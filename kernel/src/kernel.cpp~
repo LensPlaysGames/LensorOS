@@ -1,0 +1,78 @@
+// Data types
+#include <stddef.h>
+#include <stdint.h>
+
+typedef struct {
+	unsigned int x;
+	unsigned int y;
+} Coordinate;
+
+typedef struct {
+	void* BaseAddress;
+	size_t BufferSize;
+	unsigned int PixelWidth;
+	unsigned int PixelHeight;
+	unsigned int PixelsPerScanLine;
+} Framebuffer;
+
+// Globals for GOP
+const unsigned int BytesPerPixel = 4;
+Framebuffer* gFB;
+
+typedef struct {
+	// Magic bytes to indicate PSF1 font type	
+	unsigned char Magic[2];
+	unsigned char Mode;
+	unsigned char CharacterSize;
+} PSF1_HEADER;
+
+typedef struct {
+	PSF1_HEADER* PSF1_Header;
+	void* GlyphBuffer;
+} PSF1_FONT;
+
+
+PSF1_FONT* gFont;
+
+void putchar(char c, unsigned int color,
+			 unsigned int xOff, unsigned int yOff)
+{
+	unsigned int* pixel_ptr = (unsigned int*)gFB->BaseAddress;
+	char* font_ptr = gFont->GlyphBuffer + (c * gFont->PSF1_Header->CharacterSize);
+	// This assumes each character in font is 8x16 pixels
+	for (unsigned long y = yOff; y < yOff + gFont->PSF1_Header->CharacterSize; y++) {
+		for (unsigned long x = xOff; x < xOff + 8; x++) {
+			if ((*font_ptr & (0b10000000 >> (x - xOff))) > 0) {
+				*(unsigned int*)(pixel_ptr + x + (y * gFB->PixelsPerScanLine)) = color;
+			}
+		}
+		font_ptr++;
+	}
+}
+
+void putstr(char* str, unsigned int color, Coordinate* offset) {
+	// Set current character to first character in string.
+	char* c = str;
+	// Loop over string until null-terminator.
+	while (*c != 0) {
+		putchar(*c, color, offset->x, offset->y);
+		offset->x += 8;
+		if (offset->x + 8 > gFB->PixelWidth) {
+			offset->x = 0;
+			offset->y += gFont->PSF1_Header->CharacterSize;
+		}
+		c++;
+	}
+}
+
+void _start(Framebuffer* framebuffer, PSF1_FONT* font) {
+	gFB = framebuffer;
+	gFont = font;
+
+	Coordinate offset;
+	offset.x = 0;
+	offset.y = 0;
+	putstr("LensorOS is becoming more powerful!", 0xffffffff, &offset);
+	
+	return;
+}
