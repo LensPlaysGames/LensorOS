@@ -28,17 +28,30 @@ const unsigned int BytesPerPixel = 4;
 
 class BasicRenderer {
 public:
-	Framebuffer* framebuffer;
-	PSF1_FONT* Font;
-	Vector2 PixelPosition;
+	Framebuffer* framebuffer     {nullptr};
+	PSF1_FONT* Font              {nullptr};
+	Vector2 PixelPosition        {0, 0};
+	unsigned int BackgroundColor {0x00000000};
 
 	BasicRenderer(Framebuffer* fbuffer, PSF1_FONT* f) {
 		framebuffer = fbuffer;
 		Font = f;
 	}
+
+	// Change every pixel in the framebuffer to BackgroundColor.
+	void clear();
 	
+	// '\r'
+	void cret();
+	// '\n'
+	void newl();
+	// '\r' + '\n'
+	void crlf();
+	// Use font to put a character to the screen.
 	void putchar(char c, unsigned int color = 0xffffffff);
+	// Put a string of characters to the screen, wrapping if necessary.
 	void putstr(const char* str, unsigned int color = 0xffffffff);
+	void putrect(Vector2 size, unsigned int color = 0xffffffff);
 };
 
 #endif

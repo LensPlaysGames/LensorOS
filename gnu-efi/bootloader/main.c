@@ -121,6 +121,14 @@ Framebuffer* InitializeGOP() {
 	return &framebuffer;
 }
 
+typedef struct {
+  Framebuffer* framebuffer;
+  PSF1_FONT* font;
+  EFI_MEMORY_DESCRIPTOR* map;
+  UINTN mapSize;
+  UINTN mapDescSize;
+} BootInfo;
+
 EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
 	InitializeLib(ImageHandle, SystemTable);
 
@@ -193,9 +201,6 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
 	}
 	Print(L"[LOG]: LensorOS kernel loaded successfully\n");
 
-	// Define kernel entry point.
-	void (*KernelStart)(Framebuffer*, PSF1_FONT*) = ((__attribute__((sysv_abi)) void (*)(Framebuffer*, PSF1_FONT*)) elf_header.e_entry);
-
 	// Initialize Unified Extensible Firmware Interface Graphics Output Protocol.
 	// Let's call that the 'GOP' from now on.
 	Framebuffer* gop_fb = InitializeGOP();
@@ -218,12 +223,36 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
 	}
 	else {
 		Print(L"[LOG]: Default font loaded successfully\n"
-			  L"Default Font Info:"
-			  L"  Character Width: %d\n",
+			  L"Default Font (PSF1) Info:"
+			  L"  Character Size: 8x%d\n",
 			  dflt_font->PSF1_Header->CharacterSize);
 	}
 
-	KernelStart(gop_fb, dflt_font);
+	// EFI MEMORY MAP
+	EFI_MEMORY_DESCRIPTOR* Map = NULL;
+	UINTN MapSize, MapKey;
+	UINTN DescriptorSize;
+	UINT32 DescriptorVersion;
+	{
+	  SystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
+	  SystemTable->BootServices->AllocatePool(EfiLoaderData, MapSize, (void**)&Map);
+	  SystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
+	}
+
+	BootInfo info;
+	info.framebuffer = gop_fb;
+	info.font = dflt_font;
+	info.map = Map;
+	info.mapSize = MapSize;
+	info.mapDescSize = DescriptorSize;
+
+	// Exit boot services: free system resources dedicated to UEFI boot services,
+	//   as well as prevent UEFI from shutting down automatically after 5 minutes.
+	SystemTable->BootServices->ExitBootServices(ImageHandle, MapKey);
+
+	// Define kernel entry point.
+	void (*KernelStart)(BootInfo*) = ((__attribute__((sysv_abi)) void (*)(BootInfo*)) elf_header.e_entry);
+	KernelStart(&info);
 	
 	return EFI_SUCCESS;
 }
