@@ -28,6 +28,7 @@ extern uint64_t _KernelEnd;
 // - Keyboard
 // - Mouse
 // - Mouse Cursor
+// - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE)
 
 
 extern "C" void _start(BootInfo* info) {
@@ -35,6 +36,10 @@ extern "C" void _start(BootInfo* info) {
 	BasicRenderer rend(info->framebuffer, info->font);
 	// Clear screen to background color (removes UEFI bootloader messages)
 	rend.clear();
+
+	// GPLv3 LICENSE REQUIREMENT (interactive terminal must print cp notice)
+	rend.putstr("<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>");
+	rend.crlf();
 
 	rend.putstr("Setting up PageFrameAllocator from EFI memory map");
 	rend.crlf();
