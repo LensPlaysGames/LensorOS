@@ -33,6 +33,8 @@ public:
 	Vector2 PixelPosition        {0, 0};
 	unsigned int BackgroundColor {0x00000000};
 
+	BasicRenderer() {}
+
 	BasicRenderer(Framebuffer* fbuffer, PSF1_FONT* f) {
 		framebuffer = fbuffer;
 		Font = f;
@@ -53,5 +55,7 @@ public:
 	void putstr(const char* str, unsigned int color = 0xffffffff);
 	void putrect(Vector2 size, unsigned int color = 0xffffffff);
 };
+
+extern BasicRenderer gRend;
 
 #endif

@@ -1,5 +1,8 @@
 #include "BasicRenderer.h"
 
+// Define global renderer for use anywhere within the kernel.
+BasicRenderer gRend;
+
 void BasicRenderer::clear() {
 	// Draw background color to every pixel.
 	unsigned int* pixel_ptr = (unsigned int*)framebuffer->BaseAddress;
