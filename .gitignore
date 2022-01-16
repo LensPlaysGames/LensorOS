@@ -34,3 +34,6 @@
 # Emacs backups
 **/*~
 **/#*#
+
+# Kernel Build Stuff
+/kernel/bin/
