@@ -13,12 +13,14 @@ void PrepareMemory(BootInfo* bInfo) {
 	gAlloc.LockPages(&_KernelStart, kernelPagesNeeded);
 	// PAGE MAP LEVEL FOUR (see paging.h).
     PageTable* PML4 = (PageTable*)gAlloc.RequestPage();
+	// Init PML4 page to 0.
 	memset(PML4, 0, 0x1000);
-	// I don't know why I need this line, but I do otherwise QEMU does WEIRD things.
-	gAlloc.LockPages(PML4, 1000);
+	// This line is necessary to fix a bug in QEMU regarding a rainbow pattern at the top of the screen.
+	// I don't know why this is needed; I tried every value starting at 1 until it worked.
+	gAlloc.LockPages(PML4, 0x100);
     PTM = PageTableManager(PML4);
 	kInfo.PTM = &PTM;
-	// Map EFI memory map into Page Map Level Four
+	// Map EFI memory map adresses into Page Map Level Four
 	for (uint64_t t = 0; t < GetMemorySize(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize); t+=0x1000) {
 		PTM.MapMemory((void*)t, (void*)t);
 	}
@@ -63,7 +65,7 @@ KernelInfo InitializeKernel(BootInfo* bInfo) {
 	GDTD.Offset = (uint64_t)&gGDT;
 	LoadGDT(&GDTD);
 	// SETUP GOP RENDERER
-	gRend = BasicRenderer(bInfo->framebuffer,bInfo->font);
+	gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
 	// Initialize screen to background color.
 	gRend.clear();
 	// GPLv3 LICENSE REQUIREMENT (interactive terminal must print cpy notice).
