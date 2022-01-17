@@ -135,38 +135,31 @@ uint64_t PageFrameAllocator::GetUsedRAM() { return used_memory; }
 uint64_t PageFrameAllocator::GetReservedRAM() { return reserved_memory; }
 
 void PageFrameAllocator::PrintMemoryInfo() {
-	unsigned int startX = gRend.PixelPosition.x;
+	unsigned int startX = gRend.DrawPos.x;
 	gRend.putstr("Memory Info:");
-	gRend.newl();
-	gRend.PixelPosition.x = startX;
+	gRend.crlf(startX);
 	gRend.putstr("|\\");
-	gRend.newl();
-	gRend.PixelPosition.x = startX;
+    gRend.crlf(startX);
 	gRend.putstr("| Free RAM: ");
 	gRend.putstr(to_string(free_memory / 1024));
 	gRend.putstr(" kB (");
 	gRend.putstr(to_string(free_memory / 1024 / 1024));
 	gRend.putstr(" mB)");
-	gRend.newl();
-	gRend.PixelPosition.x = startX;
+    gRend.crlf(startX);
 	gRend.putstr("|\\");
-	gRend.newl();
-	gRend.PixelPosition.x = startX;
+    gRend.crlf(startX);
 	gRend.putstr("| Used RAM: ");
 	gRend.putstr(to_string(used_memory / 1024));
 	gRend.putstr(" kB (");
 	gRend.putstr(to_string(used_memory / 1024 / 1024));
 	gRend.putstr(" mB)");
-	gRend.newl();
-	gRend.PixelPosition.x = startX;
+    gRend.crlf(startX);
 	gRend.putstr(" \\");
-	gRend.newl();
-	gRend.PixelPosition.x = startX;
+    gRend.crlf(startX);
 	gRend.putstr("  Reserved RAM: ");
 	gRend.putstr(to_string(reserved_memory / 1024));
 	gRend.putstr(" kB (");
 	gRend.putstr(to_string(reserved_memory / 1024 / 1024));
 	gRend.putstr(" mB)");
-	gRend.newl();
-	gRend.PixelPosition.x = startX;
+	gRend.crlf(startX);
 }

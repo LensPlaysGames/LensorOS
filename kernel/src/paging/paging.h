@@ -80,11 +80,11 @@ struct PageMapIndexer {
 
 	PageMapIndexer(uint64_t virtualAddress) {
 		virtualAddress >>= 12;
-		PageIndex = virtualAddress & 0x1ff;
+		PageIndex =                 virtualAddress & 0x1ff;
 		virtualAddress >>= 9;
-		PageTableIndex = virtualAddress & 0x1ff;
+		PageTableIndex =            virtualAddress & 0x1ff;
 		virtualAddress >>= 9;
-		PageDirectoryIndex = virtualAddress & 0x1ff;
+		PageDirectoryIndex =        virtualAddress & 0x1ff;
 		virtualAddress >>= 9;
 		PageDirectoryPointerIndex = virtualAddress & 0x1ff;
 	}

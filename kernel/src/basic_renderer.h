@@ -31,23 +31,34 @@ class BasicRenderer {
 public:
 	Framebuffer* Target          {nullptr};
 	PSF1_FONT*   Font            {nullptr};
-	Vector2      PixelPosition   {0, 0};
+	Vector2      DrawPos         {0, 0};
 	// I = ignore                 0xIIRRGGBB
 	unsigned int BackgroundColor {0x00000000};
 
 	BasicRenderer() {}
-
 	BasicRenderer(Framebuffer* fbuffer, PSF1_FONT* f) {
 		Target = fbuffer;
 		Font = f;
 	}
 
 	// Change every pixel in the framebuffer to BackgroundColor.
-	void clear();
+	void clear() {
+		// Draw background color to every pixel.
+		unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
+		for (unsigned long y = 0; y < Target->PixelHeight; y++) {
+			for (unsigned long x = 0; x < Target->PixelWidth; x++) {
+				*(unsigned int*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = BackgroundColor;
+			}
+		}
+		// Re-initialize draw position.
+		DrawPos = {0, 0};
+	}
 	// Update BackgroundColor to given color, then clear screen.
-	void clear(unsigned int color);
-
-	// Remove a single character behind PixelPosition.
+	void clear(unsigned int color) {
+		BackgroundColor = color;
+		clear();
+	}
+	// Remove a single character behind DrawPos.
 	void clearchar();
 	
 	// '\r'
@@ -56,13 +67,17 @@ public:
 	void newl();
 	// '\r' + '\n'
 	void crlf();
-	// Use font to put a character to the screen.
+	// '\r' then add offset + '\n'
+	void crlf(uint16_t offset);
+	
+	// Use font to draw a character to the screen (don't advance).
+	void drawchar(char c, unsigned int color = 0xffffffff);
+	void drawrect(Vector2 size, unsigned int color = 0xffffffff);
+	
+	// Use font to put a character to the screen (advance draw position).
 	void putchar(char c, unsigned int color = 0xffffffff);
-	// Use font to put a character to the screen without advancing PixelPosition.
-	void putcharover(char c, unsigned int color = 0xffffffff);
-	// Put a string of characters to the screen, wrapping if necessary.
+	// Put a null-terminated string of characters to the screen, wrapping if necessary.
 	void putstr(const char* str, unsigned int color = 0xffffffff);
-	void putrect(Vector2 size, unsigned int color = 0xffffffff);
 };
 
 extern BasicRenderer gRend;

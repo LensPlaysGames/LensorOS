@@ -3,111 +3,92 @@
 // Define global renderer for use anywhere within the kernel.
 BasicRenderer gRend;
 
-void BasicRenderer::clear() {
-	// Draw background color to every pixel.
-	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
-	for (unsigned long y = 0; y < Target->PixelHeight; y++) {
-		for (unsigned long x = 0; x < Target->PixelWidth; x++) {
-			*(unsigned int*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = BackgroundColor;
-		}
-	}
-	// Reset pixel position to origin.
-	PixelPosition = {0, 0};
-}
-
-void BasicRenderer::clear(unsigned int color) {
-	BackgroundColor = color;
-	clear();
-}
-
 // Carriage return ('\r')
 void BasicRenderer::cret() {
-	PixelPosition = {
+	DrawPos = {
 		0,
-		PixelPosition.y
+		DrawPos.y
 	};
 }
 // Newline ('\n') or LineFeed (LF)
 void BasicRenderer::newl() {
-	PixelPosition = {
-		PixelPosition.x,
-		PixelPosition.y + Font->PSF1_Header->CharacterSize
+	DrawPos = {
+		DrawPos.x,
+		DrawPos.y + Font->PSF1_Header->CharacterSize
 	};
 }
 // Carriage return line feed; CRLF ('\r' + '\n')
 void BasicRenderer::crlf() {
-	PixelPosition = {
+	DrawPos = {
 		0,
-		PixelPosition.y + Font->PSF1_Header->CharacterSize
+		DrawPos.y + Font->PSF1_Header->CharacterSize
 	};
+}
+// Carriage return line feed; CRLF ('\r' + '\n')
+//   but move position on newline by offset characters to the right.
+void BasicRenderer::crlf(uint16_t offset) {
+	DrawPos = {
+		offset * 8,
+		DrawPos.y + Font->PSF1_Header->CharacterSize
+	};
+}
+
+void BasicRenderer::drawchar(char c, unsigned int color) {
+	if (DrawPos.y < 0
+		|| DrawPos.y + Font->PSF1_Header->CharacterSize > Target->PixelHeight)
+	{
+		DrawPos.y = 0;
+	}
+	if (DrawPos.x < 0
+		|| DrawPos.x + 8 > Target->PixelWidth)
+	{
+		DrawPos.x = 0;
+	}
+	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
+	char* font_ptr = (char*)Font->GlyphBuffer + (c * Font->PSF1_Header->CharacterSize);
+	for (unsigned long y = DrawPos.y; y < DrawPos.y + Font->PSF1_Header->CharacterSize; y++) {
+		for (unsigned long x = DrawPos.x; x < DrawPos.x + 8; x++) {
+			if ((*font_ptr & (0b10000000 >> (x - DrawPos.x))) > 0) {
+				*(unsigned int*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
+			}
+		}
+		font_ptr++;
+	}
+}
+
+void BasicRenderer::drawrect(Vector2 size, unsigned int color) {
+	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
+	for (unsigned long y = DrawPos.y; y < DrawPos.y + size.y; y++) {
+		for (unsigned long x = DrawPos.x; x < DrawPos.x + size.x; x++) {
+			*(unsigned int*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
+		}
+	}
 }
 
 void BasicRenderer::putchar(char c, unsigned int color)
 {
-	if (PixelPosition.y < 0
-		|| PixelPosition.y + Font->PSF1_Header->CharacterSize > Target->PixelHeight)
-	{
-		PixelPosition.y = 0;
-	}
-	if (PixelPosition.x < 0
-		|| PixelPosition.x + 8 > Target->PixelWidth)
-	{
-		PixelPosition.x = 0;
-	}
-	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
-	char* font_ptr = (char*)Font->GlyphBuffer + (c * Font->PSF1_Header->CharacterSize);
-	for (unsigned long y = PixelPosition.y; y < PixelPosition.y + Font->PSF1_Header->CharacterSize; y++) {
-		for (unsigned long x = PixelPosition.x; x < PixelPosition.x + 8; x++) {
-			if ((*font_ptr & (0b10000000 >> (x - PixelPosition.x))) > 0) {
-				*(unsigned int*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
-			}
-		}
-		font_ptr++;
-	}
+    gRend.drawchar(c, color);
 	// Increment pixel position horizontally by one character.
-	PixelPosition.x += 8;
+	DrawPos.x += 8;
 	// Newline if next character would be off-screen.
-	if (PixelPosition.x + 8 > Target->PixelWidth) {
+	if (DrawPos.x + 8 > Target->PixelWidth) {
 		crlf();
-	}
-}
-
-void BasicRenderer::putcharover(char c, unsigned int color) {
-	if (PixelPosition.y < 0
-		|| PixelPosition.y + Font->PSF1_Header->CharacterSize > Target->PixelHeight)
-	{
-		PixelPosition.y = 0;
-	}
-	if (PixelPosition.x < 0
-		|| PixelPosition.x + 8 > Target->PixelWidth)
-	{
-		PixelPosition.x = 0;
-	}
-	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
-	char* font_ptr = (char*)Font->GlyphBuffer + (c * Font->PSF1_Header->CharacterSize);
-	for (unsigned long y = PixelPosition.y; y < PixelPosition.y + Font->PSF1_Header->CharacterSize; y++) {
-		for (unsigned long x = PixelPosition.x; x < PixelPosition.x + 8; x++) {
-			if ((*font_ptr & (0b10000000 >> (x - PixelPosition.x))) > 0) {
-				*(unsigned int*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
-			}
-		}
-		font_ptr++;
 	}
 }
 
 void BasicRenderer::clearchar() {
 	// Decrement pixel position horizontally by one character.
-	if (PixelPosition.x >= 8) {
-		PixelPosition.x -= 8;
+	if (DrawPos.x >= 8) {
+		DrawPos.x -= 8;
 	}
 	else {
-		PixelPosition.x = Target->PixelWidth;
-		PixelPosition.y -= Font->PSF1_Header->CharacterSize;
+		DrawPos.x = Target->PixelWidth;
+		DrawPos.y -= Font->PSF1_Header->CharacterSize;
 	}
-	if (PixelPosition.y < 0) { PixelPosition.y = 0; }
+	if (DrawPos.y < 0) { DrawPos.y = 0; }
 	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
-	for (unsigned long y = PixelPosition.y; y < PixelPosition.y + Font->PSF1_Header->CharacterSize; y++) {
-		for (unsigned long x = PixelPosition.x; x < PixelPosition.x + 8; x++) {
+	for (unsigned long y = DrawPos.y; y < DrawPos.y + Font->PSF1_Header->CharacterSize; y++) {
+		for (unsigned long x = DrawPos.x; x < DrawPos.x + 8; x++) {
 			*(unsigned int*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = BackgroundColor;
 		}
 	}
@@ -121,14 +102,5 @@ void BasicRenderer::putstr(const char* str, unsigned int color) {
 		// put current character of string at current pixel position.
 		putchar(*c, color);
 		c++;
-	}
-}
-
-void BasicRenderer::putrect(Vector2 size, unsigned int color) {
-	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
-	for (unsigned long y = PixelPosition.y; y < PixelPosition.y + size.y; y++) {
-		for (unsigned long x = PixelPosition.x; x < PixelPosition.x + size.x; x++) {
-			*(unsigned int*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
-		}
 	}
 }

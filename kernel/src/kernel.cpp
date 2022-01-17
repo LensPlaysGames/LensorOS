@@ -9,20 +9,20 @@ extern "C" void _start(BootInfo* bInfo) {
 
 	// A FACE :)
 	// left eye
-	gRend.PixelPosition = {420, 420};
-	gRend.putrect({42, 42}, 0xff00ffff);
+	gRend.DrawPos = {420, 420};
+	gRend.drawrect({42, 42}, 0xff00ffff);
 	// left pupil
-	gRend.PixelPosition = {440, 440};
-	gRend.putrect({20, 20}, 0xffff0000);
+	gRend.DrawPos = {440, 440};
+	gRend.drawrect({20, 20}, 0xffff0000);
 	// right eye
-	gRend.PixelPosition = {520, 420};
-	gRend.putrect({42, 42}, 0xff00ffff);
+	gRend.DrawPos = {520, 420};
+	gRend.drawrect({42, 42}, 0xff00ffff);
 	// right pupil
-	gRend.PixelPosition = {540, 440};
-	gRend.putrect({20, 20}, 0xffff0000);
+	gRend.DrawPos = {540, 440};
+	gRend.drawrect({20, 20}, 0xffff0000);
 	// mouth
-	gRend.PixelPosition = {400, 520};
-	gRend.putrect({182, 20}, 0xff00ffff);
+	gRend.DrawPos = {400, 520};
+	gRend.drawrect({182, 20}, 0xff00ffff);
 
 	// MAIN KERNEL LOOP.
 	while (true) {

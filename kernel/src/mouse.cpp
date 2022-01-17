@@ -144,16 +144,16 @@ void ProcessMousePacket() {
 	}
 	// VALIDATE MOUSE POSITION IS WITHIN FRAMEBUFFER
 	if (gMousePosition.x < 0) { gMousePosition.x = 0; }
-	else if (gMousePosition.x > gRend.framebuffer->PixelWidth-1) {
-		gMousePosition.x = gRend.framebuffer->PixelWidth-1;
+	else if (gMousePosition.x > gRend.Target->PixelWidth-1) {
+		gMousePosition.x = gRend.Target->PixelWidth-1;
 	}
 	if (gMousePosition.y < 0) { gMousePosition.y = 0; }
-	else if (gMousePosition.y > gRend.framebuffer->PixelHeight-1) {
-		gMousePosition.y = gRend.framebuffer->PixelHeight-1;
+	else if (gMousePosition.y > gRend.Target->PixelHeight-1) {
+		gMousePosition.y = gRend.Target->PixelHeight-1;
 	}
 	// DRAW MOUSE CURSOR.
-	gRend.PixelPosition = gMousePosition;
-	gRend.putcharover('A');
+	gRend.DrawPos = gMousePosition;
+	gRend.drawchar('A');
 	// PACKET USED, DISCARD READY STATE.
 	mouse_packet_ready = false;
 }
