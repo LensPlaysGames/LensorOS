@@ -42,6 +42,8 @@ public:
 
 	// Change every pixel in the framebuffer to BackgroundColor.
 	void clear();
+	// Update BackgroundColor to given color, then clear screen.
+	void clear(unsigned int color);
 	
 	// '\r'
 	void cret();

@@ -1,17 +1,11 @@
 #include "kUtility.h"
 
 // TODO:
-// - GDT & an assembler
-//     [video resource](https://youtu.be/-DLb2ezXRO4)
-// - Interrupts, fault handlers, etc
-// - Panic Screen (blue screen)
-// - IO bus
-// - Keyboard
+// - Keyboard Scancode Translation
+//   [video resource](https://youtu.be/dtuPghvrXUo)
 // - Mouse
 // - Mouse Cursor
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE)
-
-
 
 extern "C" void _start(BootInfo* bInfo) {
 	KernelInfo info = InitializeKernel(bInfo);

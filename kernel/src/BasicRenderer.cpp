@@ -15,6 +15,11 @@ void BasicRenderer::clear() {
 	PixelPosition = {0, 0};
 }
 
+void BasicRenderer::clear(unsigned int color) {
+	BackgroundColor = color;
+	clear();
+}
+
 // Carriage return ('\r')
 void BasicRenderer::cret() {
 	PixelPosition = {
@@ -39,6 +44,12 @@ void BasicRenderer::crlf() {
 
 void BasicRenderer::putchar(char c, unsigned int color)
 {
+	if (PixelPosition.y + Font->PSF1_Header->CharacterSize > framebuffer->PixelHeight) {
+		PixelPosition.y = 0;
+	}
+	if (PixelPosition.x + 8 > framebuffer->PixelWidth) {
+		PixelPosition.x = 0;
+	}
 	unsigned int* pixel_ptr = (unsigned int*)framebuffer->BaseAddress;
 	char* font_ptr = (char*)Font->GlyphBuffer + (c * Font->PSF1_Header->CharacterSize);
 	// This assumes each character in font is 8x16 pixels
@@ -61,10 +72,6 @@ void BasicRenderer::putstr(const char* str, unsigned int color) {
 		putchar(*c, color);
 		// Increment pixel position horizontally by one character.
 	    PixelPosition.x += 8;
-		if (PixelPosition.x + 8 > framebuffer->PixelWidth) {
-			// Next character would be off-screen, wrap to start of next line
-			crlf();
-		}
 		c++;
 	}
 }

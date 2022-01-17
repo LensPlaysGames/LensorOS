@@ -5,6 +5,10 @@
 #include "bitmap.h"
 #include "paging/paging.h"
 #include "paging/page_table_manager.h"
+#include "gdt.h"
+#include "interrupts/idt.h"
+#include "interrupts/interrupts.h"
+#include "io.h"
 
 struct BootInfo {
 	Framebuffer* framebuffer;

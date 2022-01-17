@@ -33,8 +33,48 @@ void PrepareMemory(BootInfo* bInfo) {
 	asm ("mov %0, %%cr3" : : "r" (PML4));
 }
 
+IDTR idtr;
+void PrepareInterrupts() {
+	idtr.Limit = 0x0FFF;
+	idtr.Offset = (uint64_t)gAlloc.RequestPage();
+
+	IDTDescEntry* PageFault = (IDTDescEntry*)(idtr.Offset + 0xE * sizeof(IDTDescEntry));
+	PageFault->SetOffset((uint64_t)PageFaultHandler);
+	PageFault->type_attr = IDT_TA_InterruptGate;
+	PageFault->selector = 0x08;
+
+	IDTDescEntry* DoubleFault = (IDTDescEntry*)(idtr.Offset + 0x8 * sizeof(IDTDescEntry));
+	DoubleFault->SetOffset((uint64_t)DoubleFaultHandler);
+	DoubleFault->type_attr = IDT_TA_InterruptGate;
+	DoubleFault->selector = 0x08;
+
+	IDTDescEntry* GeneralProtectionFault = (IDTDescEntry*)(idtr.Offset + 0xD * sizeof(IDTDescEntry));
+	GeneralProtectionFault->SetOffset((uint64_t)GeneralProtectionFaultHandler);
+	GeneralProtectionFault->type_attr = IDT_TA_InterruptGate;
+	GeneralProtectionFault->selector = 0x08;
+
+	IDTDescEntry* Keyboard = (IDTDescEntry*)(idtr.Offset + 0x21 * sizeof(IDTDescEntry));
+	Keyboard->SetOffset((uint64_t)KeyboardHandler);
+	Keyboard->type_attr = IDT_TA_InterruptGate;
+	Keyboard->selector = 0x08;
+
+	asm ("lidt %0" :: "m" (idtr));
+
+	RemapPIC();
+
+	outb(PIC1_DATA, 0b11111101);
+	outb(PIC2_DATA, 0b11111111);
+
+	asm ("sti");
+}
+
 
 KernelInfo InitializeKernel(BootInfo* bInfo) {
+	// SETUP GDT DESCRIPTOR
+	GDTDescriptor GDTD = GDTDescriptor();
+	GDTD.Size = sizeof(GDT) - 1;
+	GDTD.Offset = (uint64_t)&gGDT;
+	LoadGDT(&GDTD);
 	// SETUP GOP RENDERER
 	gRend = BasicRenderer(bInfo->framebuffer,bInfo->font);
 	// Initialize screen to background color.
@@ -47,5 +87,8 @@ KernelInfo InitializeKernel(BootInfo* bInfo) {
 	gRend.putstr("Memory prepared successfully");
 	gRend.crlf();
 	gAlloc.PrintMemoryInfo(&gRend);
+
+	PrepareInterrupts();
+	
 	return kInfo;
 }
