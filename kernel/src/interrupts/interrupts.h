@@ -13,9 +13,10 @@
 #define ICW4_8086     0x01
 
 #include <stdint.h>
-#include "../BasicRenderer.h"
+#include "../basic_renderer.h"
 #include "../panic.h"
 #include "../io.h"
+#include "../keyboard.h"
 
 struct InterruptFrame;
 __attribute__((interrupt)) void PageFaultHandler(struct InterruptFrame* frame);

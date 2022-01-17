@@ -23,8 +23,7 @@ __attribute__((interrupt)) void GeneralProtectionFaultHandler(struct InterruptFr
 
 __attribute__((interrupt)) void KeyboardHandler(struct InterruptFrame* frame) {
 	uint8_t scancode = inb(0x60);
-	// Handle key press
-	gRend.putstr("Pressed");
+	HandleKeyboard(scancode);
 	
 	// End interrupt	
 	EndMasterPIC();
