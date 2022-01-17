@@ -9,6 +9,7 @@
 #include "interrupts/idt.h"
 #include "interrupts/interrupts.h"
 #include "io.h"
+#include "mouse.h"
 
 struct BootInfo {
 	Framebuffer* framebuffer;

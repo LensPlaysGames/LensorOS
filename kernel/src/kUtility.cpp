@@ -34,40 +34,28 @@ void PrepareMemory(BootInfo* bInfo) {
 }
 
 IDTR idtr;
+
+void  SetIDTGate(void* handler, uint8_t entryOffset, uint8_t type_attr, uint8_t selector) {
+	IDTDescEntry* interrupt = (IDTDescEntry*)(idtr.Offset + entryOffset * sizeof(IDTDescEntry));
+	interrupt->SetOffset((uint64_t)handler);
+	interrupt->type_attr = type_attr;
+	interrupt->selector = selector;
+}
+
 void PrepareInterrupts() {
 	idtr.Limit = 0x0FFF;
 	idtr.Offset = (uint64_t)gAlloc.RequestPage();
 
-	IDTDescEntry* PageFault = (IDTDescEntry*)(idtr.Offset + 0xE * sizeof(IDTDescEntry));
-	PageFault->SetOffset((uint64_t)PageFaultHandler);
-	PageFault->type_attr = IDT_TA_InterruptGate;
-	PageFault->selector = 0x08;
-
-	IDTDescEntry* DoubleFault = (IDTDescEntry*)(idtr.Offset + 0x8 * sizeof(IDTDescEntry));
-	DoubleFault->SetOffset((uint64_t)DoubleFaultHandler);
-	DoubleFault->type_attr = IDT_TA_InterruptGate;
-	DoubleFault->selector = 0x08;
-
-	IDTDescEntry* GeneralProtectionFault = (IDTDescEntry*)(idtr.Offset + 0xD * sizeof(IDTDescEntry));
-	GeneralProtectionFault->SetOffset((uint64_t)GeneralProtectionFaultHandler);
-	GeneralProtectionFault->type_attr = IDT_TA_InterruptGate;
-	GeneralProtectionFault->selector = 0x08;
-
-	IDTDescEntry* Keyboard = (IDTDescEntry*)(idtr.Offset + 0x21 * sizeof(IDTDescEntry));
-	Keyboard->SetOffset((uint64_t)KeyboardHandler);
-	Keyboard->type_attr = IDT_TA_InterruptGate;
-	Keyboard->selector = 0x08;
+	SetIDTGate((void*)PageFaultHandler, 0xE, IDT_TA_InterruptGate, 0x08);
+	SetIDTGate((void*)DoubleFaultHandler, 0x8, IDT_TA_InterruptGate, 0x08);
+	SetIDTGate((void*)GeneralProtectionFaultHandler, 0xD, IDT_TA_InterruptGate, 0x08);
+	SetIDTGate((void*)KeyboardHandler, 0x21, IDT_TA_InterruptGate, 0x08);
+	SetIDTGate((void*)MouseHandler, 0x2c, IDT_TA_InterruptGate, 0x08);
 
 	asm ("lidt %0" :: "m" (idtr));
 
 	RemapPIC();
-
-	outb(PIC1_DATA, 0b11111101);
-	outb(PIC2_DATA, 0b11111111);
-
-	asm ("sti");
 }
-
 
 KernelInfo InitializeKernel(BootInfo* bInfo) {
 	// SETUP GDT DESCRIPTOR
@@ -89,6 +77,13 @@ KernelInfo InitializeKernel(BootInfo* bInfo) {
 	gAlloc.PrintMemoryInfo(&gRend);
 
 	PrepareInterrupts();
+	InitPS2Mouse();
+
+	// I/O BUS BITMASKS
+	outb(PIC1_DATA, 0b11111001);
+	outb(PIC2_DATA, 0b11101111);
+
+	asm ("sti");
 	
 	return kInfo;
 }

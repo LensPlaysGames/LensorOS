@@ -1,32 +1,39 @@
 #include "interrupts.h"
 
-__attribute__((interrupt)) void PageFaultHandler(struct InterruptFrame* frame) {
+__attribute__((interrupt)) void PageFaultHandler(InterruptFrame* frame) {
 	Panic("Page fault detected!");
 	while (true) {
 		asm ("hlt");
 	}
 }
 
-__attribute__((interrupt)) void DoubleFaultHandler(struct InterruptFrame* frame) {
+__attribute__((interrupt)) void DoubleFaultHandler(InterruptFrame* frame) {
 	Panic("Double fault detected!");
 	while (true) {
 		asm ("hlt");
 	}
 }
 
-__attribute__((interrupt)) void GeneralProtectionFaultHandler(struct InterruptFrame* frame) {
+__attribute__((interrupt)) void GeneralProtectionFaultHandler(InterruptFrame* frame) {
 	Panic("General protection fault detected!");
 	while (true) {
 		asm ("hlt");
 	}
 }
 
-__attribute__((interrupt)) void KeyboardHandler(struct InterruptFrame* frame) {
+__attribute__((interrupt)) void KeyboardHandler(InterruptFrame* frame) {
 	uint8_t scancode = inb(0x60);
 	HandleKeyboard(scancode);
-	
 	// End interrupt	
 	EndMasterPIC();
+}
+
+__attribute__((interrupt)) void MouseHandler(InterruptFrame* frame) {
+	uint8_t data = inb(0x60);
+	// FIXME: THIS FUNCTION IS VERY BROKEN (WRONG MOUSE COORDINATES)
+	// HandlePS2Mouse(data);
+	// End interrupt
+	EndSlavePIC();
 }
 
 void EndMasterPIC() {

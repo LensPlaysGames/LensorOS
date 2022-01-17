@@ -44,10 +44,14 @@ void BasicRenderer::crlf() {
 
 void BasicRenderer::putchar(char c, unsigned int color)
 {
-	if (PixelPosition.y + Font->PSF1_Header->CharacterSize > framebuffer->PixelHeight) {
+	if (PixelPosition.y < 0
+		|| PixelPosition.y + Font->PSF1_Header->CharacterSize > framebuffer->PixelHeight)
+	{
 		PixelPosition.y = 0;
 	}
-	if (PixelPosition.x + 8 > framebuffer->PixelWidth) {
+	if (PixelPosition.x < 0
+		|| PixelPosition.x + 8 > framebuffer->PixelWidth)
+	{
 		PixelPosition.x = 0;
 	}
 	unsigned int* pixel_ptr = (unsigned int*)framebuffer->BaseAddress;
@@ -68,9 +72,6 @@ void BasicRenderer::putchar(char c, unsigned int color)
 	}
 }
 
-
-// FIXME FIXME FIXME
-// THIS FUNCTION CAUSES A PAGE FAULT
 void BasicRenderer::clearchar() {
 	// Decrement pixel position horizontally by one character.
 	if (PixelPosition.x >= 8) {

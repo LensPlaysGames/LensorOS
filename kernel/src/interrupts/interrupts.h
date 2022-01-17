@@ -17,12 +17,14 @@
 #include "../panic.h"
 #include "../io.h"
 #include "../keyboard.h"
+#include "../mouse.h"
 
 struct InterruptFrame;
-__attribute__((interrupt)) void PageFaultHandler(struct InterruptFrame* frame);
-__attribute__((interrupt)) void DoubleFaultHandler(struct InterruptFrame* frame);
-__attribute__((interrupt)) void GeneralProtectionFaultHandler(struct InterruptFrame* frame);
-__attribute__((interrupt)) void KeyboardHandler(struct InterruptFrame* frame);
+__attribute__((interrupt)) void PageFaultHandler				(InterruptFrame* frame);
+__attribute__((interrupt)) void DoubleFaultHandler				(InterruptFrame* frame);
+__attribute__((interrupt)) void GeneralProtectionFaultHandler	(InterruptFrame* frame);
+__attribute__((interrupt)) void KeyboardHandler					(InterruptFrame* frame);
+__attribute__((interrupt)) void MouseHandler					(InterruptFrame* frame);
 
 void RemapPIC();
 void EndMasterPIC();

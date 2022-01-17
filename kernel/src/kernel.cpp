@@ -1,8 +1,7 @@
 #include "kUtility.h"
 
 // TODO:
-// - Mouse
-// - Mouse Cursor
+// - Make The Mouse not a buggy mess
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE)
 
 extern "C" void _start(BootInfo* bInfo) {
@@ -26,8 +25,7 @@ extern "C" void _start(BootInfo* bInfo) {
 	gRend.PixelPosition = {400, 520};
 	gRend.putrect({182, 20}, 0xff00ffff);
 
-	gRend.PixelPosition = {0, 240};
-
+	// HALT LOOP (KERNEL INACTIVE).
 	while (true) {
 		asm ("hlt");
 	}
