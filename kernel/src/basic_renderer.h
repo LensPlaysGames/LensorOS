@@ -44,6 +44,9 @@ public:
 	void clear();
 	// Update BackgroundColor to given color, then clear screen.
 	void clear(unsigned int color);
+
+	// Remove character behind PixelPosition.
+	void clearchar();
 	
 	// '\r'
 	void cret();

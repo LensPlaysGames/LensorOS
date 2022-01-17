@@ -5,7 +5,7 @@
 #include "../efi_memory.h"
 #include "../bitmap.h"
 #include "../memory.h"
-#include "../BasicRenderer.h"
+#include "../basic_renderer.h"
 #include "../cstr.h"
 
 class PageFrameAllocator {

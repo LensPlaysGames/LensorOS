@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_PANIC_H
 #define LENSOR_OS_PANIC_H
 
-#include "BasicRenderer.h"
+#include "basic_renderer.h"
 
 void Panic(const char* panicMsg);
 
