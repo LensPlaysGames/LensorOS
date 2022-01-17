@@ -26,7 +26,7 @@ extern "C" void _start(BootInfo* bInfo) {
 	gRend.PixelPosition = {400, 520};
 	gRend.putrect({182, 20}, 0xff00ffff);
 
-	gRend.PixelPosition = {0, 420};
+	gRend.PixelPosition = {0, 240};
 
 	while (true) {
 		asm ("hlt");
