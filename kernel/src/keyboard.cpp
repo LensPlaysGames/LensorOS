@@ -21,9 +21,9 @@ void HandleKeyboard(uint8_t scancode) {
 	case ENTER:
 		gRend.crlf();
 		return;
-	// case BACKSPACE:
-	// 	gRend.clearchar();
-	// 	return;
+	case BACKSPACE:
+	 	gRend.clearchar();
+	 	return;
 	case SPACE:
 		gRend.putchar(' ');
 		return;

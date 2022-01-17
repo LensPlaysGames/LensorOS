@@ -71,21 +71,23 @@ void BasicRenderer::putchar(char c, unsigned int color)
 
 // FIXME FIXME FIXME
 // THIS FUNCTION CAUSES A PAGE FAULT
-// void BasicRenderer::clearchar() {
-// 	// Decrement pixel position horizontally by one character.
-// 	PixelPosition.x -= 8;
-// 	if (PixelPosition.x < 0) {
-// 	    PixelPosition.x = framebuffer->PixelWidth - 8;
-// 		PixelPosition.y -= Font->PSF1_Header->CharacterSize;
-// 	}
-// 	if (PixelPosition.y < 0) { PixelPosition.y = 0; }
-// 	unsigned int* pixel_ptr = (unsigned int*)framebuffer->BaseAddress;
-// 	for (unsigned long y = PixelPosition.y; y < PixelPosition.y + Font->PSF1_Header->CharacterSize; y++) {
-// 		for (unsigned long x = PixelPosition.x; x < PixelPosition.x + 8; x++) {
-// 			*(unsigned int*)(pixel_ptr + x + (y * framebuffer->PixelsPerScanLine)) = BackgroundColor;
-// 		}
-// 	}
-// }
+void BasicRenderer::clearchar() {
+	// Decrement pixel position horizontally by one character.
+	if (PixelPosition.x >= 8) {
+		PixelPosition.x -= 8;
+	}
+	else {
+		PixelPosition.x = framebuffer->PixelWidth;
+		PixelPosition.y -= Font->PSF1_Header->CharacterSize;
+	}
+	if (PixelPosition.y < 0) { PixelPosition.y = 0; }
+	unsigned int* pixel_ptr = (unsigned int*)framebuffer->BaseAddress;
+	for (unsigned long y = PixelPosition.y; y < PixelPosition.y + Font->PSF1_Header->CharacterSize; y++) {
+		for (unsigned long x = PixelPosition.x; x < PixelPosition.x + 8; x++) {
+			*(unsigned int*)(pixel_ptr + x + (y * framebuffer->PixelsPerScanLine)) = BackgroundColor;
+		}
+	}
+}
 
 void BasicRenderer::putstr(const char* str, unsigned int color) {
 	// Set current character to first character in string.

@@ -1,8 +1,6 @@
 #include "kUtility.h"
 
 // TODO:
-// - Keyboard Scancode Translation
-//   [video resource](https://youtu.be/dtuPghvrXUo)
 // - Mouse
 // - Mouse Cursor
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE)
