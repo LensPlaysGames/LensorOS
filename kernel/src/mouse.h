@@ -18,6 +18,11 @@ void InitPS2Mouse();
 void HandlePS2Mouse(uint8_t data);
 void ProcessMousePacket();
 
+// The mouse ID determines what features the mouse supports.
+//   0 = x, y, left, right, middle (3 bytes)
+//   3 = 0 + scroll data (4th byte)
+//   4 = 3 + 4th button, 5th button
+extern uint8_t gMouseID;
 extern Vector2 gMousePosition;
 
 #endif

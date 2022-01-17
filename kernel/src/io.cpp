@@ -6,7 +6,7 @@ void outb(uint16_t port, uint8_t value) {
 uint8_t inb(uint16_t port) {
 	uint8_t retValue;
 	asm volatile ("inb %1, %0" : "=a"(retValue) : "Nd"(port));
-return retValue;
+	return retValue;
 }
 
 void io_wait() {

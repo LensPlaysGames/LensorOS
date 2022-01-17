@@ -1,5 +1,6 @@
 #include "mouse.h"
 
+uint8_t gMouseID;
 Vector2 gMousePosition = {0, 0};
 
 void MouseWait() {
@@ -52,6 +53,14 @@ void InitPS2Mouse() {
 
 	MouseWrite(0xF4);
 	MouseRead();
+
+	MouseWrite(0xF2);
+	MouseRead(); // ACK
+	gMouseID = MouseRead();
+	gRend.putstr("Successfully initialized PS2 mouse using serial port (ID: ");
+	gRend.putstr(to_string((uint64_t)gMouseID));
+	gRend.putchar(')');
+	gRend.crlf();
 }
 
 uint8_t mouse_cycle {0};
@@ -64,7 +73,6 @@ void HandlePS2Mouse(uint8_t data) {
 		skip = false;
 		return;
 	}
-	
 	switch (mouse_cycle) {
 	case 0:
 		// Ensure always one bit is one.
@@ -84,17 +92,16 @@ void HandlePS2Mouse(uint8_t data) {
 	}
 }
 
-
 void ProcessMousePacket() {
+	// ONLY PROCESS A PACKET THAT IS READY.
 	if (mouse_packet_ready == false) {
 		return;
 	}
-
 	bool isXNegative  {false};
 	bool isYNegative  {false};
 	bool xOverflow    {false};
 	bool yOverflow    {false};
-
+	// DECODE BIT-FLAGS FROM FIRST PACKET.
 	if (mouse_packet[0] & PS2XSIGN) {
 		isXNegative = true;
 	}
@@ -107,9 +114,9 @@ void ProcessMousePacket() {
 	if (mouse_packet[0] & PS2YOVERFLOW) {
 		yOverflow = true;
 	}
-
+	// ACCUMULATE X MOUSE POSITION FROM SECOND PACKET.
 	if (isXNegative) {
-		mouse_packet[1] = 0x100 - mouse_packet[1];
+		mouse_packet[1] = 256 - mouse_packet[1];
 		gMousePosition.x -= mouse_packet[1];
 		if (xOverflow) {
 			gMousePosition.x -= 255;
@@ -121,9 +128,9 @@ void ProcessMousePacket() {
 			gMousePosition.x += 255;
 		}
 	}
-
+	// ACCUMULATE Y MOUSE POSITION FROM THIRD PACKET.
 	if (isYNegative) {
-		mouse_packet[2] = 0x100 - mouse_packet[2];
+		mouse_packet[2] = 256 - mouse_packet[2];
 		gMousePosition.y += mouse_packet[2];
 		if (yOverflow) {
 			gMousePosition.y += 255;
@@ -135,17 +142,18 @@ void ProcessMousePacket() {
 			gMousePosition.y -= 255;
 		}
 	}
-
+	// VALIDATE MOUSE POSITION IS WITHIN FRAMEBUFFER
 	if (gMousePosition.x < 0) { gMousePosition.x = 0; }
 	else if (gMousePosition.x > gRend.framebuffer->PixelWidth-1) {
 		gMousePosition.x = gRend.framebuffer->PixelWidth-1;
 	}
-
 	if (gMousePosition.y < 0) { gMousePosition.y = 0; }
 	else if (gMousePosition.y > gRend.framebuffer->PixelHeight-1) {
 		gMousePosition.y = gRend.framebuffer->PixelHeight-1;
 	}
-	
+	// DRAW MOUSE CURSOR.
 	gRend.PixelPosition = gMousePosition;
-	gRend.putchar('A');
+	gRend.putcharover('A');
+	// PACKET USED, DISCARD READY STATE.
+	mouse_packet_ready = false;
 }

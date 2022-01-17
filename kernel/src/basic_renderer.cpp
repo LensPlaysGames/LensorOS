@@ -3,12 +3,21 @@
 // Define global renderer for use anywhere within the kernel.
 BasicRenderer gRend;
 
+void BasicRenderer::putobj(RenderObject obj) {
+	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
+	for (unsigned long y = obj.posY; y < obj.posY + sizeY; y++) {
+		for (unsigned long x = obj.posX; x < obj.posX + sizeX; x++) {
+			*(unsigned int*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = obj.pixels[x + y * sizeX];
+		}
+	}
+}
+
 void BasicRenderer::clear() {
 	// Draw background color to every pixel.
-	unsigned int* pixel_ptr = (unsigned int*)framebuffer->BaseAddress;
-	for (unsigned long y = 0; y < framebuffer->PixelHeight; y++) {
-		for (unsigned long x = 0; x < framebuffer->PixelWidth; x++) {
-			*(unsigned int*)(pixel_ptr + x + (y * framebuffer->PixelsPerScanLine)) = BackgroundColor;
+	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
+	for (unsigned long y = 0; y < Target->PixelHeight; y++) {
+		for (unsigned long x = 0; x < Target->PixelWidth; x++) {
+			*(unsigned int*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = BackgroundColor;
 		}
 	}
 	// Reset pixel position to origin.
@@ -45,12 +54,12 @@ void BasicRenderer::crlf() {
 void BasicRenderer::putchar(char c, unsigned int color)
 {
 	if (PixelPosition.y < 0
-		|| PixelPosition.y + Font->PSF1_Header->CharacterSize > framebuffer->PixelHeight)
+		|| PixelPosition.y + Font->PSF1_Header->CharacterSize > Target->PixelHeight)
 	{
 		PixelPosition.y = 0;
 	}
 	if (PixelPosition.x < 0
-		|| PixelPosition.x + 8 > framebuffer->PixelWidth)
+		|| PixelPosition.x + 8 > Target->PixelWidth)
 	{
 		PixelPosition.x = 0;
 	}
@@ -69,6 +78,29 @@ void BasicRenderer::putchar(char c, unsigned int color)
 	// Newline if next character would be off-screen.
 	if (PixelPosition.x + 8 > framebuffer->PixelWidth) {
 		crlf();
+	}
+}
+
+void BasicRenderer::putcharover(char c, unsigned int color) {
+	if (PixelPosition.y < 0
+		|| PixelPosition.y + Font->PSF1_Header->CharacterSize > framebuffer->PixelHeight)
+	{
+		PixelPosition.y = 0;
+	}
+	if (PixelPosition.x < 0
+		|| PixelPosition.x + 8 > framebuffer->PixelWidth)
+	{
+		PixelPosition.x = 0;
+	}
+	unsigned int* pixel_ptr = (unsigned int*)framebuffer->BaseAddress;
+	char* font_ptr = (char*)Font->GlyphBuffer + (c * Font->PSF1_Header->CharacterSize);
+	for (unsigned long y = PixelPosition.y; y < PixelPosition.y + Font->PSF1_Header->CharacterSize; y++) {
+		for (unsigned long x = PixelPosition.x; x < PixelPosition.x + 8; x++) {
+			if ((*font_ptr & (0b10000000 >> (x - PixelPosition.x))) > 0) {
+				*(unsigned int*)(pixel_ptr + x + (y * framebuffer->PixelsPerScanLine)) = color;
+			}
+		}
+		font_ptr++;
 	}
 }
 

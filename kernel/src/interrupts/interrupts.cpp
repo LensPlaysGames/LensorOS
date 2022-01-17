@@ -30,8 +30,7 @@ __attribute__((interrupt)) void KeyboardHandler(InterruptFrame* frame) {
 
 __attribute__((interrupt)) void MouseHandler(InterruptFrame* frame) {
 	uint8_t data = inb(0x60);
-	// FIXME: THIS FUNCTION IS VERY BROKEN (WRONG MOUSE COORDINATES)
-	// HandlePS2Mouse(data);
+	HandlePS2Mouse(data);
 	// End interrupt
 	EndSlavePIC();
 }
