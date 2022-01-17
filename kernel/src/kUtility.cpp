@@ -34,8 +34,7 @@ void PrepareMemory(BootInfo* bInfo) {
 }
 
 IDTR idtr;
-
-void  SetIDTGate(void* handler, uint8_t entryOffset, uint8_t type_attr, uint8_t selector) {
+void SetIDTGate(void* handler, uint8_t entryOffset, uint8_t type_attr, uint8_t selector) {
 	IDTDescEntry* interrupt = (IDTDescEntry*)(idtr.Offset + entryOffset * sizeof(IDTDescEntry));
 	interrupt->SetOffset((uint64_t)handler);
 	interrupt->type_attr = type_attr;
@@ -74,7 +73,7 @@ KernelInfo InitializeKernel(BootInfo* bInfo) {
 	PrepareMemory(bInfo);
 	gRend.putstr("Memory prepared successfully");
 	gRend.crlf();
-	gAlloc.PrintMemoryInfo(&gRend);
+	gAlloc.PrintMemoryInfo();
 
 	PrepareInterrupts();
 	InitPS2Mouse();

@@ -12,43 +12,6 @@ uint64_t used_memory;
 
 bool initialized = false;
 
-void PageFrameAllocator::PrintMemoryInfo(BasicRenderer* rend) {
-	unsigned int startX = rend->PixelPosition.x;
-	rend->putstr("Memory Info:");
-	rend->newl();
-	rend->PixelPosition.x = startX;
-	rend->putstr("|\\");
-	rend->newl();
-	rend->PixelPosition.x = startX;
-	rend->putstr("| Free RAM: ");
-	rend->putstr(to_string(free_memory / 1024));
-	rend->putstr(" kB (");
-	rend->putstr(to_string(free_memory / 1024 / 1024));
-	rend->putstr(" mB)");
-	rend->newl();
-	rend->PixelPosition.x = startX;
-	rend->putstr("|\\");
-	rend->newl();
-	rend->PixelPosition.x = startX;
-	rend->putstr("| Used RAM: ");
-	rend->putstr(to_string(used_memory / 1024));
-	rend->putstr(" kB (");
-	rend->putstr(to_string(used_memory / 1024 / 1024));
-	rend->putstr(" mB)");
-	rend->newl();
-	rend->PixelPosition.x = startX;
-	rend->putstr(" \\");
-	rend->newl();
-	rend->PixelPosition.x = startX;
-	rend->putstr("  Reserved RAM: ");
-	rend->putstr(to_string(reserved_memory / 1024));
-	rend->putstr(" kB (");
-	rend->putstr(to_string(reserved_memory / 1024 / 1024));
-	rend->putstr(" mB)");
-	rend->newl();
-	rend->PixelPosition.x = startX;
-}
-
 void PageFrameAllocator::ReadEfiMemoryMap(EFI_MEMORY_DESCRIPTOR* map, size_t mapSize, size_t mapDescSize) {
 	if (initialized) { return; }
 	uint64_t mapEntries = mapSize / mapDescSize;
@@ -170,3 +133,40 @@ void PageFrameAllocator::ReservePages(void* addr, uint64_t numPages) {
 uint64_t PageFrameAllocator::GetFreeRAM() { return free_memory; }
 uint64_t PageFrameAllocator::GetUsedRAM() { return used_memory; }
 uint64_t PageFrameAllocator::GetReservedRAM() { return reserved_memory; }
+
+void PageFrameAllocator::PrintMemoryInfo() {
+	unsigned int startX = gRend.PixelPosition.x;
+	gRend.putstr("Memory Info:");
+	gRend.newl();
+	gRend.PixelPosition.x = startX;
+	gRend.putstr("|\\");
+	gRend.newl();
+	gRend.PixelPosition.x = startX;
+	gRend.putstr("| Free RAM: ");
+	gRend.putstr(to_string(free_memory / 1024));
+	gRend.putstr(" kB (");
+	gRend.putstr(to_string(free_memory / 1024 / 1024));
+	gRend.putstr(" mB)");
+	gRend.newl();
+	gRend.PixelPosition.x = startX;
+	gRend.putstr("|\\");
+	gRend.newl();
+	gRend.PixelPosition.x = startX;
+	gRend.putstr("| Used RAM: ");
+	gRend.putstr(to_string(used_memory / 1024));
+	gRend.putstr(" kB (");
+	gRend.putstr(to_string(used_memory / 1024 / 1024));
+	gRend.putstr(" mB)");
+	gRend.newl();
+	gRend.PixelPosition.x = startX;
+	gRend.putstr(" \\");
+	gRend.newl();
+	gRend.PixelPosition.x = startX;
+	gRend.putstr("  Reserved RAM: ");
+	gRend.putstr(to_string(reserved_memory / 1024));
+	gRend.putstr(" kB (");
+	gRend.putstr(to_string(reserved_memory / 1024 / 1024));
+	gRend.putstr(" mB)");
+	gRend.newl();
+	gRend.PixelPosition.x = startX;
+}
