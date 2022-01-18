@@ -34,12 +34,8 @@ void BasicRenderer::crlf(unsigned int offset) {
 }
 
 void BasicRenderer::drawrect(Vector2 size, unsigned int color) {
-	if (DrawPos.y < 0) {
-		DrawPos.y = 0;
-	}
-	if (DrawPos.x < 0) {
-		DrawPos.x = 0;
-	}
+	if (DrawPos.x < 0) { DrawPos.x = 0; }
+	if (DrawPos.y < 0) { DrawPos.y = 0; }
 	unsigned int diffX = Target->PixelWidth - DrawPos.x;
 	unsigned int diffY = Target->PixelHeight - DrawPos.y;
 	if (diffX < size.x) { size.x = diffX; }
