@@ -17,6 +17,7 @@ struct BootInfo {
 	EFI_MEMORY_DESCRIPTOR* map;
 	uint64_t mapSize;
 	uint64_t mapDescSize;
+	void* rsdp;
 };
 
 struct KernelInfo {

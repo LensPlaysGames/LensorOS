@@ -19,9 +19,15 @@ namespace QWERTY {
          0 , ' '
     };
 
+	bool isalnum(uint8_t scancode) {
+		return (scancode >= 16 && scancode <= 25)
+			|| (scancode >= 30 && scancode <= 38)
+			|| (scancode >= 44 && scancode <= 50);
+	}
+
 	char Translate(uint8_t scancode, bool capital) {
 		if (scancode > 58) return 0;
-		if (capital) {
+		if (capital && isalnum(scancode)) {
 			return ASCII[scancode] - 32;
 		}
 		return ASCII[scancode];

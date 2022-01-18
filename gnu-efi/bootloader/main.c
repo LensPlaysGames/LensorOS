@@ -16,6 +16,13 @@ int memcmp (const void* aptr, const void* bptr, size_t n) {
 	return 0;
 }
 
+UINTN strcmp (CHAR8* a, CHAR8* b, UINTN length) {
+	for (UINTN i = 0; i < length; i++) {
+		if (*a != *b) { return 0; }
+	}
+	return 1;
+}
+
 EFI_FILE* LoadFile(EFI_FILE* dir, CHAR16* path, EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
 	EFI_FILE* loadedFile;
 	
@@ -127,6 +134,7 @@ typedef struct {
   EFI_MEMORY_DESCRIPTOR* map;
   UINTN mapSize;
   UINTN mapDescSize;
+  void* RSDP;
 } BootInfo;
 
 EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
@@ -239,12 +247,27 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
 	  SystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
 	}
 
+	EFI_CONFIGURATION_TABLE* ConfigTable = SystemTable->ConfigurationTable;
+	void* rsdp = NULL;
+	// ACPI 2.0
+	EFI_GUID ACPI2TableGuid = ACPI_20_TABLE_GUID;
+	for (UINTN index = 0; index < SystemTable->NumberOfTableEntries; index++) {
+		if (CompareGuid(&ConfigTable[index].VendorGuid, &ACPI2TableGuid)) {
+			// Found ACPI 2.0 Table in System Table.
+			if (strcmp((CHAR8*)"RSD PTR ", (CHAR8*)ConfigTable->VendorTable, 8)) {
+				rsdp = (void*)ConfigTable->VendorTable;
+			}
+		}
+		ConfigTable++;
+	}
+
 	BootInfo info;
 	info.framebuffer = gop_fb;
 	info.font = dflt_font;
 	info.map = Map;
 	info.mapSize = MapSize;
 	info.mapDescSize = DescriptorSize;
+	info.RSDP = rsdp;
 
 	// Exit boot services: free system resources dedicated to UEFI boot services,
 	//   as well as prevent UEFI from shutting down automatically after 5 minutes.
