@@ -37,3 +37,7 @@
 
 # Kernel Build Stuff
 /kernel/bin/
+
+# Local resources
+/fonts/
+/usb_boot/
