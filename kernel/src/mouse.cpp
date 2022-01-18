@@ -113,8 +113,6 @@ uint8_t MouseCursor[] = {
 	0b00000000, 0b00000000
 };
 
-uint8_t* UnderMouseCursorBuffer {nullptr};
-
 void ProcessMousePacket() {
 	// ONLY PROCESS A PACKET THAT IS READY.
 	if (mouse_packet_ready == false) {
@@ -177,19 +175,10 @@ void ProcessMousePacket() {
 
 	// CACHE GLOBAL DRAW POSITION.
 	Vector2 cachedPos = gRend.DrawPos;
-	
-	// CLEAR OLD MOUSE CURSOR TO BUFFER.
-	gRend.DrawPos = gOldMousePosition;
-	// if (UnderMouseCursorBuffer != nullptr) {
-	//  	gRend.drawbmp({MouseCursorSize, MouseCursorSize}, &UnderMouseCursorBuffer[0]);
-	// }
-	
 	// DRAW MOUSE CUSOR AT NEW POSITION.
 	gRend.DrawPos = gMousePosition;
-	// UnderMouseCursorBuffer = gRend.readframebuffersmall({MouseCursorSize, MouseCursorSize});
-	gRend.drawbmp({MouseCursorSize, MouseCursorSize}, &MouseCursor[0], 0xffff0000);
+	gRend.drawbmp({MouseCursorSize, MouseCursorSize}, &MouseCursor[0], 0xffffffff);
 	gOldMousePosition = gMousePosition;
-	
 	// RETURN GLOBAL DRAW POSITION.
 	gRend.DrawPos = cachedPos;
 	// PACKET USED; DISCARD READY STATE.

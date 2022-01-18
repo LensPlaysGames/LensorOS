@@ -71,12 +71,12 @@ public:
 	// '\r' then add offset + '\n'
 	void crlf(unsigned int offset);
 
-	uint8_t* readframebuffersmall(Vector2 size);
-	
-	// Use font to draw a character to the screen (don't advance).
-	void drawchar(char c, unsigned int color = 0xffffffff);
+	// Draw `size` of rectangle as `color`.
 	void drawrect(Vector2 size, unsigned int color = 0xffffffff);
+	// Draw `size` of `bitmap` as `color`.
 	void drawbmp(Vector2 size, uint8_t* bitmap, unsigned int color = 0xffffffff);
+	// Use PSF1 bitmap font to draw a character to the screen (don't advance).
+	void drawchar(char c, unsigned int color = 0xffffffff);
 	
 	// Use font to put a character to the screen (advance draw position).
 	void putchar(char c, unsigned int color = 0xffffffff);
