@@ -68,6 +68,9 @@ void BasicRenderer::drawbmp(Vector2 size, uint8_t* bitmap, unsigned int color) {
 			if ((bitmap[byte] & (0b10000000 >> ((x - DrawPos.x) % 8))) > 0) {
 			    *(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
 			}
+			else {
+				*(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = BackgroundColor;
+			}
 		}
 	}
 }
