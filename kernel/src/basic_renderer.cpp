@@ -83,6 +83,9 @@ void BasicRenderer::drawchar(char c, unsigned int color) {
 	{
 		DrawPos.y = 0;
 	}
+	// Clear space for character.
+	drawrect({8, Font->PSF1_Header->CharacterSize}, BackgroundColor);
+	// Draw character.
 	drawbmp({8, Font->PSF1_Header->CharacterSize},
 			(uint8_t*)Font->GlyphBuffer + (c * Font->PSF1_Header->CharacterSize),
 			color);

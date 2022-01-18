@@ -29,7 +29,18 @@ struct Framebuffer {
 const unsigned int BytesPerPixel = 4;
 
 class BasicRenderer {
+/* IMPROVEMENTS
+     - Render to dummy framebuffer (arbitrary write to active framebuffer memory is slower).
+	   - Framebuffer* Render = framebuffer that is currently being rendered (don't write to it)
+	     - Allocate memory for Render framebuffer in memory in kUtility (how? and what does anything there actually do?)
+	   - swap() = swap the target framebuffer and render framebuffer's contents.
+	     - Call swap() anytime display should be updated.
+	 - "List" of RenderObjects that are rendered in a `render()` function.
+	   - RenderObject struct = data to draw object (DrawPos, Size, uint8_t* Bitmap, Color, Size).
+	   - render() = iterate object list, drawbmp of each one.
+*/
 public:
+	// Target = framebuffer to draw to in memory
 	Framebuffer* Target          {nullptr};
 	PSF1_FONT*   Font            {nullptr};
 	Vector2      DrawPos         {0, 0};
@@ -37,8 +48,8 @@ public:
 	unsigned int BackgroundColor {0x00000000};
 
 	BasicRenderer() {}
-	BasicRenderer(Framebuffer* fbuffer, PSF1_FONT* f) {
-		Target = fbuffer;
+	BasicRenderer(Framebuffer* target, PSF1_FONT* f) {
+		Target = target;
 		Font = f;
 	}
 

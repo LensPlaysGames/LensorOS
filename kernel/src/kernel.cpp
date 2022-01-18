@@ -1,12 +1,12 @@
 #include "kUtility.h"
 
 // TODO:
-// - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE)
+// - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
 
 extern "C" void _start(BootInfo* bInfo) {
 	KernelInfo info = InitializeKernel(bInfo);
 	gRend.putstr("LensorOS kernel initialized successfully");
-
+	gRend.crlf();
 	// A FACE :)
 	// left eye
 	gRend.DrawPos = {420, 420};

@@ -114,15 +114,26 @@ uint8_t MouseCursor[] = {
 };
 
 void ProcessMousePacket() {
-	// ONLY PROCESS A PACKET THAT IS READY.
+	// ONLY PROCESS A PACKET THAT IS READY
 	if (mouse_packet_ready == false) {
 		return;
 	}
+	// MOUSE BUTTONS
+	if (mouse_packet[0] & PS2LBTN) {
+		// LEFT CLICK
+	}
+	else if (mouse_packet[0] & PS2RBTN) {
+		// RIGHT CLICK
+	}
+	else if (mouse_packet[0] & PS2MBTN) {
+		// MIDDLE (SCROLL WHEEL) CLICK
+	}
+	// MOUSE MOVEMENT
 	bool isXNegative  {false};
 	bool isYNegative  {false};
 	bool xOverflow    {false};
 	bool yOverflow    {false};
-	// DECODE BIT-FLAGS FROM FIRST PACKET.
+	// DECODE BIT-FLAGS FROM FIRST PACKET
 	if (mouse_packet[0] & PS2XSIGN) {
 		isXNegative = true;
 	}
@@ -135,7 +146,7 @@ void ProcessMousePacket() {
 	if (mouse_packet[0] & PS2YOVERFLOW) {
 		yOverflow = true;
 	}
-	// ACCUMULATE X MOUSE POSITION FROM SECOND PACKET.
+	// ACCUMULATE X MOUSE POSITION FROM SECOND PACKET
 	if (isXNegative) {
 		mouse_packet[1] = 256 - mouse_packet[1];
 		gMousePosition.x -= mouse_packet[1];
@@ -149,7 +160,7 @@ void ProcessMousePacket() {
 			gMousePosition.x += 255;
 		}
 	}
-	// ACCUMULATE Y MOUSE POSITION FROM THIRD PACKET.
+	// ACCUMULATE Y MOUSE POSITION FROM THIRD PACKET
 	if (isYNegative) {
 		mouse_packet[2] = 256 - mouse_packet[2];
 		gMousePosition.y += mouse_packet[2];
@@ -173,14 +184,14 @@ void ProcessMousePacket() {
 		gMousePosition.y = gRend.Target->PixelHeight-1;
 	}
 
-	// CACHE GLOBAL DRAW POSITION.
+	// CACHE GLOBAL DRAW POSITION
 	Vector2 cachedPos = gRend.DrawPos;
-	// DRAW MOUSE CUSOR AT NEW POSITION.
+	// DRAW MOUSE CUSOR AT NEW POSITION
 	gRend.DrawPos = gMousePosition;
 	gRend.drawbmp({MouseCursorSize, MouseCursorSize}, &MouseCursor[0], 0xffffffff);
 	gOldMousePosition = gMousePosition;
-	// RETURN GLOBAL DRAW POSITION.
+	// RETURN GLOBAL DRAW POSITION
 	gRend.DrawPos = cachedPos;
-	// PACKET USED; DISCARD READY STATE.
+	// PACKET USED; DISCARD READY STATE
 	mouse_packet_ready = false;
 }

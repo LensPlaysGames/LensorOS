@@ -96,9 +96,8 @@ char* to_hexstring(uint64_t value) {
 		tmp = ((*ptr & 0xF0) >> 4);
 		hex_to_string_buf[size - (i * 2 + 1)] = tmp + (tmp > 9 ? 55 : '0');
 		tmp = ((*ptr & 0x0F));
-		hex_to_string_buf[size - (i * 2)] = tmp + (tmp > 9 ? 55 : '0');
+		hex_to_string_buf[size - (i * 2)]     = tmp + (tmp > 9 ? 55 : '0');
 	}
-
 	hex_to_string_buf[size + 1] = 0;
 	return hex_to_string_buf;
 }
