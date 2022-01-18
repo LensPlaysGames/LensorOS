@@ -2,6 +2,7 @@
 
 Vector2 gTextPosition;
 
+bool isCAPS;
 bool isLSHIFT;
 bool isRSHIFT;
 
@@ -27,19 +28,30 @@ void HandleKeyboard(uint8_t scancode) {
 		gTextPosition = gRend.DrawPos;
 		gRend.DrawPos = cachedPos;
 		return;
+	case ENTER + 0x80:
+		return;
 	case BACKSPACE:
 	 	gRend.clearchar();
 		gTextPosition = gRend.DrawPos;
 		gRend.DrawPos = cachedPos;
+	 	return;
+	case BACKSPACE + 0x80:
 	 	return;
 	case SPACE:
 		gRend.putchar(' ');
 		gTextPosition = gRend.DrawPos;
 		gRend.DrawPos = cachedPos;
 		return;
+	case SPACE + 0x80:
+		return;
+	case CAPSLOCK:
+		isCAPS = !isCAPS;
+		return;
+	case CAPSLOCK + 0x80:
+		return;
 	}
 
-	char ascii = QWERTY::Translate(scancode, isLSHIFT | isRSHIFT);
+	char ascii = QWERTY::Translate(scancode, isLSHIFT | isRSHIFT | isCAPS);
 	if (ascii != 0) {
 		gRend.putchar(ascii);
 	}
