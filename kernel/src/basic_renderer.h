@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "math.h"
+#include "cstr.h"
 
 typedef struct {
 	// Magic bytes to indicate PSF1 font type	
@@ -68,11 +69,14 @@ public:
 	// '\r' + '\n'
 	void crlf();
 	// '\r' then add offset + '\n'
-	void crlf(uint16_t offset);
+	void crlf(unsigned int offset);
+
+	uint8_t* readframebuffersmall(Vector2 size);
 	
 	// Use font to draw a character to the screen (don't advance).
 	void drawchar(char c, unsigned int color = 0xffffffff);
 	void drawrect(Vector2 size, unsigned int color = 0xffffffff);
+	void drawbmp(Vector2 size, uint8_t* bitmap, unsigned int color = 0xffffffff);
 	
 	// Use font to put a character to the screen (advance draw position).
 	void putchar(char c, unsigned int color = 0xffffffff);

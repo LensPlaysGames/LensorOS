@@ -2,6 +2,7 @@
 
 uint8_t gMouseID;
 Vector2 gMousePosition = {0, 0};
+Vector2 gOldMousePosition = {0, 0};
 
 void MouseWait() {
 	uint64_t timeout = 100000;
@@ -92,6 +93,28 @@ void HandlePS2Mouse(uint8_t data) {
 	}
 }
 
+#define MouseCursorSize 16
+uint8_t MouseCursor[] = {
+	0b10000000, 0b00000000,
+	0b11000000, 0b00000000,
+	0b11100000, 0b00000000,
+	0b11110000, 0b00000000,
+	0b11111000, 0b00000000,
+	0b11111100, 0b00000000,
+	0b11111110, 0b00000000,
+	0b11111111, 0b00000000,
+	0b11111111, 0b10000000,
+	0b11111111, 0b11000000,
+	0b11111111, 0b00000000,
+	0b11111100, 0b00000000,
+	0b11110000, 0b00000000,
+	0b11000000, 0b00000000,
+	0b00000000, 0b00000000,
+	0b00000000, 0b00000000
+};
+
+uint8_t* UnderMouseCursorBuffer {nullptr};
+
 void ProcessMousePacket() {
 	// ONLY PROCESS A PACKET THAT IS READY.
 	if (mouse_packet_ready == false) {
@@ -151,9 +174,24 @@ void ProcessMousePacket() {
 	else if (gMousePosition.y > gRend.Target->PixelHeight-1) {
 		gMousePosition.y = gRend.Target->PixelHeight-1;
 	}
-	// DRAW MOUSE CURSOR.
+
+	// CACHE GLOBAL DRAW POSITION.
+	Vector2 cachedPos = gRend.DrawPos;
+	
+	// CLEAR OLD MOUSE CURSOR TO BUFFER.
+	gRend.DrawPos = gOldMousePosition;
+	// if (UnderMouseCursorBuffer != nullptr) {
+	//  	gRend.drawbmp({MouseCursorSize, MouseCursorSize}, &UnderMouseCursorBuffer[0]);
+	// }
+	
+	// DRAW MOUSE CUSOR AT NEW POSITION.
 	gRend.DrawPos = gMousePosition;
-	gRend.drawchar('A');
-	// PACKET USED, DISCARD READY STATE.
+	// UnderMouseCursorBuffer = gRend.readframebuffersmall({MouseCursorSize, MouseCursorSize});
+	gRend.drawbmp({MouseCursorSize, MouseCursorSize}, &MouseCursor[0], 0xffff0000);
+	gOldMousePosition = gMousePosition;
+	
+	// RETURN GLOBAL DRAW POSITION.
+	gRend.DrawPos = cachedPos;
+	// PACKET USED; DISCARD READY STATE.
 	mouse_packet_ready = false;
 }

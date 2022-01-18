@@ -1,10 +1,14 @@
 #include "keyboard.h"
 
+Vector2 gTextPosition;
+
 bool isLSHIFT;
 bool isRSHIFT;
 
 void HandleKeyboard(uint8_t scancode) {
-	// TODO: Check what type of keyboard it is.
+	Vector2 cachedPos = gRend.DrawPos;
+	gRend.DrawPos = gTextPosition;
+	
 	switch (scancode) {
 	case LSHIFT:
 		isLSHIFT = true;
@@ -20,12 +24,18 @@ void HandleKeyboard(uint8_t scancode) {
 		return;
 	case ENTER:
 		gRend.crlf();
+		gTextPosition = gRend.DrawPos;
+		gRend.DrawPos = cachedPos;
 		return;
 	case BACKSPACE:
 	 	gRend.clearchar();
+		gTextPosition = gRend.DrawPos;
+		gRend.DrawPos = cachedPos;
 	 	return;
 	case SPACE:
 		gRend.putchar(' ');
+		gTextPosition = gRend.DrawPos;
+		gRend.DrawPos = cachedPos;
 		return;
 	}
 
@@ -33,4 +43,7 @@ void HandleKeyboard(uint8_t scancode) {
 	if (ascii != 0) {
 		gRend.putchar(ascii);
 	}
+	
+	gTextPosition = gRend.DrawPos;
+	gRend.DrawPos = cachedPos;
 }

@@ -24,5 +24,6 @@ void ProcessMousePacket();
 //   4 = 3 + 4th button, 5th button
 extern uint8_t gMouseID;
 extern Vector2 gMousePosition;
+extern Vector2 gOldMousePosition;
 
 #endif

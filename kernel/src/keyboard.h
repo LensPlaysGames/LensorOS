@@ -7,4 +7,6 @@
 
 void HandleKeyboard(uint8_t scancode);
 
+extern Vector2 gTextPosition;
+
 #endif
