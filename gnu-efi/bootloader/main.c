@@ -6,6 +6,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+EFI_HANDLE        gImageHandle;
+EFI_SYSTEM_TABLE* gSystemTable;
+
 int memcmp (const void* aptr, const void* bptr, size_t n) {
 	const unsigned char* a = aptr;
 	const unsigned char* b = bptr;
@@ -23,19 +26,25 @@ UINTN strcmp (CHAR8* a, CHAR8* b, UINTN length) {
 	return 1;
 }
 
-EFI_FILE* LoadFile(EFI_FILE* dir, CHAR16* path, EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
+// LOAD FILE FROM EFI FILE SYSTEM
+EFI_FILE* LoadFile(EFI_FILE* dir, CHAR16* path) {
 	EFI_FILE* loadedFile;
-	
-	EFI_LOADED_IMAGE_PROTOCOL* loadedImage;
-	SystemTable->BootServices->HandleProtocol(ImageHandle,
-											  &gEfiLoadedImageProtocolGuid,
-											  (void**)&loadedImage);
-	
-	EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fileSystem;
-	SystemTable->BootServices->HandleProtocol(loadedImage->DeviceHandle,
-											  &gEfiSimpleFileSystemProtocolGuid,
-											  (void**)&fileSystem);
-
+	static EFI_LOADED_IMAGE_PROTOCOL* loadedImage;
+	if (loadedImage == NULL) {
+		gSystemTable
+			->BootServices
+			->HandleProtocol(gImageHandle,
+							 &gEfiLoadedImageProtocolGuid,
+							 (void**)&loadedImage);
+	}
+	static EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fileSystem;
+	if (fileSystem == NULL) {
+		gSystemTable
+			->BootServices
+			->HandleProtocol(loadedImage->DeviceHandle,
+							 &gEfiSimpleFileSystemProtocolGuid,
+							 (void**)&fileSystem);
+	}
 	if (dir == NULL) {
 		fileSystem->OpenVolume(fileSystem, &dir);
 	}
@@ -71,12 +80,12 @@ typedef struct {
 	void* GlyphBuffer;
 } PSF1_FONT;
 
-PSF1_FONT* LoadPSF1Font(EFI_FILE* dir, CHAR16* path, EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
-	EFI_FILE* font = LoadFile(dir, path, ImageHandle, SystemTable);
+PSF1_FONT* LoadPSF1Font(EFI_FILE* dir, CHAR16* path) {
+	EFI_FILE* font = LoadFile(dir, path);
 	if (font == NULL) { return NULL; }
 
 	PSF1_HEADER* font_hdr;
-	SystemTable->BootServices->AllocatePool(EfiLoaderData, sizeof(PSF1_HEADER), (void**)&font_hdr);
+	gSystemTable->BootServices->AllocatePool(EfiLoaderData, sizeof(PSF1_HEADER), (void**)&font_hdr);
 	UINTN size = sizeof(PSF1_HEADER);
 	font->Read(font, &size, font_hdr);
 
@@ -97,11 +106,11 @@ PSF1_FONT* LoadPSF1Font(EFI_FILE* dir, CHAR16* path, EFI_HANDLE ImageHandle, EFI
 	void* glyphBuffer;
 	// Eat header
 	font->SetPosition(font, sizeof(PSF1_HEADER));
-	SystemTable->BootServices->AllocatePool(EfiLoaderData, glyphBufferSize, (void**)&glyphBuffer);
+	gSystemTable->BootServices->AllocatePool(EfiLoaderData, glyphBufferSize, (void**)&glyphBuffer);
 	font->Read(font, &glyphBufferSize, glyphBuffer);
 
 	PSF1_FONT* final_font;
-	SystemTable->BootServices->AllocatePool(EfiLoaderData, sizeof(PSF1_FONT), (void**)&final_font);
+	gSystemTable->BootServices->AllocatePool(EfiLoaderData, sizeof(PSF1_FONT), (void**)&final_font);
 	final_font->PSF1_Header = font_hdr;
 	final_font->GlyphBuffer = glyphBuffer;
 	return final_font;
@@ -137,13 +146,23 @@ typedef struct {
   void* RSDP;
 } BootInfo;
 
-EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
-	InitializeLib(ImageHandle, SystemTable);
+// ENTRY POINT
+EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
+	gImageHandle = IH;
+	gSystemTable = ST;
+	
+	InitializeLib(gImageHandle, gSystemTable);
 
-	Print(L"LensorOS BOOTLOADER\n");
+	Print(L"!==-- LensorOS BOOTLOADER --==!\n");
 
-	// FIND KERNEL
-	EFI_FILE* kernel = LoadFile(NULL, L"kernel.elf", ImageHandle, SystemTable);
+	// FIND LensorOS DIRECTORY
+	EFI_FILE* bin = LoadFile(NULL, L"LensorOS");
+	if (bin == NULL) {
+		Print(L"[ERR]: Could not load OS Directory\n");
+		return 1;
+	}
+	// FIND KERNEL WITHIN LensorOS DIRECTORY
+	EFI_FILE* kernel = LoadFile(bin, L"kernel.elf");
 	if (kernel == NULL) {
 		Print(L"[ERR]: Could not load kernel\n");
 		return 1;
@@ -159,7 +178,7 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
 		// Get size of kernel.
 		kernel->GetInfo(kernel, &gEfiFileInfoGuid, &fileInfoSize, NULL);
 		// Allocate memory pool for kernel.
-		SystemTable->BootServices->AllocatePool(EfiLoaderData,
+		gSystemTable->BootServices->AllocatePool(EfiLoaderData,
 												fileInfoSize,
 												(void**)&fileInfo);
 		// Fill memory with information from loaded kernel file.
@@ -188,7 +207,7 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
 	{
 		kernel->SetPosition(kernel, elf_header.e_phoff);
 		UINTN size = elf_header.e_phnum * elf_header.e_phentsize;
-		SystemTable->BootServices->AllocatePool(EfiLoaderData, size, (void**)&program_hdrs);
+		gSystemTable->BootServices->AllocatePool(EfiLoaderData, size, (void**)&program_hdrs);
 		kernel->Read(kernel, &size, program_hdrs);
 	}
 
@@ -201,7 +220,7 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
 			// Allocate pages for program
 			int pages = (phdr->p_memsz + 0x1000 - 1) / 0x1000;
 			Elf64_Addr segment = phdr->p_paddr;
-			SystemTable->BootServices->AllocatePages(AllocateAddress, EfiLoaderData, pages, &segment);
+			gSystemTable->BootServices->AllocatePages(AllocateAddress, EfiLoaderData, pages, &segment);
 			kernel->SetPosition(kernel, phdr->p_offset);
 			UINTN size = phdr->p_filesz;
 			kernel->Read(kernel, &size, (void*)segment);
@@ -225,14 +244,16 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
 		  gop_fb->PixelsPerScanLine);
 
 	// Read default font from root directory.
-	PSF1_FONT* dflt_font = LoadPSF1Font(NULL, L"zap-vga16.psf", ImageHandle, SystemTable);
+	PSF1_FONT* dflt_font = LoadPSF1Font(bin, L"dfltfont.psf");
 	if (dflt_font == NULL) {
 		Print(L"[ERR]: Failed to load default font\n");
 	}
 	else {
 		Print(L"[LOG]: Default font loaded successfully\n"
 			  L"Default Font (PSF1) Info:"
+			  L"  Mode:           %d\n"
 			  L"  Character Size: 8x%d\n",
+			  dflt_font->PSF1_Header->Mode,
 			  dflt_font->PSF1_Header->CharacterSize);
 	}
 
@@ -242,16 +263,16 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
 	UINTN DescriptorSize;
 	UINT32 DescriptorVersion;
 	{
-	  SystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
-	  SystemTable->BootServices->AllocatePool(EfiLoaderData, MapSize, (void**)&Map);
-	  SystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
+	  gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
+	  gSystemTable->BootServices->AllocatePool(EfiLoaderData, MapSize, (void**)&Map);
+	  gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
 	}
 
-	EFI_CONFIGURATION_TABLE* ConfigTable = SystemTable->ConfigurationTable;
+	EFI_CONFIGURATION_TABLE* ConfigTable = gSystemTable->ConfigurationTable;
 	void* rsdp = NULL;
 	// ACPI 2.0
 	EFI_GUID ACPI2TableGuid = ACPI_20_TABLE_GUID;
-	for (UINTN index = 0; index < SystemTable->NumberOfTableEntries; index++) {
+	for (UINTN index = 0; index < gSystemTable->NumberOfTableEntries; index++) {
 		if (CompareGuid(&ConfigTable[index].VendorGuid, &ACPI2TableGuid)) {
 			// Found ACPI 2.0 Table in System Table.
 			if (strcmp((CHAR8*)"RSD PTR ", (CHAR8*)ConfigTable->VendorTable, 8)) {
@@ -271,7 +292,7 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
 
 	// Exit boot services: free system resources dedicated to UEFI boot services,
 	//   as well as prevent UEFI from shutting down automatically after 5 minutes.
-	SystemTable->BootServices->ExitBootServices(ImageHandle, MapKey);
+	gSystemTable->BootServices->ExitBootServices(gImageHandle, MapKey);
 
 	// Define kernel entry point.
 	void (*KernelStart)(BootInfo*) = ((__attribute__((sysv_abi)) void (*)(BootInfo*)) elf_header.e_entry);
