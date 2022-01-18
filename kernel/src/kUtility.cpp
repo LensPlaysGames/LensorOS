@@ -13,11 +13,8 @@ void PrepareMemory(BootInfo* bInfo) {
 	gAlloc.LockPages(&_KernelStart, kernelPagesNeeded);
 	// PAGE MAP LEVEL FOUR (see paging.h).
     PageTable* PML4 = (PageTable*)gAlloc.RequestPage();
-	// Init PML4 page to 0.
-	memset(PML4, 0, 0x1000);
-	// This line is necessary to fix a bug in QEMU regarding a rainbow pattern at the top of the screen.
-	// I don't know why this is needed; I tried every value starting at 1 until it worked.
-	gAlloc.LockPages(PML4, 0x100);
+	gAlloc.LockPages((void*)PML4, 0x100);
+	// PAGE TABLE MANAGER
     PTM = PageTableManager(PML4);
 	kInfo.PTM = &PTM;
 	// Map all physical RAM addresses to virtual addresses, store them in the PML4.
