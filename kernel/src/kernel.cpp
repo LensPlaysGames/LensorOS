@@ -24,6 +24,8 @@ extern "C" void _start(BootInfo* bInfo) {
 	gRend.DrawPos = {400, 520};
 	gRend.drawrect({182, 20}, 0xff00ffff);
 
+	gRend.swap();
+
 	// MAIN KERNEL LOOP.
 	while (true) {
 		ProcessMousePacket();

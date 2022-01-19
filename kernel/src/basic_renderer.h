@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "cstr.h"
 #include "math.h"
+#include "memory.h"
 
 typedef struct {
 	// Magic bytes to indicate PSF1 font type	
@@ -41,17 +42,24 @@ class BasicRenderer {
 */
 public:
 	// Target = framebuffer to draw to in memory
+	Framebuffer* Render          {nullptr};
 	Framebuffer* Target          {nullptr};
+	Framebuffer* Copy            {nullptr};
 	PSF1_FONT*   Font            {nullptr};
 	Vector2      DrawPos         {0, 0};
 	// I = ignore                 0xIIRRGGBB
 	unsigned int BackgroundColor {0x00000000};
 
 	BasicRenderer() {}
-	BasicRenderer(Framebuffer* render, PSF1_FONT* f) {
-		Target = render;
+	BasicRenderer(Framebuffer* render, Framebuffer* target, Framebuffer* copy, PSF1_FONT* f) {
+		Render = render;
+		Target = target;
+		Copy = copy;
 		Font = f;
 	}
+
+	// SWAP MEMORY CONTENTS OF RENDER AND TARGET
+	void swap();
 	
 	// Change every pixel in the target framebuffer to BackgroundColor.
 	void clear() {

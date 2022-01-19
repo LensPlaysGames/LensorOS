@@ -82,6 +82,9 @@ void PrintMemoryInfo() {
 	gRend.crlf(startX);
 }
 
+Framebuffer target;
+Framebuffer copy;
+
 KernelInfo InitializeKernel(BootInfo* bInfo) {
 	// DISABLE INTERRUPTS.
 	asm ("cli");
@@ -99,14 +102,26 @@ KernelInfo InitializeKernel(BootInfo* bInfo) {
 	// GOP = Graphics Output Protocol.
 	uint64_t fbBase = (uint64_t)bInfo->framebuffer->BaseAddress;
 	uint64_t fbSize = (uint64_t)bInfo->framebuffer->BufferSize + 0x1000;
+	uint64_t fbPages = fbSize / 0x1000 + 1;
 	// Allocate pages in bitmap.
-	gAlloc.LockPages(bInfo->framebuffer->BaseAddress, fbSize / 0x1000 + 1);
+	gAlloc.LockPages(bInfo->framebuffer->BaseAddress, fbPages);
 	// Map active framebuffer physical address to virtual addresses 1:1.
 	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
 		PTM.MapMemory((void*)t, (void*)t);
 	}
-
-	gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
+	target.BaseAddress = gAlloc.RequestPage();
+	gAlloc.LockPages(target.BaseAddress, fbPages);
+    fbBase = (uint64_t)target.BaseAddress;
+	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
+		PTM.MapMemory((void*)t, (void*)t);
+	}
+	copy.BaseAddress = gAlloc.RequestPage();
+	gAlloc.LockPages(copy.BaseAddress, fbPages);
+    fbBase = (uint64_t)copy.BaseAddress;
+	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
+		PTM.MapMemory((void*)t, (void*)t);
+	}
+	gRend = BasicRenderer(bInfo->framebuffer, &target, &copy, bInfo->font);
 	// Initialize screen to background color.
 	gRend.clear();
 	// GPLv3 LICENSE REQUIREMENT (interactive terminal must print cpy notice).
