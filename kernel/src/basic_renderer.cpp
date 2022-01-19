@@ -5,10 +5,7 @@ BasicRenderer gRend;
 
 // Swap memory contents of framebuffer between Target and Render.
 void BasicRenderer::swap() {
-	// Render -> Copy, Target -> Render, Copy -> Target
-   	memcpy(Render->BaseAddress, Copy->BaseAddress,   Render->BufferSize);
 	memcpy(Target->BaseAddress, Render->BaseAddress, Render->BufferSize);
-   	memcpy(Copy->BaseAddress,   Target->BaseAddress, Render->BufferSize);
 }
 
 // Carriage return ('\r')

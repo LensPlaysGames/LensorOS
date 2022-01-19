@@ -29,6 +29,7 @@ extern "C" void _start(BootInfo* bInfo) {
 	// MAIN KERNEL LOOP.
 	while (true) {
 		ProcessMousePacket();
+		gRend.swap();
 	}
 
 	// HALT LOOP (KERNEL INACTIVE).

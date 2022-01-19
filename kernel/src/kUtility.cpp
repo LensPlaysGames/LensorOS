@@ -83,7 +83,6 @@ void PrintMemoryInfo() {
 }
 
 Framebuffer target;
-Framebuffer copy;
 
 KernelInfo InitializeKernel(BootInfo* bInfo) {
 	// DISABLE INTERRUPTS.
@@ -98,7 +97,6 @@ KernelInfo InitializeKernel(BootInfo* bInfo) {
 	PrepareMemory(bInfo);
 	// SETUP GOP RENDERER.
 	target = *bInfo->framebuffer;
-	copy = *bInfo->framebuffer;
 	// GOP = Graphics Output Protocol.
 	uint64_t fbBase = (uint64_t)bInfo->framebuffer->BaseAddress;
 	uint64_t fbSize = (uint64_t)bInfo->framebuffer->BufferSize + 0x1000;
@@ -115,13 +113,7 @@ KernelInfo InitializeKernel(BootInfo* bInfo) {
 	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
 		PTM.MapMemory((void*)t, (void*)t);
 	}
-	copy.BaseAddress = gAlloc.RequestPage();
-	gAlloc.LockPages(copy.BaseAddress, fbPages);
-    fbBase = (uint64_t)copy.BaseAddress;
-	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
-		PTM.MapMemory((void*)t, (void*)t);
-	}
-	gRend = BasicRenderer(bInfo->framebuffer, &target, &copy, bInfo->font);
+	gRend = BasicRenderer(bInfo->framebuffer, &target, bInfo->font);
 	// Initialize screen to background color.
 	gRend.clear();
 	// GPLv3 LICENSE REQUIREMENT (interactive terminal must print cpy notice).

@@ -8,8 +8,6 @@ bool isRSHIFT;
 
 void HandleKeyboard(uint8_t scancode) {
 	Vector2 cachedPos = gRend.DrawPos;
-	gRend.DrawPos = gTextPosition;
-	
 	switch (scancode) {
 	case LSHIFT:
 		isLSHIFT = true;
@@ -24,6 +22,7 @@ void HandleKeyboard(uint8_t scancode) {
 		isRSHIFT = false;
 		return;
 	case ENTER:
+		gRend.DrawPos = gTextPosition;
 		gRend.crlf();
 		gTextPosition = gRend.DrawPos;
 		gRend.DrawPos = cachedPos;
@@ -31,6 +30,7 @@ void HandleKeyboard(uint8_t scancode) {
 	case ENTER + 0x80:
 		return;
 	case BACKSPACE:
+		gRend.DrawPos = gTextPosition;
 	 	gRend.clearchar();
 		gTextPosition = gRend.DrawPos;
 		gRend.DrawPos = cachedPos;
@@ -38,6 +38,7 @@ void HandleKeyboard(uint8_t scancode) {
 	case BACKSPACE + 0x80:
 	 	return;
 	case SPACE:
+		gRend.DrawPos = gTextPosition;
 		gRend.putchar(' ');
 		gTextPosition = gRend.DrawPos;
 		gRend.DrawPos = cachedPos;
@@ -53,9 +54,9 @@ void HandleKeyboard(uint8_t scancode) {
 
 	char ascii = QWERTY::Translate(scancode, isLSHIFT | isRSHIFT | isCAPS);
 	if (ascii != 0) {
+		gRend.DrawPos = gTextPosition;
 		gRend.putchar(ascii);
+		gTextPosition = gRend.DrawPos;
+		gRend.DrawPos = cachedPos;
 	}
-	
-	gTextPosition = gRend.DrawPos;
-	gRend.DrawPos = cachedPos;
 }

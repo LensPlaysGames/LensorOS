@@ -25,6 +25,13 @@ struct Framebuffer {
 	unsigned int PixelWidth;
 	unsigned int PixelHeight;
 	unsigned int PixelsPerScanLine;
+
+	Framebuffer(const Framebuffer& copy) {
+		BufferSize = copy.BufferSize;
+		PixelWidth = copy.PixelWidth;
+		PixelHeight = copy.PixelHeight;
+		PixelsPerScanLine = copy.PixelsPerScanLine;
+	}
 };
 
 const unsigned int BytesPerPixel = 4;
@@ -44,20 +51,18 @@ public:
 	// Target = framebuffer to draw to in memory
 	Framebuffer* Render          {nullptr};
 	Framebuffer* Target          {nullptr};
-	Framebuffer* Copy            {nullptr};
 	PSF1_FONT*   Font            {nullptr};
 	Vector2      DrawPos         {0, 0};
 	// I = ignore                 0xIIRRGGBB
 	unsigned int BackgroundColor {0x00000000};
 
 	BasicRenderer() {}
-	BasicRenderer(Framebuffer* render, Framebuffer* target, Framebuffer* copy, PSF1_FONT* f) {
+	BasicRenderer(Framebuffer* render, Framebuffer* target, PSF1_FONT* f) {
 		Render = render;
 		Target = target;
-		Copy = copy;
 		Font = f;
 	}
-
+	
 	// SWAP MEMORY CONTENTS OF RENDER AND TARGET
 	void swap();
 	
