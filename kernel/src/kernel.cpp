@@ -1,6 +1,9 @@
 #include "kUtility.h"
 
 // TODO:
+// - Create basic kernel memory allocation functions (kalloc(), free()).
+// - Create interface to PIT chip (timer).
+// - Create cross compiler (gcc).
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
 
 extern "C" void _start(BootInfo* bInfo) {
@@ -23,8 +26,6 @@ extern "C" void _start(BootInfo* bInfo) {
 	// mouth
 	gRend.DrawPos = {400, 520};
 	gRend.drawrect({182, 20}, 0xff00ffff);
-
-	gRend.swap();
 
 	// MAIN KERNEL LOOP.
 	while (true) {

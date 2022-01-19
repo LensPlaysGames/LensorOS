@@ -113,6 +113,8 @@ uint8_t MouseCursor[] = {
 	0b00000000, 0b00000000
 };
 
+uint32_t PixelsUnderMouseCursor[MouseCursorSize * MouseCursorSize + 1];
+
 void ProcessMousePacket() {
 	// ONLY PROCESS A PACKET THAT IS READY
 	if (mouse_packet_ready == false) {
@@ -183,12 +185,21 @@ void ProcessMousePacket() {
 	else if (gMousePosition.y > gRend.Target->PixelHeight-1) {
 		gMousePosition.y = gRend.Target->PixelHeight-1;
 	}
-
 	// CACHE GLOBAL DRAW POSITION
 	Vector2 cachedPos = gRend.DrawPos;
-	// DRAW MOUSE CUSOR AT NEW POSITION
+	static bool skip = true;
+	if (skip == false) {
+		gRend.DrawPos = gOldMousePosition;
+	    gRend.drawpix({MouseCursorSize, MouseCursorSize}, &PixelsUnderMouseCursor[0]);
+	}
+	else {
+		skip = false;
+	}
 	gRend.DrawPos = gMousePosition;
-	gRend.drawbmp({MouseCursorSize, MouseCursorSize}, &MouseCursor[0], 0xffffffff);
+	// READ PIXELS UNDER NEW MOUSE POSITION INTO BUFFER.
+	gRend.readpix({MouseCursorSize, MouseCursorSize}, &PixelsUnderMouseCursor[0]);
+	// DRAW MOUSE CUSOR AT NEW POSITION.
+	gRend.drawbmpover({MouseCursorSize, MouseCursorSize}, &MouseCursor[0], 0xffffffff);
 	gOldMousePosition = gMousePosition;
 	// RETURN GLOBAL DRAW POSITION
 	gRend.DrawPos = cachedPos;

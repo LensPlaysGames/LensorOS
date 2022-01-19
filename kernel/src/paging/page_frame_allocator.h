@@ -21,6 +21,7 @@ public:
 	uint64_t GetUsedRAM();
 	uint64_t GetReservedRAM();
     void* RequestPage();
+    void* RequestPages(uint64_t numPages);
 private:
 	void InitializeBitmap(size_t bitmapSize, void* buf_address);
 	void UnreservePage(void* addr);	

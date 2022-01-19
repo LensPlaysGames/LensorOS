@@ -8,19 +8,20 @@ void PrepareMemory(BootInfo* bInfo) {
 	gAlloc = PageFrameAllocator();
 	// Setup memory map
 	gAlloc.ReadEfiMemoryMap(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+	// _KernelStart and _KernelEnd defined in linker script "../kernel.ld"
 	uint64_t kernelSize = (uint64_t)&_KernelEnd - (uint64_t)&_KernelStart;
 	uint64_t kernelPagesNeeded = (uint64_t)kernelSize / 4096 + 1;
 	gAlloc.LockPages(&_KernelStart, kernelPagesNeeded);
 	// PAGE MAP LEVEL FOUR (see paging.h).
-    PageTable* PML4 = (PageTable*)gAlloc.RequestPage();
-	gAlloc.LockPages((void*)PML4, 0x100);
+    PageTable* PML4 = (PageTable*)gAlloc.RequestPages(0x100);
 	// PAGE TABLE MANAGER
     PTM = PageTableManager(PML4);
 	kInfo.PTM = &PTM;
 	// Map all physical RAM addresses to virtual addresses, store them in the PML4.
-	// This is done so that it can be used (free memory).
-	// The whole point of paging is that more pages could be created than the size of the physical memory.
-	for (uint64_t t = 0; t < GetMemorySize(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize); t+=0x1000) {
+	for (uint64_t t = 0;
+		 t < GetMemorySize(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize);
+		 t+=0x1000)
+	{
 		PTM.MapMemory((void*)t, (void*)t);
 	}
     // Value of Control Register 3 = Address of the page directory in physical form.
@@ -101,14 +102,14 @@ KernelInfo InitializeKernel(BootInfo* bInfo) {
 	uint64_t fbBase = (uint64_t)bInfo->framebuffer->BaseAddress;
 	uint64_t fbSize = (uint64_t)bInfo->framebuffer->BufferSize + 0x1000;
 	uint64_t fbPages = fbSize / 0x1000 + 1;
-	// Allocate pages in bitmap.
+	// ALLOCATE PAGES IN BITMAP FOR ACTIVE FRAMEBUFFER (CURRENT DISPLAY MEMORY).
 	gAlloc.LockPages(bInfo->framebuffer->BaseAddress, fbPages);
 	// Map active framebuffer physical address to virtual addresses 1:1.
 	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
 		PTM.MapMemory((void*)t, (void*)t);
 	}
-	target.BaseAddress = gAlloc.RequestPage();
-	gAlloc.LockPages(target.BaseAddress, fbPages);
+	// ALLOCATE PAGES IN BITMAP FOR TARGET FRAMEBUFFER (WRITABLE).
+	target.BaseAddress = gAlloc.RequestPages(fbPages);
     fbBase = (uint64_t)target.BaseAddress;
 	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
 		PTM.MapMemory((void*)t, (void*)t);
@@ -116,8 +117,10 @@ KernelInfo InitializeKernel(BootInfo* bInfo) {
 	gRend = BasicRenderer(bInfo->framebuffer, &target, bInfo->font);
 	// Initialize screen to background color.
 	gRend.clear();
+	gRend.BackgroundColor = 0xffffffff;
 	// GPLv3 LICENSE REQUIREMENT (interactive terminal must print cpy notice).
-	gRend.putstr("<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>");
+	gRend.putstr("<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>", 0x00000000);
+	gRend.BackgroundColor = 0x00000000;
 	gRend.crlf();
 	// END GPLv3 LICENSE REQUIREMENT.
 	// PREPARE HARDWARE INTERRUPTS (IDT).

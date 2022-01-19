@@ -53,14 +53,45 @@ void BasicRenderer::drawrect(Vector2 size, unsigned int color) {
 	}
 }
 
+void BasicRenderer::readpix(Vector2 size, uint32_t* buffer) {
+	if (buffer == nullptr) { return; }
+	// Ensure within bounds of framebuffer.
+	if (DrawPos.x < 0) { DrawPos.x = 0; }
+	if (DrawPos.y < 0) { DrawPos.y = 0; }
+	unsigned int initX = size.x;
+	unsigned int diffX = Target->PixelWidth - DrawPos.x;
+	unsigned int diffY = Target->PixelHeight - DrawPos.y;
+	if (diffX < size.x) { size.x = diffX; }
+	if (diffY < size.y) { size.y = diffY; }
+	uint32_t* pixel_ptr = (uint32_t*)Target->BaseAddress;
+	for (unsigned long y = DrawPos.y; y < DrawPos.y + size.y; y++) {
+		for (unsigned long x = DrawPos.x; x < DrawPos.x + size.x; x++) {
+			*(uint32_t*)(buffer + (x - DrawPos.x) + ((y - DrawPos.y) * initX)) = *(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine));
+		}
+	}
+}
+
+void BasicRenderer::drawpix(Vector2 size, uint32_t* pixels) {
+	if (pixels == nullptr) { return; }
+	if (DrawPos.y < 0) { DrawPos.y = 0; }
+	if (DrawPos.x < 0) { DrawPos.x = 0; }
+	unsigned int initX = size.x;
+	unsigned int diffX = Target->PixelWidth - DrawPos.x;
+	unsigned int diffY = Target->PixelHeight - DrawPos.y;
+	if (diffX < size.x) { size.x = diffX; }
+	if (diffY < size.y) { size.y = diffY; }
+	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
+	for (uint64_t y = DrawPos.y; y < DrawPos.y + size.y; y++) {
+		for (uint64_t x = DrawPos.x; x < DrawPos.x + size.x; x++) {
+			*(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = *(uint32_t*)(pixels + (x - DrawPos.x) + ((y - DrawPos.y) * initX));
+		}
+	}
+}
+
 void BasicRenderer::drawbmp(Vector2 size, uint8_t* bitmap, unsigned int color) {
 	if (bitmap == nullptr) { return; }
-	if (DrawPos.y < 0) {
-		DrawPos.y = 0;
-	}
-	if (DrawPos.x < 0) {
-		DrawPos.x = 0;
-	}
+	if (DrawPos.y < 0) { DrawPos.y = 0; }
+	if (DrawPos.x < 0) { DrawPos.x = 0; }
 	unsigned int initX = size.x;
 	unsigned int diffX = Target->PixelWidth - DrawPos.x;
 	unsigned int diffY = Target->PixelHeight - DrawPos.y;
@@ -75,6 +106,26 @@ void BasicRenderer::drawbmp(Vector2 size, uint8_t* bitmap, unsigned int color) {
 			}
 			else {
 				*(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = BackgroundColor;
+			}
+		}
+	}
+}
+
+void BasicRenderer::drawbmpover(Vector2 size, uint8_t* bitmap, unsigned int color) {
+	if (bitmap == nullptr) { return; }
+	if (DrawPos.y < 0) { DrawPos.y = 0; }
+	if (DrawPos.x < 0) { DrawPos.x = 0; }
+	unsigned int initX = size.x;
+	unsigned int diffX = Target->PixelWidth - DrawPos.x;
+	unsigned int diffY = Target->PixelHeight - DrawPos.y;
+	if (diffX < size.x) { size.x = diffX; }
+	if (diffY < size.y) { size.y = diffY; }
+	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
+	for (uint64_t y = DrawPos.y; y < DrawPos.y + size.y; y++) {
+		for (uint64_t x = DrawPos.x; x < DrawPos.x + size.x; x++) {
+			int byte = ((x - DrawPos.x) + ((y - DrawPos.y) * initX)) / 8;
+			if ((bitmap[byte] & (0b10000000 >> ((x - DrawPos.x) % 8))) > 0) {
+			    *(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
 			}
 		}
 	}

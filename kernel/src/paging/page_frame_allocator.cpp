@@ -50,6 +50,9 @@ void PageFrameAllocator::InitializeBitmap(size_t bitmapSize, void* buf_address) 
 	}
 }
 
+// Find first empty page, lock it, return address.
+// This number points to the page bitmap index of which there are no zeros behind it.
+// This means this is the minimum index at which a new page OR set of pages may be found.
 uint64_t gPageBitmapIndex = 0;
 void* PageFrameAllocator::RequestPage() {
 	for (; gPageBitmapIndex < PageBitmap.Size; gPageBitmapIndex++) {
@@ -58,6 +61,37 @@ void* PageFrameAllocator::RequestPage() {
 		return (void*)(gPageBitmapIndex * 4096);
 	}
 	// TODO: Page frame swap to file
+	return NULL;
+}
+
+// Find a run of `numPages` free pages, lock them, and return the address of the beginning of the run.
+// ie.                   mem: 11110010000100011100
+// RequestPages(3) would return here ^
+void* PageFrameAllocator::RequestPages(uint64_t numPages) {
+	for (; gPageBitmapIndex < PageBitmap.Size; gPageBitmapIndex++) {
+		if (PageBitmap[gPageBitmapIndex] == true) { continue; }
+		uint64_t index_at_start = gPageBitmapIndex;
+		uint64_t index = index_at_start;
+		uint64_t run = 0;
+		while (PageBitmap[index] == false) {
+			run++;
+			index++;
+			if (index > PageBitmap.Size) {
+				// TODO:
+				// No memory matching criteria, should probably do a page frame swap from disk.
+				// I don't have disk operations implemented yet, or even a file system, so maybe
+				//   that's a task for another day.
+				return NULL;
+			}
+			if (run == numPages) {
+				void* out = (void*)(index_at_start * 0x1000);
+				// LOCK PAGES
+				LockPages(out, numPages);
+				// RETURN ADDRESS AT BEGINNING OF RUN
+				return out;
+			}
+		}
+	}
 	return NULL;
 }
 

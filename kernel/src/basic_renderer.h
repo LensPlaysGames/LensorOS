@@ -26,6 +26,14 @@ struct Framebuffer {
 	unsigned int PixelHeight;
 	unsigned int PixelsPerScanLine;
 
+	Framebuffer() {
+		BaseAddress = nullptr;
+		BufferSize = 0;
+		PixelWidth = 0;
+		PixelHeight = 0;
+		PixelsPerScanLine = 0;
+	}
+
 	Framebuffer(const Framebuffer& copy) {
 		BufferSize = copy.BufferSize;
 		PixelWidth = copy.PixelWidth;
@@ -38,12 +46,7 @@ const unsigned int BytesPerPixel = 4;
 
 class BasicRenderer {
 /* IMPROVEMENTS
-     - Render to dummy framebuffer (arbitrary write to active framebuffer memory is slower).
-	   - Framebuffer* Render = framebuffer that is currently being rendered (don't write to it)
-	     - Allocate memory for Render framebuffer in memory in kUtility (how? and what does anything there actually do?)
-	   - swap() = swap the target framebuffer and render framebuffer's contents.
-	     - Call swap() anytime display should be updated.
-	 - "List" of RenderObjects that are rendered in a `render()` function.
+	 - Linked List of RenderObjects that are rendered in a `render()` function.
 	   - RenderObject struct = data to draw object (DrawPos, Size, uint8_t* Bitmap, Color, Size).
 	   - render() = iterate object list, drawbmp of each one.
 */
@@ -65,6 +68,8 @@ public:
 	
 	// SWAP MEMORY CONTENTS OF RENDER AND TARGET
 	void swap();
+
+	void readpix(Vector2 size, uint32_t* buffer);
 	
 	// Change every pixel in the target framebuffer to BackgroundColor.
 	void clear() {
@@ -97,15 +102,20 @@ public:
 
 	// Draw `size` of rectangle as `color`.
 	void drawrect(Vector2 size, unsigned int color = 0xffffffff);
+	// Draw `size` of `pixels` buffer into target framebuffer.
+	void drawpix(Vector2 size, uint32_t* pixels);
 	// Draw `size` of `bitmap` as `color`.
-	void drawbmp(Vector2 size, uint8_t* bitmap, unsigned int color = 0xffffffff);
+	void drawbmp(Vector2 size, uint8_t* bitmap, uint32_t color = 0xffffffff);
+	// Draw `size` of `bitmap` as `color`, but don't clear `0` to background color.
+	// This allows the use of bitmaps acting on alpha as well as color.
+	void drawbmpover(Vector2 size, uint8_t* bitmap, uint32_t color = 0xffffffff);
 	// Use PSF1 bitmap font to draw a character to the screen (don't advance).
-	void drawchar(char c, unsigned int color = 0xffffffff);
+	void drawchar(char c, uint32_t color = 0xffffffff);
 	
 	// Use font to put a character to the screen (advance draw position).
-	void putchar(char c, unsigned int color = 0xffffffff);
+	void putchar(char c, uint32_t color = 0xffffffff);
 	// Put a null-terminated string of characters to the screen, wrapping if necessary.
-	void putstr(const char* str, unsigned int color = 0xffffffff);
+	void putstr(const char* str, uint32_t color = 0xffffffff);
 };
 
 extern BasicRenderer gRend;
