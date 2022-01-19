@@ -23,16 +23,7 @@ void PrepareMemory(BootInfo* bInfo) {
 	for (uint64_t t = 0; t < GetMemorySize(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize); t+=0x1000) {
 		PTM.MapMemory((void*)t, (void*)t);
 	}
-	// Active framebuffer is passed to us through EFI.
-	// Map physical address of active framebuffer to virtual addresses within the PML4.
-	// This will prevent any other processes/allocations from over-writing this memory we are using.
-	uint64_t fbBase = (uint64_t)bInfo->framebuffer->BaseAddress;
-	uint64_t fbSize = (uint64_t)bInfo->framebuffer->BufferSize + 0x1000;
-	gAlloc.LockPages((void*)fbBase, fbSize / 0x1000 + 1);
-	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
-		PTM.MapMemory((void*)t, (void*)t);
-	}
-	// Load PML4 into correct register (use new mapped framebuffer).
+    // Value of Control Register 3 = Address of the page directory in physical form.
 	asm ("mov %0, %%cr3" : : "r" (PML4));
 }
 
@@ -61,15 +52,60 @@ void PrepareInterrupts() {
 	RemapPIC();
 }
 
+void PrintMemoryInfo() {
+	unsigned int startX = gRend.DrawPos.x;
+	gRend.putstr("Memory Info:");
+	gRend.crlf(startX);
+	gRend.putstr("|\\");
+    gRend.crlf(startX);
+	gRend.putstr("| Free RAM: ");
+	gRend.putstr(to_string(gAlloc.GetFreeRAM() / 1024));
+	gRend.putstr(" kB (");
+	gRend.putstr(to_string(gAlloc.GetFreeRAM() / 1024 / 1024));
+	gRend.putstr(" mB)");
+    gRend.crlf(startX);
+	gRend.putstr("|\\");
+    gRend.crlf(startX);
+	gRend.putstr("| Used RAM: ");
+	gRend.putstr(to_string(gAlloc.GetUsedRAM() / 1024));
+	gRend.putstr(" kB (");
+	gRend.putstr(to_string(gAlloc.GetUsedRAM() / 1024 / 1024));
+	gRend.putstr(" mB)");
+    gRend.crlf(startX);
+	gRend.putstr(" \\");
+    gRend.crlf(startX);
+	gRend.putstr("  Reserved RAM: ");
+	gRend.putstr(to_string(gAlloc.GetReservedRAM() / 1024));
+	gRend.putstr(" kB (");
+	gRend.putstr(to_string(gAlloc.GetReservedRAM() / 1024 / 1024));
+	gRend.putstr(" mB)");
+	gRend.crlf(startX);
+}
+
 KernelInfo InitializeKernel(BootInfo* bInfo) {
+	// DISABLE INTERRUPTS.
+	asm ("cli");
 	// SETUP GDT DESCRIPTOR.
 	GDTDescriptor GDTD = GDTDescriptor();
 	GDTD.Size = sizeof(GDT) - 1;
 	GDTD.Offset = (uint64_t)&gGDT;
 	// Call assembly `lgdt`.
 	LoadGDT(&GDTD);
+	// PREPARE MEMORY.
+	PrepareMemory(bInfo);
 	// SETUP GOP RENDERER.
+	target = *bInfo->framebuffer;
+	copy = *bInfo->framebuffer;
 	// GOP = Graphics Output Protocol.
+	uint64_t fbBase = (uint64_t)bInfo->framebuffer->BaseAddress;
+	uint64_t fbSize = (uint64_t)bInfo->framebuffer->BufferSize + 0x1000;
+	// Allocate pages in bitmap.
+	gAlloc.LockPages(bInfo->framebuffer->BaseAddress, fbSize / 0x1000 + 1);
+	// Map active framebuffer physical address to virtual addresses 1:1.
+	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
+		PTM.MapMemory((void*)t, (void*)t);
+	}
+
 	gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
 	// Initialize screen to background color.
 	gRend.clear();
@@ -77,23 +113,16 @@ KernelInfo InitializeKernel(BootInfo* bInfo) {
 	gRend.putstr("<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>");
 	gRend.crlf();
 	// END GPLv3 LICENSE REQUIREMENT.
-	// PREPARE MEMORY.
-	PrepareMemory(bInfo);
-	// PRINT MEMORY INFORMATION.
-	// FREE, USED, RESERVED MEMORY.
-	gRend.putstr("Memory prepared successfully");
-	gRend.crlf();
-	gAlloc.PrintMemoryInfo();
 	// PREPARE HARDWARE INTERRUPTS (IDT).
 	// IDT = INTERRUPT DESCRIPTOR TABLE.
 	// Call assembly `lidt`.
 	PrepareInterrupts();
-	// PREPARE PS/2 MOUSE (INTERRUPT BASED).
+	// PREPARE PS/2 MOUSE.
 	InitPS2Mouse();
-	// USE I/O BUS TO SEND BITMASKS.
+	// INTERRUPT MASKS.
 	outb(PIC1_DATA, 0b11111001);
 	outb(PIC2_DATA, 0b11101111);
-	// SET INTERRUPT FLAG (ENABLE MASKABLE INTERRUPTS).
+	// ENABLE INTERRUPTS.
 	asm ("sti");
 	return kInfo;
 }

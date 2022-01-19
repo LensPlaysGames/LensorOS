@@ -2,7 +2,6 @@
 #define LENSOR_OS_PAGE_FRAME_ALLOCATOR
 
 #include <stdint.h>
-#include "../basic_renderer.h"
 #include "../efi_memory.h"
 #include "../bitmap.h"
 #include "../memory.h"
@@ -22,7 +21,6 @@ public:
 	uint64_t GetUsedRAM();
 	uint64_t GetReservedRAM();
     void* RequestPage();
-	void PrintMemoryInfo();
 private:
 	void InitializeBitmap(size_t bitmapSize, void* buf_address);
 	void UnreservePage(void* addr);	

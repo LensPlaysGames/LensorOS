@@ -4,6 +4,7 @@ PageTableManager::PageTableManager(PageTable* PML4_address) {
 	PML4 = PML4_address;
 }
 
+// Map a virtual address to a physical address.
 void PageTableManager::MapMemory(void* virtualMemory, void* physicalMemory) {
 	PageMapIndexer indexer((uint64_t)virtualMemory);
 	PageDirEntry PDE;

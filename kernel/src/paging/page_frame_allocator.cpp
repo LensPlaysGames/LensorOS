@@ -32,7 +32,8 @@ void PageFrameAllocator::ReadEfiMemoryMap(EFI_MEMORY_DESCRIPTOR* map, size_t map
 	free_memory = memorySize;
 	uint64_t bitmapSize = memorySize / 4096 / 8 + 1;
 	InitializeBitmap(bitmapSize, largestFreeMemorySegment);
-	LockPages(PageBitmap.Buffer, PageBitmap.Size / 4096 + 1);	for (int i = 0; i < mapEntries; i++) {
+	LockPages(PageBitmap.Buffer, PageBitmap.Size / 4096 + 1);
+	for (int i = 0; i < mapEntries; i++) {
 		EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((uint64_t)map + (i * mapDescSize));
 		if (desc->type != 7) {
 			ReservePages(desc->physicalAddress, desc->numPages);
@@ -133,33 +134,3 @@ void PageFrameAllocator::ReservePages(void* addr, uint64_t numPages) {
 uint64_t PageFrameAllocator::GetFreeRAM() { return free_memory; }
 uint64_t PageFrameAllocator::GetUsedRAM() { return used_memory; }
 uint64_t PageFrameAllocator::GetReservedRAM() { return reserved_memory; }
-
-void PageFrameAllocator::PrintMemoryInfo() {
-	unsigned int startX = gRend.DrawPos.x;
-	gRend.putstr("Memory Info:");
-	gRend.crlf(startX);
-	gRend.putstr("|\\");
-    gRend.crlf(startX);
-	gRend.putstr("| Free RAM: ");
-	gRend.putstr(to_string(free_memory / 1024));
-	gRend.putstr(" kB (");
-	gRend.putstr(to_string(free_memory / 1024 / 1024));
-	gRend.putstr(" mB)");
-    gRend.crlf(startX);
-	gRend.putstr("|\\");
-    gRend.crlf(startX);
-	gRend.putstr("| Used RAM: ");
-	gRend.putstr(to_string(used_memory / 1024));
-	gRend.putstr(" kB (");
-	gRend.putstr(to_string(used_memory / 1024 / 1024));
-	gRend.putstr(" mB)");
-    gRend.crlf(startX);
-	gRend.putstr(" \\");
-    gRend.crlf(startX);
-	gRend.putstr("  Reserved RAM: ");
-	gRend.putstr(to_string(reserved_memory / 1024));
-	gRend.putstr(" kB (");
-	gRend.putstr(to_string(reserved_memory / 1024 / 1024));
-	gRend.putstr(" mB)");
-	gRend.crlf(startX);
-}

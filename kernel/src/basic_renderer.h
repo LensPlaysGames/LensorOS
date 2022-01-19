@@ -3,8 +3,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include "math.h"
 #include "cstr.h"
+#include "math.h"
 
 typedef struct {
 	// Magic bytes to indicate PSF1 font type	
@@ -48,12 +48,12 @@ public:
 	unsigned int BackgroundColor {0x00000000};
 
 	BasicRenderer() {}
-	BasicRenderer(Framebuffer* target, PSF1_FONT* f) {
-		Target = target;
+	BasicRenderer(Framebuffer* render, PSF1_FONT* f) {
+		Target = render;
 		Font = f;
 	}
-
-	// Change every pixel in the framebuffer to BackgroundColor.
+	
+	// Change every pixel in the target framebuffer to BackgroundColor.
 	void clear() {
 		// Draw background color to every pixel.
 		unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
