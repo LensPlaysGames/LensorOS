@@ -40,13 +40,14 @@ void PrepareInterrupts() {
 	idtr.Limit = 0x0FFF;
 	idtr.Offset = (uint64_t)gAlloc.RequestPage();
 	// SET CALLBACK TO HANDLER BASED ON INTERRUPT ENTRY OFFSET.
-	SetIDTGate((void*)PageFaultHandler,				 0x0E, IDT_TA_InterruptGate, 0x08);
-	SetIDTGate((void*)DoubleFaultHandler,			 0x08, IDT_TA_InterruptGate, 0x08);
-	SetIDTGate((void*)GeneralProtectionFaultHandler, 0x0D, IDT_TA_InterruptGate, 0x08);
 	// PS/2 KEYBOARD (SERIAL)
 	SetIDTGate((void*)KeyboardHandler,				 0x21, IDT_TA_InterruptGate, 0x08);
 	// PS/2 MOUSE    (SERIAL)
 	SetIDTGate((void*)MouseHandler,					 0x2c, IDT_TA_InterruptGate, 0x08);
+	// FAULTS
+	SetIDTGate((void*)PageFaultHandler,				 0x0E, IDT_TA_InterruptGate, 0x08);
+	SetIDTGate((void*)DoubleFaultHandler,			 0x08, IDT_TA_InterruptGate, 0x08);
+	SetIDTGate((void*)GeneralProtectionFaultHandler, 0x0D, IDT_TA_InterruptGate, 0x08);
 	// LOAD INTERRUPT DESCRIPTOR TABLE.
 	asm ("lidt %0" :: "m" (idtr));
 	// REMAP PIC CHIP TO ENSURE IT DOESN'T JUMBLE-UP INTERRUPTS.

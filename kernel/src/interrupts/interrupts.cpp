@@ -1,5 +1,28 @@
 #include "interrupts.h"
 
+inline void EndMasterPIC() {
+	outb(PIC1_COMMAND, PIC_EOI);
+}
+
+inline void EndSlavePIC() {
+	outb(PIC2_COMMAND, PIC_EOI);
+	outb(PIC1_COMMAND, PIC_EOI);
+}
+
+__attribute__((interrupt)) void KeyboardHandler(InterruptFrame* frame) {
+	uint8_t scancode = inb(0x60);
+	HandleKeyboard(scancode);
+	// End interrupt	
+	EndMasterPIC();
+}
+
+__attribute__((interrupt)) void MouseHandler(InterruptFrame* frame) {
+	uint8_t data = inb(0x60);
+	HandlePS2Mouse(data);
+	// End interrupt
+	EndSlavePIC();
+}
+
 __attribute__((interrupt)) void PageFaultHandler(InterruptFrame* frame) {
 	Panic("Page fault detected!");
 	while (true) {
@@ -19,28 +42,6 @@ __attribute__((interrupt)) void GeneralProtectionFaultHandler(InterruptFrame* fr
 	while (true) {
 		asm ("hlt");
 	}
-}
-
-__attribute__((interrupt)) void KeyboardHandler(InterruptFrame* frame) {
-	uint8_t scancode = inb(0x60);
-	HandleKeyboard(scancode);
-	// End interrupt	
-	EndMasterPIC();
-}
-
-__attribute__((interrupt)) void MouseHandler(InterruptFrame* frame) {
-	uint8_t data = inb(0x60);
-	HandlePS2Mouse(data);
-	// End interrupt
-	EndSlavePIC();
-}
-
-void EndMasterPIC() {
-	outb(PIC1_COMMAND, PIC_EOI);
-}
-void EndSlavePIC() {
-	outb(PIC2_COMMAND, PIC_EOI);
-	outb(PIC1_COMMAND, PIC_EOI);
 }
 
 void RemapPIC() {

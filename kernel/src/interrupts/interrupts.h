@@ -20,11 +20,15 @@
 #include "../mouse.h"
 
 struct InterruptFrame;
+// GENERAL INTERRUPTS
+__attribute__((interrupt)) void SystemTimerHandler				(InterruptFrame* frame);
+__attribute__((interrupt)) void KeyboardHandler					(InterruptFrame* frame);
+__attribute__((interrupt)) void MouseHandler					(InterruptFrame* frame);
+// FAULT HANDLING
 __attribute__((interrupt)) void PageFaultHandler				(InterruptFrame* frame);
 __attribute__((interrupt)) void DoubleFaultHandler				(InterruptFrame* frame);
 __attribute__((interrupt)) void GeneralProtectionFaultHandler	(InterruptFrame* frame);
-__attribute__((interrupt)) void KeyboardHandler					(InterruptFrame* frame);
-__attribute__((interrupt)) void MouseHandler					(InterruptFrame* frame);
+
 
 void RemapPIC();
 void EndMasterPIC();
