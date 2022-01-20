@@ -4,7 +4,7 @@ uint64_t GetMemorySize(EFI_MEMORY_DESCRIPTOR* map, uint64_t mapEntries, uint64_t
 	static uint64_t MemorySizeInBytes = 0;
 	if (MemorySizeInBytes > 0) { return MemorySizeInBytes; }
 
-	for (int i = 0; i < mapEntries; i++) {
+	for (int i = 0; i < mapEntries; ++i) {
 		// Get descriptor for each map entry.
 		EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((uint64_t)map + (i * mapDescSize));
 		// Add memory size from descriptor to total memory size.
@@ -16,13 +16,21 @@ uint64_t GetMemorySize(EFI_MEMORY_DESCRIPTOR* map, uint64_t mapEntries, uint64_t
 }
 
 void memset(void* start, uint8_t value, uint64_t numBytes) {
-	for (uint64_t i = 0; i < numBytes; i++) {
+	for (uint64_t i = 0; i < numBytes; ++i) {
 		*(uint8_t*)((uint64_t)start + i) = value;
 	}
 }
 
 void memcpy(void* src, void* dest, uint64_t numBytes) {
-    for (uint64_t i = 0; i < numBytes; i++) {
+	// Copy 8 byte segments instead of one byte at a time.
+	uint64_t numQWords = numBytes / 8;
+	uint8_t leftover = numBytes % 8;
+	uint64_t i = 0;
+	for (; i < numQWords; i += 8) {
+		*(uint64_t*)((uint64_t)dest + i) = *(uint64_t*)((uint64_t)src + i);
+	}
+	// Finish up leftover bits.
+	for (; i < numBytes; ++i) {
 		*(uint8_t*)((uint64_t)dest + i) = *(uint8_t*)((uint64_t)src + i);
 	}
 }
