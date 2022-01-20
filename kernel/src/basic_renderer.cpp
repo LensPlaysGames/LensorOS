@@ -3,9 +3,11 @@
 // Define global renderer for use anywhere within the kernel.
 BasicRenderer gRend;
 
-// Swap memory contents of framebuffer between Target and Render.
-void BasicRenderer::swap() {
-	memcpy(Target->BaseAddress, Render->BaseAddress, Render->BufferSize);
+inline void BasicRenderer::ValidateDrawPos() {
+	if (DrawPos.x < 0) { DrawPos.x = 0; }
+	else if (DrawPos.x > Target->PixelWidth) { DrawPos.x = Target->PixelWidth; }
+	if (DrawPos.y < 0) { DrawPos.y = 0; }
+	else if (DrawPos.y > Target->PixelHeight) { DrawPos.y = Target->PixelHeight; }
 }
 
 // Carriage return ('\r')
@@ -39,8 +41,7 @@ void BasicRenderer::crlf(unsigned int offset) {
 }
 
 void BasicRenderer::drawrect(Vector2 size, unsigned int color) {
-	if (DrawPos.x < 0) { DrawPos.x = 0; }
-	if (DrawPos.y < 0) { DrawPos.y = 0; }
+    ValidateDrawPos();
 	unsigned int diffX = Target->PixelWidth - DrawPos.x;
 	unsigned int diffY = Target->PixelHeight - DrawPos.y;
 	if (diffX < size.x) { size.x = diffX; }
@@ -55,9 +56,7 @@ void BasicRenderer::drawrect(Vector2 size, unsigned int color) {
 
 void BasicRenderer::readpix(Vector2 size, uint32_t* buffer) {
 	if (buffer == nullptr) { return; }
-	// Ensure within bounds of framebuffer.
-	if (DrawPos.x < 0) { DrawPos.x = 0; }
-	if (DrawPos.y < 0) { DrawPos.y = 0; }
+	ValidateDrawPos();
 	unsigned int initX = size.x;
 	unsigned int diffX = Target->PixelWidth - DrawPos.x;
 	unsigned int diffY = Target->PixelHeight - DrawPos.y;
@@ -66,15 +65,15 @@ void BasicRenderer::readpix(Vector2 size, uint32_t* buffer) {
 	uint32_t* pixel_ptr = (uint32_t*)Target->BaseAddress;
 	for (unsigned long y = DrawPos.y; y < DrawPos.y + size.y; y++) {
 		for (unsigned long x = DrawPos.x; x < DrawPos.x + size.x; x++) {
-			*(uint32_t*)(buffer + (x - DrawPos.x) + ((y - DrawPos.y) * initX)) = *(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine));
+			*(uint32_t*)(buffer + (x - DrawPos.x) + ((y - DrawPos.y) * initX))
+				= *(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine));
 		}
 	}
 }
 
 void BasicRenderer::drawpix(Vector2 size, uint32_t* pixels) {
 	if (pixels == nullptr) { return; }
-	if (DrawPos.y < 0) { DrawPos.y = 0; }
-	if (DrawPos.x < 0) { DrawPos.x = 0; }
+    ValidateDrawPos();
 	unsigned int initX = size.x;
 	unsigned int diffX = Target->PixelWidth - DrawPos.x;
 	unsigned int diffY = Target->PixelHeight - DrawPos.y;
@@ -83,15 +82,15 @@ void BasicRenderer::drawpix(Vector2 size, uint32_t* pixels) {
 	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
 	for (uint64_t y = DrawPos.y; y < DrawPos.y + size.y; y++) {
 		for (uint64_t x = DrawPos.x; x < DrawPos.x + size.x; x++) {
-			*(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = *(uint32_t*)(pixels + (x - DrawPos.x) + ((y - DrawPos.y) * initX));
+			*(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine))
+				= *(uint32_t*)(pixels + (x - DrawPos.x) + ((y - DrawPos.y) * initX));
 		}
 	}
 }
 
 void BasicRenderer::drawbmp(Vector2 size, uint8_t* bitmap, unsigned int color) {
 	if (bitmap == nullptr) { return; }
-	if (DrawPos.y < 0) { DrawPos.y = 0; }
-	if (DrawPos.x < 0) { DrawPos.x = 0; }
+	ValidateDrawPos();
 	unsigned int initX = size.x;
 	unsigned int diffX = Target->PixelWidth - DrawPos.x;
 	unsigned int diffY = Target->PixelHeight - DrawPos.y;
@@ -113,8 +112,7 @@ void BasicRenderer::drawbmp(Vector2 size, uint8_t* bitmap, unsigned int color) {
 
 void BasicRenderer::drawbmpover(Vector2 size, uint8_t* bitmap, unsigned int color) {
 	if (bitmap == nullptr) { return; }
-	if (DrawPos.y < 0) { DrawPos.y = 0; }
-	if (DrawPos.x < 0) { DrawPos.x = 0; }
+	ValidateDrawPos();
 	unsigned int initX = size.x;
 	unsigned int diffX = Target->PixelWidth - DrawPos.x;
 	unsigned int diffY = Target->PixelHeight - DrawPos.y;
@@ -132,16 +130,6 @@ void BasicRenderer::drawbmpover(Vector2 size, uint8_t* bitmap, unsigned int colo
 }
 
 void BasicRenderer::drawchar(char c, unsigned int color) {
-	if (DrawPos.x < 0
-		|| DrawPos.x + 8 > Target->PixelWidth)
-	{
-		DrawPos.x = 0;
-	}
-	if (DrawPos.y < 0
-		|| DrawPos.y + Font->PSF1_Header->CharacterSize > Target->PixelHeight)
-	{
-		DrawPos.y = 0;
-	}
 	// Draw character.
 	drawbmp({8, Font->PSF1_Header->CharacterSize},
 			(uint8_t*)Font->GlyphBuffer + (c * Font->PSF1_Header->CharacterSize),

@@ -7,17 +7,17 @@
 #include "math.h"
 #include "memory.h"
 
-typedef struct {
+struct PSF1_HEADER {
 	// Magic bytes to indicate PSF1 font type	
 	uint8_t Magic[2];
 	uint8_t Mode;
 	uint8_t CharacterSize;
-} PSF1_HEADER;
+};
 
-typedef struct {
+struct PSF1_FONT {
 	PSF1_HEADER* PSF1_Header;
 	void* GlyphBuffer;
-} PSF1_FONT;
+};
 
 struct Framebuffer {
 	void* BaseAddress;
@@ -65,9 +65,14 @@ public:
 		Target = target;
 		Font = f;
 	}
-	
-	// SWAP MEMORY CONTENTS OF RENDER AND TARGET
-	void swap();
+
+	// ENSURE DRAW POSITION IS WITHIN FRAMEBUFFER.
+	void ValidateDrawPos();
+
+	// UPDATE MEMORY CONTENTS OF RENDER FROM TARGET
+    inline void swap() {
+		memcpy(Target->BaseAddress, Render->BaseAddress, Render->BufferSize);
+	}
 
 	void readpix(Vector2 size, uint32_t* buffer);
 	
