@@ -1,5 +1,6 @@
 #include "mouse.h"
 
+// globally accessible mouse information
 uint8_t gMouseID;
 Vector2 gMousePosition = {0, 0};
 Vector2 gOldMousePosition = {0, 0};

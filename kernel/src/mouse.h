@@ -17,6 +17,8 @@
 void InitPS2Mouse();
 void HandlePS2Mouse(uint8_t data);
 void ProcessMousePacket();
+// DRAW MOUSE CURSOR AT MOUSE POSITION USING GLOBAL RENDERER.
+void DrawMouseCursor();
 
 // The mouse ID determines what features the mouse supports.
 //   0 = x, y, left, right, middle (3 bytes)
