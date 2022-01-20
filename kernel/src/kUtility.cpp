@@ -40,6 +40,8 @@ void PrepareInterrupts() {
 	idtr.Limit = 0x0FFF;
 	idtr.Offset = (uint64_t)gAlloc.RequestPage();
 	// SET CALLBACK TO HANDLER BASED ON INTERRUPT ENTRY OFFSET.
+	// SYSTEM TIMER
+	SetIDTGate((void*)SystemTimerHandler,			 0x20, IDT_TA_InterruptGate, 0x08);
 	// PS/2 KEYBOARD (SERIAL)
 	SetIDTGate((void*)KeyboardHandler,				 0x21, IDT_TA_InterruptGate, 0x08);
 	// PS/2 MOUSE    (SERIAL)
@@ -128,10 +130,12 @@ KernelInfo InitializeKernel(BootInfo* bInfo) {
 	// IDT = INTERRUPT DESCRIPTOR TABLE.
 	// Call assembly `lidt`.
 	PrepareInterrupts();
+	// SYSTEM TIMER.
+	initialize_timer(20);
 	// PREPARE PS/2 MOUSE.
 	InitPS2Mouse();
 	// INTERRUPT MASKS.
-	outb(PIC1_DATA, 0b11111001);
+	outb(PIC1_DATA, 0b11111000);
 	outb(PIC2_DATA, 0b11101111);
 	// ENABLE INTERRUPTS.
 	asm ("sti");

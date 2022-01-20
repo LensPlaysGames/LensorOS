@@ -16,6 +16,8 @@
 #include "interrupts/interrupts.h"
 // SERIAL BUS COMMUNICATION
 #include "io.h"
+// TIMING
+#include "timer.h"
 
 struct BootInfo {
 	Framebuffer* framebuffer;

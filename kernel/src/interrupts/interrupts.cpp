@@ -9,6 +9,12 @@ inline void EndSlavePIC() {
 	outb(PIC1_COMMAND, PIC_EOI);
 }
 
+__attribute__((interrupt)) void SystemTimerHandler(InterruptFrame* frame) {
+	gTicks += 1;
+	// End interrupt
+	EndMasterPIC();
+}
+
 __attribute__((interrupt)) void KeyboardHandler(InterruptFrame* frame) {
 	uint8_t scancode = inb(0x60);
 	HandleKeyboard(scancode);

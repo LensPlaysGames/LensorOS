@@ -18,6 +18,7 @@
 #include "../io.h"
 #include "../keyboard.h"
 #include "../mouse.h"
+#include "../timer.h"
 
 struct InterruptFrame;
 // GENERAL INTERRUPTS

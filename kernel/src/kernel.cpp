@@ -28,6 +28,7 @@ extern "C" void _start(BootInfo* bInfo) {
 	// mouth
 	gRend.DrawPos = {400, 520};
 	gRend.drawrect({182, 20}, 0xff00ffff);
+	
 	// UPDATE SCREEN FROM TARGET BUFFER AS OFTEN AS POSSIBLE.
 	while (true) {
 		gRend.swap();
