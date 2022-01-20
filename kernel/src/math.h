@@ -14,6 +14,13 @@ struct Vector2 {
 		x = _x;
 		y = _y;
 	}
+
+	friend inline bool operator==(const Vector2& lhs, const Vector2& rhs) {
+		return (lhs.x == rhs.x && lhs.y == rhs.y);
+	}
+	friend inline bool operator!=(const Vector2& lhs, const Vector2& rhs) {
+		return !(lhs == rhs);
+	}
 };
 
 #endif
