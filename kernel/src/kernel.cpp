@@ -6,13 +6,55 @@
 // - Create cross compiler (gcc).
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
 
+void print_memory_info() {
+	unsigned int startX = gRend.DrawPos.x;
+	gRend.putstr("Memory Info:");
+	gRend.crlf(startX);
+	gRend.putstr("|\\");
+    gRend.crlf(startX);
+	gRend.putstr("| Free RAM: ");
+	gRend.putstr(to_string(gAlloc.get_free_ram() / 1024));
+	gRend.putstr(" kB (");
+	gRend.putstr(to_string(gAlloc.get_free_ram() / 1024 / 1024));
+	gRend.putstr(" mB)");
+    gRend.crlf(startX);
+	gRend.putstr("|\\");
+    gRend.crlf(startX);
+	gRend.putstr("| Used RAM: ");
+	gRend.putstr(to_string(gAlloc.get_used_ram() / 1024));
+	gRend.putstr(" kB (");
+	gRend.putstr(to_string(gAlloc.get_used_ram() / 1024 / 1024));
+	gRend.putstr(" mB)");
+    gRend.crlf(startX);
+	gRend.putstr(" \\");
+    gRend.crlf(startX);
+	gRend.putstr("  Reserved RAM: ");
+	gRend.putstr(to_string(gAlloc.get_reserved_ram() / 1024));
+	gRend.putstr(" kB (");
+	gRend.putstr(to_string(gAlloc.get_reserved_ram() / 1024 / 1024));
+	gRend.putstr(" mB)");
+	gRend.crlf(startX);
+}
+
+
 extern "C" void _start(BootInfo* bInfo) {
 	KernelInfo info = InitializeKernel(bInfo);
+	gRend.clear();
+	// GPLv3 LICENSE REQUIREMENT (interactive terminal must print cpy notice).
+	gRend.BackgroundColor = 0xffffffff;
+	gRend.putstr("<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>", 0x00000000);
+	gRend.BackgroundColor = 0x00000000;
+	gRend.crlf();
+	gRend.crlf();
+	// END GPLv3 LICENSE REQUIREMENT.
 	gRend.putstr("LensorOS kernel initialized successfully");
+	gRend.crlf();
+	gRend.crlf();
+	print_memory_info();
 	gRend.crlf();
 	// Start keyboard input at draw position, not origin.
 	gTextPosition = gRend.DrawPos;
-	// A FACE :)
+	// DRAW A FACE :)
 	// left eye
 	gRend.DrawPos = {420, 420};
 	gRend.drawrect({42, 42}, 0xff00ffff);
@@ -28,17 +70,13 @@ extern "C" void _start(BootInfo* bInfo) {
 	// mouth
 	gRend.DrawPos = {400, 520};
 	gRend.drawrect({182, 20}, 0xff00ffff);
-	
 	// UPDATE SCREEN FROM TARGET BUFFER AS OFTEN AS POSSIBLE.
 	while (true) {
 		// DRAW TIME ELAPSED SINCE KERNEL INITIALIZATION IN TOP RIGHT.
 		gRend.DrawPos = {600, 0};
-		gRend.putstr("| Elapsed: ");
+		gRend.putstr("Elapsed: ");
 		gRend.putstr(to_string(get_seconds()));
-		gRend.putstr("s |");
-		if (gRend.DrawPos.y > gRend.Target->PixelHeight) {
-			gRend.DrawPos.y = 0;
-		}
+		gRend.putstr("s");
 		gRend.swap();
 	}
 	// HALT LOOP (KERNEL INACTIVE).

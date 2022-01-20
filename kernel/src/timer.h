@@ -45,13 +45,9 @@ extern uint64_t start;
 extern uint64_t end;
 
 // Get seconds elapsed for a given amount of ticks.
-inline double get_seconds(uint64_t ticks) {
-	return ticks / (double)gFreq;
-}
+double get_seconds(uint64_t ticks);
 
-inline double get_seconds() {
-	return get_seconds(gTicks);
-}
+double get_seconds();
 
 inline void timer_start() {
 	start = gTicks;
@@ -64,8 +60,7 @@ inline void timer_end() {
 inline uint64_t timer_elapsed_ticks() {
 	return end - start;
 }
-inline double timer_elapsed_seconds() {
-	return get_seconds(end - start);
-}
+
+double timer_elapsed_seconds();
 
 #endif

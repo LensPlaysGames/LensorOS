@@ -11,23 +11,23 @@ class PageFrameAllocator {
 public:
 	PageFrameAllocator() {}
 	
-	void ReadEfiMemoryMap(EFI_MEMORY_DESCRIPTOR* map, size_t mapSize, size_t mapDescSize);
+	void read_efi_memory_map(EFI_MEMORY_DESCRIPTOR* map, size_t mapSize, size_t mapDescSize);
 	Bitmap PageBitmap;
-	void FreePage(void* addr);
-	void LockPage(void* addr);
-	void FreePages(void* addr, uint64_t numPages);
-	void LockPages(void* addr, uint64_t numPages);
-	uint64_t GetFreeRAM();
-	uint64_t GetUsedRAM();
-	uint64_t GetReservedRAM();
-    void* RequestPage();
-    void* RequestPages(uint64_t numPages);
+	void free_page(void* addr);
+	void lock_page(void* addr);
+	void free_pages(void* addr, uint64_t numPages);
+	void lock_pages(void* addr, uint64_t numPages);
+	uint64_t get_free_ram();
+	uint64_t get_used_ram();
+	uint64_t get_reserved_ram();
+    void* request_page();
+    void* request_pages(uint64_t numPages);
 private:
-	void InitializeBitmap(size_t bitmapSize, void* buf_address);
-	void UnreservePage(void* addr);	
-	void ReservePage(void* addr);
-	void UnreservePages(void* addr, uint64_t numPages);
-	void ReservePages(void* addr, uint64_t numPages);
+	void initialize_bitmap(size_t bitmapSize, void* bufAddress);
+	void unreserve_page(void* addr);	
+	void reserve_page(void* addr);
+	void unreserve_pages(void* addr, uint64_t numPages);
+	void reserve_pages(void* addr, uint64_t numPages);
 };
 
 extern PageFrameAllocator gAlloc;

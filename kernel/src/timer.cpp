@@ -16,3 +16,16 @@ void initialize_timer(uint32_t freq) {
 	outb(PIT_CH0_DAT, (uint8_t) (divisor & 0x00ff));
 	outb(PIT_CH0_DAT, (uint8_t)((divisor & 0xff00) >> 8));
 }
+
+// Get seconds elapsed for a given amount of ticks.
+double get_seconds(uint64_t ticks) {
+	return ticks / (double)gFreq;
+}
+
+double get_seconds() {
+	return get_seconds(gTicks);
+}
+
+double timer_elapsed_seconds() {
+	return get_seconds(end - start);
+}

@@ -3,17 +3,17 @@
 KernelInfo kInfo;
 PageTableManager PTM = NULL;
 
-void PrepareMemory(BootInfo* bInfo) {
+void prepare_memory(BootInfo* bInfo) {
 	// Setup global page frame allocator
 	gAlloc = PageFrameAllocator();
 	// Setup memory map
-	gAlloc.ReadEfiMemoryMap(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+	gAlloc.read_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
 	// _KernelStart and _KernelEnd defined in linker script "../kernel.ld"
 	uint64_t kernelSize = (uint64_t)&_KernelEnd - (uint64_t)&_KernelStart;
 	uint64_t kernelPagesNeeded = (uint64_t)kernelSize / 4096 + 1;
-	gAlloc.LockPages(&_KernelStart, kernelPagesNeeded);
+	gAlloc.lock_pages(&_KernelStart, kernelPagesNeeded);
 	// PAGE MAP LEVEL FOUR (see paging.h).
-    PageTable* PML4 = (PageTable*)gAlloc.RequestPages(0x100);
+    PageTable* PML4 = (PageTable*)gAlloc.request_pages(0x100);
 	// PAGE TABLE MANAGER
     PTM = PageTableManager(PML4);
 	kInfo.PTM = &PTM;
@@ -29,65 +29,35 @@ void PrepareMemory(BootInfo* bInfo) {
 }
 
 IDTR idtr;
-void SetIDTGate(void* handler, uint8_t entryOffset, uint8_t type_attr, uint8_t selector) {
+void set_idt_gate(void* handler, uint8_t entryOffset, uint8_t type_attr, uint8_t selector) {
 	IDTDescEntry* interrupt = (IDTDescEntry*)(idtr.Offset + entryOffset * sizeof(IDTDescEntry));
 	interrupt->SetOffset((uint64_t)handler);
 	interrupt->type_attr = type_attr;
 	interrupt->selector = selector;
 }
 
-void PrepareInterrupts() {
+void prepare_interrupts() {
 	idtr.Limit = 0x0FFF;
-	idtr.Offset = (uint64_t)gAlloc.RequestPage();
+	idtr.Offset = (uint64_t)gAlloc.request_page();
 	// SET CALLBACK TO HANDLER BASED ON INTERRUPT ENTRY OFFSET.
-	// SYSTEM TIMER
-	SetIDTGate((void*)SystemTimerHandler,			 0x20, IDT_TA_InterruptGate, 0x08);
+	// SYSTEM TIMER (PIT CHIP on IRQ0)
+	set_idt_gate((void*)SystemTimerHandler,			   0x20, IDT_TA_InterruptGate, 0x08);
 	// PS/2 KEYBOARD (SERIAL)
-	SetIDTGate((void*)KeyboardHandler,				 0x21, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((void*)KeyboardHandler,			   0x21, IDT_TA_InterruptGate, 0x08);
 	// PS/2 MOUSE    (SERIAL)
-	SetIDTGate((void*)MouseHandler,					 0x2c, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((void*)MouseHandler,				   0x2c, IDT_TA_InterruptGate, 0x08);
 	// FAULTS
-	SetIDTGate((void*)PageFaultHandler,				 0x0E, IDT_TA_InterruptGate, 0x08);
-	SetIDTGate((void*)DoubleFaultHandler,			 0x08, IDT_TA_InterruptGate, 0x08);
-	SetIDTGate((void*)GeneralProtectionFaultHandler, 0x0D, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((void*)PageFaultHandler,			   0x0E, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((void*)DoubleFaultHandler,			   0x08, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((void*)GeneralProtectionFaultHandler, 0x0D, IDT_TA_InterruptGate, 0x08);
 	// LOAD INTERRUPT DESCRIPTOR TABLE.
 	asm ("lidt %0" :: "m" (idtr));
-	// REMAP PIC CHIP TO ENSURE IT DOESN'T JUMBLE-UP INTERRUPTS.
-	RemapPIC();
-}
-
-void PrintMemoryInfo() {
-	unsigned int startX = gRend.DrawPos.x;
-	gRend.putstr("Memory Info:");
-	gRend.crlf(startX);
-	gRend.putstr("|\\");
-    gRend.crlf(startX);
-	gRend.putstr("| Free RAM: ");
-	gRend.putstr(to_string(gAlloc.GetFreeRAM() / 1024));
-	gRend.putstr(" kB (");
-	gRend.putstr(to_string(gAlloc.GetFreeRAM() / 1024 / 1024));
-	gRend.putstr(" mB)");
-    gRend.crlf(startX);
-	gRend.putstr("|\\");
-    gRend.crlf(startX);
-	gRend.putstr("| Used RAM: ");
-	gRend.putstr(to_string(gAlloc.GetUsedRAM() / 1024));
-	gRend.putstr(" kB (");
-	gRend.putstr(to_string(gAlloc.GetUsedRAM() / 1024 / 1024));
-	gRend.putstr(" mB)");
-    gRend.crlf(startX);
-	gRend.putstr(" \\");
-    gRend.crlf(startX);
-	gRend.putstr("  Reserved RAM: ");
-	gRend.putstr(to_string(gAlloc.GetReservedRAM() / 1024));
-	gRend.putstr(" kB (");
-	gRend.putstr(to_string(gAlloc.GetReservedRAM() / 1024 / 1024));
-	gRend.putstr(" mB)");
-	gRend.crlf(startX);
+	// REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
+	// IRQs now start at 0x20 (what was `int 0` is now `int 32`).
+	remap_pic();
 }
 
 Framebuffer target;
-
 KernelInfo InitializeKernel(BootInfo* bInfo) {
 	// DISABLE INTERRUPTS.
 	asm ("cli");
@@ -98,7 +68,7 @@ KernelInfo InitializeKernel(BootInfo* bInfo) {
 	// Call assembly `lgdt`.
 	LoadGDT(&GDTD);
 	// PREPARE MEMORY.
-	PrepareMemory(bInfo);
+	prepare_memory(bInfo);
 	// SETUP GOP RENDERER.
 	target = *bInfo->framebuffer;
 	// GOP = Graphics Output Protocol.
@@ -106,35 +76,29 @@ KernelInfo InitializeKernel(BootInfo* bInfo) {
 	uint64_t fbSize = (uint64_t)bInfo->framebuffer->BufferSize + 0x1000;
 	uint64_t fbPages = fbSize / 0x1000 + 1;
 	// ALLOCATE PAGES IN BITMAP FOR ACTIVE FRAMEBUFFER (CURRENT DISPLAY MEMORY).
-	gAlloc.LockPages(bInfo->framebuffer->BaseAddress, fbPages);
+	gAlloc.lock_pages(bInfo->framebuffer->BaseAddress, fbPages);
 	// Map active framebuffer physical address to virtual addresses 1:1.
 	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
 		PTM.MapMemory((void*)t, (void*)t);
 	}
 	// ALLOCATE PAGES IN BITMAP FOR TARGET FRAMEBUFFER (WRITABLE).
-	target.BaseAddress = gAlloc.RequestPages(fbPages);
+	target.BaseAddress = gAlloc.request_pages(fbPages);
     fbBase = (uint64_t)target.BaseAddress;
 	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
 		PTM.MapMemory((void*)t, (void*)t);
 	}
+	// CREATE GLOBAL RENDERER
 	gRend = BasicRenderer(bInfo->framebuffer, &target, bInfo->font);
-	// Initialize screen to background color.
-	gRend.clear();
-	gRend.BackgroundColor = 0xffffffff;
-	// GPLv3 LICENSE REQUIREMENT (interactive terminal must print cpy notice).
-	gRend.putstr("<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>", 0x00000000);
-	gRend.BackgroundColor = 0x00000000;
-	gRend.crlf();
-	// END GPLv3 LICENSE REQUIREMENT.
 	// PREPARE HARDWARE INTERRUPTS (IDT).
 	// IDT = INTERRUPT DESCRIPTOR TABLE.
 	// Call assembly `lidt`.
-	PrepareInterrupts();
+	prepare_interrupts();
 	// SYSTEM TIMER.
 	initialize_timer(20);
 	// PREPARE PS/2 MOUSE.
 	InitPS2Mouse();
 	// INTERRUPT MASKS.
+	// 0 = UNMASKED, ALLOWED TO HAPPEN
 	outb(PIC1_DATA, 0b11111000);
 	outb(PIC2_DATA, 0b11101111);
 	// ENABLE INTERRUPTS.

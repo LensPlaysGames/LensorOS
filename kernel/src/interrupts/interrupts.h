@@ -31,8 +31,8 @@ __attribute__((interrupt)) void DoubleFaultHandler				(InterruptFrame* frame);
 __attribute__((interrupt)) void GeneralProtectionFaultHandler	(InterruptFrame* frame);
 
 
-void RemapPIC();
-void EndMasterPIC();
-void EndSlavePIC();
+void remap_pic();
+void end_master_pic();
+void end_slave_pic();
 
 #endif
