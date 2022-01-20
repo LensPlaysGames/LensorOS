@@ -2,7 +2,6 @@
 
 // TODO:
 // - Create basic kernel memory allocation functions (kalloc(), free()).
-// - Create interface to PIT chip (timer).
 // - Create cross compiler (gcc).
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
 

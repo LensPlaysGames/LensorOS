@@ -3,6 +3,6 @@
 
 #include "basic_renderer.h"
 
-void Panic(const char* panicMsg);
+void panic(const char* panicMessage);
 
 #endif

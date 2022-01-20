@@ -14,11 +14,11 @@
 #include "cstr.h"
 #include "basic_renderer.h"
 
-void InitPS2Mouse();
-void HandlePS2Mouse(uint8_t data);
-void ProcessMousePacket();
+void init_ps2_mouse();
+void handle_ps2_mouse_interrupt(uint8_t data);
+void process_mouse_packet();
 // DRAW MOUSE CURSOR AT MOUSE POSITION USING GLOBAL RENDERER.
-void DrawMouseCursor();
+void draw_mouse_cursor();
 
 // The mouse ID determines what features the mouse supports.
 //   0 = x, y, left, right, middle (3 bytes)

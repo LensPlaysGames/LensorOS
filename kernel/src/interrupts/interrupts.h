@@ -22,13 +22,13 @@
 
 struct InterruptFrame;
 // GENERAL INTERRUPTS
-__attribute__((interrupt)) void SystemTimerHandler				(InterruptFrame* frame);
-__attribute__((interrupt)) void KeyboardHandler					(InterruptFrame* frame);
-__attribute__((interrupt)) void MouseHandler					(InterruptFrame* frame);
+__attribute__((interrupt)) void system_timer_handler   			    (InterruptFrame* frame);
+__attribute__((interrupt)) void keyboard_handler				    (InterruptFrame* frame);
+__attribute__((interrupt)) void mouse_handler					    (InterruptFrame* frame);
 // FAULT HANDLING
-__attribute__((interrupt)) void PageFaultHandler				(InterruptFrame* frame);
-__attribute__((interrupt)) void DoubleFaultHandler				(InterruptFrame* frame);
-__attribute__((interrupt)) void GeneralProtectionFaultHandler	(InterruptFrame* frame);
+__attribute__((interrupt)) void page_fault_handler				    (InterruptFrame* frame);
+__attribute__((interrupt)) void double_fault_handler			    (InterruptFrame* frame);
+__attribute__((interrupt)) void general_protection_fault_handler    (InterruptFrame* frame);
 
 
 void remap_pic();

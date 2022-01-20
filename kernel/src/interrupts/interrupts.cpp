@@ -9,42 +9,42 @@ inline void end_slave_pic() {
 	outb(PIC1_COMMAND, PIC_EOI);
 }
 
-__attribute__((interrupt)) void SystemTimerHandler(InterruptFrame* frame) {
+__attribute__((interrupt)) void system_timer_handler(InterruptFrame* frame) {
 	gTicks += 1;
 	// End interrupt
 	end_master_pic();
 }
 
-__attribute__((interrupt)) void KeyboardHandler(InterruptFrame* frame) {
+__attribute__((interrupt)) void keyboard_handler(InterruptFrame* frame) {
 	uint8_t scancode = inb(0x60);
-	HandleKeyboard(scancode);
+	handle_keyboard(scancode);
 	// End interrupt	
 	end_master_pic();
 }
 
-__attribute__((interrupt)) void MouseHandler(InterruptFrame* frame) {
+__attribute__((interrupt)) void mouse_handler(InterruptFrame* frame) {
 	uint8_t data = inb(0x60);
-	HandlePS2Mouse(data);
+	handle_ps2_mouse_interrupt(data);
 	// End interrupt
 	end_slave_pic();
 }
 
-__attribute__((interrupt)) void PageFaultHandler(InterruptFrame* frame) {
-	Panic("Page fault detected!");
+__attribute__((interrupt)) void page_fault_handler(InterruptFrame* frame) {
+	panic("Page fault detected!");
 	while (true) {
 		asm ("hlt");
 	}
 }
 
-__attribute__((interrupt)) void DoubleFaultHandler(InterruptFrame* frame) {
-	Panic("Double fault detected!");
+__attribute__((interrupt)) void double_fault_handler(InterruptFrame* frame) {
+	panic("Double fault detected!");
 	while (true) {
 		asm ("hlt");
 	}
 }
 
-__attribute__((interrupt)) void GeneralProtectionFaultHandler(InterruptFrame* frame) {
-	Panic("General protection fault detected!");
+__attribute__((interrupt)) void general_protection_fault_handler(InterruptFrame* frame) {
+	panic("General protection fault detected!");
 	while (true) {
 		asm ("hlt");
 	}
@@ -52,10 +52,10 @@ __attribute__((interrupt)) void GeneralProtectionFaultHandler(InterruptFrame* fr
 
 void remap_pic() {
 	// SAVE INTERRUPT MASKS
-	uint8_t a1;
-	uint8_t a2;
-	a1 = inb(PIC1_DATA);
-	a2 = inb(PIC2_DATA);
+	uint8_t masterMasks;
+	uint8_t slaveMasks;
+	masterMasks = inb(PIC1_DATA);
+	slaveMasks = inb(PIC2_DATA);
 	// START INIT IN CASCADE MODE
 	outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
 	io_wait();
@@ -65,6 +65,9 @@ void remap_pic() {
 	outb(PIC1_DATA, 0x20);
 	io_wait();
 	// SET VECTOR OFFSET OF SLAVE PIC
+	//   This allows software to throw low interrupts as normal (0-32)
+	//     without triggering an IRQ. This allows specific software and
+	//     hardware error handling.
 	outb(PIC2_DATA, 0x28);
 	io_wait();
 	// TELL MASTER THERE IS A SLAVE ON IRQ2
@@ -79,6 +82,6 @@ void remap_pic() {
 	outb(PIC2_DATA, ICW4_8086);
 	io_wait();
 	// LOAD INTERRUPT MASKS
-	outb(PIC1_DATA, a1);
-	outb(PIC2_DATA, a2);
+	outb(PIC1_DATA, masterMasks);
+	outb(PIC2_DATA, slaveMasks);
 }

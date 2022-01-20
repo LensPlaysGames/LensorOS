@@ -6,7 +6,7 @@ bool isCAPS;
 bool isLSHIFT;
 bool isRSHIFT;
 
-void HandleKeyboard(uint8_t scancode) {
+void handle_keyboard(uint8_t scancode) {
 	Vector2 cachedPos = gRend.DrawPos;
 	switch (scancode) {
 	case LSHIFT:

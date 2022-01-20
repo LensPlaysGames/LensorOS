@@ -5,7 +5,7 @@ uint8_t gMouseID;
 Vector2 gMousePosition = {0, 0};
 Vector2 gOldMousePosition = {0, 0};
 
-void MouseWait() {
+void mouse_wait() {
 	uint64_t timeout = 100000;
 	while (timeout--){
 		if ((inb(0x64) & 0b10) == 0) {
@@ -14,7 +14,7 @@ void MouseWait() {
 	}
 }
 
-void MouseWaitInput() {
+void mouse_wait_input() {
 	uint64_t timeout = 100000;
 	while (timeout--){
 		if (inb(0x64) & 0b1) {
@@ -23,42 +23,42 @@ void MouseWaitInput() {
 	}
 }
 
-void MouseWrite(uint8_t value) {
-	MouseWaitInput();
+void mouse_write(uint8_t value) {
+	mouse_wait_input();
 	outb(0x64, 0xD4);
-	MouseWait();
+	mouse_wait();
 	outb(0x60, value);
 }
 
-uint8_t MouseRead() {
-	MouseWaitInput();
+uint8_t mouse_read() {
+	mouse_wait_input();
 	return inb(0x60);
 }
 
-void InitPS2Mouse() {
+void init_ps2_mouse() {
 	// Enable mouse.
 	outb(0x64, 0xA8);
-	MouseWait();
+	mouse_wait();
 	// Tell keyboard controller a mouse message is incoming.
 	outb(0x64, 0x20);
 	
-	MouseWaitInput();
+	mouse_wait_input();
 	uint8_t status = inb(0x60);
 	status |= 0b10;
-	MouseWait();
+	mouse_wait();
 	outb(0x64, 0x60);
-	MouseWait();
+	mouse_wait();
 	outb(0x60, status);
 
-	MouseWrite(0xF6);
-	MouseRead();
+	mouse_write(0xF6);
+	mouse_read(); // ACKNOWLEDGE
 
-	MouseWrite(0xF4);
-	MouseRead();
+	mouse_write(0xF4);
+	mouse_read(); // ACK
 
-	MouseWrite(0xF2);
-	MouseRead(); // ACK
-	gMouseID = MouseRead();
+	mouse_write(0xF2);
+	mouse_read(); // ACK
+	gMouseID = mouse_read();
 	gRend.putstr("Successfully initialized PS2 mouse using serial port (ID: ");
 	gRend.putstr(to_string((uint64_t)gMouseID));
 	gRend.putchar(')');
@@ -68,7 +68,7 @@ void InitPS2Mouse() {
 uint8_t mouse_cycle {0};
 uint8_t mouse_packet[4];
 bool mouse_packet_ready = false;
-void HandlePS2Mouse(uint8_t data) {
+void handle_ps2_mouse_interrupt(uint8_t data) {
 	static bool skip = true;
 	if (skip) {
 		skip = false;
@@ -91,11 +91,11 @@ void HandlePS2Mouse(uint8_t data) {
 		mouse_cycle = 0;
 		break;
 	}
-	ProcessMousePacket();
+	process_mouse_packet();
 }
 
 #define MouseCursorSize 16
-uint8_t MouseCursor[] = {
+uint8_t mouse_cursor[] = {
 	0b10000000, 0b00000000,
 	0b11000000, 0b00000000,
 	0b11100000, 0b00000000,
@@ -114,7 +114,7 @@ uint8_t MouseCursor[] = {
 	0b00000000, 0b00000000
 };
 
-uint32_t PixelsUnderMouseCursor[MouseCursorSize * MouseCursorSize + 1];
+uint32_t pixels_under_mouse_cursor[MouseCursorSize * MouseCursorSize + 1];
 
 // DRAW MOUSE CURSOR AT gMousePosition
 void DrawMouseCursor() {
@@ -123,23 +123,23 @@ void DrawMouseCursor() {
 	static bool skip = true;
 	if (skip == false) {
 		gRend.DrawPos = gOldMousePosition;
-		gRend.drawpix({MouseCursorSize, MouseCursorSize}, &PixelsUnderMouseCursor[0]);
+		gRend.drawpix({MouseCursorSize, MouseCursorSize}, &pixels_under_mouse_cursor[0]);
 	}
 	else {
 		skip = false;
 	}
 	gRend.DrawPos = gMousePosition;
 	// READ PIXELS UNDER NEW MOUSE POSITION INTO BUFFER.
-	gRend.readpix({MouseCursorSize, MouseCursorSize}, &PixelsUnderMouseCursor[0]);
+	gRend.readpix({MouseCursorSize, MouseCursorSize}, &pixels_under_mouse_cursor[0]);
 	// DRAW MOUSE CUSOR AT NEW POSITION.
-	gRend.drawbmpover({MouseCursorSize, MouseCursorSize}, &MouseCursor[0], 0xffffffff);
+	gRend.drawbmpover({MouseCursorSize, MouseCursorSize}, &mouse_cursor[0], 0xffffffff);
 	// UPDATE VISUALS FROM NEW DATA.
 	gOldMousePosition = gMousePosition;
 	// RETURN GLOBAL DRAW POSITION.
 	gRend.DrawPos = cachedPos;
 }
 
-void ProcessMousePacket() {
+void process_mouse_packet() {
 	// ONLY PROCESS A PACKET THAT IS READY
 	if (mouse_packet_ready == false) {
 		return;

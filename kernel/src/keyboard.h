@@ -5,7 +5,7 @@
 #include "keyboard_scancode_translation.h"
 #include "basic_renderer.h"
 
-void HandleKeyboard(uint8_t scancode);
+void handle_keyboard(uint8_t scancode);
 
 extern Vector2 gTextPosition;
 

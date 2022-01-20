@@ -41,15 +41,15 @@ void prepare_interrupts() {
 	idtr.Offset = (uint64_t)gAlloc.request_page();
 	// SET CALLBACK TO HANDLER BASED ON INTERRUPT ENTRY OFFSET.
 	// SYSTEM TIMER (PIT CHIP on IRQ0)
-	set_idt_gate((void*)SystemTimerHandler,			   0x20, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((void*)system_timer_handler,				0x20, IDT_TA_InterruptGate, 0x08);
 	// PS/2 KEYBOARD (SERIAL)
-	set_idt_gate((void*)KeyboardHandler,			   0x21, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((void*)keyboard_handler,					0x21, IDT_TA_InterruptGate, 0x08);
 	// PS/2 MOUSE    (SERIAL)
-	set_idt_gate((void*)MouseHandler,				   0x2c, IDT_TA_InterruptGate, 0x08);
-	// FAULTS
-	set_idt_gate((void*)PageFaultHandler,			   0x0E, IDT_TA_InterruptGate, 0x08);
-	set_idt_gate((void*)DoubleFaultHandler,			   0x08, IDT_TA_InterruptGate, 0x08);
-	set_idt_gate((void*)GeneralProtectionFaultHandler, 0x0D, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((void*)mouse_handler,						0x2c, IDT_TA_InterruptGate, 0x08);
+	// FAULTS (POSSIBLE TO RECOVER)
+	set_idt_gate((void*)page_fault_handler,					0x0E, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((void*)double_fault_handler,				0x08, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((void*)general_protection_fault_handler,	0x0D, IDT_TA_InterruptGate, 0x08);
 	// LOAD INTERRUPT DESCRIPTOR TABLE.
 	asm ("lidt %0" :: "m" (idtr));
 	// REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
@@ -94,9 +94,9 @@ KernelInfo InitializeKernel(BootInfo* bInfo) {
 	// Call assembly `lidt`.
 	prepare_interrupts();
 	// SYSTEM TIMER.
-	initialize_timer(20);
+	initialize_timer(100);
 	// PREPARE PS/2 MOUSE.
-	InitPS2Mouse();
+	init_ps2_mouse();
 	// INTERRUPT MASKS.
 	// 0 = UNMASKED, ALLOWED TO HAPPEN
 	outb(PIC1_DATA, 0b11111000);
