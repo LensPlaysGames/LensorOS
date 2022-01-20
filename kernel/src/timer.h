@@ -37,6 +37,8 @@
 
 void initialize_timer(uint32_t freq);
 
+double get_seconds(uint64_t startTick = 0);
+
 extern uint64_t gTicks;
 extern uint32_t gFreq;
 

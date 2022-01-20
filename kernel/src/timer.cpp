@@ -12,3 +12,7 @@ void initialize_timer(uint32_t freq) {
 	outb(PIT_CH0_DAT, (uint8_t) (divisor & 0x00ff));
 	outb(PIT_CH0_DAT, (uint8_t)((divisor & 0xff00) >> 8));
 }
+
+double get_seconds(uint64_t startTick) {
+	return (gTicks - startTick) / (double)gFreq;
+}
