@@ -10,6 +10,8 @@ extern "C" void _start(BootInfo* bInfo) {
 	KernelInfo info = InitializeKernel(bInfo);
 	gRend.putstr("LensorOS kernel initialized successfully");
 	gRend.crlf();
+	// Start keyboard input at draw position, not origin.
+	gTextPosition = gRend.DrawPos;
 	// A FACE :)
 	// left eye
 	gRend.DrawPos = {420, 420};
@@ -26,13 +28,10 @@ extern "C" void _start(BootInfo* bInfo) {
 	// mouth
 	gRend.DrawPos = {400, 520};
 	gRend.drawrect({182, 20}, 0xff00ffff);
-
-	// MAIN KERNEL LOOP.
+	// UPDATE SCREEN FROM TARGET BUFFER AS OFTEN AS POSSIBLE.
 	while (true) {
-		ProcessMousePacket();
 		gRend.swap();
 	}
-
 	// HALT LOOP (KERNEL INACTIVE).
 	while (true) {
 		asm ("hlt");
