@@ -31,10 +31,11 @@ extern "C" void _start(BootInfo* bInfo) {
 	
 	// UPDATE SCREEN FROM TARGET BUFFER AS OFTEN AS POSSIBLE.
 	while (true) {
-		gRend.DrawPos = {680, 0};
-		gRend.putstr("|Elapsed: ");
-		gRend.putstr(to_string((get_seconds())));
-		gRend.putchar('|');
+		// DRAW TIME ELAPSED SINCE KERNEL INITIALIZATION IN TOP RIGHT.
+		gRend.DrawPos = {600, 0};
+		gRend.putstr("| Elapsed: ");
+		gRend.putstr(to_string(get_seconds()));
+		gRend.putstr("s |");
 		if (gRend.DrawPos.y > gRend.Target->PixelHeight) {
 			gRend.DrawPos.y = 0;
 		}

@@ -37,9 +37,35 @@
 
 void initialize_timer(uint32_t freq);
 
-double get_seconds(uint64_t startTick = 0);
-
 extern uint64_t gTicks;
 extern uint32_t gFreq;
+
+// Stopwatch functionality
+extern uint64_t start;
+extern uint64_t end;
+
+// Get seconds elapsed for a given amount of ticks.
+inline double get_seconds(uint64_t ticks) {
+	return ticks / (double)gFreq;
+}
+
+inline double get_seconds() {
+	return get_seconds(gTicks);
+}
+
+inline void timer_start() {
+	start = gTicks;
+}
+
+inline void timer_end() {
+	end = gTicks;
+}
+
+inline uint64_t timer_elapsed_ticks() {
+	return end - start;
+}
+inline double timer_elapsed_seconds() {
+	return get_seconds(end - start);
+}
 
 #endif
