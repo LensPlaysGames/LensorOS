@@ -35,9 +35,25 @@ void print_memory_info() {
 	gRend.crlf(startX);
 }
 
+void print_now() {
+	gRend.crlf();
+	gRend.putstr("Now is ");
+	gRend.putstr(to_string((uint64_t)gRTC.time.hour));
+	gRend.putchar(':');
+	gRend.putstr(to_string((uint64_t)gRTC.time.minute));
+	gRend.putchar(':');
+	gRend.putstr(to_string((uint64_t)gRTC.time.second));
+	gRend.putstr(" on ");
+	gRend.putstr(to_string((uint64_t)gRTC.time.year));
+	gRend.putchar('-');
+	gRend.putstr(to_string((uint64_t)gRTC.time.month));
+	gRend.putchar('-');
+	gRend.putstr(to_string((uint64_t)gRTC.time.date));
+	gRend.crlf();
+}
 
 extern "C" void _start(BootInfo* bInfo) {
-	KernelInfo info = InitializeKernel(bInfo);
+	KernelInfo info = kernel_init(bInfo);
 	gRend.clear();
 	// GPLv3 LICENSE REQUIREMENT (interactive terminal must print cpy notice).
 	gRend.BackgroundColor = 0xffffffff;
@@ -51,6 +67,7 @@ extern "C" void _start(BootInfo* bInfo) {
 	gRend.crlf();
 	print_memory_info();
 	gRend.crlf();
+	print_now();
 	// Start keyboard input at draw position, not origin.
 	gTextPosition = gRend.DrawPos;
 	// DRAW A FACE :)
@@ -69,7 +86,7 @@ extern "C" void _start(BootInfo* bInfo) {
 	// mouth
 	gRend.DrawPos = {400, 520};
 	gRend.drawrect({182, 20}, 0xff00ffff);
-	// UPDATE SCREEN FROM TARGET BUFFER AS OFTEN AS POSSIBLE.
+	// UPDATE SCREEN FROM TARGET BUFFER.
 	while (true) {
 		// DRAW TIME ELAPSED SINCE KERNEL INITIALIZATION IN TOP RIGHT.
 		gRend.DrawPos = {600, 0};

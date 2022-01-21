@@ -58,7 +58,7 @@ void prepare_interrupts() {
 }
 
 Framebuffer target;
-KernelInfo InitializeKernel(BootInfo* bInfo) {
+KernelInfo kernel_init(BootInfo* bInfo) {
 	// DISABLE INTERRUPTS.
 	asm ("cli");
 	// SETUP GDT DESCRIPTOR.
@@ -94,9 +94,11 @@ KernelInfo InitializeKernel(BootInfo* bInfo) {
 	// Call assembly `lidt`.
 	prepare_interrupts();
 	// SYSTEM TIMER.
-	initialize_timer(100);
+	initialize_timer(1000);
 	// PREPARE PS/2 MOUSE.
 	init_ps2_mouse();
+	// CREATE GLOBAL DATE/TIME (RTC INIT)
+	gRTC = RTC();
 	// INTERRUPT MASKS.
 	// 0 = UNMASKED, ALLOWED TO HAPPEN
 	outb(PIC1_DATA, 0b11111000);

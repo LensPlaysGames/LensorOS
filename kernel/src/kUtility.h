@@ -18,6 +18,7 @@
 #include "io.h"
 // TIMING
 #include "timer.h"
+#include "rtc.h"
 
 struct BootInfo {
 	Framebuffer* framebuffer;
@@ -35,4 +36,4 @@ struct KernelInfo {
 extern uint64_t _KernelStart;
 extern uint64_t _KernelEnd;
 
-KernelInfo InitializeKernel(BootInfo* info);
+KernelInfo kernel_init(BootInfo* info);
