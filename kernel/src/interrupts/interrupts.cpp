@@ -9,6 +9,7 @@ inline void end_slave_pic() {
 	outb(PIC1_COMMAND, PIC_EOI);
 }
 
+// HARDWARE INTERRUPT HANDLERS (IRQs)
 __attribute__((interrupt)) void system_timer_handler(InterruptFrame* frame) {
 	gTicks += 1;
 	// End interrupt
@@ -29,14 +30,44 @@ __attribute__((interrupt)) void mouse_handler(InterruptFrame* frame) {
 	end_slave_pic();
 }
 
+
+
+// FAULT INTERRUPT HANDLERS
 __attribute__((interrupt)) void page_fault_handler(InterruptFrame* frame) {
-	panic("Page fault detected!");
+	// POP ERROR CODE FROM STACK
+	uint64_t address;
+	asm volatile ("mov %%cr2, %0" : "=r" (address));
+	uint32_t err;
+	asm volatile ("pop %%rax; \
+                   mov %%eax, %0" : "=r" (err));
+	// If bit 0 == 0, page not present
+	if ((err & 0b1) == 0) {
+		panic("Page fault detected (page not present)");
+	}
+	// If bit 1 == 1, caused by page write access
+	else if (((err & 0b10) >> 1) == 1) {
+		panic("Page fault detected (Invalid page write access)");
+	}
+	// If bit 5 == 1, caused by a protection key violation.
+	else if (((err & 0b10000) >> 4) == 1) {
+		panic("Page fault detected (Protection-key violation)");
+	}
+	// If bit 6 == 1, caused by a shadow stack access.
+	else if (((err & 0b100000) >> 5) == 1) {
+		panic("Page fault detected (Shadow stack access)");
+	}
+	else {
+		panic("Page fault detected");
+	}
+	gRend.putstr(to_string(address));
 	while (true) {
 		asm ("hlt");
 	}
 }
 
 __attribute__((interrupt)) void double_fault_handler(InterruptFrame* frame) {
+	// POP ERROR CODE FROM STACK (always zero)
+	asm ("pop %rax");
 	panic("Double fault detected!");
 	while (true) {
 		asm ("hlt");
@@ -44,6 +75,8 @@ __attribute__((interrupt)) void double_fault_handler(InterruptFrame* frame) {
 }
 
 __attribute__((interrupt)) void general_protection_fault_handler(InterruptFrame* frame) {
+	// POP ERROR CODE FROM STACK (segment selector if segment related fault)
+	asm volatile ("pop %rax");
 	panic("General protection fault detected!");
 	while (true) {
 		asm ("hlt");
