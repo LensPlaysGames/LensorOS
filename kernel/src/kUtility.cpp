@@ -19,7 +19,7 @@ void prepare_memory(BootInfo* bInfo) {
 	kInfo.PTM = &PTM;
 	// Map all physical RAM addresses to virtual addresses, store them in the PML4.
 	for (uint64_t t = 0;
-		 t < GetMemorySize(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize);
+		 t < get_memory_size(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize);
 		 t+=0x1000)
 	{
 		PTM.MapMemory((void*)t, (void*)t);
@@ -46,10 +46,10 @@ void prepare_interrupts() {
 	set_idt_gate((void*)keyboard_handler,					0x21, IDT_TA_InterruptGate, 0x08);
 	// PS/2 MOUSE    (SERIAL)
 	set_idt_gate((void*)mouse_handler,						0x2c, IDT_TA_InterruptGate, 0x08);
-	// FAULTS (POSSIBLE TO RECOVER)
-	set_idt_gate((void*)page_fault_handler,					0x0E, IDT_TA_InterruptGate, 0x08);
-	set_idt_gate((void*)double_fault_handler,				0x08, IDT_TA_InterruptGate, 0x08);
+	// FAULTS (CALLED BEFORE FAULTY INSTRUCTION EXECUTES)
+	set_idt_gate((void*)general_protection_fault_handler,	0x08, IDT_TA_InterruptGate, 0x08);
 	set_idt_gate((void*)general_protection_fault_handler,	0x0D, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((void*)page_fault_handler,					0x0E, IDT_TA_InterruptGate, 0x08);
 	// LOAD INTERRUPT DESCRIPTOR TABLE.
 	asm ("lidt %0" :: "m" (idtr));
 	// REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
