@@ -1,7 +1,11 @@
 #include "kUtility.h"
 
 // TODO:
-// - Write ASM interrupt wrapper
+// - Write ASM interrupt wrapper (no longer rely on GCC-only "__attribute((interrupt))")
+//   - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/
+// - Test different memcpy implementations
+//   - See https://stackoverflow.com/questions/22387586/measuring-execution-time-of-a-function-in-c
+// - Move all std library includes to homebrew solutions (I only really use stdint.h, so it's quite easy)
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
 
 void print_memory_info() {
@@ -89,6 +93,7 @@ extern "C" void _start(BootInfo* bInfo) {
 	// mouth
 	gRend.DrawPos = {400, 520};
 	gRend.drawrect({182, 20}, 0xff00ffff);
+
 	// UPDATE SCREEN FROM TARGET BUFFER.
 	while (true) {
 		// DRAW TIME ELAPSED SINCE KERNEL INITIALIZATION IN TOP RIGHT.

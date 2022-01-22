@@ -30,16 +30,14 @@ __attribute__((interrupt)) void mouse_handler(InterruptFrame* frame) {
 	end_slave_pic();
 }
 
-
-
 // FAULT INTERRUPT HANDLERS
 __attribute__((interrupt)) void page_fault_handler(InterruptFrame* frame) {
 	// POP ERROR CODE FROM STACK
 	uint64_t address;
 	asm volatile ("mov %%cr2, %0" : "=r" (address));
 	uint32_t err;
-	asm volatile ("pop %%rax; \
-                   mov %%eax, %0" : "=r" (err));
+	asm volatile ("pop %%rax\n\t"
+				  "mov %%eax, %0" : "=r" (err));
 	// If bit 0 == 0, page not present
 	if ((err & 0b1) == 0) {
 		panic("Page fault detected (page not present)");
@@ -67,7 +65,7 @@ __attribute__((interrupt)) void page_fault_handler(InterruptFrame* frame) {
 
 __attribute__((interrupt)) void double_fault_handler(InterruptFrame* frame) {
 	// POP ERROR CODE FROM STACK (always zero)
-	asm ("pop %rax");
+	asm volatile ("pop %rax");
 	panic("Double fault detected!");
 	while (true) {
 		asm ("hlt");

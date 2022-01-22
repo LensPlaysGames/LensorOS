@@ -250,7 +250,7 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
 	}
 	else {
 		Print(L"[LOG]: Default font loaded successfully\n"
-			  L"Default Font (PSF1) Info:"
+			  L"Default Font (PSF1) Info:\n"
 			  L"  Mode:           %d\n"
 			  L"  Character Size: 8x%d\n",
 			  dflt_font->PSF1_Header->Mode,
@@ -266,16 +266,18 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
 	  gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
 	  gSystemTable->BootServices->AllocatePool(EfiLoaderData, MapSize, (void**)&Map);
 	  gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
+	  Print(L"[LOG]: EFI memory map successfully parsed\n");
 	}
 
+	// ACPI 2.0
 	EFI_CONFIGURATION_TABLE* ConfigTable = gSystemTable->ConfigurationTable;
 	void* rsdp = NULL;
-	// ACPI 2.0
 	EFI_GUID ACPI2TableGuid = ACPI_20_TABLE_GUID;
 	for (UINTN index = 0; index < gSystemTable->NumberOfTableEntries; index++) {
 		if (CompareGuid(&ConfigTable[index].VendorGuid, &ACPI2TableGuid)) {
 			// Found ACPI 2.0 Table in System Table.
 			if (strcmp((CHAR8*)"RSD PTR ", (CHAR8*)ConfigTable->VendorTable, 8)) {
+				Print(L"[LOG]: Found RSDP\n");
 				rsdp = (void*)ConfigTable->VendorTable;
 			}
 		}

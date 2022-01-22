@@ -19,6 +19,8 @@
 // TIMING
 #include "timer.h"
 #include "rtc.h"
+// SYSTEM TABLES
+#include "acpi.h"
 
 struct BootInfo {
 	Framebuffer* framebuffer;
@@ -26,7 +28,7 @@ struct BootInfo {
 	EFI_MEMORY_DESCRIPTOR* map;
 	uint64_t mapSize;
 	uint64_t mapDescSize;
-	void* rsdp;
+	ACPI::RSDP2* rsdp;
 };
 
 struct KernelInfo {

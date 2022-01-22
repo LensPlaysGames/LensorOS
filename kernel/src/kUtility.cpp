@@ -57,6 +57,21 @@ void prepare_interrupts() {
 	remap_pic();
 }
 
+void prepare_acpi(BootInfo* bInfo) {
+	ACPI::SDTHeader* xsdt = (ACPI::SDTHeader*)(bInfo->rsdp->XSDTAddress);
+	int entries = (xsdt->Length - sizeof(ACPI::SDTHeader)) / 8;
+	gRend.putstr("ACPI Tables Found: | ");
+	for (int t = 0; t < entries; ++t) {
+		ACPI::SDTHeader* SDTHeader = (ACPI::SDTHeader*)*(uint64_t*)((uint64_t)xsdt + sizeof(ACPI::SDTHeader) + (t * 8));
+		for (int i = 0; i < 4; ++i) {
+			gRend.putchar(SDTHeader->Signature[i]);
+		}
+		gRend.putstr(" | ");
+	}
+	gRend.crlf();
+	gRend.swap();
+}
+
 Framebuffer target;
 KernelInfo kernel_init(BootInfo* bInfo) {
 	// DISABLE INTERRUPTS.
@@ -99,6 +114,8 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	init_ps2_mouse();
 	// CREATE GLOBAL DATE/TIME (RTC INIT)
 	gRTC = RTC();
+	// SYSTEM INFORMATION IS FOUND IN ACPI TABLE
+	prepare_acpi(bInfo);
 	// INTERRUPT MASKS.
 	// 0 = UNMASKED, ALLOWED TO HAPPEN
 	outb(PIC1_DATA, 0b11111000);
