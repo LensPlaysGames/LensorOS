@@ -2,9 +2,10 @@
 #define LENSOR_OS_MEMORY_H
 
 #include <stdint.h>
+#include "large_integers.h"
 #include "efi_memory.h"
 
-uint64_t GetMemorySize(EFI_MEMORY_DESCRIPTOR* map, uint64_t mapEntries, uint64_t mapDescSize);
+uint64_t get_memory_size(EFI_MEMORY_DESCRIPTOR* map, uint64_t mapEntries, uint64_t mapDescSize);
 
 // Take in an address, `start`, and write `value` to the given number of bytes, `numBytes`.
 void memset(void* start, uint8_t value, uint64_t numBytes);

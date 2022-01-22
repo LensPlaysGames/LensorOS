@@ -1,8 +1,7 @@
 #include "kUtility.h"
 
 // TODO:
-// - Create basic kernel memory allocation functions (kalloc(), free()).
-// - Create cross compiler (gcc).
+// - Write ASM interrupt wrapper
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
 
 void print_memory_info() {
@@ -63,6 +62,10 @@ extern "C" void _start(BootInfo* bInfo) {
 	gRend.crlf();
 	// END GPLv3 LICENSE REQUIREMENT.
 	gRend.putstr("LensorOS kernel initialized successfully");
+	gRend.crlf();
+	gRend.crlf();
+	gRend.putstr("Framebuffer size (bytes): ");
+	gRend.putstr(to_string((uint64_t)gRend.Render->BufferSize));
 	gRend.crlf();
 	gRend.crlf();
 	print_memory_info();
