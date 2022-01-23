@@ -17,7 +17,7 @@ namespace PCI {
 		gRend.putstr(" / ");
 		gRend.putstr(DeviceClasses[pciDevHdr->Class]);
 		gRend.putstr(" / ");
-		gRend.putstr(to_hexstring(pciDevHdr->Subclass));
+		gRend.putstr(get_subclass_name(pciDevHdr->Class, pciDevHdr->Subclass));
 		gRend.putstr(" / ");
 		gRend.putstr(to_hexstring(pciDevHdr->ProgIF));
 	}

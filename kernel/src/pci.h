@@ -29,6 +29,6 @@ namespace PCI {
 	const char* get_vendor_name(uint16_t vendorID);
 	const char* get_device_name(uint16_t vendorID, uint16_t deviceID);
 	const char* get_subclass_name(uint8_t classCode, uint8_t subclassCode);
-}
+	const char* get_prog_if_name(uint8_t progIF);
 
 #endif

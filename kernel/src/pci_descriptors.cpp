@@ -141,7 +141,267 @@ namespace PCI {
 		}
 	}
 
-	const char* get_subclass_name(uint8_t classCode, uint8_t subclassCode) {
-		return "";
+	const char* get_subclass_name(uint8_t _class, uint8_t subclass) {
+	    switch (_class) {
+		case 0x00:
+			switch (subclass) {
+			case 0x0:
+				return "Non-VGA-Compatible Unclassified Device";
+			case 0x1:
+				return "VGA-Compatible Unclassified Device";
+			default:
+				return to_hexstring(subclass);
+			}
+		case 0x01:
+			// Mass Storage Controller
+			switch (subclass) {
+			case 0x0:
+				return "SCSI Bus Controller";
+			case 0x1:
+				return "IDE Controller";
+			case 0x2:
+				return "Floppy Disk Controller";
+			case 0x3:
+				return "IPI Bus Controller";
+			case 0x4:
+				return "RAID Controller";
+			case 0x5:
+				return "ADA Controller";
+			case 0x6:
+				return "Serial ATA Controller";
+			case 0x7:
+				return "Serial Attached SCSI Controller";
+			case 0x8:
+				return "Non-Volatile Memory Controller";
+			case 0x80:
+				return "Other";
+			default:
+				return to_hexstring(subclass);
+			}
+		case 0x02:
+			// Network Controller
+			switch (subclass) {
+			case 0x0:
+				return "Ethernet Controller";
+			case 0x1:
+				return "Token Ring Controller";
+			case 0x2:
+				return "FDDI Controller";
+			case 0x3:
+				return "ATM Controller";
+			case 0x4:
+				return "ISDN Controller";
+			case 0x5:
+				return "WorldFip Controller";
+			case 0x6:
+				return "PICMG 2.14 Multi Computing Controller";
+			case 0x7:
+				return "Infiniband Controller";
+			case 0x8:
+				return "Fabric Controller";
+			case 0x80:
+				return "Other";
+			default:
+				return to_hexstring(subclass);
+			}
+		case 0x03:
+			// Display Controller
+			switch (subclass) {
+			case 0x0:
+				return "VGA Compatible Controller";
+			case 0x1:
+				return "XGA Controller";
+			case 0x2:
+				return "3D Controller (Not VGA-Compatible) Controller";
+			case 0x80:
+				return "Other";
+			default:
+				return to_hexstring(subclass);
+			}
+		case 0x04:
+			// Multimedia Controller
+			switch (subclass) {
+			case 0x0:
+				return "Multimedia Video Controller";
+			case 0x1:
+				return "Multimedia Audio Controller";
+			case 0x2:
+				return "Computer Telephony Device";
+			case 0x3:
+				return "Audio Device";
+			case 0x80:
+				return "Other";
+			default:
+				return to_hexstring(subclass);
+			}
+		case 0x05:
+			// Memory Controller
+			switch (subclass) {
+			case 0x0:
+				return "RAM Controller";
+			case 0x1:
+				return "Flash Controller";
+			case 0x80:
+				return "Other";
+			default:
+				return to_hexstring(subclass);
+			}
+		case 0x06:
+			// Bridge
+			switch (subclass) {
+			case 0x0:
+				return "Host Bridge";
+			case 0x1:
+				return "ISA Bridge";
+			case 0x2:
+				return "EISA Bridge";
+			case 0x3:
+				return "MCA Bridge";
+			case 0x4:
+				return "PCI-to-PCI Bridge";
+			case 0x5:
+				return "PCMCIA Bridge";
+			case 0x6:
+				return "NuBus Bridge";
+			case 0x7:
+				return "CardBus Bridge";
+			case 0x8:
+				return "RACEway Bridge";
+			case 0x9:
+				return "PCI-to-PCI Bridge";
+			case 0xa:
+				return "InfiniBand-to-PCI Host Bridge";
+			case 0x80:
+				return "Other";
+			default:
+				return to_hexstring(subclass);
+			}
+		default:
+			return to_hexstring(subclass);
+		}
+	}
+
+	const char* get_prog_if_name(uint8_t _class, uint8_t subclass, uint8_t progIF) {
+		switch (_class) {
+		case 0x01:
+			// Mass Storage Controller
+			switch (subclass) {
+			case 0x1:
+				// IDE Controller
+				switch(progIF) {
+				case 0x0:
+					return "ISA compatibility mode-only controller";
+				case 0x5:
+					return "PCI native mode-only controller";
+				case 0xa:
+					return "ISA compatibility mode controller, supports both channels switched to PCI native mode";
+				case 0xf:
+					return "PCI native mode controller, supports both channels switched to ISA compatibility mode";
+				case 0x80:
+					return "ISA compatibility mode-only controller, supports bus mastering";
+				case 0x85:
+					return "PCI native mode-only controller, supports bus mastering";
+				case 0x8a:
+					return "ISA compatibility mode controller, supports both channels switched to PCI native mode, supports bus mastering";
+				case 0x8f:
+					return "PCI native mode controller, supports both channels switched to ISA compatibility mode, supports bus mastering";
+				default:
+					return to_hexstring(progIF);
+				}
+			case 0x5:
+				// ATA Controller
+				switch(progIF) {
+				case 0x20:
+					return "Single DMA";
+				case 0x30:
+					return "Chained DMA";
+				default:
+					return to_hexstring(progIF);
+				}
+			case 0x6:
+				// Serial ATA Controller
+				switch(progIF) {
+				case 0x0:
+					return "Vendor Specific Interface";
+				case 0x1:
+					return "AHCI 1.0";
+				case 0x2:
+					return "Serial Storage Bus";
+				default:
+					return to_hexstring(progIF);
+				}
+			case 0x7:
+				// Serial Attached SCSI Controller
+				switch(progIF) {
+				case 0x0:
+					return "SAS";
+				case 0x1:
+					return "Serial Storage Bus";
+				default:
+					return to_hexstring(progIF);
+				}
+			case 0x8:
+				// Non-Volatile Memory Controller
+				switch(progIF) {
+				case 0x1:
+					return "NVMHCI";
+				case 0x2:
+					return "NVM Express";
+				default:
+					return to_hexstring(progIF);
+				}
+			default:
+				return to_hexstring(progIF);
+			}
+		case 0x03:
+			// Display Controller
+			if (subclass == 0x0) {
+				// VGA Compatible Controller
+				switch (progIF) {
+				case 0x0:
+					return "VGA Controller";
+				case 0x1:
+					return "8514-Compatible Controller";
+				default:
+					return to_hexstring(progIF);
+				}
+			}
+		case 0x06:
+			// Bridge
+			switch (subclass) {
+			case 0x4: 
+				// PCI-to-PCI Bridge
+				switch (progIF) {
+				case 0x0:
+					return "Normal Decode";
+				case 0x1:
+					return "Subtractive Decode";
+				default:
+					return to_hexstring(progIF);
+				}
+			case 0x8: 
+				// RACEway Bridge
+				switch (progIF) {
+				case 0x0:
+					return "Transparent Mode";
+				case 0x1:
+					return "Endpoint Mode";
+				default:
+					return to_hexstring(progIF);
+				}
+			case 0x9: 
+				// PCI-to-PCI Bridge
+				switch (progIF) {
+				case 0x40:
+					return "Semi-Transparent, Primary bus towards host CPU";
+				case 0x80:
+					return "Semi-Transparent, Secondary bus towards host CPU";
+				default:
+					return to_hexstring(progIF);
+				}
+			}
+		default:
+			return to_hexstring(progIF);
+		}
 	}
 }
