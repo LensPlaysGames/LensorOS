@@ -32,13 +32,16 @@ void PageFrameAllocator::read_efi_memory_map(EFI_MEMORY_DESCRIPTOR* map, size_t 
 	free_memory = memorySize;
 	uint64_t bitmapSize = memorySize / 4096 / 8 + 1;
 	initialize_bitmap(bitmapSize, largestFreeMemorySegment);
-	lock_pages(PageBitmap.Buffer, PageBitmap.Size / 4096 + 1);
+	reserve_pages(0, memorySize / 4096 + 1);
 	for (int i = 0; i < mapEntries; i++) {
 		EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((uint64_t)map + (i * mapDescSize));
-		if (desc->type != 7) {
-			reserve_pages(desc->physicalAddress, desc->numPages);
+		if (desc->type == 7) {
+			unreserve_pages(desc->physicalAddress, desc->numPages);
 		}
 	}
+	// Reserve between 0 and 0x100000 (BIOS on some machines)
+	reserve_pages(0, 0x100);
+	lock_pages(PageBitmap.Buffer, PageBitmap.Size / 4096 + 1);
 	initialized = true;
 }
 
