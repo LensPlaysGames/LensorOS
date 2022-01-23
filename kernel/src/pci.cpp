@@ -16,6 +16,10 @@ namespace PCI {
 		gRend.putstr(get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID));
 		gRend.putstr(" / ");
 		gRend.putstr(DeviceClasses[pciDevHdr->Class]);
+		gRend.putstr(" / ");
+		gRend.putstr(to_hexstring(pciDevHdr->Subclass));
+		gRend.putstr(" / ");
+		gRend.putstr(to_hexstring(pciDevHdr->ProgIF));
 	}
 	
 	void enumerate_device(uint64_t bus_address, uint64_t device_number) {

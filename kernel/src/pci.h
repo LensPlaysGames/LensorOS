@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include "acpi.h"
 #include "paging/page_table_manager.h"
-
-// FIXME TEMPORARY FOR DEBUG PURPOSES
 #include "basic_renderer.h"
 #include "cstr.h"
 
@@ -30,6 +28,7 @@ namespace PCI {
 	extern const char* DeviceClasses[];
 	const char* get_vendor_name(uint16_t vendorID);
 	const char* get_device_name(uint16_t vendorID, uint16_t deviceID);
+	const char* get_subclass_name(uint8_t classCode, uint8_t subclassCode);
 }
 
 #endif
