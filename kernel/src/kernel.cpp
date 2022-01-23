@@ -77,6 +77,28 @@ extern "C" void _start(BootInfo* bInfo) {
 	gRend.crlf();
 	print_memory_info();
 	gRend.crlf();
+	
+	gRend.putstr("MEMORY ALLOCATION:");
+	gRend.crlf();
+	gRend.putstr("Address of 0x8000 bytes allocation: ");
+	gRend.putstr(to_hexstring((uint64_t)malloc(0x8000)));
+	gRend.crlf();
+	void* addr = malloc(0x8000);
+	gRend.putstr("Address of 0x8000 bytes allocation: ");
+	gRend.putstr(to_hexstring((uint64_t)addr));
+	gRend.crlf();
+	gRend.putstr("Address of 0x100 bytes allocation: ");
+	gRend.putstr(to_hexstring((uint64_t)malloc(0x100)));
+	gRend.crlf();
+	free(addr);
+	gRend.putstr("Address of 0x100 bytes allocation: ");
+	gRend.putstr(to_hexstring((uint64_t)malloc(0x100)));
+	gRend.crlf();
+	gRend.putstr("Address of 0x100 bytes allocation: ");
+	gRend.putstr(to_hexstring((uint64_t)malloc(0x100)));
+	gRend.crlf();
+	
+	gRend.crlf();
 	print_now();
 	// Start keyboard input at draw position, not origin.
 	gTextPosition = gRend.DrawPos;

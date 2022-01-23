@@ -21,7 +21,7 @@ void prepare_memory(BootInfo* bInfo) {
 		 t < get_memory_size(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize);
 		 t+=0x1000)
 	{
-		gPTM.MapMemory((void*)t, (void*)t);
+		gPTM.map_memory((void*)t, (void*)t);
 	}
     // Value of Control Register 3 = Address of the page directory in physical form.
 	asm ("mov %0, %%cr3" : : "r" (PML4));
@@ -78,6 +78,8 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	LoadGDT(&GDTD);
 	// PREPARE MEMORY.
 	prepare_memory(bInfo);
+	// SETUP KERNEL HEAP.
+	init_heap((void*)0x100000000000, 1);
 	// SETUP GOP RENDERER.
 	target = *bInfo->framebuffer;
 	// GOP = Graphics Output Protocol.
@@ -88,13 +90,13 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	gAlloc.lock_pages(bInfo->framebuffer->BaseAddress, fbPages);
 	// Map active framebuffer physical address to virtual addresses 1:1.
 	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
-		gPTM.MapMemory((void*)t, (void*)t);
+		gPTM.map_memory((void*)t, (void*)t);
 	}
 	// ALLOCATE PAGES IN BITMAP FOR TARGET FRAMEBUFFER (WRITABLE).
 	target.BaseAddress = gAlloc.request_pages(fbPages);
     fbBase = (uint64_t)target.BaseAddress;
 	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
-		gPTM.MapMemory((void*)t, (void*)t);
+		gPTM.map_memory((void*)t, (void*)t);
 	}
 	// CREATE GLOBAL RENDERER
 	gRend = BasicRenderer(bInfo->framebuffer, &target, bInfo->font);

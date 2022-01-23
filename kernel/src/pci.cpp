@@ -4,7 +4,7 @@ namespace PCI {
 	void enumerate_function(uint64_t device_address, uint64_t function_number) {
 		uint64_t offset = function_number << 12;
 		uint64_t function_address = device_address + offset;
-		gPTM.MapMemory((void*)function_address, (void*)function_address);
+		gPTM.map_memory((void*)function_address, (void*)function_address);
 		PCIDeviceHeader* pciDevHdr = (PCIDeviceHeader*)function_address;
 		if (pciDevHdr->DeviceID == 0x0000) { return; }
 		if (pciDevHdr->DeviceID == 0xFFFF) { return; }
@@ -25,7 +25,7 @@ namespace PCI {
 	void enumerate_device(uint64_t bus_address, uint64_t device_number) {
 		uint64_t offset = device_number << 15;
 		uint64_t device_address = bus_address + offset;
-		gPTM.MapMemory((void*)device_address, (void*)device_address);
+		gPTM.map_memory((void*)device_address, (void*)device_address);
 		PCIDeviceHeader* pciDevHdr = (PCIDeviceHeader*)device_address;
 		if (pciDevHdr->DeviceID == 0x0000) { return; }
 		if (pciDevHdr->DeviceID == 0xFFFF) { return; }
@@ -37,7 +37,7 @@ namespace PCI {
 	void enumerate_bus(uint64_t base_address, uint64_t bus_number) {
 		uint64_t offset = bus_number << 20;
 		uint64_t bus_address = base_address + offset;
-		gPTM.MapMemory((void*)bus_address, (void*)bus_address);
+		gPTM.map_memory((void*)bus_address, (void*)bus_address);
 		PCIDeviceHeader* pciDevHdr = (PCIDeviceHeader*)bus_address;
 		if (pciDevHdr->DeviceID == 0x0000) { return; }
 		if (pciDevHdr->DeviceID == 0xFFFF) { return; }

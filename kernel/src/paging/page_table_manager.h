@@ -10,7 +10,7 @@ public:
 	PageTableManager(PageTable* PML4_address);
 	PageTable* PML4;
 
-	void MapMemory(void* virtualMemory, void* physicalMemory);
+	void map_memory(void* virtualMemory, void* physicalMemory);
 };
 
 extern PageTableManager gPTM;
