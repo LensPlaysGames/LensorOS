@@ -144,6 +144,7 @@ namespace PCI {
 	const char* get_subclass_name(uint8_t _class, uint8_t subclass) {
 	    switch (_class) {
 		case 0x00:
+			// Unclassified
 			switch (subclass) {
 			case 0x0:
 				return "Non-VGA-Compatible Unclassified Device";
@@ -276,6 +277,193 @@ namespace PCI {
 			default:
 				return to_hexstring(subclass);
 			}
+		case 0x07:
+			// Simple Communication Controller
+			switch (subclass) {
+			case 0x0:
+				return "Serial Controller";
+			case 0x1:
+				return "Parallel Controller";
+			case 0x2:
+				return "Multiport Serial Controller";
+			case 0x3:
+				return "Modem";
+			case 0x4:
+				return "IEEE 488.1/2 (GPIB) Controller";
+			case 0x5:
+				return "Smart Card Controller";
+			case 0x80:
+				return "Other";
+			default:
+				return to_hexstring(subclass);
+			}
+		case 0x08:
+			// Base System Peripheral
+			switch (subclass) {
+			case 0x0:
+				return "Programmable Interrupt Controller";
+			case 0x1:
+				return "DMA Controller";
+			case 0x2:
+				return "Timer";
+			case 0x3:
+				return "RTC Controller";
+			case 0x4:
+				return "PCI Hot-Plug Controller";
+			case 0x5:
+				return "SD Host Controller";
+			case 0x6:
+				return "IOMMU";
+			case 0x80:
+				return "Other";
+			default:
+				return to_hexstring(subclass);
+			}
+		case 0x09:
+			// Input Device Controller
+			switch (subclass) {
+			case 0x0:
+				return "Keyboard Controller";
+			case 0x1:
+				return "Digitizer Pen";
+			case 0x2:
+				return "Mouse Controller";
+			case 0x3:
+				return "Scanner Controller";
+			case 0x4:
+				return "Gameport Controller";
+			case 0x80:
+				return "Other";
+			default:
+				return to_hexstring(subclass);
+			}
+		case 0x0a:
+			// Docking Station
+			switch (subclass) {
+			case 0x0:
+				return "Generic";
+			case 0x80:
+				return "Other";
+			default:
+				return to_hexstring(subclass);
+			}
+		case 0x0b:
+			// Processor
+			switch (subclass) {
+			case 0x0:
+				return "386";
+			case 0x1:
+				return "486";
+			case 0x2:
+				return "Pentium";
+			case 0x3:
+				return "Pentium Pro";
+			case 0x10:
+				return "Alpha";
+			case 0x20:
+				return "PowerPC";
+			case 0x30:
+				return "MIPS";
+			case 0x40:
+				return "Co-Processor";
+			case 0x80:
+				return "Other";
+			default:
+				return to_hexstring(subclass);
+			}
+		case 0x0c:
+			// Serial Bus Controller
+			switch (subclass) {
+			case 0x0:
+				return "FireWire (IEEE 1394) Controller";
+			case 0x1:
+				return "ACCESS Bus Controller";
+			case 0x2:
+				return "SSA";
+			case 0x3:
+				return "USB Controller";
+			case 0x4:
+				return "Fibre Channel";
+			case 0x5:
+				return "SMBus Controller";
+			case 0x6:
+				return "InfiniBand Controller";
+			case 0x7:
+				return "IPMI Interface";
+			case 0x8:
+				return "SERCOS Interface (IEC 61491)";
+			case 0x9:
+				return "CANbus Controller";
+			case 0x80:
+				return "Other";
+			default:
+				return to_hexstring(subclass);
+			}
+		case 0x0d:
+			// Wireless Controller
+			switch (subclass) {
+			case 0x0:
+				return "IRDA Compatible Controller";
+			case 0x1:
+				return "Consumer IR Controller";
+			case 0x10:
+				return "RF Controller";
+			case 0x11:
+				return "Bluetooth Controller";
+			case 0x12:
+				return "Broadband Controller";
+			case 0x20:
+				return "Ethernet Controller (802.1a)";
+			case 0x21:
+				return "Ethernet Controller (802.1b)";
+			case 0x80:
+				return "Other";
+			default:
+				return to_hexstring(subclass);
+			}
+		case 0xe:
+			// Intelligent Controller
+			return "I20";
+		case 0xF:
+			// Satellite Communication Controller
+			switch (subclass) {
+			case 0x1:
+				return "Satellite TV Controller";
+			case 0x2:
+				return "Satellite Audio Controller";
+			case 0x3:
+				return "Satellite Voice Controller";
+			case 0x4:
+				return "Satellite Data Controller";
+			}
+		case 0x10:
+			// Encryption Controller
+			switch (subclass) {
+			case 0x0:
+				return "Network and Computing Encryption/Decryption";
+			case 0x10:
+				return "Entertainment Encryption/Decryption";
+			case 0x80:
+				return "Other";
+			default:
+				return to_hexstring(subclass);
+			}
+		case 0x11:
+			// Signal Processing Controller
+			switch (subclass) {
+			case 0x0:
+				return "DPIO Modules";
+			case 0x1:
+				return "Performance Counters";
+			case 0x10:
+				return "Communication Synchronizer";
+			case 0x20:
+				return "Signal Processing Management";
+			case 0x80:
+				return "Other";
+			default:
+				return to_hexstring(subclass);
+			}
 		default:
 			return to_hexstring(subclass);
 		}
@@ -399,6 +587,164 @@ namespace PCI {
 				default:
 					return to_hexstring(progIF);
 				}
+			}
+		case 0x07:
+			// Simple Communication Controller
+			switch (subclass) {
+			case 0x0:
+				// Serial Controller
+				switch (progIF) {
+				case 0x0:
+					return "8250-Compatible (Generic XT)";
+				case 0x1:
+					return "16450-Compatible";
+				case 0x2:
+					return "16550-Compatible";
+				case 0x3:
+					return "16650-Compatible";
+				case 0x4:
+					return "16750-Compatible";
+				case 0x5:
+					return "16850-Compatible";
+				case 0x6:
+					return "16950-Compatible";
+				default:
+					return to_hexstring(progIF);
+				}
+			case 0x1:
+				// Parallel Controller
+				switch (progIF) {
+				case 0x0:
+					return "Standard Parallel Port";
+				case 0x1:
+					return "Bi-Directional Parallel Port";
+				case 0x2:
+					return "ECP 1.X Compliant Parallel Port";
+				case 0x3:
+					return "IEEE 1284 Controller";
+				case 0xFE:
+					return "IEEE 1284 Target Device";
+				default:
+					return to_hexstring(progIF);
+				}
+			case 0x3:
+				// Modem
+				switch (progIF) {
+				case 0x0:
+					return "Generic Modem";
+				case 0x1:
+					return "Hayes 16450-Compatible Interface";
+				case 0x2:
+					return "Hayes 16550-Compatible Interface";
+				case 0x3:
+					return "Hayes 16650-Compatible Interface";
+				case 0x4:
+					return "Hayes 16750-Compatible Interface";
+				default:
+					return to_hexstring(progIF);
+				}
+			default:
+				return to_hexstring(progIF);
+			}
+		case 0x08:
+			// Base System Peripheral
+			switch (subclass) {
+			case 0x0:
+				// PIC
+				switch (progIF) {
+				case 0x0:
+					return "Generic 8259-Compatible";
+				case 0x1:
+					return "ISA-Compatible";
+				case 0x2:
+					return "EISA-Compatible";
+				case 0x10:
+					return "I/O APIC Interrupt Controller";
+				case 0x20:
+					return "I/O(x) APIC Interrupt Controller";
+				default:
+					return to_hexstring(progIF);
+				}
+			case 0x1:
+				// DMA Controller
+				switch (progIF) {
+				case 0x0:
+					return "Generic 8237-Compatible";
+				case 0x1:
+					return "ISA-Compatible";
+				case 0x2:
+					return "EISA-Compatible";
+				default:
+					return to_hexstring(progIF);
+				}
+			case 0x2:
+				// Timer
+				switch (progIF) {
+				case 0x0:
+					return "Generic 8254-Compatible";
+				case 0x1:
+					return "ISA-Compatible";
+				case 0x2:
+					return "EISA-Compatible";
+				case 0x3:
+					return "HPET";
+				default:
+					return to_hexstring(progIF);
+				}
+			case 0x3:
+				// RTC Controller
+				switch (progIF) {
+				case 0x0:
+					return "Generic RTC";
+				case 0x1:
+					return "ISA-Compatible";
+				default:
+					return to_hexstring(progIF);
+				}
+			default:
+				return to_hexstring(progIF);
+			}
+		case 0x09:
+			// Input Device Controller
+			if (subclass == 0x4) {
+				// Gameport Controller
+				if (progIF == 0x0)       { return "Generic";  }
+				else if (progIF == 0x10) { return "Extended"; }
+				else { return to_hexstring(progIF); }
+			}
+		case 0xc:
+			// Serial Bus Controller
+			switch (subclass) {
+			case 0x0:
+				// FireWire (IEEE 1394) Controller
+				if (progIF == 0x0)       { return "Generic"; }
+				else if (progIF == 0x10) { return "OHCI";    }
+				else { return to_hexstring(progIF); }
+			case 0x3:
+				// USB Controller
+				switch (progIF) {
+				case 0x0:
+					return "UHCI Controller";
+				case 0x10:
+					return "OHCI Controller";
+				case 0x20:
+					return "EHCI (USB2) Controller";
+				case 0x30:
+					return "XHCI (USB3) Controller";
+				case 0x80:
+					return "Unspecified";
+				case 0xfe:
+					return "USB Device";
+				default:
+					return to_hexstring(progIF);
+				}
+			case 0x7:
+				// IPMI Interface
+				if      (progIF == 0x0) { return "SMIC";                      }
+				else if (progIF == 0x1) { return "Keyboard Controller Style"; }
+				else if (progIF == 0x2) { return "Block Transfer";            }
+			default:
+				return to_hexstring(progIF);
 			}
 		default:
 			return to_hexstring(progIF);

@@ -19,7 +19,7 @@ namespace PCI {
 		gRend.putstr(" / ");
 		gRend.putstr(get_subclass_name(pciDevHdr->Class, pciDevHdr->Subclass));
 		gRend.putstr(" / ");
-		gRend.putstr(to_hexstring(pciDevHdr->ProgIF));
+		gRend.putstr(get_prog_if_name(pciDevHdr->Class, pciDevHdr->Subclass, pciDevHdr->ProgIF));
 	}
 	
 	void enumerate_device(uint64_t bus_address, uint64_t device_number) {
