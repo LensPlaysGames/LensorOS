@@ -1,11 +1,14 @@
 #include "kUtility.h"
 
 // TODO:
+// - PCI
+//   - PCI Subclass and ProgIF human-readable translation to descriptor
+//   - Save parsed PCI devices for quick lookup.
 // - Write ASM interrupt wrapper (no longer rely on GCC-only "__attribute((interrupt))")
 //   - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/
 // - Test different memcpy implementations
 //   - See https://stackoverflow.com/questions/22387586/measuring-execution-time-of-a-function-in-c
-// - Move all std library includes to homebrew solutions (I only really use stdint.h, so it's quite easy)
+// - Move all std library includes to homebrew solutions (I only really use stddef.h and stdint.h, so it'll quite easy)
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
 
 void print_memory_info() {
