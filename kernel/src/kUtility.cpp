@@ -1,7 +1,6 @@
 #include "kUtility.h"
 
 KernelInfo kInfo;
-PageTableManager PTM = NULL;
 
 void prepare_memory(BootInfo* bInfo) {
 	// Setup global page frame allocator
@@ -15,14 +14,14 @@ void prepare_memory(BootInfo* bInfo) {
 	// PAGE MAP LEVEL FOUR (see paging.h).
     PageTable* PML4 = (PageTable*)gAlloc.request_pages(0x100);
 	// PAGE TABLE MANAGER
-    PTM = PageTableManager(PML4);
-	kInfo.PTM = &PTM;
+    gPTM = PageTableManager(PML4);
+	kInfo.PTM = &gPTM;
 	// Map all physical RAM addresses to virtual addresses, store them in the PML4.
 	for (uint64_t t = 0;
 		 t < get_memory_size(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize);
 		 t+=0x1000)
 	{
-		PTM.MapMemory((void*)t, (void*)t);
+		gPTM.MapMemory((void*)t, (void*)t);
 	}
     // Value of Control Register 3 = Address of the page directory in physical form.
 	asm ("mov %0, %%cr3" : : "r" (PML4));
@@ -58,20 +57,15 @@ void prepare_interrupts() {
 }
 
 void prepare_acpi(BootInfo* bInfo) {
+	// FIXME
+	// eXtended Something Descriptor Table
 	ACPI::SDTHeader* xsdt = (ACPI::SDTHeader*)(bInfo->rsdp->XSDTAddress);
-	int entries = (xsdt->Length - sizeof(ACPI::SDTHeader)) / 8;
-	gRend.putstr("ACPI Tables Found: | ");
-	for (int t = 0; t < entries; ++t) {
-		ACPI::SDTHeader* SDTHeader = (ACPI::SDTHeader*)*(uint64_t*)((uint64_t)xsdt + sizeof(ACPI::SDTHeader) + (t * 8));
-		for (int i = 0; i < 4; ++i) {
-			gRend.putchar(SDTHeader->Signature[i]);
-		}
-		gRend.putstr(" | ");
-	}
-	gRend.crlf();
-	gRend.swap();
+	// FIXME
+	// Macarena CauliFlower Gout
+	ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table(xsdt, (char*)"MCFG");
+	PCI::enumerate_pci(mcfg);
 }
-
+ 
 Framebuffer target;
 KernelInfo kernel_init(BootInfo* bInfo) {
 	// DISABLE INTERRUPTS.
@@ -94,13 +88,13 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	gAlloc.lock_pages(bInfo->framebuffer->BaseAddress, fbPages);
 	// Map active framebuffer physical address to virtual addresses 1:1.
 	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
-		PTM.MapMemory((void*)t, (void*)t);
+		gPTM.MapMemory((void*)t, (void*)t);
 	}
 	// ALLOCATE PAGES IN BITMAP FOR TARGET FRAMEBUFFER (WRITABLE).
 	target.BaseAddress = gAlloc.request_pages(fbPages);
     fbBase = (uint64_t)target.BaseAddress;
 	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
-		PTM.MapMemory((void*)t, (void*)t);
+		gPTM.MapMemory((void*)t, (void*)t);
 	}
 	// CREATE GLOBAL RENDERER
 	gRend = BasicRenderer(bInfo->framebuffer, &target, bInfo->font);

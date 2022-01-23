@@ -13,4 +13,6 @@ public:
 	void MapMemory(void* virtualMemory, void* physicalMemory);
 };
 
+extern PageTableManager gPTM;
+
 #endif

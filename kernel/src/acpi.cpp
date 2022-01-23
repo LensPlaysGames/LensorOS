@@ -7,11 +7,11 @@ namespace ACPI {
 			ACPI::SDTHeader* sdt = (ACPI::SDTHeader*)*(uint64_t*)((uint64_t)header + sizeof(ACPI::SDTHeader) + (t * 8));
 		    for (int i = 0; i < 4; ++i) {
 				if (sdt->Signature[i] != signature[i]) {
-					// Signature does not match given, return zero.
-				    return 0;
+					// Signature does not match given, check next header.
+					break;
 				}
 				else if (i == 3) {
-					// Successfully parsed 4 char signature
+					// Successfully matched 4 char signature
 					return sdt;
 				}
 			}

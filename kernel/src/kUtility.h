@@ -21,6 +21,7 @@
 #include "rtc.h"
 // SYSTEM TABLES
 #include "acpi.h"
+#include "pci.h"
 
 struct BootInfo {
 	Framebuffer* framebuffer;

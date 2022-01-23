@@ -1,5 +1,7 @@
 #include "page_table_manager.h"
 
+PageTableManager gPTM {nullptr};
+
 PageTableManager::PageTableManager(PageTable* PML4_address) {
 	PML4 = PML4_address;
 }
