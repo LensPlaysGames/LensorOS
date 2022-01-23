@@ -8,6 +8,14 @@ namespace PCI {
 		PCIDeviceHeader* pciDevHdr = (PCIDeviceHeader*)function_address;
 		if (pciDevHdr->DeviceID == 0x0000) { return; }
 		if (pciDevHdr->DeviceID == 0xFFFF) { return; }
+
+		// Print information about device
+		gRend.crlf();
+		gRend.putstr(get_vendor_name(pciDevHdr->VendorID));
+		gRend.putstr(" / ");
+		gRend.putstr(get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID));
+		gRend.putstr(" / ");
+		gRend.putstr(DeviceClasses[pciDevHdr->Class]);
 	}
 	
 	void enumerate_device(uint64_t bus_address, uint64_t device_number) {
@@ -38,12 +46,10 @@ namespace PCI {
 		int entries = ((mcfg->Header.Length) - sizeof(ACPI::MCFGHeader)) / sizeof(ACPI::DeviceConfig);
 		for (int t = 0; t < entries; ++t) {
 			ACPI::DeviceConfig* devCon = (ACPI::DeviceConfig*)((uint64_t)mcfg + sizeof(ACPI::MCFGHeader) + (sizeof(ACPI::DeviceConfig) * t));
-			gRend.putstr("Checking ");
-			gRend.putstr(to_string((uint64_t)entries));
-			gRend.putstr(" ACPI MCFG PCI devices");
 			for (uint64_t bus = devCon->StartBus; bus < devCon->EndBus; bus++) {
 				enumerate_bus(devCon->BaseAddress, bus);
 			}
+			gRend.swap();
 		}
 	}
 }

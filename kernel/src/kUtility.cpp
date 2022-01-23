@@ -64,6 +64,7 @@ void prepare_acpi(BootInfo* bInfo) {
 	// Macarena CauliFlower Gout
 	ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table(xsdt, (char*)"MCFG");
 	PCI::enumerate_pci(mcfg);
+	while (true) { asm ("hlt"); }
 }
  
 Framebuffer target;
