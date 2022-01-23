@@ -294,6 +294,7 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
 
 	// Exit boot services: free system resources dedicated to UEFI boot services,
 	//   as well as prevent UEFI from shutting down automatically after 5 minutes.
+	Print(L"[LOG]: Exiting boot services");
 	gSystemTable->BootServices->ExitBootServices(gImageHandle, MapKey);
 
 	// Define kernel entry point.
