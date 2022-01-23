@@ -68,36 +68,8 @@ extern "C" void _start(BootInfo* bInfo) {
 	gRend.crlf();
 	gRend.crlf();
 	// END GPLv3 LICENSE REQUIREMENT.
-	gRend.putstr("LensorOS kernel initialized successfully");
-	gRend.crlf();
-	gRend.crlf();
-	gRend.putstr("Framebuffer size (bytes): ");
-	gRend.putstr(to_string((uint64_t)gRend.Render->BufferSize));
-	gRend.crlf();
-	gRend.crlf();
 	print_memory_info();
 	gRend.crlf();
-	
-	gRend.putstr("MEMORY ALLOCATION:");
-	gRend.crlf();
-	gRend.putstr("Address of 0x8000 bytes allocation: ");
-	gRend.putstr(to_hexstring((uint64_t)malloc(0x8000)));
-	gRend.crlf();
-	void* addr = malloc(0x8000);
-	gRend.putstr("Address of 0x8000 bytes allocation: ");
-	gRend.putstr(to_hexstring((uint64_t)addr));
-	gRend.crlf();
-	gRend.putstr("Address of 0x100 bytes allocation: ");
-	gRend.putstr(to_hexstring((uint64_t)malloc(0x100)));
-	gRend.crlf();
-	free(addr);
-	gRend.putstr("Address of 0x100 bytes allocation: ");
-	gRend.putstr(to_hexstring((uint64_t)malloc(0x100)));
-	gRend.crlf();
-	gRend.putstr("Address of 0x100 bytes allocation: ");
-	gRend.putstr(to_hexstring((uint64_t)malloc(0x100)));
-	gRend.crlf();
-	
 	gRend.crlf();
 	print_now();
 	// Start keyboard input at draw position, not origin.
@@ -121,6 +93,8 @@ extern "C" void _start(BootInfo* bInfo) {
 
 	// UPDATE SCREEN FROM TARGET BUFFER.
 	while (true) {
+		// TEST SLEEP FUNCTION
+		sleep_sec(1);
 		// DRAW TIME ELAPSED SINCE KERNEL INITIALIZATION IN TOP RIGHT.
 		gRend.DrawPos = {600, 0};
 		gRend.putstr("Elapsed: ");

@@ -35,6 +35,7 @@
 //   1 0 =      channel 2
 //   1 1 =      read-back command (8254 only)
 
+void set_frequency(uint32_t freq);
 void initialize_timer(uint32_t freq);
 
 extern uint64_t gTicks;
@@ -46,7 +47,7 @@ extern uint64_t end;
 
 // Get seconds elapsed for a given amount of ticks.
 double get_seconds(uint64_t ticks);
-
+// Get total seconds since bootup.
 double get_seconds();
 
 inline void timer_start() {
@@ -62,5 +63,9 @@ inline uint64_t timer_elapsed_ticks() {
 }
 
 double timer_elapsed_seconds();
+
+// Halt cpu execution for given amount of time.
+void sleep_sec(double seconds);
+void sleep_ms(uint64_t milliseconds);
 
 #endif
