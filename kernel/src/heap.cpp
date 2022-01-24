@@ -12,6 +12,7 @@ void HeapSegmentHeader::combine_forward() {
 	if (next->next != nullptr) {
 		next->next->last = this;
 	}
+	next = next->next;
 	length = length + next->length + sizeof(HeapSegmentHeader);
 }
 
@@ -22,9 +23,9 @@ void HeapSegmentHeader::combine_backward() {
 }
 
 HeapSegmentHeader* HeapSegmentHeader::split(uint64_t splitLength) {
-	if (splitLength < 0x8) { return nullptr; }
-	uint64_t splitSegmentLength = length - splitLength - (sizeof(HeapSegmentHeader));
-	if (splitSegmentLength < 0x10) { return nullptr; }
+	if (splitLength < 8) { return nullptr; }
+	uint64_t splitSegmentLength = length - splitLength - sizeof(HeapSegmentHeader);
+	if (splitSegmentLength < 8) { return nullptr; }
 	HeapSegmentHeader* splitHeader = (HeapSegmentHeader*)((uint64_t)this + splitLength + sizeof(HeapSegmentHeader));
 	// Set next segment's last segment to the new segment.
 	next->last = splitHeader;
@@ -91,10 +92,10 @@ void* malloc(uint64_t numBytes) {
 	if (numBytes == 0) {
 		return nullptr;
 	}
-	// Round numBytes to 64-bit-aligned number.
-	if (numBytes % 0x8 > 0) {
-		numBytes -= (numBytes % 0x8);
-		numBytes += 0x8;
+	// Round numBytes to 64-bit (8-byte) aligned number.
+	if (numBytes % 8 > 0) {
+		numBytes -= (numBytes % 8);
+		numBytes += 8;
 	}
 
 	HeapSegmentHeader* current = (HeapSegmentHeader*)sHeapStart;
