@@ -3,6 +3,7 @@ ENTRY(_start)
 
 SECTIONS
 {
+/*  Kernel could be moved by assigning `.` to a specific address */
 	_KernelStart = .;
 	.text : ALIGN(0x1000)
 	{
