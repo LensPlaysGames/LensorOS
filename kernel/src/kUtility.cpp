@@ -57,11 +57,9 @@ void prepare_interrupts() {
 }
 
 void prepare_acpi(BootInfo* bInfo) {
-	// FIXME
-	// eXtended Something Descriptor Table
+	// eXtended System Descriptor Table
 	ACPI::SDTHeader* xsdt = (ACPI::SDTHeader*)(bInfo->rsdp->XSDTAddress);
-	// FIXME
-	// Macarena CauliFlower Gout
+	// Memory-mapped ConFiguration Table
 	ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table(xsdt, (char*)"MCFG");
 	PCI::enumerate_pci(mcfg);
 }
@@ -105,7 +103,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	// Call assembly `lidt`.
 	prepare_interrupts();
 	// SYSTEM TIMER.
-	initialize_timer(1000);
+	initialize_timer(2000);
 	// PREPARE PS/2 MOUSE.
 	init_ps2_mouse();
 	// CREATE GLOBAL DATE/TIME (RTC INIT)
