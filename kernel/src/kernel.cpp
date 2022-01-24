@@ -1,10 +1,9 @@
 #include "kUtility.h"
 
 // TODO:
-// - PCI
-//   - PCI Subclass and ProgIF human-readable translation to descriptor
-//   - Save parsed PCI devices for quick lookup.
-// - Write ASM interrupt wrapper (no longer rely on GCC-only "__attribute((interrupt))")
+// - AHCI Driver Implementation
+// - Save parsed PCI devices for quick lookup.
+// - Write ASM interrupt wrapper (no longer rely on GCC-only "__attribute__((interrupt))")
 //   - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/
 // - Test different memcpy implementations
 //   - See https://stackoverflow.com/questions/22387586/measuring-execution-time-of-a-function-in-c
@@ -93,8 +92,6 @@ extern "C" void _start(BootInfo* bInfo) {
 
 	// UPDATE SCREEN FROM TARGET BUFFER.
 	while (true) {
-		// TEST SLEEP FUNCTION
-		sleep_sec(1);
 		// DRAW TIME ELAPSED SINCE KERNEL INITIALIZATION IN TOP RIGHT.
 		gRend.DrawPos = {600, 0};
 		gRend.putstr("Elapsed: ");
