@@ -1,6 +1,6 @@
 #include "bitmap.h"
 
-bool Bitmap::operator[](uint64_t index) {
+bool Bitmap::Get(uint64_t index) {
 	if (index >= Size * 8) { return false; }
 	if ((Buffer[index / 8] & (0b10000000 >> (index % 8))) > 0) {
 		return true;
@@ -17,4 +17,8 @@ bool Bitmap::Set(uint64_t index, bool value) {
 		Buffer[byteIndex] |= bitIndexer;
 	}
 	return true;
+}
+
+bool Bitmap::operator[](uint64_t index) {
+    return Get(index);
 }
