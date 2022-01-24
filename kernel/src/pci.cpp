@@ -1,4 +1,5 @@
 #include "pci.h"
+#include "ahci/ahci.h"
 
 namespace PCI {
 	void enumerate_function(uint64_t device_address, uint64_t function_number) {
@@ -20,6 +21,25 @@ namespace PCI {
 		gRend.putstr(get_subclass_name(pciDevHdr->Class, pciDevHdr->Subclass));
 		gRend.putstr(" / ");
 		gRend.putstr(get_prog_if_name(pciDevHdr->Class, pciDevHdr->Subclass, pciDevHdr->ProgIF));
+
+		 if (pciDevHdr->Class == 0x01) {
+		 	// Mass Storage Controller
+		 	if (pciDevHdr->Subclass == 0x06) {
+				// Serial ATA
+		 		if (pciDevHdr->ProgIF == 0x01) {
+		 			// AHCI 1.0 Device
+					// THIS ONE FAILS (original)
+					// AHCI::AHCIDriver* ahci = new AHCI::AHCIDriver(pciDevHdr);
+					// THIS ONE FAILS (rewrite)
+					// AHCI::AHCIDriver* ahci = (AHCI::AHCIDriver*)malloc(sizeof(AHCI::AHCIDriver));
+					// THIS ONE FAILS (test)
+					// uint8_t* test = (uint8_t*)malloc(1);
+
+					// THIS ONE WORKS
+					AHCI::AHCIDriver ahci(pciDevHdr);
+		 		}
+			}
+		}
 	}
 	
 	void enumerate_device(uint64_t bus_address, uint64_t device_number) {
@@ -50,7 +70,7 @@ namespace PCI {
 		int entries = ((mcfg->Header.Length) - sizeof(ACPI::MCFGHeader)) / sizeof(ACPI::DeviceConfig);
 		for (int t = 0; t < entries; ++t) {
 			ACPI::DeviceConfig* devCon = (ACPI::DeviceConfig*)((uint64_t)mcfg + sizeof(ACPI::MCFGHeader) + (sizeof(ACPI::DeviceConfig) * t));
-			for (uint64_t bus = devCon->StartBus; bus < devCon->EndBus; bus++) {
+			for (uint64_t bus = devCon->StartBus; bus < devCon->EndBus; ++bus) {
 				enumerate_bus(devCon->BaseAddress, bus);
 			}
 			gRend.swap();
