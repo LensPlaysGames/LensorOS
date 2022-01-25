@@ -24,13 +24,27 @@ void HeapSegmentHeader::combine_backward() {
 
 HeapSegmentHeader* HeapSegmentHeader::split(uint64_t splitLength) {
 	if (splitLength < 8) { return nullptr; }
+	
+	/// Length of segment that is leftover after creating new header of `splitLength` length.
 	uint64_t splitSegmentLength = length - splitLength - sizeof(HeapSegmentHeader);
 	if (splitSegmentLength < 8) { return nullptr; }
-	HeapSegmentHeader* splitHeader = (HeapSegmentHeader*)((uint64_t)this + splitLength + sizeof(HeapSegmentHeader));
-	// Set next segment's last segment to the new segment.
-	next->last = splitHeader;
-	// Set new segment's next segment.
-	splitHeader->next = next;
+
+	/// Position of header that is newly created within the middle of `this` header.
+	HeapSegmentHeader* splitHeader = (HeapSegmentHeader*)((uint64_t)this
+														  + sizeof(HeapSegmentHeader)
+														  + splitLength);
+
+	// this.next->last     = splitHeader
+	// splitHeader.next    = this.next
+	// this.next           = splitHeader
+	// splitHeader->last   = this
+	
+	if (next != nullptr) {
+		// Set next segment's last segment to the new segment.
+		next->last = splitHeader;
+		// Set new segment's next segment.
+		splitHeader->next = next;
+	}
 	// Set current segment next to newly inserted segment.
 	next = splitHeader;
 	// Set new segment's last segment to this segment.
@@ -46,7 +60,6 @@ HeapSegmentHeader* HeapSegmentHeader::split(uint64_t splitLength) {
 }
 
 void init_heap(void* startAddress, uint64_t numInitialPages) {
-	void* pos = startAddress;
 	for (uint64_t i = 0; i < numInitialPages; ++i) {
 		// Map virtual heap position to physical memory address returned by page frame allocator.
 		gPTM.map_memory((void*)((uint64_t)startAddress + (i * 0x1000)), gAlloc.request_page());
