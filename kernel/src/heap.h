@@ -28,9 +28,9 @@ void expand_heap(uint64_t numBytes);
 void* malloc(uint64_t numBytes);
 void free(void* address);
 
-inline void* operator new(uint64_t numBytes)   { return malloc(numBytes); }
-inline void* operator new[](uint64_t numBytes) { return malloc(numBytes); }
-inline void operator delete(void* address)     { return free(address);    }
-inline void operator delete[](void* address)   { return free(address);    }
+inline void* operator new      (uint64_t numBytes) { return malloc(numBytes); }
+inline void* operator new[]    (uint64_t numBytes) { return malloc(numBytes); }
+inline void  operator delete   (void* address)     { return free(address);    }
+inline void  operator delete[] (void* address)     { return free(address);    }
 
 #endif

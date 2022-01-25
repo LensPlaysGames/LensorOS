@@ -2,9 +2,7 @@
 
 PageTableManager gPTM {nullptr};
 
-PageTableManager::PageTableManager(PageTable* PML4_address) {
-	PML4 = PML4_address;
-}
+PageTableManager::PageTableManager(PageTable* PML4Address) : PML4(PML4Address) {}
 
 // Map a virtual address to a physical address.
 void PageTableManager::map_memory(void* virtualMemory, void* physicalMemory) {

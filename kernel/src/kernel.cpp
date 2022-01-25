@@ -59,7 +59,7 @@ void print_now() {
 
 extern "C" void _start(BootInfo* bInfo) {
 	KernelInfo info = kernel_init(bInfo);
-	gRend.clear();
+	// gRend.clear();
 	// GPLv3 LICENSE REQUIREMENT (interactive terminal must print cpy notice).
 	gRend.BackgroundColor = 0xffffffff;
 	gRend.putstr("<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>", 0x00000000);

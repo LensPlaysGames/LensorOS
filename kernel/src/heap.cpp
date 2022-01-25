@@ -12,8 +12,8 @@ void HeapSegmentHeader::combine_forward() {
 	if (next->next != nullptr) {
 		next->next->last = this;
 	}
-	next = next->next;
 	length = length + next->length + sizeof(HeapSegmentHeader);
+	next = next->next;
 }
 
 void HeapSegmentHeader::combine_backward() {
@@ -66,12 +66,7 @@ void init_heap(void* startAddress, uint64_t numInitialPages) {
 }
 
 void expand_heap(uint64_t numBytes) {
-	// Round to page size
-	if(numBytes % 0x1000) {
-		numBytes -= numBytes % 0x1000;
-		numBytes += 0x1000;
-	}
-	uint64_t numPages = numBytes / 0x1000;
+	uint64_t numPages = (numBytes / 0x1000) + 1;
 	HeapSegmentHeader* extension = (HeapSegmentHeader*)sHeapEnd;
 	for (uint64_t i = 0; i < numPages; ++i) {
 		gPTM.map_memory(sHeapEnd, gAlloc.request_page());

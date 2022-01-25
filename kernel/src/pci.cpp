@@ -11,7 +11,6 @@ namespace PCI {
 		if (pciDevHdr->DeviceID == 0xFFFF) { return; }
 
 		// Print information about device
-		gRend.crlf();
 		gRend.putstr(get_vendor_name(pciDevHdr->VendorID));
 		gRend.putstr(" / ");
 		gRend.putstr(get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID));
@@ -21,7 +20,8 @@ namespace PCI {
 		gRend.putstr(get_subclass_name(pciDevHdr->Class, pciDevHdr->Subclass));
 		gRend.putstr(" / ");
 		gRend.putstr(get_prog_if_name(pciDevHdr->Class, pciDevHdr->Subclass, pciDevHdr->ProgIF));
-
+		gRend.crlf();
+		
 		 if (pciDevHdr->Class == 0x01) {
 		 	// Mass Storage Controller
 		 	if (pciDevHdr->Subclass == 0x06) {
@@ -29,12 +29,11 @@ namespace PCI {
 		 		if (pciDevHdr->ProgIF == 0x01) {
 		 			// AHCI 1.0 Device
 					// THIS ONE FAILS (original)
-					// AHCI::AHCIDriver* ahci = new AHCI::AHCIDriver(pciDevHdr);
+					// new AHCI::AHCIDriver(pciDevHdr);
 					// THIS ONE FAILS (rewrite)
 					// AHCI::AHCIDriver* ahci = (AHCI::AHCIDriver*)malloc(sizeof(AHCI::AHCIDriver));
 					// THIS ONE FAILS (test)
 					// uint8_t* test = (uint8_t*)malloc(1);
-
 					// THIS ONE WORKS
 					AHCI::AHCIDriver ahci(pciDevHdr);
 		 		}
@@ -73,7 +72,6 @@ namespace PCI {
 			for (uint64_t bus = devCon->StartBus; bus < devCon->EndBus; ++bus) {
 				enumerate_bus(devCon->BaseAddress, bus);
 			}
-			gRend.swap();
 		}
 	}
 }

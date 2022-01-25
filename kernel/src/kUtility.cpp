@@ -62,7 +62,7 @@ void prepare_acpi(BootInfo* bInfo) {
 	// Memory-mapped ConFiguration Table
 	ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table(xsdt, (char*)"MCFG");
 	PCI::enumerate_pci(mcfg);
-	while (true) { asm ("hlt"); }
+	gRend.crlf();
 }
  
 Framebuffer target;
@@ -105,6 +105,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	prepare_interrupts();
 	gRend.putstr("Interrupts prepared.");
 	gRend.crlf();
+	gRend.swap();
 	// SYSTEM TIMER.
 	uint64_t pitFreq = 2000;
 	initialize_timer(pitFreq);
@@ -112,16 +113,19 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	gRend.putstr(to_string(pitFreq));
 	gRend.putstr("hz).");
 	gRend.crlf();
+	gRend.swap();
 	// PREPARE PS/2 MOUSE.
 	init_ps2_mouse();
 	// CREATE GLOBAL DATE/TIME (RTC INIT)
 	gRTC = RTC();
 	gRend.putstr("Real Time Clock initialized.");
 	gRend.crlf();
+	gRend.swap();
 	// SYSTEM INFORMATION IS FOUND IN ACPI TABLE
 	prepare_acpi(bInfo);
 	gRend.putstr("ACPI prepared.");
 	gRend.crlf();
+	gRend.swap();
 	// INTERRUPT MASKS.
 	// 0 = UNMASKED, ALLOWED TO HAPPEN
 	outb(PIC1_DATA, 0b11111000);
@@ -129,5 +133,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	// ENABLE INTERRUPTS.
 	asm ("sti");
 	gRend.putstr("Interrupts enabled.");
+	gRend.crlf();
+	gRend.swap();
 	return kInfo;
 }
