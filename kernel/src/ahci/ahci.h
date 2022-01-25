@@ -20,7 +20,7 @@
 
 namespace AHCI {
 /// Max readable file size
-/// 128mib = 134217700 bytes = 32768 pages
+/// 128mib = 134217700 bytes = 32768 pages = 0x8000
 #define MAX_READ_PAGES 0x8000
 #define ATA_DEV_BUSY 0x80
 #define ATA_DEV_DRQ  0x08

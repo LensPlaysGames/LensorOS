@@ -31,6 +31,8 @@ namespace PCI {
 					// THIS ONE FAILS (original)
 					// new AHCI::AHCIDriver(pciDevHdr);
 					// THIS ONE FAILS (rewrite)
+					// AHCI::AHCIDriver* ahci = new AHCI::AHCIDriver(pciDevHdr);
+					// THIS ONE FAILS (rewrite)
 					// AHCI::AHCIDriver* ahci = (AHCI::AHCIDriver*)malloc(sizeof(AHCI::AHCIDriver));
 					// THIS ONE FAILS (test)
 					// uint8_t* test = (uint8_t*)malloc(1);

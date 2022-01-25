@@ -99,6 +99,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	}
 	// CREATE GLOBAL RENDERER
 	gRend = BasicRenderer(bInfo->framebuffer, &target, bInfo->font);
+	gRend.clear();
 	// PREPARE HARDWARE INTERRUPTS (IDT).
 	// IDT = INTERRUPT DESCRIPTOR TABLE.
 	// Call assembly `lidt`.

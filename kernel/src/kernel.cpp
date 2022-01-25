@@ -10,33 +10,36 @@
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
 
 void print_memory_info() {
-	unsigned int startX = gRend.DrawPos.x;
+	// 8 pixels per character, one char per column.
+	uint64_t startCol = gRend.DrawPos.x / 8;
+	gRend.crlf(startCol);
 	gRend.putstr("Memory Info:");
-	gRend.crlf(startX);
+	gRend.crlf(startCol);
 	gRend.putstr("|\\");
-    gRend.crlf(startX);
+    gRend.crlf(startCol);
 	gRend.putstr("| Free RAM: ");
 	gRend.putstr(to_string(gAlloc.get_free_ram() / 1024));
 	gRend.putstr(" kB (");
 	gRend.putstr(to_string(gAlloc.get_free_ram() / 1024 / 1024));
 	gRend.putstr(" mB)");
-    gRend.crlf(startX);
+    gRend.crlf(startCol);
 	gRend.putstr("|\\");
-    gRend.crlf(startX);
+    gRend.crlf(startCol);
 	gRend.putstr("| Used RAM: ");
 	gRend.putstr(to_string(gAlloc.get_used_ram() / 1024));
 	gRend.putstr(" kB (");
 	gRend.putstr(to_string(gAlloc.get_used_ram() / 1024 / 1024));
 	gRend.putstr(" mB)");
-    gRend.crlf(startX);
+    gRend.crlf(startCol);
 	gRend.putstr(" \\");
-    gRend.crlf(startX);
+    gRend.crlf(startCol);
 	gRend.putstr("  Reserved RAM: ");
 	gRend.putstr(to_string(gAlloc.get_reserved_ram() / 1024));
 	gRend.putstr(" kB (");
 	gRend.putstr(to_string(gAlloc.get_reserved_ram() / 1024 / 1024));
 	gRend.putstr(" mB)");
-	gRend.crlf(startX);
+	gRend.crlf(startCol);
+	gRend.swap();
 }
 
 void print_now() {
@@ -54,21 +57,22 @@ void print_now() {
 	gRend.putchar('-');
 	gRend.putstr(to_string((uint64_t)gRTC.time.date));
 	gRend.crlf();
+	gRend.swap();
 }
 
 extern "C" void _start(BootInfo* bInfo) {
 	KernelInfo info = kernel_init(bInfo);
+	// Uncomment the next line to clear initial information about
+	//   kernel setup (printed to screen during kernel_init).
 	// gRend.clear();
-	// GPLv3 LICENSE REQUIREMENT (interactive terminal must print cpy notice).
+	/// GPLv3 LICENSE REQUIREMENT (interactive terminal must print cpy notice).
 	gRend.BackgroundColor = 0xffffffff;
 	gRend.putstr("<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>", 0x00000000);
 	gRend.BackgroundColor = 0x00000000;
 	gRend.crlf();
-	gRend.crlf();
-	// END GPLv3 LICENSE REQUIREMENT.
+	gRend.swap();
+	/// END GPLv3 LICENSE REQUIREMENT.
 	print_memory_info();
-	gRend.crlf();
-	gRend.crlf();
 	print_now();
 	// Start keyboard input at draw position, not origin.
 	gTextPosition = gRend.DrawPos;
@@ -88,7 +92,7 @@ extern "C" void _start(BootInfo* bInfo) {
 	// mouth
 	gRend.DrawPos = {400, 520};
 	gRend.drawrect({182, 20}, 0xff00ffff);
-
+	gRend.swap();
 	// UPDATE SCREEN FROM TARGET BUFFER.
 	while (true) {
 		// DRAW TIME ELAPSED SINCE KERNEL INITIALIZATION IN TOP RIGHT.

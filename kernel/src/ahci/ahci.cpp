@@ -1,7 +1,5 @@
 #include "ahci.h"
 
-#include "../timer.h"
-
 namespace AHCI {
 #define HBA_PORT_DEVICE_PRESENT 0x3
 #define HBA_PORT_IPM_ACTIVE     0x1
@@ -165,11 +163,12 @@ namespace AHCI {
 		probe_ports();
 		for(uint32_t i = 0; i < numPorts; ++i) {
 			Ports[i].Configure();
-			// Allocate a single page as a buffer for each port.
-			// The max size of a file read or write is 4kib.
-			Ports[i].buffer = (uint8_t*)gAlloc.request_page();
-			memset(Ports[i].buffer, 0, 0x1000);
-			// READ ALL DISKS' CONTENTS TO SCREEN (requires '#include "../basic_renderer.h"')
+			Ports[i].buffer = (uint8_t*)gAlloc.request_pages(MAX_READ_PAGES);
+			if (Ports[i].buffer != nullptr) {
+				memset((void*)Ports[i].buffer, 0, MAX_READ_PAGES * 0x1000);
+			}
+			// READ ALL DISKS' CONTENTS TO SCREEN
+			// (requires '#include "../basic_renderer.h"')
 			// if (Ports[i].Read(0, 4, Ports[i].buffer)) {
 			// 	for (int t = 0; t < 1024; ++t) {
 			// 		gRend.putchar(Ports[i].buffer[t]);
