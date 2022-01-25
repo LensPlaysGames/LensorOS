@@ -13,6 +13,8 @@ namespace AHCI {
 #define SATA_SIG_SEMB  0xc33c0101
 #define SATA_SIG_PM    0x96690101
 
+	AHCIDriver* gAHCI;
+
 	PortType get_port_type(HBAPort* port) {
 		uint32_t sataStatus = port->sataStatus;
 		uint8_t interfacePowerManagement = (sataStatus >> 8) & 0b111;

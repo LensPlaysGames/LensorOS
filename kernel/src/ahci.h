@@ -191,6 +191,9 @@ namespace AHCI {
 		uint8_t numPorts;
 		void probe_ports();
 	};
+
+	extern AHCIDriver* gAHCI;
 }
+
 
 #endif
