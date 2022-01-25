@@ -3,20 +3,22 @@
 KernelInfo kInfo;
 
 void prepare_memory(BootInfo* bInfo) {
-	// Setup global page frame allocator
+	// Setup global page frame allocator.
+	// Page = 4kb of virtual memory.
+	// Frame = 4kb of physical memory.
 	gAlloc = PageFrameAllocator();
-	// Setup memory map
+	// Setup memory state from EFI memory map.
 	gAlloc.read_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
 	// _KernelStart and _KernelEnd defined in linker script "../kernel.ld"
-	uint64_t kernelSize = (uint64_t)&_KernelEnd - (uint64_t)&_KernelStart;
-	uint64_t kernelPagesNeeded = (uint64_t)kernelSize / 4096 + 1;
-	gAlloc.lock_pages(&_KernelStart, kernelPagesNeeded);
+	uint64_t kernelPagesNeeded = (((uint64_t)&_KernelEnd - (uint64_t)&_KernelStart) / 4096) + 1;
+    gAlloc.lock_pages(&_KernelStart, kernelPagesNeeded);
 	// PAGE MAP LEVEL FOUR (see paging.h).
-    PageTable* PML4 = (PageTable*)gAlloc.request_pages(0x100);
+    PageTable* PML4 = (PageTable*)gAlloc.request_page();
 	// PAGE TABLE MANAGER
     gPTM = PageTableManager(PML4);
 	kInfo.PTM = &gPTM;
-	// Map all physical RAM addresses to virtual addresses, store them in the PML4.
+	// Map all physical RAM addresses to virtual addresses 1:1, store them in the PML4.
+	// This means that virtual addresses will be equal to physical addresses.
 	for (uint64_t t = 0;
 		 t < get_memory_size(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize);
 		 t+=0x1000)
