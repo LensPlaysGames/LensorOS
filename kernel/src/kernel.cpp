@@ -1,13 +1,26 @@
 #include "kUtility.h"
 
 // TODO:
-// - AHCI Driver Implementation
+// - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
+// - AHCI Driver Update: DMA ATA Write implementation
 // - Save parsed PCI devices for quick lookup.
 // - Write ASM interrupt wrapper (no longer rely on GCC-only "__attribute__((interrupt))")
 //   - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/
 // - Test different memcpy implementations
 //   - See https://stackoverflow.com/questions/22387586/measuring-execution-time-of-a-function-in-c
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
+
+// TODO: Change from the ugly to the new beautiful alias'.
+/// Unsigned Integer Alias Declarations
+// using u8 = uint8_t;
+// using u16 = uint16_t;
+// using u32 = uint32_t;
+// using u64 = uint64_t;
+/// Signed Integer Alias Declarations
+// using s8 = int8_t;
+// using s16 = int16_t;
+// using s32 = int32_t;
+// using s64 = int64_t;
 
 void print_memory_info() {
 	// 8 pixels per character, one char per column.
