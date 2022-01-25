@@ -17,7 +17,7 @@ Create a folder. `LensorOS`, then move the following resources into the director
 - `kernel.elf` from `/kernel/bin/`
 - Any `.psf` version 1 font renamed to `dfltfont.psf`
   - A font is included for ease of use: `zap-vga16.psf`. 
-  - Many free fonts can be found [here](https://github.com/ercanersoy/PSF-Fonts))
+  - Many free fonts can be found [here](https://github.com/ercanersoy/PSF-Fonts)
 
 ```
 Final Directory Structure:
