@@ -1,5 +1,5 @@
 #include "pci.h"
-#include "ahci/ahci.h"
+#include "ahci.h"
 
 namespace PCI {
 	void enumerate_function(uint64_t device_address, uint64_t function_number) {
@@ -28,6 +28,8 @@ namespace PCI {
 				// Serial ATA
 		 		if (pciDevHdr->ProgIF == 0x01) {
 		 			// AHCI 1.0 Device
+					gRend.putstr("Found AHCI 1.0 Serial ATA Mass Storage Controller");
+					gRend.crlf();
 					// THIS ONE FAILS (original)
 					// new AHCI::AHCIDriver(pciDevHdr);
 					// THIS ONE FAILS (rewrite)
@@ -35,7 +37,7 @@ namespace PCI {
 					// THIS ONE FAILS (rewrite)
 					// AHCI::AHCIDriver* ahci = (AHCI::AHCIDriver*)malloc(sizeof(AHCI::AHCIDriver));
 					// THIS ONE FAILS (test)
-					// uint8_t* test = (uint8_t*)malloc(1);
+					// uint64_t* test = (uint64_t*)malloc(8);
 					// THIS ONE WORKS
 					AHCI::AHCIDriver ahci(pciDevHdr);
 		 		}
