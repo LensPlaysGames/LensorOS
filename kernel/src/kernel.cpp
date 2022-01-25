@@ -89,12 +89,6 @@ extern "C" void _start(BootInfo* bInfo) {
 	gRend.DrawPos = {400, 520};
 	gRend.drawrect({182, 20}, 0xff00ffff);
 
-	gRend.DrawPos = gTextPosition;
-	gRend.putstr("Calling page-fault interrupt by hand");
-	gRend.crlf();
-	gRend.swap();
-	asm volatile ("int $0xE");
-
 	// UPDATE SCREEN FROM TARGET BUFFER.
 	while (true) {
 		// DRAW TIME ELAPSED SINCE KERNEL INITIALIZATION IN TOP RIGHT.

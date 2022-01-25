@@ -73,7 +73,7 @@ __attribute__((interrupt)) void double_fault_handler(InterruptFrame* frame) {
 }
 
 __attribute__((interrupt)) void general_protection_fault_handler(InterruptFrame* frame) {
-	
+	// POP ERROR CODE FROM STACK (segment selector if segment related fault)
 	asm volatile ("pop %rax");
 	panic("General protection fault detected!");
 	while (true) {
