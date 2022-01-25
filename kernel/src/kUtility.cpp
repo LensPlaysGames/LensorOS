@@ -28,9 +28,9 @@ void prepare_memory(BootInfo* bInfo) {
 }
 
 IDTR idtr;
-void set_idt_gate(void* handler, uint8_t entryOffset, uint8_t type_attr, uint8_t selector) {
+void set_idt_gate(uint64_t handler, uint8_t entryOffset, uint8_t type_attr, uint8_t selector) {
 	IDTDescEntry* interrupt = (IDTDescEntry*)(idtr.Offset + entryOffset * sizeof(IDTDescEntry));
-	interrupt->SetOffset((uint64_t)handler);
+	interrupt->SetOffset(handler);
 	interrupt->type_attr = type_attr;
 	interrupt->selector = selector;
 }
@@ -40,15 +40,15 @@ void prepare_interrupts() {
 	idtr.Offset = (uint64_t)gAlloc.request_page();
 	// SET CALLBACK TO HANDLER BASED ON INTERRUPT ENTRY OFFSET.
 	// SYSTEM TIMER (PIT CHIP on IRQ0)
-	set_idt_gate((void*)system_timer_handler,				0x20, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((uint64_t)system_timer_handler,				0x20, IDT_TA_InterruptGate, 0x08);
 	// PS/2 KEYBOARD (SERIAL)
-	set_idt_gate((void*)keyboard_handler,					0x21, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((uint64_t)keyboard_handler,					0x21, IDT_TA_InterruptGate, 0x08);
 	// PS/2 MOUSE    (SERIAL)
-	set_idt_gate((void*)mouse_handler,						0x2c, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((uint64_t)mouse_handler,						0x2c, IDT_TA_InterruptGate, 0x08);
 	// FAULTS (CALLED BEFORE FAULTY INSTRUCTION EXECUTES)
-	set_idt_gate((void*)general_protection_fault_handler,	0x08, IDT_TA_InterruptGate, 0x08);
-	set_idt_gate((void*)general_protection_fault_handler,	0x0D, IDT_TA_InterruptGate, 0x08);
-	set_idt_gate((void*)page_fault_handler,					0x0E, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((uint64_t)double_fault_handler,	            0x08, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((uint64_t)general_protection_fault_handler,	0x0D, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((uint64_t)page_fault_handler,					0x0E, IDT_TA_InterruptGate, 0x08);
 	// LOAD INTERRUPT DESCRIPTOR TABLE.
 	asm ("lidt %0" :: "m" (idtr));
 	// REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
@@ -129,7 +129,9 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	// INTERRUPT MASKS.
 	// 0 = UNMASKED, ALLOWED TO HAPPEN
 	outb(PIC1_DATA, 0b11111000);
+	io_wait();
 	outb(PIC2_DATA, 0b11101111);
+	io_wait();
 	// ENABLE INTERRUPTS.
 	asm ("sti");
 	gRend.putstr("Interrupts enabled.");

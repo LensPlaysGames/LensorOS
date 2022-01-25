@@ -64,7 +64,7 @@ __attribute__((interrupt)) void page_fault_handler(InterruptFrame* frame) {
 }
 
 __attribute__((interrupt)) void double_fault_handler(InterruptFrame* frame) {
-	// POP ERROR CODE FROM STACK (always zero)
+	// ERROR CODE FROM DOUBLE FAULT ALWAYS ZERO (never useful).
 	asm volatile ("pop %rax");
 	panic("Double fault detected!");
 	while (true) {
@@ -73,7 +73,7 @@ __attribute__((interrupt)) void double_fault_handler(InterruptFrame* frame) {
 }
 
 __attribute__((interrupt)) void general_protection_fault_handler(InterruptFrame* frame) {
-	// POP ERROR CODE FROM STACK (segment selector if segment related fault)
+	
 	asm volatile ("pop %rax");
 	panic("General protection fault detected!");
 	while (true) {
@@ -86,7 +86,9 @@ void remap_pic() {
 	uint8_t masterMasks;
 	uint8_t slaveMasks;
 	masterMasks = inb(PIC1_DATA);
+	io_wait();
 	slaveMasks = inb(PIC2_DATA);
+	io_wait();
 	// START INIT IN CASCADE MODE
 	outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
 	io_wait();
@@ -114,5 +116,7 @@ void remap_pic() {
 	io_wait();
 	// LOAD INTERRUPT MASKS
 	outb(PIC1_DATA, masterMasks);
+	io_wait();
 	outb(PIC2_DATA, slaveMasks);
+	io_wait();
 }

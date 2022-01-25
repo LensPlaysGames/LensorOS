@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-#define IDT_TA_InterruptGate   0x8E
-#define IDT_TA_TrapGate        0x8F
+#define IDT_TA_InterruptGate   0x8e
+#define IDT_TA_TrapGate        0x8f
 
 struct IDTDescEntry {
   uint16_t offset0;

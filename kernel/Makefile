@@ -43,7 +43,7 @@ buildimg:
 kernel: $(OBJS) link
 $(OBJDIR)/interrupts/interrupts.o: $(SRCDIR)/interrupts/interrupts.cpp
 	@mkdir -p $(@D)
-	$(CC) -mno-red-zone -mgeneral-regs-only -ffreestanding -c $^ -o $@
+	$(CC) -mno-red-zone -mgeneral-regs-only -ffreestanding -fno-exceptions -c $^ -o $@
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $^ -o $@
