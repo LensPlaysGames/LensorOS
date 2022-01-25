@@ -25,19 +25,13 @@ namespace AHCI {
 			return PortType::None;
 		}
 
-		if (port->signature == SATA_SIG_ATAPI) {
-			return PortType::SATAPI;
+		switch (port->signature) {
+		case SATA_SIG_ATAPI: { return PortType::SATAPI; }
+		case SATA_SIG_ATA:   { return PortType::SATA;   }
+		case SATA_SIG_SEMB:  { return PortType::SEMB;   }
+		case SATA_SIG_PM:    { return PortType::PM;     }
+		default:             { return PortType::None;   }
 		}
-		if (port->signature == SATA_SIG_ATA) {
-			return PortType::SATA;
-		}
-		if (port->signature == SATA_SIG_SEMB) {
-			return PortType::SEMB;
-		}
-		if (port->signature == SATA_SIG_PM) {
-			return PortType::PM;
-		}
-		return PortType::None;
 	}
 
 	void AHCIDriver::probe_ports() {
@@ -144,28 +138,63 @@ namespace AHCI {
 		cmdFIS->countHigh = (numSectors >> 8) & 0xff;
 		// issue command.
 		hbaPort->commandIssue = 1;
-
+		// Wait until command is completed.
 		while (true) {
 			if (hbaPort->commandIssue == 0) { break; }
 			if (hbaPort->interruptStatus & HBA_PxIS_TFES) {
 				return false;
 			}
 		}
+		// Check once more after break that read did not fail.
+		if (hbaPort->interruptStatus & HBA_PxIS_TFES) {
+			return false;
+		}
 		return true;
 	}
 
 	AHCIDriver::AHCIDriver(PCI::PCIDeviceHeader* pciBaseAddress) {
 		PCIBaseAddress = pciBaseAddress;
+		
 	    ABAR = (HBAMemory*)(uint64_t)(((PCI::PCIHeader0*)PCIBaseAddress)->BAR5);
 		// Map ABAR into memory.
 		gPTM.map_memory(ABAR, ABAR);
+		
+		gRend.putstr("Probing AHCI 1.0 Controller at ");
+		gRend.putstr(to_hexstring((uint64_t)PCIBaseAddress));
+		gRend.crlf();
+		gRend.swap();
+		
 		// Probe ABAR for port info.
 		probe_ports();
+		
+		gRend.putstr("Found ");
+		gRend.putstr(to_string((uint64_t)numPorts));
+		gRend.putstr(" open and active ports");
+		gRend.crlf();
+		gRend.putstr("Max read/write: ");
+		gRend.putstr(to_string((uint64_t)MAX_READ_PAGES * 4));
+		gRend.putstr("kib");
+		gRend.crlf();
+		gRend.swap();
+		
 		for(uint32_t i = 0; i < numPorts; ++i) {
 			Ports[i].Configure();
 			Ports[i].buffer = (uint8_t*)gAlloc.request_pages(MAX_READ_PAGES);
 			if (Ports[i].buffer != nullptr) {
 				memset((void*)Ports[i].buffer, 0, MAX_READ_PAGES * 0x1000);
+				
+				gRend.putstr("Port ");
+				gRend.putstr(to_string((uint64_t)i));
+				gRend.putstr(" successfully configured");
+				gRend.crlf();
+				gRend.swap();
+			}
+			else {
+				gRend.putstr("Port ");
+				gRend.putstr(to_string((uint64_t)i));
+				gRend.putstr(" could not be configured");
+				gRend.crlf();
+				gRend.swap();
 			}
 			// READ ALL DISKS' CONTENTS TO SCREEN
 			// (requires '#include "../basic_renderer.h"')
@@ -180,6 +209,11 @@ namespace AHCI {
 	}
 	
 	AHCIDriver::~AHCIDriver() {
-		
+		gRend.putstr("Deconstructing AHCI Driver");
+		gRend.crlf();
+		gRend.swap();
+		for(uint32_t i = 0; i < numPorts; ++i) {
+			gAlloc.free_pages((void*)Ports[i].buffer, MAX_READ_PAGES);
+		}
 	}
 }

@@ -2,8 +2,8 @@
 #define LENSOR_OS_AHCI_H
 
 #include <stdint.h>
-#include "../paging/page_table_manager.h"
-#include "../pci.h"
+#include "paging/page_table_manager.h"
+#include "pci.h"
 
 /// AHCI (Advance Host Controller Interface) developed by Intel
 ///   Facilitates handling of Serial ATA devices.
@@ -21,7 +21,9 @@
 namespace AHCI {
 /// Max readable file size
 /// 128mib = 134217700 bytes = 32768 pages = 0x8000
-#define MAX_READ_PAGES 0x8000
+/// 1mib = 1048576 bytes = 256 pages = 0x100
+#define MAX_READ_PAGES 0x100
+	
 #define ATA_DEV_BUSY 0x80
 #define ATA_DEV_DRQ  0x08
 #define ATA_CMD_READ_DMA_EX 0x25
