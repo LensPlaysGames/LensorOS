@@ -90,17 +90,25 @@ namespace AHCI {
 		HBA_PRDTEntry prdtEntry[];
 	};
 
+	/// Frame Information Structure Type
 	enum FIS_TYPE {
+		/// Used by the host to send command or control to a device.
 		REG_H2D   = 0x27,
+		/// Used by the device to notify the host
+		///   that some ATA register has changed.
 		REG_D2H   = 0x34,
 		DMA_ACT   = 0x39,
 		DMA_SETUP = 0x41,
+		/// Used by both the host and device to send data payload.
 		DATA      = 0x46,
 		BIST      = 0x58,
+		/// Used by the device to notify the host that it's about to send
+		///   (or ready to recieve) a PIO data payload.
 		PIO_SETUP = 0x5f,
 		DEV_BITS  = 0xa1,
 	};
 	
+	/// Frame Information Structure Reegister Host to Device
 	struct FIS_REG_H2D {
 		uint8_t type;
 		uint8_t portMultiplier:4;
@@ -123,6 +131,7 @@ namespace AHCI {
 		uint8_t rsv1[4];
 	};
 
+	/// Port Type
 	enum PortType {
 		None = 0,
 		SATA = 1,
@@ -146,11 +155,13 @@ namespace AHCI {
 	class AHCIDriver {
 	public:
 		PCI::PCIDeviceHeader* PCIBaseAddress;
+		/// AHCI Base Memory Register
 		HBAMemory* ABAR;
 
 		AHCIDriver(PCI::PCIDeviceHeader* pciBaseAddress);
 		~AHCIDriver();
-		
+
+		// TODO: Move port memory allocation to dynamic (reduce memory usage).
 		Port Ports[32];
 		uint8_t numPorts;
 		void probe_ports();
