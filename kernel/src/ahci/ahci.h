@@ -5,19 +5,30 @@
 #include "../paging/page_table_manager.h"
 #include "../pci.h"
 
-namespace AHCI {
-	// Max readable file size; 128mib
-#define MAX_READ_PAGES 0x8000
+/// AHCI (Advance Host Controller Interface) developed by Intel
+///   Facilitates handling of Serial ATA devices.
+///   An AHCI Controller is referred to as a Host Bus Adapter, or HBA.
+///   The HBA's job (nutshell) is to allow access to SATA drives using
+///     system memory and memory mapped registers, without using what
+///     are called task files (a requirement for IDE, the alternative).
+///   The HBA does this through the use of ports. A port is a pathway
+///     for communication between a host (the computer) and a SATA device.
+///   An HBA may support up to 32 ports which can attach different
+///     SATA devices (disk drives, port multipliers, etc).
+///   By sending commands through these ports, the devices can be manipulated
+///     to do anything they are capable of (read data, write data, etc).
 
-	// page = 0x1000
-	// max_read_pages = bytes / page
-	
+namespace AHCI {
+/// Max readable file size
+/// 128mib = 134217700 bytes = 32768 pages
+#define MAX_READ_PAGES 0x8000
 #define ATA_DEV_BUSY 0x80
 #define ATA_DEV_DRQ  0x08
 #define ATA_CMD_READ_DMA_EX 0x25
 
 #define HBA_PxIS_TFES (1 << 30)
 
+	/// Host Bus Adapter Port
 	struct HBAPort{
         uint32_t commandListBase;
         uint32_t commandListBaseUpper;
@@ -40,6 +51,9 @@ namespace AHCI {
         uint32_t vendor[4];
     };
 
+	/// Host Bus Adapter Memory Registers
+	///   The layout of the memory registers
+	///     accessable through the Host Bus Adapter.
 	struct HBAMemory{
         uint32_t hostCapability;
         uint32_t globalHostControl;
@@ -57,6 +71,8 @@ namespace AHCI {
         HBAPort ports[1];
     };
 
+	/// Host Bus Adapter Command Header
+	///   The beginning of a Host Bus Adapter command is structured as shown.
 	struct HBACommandHeader {
 		uint8_t commandFISLength :5;
 		uint8_t atapi            :1;
@@ -74,6 +90,8 @@ namespace AHCI {
 		uint32_t rsv1[4];
 	};
 
+	/// Host Bus Adapter Physical Region Descriptor Table Entry
+	///   Specifies data payload address in memory as well as size.
 	struct HBA_PRDTEntry {
 		uint32_t dataBaseAddress;
 		uint32_t dataBaseAddressUpper;
@@ -151,9 +169,14 @@ namespace AHCI {
 		void StopCMD();
 		bool Read(uint64_t sector, uint16_t numSectors, void* buffer);
 	};
-	
+
+	/// Advance Host Controller Interface Driver
+	///   This driver is instantiated for each SATA controller found on
+	///     the PCI bus, and will parse all the ports that are active and
+	///     valid for later use.
 	class AHCIDriver {
 	public:
+		/// Address of PCI device header (expected SATA Controller, AHCI 1.0).
 		PCI::PCIDeviceHeader* PCIBaseAddress;
 		/// AHCI Base Memory Register
 		HBAMemory* ABAR;

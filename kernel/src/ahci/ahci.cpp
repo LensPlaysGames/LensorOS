@@ -158,13 +158,15 @@ namespace AHCI {
 
 	AHCIDriver::AHCIDriver(PCI::PCIDeviceHeader* pciBaseAddress) {
 		PCIBaseAddress = pciBaseAddress;
+	    ABAR = (HBAMemory*)(uint64_t)(((PCI::PCIHeader0*)PCIBaseAddress)->BAR5);
 		// Map ABAR into memory.
-	    ABAR = (HBAMemory*)((uint64_t)(((PCI::PCIHeader0*)PCIBaseAddress)->BAR5));
 		gPTM.map_memory(ABAR, ABAR);
 		// Probe ABAR for port info.
 		probe_ports();
 		for(uint32_t i = 0; i < numPorts; ++i) {
 			Ports[i].Configure();
+			// Allocate a single page as a buffer for each port.
+			// The max size of a file read or write is 4kib.
 			Ports[i].buffer = (uint8_t*)gAlloc.request_page();
 			memset(Ports[i].buffer, 0, 0x1000);
 			// READ ALL DISKS' CONTENTS TO SCREEN (requires '#include "../basic_renderer.h"')
