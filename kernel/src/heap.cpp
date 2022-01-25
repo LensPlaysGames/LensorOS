@@ -33,12 +33,6 @@ HeapSegmentHeader* HeapSegmentHeader::split(uint64_t splitLength) {
 	HeapSegmentHeader* splitHeader = (HeapSegmentHeader*)((uint64_t)this
 														  + sizeof(HeapSegmentHeader)
 														  + splitLength);
-
-	// this.next->last     = splitHeader
-	// splitHeader.next    = this.next
-	// this.next           = splitHeader
-	// splitHeader->last   = this
-	
 	if (next != nullptr) {
 		// Set next segment's last segment to the new segment.
 		next->last = splitHeader;
@@ -80,18 +74,20 @@ void init_heap(void* startAddress, uint64_t numInitialPages) {
 
 void expand_heap(uint64_t numBytes) {
 	uint64_t numPages = (numBytes / 0x1000) + 1;
+	// Get address of new header at the end of the heap.
 	HeapSegmentHeader* extension = (HeapSegmentHeader*)sHeapEnd;
+	// Allocate and map a page in memory for new header.
 	for (uint64_t i = 0; i < numPages; ++i) {
 		gPTM.map_memory(sHeapEnd, gAlloc.request_page());
 		sHeapEnd = (void*)((uint64_t)sHeapEnd + 0x1000);
 	}
-
 	extension->free = true;
 	extension->last = sLastHeader;
 	sLastHeader->next = extension;
 	sLastHeader = extension;
 	extension->next = nullptr;
 	extension->length = numBytes - sizeof(HeapSegmentHeader);
+	// After expanding, combine with the previous segment (decrease fragmentation).
 	extension->combine_backward();
 }
 

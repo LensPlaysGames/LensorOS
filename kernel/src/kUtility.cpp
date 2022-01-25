@@ -41,11 +41,11 @@ void prepare_interrupts() {
 	idtr.Limit = 0x0FFF;
 	idtr.Offset = (uint64_t)gAlloc.request_page();
 	// SET CALLBACK TO HANDLER BASED ON INTERRUPT ENTRY OFFSET.
-	// SYSTEM TIMER (PIT CHIP on IRQ0)
+	// IRQ0: SYSTEM TIMER  (PIT CHIP)
 	set_idt_gate((uint64_t)system_timer_handler,				0x20, IDT_TA_InterruptGate, 0x08);
-	// PS/2 KEYBOARD (SERIAL)
+	// IRQ1: PS/2 KEYBOARD (SERIAL)
 	set_idt_gate((uint64_t)keyboard_handler,					0x21, IDT_TA_InterruptGate, 0x08);
-	// PS/2 MOUSE    (SERIAL)
+	// IRQ12: PS/2 MOUSE   (SERIAL)
 	set_idt_gate((uint64_t)mouse_handler,						0x2c, IDT_TA_InterruptGate, 0x08);
 	// FAULTS (CALLED BEFORE FAULTY INSTRUCTION EXECUTES)
 	set_idt_gate((uint64_t)double_fault_handler,	            0x08, IDT_TA_InterruptGate, 0x08);
@@ -80,7 +80,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	// PREPARE MEMORY.
 	prepare_memory(bInfo);
 	// SETUP KERNEL HEAP.
-	init_heap((void*)0x100000000000, 1);
+	init_heap((void*)0x700000000000, 1);
 	// SETUP GOP RENDERER.
 	target = *bInfo->framebuffer;
 	// GOP = Graphics Output Protocol.
