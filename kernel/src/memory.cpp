@@ -16,8 +16,31 @@ uint64_t get_memory_size(EFI_MEMORY_DESCRIPTOR* map, uint64_t mapEntries, uint64
 }
 
 void memset(void* start, uint8_t value, uint64_t numBytes) {
-	for (uint64_t i = 0; i < numBytes; ++i) {
-		*(uint8_t*)((uint64_t)start + i) = value;
+	if (numBytes <= 256) {
+		for (uint64_t i = 0; i < numBytes; ++i) {
+			*(uint8_t*)((uint64_t)start + i) = value;
+		}
+	}
+	else {
+		uint64_t qWordValue = 0;
+		qWordValue |= (uint64_t)value << 0;
+		qWordValue |= (uint64_t)value << 8;
+		qWordValue |= (uint64_t)value << 16;
+		qWordValue |= (uint64_t)value << 24;
+		qWordValue |= (uint64_t)value << 32;
+		qWordValue |= (uint64_t)value << 40;
+		qWordValue |= (uint64_t)value << 48;
+		qWordValue |= (uint64_t)value << 56;
+		uint64_t numQWords = numBytes / 8;
+		uint8_t leftover = numBytes % 8;
+		uint64_t i = 0;
+		for (; i < numQWords; i += 8) {
+			*(uint64_t*)((uint64_t)start + i) = qWordValue;
+		}
+		// Finish up leftover bits.
+		for (; i < numBytes; ++i) {
+			*(uint8_t*)((uint64_t)start + i) = value;
+		}
 	}
 }
 
@@ -34,7 +57,8 @@ void memcpy(void* src, void* dest, uint64_t numBytes) {
 		for (; i < numBytes; ++i) {
 			*(uint8_t*)((uint64_t)dest + i) = *(uint8_t*)((uint64_t)src + i);
 		}
-	} else if (numBytes <= 16384){
+	}
+	else if (numBytes <= 16384){
 		uint64_t numSWords = numBytes / 32;
 		uint8_t leftover = numBytes % 32;
 		uint64_t i = 0;
@@ -45,7 +69,8 @@ void memcpy(void* src, void* dest, uint64_t numBytes) {
 		for (; i < numBytes; ++i) {
 			*(uint8_t*)((uint64_t)dest + i) = *(uint8_t*)((uint64_t)src + i);
 		}
-	} else {
+	}
+	else {
 		uint64_t numKWords = numBytes / 128;
 		uint8_t leftoverBits = numBytes % 128;
 		uint8_t leftoverQWords = leftoverBits / 8;
