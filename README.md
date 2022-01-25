@@ -1,5 +1,8 @@
 # LensorOS
-An OS I've created with the help of resources that can be found at [Poncho](https://github.com/Absurdponcho)
+At first, development followed tutorials that can be found at [Poncho's GitHub](https://github.com/Absurdponcho). \
+Those tutorials were abandoned just after setting up a very basic AHCI driver, so I've taken the wheels from there.
+
+A large thanks to the huge portions of inspiration, knowledge, and help that came from the OSDev [wiki](https://wiki.osdev.org/Expanded_Main_Page) and [forums](https://forum.osdev.org/).
 
 ### Running LensorOS on hardware
 ###### DISCLAIMER: LensorOS IS IN NO WAY GUARANTEED TO BE 'SAFE'; RUN AT YOUR OWN RISK! (see LICENSE)
