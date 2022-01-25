@@ -4,11 +4,10 @@
 PageFrameAllocator gAlloc;
 
 // Reserved by OS/hardware.
-uint64_t reserved_memory;
+uint64_t reserved_memory {0};
 // Available memory to use.
-uint64_t free_memory;
-// Used by the user-space.
-uint64_t used_memory;
+uint64_t free_memory {0};
+uint64_t used_memory {0};
 
 bool initialized = false;
 
@@ -39,8 +38,6 @@ void PageFrameAllocator::read_efi_memory_map(EFI_MEMORY_DESCRIPTOR* map, size_t 
 			unreserve_pages(desc->physicalAddress, desc->numPages);
 		}
 	}
-	// Reserve between 0 and 0x100000 (BIOS on some machines)
-	reserve_pages(0, 0x100);
 	lock_pages(PageBitmap.Buffer, PageBitmap.Size / 4096 + 1);
 	initialized = true;
 }
@@ -71,10 +68,9 @@ void* PageFrameAllocator::request_page() {
 // ie.                   mem: 11110010000100011100
 // RequestPages(3) would return here ^
 void* PageFrameAllocator::request_pages(uint64_t numPages) {
-	for (; gPageBitmapIndex < PageBitmap.Size; gPageBitmapIndex++) {
-		if (PageBitmap[gPageBitmapIndex] == true) { continue; }
-		uint64_t index_at_start = gPageBitmapIndex;
-		uint64_t index = index_at_start;
+	for (uint64_t i = gPageBitmapIndex; i < PageBitmap.Size; ++i) {
+		if (PageBitmap[i] == true) { continue; }
+		uint64_t index = i;
 		uint64_t run = 0;
 		while (PageBitmap[index] == false) {
 			run++;
@@ -82,20 +78,21 @@ void* PageFrameAllocator::request_pages(uint64_t numPages) {
 			if (index > PageBitmap.Size) {
 				// TODO:
 				// No memory matching criteria, should probably do a page frame swap from disk.
-				// I don't have disk operations implemented yet, or even a file system, so maybe
-				//   that's a task for another day.
-				return NULL;
+				return nullptr;
 			}
-			if (run == numPages) {
-				void* out = (void*)(index_at_start * 0x1000);
+			if (run >= numPages) {
+				void* out = (void*)(i * 4096);
 				// LOCK PAGES
 				lock_pages(out, numPages);
 				// RETURN ADDRESS AT BEGINNING OF RUN
 				return out;
 			}
 		}
+		// If this point is reached, it means run was not long enough.
+		// Start searching for next run after the run we've already determined is not long enough.
+		i = index;
 	}
-	return NULL;
+	return nullptr;
 }
 
 void PageFrameAllocator::free_page(void* addr) {
@@ -119,7 +116,6 @@ void PageFrameAllocator::free_pages(void* addr, uint64_t numPages) {
 
 void PageFrameAllocator::lock_page(void* addr) {
 	uint64_t index = (uint64_t)addr / 4096;
-	// Check if page is already locked.
 	if (PageBitmap[index] == true) { return; }
 	if (PageBitmap.Set(index, true)) {
 		free_memory -= 4096;
