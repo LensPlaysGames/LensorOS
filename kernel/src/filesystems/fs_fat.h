@@ -7,6 +7,19 @@
 
 #define FAT_DIRECTORY_SIZE_BYTES 32
 
+// Thanks to Gigasoft of osdev forums for this list
+// What makes a FAT filesystem valid:
+// - Word at 0x1fe equates to 0xaa55
+// - Sector size is power of two between 512-4096 (inclusive)
+// - Cluster size of a power of two
+// - Media type is 0xf0 or greater or equal to 0xf8
+// - FAT size is not zero
+// - Number of sectors is not zero
+// - Number of root directory entries is (zero if fat32) (not zero if fat12/16)
+// - Root cluster is valid (FAT32)
+// - File system version is zero (FAT32)
+// - NumFATsPresent greater than zero
+
 /// File Allocation Table File System
 ///   Formats storage media into three sections:
 ///     - Boot Record
@@ -14,9 +27,6 @@
 ///     - Directory + Data area (they couldn't name
 ///         this something cool like the other two?)
 namespace FatFS {
-	/// Boot Record
-	///   Starting at logical sector zero of the partition, occupies one sector.
-	///   Contains both data and code mixed together.
 	/// BIOSParameterBlock
 	///   Initial section of first logical sector on storage media.
 	///   Contains information such as number of bytes per sector,
@@ -47,12 +57,9 @@ namespace FatFS {
 		/// Number of hidden sectors (the LBA of the beginning of the partition).
 		u32 NumHiddenSectors;
 		u32 TotalSectors32;
-		// This will be cast to it's specific type once the driver parses
-		//   what type of FAT this is (extended 16 or extended 32).
-		u8 Extended[54];
 	} __attribute__((packed));
 
-	struct ExtendedBootRecord16 {
+	struct BootRecordExtension16 {
 		u8 BIOSDriveNumber;
 		u8 Reserved;
 		u8 BootSignature;
@@ -61,7 +68,7 @@ namespace FatFS {
 		u8 FatTypeLabel[8];
 	} __attribute__((packed));
 
-	struct ExtendedBootRecord32 {
+	struct BootRecordExtension32 {
 		u32 NumSectorsPerFAT;
 		u16 ExtendFlags;
 		u16 FatVersion;
@@ -78,6 +85,17 @@ namespace FatFS {
 		u8 FatTypeLabel[8];
 	} __attribute__((packed));
 
+	/// Boot Record
+	///   Starting at logical sector zero of the partition, occupies one sector.
+	///   Contains both data and code mixed together.
+	struct BootRecord {
+		// See above.
+		BIOSParameterBlock BPB;
+		// This will be cast to it's specific type once the driver parses
+		//   what type of FAT this is (extended 16 or extended 32).
+		u8 Extended[54];
+	} __attribute__((packed));
+
 	enum FATType {
 		INVALID = 0,
 		FAT12 = 1,
@@ -90,34 +108,34 @@ namespace FatFS {
 	public:
 		AHCI::Port* Port;
 		FATType Type {INVALID};
-		BIOSParameterBlock BPB;
+		BootRecord BR;
 
 		FATDevice()  {}
 		~FATDevice() {}
 
 		inline u32 get_total_sectors() {
-			if (BPB.TotalSectors16 == 0) {
-				return BPB.TotalSectors32;
+			if (BR.BPB.TotalSectors16 == 0) {
+				return BR.BPB.TotalSectors32;
 			}
-			return BPB.TotalSectors16;
+			return BR.BPB.TotalSectors16;
 		}
 
 		inline u32 get_total_fat_sectors() {
-			if (BPB.NumSectorsPerFAT == 0) {
-				return (*(ExtendedBootRecord32*)&BPB.Extended).NumSectorsPerFAT;
+			if (BR.BPB.NumSectorsPerFAT == 0) {
+				return (*(BootRecordExtension32*)&BR.Extended).NumSectorsPerFAT;
 			}
-			return BPB.NumSectorsPerFAT;
+			return BR.BPB.NumSectorsPerFAT;
 		}
 
 		inline u32 get_first_fat_sector() {
-			return BPB.NumReservedSectors;
+			return BR.BPB.NumReservedSectors;
 		}
 
 		u32 get_root_directory_sectors() {
 			static u32 sRootDirSectors = 0;
 			if (sRootDirSectors == 0) {
-			    sRootDirSectors = ((BPB.NumEntriesInRoot * FAT_DIRECTORY_SIZE_BYTES)
-								   + (BPB.NumBytesPerSector-1)) / BPB.NumBytesPerSector;
+			    sRootDirSectors = ((BR.BPB.NumEntriesInRoot * FAT_DIRECTORY_SIZE_BYTES)
+								   + (BR.BPB.NumBytesPerSector-1)) / BR.BPB.NumBytesPerSector;
 			}
 			return sRootDirSectors;
 		}
@@ -125,23 +143,28 @@ namespace FatFS {
 		inline u32 get_first_data_sector() {
 			static u32 sFirstDataSector = 0;
 			if (sFirstDataSector == 0) {
-				sFirstDataSector = BPB.NumReservedSectors
-					+ (BPB.NumFATsPresent * get_total_fat_sectors())
+				sFirstDataSector = BR.BPB.NumReservedSectors
+					+ (BR.BPB.NumFATsPresent * get_total_fat_sectors())
 					+ get_root_directory_sectors();
 			}
 			return sFirstDataSector;
 		}
 
 		inline u32 get_root_directory_start_sector() {
-			return get_first_data_sector() - get_root_directory_sectors();
+			if (Type == FATType::FAT12 || Type == FATType::FAT16) {
+				return get_first_data_sector() - get_root_directory_sectors();				
+			}
+			else {
+				return (*(BootRecordExtension32*)&BR.Extended).RootCluster;
+			}
 		}
 
 		u32 get_total_data_sectors() {
 			static u32 sTotalDataSectors = 0;
 			if (sTotalDataSectors == 0) {
 			    sTotalDataSectors = get_total_sectors()
-				- (BPB.NumReservedSectors
-				   + (BPB.NumFATsPresent * get_total_fat_sectors())
+				- (BR.BPB.NumReservedSectors
+				   + (BR.BPB.NumFATsPresent * get_total_fat_sectors())
 				   + get_root_directory_sectors());
 			}
 			return sTotalDataSectors;
@@ -151,26 +174,36 @@ namespace FatFS {
 			static u32 sTotalClusters = 0;
 			if (sTotalClusters == 0) {
 				// This rounds down.
-			    sTotalClusters = get_total_data_sectors() / BPB.NumSectorsPerCluster;
+			    sTotalClusters = get_total_data_sectors()
+					/ BR.BPB.NumSectorsPerCluster;
 			}
 			return sTotalClusters;
 		}
 
 		inline u32 get_cluster_start_sector(u32 cluster) {
-			return ((cluster - 2) * BPB.NumSectorsPerCluster) + get_first_data_sector();
+			return ((cluster - 2) * BR.BPB.NumSectorsPerCluster)
+				+ get_first_data_sector();
+		}
+
+		/// Return total size of all sectors formatted in bytes.
+		u64 get_total_size() {
+			static u64 sTotalSize = 0;
+			if (sTotalSize == 0) {
+				sTotalSize = get_total_sectors() * BR.BPB.NumBytesPerSector;
+			}
+			return sTotalSize;
 		}
 	};
 
 	void print_fat_boot_record(FATDevice* device) {
-		u64 totalSectors = (u64)device->get_total_sectors();
+		u64 totalSectors     = (u64)device->get_total_sectors();
 		u64 totalDataSectors = (u64)device->get_total_data_sectors();
 		gRend.putstr("FAT Boot Record: ");
 		gRend.crlf();
 		gRend.putstr("|\\");
 		gRend.crlf();
 		gRend.putstr("| Total Size: ");
-		gRend.putstr(to_string(totalSectors * device->BPB.NumBytesPerSector
-							   / 1024 / 1024));
+		gRend.putstr(to_string(device->get_total_size() / 1024 / 1024));
 		gRend.putstr("mib");
 		gRend.crlf();
 		gRend.putstr("| |\\");
@@ -181,17 +214,17 @@ namespace FatFS {
 		gRend.putstr("| \\");
 		gRend.crlf();
 		gRend.putstr("|  Sector Size: ");
-		gRend.putstr(to_string((u64)device->BPB.NumBytesPerSector));
+		gRend.putstr(to_string((u64)device->BR.BPB.NumBytesPerSector));
 		gRend.crlf();
 		gRend.putstr("|\\");
 		gRend.crlf();
 		gRend.putstr("| Number of Sectors Per Cluster: ");
-		gRend.putstr(to_string((u64)device->BPB.NumSectorsPerCluster));
+		gRend.putstr(to_string((u64)device->BR.BPB.NumSectorsPerCluster));
 		gRend.crlf();
 		gRend.putstr("|\\");
 		gRend.crlf();
 		gRend.putstr("| Total Usable Size: ");
-		gRend.putstr(to_string(totalDataSectors * device->BPB.NumBytesPerSector
+		gRend.putstr(to_string(totalDataSectors * device->BR.BPB.NumBytesPerSector
 							   / 1024 / 1024));
 		gRend.putstr("mib");
 		gRend.crlf();
@@ -215,7 +248,7 @@ namespace FatFS {
 
 	    void read_boot_sector(u8 index) {
 			// read boot sector from port into device at index.
-			gRend.putstr("Reading boot sector");
+			gRend.putstr("[FatFS]: Reading boot sector");
 			gRend.crlf();
 		    if (devices[index].Port->Read(0, 1, devices[index].Port->buffer)) {
 				memcpy((void*)devices[index].Port->buffer, &devices[index].BPB, 720);
@@ -237,7 +270,7 @@ namespace FatFS {
 				}
 			}
 			else {
-				gRend.putstr("Unsuccessful read");
+				gRend.putstr("[FatFS]: Unsuccessful read (is device functioning properly?)");
 				gRend.crlf();
 			}
 		}
@@ -260,8 +293,6 @@ namespace FatFS {
 		void read_root_directory() {
 			
 		}
-
-		
 	};
 }
 
