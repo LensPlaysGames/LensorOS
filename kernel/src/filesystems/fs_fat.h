@@ -90,8 +90,6 @@ namespace FatFS {
 		AHCI::Port* Port;
 		FATType Type {INVALID};
 		BIOSParameterBlock BPB;
-		ExtendedBootRecord16 ExtBR16;
-		ExtendedBootRecord32 ExtBR32;
 
 		FATDevice()  {}
 		~FATDevice() {}
@@ -103,42 +101,58 @@ namespace FatFS {
 			return BPB.TotalSectors16;
 		}
 
-		inline uint32_t get_fat_size_sectors() {
+		inline uint32_t get_total_fat_sectors() {
 			if (BPB.NumSectorsPerFAT == 0) {
-				return ExtBR32.NumSectorsPerFAT;
+				return (*(ExtendedBootRecord32*)&BPB.Extended).NumSectorsPerFAT;
 			}
 			return BPB.NumSectorsPerFAT;
 		}
 
-		inline uint32_t get_first_FAT_sector() {
+		inline uint32_t get_first_fat_sector() {
 			return BPB.NumReservedSectors;
 		}
 
-		inline uint32_t get_root_directory_sectors() {
-			return ((BPB.NumEntriesInRoot * FAT_DIRECTORY_SIZE_BYTES)
-					+ (BPB.NumBytesPerSector - 1)) / BPB.NumBytesPerSector;
+		uint32_t get_root_directory_sectors() {
+			static uint32_t sRootDirSectors = 0;
+			if (sRootDirSectors == 0) {
+			    sRootDirSectors = ((BPB.NumEntriesInRoot * FAT_DIRECTORY_SIZE_BYTES)
+								   + (BPB.NumBytesPerSector-1)) / BPB.NumBytesPerSector;
+			}
+			return sRootDirSectors;
 		}
 
 		inline uint32_t get_first_data_sector() {
-			return BPB.NumReservedSectors
-				+ (BPB.NumFATsPresent * get_fat_size_sectors())
-				+ get_root_directory_sectors();
+			static uint32_t sFirstDataSector = 0;
+			if (sFirstDataSector == 0) {
+				sFirstDataSector = BPB.NumReservedSectors
+					+ (BPB.NumFATsPresent * get_total_fat_sectors())
+					+ get_root_directory_sectors();
+			}
+			return sFirstDataSector;
 		}
 
 		inline uint32_t get_root_directory_start_sector() {
 			return get_first_data_sector() - get_root_directory_sectors();
 		}
 
-		inline uint32_t get_total_data_sectors() {
-			return get_total_sectors()
+		uint32_t get_total_data_sectors() {
+			static uint32_t sTotalDataSectors = 0;
+			if (sTotalDataSectors == 0) {
+			    sTotalDataSectors = get_total_sectors()
 				- (BPB.NumReservedSectors
-				   + (BPB.NumFATsPresent * get_fat_size_sectors())
+				   + (BPB.NumFATsPresent * get_total_fat_sectors())
 				   + get_root_directory_sectors());
+			}
+			return sTotalDataSectors;
 		}
 
-		inline uint32_t get_total_clusters() {
-			// This rounds down.
-			return get_total_data_sectors() / BPB.NumSectorsPerCluster;
+		uint32_t get_total_clusters() {
+			static uint32_t sTotalClusters = 0;
+			if (sTotalClusters == 0) {
+				// This rounds down.
+			    sTotalClusters = get_total_data_sectors() / BPB.NumSectorsPerCluster;
+			}
+			return sTotalClusters;
 		}
 
 		inline uint32_t get_cluster_start_sector(uint32_t cluster) {
