@@ -32,6 +32,14 @@ void BasicRenderer::crlf() {
 	};
 }
 
+// Carriage return offset by given argument value pixels, then newline.
+void BasicRenderer::crlf(u32 offset) {
+	DrawPos = {
+		offset,
+		DrawPos.y + Font->PSF1_Header->CharacterSize
+	};
+}
+
 void BasicRenderer::drawrect(Vector2 size, u32 color) {
     ValidateDrawPos();
 	u32 diffX = Target->PixelWidth - DrawPos.x;

@@ -11,38 +11,38 @@
 //   - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/
 // - Test different memcpy implementations
 //   - See https://stackoverflow.com/questions/22387586/measuring-execution-time-of-a-function-in-c
-// - UART Driver (serial communication, necessary for terminals/terminal emulators)
+// - UART Driver (serial communication, necessary for terminals/terminal emulators).
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
 
 void print_memory_info() {
-	// 8 pixels per character, one char per column.
-	gRend.newl();
+	u32 startOffset = gRend.DrawPos.x;
+	gRend.crlf(startOffset);
 	gRend.putstr("Memory Info:");
-	gRend.newl();
+	gRend.crlf(startOffset);
 	gRend.putstr("|\\");
-    gRend.newl();
+    gRend.crlf(startOffset);
 	gRend.putstr("| Free RAM: ");
 	gRend.putstr(to_string(gAlloc.get_free_ram() / 1024));
 	gRend.putstr(" kB (");
 	gRend.putstr(to_string(gAlloc.get_free_ram() / 1024 / 1024));
 	gRend.putstr(" mB)");
-    gRend.newl();
+    gRend.crlf(startOffset);
 	gRend.putstr("|\\");
-    gRend.newl();
+    gRend.crlf(startOffset);
 	gRend.putstr("| Used RAM: ");
 	gRend.putstr(to_string(gAlloc.get_used_ram() / 1024));
 	gRend.putstr(" kB (");
 	gRend.putstr(to_string(gAlloc.get_used_ram() / 1024 / 1024));
 	gRend.putstr(" mB)");
-    gRend.newl();
+    gRend.crlf(startOffset);
 	gRend.putstr(" \\");
-    gRend.newl();
+    gRend.crlf(startOffset);
 	gRend.putstr("  Reserved RAM: ");
 	gRend.putstr(to_string(gAlloc.get_reserved_ram() / 1024));
 	gRend.putstr(" kB (");
 	gRend.putstr(to_string(gAlloc.get_reserved_ram() / 1024 / 1024));
 	gRend.putstr(" mB)");
-	gRend.newl();
+	gRend.crlf(startOffset);
 	gRend.swap();
 }
 
