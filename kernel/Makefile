@@ -29,9 +29,20 @@ setup:
 	@mkdir $(SRCDIR)
 	@mkdir $(OBJDIR)
 
-buildimg:
-	dd if=/dev/zero of=$(BUILDDIR)/$(OSNAME).img bs=512 count=187500
+image:
+	dd if=/dev/zero of=$(BUILDDIR)/$(OSNAME).img count=93750
 	mformat -i $(BUILDDIR)/$(OSNAME).img -F ::
+	mmd -i $(BUILDDIR)/$(OSNAME).img ::/EFI
+	mmd -i $(BUILDDIR)/$(OSNAME).img ::/EFI/BOOT
+	mmd -i $(BUILDDIR)/$(OSNAME).img ::/LensorOS
+	mcopy -i $(BUILDDIR)/$(OSNAME).img $(BOOTEFI) ::/EFI/BOOT
+	mcopy -i $(BUILDDIR)/$(OSNAME).img startup.nsh ::
+	mcopy -i $(BUILDDIR)/$(OSNAME).img $(BUILDDIR)/kernel.elf ::/LensorOS
+	mcopy -i $(BUILDDIR)/$(OSNAME).img $(BUILDDIR)/dfltfont.psf ::/LensorOS
+
+fat12_image:
+	dd if=/dev/zero of=$(BUILDDIR)/$(OSNAME).img count=93750
+	mformat -i $(BUILDDIR)/$(OSNAME).img -f 1440 ::
 	mmd -i $(BUILDDIR)/$(OSNAME).img ::/EFI
 	mmd -i $(BUILDDIR)/$(OSNAME).img ::/EFI/BOOT
 	mmd -i $(BUILDDIR)/$(OSNAME).img ::/LensorOS

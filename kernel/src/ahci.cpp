@@ -181,22 +181,28 @@ namespace AHCI {
 		gRend.swap();
 
 		FatFS::FATDriver FAT;
-		
+
+		// Somehow the i value is being... over-written? deleted? somehow corrupted.
+		// Or my to_string is very, very wrong.
 		for(uint32_t i = 0; i < numPorts; ++i) {
-			Ports[i].Configure();
+			gRend.putstr("Configuring port ");
+			gRend.putstr(to_string((uint64_t)i));
+			gRend.crlf();
+			Ports[i].Configure();			
 			Ports[i].buffer = (uint8_t*)gAlloc.request_pages(MAX_READ_PAGES);
 			if (Ports[i].buffer != nullptr) {
 				memset((void*)Ports[i].buffer, 0, MAX_READ_PAGES * 0x1000);
-
-				if (FAT.is_device_FAT(&Ports[i])) {
+				
+				if (FAT.is_device_fat(&Ports[i])) {
 					gRend.putstr("Device is FAT formatted.");
 					gRend.crlf();
 				}
-				
+
 				gRend.putstr("Port ");
 				gRend.putstr(to_string((uint64_t)i));
 				gRend.putstr(" successfully configured");
 				gRend.crlf();
+				
 				gRend.swap();
 			}
 			else {

@@ -209,34 +209,30 @@ namespace FatFS {
 	///   - Reading/Writing a directory.
 	class FATDriver {
 	public:
-	    
+		FATDevice devices[32];
 		uint8_t numDevices{0};
 
-	    void read_boot_sector(uint8_t index, AHCI::Port* port) {
+	    void read_boot_sector(uint8_t index) {
 			// read boot sector from port into device at index.
 			gRend.putstr("Reading boot sector");
 			gRend.crlf();
-			// FIXME: ERROR HERE SOMEWHERE
-		    if (port->Read(0, 1, port->buffer)) {
-				memcpy(port->buffer, &devices[index]->BPB, 512);
-				// TODO: Validate that media is FAT formatted (how do I do this?)
-				//         I guess I just have to ensure that values make sense...
-				print_fat_boot_record(devices[index]);
-				if (devices[index]->BPB.NumFATsPresent > 0) {
-					uint32_t totalClusters = devices[index]->get_total_clusters();
+		    if (devices[index].Port->Read(0, 1, devices[index].Port->buffer)) {
+				memcpy((void*)devices[index].Port->buffer, &devices[index].BPB, 720);
+				print_fat_boot_record(&devices[index]);
+				if (devices[index].BPB.NumFATsPresent > 0) {
+					uint32_t totalClusters = devices[index].get_total_clusters();
 					if (totalClusters == 0) {
-						devices[index]->Type = FATType::ExFAT;
+						devices[index].Type = FATType::ExFAT;
 					}
 					else if (totalClusters < 4085) {
-						devices[index]->Type = FATType::FAT12;
+						devices[index].Type = FATType::FAT12;
 					}
 					else if (totalClusters < 65525) {
-						devices[index]->Type = FATType::FAT16;
+						devices[index].Type = FATType::FAT16;
 					}
 					else {
-						devices[index]->Type = FATType::FAT32;
+						devices[index].Type = FATType::FAT32;
 					}
-					devices[index]->Port = port;
 				}
 			}
 			else {
@@ -245,17 +241,16 @@ namespace FatFS {
 			}
 		}
 
-		bool is_device_FAT(AHCI::Port* port) {
+		bool is_device_fat(AHCI::Port* port) {
 			uint8_t devIndex = numDevices;
 			numDevices++;
 
-			devices[devIndex] = new FATDevice();
+			devices[devIndex].Port = port;
 			
-			// Read boot sector from port into device
-			read_boot_sector(devIndex, port);
-			if (devices[devIndex]->Type == FATType::INVALID) {
+			// Read boot sector from port into device.
+			read_boot_sector(devIndex);
+			if (devices[devIndex].Type == FATType::INVALID) {
 				numDevices--;
-				delete devices[devIndex];
 				return false;
 			}
 			return true;
@@ -265,7 +260,7 @@ namespace FatFS {
 			
 		}
 
-		FATDevice* devices[];
+		
 	};
 }
 
