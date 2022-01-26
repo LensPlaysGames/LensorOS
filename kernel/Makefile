@@ -59,8 +59,19 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $^ -o $@
 $(OBJDIR)/%_asm.o: $(SRCDIR)/%.asm
-	mkdir -p $(@D)
+	@mkdir -p $(@D)
 	$(ASMC) $(ASMFLAGS) $^ -o $@
+
+kernel_debug: $(OBJS) link
+$(OBJDIR)/interrupts/interrupts.o: $(SRCDIR)/interrupts/interrupts.cpp
+	@mkdir -p $(@D)
+	$(CC) -g -mno-red-zone -mgeneral-regs-only -ffreestanding -fno-exceptions -c $^ -o $@
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp
+	@mkdir -p $(@D)
+	$(CC) -g $(CFLAGS) -c $^ -o $@
+$(OBJDIR)/%_asm.o: $(SRCDIR)/%.asm
+	@mkdir -p $(@D)
+	$(ASMC) -g $(ASMFLAGS) $^ -o $@
 
 link:
 	$(LD) $(LDFLAGS) -o $(BUILDDIR)/kernel.elf $(OBJS)
