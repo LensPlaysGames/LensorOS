@@ -1,20 +1,20 @@
 #ifndef LENSOR_OS_GDT_H
 #define LENSOR_OS_GDT_H
 
-#include <stdint.h>
+#include "integers.h"
 
 struct GDTDescriptor {
-	uint16_t Size;
-	uint64_t Offset;
+	u16 Size;
+	u64 Offset;
 } __attribute__((packed));
 
 struct GDTEntry {
-	uint16_t Limit0;
-	uint16_t Base0;
-	uint8_t Base1;
-	uint8_t AccessByte;
-	uint8_t Limit1_Flags;
-	uint8_t Base2;
+	u16 Limit0;
+	u16 Base0;
+	u8 Base1;
+	u8 AccessByte;
+	u8 Limit1_Flags;
+	u8 Base2;
 } __attribute__((packed));
 
 // Global Descriptor Table

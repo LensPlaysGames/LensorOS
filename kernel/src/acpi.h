@@ -1,44 +1,44 @@
 #ifndef LENSOR_OS_ACPI_H
 #define LENSOR_OS_ACPI_H
 
-#include <stdint.h>
+#include "integers.h"
 
 namespace ACPI {
 	struct RSDP2 {
 		unsigned char Signature[8];
-		uint8_t Checksum;
-		uint8_t OEMId[6];
-		uint8_t Revision;
-		uint32_t RSDTAddress;
-		uint32_t Length;
-		uint64_t XSDTAddress;
-		uint8_t ExtendedChecksum;
-		uint8_t Reserved[3];
+		u8 Checksum;
+		u8 OEMId[6];
+		u8 Revision;
+		u32 RSDTAddress;
+		u32 Length;
+		u64 XSDTAddress;
+		u8 ExtendedChecksum;
+		u8 Reserved[3];
 	} __attribute__((packed));
 
 	struct SDTHeader {
 		unsigned char Signature[4];
-		uint32_t Length;
-		uint8_t Revision;
-		uint8_t Checksum;
-		uint8_t OEMID[6];
-		uint8_t OEMTableID[8];
-		uint32_t OEMRevision;
-		uint32_t CreatorID;
-		uint32_t CreatorRevision;
+		u32 Length;
+		u8 Revision;
+		u8 Checksum;
+		u8 OEMID[6];
+		u8 OEMTableID[8];
+		u32 OEMRevision;
+		u32 CreatorID;
+		u32 CreatorRevision;
 	} __attribute__((packed));
 
 	struct MCFGHeader {
 		SDTHeader Header;
-		uint64_t Reserved;
+		u64 Reserved;
 	} __attribute__((packed));
 
 	struct DeviceConfig {
-		uint64_t BaseAddress;
-		uint16_t PCISegmentGroup;
-		uint8_t StartBus;
-		uint8_t EndBus;
-		uint32_t Reserved;
+		u64 BaseAddress;
+		u16 PCISegmentGroup;
+		u8 StartBus;
+		u8 EndBus;
+		u32 Reserved;
 	} __attribute__((packed));
 
 	void* find_table(SDTHeader* sdt, char* signature);

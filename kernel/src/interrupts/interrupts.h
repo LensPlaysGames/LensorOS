@@ -12,7 +12,7 @@
 #define ICW1_ICW4     0x01
 #define ICW4_8086     0x01
 
-#include <stdint.h>
+#include "../integers.h"
 #include "../basic_renderer.h"
 #include "../panic.h"
 #include "../io.h"

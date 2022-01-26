@@ -32,81 +32,81 @@ namespace AHCI {
 
 	/// Host Bus Adapter Port
 	struct HBAPort{
-        uint32_t commandListBase;
-        uint32_t commandListBaseUpper;
-        uint32_t fisBaseAddress;
-        uint32_t fisBaseAddressUpper;
-        uint32_t interruptStatus;
-        uint32_t interruptEnable;
-        uint32_t cmdSts;
-        uint32_t rsv0;
-        uint32_t taskFileData;
-        uint32_t signature;
-        uint32_t sataStatus;
-        uint32_t sataControl;
-        uint32_t sataError;
-        uint32_t sataActive;
-        uint32_t commandIssue;
-        uint32_t sataNotification;
-        uint32_t fisSwitchControl;
-        uint32_t rsv1[11];
-        uint32_t vendor[4];
+        u32 commandListBase;
+        u32 commandListBaseUpper;
+        u32 fisBaseAddress;
+        u32 fisBaseAddressUpper;
+        u32 interruptStatus;
+        u32 interruptEnable;
+        u32 cmdSts;
+        u32 rsv0;
+        u32 taskFileData;
+        u32 signature;
+        u32 sataStatus;
+        u32 sataControl;
+        u32 sataError;
+        u32 sataActive;
+        u32 commandIssue;
+        u32 sataNotification;
+        u32 fisSwitchControl;
+        u32 rsv1[11];
+        u32 vendor[4];
     };
 
 	/// Host Bus Adapter Memory Registers
 	///   The layout of the memory registers
 	///     accessable through the Host Bus Adapter.
 	struct HBAMemory{
-        uint32_t hostCapability;
-        uint32_t globalHostControl;
-        uint32_t interruptStatus;
-        uint32_t portsImplemented;
-        uint32_t version;
-        uint32_t cccControl;
-        uint32_t cccPorts;
-        uint32_t enclosureManagementLocation;
-        uint32_t enclosureManagementControl;
-        uint32_t hostCapabilitiesExtended;
-        uint32_t biosHandoffCtrlSts;
-        uint8_t rsv0[0x74];
-        uint8_t vendor[0x60];
+        u32 hostCapability;
+        u32 globalHostControl;
+        u32 interruptStatus;
+        u32 portsImplemented;
+        u32 version;
+        u32 cccControl;
+        u32 cccPorts;
+        u32 enclosureManagementLocation;
+        u32 enclosureManagementControl;
+        u32 hostCapabilitiesExtended;
+        u32 biosHandoffCtrlSts;
+        u8 rsv0[0x74];
+        u8 vendor[0x60];
         HBAPort ports[1];
     };
 
 	/// Host Bus Adapter Command Header
 	///   The beginning of a Host Bus Adapter command is structured as shown.
 	struct HBACommandHeader {
-		uint8_t commandFISLength :5;
-		uint8_t atapi            :1;
-		uint8_t write            :1;
-		uint8_t prefetchable     :1;
-		uint8_t reset            :1;
-		uint8_t bist             :1;
-		uint8_t clearBusy        :1;
-		uint8_t rsv0             :1;
-		uint8_t portMultiplier   :4;
-		uint16_t prdtLength;
-		uint32_t prdbCount;
-		uint32_t commandTableBaseAddress;
-		uint32_t commandTableBaseAddressUpper;
-		uint32_t rsv1[4];
+		u8 commandFISLength :5;
+		u8 atapi            :1;
+		u8 write            :1;
+		u8 prefetchable     :1;
+		u8 reset            :1;
+		u8 bist             :1;
+		u8 clearBusy        :1;
+		u8 rsv0             :1;
+		u8 portMultiplier   :4;
+		u16 prdtLength;
+		u32 prdbCount;
+		u32 commandTableBaseAddress;
+		u32 commandTableBaseAddressUpper;
+		u32 rsv1[4];
 	};
 
 	/// Host Bus Adapter Physical Region Descriptor Table Entry
 	///   Specifies data payload address in memory as well as size.
 	struct HBA_PRDTEntry {
-		uint32_t dataBaseAddress;
-		uint32_t dataBaseAddressUpper;
-		uint32_t rsv0;
-		uint32_t byteCount             :22;
-		uint32_t rsv1                  :9;
-		uint32_t interruptOnCompletion :1;
+		u32 dataBaseAddress;
+		u32 dataBaseAddressUpper;
+		u32 rsv0;
+		u32 byteCount             :22;
+		u32 rsv1                  :9;
+		u32 interruptOnCompletion :1;
 	};
 
 	struct HBACommandTable {
-		uint8_t commandFIS[64];
-		uint8_t atapiCommand[16];
-		uint8_t rsv[48];
+		u8 commandFIS[64];
+		u8 atapiCommand[16];
+		u8 rsv[48];
 		HBA_PRDTEntry prdtEntry[];
 	};
 
@@ -130,25 +130,25 @@ namespace AHCI {
 	
 	/// Frame Information Structure Reegister Host to Device
 	struct FIS_REG_H2D {
-		uint8_t type;
-		uint8_t portMultiplier:4;
-		uint8_t rsv0:3;
-		uint8_t commandControl:1;
-		uint8_t command;
-		uint8_t featureLow;
-		uint8_t lba0;
-		uint8_t lba1;
-		uint8_t lba2;
-		uint8_t deviceRegister;
-		uint8_t lba3;
-		uint8_t lba4;
-		uint8_t lba5;
-		uint8_t featureHigh;
-		uint8_t countLow;
-		uint8_t countHigh;
-		uint8_t isoCommandCompletion;
-		uint8_t control;
-		uint8_t rsv1[4];
+		u8 type;
+		u8 portMultiplier:4;
+		u8 rsv0:3;
+		u8 commandControl:1;
+		u8 command;
+		u8 featureLow;
+		u8 lba0;
+		u8 lba1;
+		u8 lba2;
+		u8 deviceRegister;
+		u8 lba3;
+		u8 lba4;
+		u8 lba5;
+		u8 featureHigh;
+		u8 countLow;
+		u8 countHigh;
+		u8 isoCommandCompletion;
+		u8 control;
+		u8 rsv1[4];
 	};
 
 	/// Port Type
@@ -164,12 +164,12 @@ namespace AHCI {
 	public:
 		HBAPort* hbaPort;
 		PortType type;
-		uint8_t* buffer;
-		uint8_t  number;
+		u8* buffer;
+		u8  number;
 		void Configure();
 		void StartCMD();
 		void StopCMD();
-		bool Read(uint64_t sector, uint16_t numSectors, void* buffer);
+		bool Read(u64 sector, u16 numSectors, void* buffer);
 	};
 
 	/// Advance Host Controller Interface Driver
@@ -187,7 +187,7 @@ namespace AHCI {
 		~AHCIDriver();
 
 		Port* Ports[32];
-		uint8_t numPorts;
+		u8 numPorts;
 		void probe_ports();
 		
 	};

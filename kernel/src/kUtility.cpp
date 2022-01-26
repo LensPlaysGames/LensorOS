@@ -10,7 +10,7 @@ void prepare_memory(BootInfo* bInfo) {
 	// Setup memory state from EFI memory map.
 	gAlloc.read_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
 	// _KernelStart and _KernelEnd defined in linker script "../kernel.ld"
-	uint64_t kernelPagesNeeded = (((uint64_t)&_KernelEnd - (uint64_t)&_KernelStart) / 4096) + 1;
+	u64 kernelPagesNeeded = (((u64)&_KernelEnd - (u64)&_KernelStart) / 4096) + 1;
     gAlloc.lock_pages(&_KernelStart, kernelPagesNeeded);
 	// PAGE MAP LEVEL FOUR (see paging.h).
     PageTable* PML4 = (PageTable*)gAlloc.request_page();
@@ -19,7 +19,7 @@ void prepare_memory(BootInfo* bInfo) {
 	kInfo.PTM = &gPTM;
 	// Map all physical RAM addresses to virtual addresses 1:1, store them in the PML4.
 	// This means that virtual addresses will be equal to physical addresses.
-	for (uint64_t t = 0;
+	for (u64 t = 0;
 		 t < get_memory_size(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize);
 		 t+=0x1000)
 	{
@@ -30,7 +30,7 @@ void prepare_memory(BootInfo* bInfo) {
 }
 
 IDTR idtr;
-void set_idt_gate(uint64_t handler, uint8_t entryOffset, uint8_t type_attr, uint8_t selector) {
+void set_idt_gate(u64 handler, u8 entryOffset, u8 type_attr, u8 selector) {
 	IDTDescEntry* interrupt = (IDTDescEntry*)(idtr.Offset + entryOffset * sizeof(IDTDescEntry));
 	interrupt->SetOffset(handler);
 	interrupt->type_attr = type_attr;
@@ -39,18 +39,18 @@ void set_idt_gate(uint64_t handler, uint8_t entryOffset, uint8_t type_attr, uint
 
 void prepare_interrupts() {
 	idtr.Limit = 0x0FFF;
-	idtr.Offset = (uint64_t)gAlloc.request_page();
+	idtr.Offset = (u64)gAlloc.request_page();
 	// SET CALLBACK TO HANDLER BASED ON INTERRUPT ENTRY OFFSET.
 	// IRQ0: SYSTEM TIMER  (PIT CHIP)
-	set_idt_gate((uint64_t)system_timer_handler,				0x20, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((u64)system_timer_handler,				0x20, IDT_TA_InterruptGate, 0x08);
 	// IRQ1: PS/2 KEYBOARD (SERIAL)
-	set_idt_gate((uint64_t)keyboard_handler,					0x21, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((u64)keyboard_handler,					0x21, IDT_TA_InterruptGate, 0x08);
 	// IRQ12: PS/2 MOUSE   (SERIAL)
-	set_idt_gate((uint64_t)mouse_handler,						0x2c, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((u64)mouse_handler,						0x2c, IDT_TA_InterruptGate, 0x08);
 	// FAULTS (CALLED BEFORE FAULTY INSTRUCTION EXECUTES)
-	set_idt_gate((uint64_t)double_fault_handler,	            0x08, IDT_TA_InterruptGate, 0x08);
-	set_idt_gate((uint64_t)general_protection_fault_handler,	0x0D, IDT_TA_InterruptGate, 0x08);
-	set_idt_gate((uint64_t)page_fault_handler,					0x0E, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((u64)double_fault_handler,	            0x08, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((u64)general_protection_fault_handler,	0x0D, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((u64)page_fault_handler,					0x0E, IDT_TA_InterruptGate, 0x08);
 	// LOAD INTERRUPT DESCRIPTOR TABLE.
 	asm ("lidt %0" :: "m" (idtr));
 	// REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
@@ -74,7 +74,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	// SETUP GDT DESCRIPTOR.
 	GDTDescriptor GDTD = GDTDescriptor();
 	GDTD.Size = sizeof(GDT) - 1;
-	GDTD.Offset = (uint64_t)&gGDT;
+	GDTD.Offset = (u64)&gGDT;
 	// Call assembly `lgdt`.
 	LoadGDT(&GDTD);
 	// PREPARE MEMORY.
@@ -84,19 +84,19 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	// SETUP GOP RENDERER.
 	target = *bInfo->framebuffer;
 	// GOP = Graphics Output Protocol.
-	uint64_t fbBase = (uint64_t)bInfo->framebuffer->BaseAddress;
-	uint64_t fbSize = (uint64_t)bInfo->framebuffer->BufferSize + 0x1000;
-	uint64_t fbPages = fbSize / 0x1000 + 1;
+	u64 fbBase = (u64)bInfo->framebuffer->BaseAddress;
+	u64 fbSize = (u64)bInfo->framebuffer->BufferSize + 0x1000;
+	u64 fbPages = fbSize / 0x1000 + 1;
 	// ALLOCATE PAGES IN BITMAP FOR ACTIVE FRAMEBUFFER (CURRENT DISPLAY MEMORY).
 	gAlloc.lock_pages(bInfo->framebuffer->BaseAddress, fbPages);
 	// Map active framebuffer physical address to virtual addresses 1:1.
-	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
+	for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000) {
 		gPTM.map_memory((void*)t, (void*)t);
 	}
 	// ALLOCATE PAGES IN BITMAP FOR TARGET FRAMEBUFFER (WRITABLE).
 	target.BaseAddress = gAlloc.request_pages(fbPages);
-    fbBase = (uint64_t)target.BaseAddress;
-	for (uint64_t t = fbBase; t < fbBase + fbSize; t += 0x1000) {
+    fbBase = (u64)target.BaseAddress;
+	for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000) {
 		gPTM.map_memory((void*)t, (void*)t);
 	}
 	// CREATE GLOBAL RENDERER
@@ -110,7 +110,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	gRend.crlf();
 	gRend.swap();
 	// SYSTEM TIMER.
-	uint64_t pitFreq = 2000;
+	u64 pitFreq = 2000;
 	initialize_timer(pitFreq);
 	gRend.putstr("Programmable Interval Timer initialized (");
 	gRend.putstr(to_string(pitFreq));

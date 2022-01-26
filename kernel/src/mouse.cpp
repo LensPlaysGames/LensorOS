@@ -1,12 +1,12 @@
 #include "mouse.h"
 
 // globally accessible mouse information
-uint8_t gMouseID;
+u8 gMouseID;
 Vector2 gMousePosition = {0, 0};
 Vector2 gOldMousePosition = {0, 0};
 
 void mouse_wait() {
-	uint64_t timeout = 100000;
+	u64 timeout = 100000;
 	while (timeout--){
 		if ((inb(0x64) & 0b10) == 0) {
 			return;
@@ -15,7 +15,7 @@ void mouse_wait() {
 }
 
 void mouse_wait_input() {
-	uint64_t timeout = 100000;
+	u64 timeout = 100000;
 	while (timeout--){
 		if (inb(0x64) & 0b1) {
 			return;
@@ -23,14 +23,14 @@ void mouse_wait_input() {
 	}
 }
 
-void mouse_write(uint8_t value) {
+void mouse_write(u8 value) {
 	mouse_wait_input();
 	outb(0x64, 0xD4);
 	mouse_wait();
 	outb(0x60, value);
 }
 
-uint8_t mouse_read() {
+u8 mouse_read() {
 	mouse_wait_input();
 	return inb(0x60);
 }
@@ -43,7 +43,7 @@ void init_ps2_mouse() {
 	outb(0x64, 0x20);
 	
 	mouse_wait_input();
-	uint8_t status = inb(0x60);
+	u8 status = inb(0x60);
 	status |= 0b10;
 	mouse_wait();
 	outb(0x64, 0x60);
@@ -60,15 +60,15 @@ void init_ps2_mouse() {
 	mouse_read(); // ACK
 	gMouseID = mouse_read();
 	gRend.putstr("Successfully initialized PS2 mouse using serial port (ID: ");
-	gRend.putstr(to_string((uint64_t)gMouseID));
+	gRend.putstr(to_string((u64)gMouseID));
 	gRend.putchar(')');
 	gRend.crlf();
 }
 
-uint8_t mouse_cycle {0};
-uint8_t mouse_packet[4];
+u8 mouse_cycle {0};
+u8 mouse_packet[4];
 bool mouse_packet_ready = false;
-void handle_ps2_mouse_interrupt(uint8_t data) {
+void handle_ps2_mouse_interrupt(u8 data) {
 	static bool skip = true;
 	if (skip) {
 		skip = false;
@@ -95,7 +95,7 @@ void handle_ps2_mouse_interrupt(uint8_t data) {
 }
 
 #define MouseCursorSize 16
-uint8_t mouse_cursor[] = {
+u8 mouse_cursor[] = {
 	0b10000000, 0b00000000,
 	0b11000000, 0b00000000,
 	0b11100000, 0b00000000,
@@ -114,7 +114,7 @@ uint8_t mouse_cursor[] = {
 	0b00000000, 0b00000000
 };
 
-uint32_t pixels_under_mouse_cursor[MouseCursorSize * MouseCursorSize + 1];
+u32 pixels_under_mouse_cursor[MouseCursorSize * MouseCursorSize + 1];
 
 // DRAW MOUSE CURSOR AT gMousePosition
 void DrawMouseCursor() {

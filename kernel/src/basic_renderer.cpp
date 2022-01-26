@@ -32,103 +32,103 @@ void BasicRenderer::crlf() {
 	};
 }
 
-void BasicRenderer::drawrect(Vector2 size, unsigned int color) {
+void BasicRenderer::drawrect(Vector2 size, u32 color) {
     ValidateDrawPos();
-	unsigned int diffX = Target->PixelWidth - DrawPos.x;
-	unsigned int diffY = Target->PixelHeight - DrawPos.y;
+	u32 diffX = Target->PixelWidth - DrawPos.x;
+	u32 diffY = Target->PixelHeight - DrawPos.y;
 	if (diffX < size.x) { size.x = diffX; }
 	if (diffY < size.y) { size.y = diffY; }
-	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
-	for (unsigned long y = DrawPos.y; y < DrawPos.y + size.y; y++) {
-		for (unsigned long x = DrawPos.x; x < DrawPos.x + size.x; x++) {
-			*(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
+	u32* pixel_ptr = (u32*)Target->BaseAddress;
+	for (u64 y = DrawPos.y; y < DrawPos.y + size.y; y++) {
+		for (u64 x = DrawPos.x; x < DrawPos.x + size.x; x++) {
+			*(u32*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
 		}
 	}
 }
 
-void BasicRenderer::readpix(Vector2 size, uint32_t* buffer) {
+void BasicRenderer::readpix(Vector2 size, u32* buffer) {
 	if (buffer == nullptr) { return; }
 	ValidateDrawPos();
-	unsigned int initX = size.x;
-	unsigned int diffX = Target->PixelWidth - DrawPos.x;
-	unsigned int diffY = Target->PixelHeight - DrawPos.y;
+	u32 initX = size.x;
+	u32 diffX = Target->PixelWidth - DrawPos.x;
+	u32 diffY = Target->PixelHeight - DrawPos.y;
 	if (diffX < size.x) { size.x = diffX; }
 	if (diffY < size.y) { size.y = diffY; }
-	uint32_t* pixel_ptr = (uint32_t*)Target->BaseAddress;
-	for (unsigned long y = DrawPos.y; y < DrawPos.y + size.y; y++) {
-		for (unsigned long x = DrawPos.x; x < DrawPos.x + size.x; x++) {
-			*(uint32_t*)(buffer + (x - DrawPos.x) + ((y - DrawPos.y) * initX))
-				= *(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine));
+	u32* pixel_ptr = (u32*)Target->BaseAddress;
+	for (u64 y = DrawPos.y; y < DrawPos.y + size.y; y++) {
+		for (u64 x = DrawPos.x; x < DrawPos.x + size.x; x++) {
+			*(u32*)(buffer + (x - DrawPos.x) + ((y - DrawPos.y) * initX))
+				= *(u32*)(pixel_ptr + x + (y * Target->PixelsPerScanLine));
 		}
 	}
 }
 
-void BasicRenderer::drawpix(Vector2 size, uint32_t* pixels) {
+void BasicRenderer::drawpix(Vector2 size, u32* pixels) {
 	if (pixels == nullptr) { return; }
     ValidateDrawPos();
-	unsigned int initX = size.x;
-	unsigned int diffX = Target->PixelWidth - DrawPos.x;
-	unsigned int diffY = Target->PixelHeight - DrawPos.y;
+	u32 initX = size.x;
+	u32 diffX = Target->PixelWidth - DrawPos.x;
+	u32 diffY = Target->PixelHeight - DrawPos.y;
 	if (diffX < size.x) { size.x = diffX; }
 	if (diffY < size.y) { size.y = diffY; }
-	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
-	for (uint64_t y = DrawPos.y; y < DrawPos.y + size.y; y++) {
-		for (uint64_t x = DrawPos.x; x < DrawPos.x + size.x; x++) {
-			*(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine))
-				= *(uint32_t*)(pixels + (x - DrawPos.x) + ((y - DrawPos.y) * initX));
+	u32* pixel_ptr = (u32*)Target->BaseAddress;
+	for (u64 y = DrawPos.y; y < DrawPos.y + size.y; y++) {
+		for (u64 x = DrawPos.x; x < DrawPos.x + size.x; x++) {
+			*(u32*)(pixel_ptr + x + (y * Target->PixelsPerScanLine))
+				= *(u32*)(pixels + (x - DrawPos.x) + ((y - DrawPos.y) * initX));
 		}
 	}
 }
 
-void BasicRenderer::drawbmp(Vector2 size, uint8_t* bitmap, unsigned int color) {
+void BasicRenderer::drawbmp(Vector2 size, u8* bitmap, u32 color) {
 	if (bitmap == nullptr) { return; }
 	ValidateDrawPos();
-	unsigned int initX = size.x;
-	unsigned int diffX = Target->PixelWidth - DrawPos.x;
-	unsigned int diffY = Target->PixelHeight - DrawPos.y;
+	u32 initX = size.x;
+	u32 diffX = Target->PixelWidth - DrawPos.x;
+	u32 diffY = Target->PixelHeight - DrawPos.y;
 	if (diffX < size.x) { size.x = diffX; }
 	if (diffY < size.y) { size.y = diffY; }
-	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
-	for (uint64_t y = DrawPos.y; y < DrawPos.y + size.y; y++) {
-		for (uint64_t x = DrawPos.x; x < DrawPos.x + size.x; x++) {
-			int byte = ((x - DrawPos.x) + ((y - DrawPos.y) * initX)) / 8;
+	u32* pixel_ptr = (u32*)Target->BaseAddress;
+	for (u64 y = DrawPos.y; y < DrawPos.y + size.y; y++) {
+		for (u64 x = DrawPos.x; x < DrawPos.x + size.x; x++) {
+			s32 byte = ((x - DrawPos.x) + ((y - DrawPos.y) * initX)) / 8;
 			if ((bitmap[byte] & (0b10000000 >> ((x - DrawPos.x) % 8))) > 0) {
-			    *(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
+			    *(u32*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
 			}
 			else {
-				*(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = BackgroundColor;
+				*(u32*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = BackgroundColor;
 			}
 		}
 	}
 }
 
-void BasicRenderer::drawbmpover(Vector2 size, uint8_t* bitmap, unsigned int color) {
+void BasicRenderer::drawbmpover(Vector2 size, u8* bitmap, u32 color) {
 	if (bitmap == nullptr) { return; }
 	ValidateDrawPos();
-	unsigned int initX = size.x;
-	unsigned int diffX = Target->PixelWidth - DrawPos.x;
-	unsigned int diffY = Target->PixelHeight - DrawPos.y;
+	u32 initX = size.x;
+	u32 diffX = Target->PixelWidth - DrawPos.x;
+	u32 diffY = Target->PixelHeight - DrawPos.y;
 	if (diffX < size.x) { size.x = diffX; }
 	if (diffY < size.y) { size.y = diffY; }
-	unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
-	for (uint64_t y = DrawPos.y; y < DrawPos.y + size.y; y++) {
-		for (uint64_t x = DrawPos.x; x < DrawPos.x + size.x; x++) {
-			int byte = ((x - DrawPos.x) + ((y - DrawPos.y) * initX)) / 8;
+	u32* pixel_ptr = (u32*)Target->BaseAddress;
+	for (u64 y = DrawPos.y; y < DrawPos.y + size.y; y++) {
+		for (u64 x = DrawPos.x; x < DrawPos.x + size.x; x++) {
+			s32 byte = ((x - DrawPos.x) + ((y - DrawPos.y) * initX)) / 8;
 			if ((bitmap[byte] & (0b10000000 >> ((x - DrawPos.x) % 8))) > 0) {
-			    *(uint32_t*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
+			    *(u32*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
 			}
 		}
 	}
 }
 
-void BasicRenderer::drawchar(char c, unsigned int color) {
+void BasicRenderer::drawchar(char c, u32 color) {
 	// Draw character.
 	drawbmp({8, Font->PSF1_Header->CharacterSize},
-			(uint8_t*)Font->GlyphBuffer + (c * Font->PSF1_Header->CharacterSize),
+			(u8*)Font->GlyphBuffer + (c * Font->PSF1_Header->CharacterSize),
 			color);
 }
 
-void BasicRenderer::putchar(char c, unsigned int color)
+void BasicRenderer::putchar(char c, u32 color)
 {
     gRend.drawchar(c, color);
 	// Increment pixel position horizontally by one character.
@@ -154,7 +154,7 @@ void BasicRenderer::clearchar() {
     drawrect({8, Font->PSF1_Header->CharacterSize}, BackgroundColor);
 }
 
-void BasicRenderer::putstr(const char* str, unsigned int color) {
+void BasicRenderer::putstr(const char* str, u32 color) {
 	// Set current character to first character in string.
 	char* c = (char*)str;
 	// Loop over string until null-terminator.

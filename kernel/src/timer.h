@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_TIMER_H
 #define LENSOR_OS_TIMER_H
 
-#include <stdint.h>
+#include "integers.h"
 #include "io.h"
 
 #define MIN_FREQ 20
@@ -35,18 +35,18 @@
 //   1 0 =      channel 2
 //   1 1 =      read-back command (8254 only)
 
-void set_frequency(uint32_t freq);
-void initialize_timer(uint32_t freq);
+void set_frequency(u32 freq);
+void initialize_timer(u32 freq);
 
-extern uint64_t gTicks;
-extern uint32_t gFreq;
+extern u64 gTicks;
+extern u32 gFreq;
 
 // Stopwatch functionality
-extern uint64_t start;
-extern uint64_t end;
+extern u64 start;
+extern u64 end;
 
 // Get seconds elapsed for a given amount of ticks.
-double get_seconds(uint64_t ticks);
+double get_seconds(u64 ticks);
 // Get total seconds since bootup.
 double get_seconds();
 
@@ -58,7 +58,7 @@ inline void timer_end() {
 	end = gTicks;
 }
 
-inline uint64_t timer_elapsed_ticks() {
+inline u64 timer_elapsed_ticks() {
 	return end - start;
 }
 
@@ -66,6 +66,6 @@ double timer_elapsed_seconds();
 
 // Halt cpu execution for given amount of time.
 void sleep_sec(double seconds);
-void sleep_ms(uint64_t milliseconds);
+void sleep_ms(u64 milliseconds);
 
 #endif

@@ -1,26 +1,26 @@
 #ifndef LENSOR_OS_IDT_H
 #define LENSOR_OS_IDT_H
 
-#include <stdint.h>
+#include "../integers.h"
 
 #define IDT_TA_InterruptGate   0x8e
 #define IDT_TA_TrapGate        0x8f
 
 struct IDTDescEntry {
-  uint16_t offset0;
-  uint16_t selector;
-  uint8_t ist;
-  uint8_t type_attr;
-  uint16_t offset1;
-  uint32_t offset2;
-  uint32_t ignore;
-  void SetOffset(uint64_t offset);
-  uint64_t GetOffset();
+  u16 offset0;
+  u16 selector;
+  u8 ist;
+  u8 type_attr;
+  u16 offset1;
+  u32 offset2;
+  u32 ignore;
+  void SetOffset(u64 offset);
+  u64 GetOffset();
 };
 
 struct IDTR {
-  uint16_t Limit;
-  uint64_t Offset;
+  u16 Limit;
+  u64 Offset;
 } __attribute__((packed));
 
 #endif

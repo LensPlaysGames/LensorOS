@@ -9,6 +9,7 @@
 #define PS2XOVERFLOW 0b01000000
 #define PS2YOVERFLOW 0b10000000
 
+#include "integers.h"
 #include "io.h"
 #include "math.h"
 #include "cstr.h"

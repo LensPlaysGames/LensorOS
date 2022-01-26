@@ -1,6 +1,6 @@
 // GRAPHICS
 #include "basic_renderer.h"
-// BITMAP ABSTRACTION (for usability, NOT performance)
+// BITMAP ABSTRACTION
 #include "bitmap.h"
 // to_string, to_hexstring
 #include "cstr.h"
@@ -28,8 +28,8 @@ struct BootInfo {
 	Framebuffer* framebuffer;
 	PSF1_FONT* font;
 	EFI_MEMORY_DESCRIPTOR* map;
-	uint64_t mapSize;
-	uint64_t mapDescSize;
+	u64 mapSize;
+	u64 mapDescSize;
 	ACPI::RSDP2* rsdp;
 };
 
@@ -37,7 +37,7 @@ struct KernelInfo {
 	PageTableManager* PTM;
 };
 
-extern uint64_t _KernelStart;
-extern uint64_t _KernelEnd;
+extern u64 _KernelStart;
+extern u64 _KernelEnd;
 
 KernelInfo kernel_init(BootInfo* info);

@@ -1,6 +1,7 @@
 #ifndef LENSOR_OS_PAGE_TABLE_MANAGER
 #define LENSOR_OS_PAGE_TABLE_MANAGER
 
+#include "../integers.h"
 #include "../memory.h"
 #include "paging.h"
 #include "page_frame_allocator.h"

@@ -1,10 +1,9 @@
 #ifndef LENSOR_OS_PAGING_H
 #define LENSOR_OS_PAGING_H
 
-#include <stdint.h>
+#include "../integers.h"
 
 // The idea is to create a tree of nodes that can be traversed to get a page of memory.
-
 // A 'page' is equal to 4096 bytes (4 kB) of memory.
 // A Modern OS gives each program virtual addresses that start at
 //   zero for ease of use, however the physical address of each page of
@@ -73,12 +72,12 @@
 //   Page Directory Pointer Table [512]...
 
 struct PageMapIndexer {
-	uint64_t PageDirectoryPointerIndex;
-	uint64_t PageDirectoryIndex;
-	uint64_t PageTableIndex;
-	uint64_t PageIndex;
+	u64 PageDirectoryPointerIndex;
+	u64 PageDirectoryIndex;
+	u64 PageTableIndex;
+	u64 PageIndex;
 
-	PageMapIndexer(uint64_t virtualAddress) {
+	PageMapIndexer(u64 virtualAddress) {
 		virtualAddress >>= 12;
 		PageIndex =                 virtualAddress & 0x1ff;
 		virtualAddress >>= 9;
@@ -105,12 +104,12 @@ enum PT_Flag {
 };
 
 struct PageDirEntry {
-	uint64_t Value;
+	u64 Value;
 	
 	void set_flag(PT_Flag flag, bool enabled);
 	bool get_flag(PT_Flag flag);
-	void set_address(uint64_t addr);
-	uint64_t get_address();
+	void set_address(u64 addr);
+	u64 get_address();
 };
 
 struct PageTable {

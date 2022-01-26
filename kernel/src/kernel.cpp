@@ -2,25 +2,17 @@
 
 // TODO:
 // - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
-// - AHCI Driver Update: DMA ATA Write implementation
-// - Save parsed PCI devices for quick lookup.
-// - Write ASM interrupt wrapper (no longer rely on GCC-only "__attribute__((interrupt))")
+// - FILE SYSTEM:
+//  - AHCI Driver Update: DMA ATA Write implementation
+//  - Another filesystem better suited for mass storage (Ext2? Proprietary?)
+//  - Virtual File System that will store intermediate representation of files/folders/storage media devices
+// - Save parsed PCI devices for quick lookup (device tree).
+// - Write ASM interrupt wrapper (no longer rely on `__attribute__((interrupt))`)
 //   - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/
 // - Test different memcpy implementations
 //   - See https://stackoverflow.com/questions/22387586/measuring-execution-time-of-a-function-in-c
+// - UART Driver (serial communication, necessary for terminals/terminal emulators)
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
-
-// TODO: Change from the ugly to the new beautiful alias'.
-/// Unsigned Integer Alias Declarations
-// using u8 = uint8_t;
-// using u16 = uint16_t;
-// using u32 = uint32_t;
-// using u64 = uint64_t;
-/// Signed Integer Alias Declarations
-// using s8 = int8_t;
-// using s16 = int16_t;
-// using s32 = int32_t;
-// using s64 = int64_t;
 
 void print_memory_info() {
 	// 8 pixels per character, one char per column.
@@ -57,17 +49,17 @@ void print_memory_info() {
 void print_now() {
 	gRend.crlf();
 	gRend.putstr("Now is ");
-	gRend.putstr(to_string((uint64_t)gRTC.time.hour));
+	gRend.putstr(to_string((u64)gRTC.time.hour));
 	gRend.putchar(':');
-	gRend.putstr(to_string((uint64_t)gRTC.time.minute));
+	gRend.putstr(to_string((u64)gRTC.time.minute));
 	gRend.putchar(':');
-	gRend.putstr(to_string((uint64_t)gRTC.time.second));
+	gRend.putstr(to_string((u64)gRTC.time.second));
 	gRend.putstr(" on ");
-	gRend.putstr(to_string((uint64_t)gRTC.time.year));
+	gRend.putstr(to_string((u64)gRTC.time.year));
 	gRend.putchar('-');
-	gRend.putstr(to_string((uint64_t)gRTC.time.month));
+	gRend.putstr(to_string((u64)gRTC.time.month));
 	gRend.putchar('-');
-	gRend.putstr(to_string((uint64_t)gRTC.time.date));
+	gRend.putstr(to_string((u64)gRTC.time.date));
 	gRend.crlf();
 	gRend.swap();
 }

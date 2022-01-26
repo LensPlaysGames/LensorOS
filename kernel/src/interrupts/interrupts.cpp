@@ -17,14 +17,14 @@ __attribute__((interrupt)) void system_timer_handler(InterruptFrame* frame) {
 }
 
 __attribute__((interrupt)) void keyboard_handler(InterruptFrame* frame) {
-	uint8_t scancode = inb(0x60);
+	u8 scancode = inb(0x60);
 	handle_keyboard(scancode);
 	// End interrupt	
 	end_master_pic();
 }
 
 __attribute__((interrupt)) void mouse_handler(InterruptFrame* frame) {
-	uint8_t data = inb(0x60);
+	u8 data = inb(0x60);
 	handle_ps2_mouse_interrupt(data);
 	// End interrupt
 	end_slave_pic();
@@ -33,9 +33,9 @@ __attribute__((interrupt)) void mouse_handler(InterruptFrame* frame) {
 // FAULT INTERRUPT HANDLERS
 __attribute__((interrupt)) void page_fault_handler(InterruptFrame* frame) {
 	// POP ERROR CODE FROM STACK
-	uint64_t address;
+	u64 address;
 	asm volatile ("mov %%cr2, %0" : "=r" (address));
-	uint32_t err;
+	u32 err;
 	asm volatile ("pop %%rax\n\t"
 				  "mov %%eax, %0" : "=r" (err));
 	// If bit 0 == 0, page not present
@@ -83,8 +83,8 @@ __attribute__((interrupt)) void general_protection_fault_handler(InterruptFrame*
 
 void remap_pic() {
 	// SAVE INTERRUPT MASKS
-	uint8_t masterMasks;
-	uint8_t slaveMasks;
+	u8 masterMasks;
+	u8 slaveMasks;
 	masterMasks = inb(PIC1_DATA);
 	io_wait();
 	slaveMasks = inb(PIC2_DATA);

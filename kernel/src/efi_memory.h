@@ -1,14 +1,14 @@
 #ifndef LENSOR_OS_EFI_MEMORY_OS
 #define LENSOR_OS_EFI_MEMORY_OS
 
-#include <stdint.h>
+#include "integers.h"
 
 struct EFI_MEMORY_DESCRIPTOR {
-  uint32_t type;
+  u32 type;
   void* physicalAddress;
   void* virtualAddress;
-  uint64_t numPages;
-  uint64_t attributes;
+  u64 numPages;
+  u64 attributes;
 };
 
 extern const char* EFI_MEMORY_TYPE_STRINGS[];

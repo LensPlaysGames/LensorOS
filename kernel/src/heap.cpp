@@ -22,15 +22,15 @@ void HeapSegmentHeader::combine_backward() {
 	}
 }
 
-HeapSegmentHeader* HeapSegmentHeader::split(uint64_t splitLength) {
+HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
 	if (splitLength < 8) { return nullptr; }
 	
 	/// Length of segment that is leftover after creating new header of `splitLength` length.
-	uint64_t splitSegmentLength = length - splitLength - sizeof(HeapSegmentHeader);
+	u64 splitSegmentLength = length - splitLength - sizeof(HeapSegmentHeader);
 	if (splitSegmentLength < 8) { return nullptr; }
 
 	/// Position of header that is newly created within the middle of `this` header.
-	HeapSegmentHeader* splitHeader = (HeapSegmentHeader*)((uint64_t)this
+	HeapSegmentHeader* splitHeader = (HeapSegmentHeader*)((u64)this
 														  + sizeof(HeapSegmentHeader)
 														  + splitLength);
 	if (next != nullptr) {
@@ -53,16 +53,16 @@ HeapSegmentHeader* HeapSegmentHeader::split(uint64_t splitLength) {
 	return splitHeader;
 }
 
-void init_heap(void* startAddress, uint64_t numInitialPages) {
-	for (uint64_t i = 0; i < numInitialPages; ++i) {
+void init_heap(void* startAddress, u64 numInitialPages) {
+	for (u64 i = 0; i < numInitialPages; ++i) {
 		// Map virtual heap position to physical memory address returned by page frame allocator.
-		gPTM.map_memory((void*)((uint64_t)startAddress + (i * 0x1000)), gAlloc.request_page());
+		gPTM.map_memory((void*)((u64)startAddress + (i * 0x1000)), gAlloc.request_page());
 	}
 	// Start of heap.
 	sHeapStart = startAddress;
 	// End of heap.
-	uint64_t numBytes = numInitialPages * 0x1000;
-	sHeapEnd = (void*)((uint64_t)sHeapStart + numBytes);
+	u64 numBytes = numInitialPages * 0x1000;
+	sHeapEnd = (void*)((u64)sHeapStart + numBytes);
 	HeapSegmentHeader* firstSegment = (HeapSegmentHeader*)startAddress;
 	// Actual length of free memory has to take into account header.
 	firstSegment->length = numBytes - sizeof(HeapSegmentHeader);
@@ -72,14 +72,14 @@ void init_heap(void* startAddress, uint64_t numInitialPages) {
 	sLastHeader = firstSegment;
 }
 
-void expand_heap(uint64_t numBytes) {
-	uint64_t numPages = (numBytes / 0x1000) + 1;
+void expand_heap(u64 numBytes) {
+	u64 numPages = (numBytes / 0x1000) + 1;
 	// Get address of new header at the end of the heap.
 	HeapSegmentHeader* extension = (HeapSegmentHeader*)sHeapEnd;
 	// Allocate and map a page in memory for new header.
-	for (uint64_t i = 0; i < numPages; ++i) {
+	for (u64 i = 0; i < numPages; ++i) {
 		gPTM.map_memory(sHeapEnd, gAlloc.request_page());
-		sHeapEnd = (void*)((uint64_t)sHeapEnd + 0x1000);
+		sHeapEnd = (void*)((u64)sHeapEnd + 0x1000);
 	}
 	extension->free = true;
 	extension->last = sLastHeader;
@@ -91,7 +91,7 @@ void expand_heap(uint64_t numBytes) {
 	extension->combine_backward();
 }
 
-void* malloc(uint64_t numBytes) {
+void* malloc(u64 numBytes) {
 	// Can not allocate nothing.
 	if (numBytes == 0) {
 		return nullptr;
@@ -108,11 +108,11 @@ void* malloc(uint64_t numBytes) {
 			if (current->length > numBytes) {
 				current->split(numBytes);
 				current->free = false;
-				return (void*)((uint64_t)current + sizeof(HeapSegmentHeader));
+				return (void*)((u64)current + sizeof(HeapSegmentHeader));
 			}
 			else if (current->length == numBytes) {
 				current->free = false;
-				return (void*)((uint64_t)current + sizeof(HeapSegmentHeader));
+				return (void*)((u64)current + sizeof(HeapSegmentHeader));
 			}
 		}
 		if (current->next == nullptr) { break; }
@@ -128,7 +128,7 @@ void* malloc(uint64_t numBytes) {
 }
 
 void free(void* address) {
-	HeapSegmentHeader* segment = (HeapSegmentHeader*)((uint64_t)address - sizeof(HeapSegmentHeader));
+	HeapSegmentHeader* segment = (HeapSegmentHeader*)((u64)address - sizeof(HeapSegmentHeader));
 	segment->free = true;
 	segment->combine_forward();
 	segment->combine_backward();

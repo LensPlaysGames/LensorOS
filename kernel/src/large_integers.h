@@ -1,18 +1,22 @@
 #ifndef LENSOR_OS_LARGE_INTEGERS_H
 #define LENSOR_OS_LARGE_INTEGERS_H
 
+#include "integers.h"
+
 struct uint256_t {
-	uint64_t a;
-	uint64_t b;
-	uint64_t c;
-	uint64_t d;
+	u64 a;
+	u64 b;
+	u64 c;
+	u64 d;
 } __attribute__((packed));
+using u256 = uint256_t;
 
 struct uint1024_t {
-	uint256_t a;
-	uint256_t b;
-	uint256_t c;
-	uint256_t d;
+	u256 a;
+	u256 b;
+	u256 c;
+	u256 d;
 } __attribute__((packed));
+using u1024 = uint1024_t;
 
 #endif

@@ -1,12 +1,12 @@
 #include "memory.h"
 
-uint64_t get_memory_size(EFI_MEMORY_DESCRIPTOR* map, uint64_t mapEntries, uint64_t mapDescSize) {
-	static uint64_t s_memory_size_in_bytes = 0;
+u64 get_memory_size(EFI_MEMORY_DESCRIPTOR* map, u64 mapEntries, u64 mapDescSize) {
+	static u64 s_memory_size_in_bytes = 0;
 	if (s_memory_size_in_bytes > 0) { return s_memory_size_in_bytes; }
 
 	for (int i = 0; i < mapEntries; ++i) {
 		// Get descriptor for each map entry.
-		EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((uint64_t)map + (i * mapDescSize));
+		EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)map + (i * mapDescSize));
 		// Add memory size from descriptor to total memory size.
 		// 4096 = page size in bytes
 	    s_memory_size_in_bytes += desc->numPages * 4096;
@@ -15,78 +15,78 @@ uint64_t get_memory_size(EFI_MEMORY_DESCRIPTOR* map, uint64_t mapEntries, uint64
 	return s_memory_size_in_bytes;
 }
 
-void memset(void* start, uint8_t value, uint64_t numBytes) {
+void memset(void* start, u8 value, u64 numBytes) {
 	if (numBytes <= 256) {
-		for (uint64_t i = 0; i < numBytes; ++i) {
-			*(uint8_t*)((uint64_t)start + i) = value;
+		for (u64 i = 0; i < numBytes; ++i) {
+			*(u8*)((u64)start + i) = value;
 		}
 	}
 	else {
-		uint64_t qWordValue = 0;
-		qWordValue |= (uint64_t)value << 0;
-		qWordValue |= (uint64_t)value << 8;
-		qWordValue |= (uint64_t)value << 16;
-		qWordValue |= (uint64_t)value << 24;
-		qWordValue |= (uint64_t)value << 32;
-		qWordValue |= (uint64_t)value << 40;
-		qWordValue |= (uint64_t)value << 48;
-		qWordValue |= (uint64_t)value << 56;
-		uint64_t numQWords = numBytes / 8;
-		uint8_t leftover = numBytes % 8;
-		uint64_t i = 0;
+		u64 qWordValue = 0;
+		qWordValue |= (u64)value << 0;
+		qWordValue |= (u64)value << 8;
+		qWordValue |= (u64)value << 16;
+		qWordValue |= (u64)value << 24;
+		qWordValue |= (u64)value << 32;
+		qWordValue |= (u64)value << 40;
+		qWordValue |= (u64)value << 48;
+		qWordValue |= (u64)value << 56;
+		u64 numQWords = numBytes / 8;
+		u8 leftover = numBytes % 8;
+		u64 i = 0;
 		for (; i < numQWords; i += 8) {
-			*(uint64_t*)((uint64_t)start + i) = qWordValue;
+			*(u64*)((u64)start + i) = qWordValue;
 		}
 		// Finish up leftover bits.
 		for (; i < numBytes; ++i) {
-			*(uint8_t*)((uint64_t)start + i) = value;
+			*(u8*)((u64)start + i) = value;
 		}
 	}
 }
 
-void memcpy(void* src, void* dest, uint64_t numBytes) {
+void memcpy(void* src, void* dest, u64 numBytes) {
 	if (numBytes <= 256) {
 		// Copy 8 byte segments instead of one byte at a time.
-		uint64_t numQWords = numBytes / 8;
-		uint8_t leftover = numBytes % 8;
-		uint64_t i = 0;
+		u64 numQWords = numBytes / 8;
+		u8 leftover = numBytes % 8;
+		u64 i = 0;
 		for (; i < numQWords; i += 8) {
-			*(uint64_t*)((uint64_t)dest + i) = *(uint64_t*)((uint64_t)src + i);
+			*(u64*)((u64)dest + i) = *(u64*)((u64)src + i);
 		}
 		// Finish up leftover bits.
 		for (; i < numBytes; ++i) {
-			*(uint8_t*)((uint64_t)dest + i) = *(uint8_t*)((uint64_t)src + i);
+			*(u8*)((u64)dest + i) = *(u8*)((u64)src + i);
 		}
 	}
 	else if (numBytes <= 16384){
-		uint64_t numSWords = numBytes / 32;
-		uint8_t leftover = numBytes % 32;
-		uint64_t i = 0;
+		u64 numSWords = numBytes / 32;
+		u8 leftover = numBytes % 32;
+		u64 i = 0;
 		for (; i < numSWords; i += 32) {
-			*(uint256_t*)((uint64_t)dest + i) = *(uint256_t*)((uint64_t)src + i);
+			*(u256*)((u64)dest + i) = *(u256*)((u64)src + i);
 		}
 		// Finish up leftover bits.
 		for (; i < numBytes; ++i) {
-			*(uint8_t*)((uint64_t)dest + i) = *(uint8_t*)((uint64_t)src + i);
+			*(u8*)((u64)dest + i) = *(u8*)((u64)src + i);
 		}
 	}
 	else {
-		uint64_t numKWords = numBytes / 128;
-		uint8_t leftoverBits = numBytes % 128;
-		uint8_t leftoverQWords = leftoverBits / 8;
+		u64 numKWords = numBytes / 128;
+		u8 leftoverBits = numBytes % 128;
+		u8 leftoverQWords = leftoverBits / 8;
 		leftoverBits = leftoverBits % 8;
-		uint64_t i = 0;
+		u64 i = 0;
 		// Copy bulk of data using 1024 bit-wide chunks.
 		for (; i < numKWords; i += 128) {
-			*(uint1024_t*)((uint64_t)dest + i) = *(uint1024_t*)((uint64_t)src + i);
+			*(u1024*)((u64)dest + i) = *(u1024*)((u64)src + i);
 		}
 		// Finish up leftover quad words.
 		for (; i < numKWords + leftoverQWords; i += 8) {
-			*(uint64_t*)((uint64_t)dest + i) = *(uint64_t*)((uint64_t)src + i);
+			*(u64*)((u64)dest + i) = *(u64*)((u64)src + i);
 		}
 		// Finish up leftover bytes.
 		for (; i < numBytes; ++i) {
-			*(uint8_t*)((uint64_t)dest + i) = *(uint8_t*)((uint64_t)src + i);
+			*(u8*)((u64)dest + i) = *(u8*)((u64)src + i);
 		}
 	}
 }

@@ -1,28 +1,28 @@
 #include "timer.h"
 
-uint64_t gTicks;
-uint32_t gFreq;
+u64 gTicks;
+u32 gFreq;
 
 // Stopwatch functionality
-uint64_t start;
-uint64_t end;
+u64 start;
+u64 end;
 
-void set_frequency(uint32_t freq) {
+void set_frequency(u32 freq) {
 	if (freq < MIN_FREQ) { freq = MIN_FREQ; }
 	else if (freq > MAX_FREQ) { freq = MAX_FREQ; }
 	gFreq = freq;
-	uint32_t divisor = MAX_FREQ / freq;
+	u32 divisor = MAX_FREQ / freq;
 	outb(PIT_CMD, 0b00110100);
-	outb(PIT_CH0_DAT, (uint8_t) (divisor & 0x00ff));
-	outb(PIT_CH0_DAT, (uint8_t)((divisor & 0xff00) >> 8));
+	outb(PIT_CH0_DAT, (u8) (divisor & 0x00ff));
+	outb(PIT_CH0_DAT, (u8)((divisor & 0xff00) >> 8));
 }
 
-void initialize_timer(uint32_t freq) {
+void initialize_timer(u32 freq) {
 	set_frequency(freq);
 }
 
 // Get seconds elapsed for a given amount of ticks.
-double get_seconds(uint64_t ticks) {
+double get_seconds(u64 ticks) {
 	return ticks / (double)gFreq;
 }
 
@@ -36,11 +36,11 @@ double timer_elapsed_seconds() {
 
 void sleep_sec(double seconds) {
 	// Calculate number of ticks needed to wait.
-	uint64_t ticksToWait = seconds * gFreq;
-	uint64_t startTicks = gTicks;
+	u64 ticksToWait = seconds * gFreq;
+	u64 startTicks = gTicks;
 	while (gTicks - startTicks < ticksToWait) { asm ("hlt"); }
 }
 
-void sleep_ms(uint64_t milliseconds) {
+void sleep_ms(u64 milliseconds) {
 	sleep_sec((double)milliseconds / 1000);
 }

@@ -17,9 +17,9 @@ namespace AHCI {
 	AHCIDriver* gAHCI;
 
 	PortType get_port_type(HBAPort* port) {
-		uint32_t sataStatus = port->sataStatus;
-		uint8_t interfacePowerManagement = (sataStatus >> 8) & 0b111;
-		uint8_t deviceDetection = sataStatus & 0b111;
+		u32 sataStatus = port->sataStatus;
+		u8 interfacePowerManagement = (sataStatus >> 8) & 0b111;
+		u8 deviceDetection = sataStatus & 0b111;
 
 		if (deviceDetection != HBA_PORT_DEVICE_PRESENT
 			|| interfacePowerManagement != HBA_PORT_IPM_ACTIVE)
@@ -38,8 +38,8 @@ namespace AHCI {
 	}
 
 	void AHCIDriver::probe_ports() {
-		uint32_t ports = ABAR->portsImplemented;
-		for (uint64_t i = 0; i < 32; ++i) {
+		u32 ports = ABAR->portsImplemented;
+		for (u64 i = 0; i < 32; ++i) {
 			if (ports & (1 << i)) {
 				PortType type = get_port_type(&ABAR->ports[i]);
 				if (type == PortType::SATA
@@ -59,22 +59,22 @@ namespace AHCI {
 		StopCMD();
 		// Command Base
 		void* base = gAlloc.request_page();
-	    hbaPort->commandListBase = (uint32_t)(uint64_t)base;
-	    hbaPort->commandListBaseUpper = (uint32_t)((uint64_t)base >> 32);
+	    hbaPort->commandListBase = (u32)(u64)base;
+	    hbaPort->commandListBaseUpper = (u32)((u64)base >> 32);
 		memset(base, 0, 1024);
 		// FIS Base
 		void* fisBase = gAlloc.request_page();
-	    hbaPort->fisBaseAddress = (uint32_t)(uint64_t)fisBase;
-	    hbaPort->fisBaseAddressUpper = (uint32_t)((uint64_t)fisBase >> 32);
+	    hbaPort->fisBaseAddress = (u32)(u64)fisBase;
+	    hbaPort->fisBaseAddressUpper = (u32)((u64)fisBase >> 32);
 		memset(fisBase, 0, 256);
 
-		HBACommandHeader* cmdHdr = (HBACommandHeader*)((uint64_t)hbaPort->commandListBase + ((uint64_t)hbaPort->commandListBaseUpper << 32));
-		for (uint64_t i = 0; i < 32; ++i) {
+		HBACommandHeader* cmdHdr = (HBACommandHeader*)((u64)hbaPort->commandListBase + ((u64)hbaPort->commandListBaseUpper << 32));
+		for (u64 i = 0; i < 32; ++i) {
 			cmdHdr[i].prdtLength = 8;
 			void* cmdTableAddress = gAlloc.request_page();
-			uint64_t address = (uint64_t)cmdTableAddress + (i << 8);
-			cmdHdr[i].commandTableBaseAddress = (uint32_t)address;
-			cmdHdr[i].commandTableBaseAddressUpper = (uint32_t)((uint64_t)address >> 32);
+			u64 address = (u64)cmdTableAddress + (i << 8);
+			cmdHdr[i].commandTableBaseAddress = (u32)address;
+			cmdHdr[i].commandTableBaseAddressUpper = (u32)((u64)address >> 32);
 			memset(cmdTableAddress, 0, 256);
 		}
 		
@@ -96,9 +96,9 @@ namespace AHCI {
 			   && hbaPort->cmdSts & HBA_PxCMD_CR);
 	}
 
-	bool Port::Read(uint64_t sector, uint16_t numSectors, void* buffer) {
-		const uint64_t maxSpin = 1000000;
-		uint64_t spin = 0;
+	bool Port::Read(u64 sector, u16 numSectors, void* buffer) {
+		const u64 maxSpin = 1000000;
+		u64 spin = 0;
 		while ((hbaPort->taskFileData & (ATA_DEV_BUSY | ATA_DEV_DRQ))
 			   && spin < maxSpin)
 		{
@@ -108,19 +108,19 @@ namespace AHCI {
 			return false;
 		}
 
-		uint32_t sectorL = (uint32_t)sector;
-		uint32_t sectorH = (uint32_t)(sector >> 32);
+		u32 sectorL = (u32)sector;
+		u32 sectorH = (u32)(sector >> 32);
 
-		hbaPort->interruptStatus = (uint32_t)-1;
+		hbaPort->interruptStatus = (u32)-1;
 
-		HBACommandHeader* cmdHdr = (HBACommandHeader*)(uint64_t)hbaPort->commandListBase;
-		cmdHdr->commandFISLength = sizeof(FIS_REG_H2D)/sizeof(uint32_t);
+		HBACommandHeader* cmdHdr = (HBACommandHeader*)(u64)hbaPort->commandListBase;
+		cmdHdr->commandFISLength = sizeof(FIS_REG_H2D)/sizeof(u32);
 		cmdHdr->write = 0;
 		cmdHdr->prdtLength = 1;
-		HBACommandTable* cmdTable = (HBACommandTable*)(uint64_t)cmdHdr->commandTableBaseAddress;
+		HBACommandTable* cmdTable = (HBACommandTable*)(u64)cmdHdr->commandTableBaseAddress;
 		memset(cmdTable, 0, sizeof(HBACommandTable) + ((cmdHdr->prdtLength-1) * sizeof(HBA_PRDTEntry)));
-		cmdTable->prdtEntry[0].dataBaseAddress = (uint32_t)(uint64_t)buffer;
-		cmdTable->prdtEntry[0].dataBaseAddressUpper = (uint32_t)((uint64_t)buffer >> 32);
+		cmdTable->prdtEntry[0].dataBaseAddress = (u32)(u64)buffer;
+		cmdTable->prdtEntry[0].dataBaseAddressUpper = (u32)((u64)buffer >> 32);
 		cmdTable->prdtEntry[0].byteCount = (numSectors << 9) - 1;
 		cmdTable->prdtEntry[0].interruptOnCompletion = 1;
 		FIS_REG_H2D* cmdFIS = (FIS_REG_H2D*)(&cmdTable->commandFIS);
@@ -129,12 +129,12 @@ namespace AHCI {
 		cmdFIS->commandControl = 1;
 		cmdFIS->command = ATA_CMD_READ_DMA_EX;
 		// assign lba's
-		cmdFIS->lba0 = (uint8_t)(sectorL);
-		cmdFIS->lba1 = (uint8_t)(sectorL >> 8);
-		cmdFIS->lba2 = (uint8_t)(sectorL >> 16);
-		cmdFIS->lba3 = (uint8_t)(sectorH);
-		cmdFIS->lba4 = (uint8_t)(sectorH >> 8);
-		cmdFIS->lba5 = (uint8_t)(sectorH >> 16);
+		cmdFIS->lba0 = (u8)(sectorL);
+		cmdFIS->lba1 = (u8)(sectorL >> 8);
+		cmdFIS->lba2 = (u8)(sectorL >> 16);
+		cmdFIS->lba3 = (u8)(sectorH);
+		cmdFIS->lba4 = (u8)(sectorH >> 8);
+		cmdFIS->lba5 = (u8)(sectorH >> 16);
 		// use lba mode.
 		cmdFIS->deviceRegister = 1 << 6;
 		// set sector count.
@@ -159,12 +159,12 @@ namespace AHCI {
 	AHCIDriver::AHCIDriver(PCI::PCIDeviceHeader* pciBaseAddress) {
 		PCIBaseAddress = pciBaseAddress;
 		
-	    ABAR = (HBAMemory*)(uint64_t)(((PCI::PCIHeader0*)PCIBaseAddress)->BAR5);
+	    ABAR = (HBAMemory*)(u64)(((PCI::PCIHeader0*)PCIBaseAddress)->BAR5);
 		// Map ABAR into memory.
 		gPTM.map_memory(ABAR, ABAR);
 		
 		gRend.putstr("Probing AHCI 1.0 Controller at ");
-		gRend.putstr(to_hexstring((uint64_t)PCIBaseAddress));
+		gRend.putstr(to_hexstring((u64)PCIBaseAddress));
 		gRend.crlf();
 		gRend.swap();
 		
@@ -172,42 +172,42 @@ namespace AHCI {
 		probe_ports();
 		
 		gRend.putstr("Found ");
-		gRend.putstr(to_string((uint64_t)numPorts));
+		gRend.putstr(to_string((u64)numPorts));
 		gRend.putstr(" open and active ports");
 		gRend.crlf();
 		gRend.putstr("Max read/write: ");
-		gRend.putstr(to_string((uint64_t)MAX_READ_PAGES * 4));
+		gRend.putstr(to_string((u64)MAX_READ_PAGES * 4));
 		gRend.putstr("kib");
 		gRend.crlf();
 		gRend.swap();
 
 		FatFS::FATDriver FAT;
 
-		for(uint32_t i = 0; i < numPorts; ++i) {
+		for(u32 i = 0; i < numPorts; ++i) {
 			gRend.putstr("Configuring port ");
-			gRend.putstr(to_string((uint64_t)i));
+			gRend.putstr(to_string((u64)i));
 			gRend.crlf();
 			Ports[i]->Configure();			
-			Ports[i]->buffer = (uint8_t*)gAlloc.request_pages(MAX_READ_PAGES);
+			Ports[i]->buffer = (u8*)gAlloc.request_pages(MAX_READ_PAGES);
 			if (Ports[i]->buffer != nullptr) {
 				// Set port buffer to expected state (all zeroes).
 				memset((void*)Ports[i]->buffer, 0, MAX_READ_PAGES * 0x1000);
 				// Check if device is FAT formatted.
 				if (FAT.is_device_fat(Ports[i])) {
 					gRend.putstr("Device at port ");
-					gRend.putstr(to_string((uint64_t)i));
+					gRend.putstr(to_string((u64)i));
 					gRend.putstr(" is FAT formatted.");
 					gRend.crlf();
 				}
 				gRend.putstr("Port ");
-				gRend.putstr(to_string((uint64_t)i));
+				gRend.putstr(to_string((u64)i));
 				gRend.putstr(" successfully configured");
 				gRend.crlf();
 				gRend.swap();
 			}
 			else {
 				gRend.putstr("Port ");
-				gRend.putstr(to_string((uint64_t)i));
+				gRend.putstr(to_string((u64)i));
 				gRend.putstr(" could not be configured");
 				gRend.crlf();
 				gRend.swap();
@@ -219,7 +219,7 @@ namespace AHCI {
 		gRend.putstr("Deconstructing AHCI Driver");
 		gRend.crlf();
 		gRend.swap();
-		for(uint32_t i = 0; i < numPorts; ++i) {
+		for(u32 i = 0; i < numPorts; ++i) {
 			gAlloc.free_pages((void*)Ports[i]->buffer, MAX_READ_PAGES);
 		}
 	}
