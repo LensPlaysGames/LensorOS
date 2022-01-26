@@ -45,9 +45,10 @@ namespace AHCI {
 				if (type == PortType::SATA
 					|| type == PortType::SATAPI)
 				{
-					Ports[numPorts].hbaPort = &ABAR->ports[i];
-					Ports[numPorts].type = type;
-					Ports[numPorts].number = numPorts;
+					Ports[numPorts] = new Port;
+					Ports[numPorts]->hbaPort = &ABAR->ports[i];
+					Ports[numPorts]->type = type;
+					Ports[numPorts]->number = numPorts;
 					numPorts++;
 				}
 			}
@@ -182,27 +183,26 @@ namespace AHCI {
 
 		FatFS::FATDriver FAT;
 
-		// Somehow the i value is being... over-written? deleted? somehow corrupted.
-		// Or my to_string is very, very wrong.
 		for(uint32_t i = 0; i < numPorts; ++i) {
 			gRend.putstr("Configuring port ");
 			gRend.putstr(to_string((uint64_t)i));
 			gRend.crlf();
-			Ports[i].Configure();			
-			Ports[i].buffer = (uint8_t*)gAlloc.request_pages(MAX_READ_PAGES);
-			if (Ports[i].buffer != nullptr) {
-				memset((void*)Ports[i].buffer, 0, MAX_READ_PAGES * 0x1000);
-				
-				if (FAT.is_device_fat(&Ports[i])) {
-					gRend.putstr("Device is FAT formatted.");
+			Ports[i]->Configure();			
+			Ports[i]->buffer = (uint8_t*)gAlloc.request_pages(MAX_READ_PAGES);
+			if (Ports[i]->buffer != nullptr) {
+				// Set port buffer to expected state (all zeroes).
+				memset((void*)Ports[i]->buffer, 0, MAX_READ_PAGES * 0x1000);
+				// Check if device is FAT formatted.
+				if (FAT.is_device_fat(Ports[i])) {
+					gRend.putstr("Device at port ");
+					gRend.putstr(to_string((uint64_t)i));
+					gRend.putstr(" is FAT formatted.");
 					gRend.crlf();
 				}
-
 				gRend.putstr("Port ");
 				gRend.putstr(to_string((uint64_t)i));
 				gRend.putstr(" successfully configured");
 				gRend.crlf();
-				
 				gRend.swap();
 			}
 			else {
@@ -212,15 +212,6 @@ namespace AHCI {
 				gRend.crlf();
 				gRend.swap();
 			}
-			// READ ALL DISKS' CONTENTS TO SCREEN
-			// (requires '#include "../basic_renderer.h"')
-			// if (Ports[i].Read(0, 4, Ports[i].buffer)) {
-			// 	for (int t = 0; t < 1024; ++t) {
-			// 		gRend.putchar(Ports[i].buffer[t]);
-			// 	}
-			// 	gRend.crlf();
-			// 	gRend.swap();
-			// }
 		}
 	}
 	
@@ -229,7 +220,7 @@ namespace AHCI {
 		gRend.crlf();
 		gRend.swap();
 		for(uint32_t i = 0; i < numPorts; ++i) {
-			gAlloc.free_pages((void*)Ports[i].buffer, MAX_READ_PAGES);
+			gAlloc.free_pages((void*)Ports[i]->buffer, MAX_READ_PAGES);
 		}
 	}
 }

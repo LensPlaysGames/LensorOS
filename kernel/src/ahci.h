@@ -186,10 +186,10 @@ namespace AHCI {
 		AHCIDriver(PCI::PCIDeviceHeader* pciBaseAddress);
 		~AHCIDriver();
 
-		// TODO: Move port memory allocation to dynamic (reduce memory usage).
-		Port Ports[32];
+		Port* Ports[32];
 		uint8_t numPorts;
 		void probe_ports();
+		
 	};
 
 	extern AHCIDriver* gAHCI;
