@@ -9,9 +9,9 @@
 
 struct PSF1_HEADER {
 	// Magic bytes to indicate PSF1 font type	
-	uint8_t Magic[2];
-	uint8_t Mode;
-	uint8_t CharacterSize;
+	u8 Magic[2];
+	u8 Mode;
+	u8 CharacterSize;
 };
 
 struct PSF1_FONT {
@@ -22,9 +22,9 @@ struct PSF1_FONT {
 struct Framebuffer {
 	void* BaseAddress;
 	size_t BufferSize;
-	unsigned int PixelWidth;
-	unsigned int PixelHeight;
-	unsigned int PixelsPerScanLine;
+	u32 PixelWidth;
+	u32 PixelHeight;
+	u32 PixelsPerScanLine;
 
 	Framebuffer() {
 		BaseAddress = nullptr;
@@ -42,12 +42,12 @@ struct Framebuffer {
 	}
 };
 
-const unsigned int BytesPerPixel = 4;
+const u32 BytesPerPixel = 4;
 
 class BasicRenderer {
 /* IMPROVEMENTS
 	 - Linked List of RenderObjects that are rendered in a `render()` function.
-	   - RenderObject struct = data to draw object (DrawPos, Size, uint8_t* Bitmap, Color, Size).
+	   - RenderObject struct = data to draw object (DrawPos, Size, u8* Bitmap, Color, Size).
 	   - render() = iterate object list, drawbmp of each one.
 */
 public:
@@ -57,7 +57,7 @@ public:
 	PSF1_FONT*   Font            {nullptr};
 	Vector2      DrawPos         {0, 0};
 	// I = ignore                 0xIIRRGGBB
-	unsigned int BackgroundColor {0x00000000};
+	u32 BackgroundColor {0x00000000};
 
 	BasicRenderer() {}
 	BasicRenderer(Framebuffer* render, Framebuffer* target, PSF1_FONT* f) {
@@ -74,22 +74,22 @@ public:
 		memcpy(Target->BaseAddress, Render->BaseAddress, Render->BufferSize);
 	}
 
-	void readpix(Vector2 size, uint32_t* buffer);
+	void readpix(Vector2 size, u32* buffer);
 	
 	// Change every pixel in the target framebuffer to BackgroundColor.
 	void clear() {
 		// Draw background color to every pixel.
-		unsigned int* pixel_ptr = (unsigned int*)Target->BaseAddress;
-		for (unsigned long y = 0; y < Target->PixelHeight; y++) {
-			for (unsigned long x = 0; x < Target->PixelWidth; x++) {
-				*(unsigned int*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = BackgroundColor;
+		u32* pixel_ptr = (u32*)Target->BaseAddress;
+		for (u64 y = 0; y < Target->PixelHeight; y++) {
+			for (u64 x = 0; x < Target->PixelWidth; x++) {
+				*(u32*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = BackgroundColor;
 			}
 		}
 		// Re-initialize draw position.
 		DrawPos = {0, 0};
 	}
 	// Update BackgroundColor to given color, then clear screen.
-	void clear(unsigned int color) {
+	void clear(u32 color) {
 		BackgroundColor = color;
 		clear();
 	}
@@ -102,23 +102,24 @@ public:
 	void newl();
 	// '\r' + '\n'
 	void crlf();
+	void crlf(u32 offset);
 
 	// Draw `size` of rectangle as `color`.
-	void drawrect(Vector2 size, unsigned int color = 0xffffffff);
+	void drawrect(Vector2 size, u32 color = 0xffffffff);
 	// Draw `size` of `pixels` buffer into target framebuffer.
-	void drawpix(Vector2 size, uint32_t* pixels);
+	void drawpix(Vector2 size, u32* pixels);
 	// Draw `size` of `bitmap` as `color`.
-	void drawbmp(Vector2 size, uint8_t* bitmap, uint32_t color = 0xffffffff);
+	void drawbmp(Vector2 size, u8* bitmap, u32 color = 0xffffffff);
 	// Draw `size` of `bitmap` as `color`, but don't clear `0` to background color.
 	// This allows the use of bitmaps acting on alpha as well as color.
-	void drawbmpover(Vector2 size, uint8_t* bitmap, uint32_t color = 0xffffffff);
+	void drawbmpover(Vector2 size, u8* bitmap, u32 color = 0xffffffff);
 	// Use PSF1 bitmap font to draw a character to the screen (don't advance).
-	void drawchar(char c, uint32_t color = 0xffffffff);
+	void drawchar(char c, u32 color = 0xffffffff);
 	
 	// Use font to put a character to the screen (advance draw position).
-	void putchar(char c, uint32_t color = 0xffffffff);
+	void putchar(char c, u32 color = 0xffffffff);
 	// Put a null-terminated string of characters to the screen, wrapping if necessary.
-	void putstr(const char* str, uint32_t color = 0xffffffff);
+	void putstr(const char* str, u32 color = 0xffffffff);
 };
 
 extern BasicRenderer gRend;
