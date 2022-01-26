@@ -93,6 +93,9 @@ namespace FatFS {
 		ExtendedBootRecord16 ExtBR16;
 		ExtendedBootRecord32 ExtBR32;
 
+		FATDevice()  {}
+		~FATDevice() {}
+
 		inline uint32_t get_total_sectors() {
 			if (BPB.TotalSectors16 == 0) {
 				return BPB.TotalSectors32;
@@ -151,8 +154,7 @@ namespace FatFS {
 		gRend.putstr("|\\");
 		gRend.crlf();
 		gRend.putstr("| Total Size: ");
-		gRend.putstr(to_string((uint64_t)(totalSectors
-										  * device->BPB.NumBytesPerSector)
+		gRend.putstr(to_string(totalSectors * device->BPB.NumBytesPerSector
 							   / 1024 / 1024));
 		gRend.putstr("mib");
 		gRend.crlf();
@@ -174,8 +176,7 @@ namespace FatFS {
 		gRend.putstr("|\\");
 		gRend.crlf();
 		gRend.putstr("| Total Usable Size: ");
-		gRend.putstr(to_string((uint64_t)(totalDataSectors
-										  * device->BPB.NumBytesPerSector)
+		gRend.putstr(to_string(totalDataSectors * device->BPB.NumBytesPerSector
 							   / 1024 / 1024));
 		gRend.putstr("mib");
 		gRend.crlf();
@@ -194,19 +195,35 @@ namespace FatFS {
 	///   - Reading/Writing a directory.
 	class FATDriver {
 	public:
-		FATDevice devices[32];
+	    
 		uint8_t numDevices{0};
 
 	    void read_boot_sector(uint8_t index, AHCI::Port* port) {
-			devices[index].Port = port;
 			// read boot sector from port into device at index.
 			gRend.putstr("Reading boot sector");
 			gRend.crlf();
+			// FIXME: ERROR HERE SOMEWHERE
 		    if (port->Read(0, 1, port->buffer)) {
-				memcpy(port->buffer, &devices[index].BPB, 512);
+				memcpy(port->buffer, &devices[index]->BPB, 512);
 				// TODO: Validate that media is FAT formatted (how do I do this?)
 				//         I guess I just have to ensure that values make sense...
-				print_fat_boot_record(&devices[index]);
+				print_fat_boot_record(devices[index]);
+				if (devices[index]->BPB.NumFATsPresent > 0) {
+					uint32_t totalClusters = devices[index]->get_total_clusters();
+					if (totalClusters == 0) {
+						devices[index]->Type = FATType::ExFAT;
+					}
+					else if (totalClusters < 4085) {
+						devices[index]->Type = FATType::FAT12;
+					}
+					else if (totalClusters < 65525) {
+						devices[index]->Type = FATType::FAT16;
+					}
+					else {
+						devices[index]->Type = FATType::FAT32;
+					}
+					devices[index]->Port = port;
+				}
 			}
 			else {
 				gRend.putstr("Unsuccessful read");
@@ -217,11 +234,14 @@ namespace FatFS {
 		bool is_device_FAT(AHCI::Port* port) {
 			uint8_t devIndex = numDevices;
 			numDevices++;
+
+			devices[devIndex] = new FATDevice();
+			
 			// Read boot sector from port into device
 			read_boot_sector(devIndex, port);
-
-			if (devices[devIndex].Type == FATType::INVALID) {
+			if (devices[devIndex]->Type == FATType::INVALID) {
 				numDevices--;
+				delete devices[devIndex];
 				return false;
 			}
 			return true;
@@ -230,6 +250,8 @@ namespace FatFS {
 		void read_root_directory() {
 			
 		}
+
+		FATDevice* devices[];
 	};
 }
 

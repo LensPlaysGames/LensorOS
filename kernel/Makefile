@@ -30,8 +30,8 @@ setup:
 	@mkdir $(OBJDIR)
 
 buildimg:
-	dd if=/dev/zero of=$(BUILDDIR)/$(OSNAME).img bs=512 count=93750
-	mformat -i $(BUILDDIR)/$(OSNAME).img -f 1440 ::
+	dd if=/dev/zero of=$(BUILDDIR)/$(OSNAME).img bs=512 count=187500
+	mformat -i $(BUILDDIR)/$(OSNAME).img -f 2880 ::
 	mmd -i $(BUILDDIR)/$(OSNAME).img ::/EFI
 	mmd -i $(BUILDDIR)/$(OSNAME).img ::/EFI/BOOT
 	mmd -i $(BUILDDIR)/$(OSNAME).img ::/LensorOS

@@ -31,6 +31,7 @@ void free(void* address);
 inline void* operator new      (uint64_t numBytes) { return malloc(numBytes); }
 inline void* operator new[]    (uint64_t numBytes) { return malloc(numBytes); }
 inline void  operator delete   (void* address)     { return free(address);    }
+inline void  operator delete   (void* address, uint64_t ignore) { return free(address);    }
 inline void  operator delete[] (void* address)     { return free(address);    }
 
 #endif
