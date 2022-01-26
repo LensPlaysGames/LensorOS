@@ -251,23 +251,28 @@ namespace FatFS {
 			gRend.putstr("[FatFS]: Reading boot sector");
 			gRend.crlf();
 		    if (devices[index].Port->Read(0, 1, devices[index].Port->buffer)) {
-				memcpy((void*)devices[index].Port->buffer, &devices[index].BPB, 720);
-				print_fat_boot_record(&devices[index]);
-				if (devices[index].BPB.NumFATsPresent > 0) {
-					u32 totalClusters = devices[index].get_total_clusters();
-					if (totalClusters == 0) {
-						devices[index].Type = FATType::ExFAT;
-					}
-					else if (totalClusters < 4085) {
-						devices[index].Type = FATType::FAT12;
-					}
-					else if (totalClusters < 65525) {
-						devices[index].Type = FATType::FAT16;
-					}
-					else {
-						devices[index].Type = FATType::FAT32;
-					}
+				memcpy((void*)devices[index].Port->buffer, &devices[index].BR, 720);
+				// FAT Filesystem magic bytes (0xaa55 word at 0x1fe offset).
+				if (*(u16*)((u64)devices[index].Port->buffer + 0x1fe) != 0xaa55) {
+					devices[index].Type = FATType::INVALID;
+					return;
 				}
+				// TODO: More fool-proof method of detecting FAT type.
+				// Get FAT type based on total cluster amount (mostly correct).
+				u32 totalClusters = devices[index].get_total_clusters();
+				if (totalClusters == 0) {
+					devices[index].Type = FATType::ExFAT;
+				}
+				else if (totalClusters < 4085) {
+					devices[index].Type = FATType::FAT12;
+				}
+				else if (totalClusters < 65525) {
+					devices[index].Type = FATType::FAT16;
+				}
+				else {
+					devices[index].Type = FATType::FAT32;
+				}
+				
 			}
 			else {
 				gRend.putstr("[FatFS]: Unsuccessful read (is device functioning properly?)");
@@ -291,7 +296,8 @@ namespace FatFS {
 		}
 
 		void read_root_directory() {
-			
+			// FAT12/FAT16 have fixed root directory position.
+			//   first_root_dir_sector = first_data_sector - root_dir_sectors;
 		}
 	};
 }
