@@ -102,8 +102,6 @@ public:
 	void newl();
 	// '\r' + '\n'
 	void crlf();
-	// '\r' then add offset + '\n'
-	void crlf(unsigned int offset);
 
 	// Draw `size` of rectangle as `color`.
 	void drawrect(Vector2 size, unsigned int color = 0xffffffff);

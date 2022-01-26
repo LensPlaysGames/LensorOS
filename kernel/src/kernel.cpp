@@ -24,34 +24,33 @@
 
 void print_memory_info() {
 	// 8 pixels per character, one char per column.
-	uint64_t startCol = gRend.DrawPos.x / 8;
-	gRend.crlf(startCol);
+	gRend.newl();
 	gRend.putstr("Memory Info:");
-	gRend.crlf(startCol);
+	gRend.newl();
 	gRend.putstr("|\\");
-    gRend.crlf(startCol);
+    gRend.newl();
 	gRend.putstr("| Free RAM: ");
 	gRend.putstr(to_string(gAlloc.get_free_ram() / 1024));
 	gRend.putstr(" kB (");
 	gRend.putstr(to_string(gAlloc.get_free_ram() / 1024 / 1024));
 	gRend.putstr(" mB)");
-    gRend.crlf(startCol);
+    gRend.newl();
 	gRend.putstr("|\\");
-    gRend.crlf(startCol);
+    gRend.newl();
 	gRend.putstr("| Used RAM: ");
 	gRend.putstr(to_string(gAlloc.get_used_ram() / 1024));
 	gRend.putstr(" kB (");
 	gRend.putstr(to_string(gAlloc.get_used_ram() / 1024 / 1024));
 	gRend.putstr(" mB)");
-    gRend.crlf(startCol);
+    gRend.newl();
 	gRend.putstr(" \\");
-    gRend.crlf(startCol);
+    gRend.newl();
 	gRend.putstr("  Reserved RAM: ");
 	gRend.putstr(to_string(gAlloc.get_reserved_ram() / 1024));
 	gRend.putstr(" kB (");
 	gRend.putstr(to_string(gAlloc.get_reserved_ram() / 1024 / 1024));
 	gRend.putstr(" mB)");
-	gRend.crlf(startCol);
+	gRend.newl();
 	gRend.swap();
 }
 

@@ -31,14 +31,6 @@ void BasicRenderer::crlf() {
 		DrawPos.y + Font->PSF1_Header->CharacterSize
 	};
 }
-// Carriage return line feed; CRLF ('\r' + '\n')
-//   but move position on newline by offset characters to the right.
-void BasicRenderer::crlf(unsigned int offset) {
-	DrawPos = {
-		offset * 8,
-		DrawPos.y + Font->PSF1_Header->CharacterSize
-	};
-}
 
 void BasicRenderer::drawrect(Vector2 size, unsigned int color) {
     ValidateDrawPos();
