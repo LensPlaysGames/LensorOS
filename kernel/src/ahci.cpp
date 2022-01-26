@@ -163,7 +163,7 @@ namespace AHCI {
 		// Map ABAR into memory.
 		gPTM.map_memory(ABAR, ABAR);
 		
-		gRend.putstr("Probing AHCI 1.0 Controller at ");
+		gRend.putstr("[AHCI]: Probing AHCI 1.0 Controller at ");
 		gRend.putstr(to_hexstring((u64)PCIBaseAddress));
 		gRend.crlf();
 		gRend.swap();
@@ -171,20 +171,19 @@ namespace AHCI {
 		// Probe ABAR for port info.
 		probe_ports();
 		
-		gRend.putstr("Found ");
+		gRend.putstr("[AHCI]: Found ");
 		gRend.putstr(to_string((u64)numPorts));
 		gRend.putstr(" open and active ports");
 		gRend.crlf();
-		gRend.putstr("Max read/write: ");
+		gRend.putstr("[AHCI]: Max read/write: ");
 		gRend.putstr(to_string((u64)MAX_READ_PAGES * 4));
 		gRend.putstr("kib");
 		gRend.crlf();
 		gRend.swap();
 
 		FatFS::FATDriver FAT;
-
 		for(u32 i = 0; i < numPorts; ++i) {
-			gRend.putstr("Configuring port ");
+			gRend.putstr("[AHCI]: Configuring port ");
 			gRend.putstr(to_string((u64)i));
 			gRend.crlf();
 			Ports[i]->Configure();			
@@ -194,19 +193,27 @@ namespace AHCI {
 				memset((void*)Ports[i]->buffer, 0, MAX_READ_PAGES * 0x1000);
 				// Check if device is FAT formatted.
 				if (FAT.is_device_fat(Ports[i])) {
-					gRend.putstr("Device at port ");
+					gRend.putstr("[AHCI]: Device at port ");
 					gRend.putstr(to_string((u64)i));
-					gRend.putstr(" is FAT formatted.");
+					if (FAT.devices[FAT.numDevices].Type == FatFS::FATType::FAT32) {
+						gRend.putstr(" is FAT32 formatted.");
+					}
+					else if (FAT.devices[FAT.numDevices].Type == FatFS::FATType::FAT16) {
+						gRend.putstr(" is FAT16 formatted.");
+					}
+					else if (FAT.devices[FAT.numDevices].Type == FatFS::FATType::FAT12) {
+					    gRend.putstr(" is FAT12 formatted."); }
+					else { gRend.putstr(" is FAT formatted."); }
 					gRend.crlf();
 				}
-				gRend.putstr("Port ");
+				gRend.putstr("[AHCI]: Port ");
 				gRend.putstr(to_string((u64)i));
 				gRend.putstr(" successfully configured");
 				gRend.crlf();
 				gRend.swap();
 			}
 			else {
-				gRend.putstr("Port ");
+				gRend.putstr("[AHCI]: Port ");
 				gRend.putstr(to_string((u64)i));
 				gRend.putstr(" could not be configured");
 				gRend.crlf();
@@ -216,7 +223,7 @@ namespace AHCI {
 	}
 	
 	AHCIDriver::~AHCIDriver() {
-		gRend.putstr("Deconstructing AHCI Driver");
+		gRend.putstr("[AHCI]: Deconstructing AHCI Driver");
 		gRend.crlf();
 		gRend.swap();
 		for(u32 i = 0; i < numPorts; ++i) {
