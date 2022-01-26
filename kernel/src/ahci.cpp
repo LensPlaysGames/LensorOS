@@ -1,4 +1,5 @@
 #include "ahci.h"
+#include "filesystems/fs_fat.h"
 
 namespace AHCI {
 #define HBA_PORT_DEVICE_PRESENT 0x3
@@ -178,12 +179,19 @@ namespace AHCI {
 		gRend.putstr("kib");
 		gRend.crlf();
 		gRend.swap();
+
+		FatFS::FATDriver FAT;
 		
 		for(uint32_t i = 0; i < numPorts; ++i) {
 			Ports[i].Configure();
 			Ports[i].buffer = (uint8_t*)gAlloc.request_pages(MAX_READ_PAGES);
 			if (Ports[i].buffer != nullptr) {
 				memset((void*)Ports[i].buffer, 0, MAX_READ_PAGES * 0x1000);
+
+				if (FAT.is_device_FAT(&Ports[i])) {
+					gRend.putstr("Device is FAT formatted.");
+					gRend.crlf();
+				}
 				
 				gRend.putstr("Port ");
 				gRend.putstr(to_string((uint64_t)i));

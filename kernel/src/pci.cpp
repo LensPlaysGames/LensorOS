@@ -30,8 +30,6 @@ namespace PCI {
 		 			// AHCI 1.0 Device
 					gRend.putstr("Found AHCI 1.0 Serial ATA Mass Storage Controller");
 					gRend.crlf();
-					// I FINALLY FOUND WHY THEY WERE FAILING!
-					// There was a bug in HeapSegmentHeader::Split() regarding nullptrs.
 					AHCI::gAHCI = new AHCI::AHCIDriver(pciDevHdr);
 		 		}
 			}

@@ -106,9 +106,9 @@ extern "C" void _start(BootInfo* bInfo) {
 	gRend.DrawPos = {400, 520};
 	gRend.drawrect({182, 20}, 0xff00ffff);
 	gRend.swap();
-	// UPDATE SCREEN FROM TARGET BUFFER.
+	// UPDATE SCREEN FROM TARGET BUFFER IN INFINITE LOOP.
 	while (true) {
-		// DRAW TIME ELAPSED SINCE KERNEL INITIALIZATION IN TOP RIGHT.
+		// DRAW TIME ELAPSED SINCE KERNEL INITIALIZATION IN TOP RIGHT (PIT).
 		gRend.DrawPos = {600, 0};
 		gRend.putstr("Elapsed: ");
 		gRend.putstr(to_string(get_seconds()));
