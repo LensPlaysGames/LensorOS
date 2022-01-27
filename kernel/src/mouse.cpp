@@ -133,7 +133,6 @@ void DrawMouseCursor() {
 	gRend.readpix({MouseCursorSize, MouseCursorSize}, &pixels_under_mouse_cursor[0]);
 	// DRAW MOUSE CUSOR AT NEW POSITION.
 	gRend.drawbmpover({MouseCursorSize, MouseCursorSize}, &mouse_cursor[0], 0xffffffff);
-	// UPDATE VISUALS FROM NEW DATA.
 	gOldMousePosition = gMousePosition;
 	// RETURN GLOBAL DRAW POSITION.
 	gRend.DrawPos = cachedPos;

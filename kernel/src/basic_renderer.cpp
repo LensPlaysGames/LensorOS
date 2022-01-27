@@ -10,6 +10,29 @@ inline void BasicRenderer::ValidateDrawPos() {
 	else if (DrawPos.y > Target->PixelHeight) { DrawPos.y = Target->PixelHeight; }
 }
 
+void BasicRenderer::swap(Vector2 position, Vector2 size) {
+    if (position.x > Target->PixelWidth) { position.x = Target->PixelWidth; }
+	if (position.y > Target->PixelHeight) { position.y = Target->PixelHeight; }
+	u64 diffX = Target->PixelWidth - position.x;
+	u64 diffY = Target->PixelHeight - position.y;
+	if (diffX < size.x) { size.x = diffX; }
+	if (diffY < size.y) { size.y = diffY; }
+	// Calculate addresses.
+    u32* targetBaseAddress = (u32*)((u64)Target->BaseAddress
+									+ position.x
+									+ (position.y * Target->PixelsPerScanLine));
+	u32* renderBaseAddress = (u32*)((u64)Render->BaseAddress
+									+ position.x
+									+ (position.y * Target->PixelsPerScanLine));
+	// Copy rectangle line-by-line.
+	u64 bytesPerLine = BytesPerPixel * size.x;
+	for (u64 y = 0; y < size.y; ++y) {
+		targetBaseAddress += Target->PixelsPerScanLine;
+		renderBaseAddress += Target->PixelsPerScanLine;
+		memcpy(targetBaseAddress, renderBaseAddress, bytesPerLine);
+	}
+}
+
 // Carriage return ('\r')
 void BasicRenderer::cret() {
 	DrawPos = {

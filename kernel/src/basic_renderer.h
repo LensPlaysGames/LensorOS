@@ -66,13 +66,16 @@ public:
 		Font = f;
 	}
 
-	// ENSURE DRAW POSITION IS WITHIN FRAMEBUFFER.
+	/// ENSURE DRAW POSITION IS WITHIN FRAMEBUFFER.
 	void ValidateDrawPos();
 
-	// UPDATE MEMORY CONTENTS OF RENDER FROM TARGET
+	/// UPDATE MEMORY CONTENTS OF RENDER FROM TARGET
     inline void swap() {
 		memcpy(Target->BaseAddress, Render->BaseAddress, Render->BufferSize);
 	}
+
+	/// UPDATE SIZE of MEMORY CONTENTS OF RENDER FROM TARGET AT POSITION
+    void swap(Vector2 position, Vector2 size);
 
 	void readpix(Vector2 size, u32* buffer);
 	
