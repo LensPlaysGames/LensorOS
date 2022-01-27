@@ -157,7 +157,7 @@ namespace AHCI {
 	}
 
 	AHCIDriver::AHCIDriver(PCI::PCIDeviceHeader* pciBaseAddress) {
-		srl.writestr("[AHCI]: Constructing driver.");
+		srl.writestr("[AHCI]: Constructing driver.\r\n");
 
 		PCIBaseAddress = pciBaseAddress;
 		
@@ -189,11 +189,11 @@ namespace AHCI {
 			if (Ports[i]->buffer != nullptr) {
 				// Set port buffer to expected state (all zeroes).
 				memset((void*)Ports[i]->buffer, 0, MAX_READ_PAGES * 0x1000);
-				srl.writestr("[AHCI]: Device at port ");
-				srl.writestr(to_string((u64)i));
 				/// Check device if it is valid for each supported format until valid is found.
 				// Check if device is FAT formatted.
 				if (FAT.is_device_fat(Ports[i])) {
+					srl.writestr("[AHCI]: Device at port ");
+					srl.writestr(to_string((u64)i));
 					if (FAT.devices[FAT.numDevices].Type == FatFS::FATType::FAT32) {
 						srl.writestr(" is FAT32 formatted.");
 					}
@@ -201,9 +201,10 @@ namespace AHCI {
 						srl.writestr(" is FAT16 formatted.");
 					}
 					else if (FAT.devices[FAT.numDevices].Type == FatFS::FATType::FAT12) {
-					    srl.writestr(" is FAT12 formatted."); }
+					    srl.writestr(" is FAT12 formatted.");
+					}
 					else {
-						srl.writestr(" is FAT formatted.");
+						srl.writestr(" is ExFAT formatted.");
 					}
 					srl.writestr("\r\n");
 				}
@@ -218,7 +219,7 @@ namespace AHCI {
 				srl.writestr(" could not be configured.\r\n");
 			}
 		}
-		srl.writestr("[AHCI]: Driver constructed.");
+		srl.writestr("[AHCI]: Driver constructed.\r\n");
 	}
 	
 	AHCIDriver::~AHCIDriver() {

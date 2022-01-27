@@ -195,6 +195,14 @@ namespace FatFS {
 			}
 			return sTotalSize;
 		}
+
+		u64 get_data_size() {
+			static u64 sDataSize = 0;
+			if (sDataSize == 0) {
+				sDataSize = get_total_data_sectors() * BR.BPB.NumBytesPerSector;
+			}
+			return sDataSize;
+		}
 	};
 
 	void srl_fat_boot_record(FATDevice* device) {
@@ -202,29 +210,28 @@ namespace FatFS {
 		u64 totalDataSectors = (u64)device->get_total_data_sectors();
 		srl.writestr("FAT Boot Record: \r\n");
 		srl.writestr("|\\\r\n");
-		srl.writestr("| Total Size: ");
-		srl.writestr(to_string(device->get_total_size() / 1024 / 1024));
-		srl.writestr("mib\r\n");
+		srl.writestr("| Sector Size: ");
+		srl.writestr(to_string((u64)device->BR.BPB.NumBytesPerSector));
+		srl.writestr("\r\n");
 		srl.writestr("| |\\\r\n");
 		srl.writestr("| | Total sectors: ");
 		srl.writestr(to_string(totalSectors));
 		srl.writestr("\r\n");
-		srl.writestr("| \\\r\n");
-		srl.writestr("|  Sector Size: ");
-		srl.writestr(to_string((u64)device->BR.BPB.NumBytesPerSector));
-		srl.writestr("\r\n");
-		srl.writestr("|\\\r\n");
-		srl.writestr("| Number of Sectors Per Cluster: ");
-		srl.writestr(to_string((u64)device->BR.BPB.NumSectorsPerCluster));
-		srl.writestr("\r\n");
-		srl.writestr("|\\\r\n");
-		srl.writestr("| Total Usable Size: ");
-		srl.writestr(to_string(totalDataSectors * device->BR.BPB.NumBytesPerSector
-							   / 1024 / 1024));
-		srl.writestr("mib\r\n");
+		srl.writestr("| | \\\r\n");
+		srl.writestr("| |  Total size: ");
+		srl.writestr(to_string(device->get_total_size() / 1024 / 1024));
+		srl.writestr("MiB\r\n");
 		srl.writestr("| \\\r\n");
 		srl.writestr("|  Total data sectors: ");
 		srl.writestr(to_string(totalDataSectors));
+		srl.writestr("\r\n");
+		srl.writestr("|  \\\r\n");
+		srl.writestr("|   Total data size: ");
+		srl.writestr(to_string(device->get_data_size() / 1024 / 1024));
+		srl.writestr("MiB\r\n");
+		srl.writestr(" \\\r\n");
+		srl.writestr("  Number of Sectors Per Cluster: ");
+		srl.writestr(to_string((u64)device->BR.BPB.NumSectorsPerCluster));
 		srl.writestr("\r\n");
 	}
 
@@ -272,6 +279,8 @@ namespace FatFS {
 				else {
 					devices[index].Type = FATType::FAT32;
 				}
+
+				srl_fat_boot_record(&devices[index]);
 			}
 			else {
 			    srl.writestr("[FatFS]: Unsuccessful read (is device functioning properly?)\r\n");
