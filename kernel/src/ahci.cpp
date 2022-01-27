@@ -194,23 +194,26 @@ namespace AHCI {
 				if (FAT.is_device_fat(Ports[i])) {
 					srl.writestr("[AHCI]: Device at port ");
 					srl.writestr(to_string((u64)i));
-					if (FAT.devices[FAT.numDevices].Type == FatFS::FATType::FAT32) {
+					u16 FATdeviceIndex = FAT.numDevices - 1;
+					if (FAT.devices[FATdeviceIndex].Type == FatFS::FATType::FAT32) {
 						srl.writestr(" is FAT32 formatted.");
 					}
-					else if (FAT.devices[FAT.numDevices].Type == FatFS::FATType::FAT16) {
+					else if (FAT.devices[FATdeviceIndex].Type == FatFS::FATType::FAT16) {
 						srl.writestr(" is FAT16 formatted.");
 					}
-					else if (FAT.devices[FAT.numDevices].Type == FatFS::FATType::FAT12) {
+					else if (FAT.devices[FATdeviceIndex].Type == FatFS::FATType::FAT12) {
 					    srl.writestr(" is FAT12 formatted.");
 					}
-					else {
+					else if (FAT.devices[FATdeviceIndex].Type == FatFS::FATType::ExFAT) {
 						srl.writestr(" is ExFAT formatted.");
 					}
-					srl.writestr("\r\n");
-					srl.writestr("  Total Size: ");
+					else {
+						srl.writestr(" has INVALID format\r\n");
+						continue;
+					}
+					srl.writestr("\r\n  Total Size: ");
 					srl.writestr(to_string(FAT.devices[FAT.numDevices].get_total_size() / 1024 / 1024));
-					srl.writestr("MiB\r\n");
-					srl.writestr("  Usable Size: ");
+					srl.writestr("MiB\r\n  Usable Size: ");
 					srl.writestr(to_string(FAT.devices[FAT.numDevices].get_data_size() / 1024 / 1024));
 					srl.writestr("MiB\r\n");
 				}
