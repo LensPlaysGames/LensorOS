@@ -133,7 +133,7 @@ namespace FatFS {
 			return BR.BPB.NumReservedSectors;
 		}
 
-		u32 get_root_directory_sectors() {
+		inline u32 get_root_directory_sectors() {
 			static u32 sRootDirSectors = 0;
 			if (sRootDirSectors == 0) {
 			    sRootDirSectors = ((BR.BPB.NumEntriesInRoot * FAT_DIRECTORY_SIZE_BYTES)
@@ -152,16 +152,20 @@ namespace FatFS {
 			return sFirstDataSector;
 		}
 
-		inline u32 get_root_directory_start_sector() {
+		inline u32 get_first_root_directory_sector() {
 			if (Type == FATType::FAT12 || Type == FATType::FAT16) {
-				return get_first_data_sector() - get_root_directory_sectors();				
+				// FAT12/FAT16 have fixed root directory position.
+				//   first_root_dir_sector = first_data_sector - root_dir_sectors;
+				return get_first_data_sector() - get_root_directory_sectors();
 			}
 			else {
-				return (*(BootRecordExtension32*)&BR.Extended).RootCluster;
+				// FAT32/ExFAT store root directory in a cluster, which can be
+				//   found by accessing the boot record extension `RootCluster` field.
+				return get_cluster_start_sector((*(BootRecordExtension32*)&BR.Extended).RootCluster);
 			}
 		}
 
-		u32 get_total_data_sectors() {
+		inline u32 get_total_data_sectors() {
 			static u32 sTotalDataSectors = 0;
 			if (sTotalDataSectors == 0) {
 			    sTotalDataSectors = get_total_sectors()
@@ -172,7 +176,7 @@ namespace FatFS {
 			return sTotalDataSectors;
 		}
 
-		u32 get_total_clusters() {
+		inline u32 get_total_clusters() {
 			static u32 sTotalClusters = 0;
 			if (sTotalClusters == 0) {
 				// This rounds down.
@@ -188,7 +192,7 @@ namespace FatFS {
 		}
 
 		/// Return total size of all sectors formatted in bytes.
-		u64 get_total_size() {
+		inline u64 get_total_size() {
 			static u64 sTotalSize = 0;
 			if (sTotalSize == 0) {
 				sTotalSize = get_total_sectors() * BR.BPB.NumBytesPerSector;
@@ -196,7 +200,7 @@ namespace FatFS {
 			return sTotalSize;
 		}
 
-		u64 get_data_size() {
+		inline u64 get_data_size() {
 			static u64 sDataSize = 0;
 			if (sDataSize == 0) {
 				sDataSize = get_total_data_sectors() * BR.BPB.NumBytesPerSector;
@@ -235,6 +239,56 @@ namespace FatFS {
 		srl.writestr("\r\n");
 	}
 
+	struct ClusterEntry {
+		/// If the first byte equates to zero, last entry in cluster.
+		/// If the first byte equates to 0xe5, unused entry (skip).
+		// First 8 characters = name, last 3 = extension
+		u8 FileName[11];
+		/// READ_ONLY=0x01,  HIDDEN=0x02,     SYSTEM=0x04,
+		/// VOLUME_ID=0x08,  DIRECTORY=0x10,  ARCHIVE=0x20,
+		///	LFN=0x0f
+		u8 Attributes;
+		u8 Reserved0;
+		/// Range 0-199 (inclusive).
+		u8 TimeCreatedInTenthsSecond;
+		/// 5 bits for seconds, 6 bits for minutes, 5 bits for hour.
+		u16 TimeCreated;
+		/// 5 bits for day, 4 bits for month, 7 bits for year.
+		u16 DateCreated;
+		u16 DateAccessed;
+		/// Zero on FAT12/16.
+		/// High 16 bits of entry's first cluster number.
+		u16 EntryFirstClusterNumberH;
+		/// Same format as TimeCreated.
+		u16 TimeModified;
+		/// Same format as DateCreated.
+		u16 DateModified;
+		/// Low 16 bits of entry's first cluster number.
+		u16 EntryFirstClusterNumberL;
+		u32 FileSizeInBytes;
+	} __attribute__((packed));
+
+	/// Long File Name Cluster Entry
+	/// ALWAYS placed directly before their 8.3 entry (seen above).
+	struct LFNClusterEntry {
+		u8 Order;
+		/// Five two-byte characters.
+		u16 Characters1[5];
+		/// Always 0x0f.
+		u8 Attribute;
+		/// Zero for name entries.
+		u8 LongEntryType;
+		/// Checksum generated from short file-name when file was created.
+		u8 Checksum;
+		/// Six two-byte characters.
+		u16 Characters2[6];
+		u16 Zero;
+		/// Two two-byte characters.
+		u16 Characters3[2];
+	} __attribute__((packed));
+
+	// TODO: ExFAT directory entry struct.
+
 	/// The FAT Driver will house all functionality pertaining to actually
 	///   reading and writing to/from a FATDevice.
 	/// This includes:
@@ -253,9 +307,11 @@ namespace FatFS {
 	    void read_boot_sector(u8 index) {
 			srl.writestr("[FatFS]: Reading boot sector\r\n");
 		    if (devices[index].Port->Read(0, 1, devices[index].Port->buffer)) {
-				memcpy((void*)devices[index].Port->buffer, &devices[index].BR, 720);
-				// FAT Filesystem magic bytes (0xaa55 word at 0x1fe offset).
-				// Ensure there is at least one fat present
+				// Copy data read from buffer directly into struct.
+				memcpy((void*)devices[index].Port->buffer, &devices[index].BR, sizeof(BootRecord));
+				// Validation:
+				// - FAT Filesystem magic bytes (0xaa55 word at 0x1fe offset).
+				// - Ensure there is at least one fat present
 				if (*(u16*)((u64)devices[index].Port->buffer + 0x1fe) != 0xaa55
 					|| devices[index].BR.BPB.NumFATsPresent == 0
 					|| (devices[index].BR.BPB.NumBytesPerSector
@@ -279,8 +335,8 @@ namespace FatFS {
 				else {
 					devices[index].Type = FATType::FAT32;
 				}
-
 				srl_fat_boot_record(&devices[index]);
+				read_root_directory(index);
 			}
 			else {
 			    srl.writestr("[FatFS]: Unsuccessful read (is device functioning properly?)\r\n");
@@ -302,21 +358,77 @@ namespace FatFS {
 			return true;
 		}
 
-		void read_root_directory(u8 index) {
+		void read_cluster_from_buffer(u8 index) {
 			if (devices[index].Type == FATType::FAT12
-				|| devices[index].Type == FATType::FAT16)
+				|| devices[index].Type == FATType::FAT16
+				|| devices[index].Type == FATType::FAT32)
 			{
-				//TODO:READ ROOT DIRECTORY
-				// FAT12/FAT16 have fixed root directory position.
-				//   first_root_dir_sector = first_data_sector - root_dir_sectors;
+				ClusterEntry* current = (ClusterEntry*)devices[index].Port->buffer;
+				bool lfnBufferFull = false;
+				u16* lfnBuffer = new u16[13];
+				// Read entries from sector until firstByte = 0;
+				while (current->FileName[0] != 0) {
+					// Skip unused cluster entries.
+					if (current->FileName[0] == 0xe5) {
+						continue;
+					}
+					
+					srl.writestr("Found entry in cluster:");
+					
+					// Long File Name Entry
+					if (current->Attributes == 0x0f) {
+						srl.writestr("Long File Name Entry");
+						LFNClusterEntry* lfn = (LFNClusterEntry*)current;
+						// Copy long file name into buffer.
+						// First five two-byte characters.
+						memcpy(&lfn->Characters1[0], &lfnBuffer[0], 10);
+						// Next six characters.
+						memcpy(&lfn->Characters2[0], &lfnBuffer[5], 12);
+						// Last two characters.
+						memcpy(&lfn->Characters3[0], &lfnBuffer[11], 4);
+						lfnBufferFull = true;
+					}
+
+					// TODO TODO TODO
+					// Parse data from entry, store it in VFS structure of some sort.
+
+					if (lfnBufferFull) {
+						// TODO: Apply long file name to entry that was just read.
+						//       This should be stored in the VFS structure of a
+						//         file for later use.
+						srl.writestr("Folder/File Entry with Long File Name");
+						// Clear long file-name buffer.
+						delete lfnBuffer;
+						lfnBuffer = new u16[13];
+						lfnBufferFull = false;
+					}
+					else {
+						srl.writestr("Standard Entry (Folder/File)");
+					}
+					srl.writestr(" (");
+					srl.writestr(to_string((u64)current->FileSizeInBytes));
+					srl.writestr(" bytes)\r\n");
+					current++;
+				}
+				delete lfnBuffer;
 			}
-			else if (devices[index].Type == FATType::FAT32
-					 || devices[index].Type == FATType::ExFAT)
-			{
-				//TODO:READ ROOT DIRECTORY
-				// FAT32/ExFAT store root directory in a cluster, which can be
-				//   found by accessing the boot record extension `RootCluster` field.
+			else if (devices[index].Type == FATType::ExFAT) {
+				srl.writestr("[FatFS]: ExFAT format not yet supported");
+				// TODO: Parse ExFAT directory structures.
 			}
+		}
+		
+		void read_root_directory(u8 index) {
+			u64 sector = devices[index].get_first_root_directory_sector();
+
+			// Protection against reading from boot sector.
+			if (sector == 0) { return; }
+			// Read cluster into device's port buffer.
+			devices[index].Port->Read(sector,
+									  devices[index].get_root_directory_sectors(),
+									  devices[index].Port->buffer);
+			// Get data out of cluster from device at index' port buffer.
+		    read_cluster_from_buffer(index);
 		}
 	};
 }
