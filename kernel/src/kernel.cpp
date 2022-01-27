@@ -1,18 +1,17 @@
 #include "kUtility.h"
 
 // TODO:
+// - Handle two-byte width characters (somehow).
 // - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
+// - Save parsed PCI devices for quick lookup (device tree).
 // - FILE SYSTEM:
+//   - Virtual File System that will store intermediate representation of files/folders/storage media devices
 //   - AHCI Driver Update: DMA ATA Write implementation
 //   - Another filesystem better suited for mass storage (Ext2? Proprietary?)
-//   - Virtual File System that will store intermediate representation of files/folders/storage media devices
-//   - Improve FatFS (actually parse more than just the BPB).
-// - Save parsed PCI devices for quick lookup (device tree).
 // - Write ASM interrupt wrapper (no longer rely on `__attribute__((interrupt))`)
 //   - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/
 // - Test different memcpy implementations
 //   - See https://stackoverflow.com/questions/22387586/measuring-execution-time-of-a-function-in-c
-// - UART Driver (serial communication, necessary for terminals/terminal emulators).
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
 
 void print_memory_info() {
