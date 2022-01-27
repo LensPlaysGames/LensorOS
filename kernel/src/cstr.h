@@ -4,7 +4,7 @@
 #include "integers.h"
 
 char* to_string(u64 value);
-char* to_string(int64_t value);
+char* to_string(s64 value);
 char* to_string(double value, u8 decimalPlaces = 2);
 char* to_hexstring(u64 value);
 
