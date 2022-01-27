@@ -3,7 +3,7 @@
 
 #define CURRENT_YEAR 2022
 
-#include <stdint.h>
+#include "integers.h"
 #include "io.h"
 
 #define CMOS_ADDR 0x70
@@ -28,14 +28,14 @@
 #define CENTURY_REGISTER 0x00
 
 struct RTCData {
-	uint8_t  second;
-	uint8_t  minute;
-	uint8_t  hour;
-	uint8_t  weekday;
-	uint8_t  date;
-	uint8_t  month;
-	uint32_t year;
-	uint8_t  century;
+	u8  second;
+	u8  minute;
+	u8  hour;
+	u8  weekday;
+	u8  date;
+	u8  month;
+	u32 year;
+	u8  century;
 
 	RTCData() {}
 
@@ -61,12 +61,12 @@ public:
 	}
 
 private:
-	inline uint8_t is_rtc_updating() {
+	inline u8 is_rtc_updating() {
 		outb(CMOS_ADDR, 0x0a);
 		return inb(CMOS_DATA) & 0x80;
 	}
 	
-	inline uint8_t read_register(uint8_t reg) {
+	inline u8 read_register(u8 reg) {
 		outb(CMOS_ADDR, reg);
 		return inb(CMOS_DATA);
 	}

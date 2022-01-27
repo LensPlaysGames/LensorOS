@@ -42,7 +42,7 @@ void RTC::get_date_time() {
 		   || (new_time.year    != time.year)
 		   || (new_time.century != time.century));
 
-	uint8_t statusB = read_register(0x0b);
+	u8 statusB = read_register(0x0b);
 
 	// BCD -> BINARY
 	if (!(statusB & 0b00000100)) {

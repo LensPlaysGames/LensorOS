@@ -3,9 +3,10 @@
 // TODO:
 // - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
 // - FILE SYSTEM:
-//  - AHCI Driver Update: DMA ATA Write implementation
-//  - Another filesystem better suited for mass storage (Ext2? Proprietary?)
-//  - Virtual File System that will store intermediate representation of files/folders/storage media devices
+//   - AHCI Driver Update: DMA ATA Write implementation
+//   - Another filesystem better suited for mass storage (Ext2? Proprietary?)
+//   - Virtual File System that will store intermediate representation of files/folders/storage media devices
+//   - Improve FatFS (actually parse more than just the BPB).
 // - Save parsed PCI devices for quick lookup (device tree).
 // - Write ASM interrupt wrapper (no longer rely on `__attribute__((interrupt))`)
 //   - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/

@@ -207,8 +207,16 @@ namespace AHCI {
 						srl.writestr(" is ExFAT formatted.");
 					}
 					srl.writestr("\r\n");
+					srl.writestr("  Total Size: ");
+					srl.writestr(to_string(FAT.devices[FAT.numDevices].get_total_size() / 1024 / 1024));
+					srl.writestr("MiB\r\n");
+					srl.writestr("  Usable Size: ");
+					srl.writestr(to_string(FAT.devices[FAT.numDevices].get_data_size() / 1024 / 1024));
+					srl.writestr("MiB\r\n");
 				}
 				else {
+					srl.writestr("[AHCI]: Device at port ");
+					srl.writestr(to_string((u64)i));
 					srl.writestr(" has an unrecognizable format.\r\n");
 					// TODO: Handle un-used port. (deallocate buffer?)
 				}
