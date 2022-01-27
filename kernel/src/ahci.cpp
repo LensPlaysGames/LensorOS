@@ -157,75 +157,72 @@ namespace AHCI {
 	}
 
 	AHCIDriver::AHCIDriver(PCI::PCIDeviceHeader* pciBaseAddress) {
+		srl.writestr("[AHCI]: Constructing driver.");
+
 		PCIBaseAddress = pciBaseAddress;
 		
 	    ABAR = (HBAMemory*)(u64)(((PCI::PCIHeader0*)PCIBaseAddress)->BAR5);
 		// Map ABAR into memory.
 		gPTM.map_memory(ABAR, ABAR);
 		
-		gRend.putstr("[AHCI]: Probing AHCI 1.0 Controller at ");
-		gRend.putstr(to_hexstring((u64)PCIBaseAddress));
-		gRend.crlf();
-		gRend.swap();
-		
+		srl.writestr("[AHCI]: Probing AHCI 1.0 Controller at ");
+		srl.writestr(to_hexstring((u64)PCIBaseAddress));
+		srl.writestr("\r\n");
+
 		// Probe ABAR for port info.
 		probe_ports();
 		
-		gRend.putstr("[AHCI]: Found ");
-		gRend.putstr(to_string((u64)numPorts));
-		gRend.putstr(" open and active ports");
-		gRend.crlf();
-		gRend.putstr("[AHCI]: Max read/write: ");
-		gRend.putstr(to_string((u64)MAX_READ_PAGES * 4));
-		gRend.putstr("kib");
-		gRend.crlf();
-		gRend.swap();
+		srl.writestr("[AHCI]: Found ");
+		srl.writestr(to_string((u64)numPorts));
+		srl.writestr(" open and active ports\r\n");
+		srl.writestr("[AHCI]: Read/write buffer size: ");
+		srl.writestr(to_string((u64)MAX_READ_PAGES * 4));
+		srl.writestr("kib\r\n");
 
+		// TODO: Manage file system drivers better
+		//         (non-local; global would need
+		//         custom amount of devices in array).
 		FatFS::FATDriver FAT;
 		for(u32 i = 0; i < numPorts; ++i) {
-			gRend.putstr("[AHCI]: Configuring port ");
-			gRend.putstr(to_string((u64)i));
-			gRend.crlf();
 			Ports[i]->Configure();			
 			Ports[i]->buffer = (u8*)gAlloc.request_pages(MAX_READ_PAGES);
 			if (Ports[i]->buffer != nullptr) {
 				// Set port buffer to expected state (all zeroes).
 				memset((void*)Ports[i]->buffer, 0, MAX_READ_PAGES * 0x1000);
+				srl.writestr("[AHCI]: Device at port ");
+				srl.writestr(to_string((u64)i));
+				/// Check device if it is valid for each supported format until valid is found.
 				// Check if device is FAT formatted.
 				if (FAT.is_device_fat(Ports[i])) {
-					gRend.putstr("[AHCI]: Device at port ");
-					gRend.putstr(to_string((u64)i));
 					if (FAT.devices[FAT.numDevices].Type == FatFS::FATType::FAT32) {
-						gRend.putstr(" is FAT32 formatted.");
+						srl.writestr(" is FAT32 formatted.");
 					}
 					else if (FAT.devices[FAT.numDevices].Type == FatFS::FATType::FAT16) {
-						gRend.putstr(" is FAT16 formatted.");
+						srl.writestr(" is FAT16 formatted.");
 					}
 					else if (FAT.devices[FAT.numDevices].Type == FatFS::FATType::FAT12) {
-					    gRend.putstr(" is FAT12 formatted."); }
-					else { gRend.putstr(" is FAT formatted."); }
-					gRend.crlf();
+					    srl.writestr(" is FAT12 formatted."); }
+					else {
+						srl.writestr(" is FAT formatted.");
+					}
+					srl.writestr("\r\n");
 				}
-				gRend.putstr("[AHCI]: Port ");
-				gRend.putstr(to_string((u64)i));
-				gRend.putstr(" successfully configured");
-				gRend.crlf();
-				gRend.swap();
+				else {
+					srl.writestr(" has an unrecognizable format.\r\n");
+					// TODO: Handle un-used port. (deallocate buffer?)
+				}
 			}
 			else {
-				gRend.putstr("[AHCI]: Port ");
-				gRend.putstr(to_string((u64)i));
-				gRend.putstr(" could not be configured");
-				gRend.crlf();
-				gRend.swap();
+				srl.writestr("[AHCI]: Port ");
+				srl.writestr(to_string((u64)i));
+				srl.writestr(" could not be configured.\r\n");
 			}
 		}
+		srl.writestr("[AHCI]: Driver constructed.");
 	}
 	
 	AHCIDriver::~AHCIDriver() {
-		gRend.putstr("[AHCI]: Deconstructing AHCI Driver");
-		gRend.crlf();
-		gRend.swap();
+	    srl.writestr("[AHCI]: Deconstructing AHCI Driver\r\n");
 		for(u32 i = 0; i < numPorts; ++i) {
 			gAlloc.free_pages((void*)Ports[i]->buffer, MAX_READ_PAGES);
 		}

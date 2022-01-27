@@ -64,7 +64,6 @@ void prepare_acpi(BootInfo* bInfo) {
 	// Memory-mapped ConFiguration Table
 	ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table(xsdt, (char*)"MCFG");
 	PCI::enumerate_pci(mcfg);
-	gRend.crlf();
 }
  
 Framebuffer target;
@@ -81,6 +80,8 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	prepare_memory(bInfo);
 	// SETUP KERNEL HEAP.
 	init_heap((void*)0x700000000000, 1);
+	// SETUP SERIAL I/O.
+	srl = UARTDriver();
 	// SETUP GOP RENDERER.
 	target = *bInfo->framebuffer;
 	// GOP = Graphics Output Protocol.
@@ -106,29 +107,21 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	// IDT = INTERRUPT DESCRIPTOR TABLE.
 	// Call assembly `lidt`.
 	prepare_interrupts();
-	gRend.putstr("Interrupts prepared.");
-	gRend.crlf();
-	gRend.swap();
+	srl.writestr("[kUtil]: Interrupts prepared.\r\n");
 	// SYSTEM TIMER.
 	u64 pitFreq = 2000;
 	initialize_timer(pitFreq);
-	gRend.putstr("Programmable Interval Timer initialized (");
-	gRend.putstr(to_string(pitFreq));
-	gRend.putstr("hz).");
-	gRend.crlf();
-	gRend.swap();
+	srl.writestr("Programmable Interval Timer initialized (");
+	srl.writestr(to_string(pitFreq));
+	srl.writestr("hz).\r\n");
 	// PREPARE PS/2 MOUSE.
 	init_ps2_mouse();
 	// CREATE GLOBAL DATE/TIME (RTC INIT)
 	gRTC = RTC();
-	gRend.putstr("Real Time Clock initialized.");
-	gRend.crlf();
-	gRend.swap();
+	srl.writestr("Real Time Clock initialized.\r\n");
 	// SYSTEM INFORMATION IS FOUND IN ACPI TABLE
 	prepare_acpi(bInfo);
-	gRend.putstr("ACPI prepared.");
-	gRend.crlf();
-	gRend.swap();
+	srl.writestr("ACPI prepared.\r\n");
 	// INTERRUPT MASKS.
 	// 0 = UNMASKED, ALLOWED TO HAPPEN
 	outb(PIC1_DATA, 0b11111000);
@@ -137,8 +130,6 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	io_wait();
 	// ENABLE INTERRUPTS.
 	asm ("sti");
-	gRend.putstr("Interrupts enabled.");
-	gRend.crlf();
-	gRend.swap();
+	srl.writestr("Interrupts enabled.\r\n");
 	return kInfo;
 }

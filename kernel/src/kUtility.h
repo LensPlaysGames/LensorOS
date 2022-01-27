@@ -23,6 +23,8 @@
 // SYSTEM TABLES
 #include "acpi.h"
 #include "pci.h"
+// SERIAL COMMUNICATIONS
+#include "uart.h"
 
 struct BootInfo {
 	Framebuffer* framebuffer;

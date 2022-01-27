@@ -7,6 +7,8 @@
 
 #define FAT_DIRECTORY_SIZE_BYTES 32
 
+// Resource Used: https://wiki.osdev.org/FAT#Programming_Guide
+
 // Thanks to Gigasoft of osdev forums for this list
 // What makes a FAT filesystem valid:
 // - Word at 0x1fe equates to 0xaa55
@@ -195,44 +197,35 @@ namespace FatFS {
 		}
 	};
 
-	void print_fat_boot_record(FATDevice* device) {
+	void srl_fat_boot_record(FATDevice* device) {
 		u64 totalSectors     = (u64)device->get_total_sectors();
 		u64 totalDataSectors = (u64)device->get_total_data_sectors();
-		gRend.putstr("FAT Boot Record: ");
-		gRend.crlf();
-		gRend.putstr("|\\");
-		gRend.crlf();
-		gRend.putstr("| Total Size: ");
-		gRend.putstr(to_string(device->get_total_size() / 1024 / 1024));
-		gRend.putstr("mib");
-		gRend.crlf();
-		gRend.putstr("| |\\");
-		gRend.crlf();
-		gRend.putstr("| | Total sectors: ");
-		gRend.putstr(to_string(totalSectors));
-		gRend.crlf();
-		gRend.putstr("| \\");
-		gRend.crlf();
-		gRend.putstr("|  Sector Size: ");
-		gRend.putstr(to_string((u64)device->BR.BPB.NumBytesPerSector));
-		gRend.crlf();
-		gRend.putstr("|\\");
-		gRend.crlf();
-		gRend.putstr("| Number of Sectors Per Cluster: ");
-		gRend.putstr(to_string((u64)device->BR.BPB.NumSectorsPerCluster));
-		gRend.crlf();
-		gRend.putstr("|\\");
-		gRend.crlf();
-		gRend.putstr("| Total Usable Size: ");
-		gRend.putstr(to_string(totalDataSectors * device->BR.BPB.NumBytesPerSector
+		srl.writestr("FAT Boot Record: \r\n");
+		srl.writestr("|\\\r\n");
+		srl.writestr("| Total Size: ");
+		srl.writestr(to_string(device->get_total_size() / 1024 / 1024));
+		srl.writestr("mib\r\n");
+		srl.writestr("| |\\\r\n");
+		srl.writestr("| | Total sectors: ");
+		srl.writestr(to_string(totalSectors));
+		srl.writestr("\r\n");
+		srl.writestr("| \\\r\n");
+		srl.writestr("|  Sector Size: ");
+		srl.writestr(to_string((u64)device->BR.BPB.NumBytesPerSector));
+		srl.writestr("\r\n");
+		srl.writestr("|\\\r\n");
+		srl.writestr("| Number of Sectors Per Cluster: ");
+		srl.writestr(to_string((u64)device->BR.BPB.NumSectorsPerCluster));
+		srl.writestr("\r\n");
+		srl.writestr("|\\\r\n");
+		srl.writestr("| Total Usable Size: ");
+		srl.writestr(to_string(totalDataSectors * device->BR.BPB.NumBytesPerSector
 							   / 1024 / 1024));
-		gRend.putstr("mib");
-		gRend.crlf();
-		gRend.putstr("| \\");
-		gRend.crlf();
-		gRend.putstr("|  Total data sectors: ");
-		gRend.putstr(to_string(totalDataSectors));
-		gRend.crlf();
+		srl.writestr("mib\r\n");
+		srl.writestr("| \\\r\n");
+		srl.writestr("|  Total data sectors: ");
+		srl.writestr(to_string(totalDataSectors));
+		srl.writestr("\r\n");
 	}
 
 	/// The FAT Driver will house all functionality pertaining to actually
@@ -243,17 +236,24 @@ namespace FatFS {
 	///   - Reading/Writing a directory.
 	class FATDriver {
 	public:
+		// TODO: Move array to dynamically allocated memory (new + delete)
 		FATDevice devices[32];
 		u8 numDevices{0};
 
+		/// Read the first logical sector of the device (boot sector),
+		///   then validate that it matches what's expected of a FAT filesystem.
+		/// If it doesn't match, set devices `Type` field to `INVALID` as a flag.
 	    void read_boot_sector(u8 index) {
-			// read boot sector from port into device at index.
-			gRend.putstr("[FatFS]: Reading boot sector");
-			gRend.crlf();
+			srl.writestr("[FatFS]: Reading boot sector\r\n");
 		    if (devices[index].Port->Read(0, 1, devices[index].Port->buffer)) {
 				memcpy((void*)devices[index].Port->buffer, &devices[index].BR, 720);
 				// FAT Filesystem magic bytes (0xaa55 word at 0x1fe offset).
-				if (*(u16*)((u64)devices[index].Port->buffer + 0x1fe) != 0xaa55) {
+				// Ensure there is at least one fat present
+				if (*(u16*)((u64)devices[index].Port->buffer + 0x1fe) != 0xaa55
+					|| devices[index].BR.BPB.NumFATsPresent == 0
+					|| (devices[index].BR.BPB.NumBytesPerSector
+						& (devices[index].BR.BPB.NumBytesPerSector - 1) == 0))
+				{
 					devices[index].Type = FATType::INVALID;
 					return;
 				}
@@ -272,11 +272,9 @@ namespace FatFS {
 				else {
 					devices[index].Type = FATType::FAT32;
 				}
-				
 			}
 			else {
-				gRend.putstr("[FatFS]: Unsuccessful read (is device functioning properly?)");
-				gRend.crlf();
+			    srl.writestr("[FatFS]: Unsuccessful read (is device functioning properly?)\r\n");
 			}
 		}
 
@@ -286,7 +284,7 @@ namespace FatFS {
 
 			devices[devIndex].Port = port;
 			
-			// Read boot sector from port into device.
+			// Read boot sector from devices' port.
 			read_boot_sector(devIndex);
 			if (devices[devIndex].Type == FATType::INVALID) {
 				numDevices--;
@@ -295,9 +293,21 @@ namespace FatFS {
 			return true;
 		}
 
-		void read_root_directory() {
-			// FAT12/FAT16 have fixed root directory position.
-			//   first_root_dir_sector = first_data_sector - root_dir_sectors;
+		void read_root_directory(u8 index) {
+			if (devices[index].Type == FATType::FAT12
+				|| devices[index].Type == FATType::FAT16)
+			{
+				//TODO:READ ROOT DIRECTORY
+				// FAT12/FAT16 have fixed root directory position.
+				//   first_root_dir_sector = first_data_sector - root_dir_sectors;
+			}
+			else if (devices[index].Type == FATType::FAT32
+					 || devices[index].Type == FATType::ExFAT)
+			{
+				//TODO:READ ROOT DIRECTORY
+				// FAT32/ExFAT store root directory in a cluster, which can be
+				//   found by accessing the boot record extension `RootCluster` field.
+			}
 		}
 	};
 }

@@ -59,10 +59,10 @@ void init_ps2_mouse() {
 	mouse_write(0xF2);
 	mouse_read(); // ACK
 	gMouseID = mouse_read();
-	gRend.putstr("Successfully initialized PS2 mouse using serial port (ID: ");
-	gRend.putstr(to_string((u64)gMouseID));
-	gRend.putchar(')');
-	gRend.crlf();
+
+	srl.writestr("Successfully initialized PS2 mouse using serial port (ID: ");
+	srl.writestr(to_string((u64)gMouseID));
+	srl.writestr(")\r\n");
 }
 
 u8 mouse_cycle {0};

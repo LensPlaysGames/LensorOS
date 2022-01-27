@@ -1,9 +1,10 @@
 #ifndef LENSOR_OS_AHCI_H
 #define LENSOR_OS_AHCI_H
 
-#include <stdint.h>
+#include "integers.h"
 #include "paging/page_table_manager.h"
 #include "pci.h"
+#include "uart.h"
 
 /// AHCI (Advance Host Controller Interface) developed by Intel
 ///   Facilitates handling of Serial ATA devices.
@@ -17,6 +18,9 @@
 ///     SATA devices (disk drives, port multipliers, etc).
 ///   By sending commands through these ports, the devices can be manipulated
 ///     to do anything they are capable of (read data, write data, etc).
+///
+///   NOTE: All memory addresses used by the HBA must be physical.
+///         This is done by mapping them 1:1 using the PTM.
 
 namespace AHCI {
 /// Max readable file size

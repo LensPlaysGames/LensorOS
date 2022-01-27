@@ -46,6 +46,36 @@ void print_memory_info() {
 	gRend.swap();
 }
 
+void srl_memory_info() {
+	srl.writestr("\r\n");
+	srl.writestr("Memory Info:");
+	srl.writestr("\r\n");
+	srl.writestr("|\\");
+    srl.writestr("\r\n");
+	srl.writestr("| Free RAM: ");
+	srl.writestr(to_string(gAlloc.get_free_ram() / 1024));
+	srl.writestr(" kB (");
+	srl.writestr(to_string(gAlloc.get_free_ram() / 1024 / 1024));
+	srl.writestr(" mB)");
+    srl.writestr("\r\n");
+	srl.writestr("|\\");
+    srl.writestr("\r\n");
+	srl.writestr("| Used RAM: ");
+	srl.writestr(to_string(gAlloc.get_used_ram() / 1024));
+	srl.writestr(" kB (");
+	srl.writestr(to_string(gAlloc.get_used_ram() / 1024 / 1024));
+	srl.writestr(" mB)");
+    srl.writestr("\r\n");
+	srl.writestr(" \\");
+    srl.writestr("\r\n");
+	srl.writestr("  Reserved RAM: ");
+	srl.writestr(to_string(gAlloc.get_reserved_ram() / 1024));
+	srl.writestr(" kB (");
+	srl.writestr(to_string(gAlloc.get_reserved_ram() / 1024 / 1024));
+	srl.writestr(" mB)");
+	srl.writestr("\r\n");
+}
+
 void print_now() {
 	gRend.crlf();
 	gRend.putstr("Now is ");
@@ -70,13 +100,17 @@ extern "C" void _start(BootInfo* bInfo) {
 	//   kernel setup (printed to screen during kernel_init).
 	// gRend.clear();
 	/// GPLv3 LICENSE REQUIREMENT (interactive terminal must print cpy notice).
+	// TO SERIAL
+	srl.writestr("\r\n");
+	srl.writestr("<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>");
+	// TO SCREEN
 	gRend.BackgroundColor = 0xffffffff;
 	gRend.putstr("<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>", 0x00000000);
 	gRend.BackgroundColor = 0x00000000;
 	gRend.crlf();
 	gRend.swap();
 	/// END GPLv3 LICENSE REQUIREMENT.
-	print_memory_info();
+	srl_memory_info();
 	print_now();
 	// Start keyboard input at draw position, not origin.
 	gTextPosition = gRend.DrawPos;

@@ -1,7 +1,5 @@
 #include "acpi.h"
 
-#include "integers.h"
-
 namespace ACPI {
 	void* find_table(SDTHeader* header, char* signature) {
 		int entries = (header->Length - sizeof(ACPI::SDTHeader)) / 8;

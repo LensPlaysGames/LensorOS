@@ -11,16 +11,16 @@ namespace PCI {
 		if (pciDevHdr->DeviceID == 0xFFFF) { return; }
 
 		// Print information about device
-		gRend.putstr(get_vendor_name(pciDevHdr->VendorID));
-		gRend.putstr(" / ");
-		gRend.putstr(get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID));
-		gRend.putstr(" / ");
-		gRend.putstr(DeviceClasses[pciDevHdr->Class]);
-		gRend.putstr(" / ");
-		gRend.putstr(get_subclass_name(pciDevHdr->Class, pciDevHdr->Subclass));
-		gRend.putstr(" / ");
-		gRend.putstr(get_prog_if_name(pciDevHdr->Class, pciDevHdr->Subclass, pciDevHdr->ProgIF));
-		gRend.crlf();
+		srl.writestr(get_vendor_name(pciDevHdr->VendorID));
+		srl.writestr(" / ");
+		srl.writestr(get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID));
+		srl.writestr(" / ");
+		srl.writestr(DeviceClasses[pciDevHdr->Class]);
+		srl.writestr(" / ");
+		srl.writestr(get_subclass_name(pciDevHdr->Class, pciDevHdr->Subclass));
+		srl.writestr(" / ");
+		srl.writestr(get_prog_if_name(pciDevHdr->Class, pciDevHdr->Subclass, pciDevHdr->ProgIF));
+		srl.writestr("\r\n");
 		
 		 if (pciDevHdr->Class == 0x01) {
 		 	// Mass Storage Controller
@@ -28,8 +28,7 @@ namespace PCI {
 				// Serial ATA
 		 		if (pciDevHdr->ProgIF == 0x01) {
 		 			// AHCI 1.0 Device
-					gRend.putstr("Found AHCI 1.0 Serial ATA Mass Storage Controller");
-					gRend.crlf();
+					srl.writestr("Found AHCI 1.0 Serial ATA Mass Storage Controller\r\n");
 					AHCI::gAHCI = new AHCI::AHCIDriver(pciDevHdr);
 		 		}
 			}
