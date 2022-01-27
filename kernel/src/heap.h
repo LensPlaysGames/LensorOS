@@ -28,9 +28,12 @@ void expand_heap(u64 numBytes);
 void* malloc(u64 numBytes);
 void free(void* address);
 
-inline void* operator new      (u64 numBytes) { return malloc(numBytes); }
-inline void* operator new[]    (u64 numBytes) { return malloc(numBytes); }
-inline void  operator delete   (void* address)     { return free(address);    }
-inline void  operator delete[] (void* address)     { return free(address);    }
+inline void* operator new      (u64 numBytes)  { return malloc(numBytes); }
+inline void* operator new[]    (u64 numBytes)  { return malloc(numBytes); }
+inline void  operator delete   (void* address) { return free(address);    }
+inline void  operator delete[] (void* address) { return free(address);    }
 
+/// According to www.cplusplus.com on the C++14 standard, delete calls
+///   with an extra `unsigned long` parameter just calls delete.
+inline void operator delete (void* address, u64 unused) { return free(address); }
 #endif
