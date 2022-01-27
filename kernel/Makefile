@@ -29,6 +29,9 @@ setup:
 	@mkdir $(SRCDIR)
 	@mkdir $(OBJDIR)
 
+clean:
+	rm -r $(OBJDIR)
+
 image:
 	dd if=/dev/zero of=$(BUILDDIR)/$(OSNAME).img count=93750
 	mformat -i $(BUILDDIR)/$(OSNAME).img -F ::
@@ -76,5 +79,13 @@ $(OBJDIR)/%_asm.o: $(SRCDIR)/%.asm
 link:
 	$(LD) $(LDFLAGS) -o $(BUILDDIR)/kernel.elf $(OBJS)
 
+rekernel:
+	$(MAKE) clean
+	$(MAKE) kernel
+
+all:
+    $(MAKE) rekernel
+    $(MAKE) image
+
 run:
-	qemu-system-x86_64 -vga cirrus -rtc base=localtime,clock=host,driftfix=none -machine q35 -drive file=$(BUILDDIR)/$(OSNAME).img -m 256M -cpu qemu64 -drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE-pure-efi.fd",readonly=on -drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS-pure-efi.fd" -net none
+	qemu-system-x86_64 -cpu qemu64 -m 256M -rtc base=localtime,clock=host,driftfix=none -machine q35 -vga cirrus -drive format=raw,file=$(BUILDDIR)/$(OSNAME).img -drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE-pure-efi.fd",readonly=on -drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS-pure-efi.fd" -net none
