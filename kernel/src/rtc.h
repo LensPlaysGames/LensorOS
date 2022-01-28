@@ -54,25 +54,18 @@ struct RTCData {
 class RTC {
 public:
 	RTCData time;
-	
-	RTC() {
-		// POPULATE `gRTC` STRUCT
-	    get_date_time();
-	}
-
+	RTC() { get_date_time(); }
+	void get_date_time();
 private:
 	inline u8 is_rtc_updating() {
 		outb(CMOS_ADDR, 0x0a);
 		return inb(CMOS_DATA) & 0x80;
 	}
-	
 	inline u8 read_register(u8 reg) {
 		outb(CMOS_ADDR, reg);
 		return inb(CMOS_DATA);
 	}
-
 	void get_rtc_data(RTCData& data);
-    void get_date_time();
 };
 
 extern RTC gRTC;

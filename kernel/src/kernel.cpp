@@ -42,7 +42,6 @@ void print_memory_info() {
 	gRend.putstr(to_string(gAlloc.get_reserved_ram() / 1024 / 1024));
 	gRend.putstr(" mB)");
 	gRend.crlf(startOffset);
-	gRend.swap();
 }
 
 void srl_memory_info() {
@@ -75,8 +74,8 @@ void srl_memory_info() {
 	srl.writestr("\r\n");
 }
 
-void print_now() {
-	gRend.crlf();
+void print_now(u64 xOffset = 0) {
+	gRend.crlf(xOffset);
 	gRend.putstr("Now is ");
 	gRend.putstr(to_string((u64)gRTC.time.hour));
 	gRend.putchar(':');
@@ -89,54 +88,44 @@ void print_now() {
 	gRend.putstr(to_string((u64)gRTC.time.month));
 	gRend.putchar('-');
 	gRend.putstr(to_string((u64)gRTC.time.date));
-	gRend.crlf();
-	gRend.swap();
+	gRend.crlf(xOffset);
 }
 
 extern "C" void _start(BootInfo* bInfo) {
 	KernelInfo info = kernel_init(bInfo);
 	// Uncomment the next line to clear initial information about
 	//   kernel setup (printed to screen during kernel_init).
-	// gRend.clear();
+	gRend.clear();
 	/// GPLv3 LICENSE REQUIREMENT (interactive terminal must print cpy notice).
+	const char* GPLv3 = "<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>";
 	// TO SERIAL
 	srl.writestr("\r\n");
-	srl.writestr("<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>");
+	srl.writestr(GPLv3);
 	// TO SCREEN
 	gRend.BackgroundColor = 0xffffffff;
-	gRend.putstr("<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>", 0x00000000);
+	gRend.putstr(GPLv3, 0x00000000);
 	gRend.BackgroundColor = 0x00000000;
 	gRend.crlf();
 	gRend.swap();
 	/// END GPLv3 LICENSE REQUIREMENT.
 	srl_memory_info();
 	print_now();
-	// Start keyboard input at draw position, not origin.
-	gTextPosition = gRend.DrawPos;
-	// DRAW A FACE :)
-	// left eye
-	gRend.DrawPos = {420, 420};
-	gRend.drawrect({42, 42}, 0xff00ffff);
-	// left pupil
-	gRend.DrawPos = {440, 440};
-	gRend.drawrect({20, 20}, 0xffff0000);
-	// right eye
-	gRend.DrawPos = {520, 420};
-	gRend.drawrect({42, 42}, 0xff00ffff);
-	// right pupil
-	gRend.DrawPos = {540, 440};
-	gRend.drawrect({20, 20}, 0xffff0000);
-	// mouth
-	gRend.DrawPos = {400, 520};
-	gRend.drawrect({182, 20}, 0xff00ffff);
 	gRend.swap();
+	// Start keyboard input at draw position, not origin.
+	gTextPosition = gRend.DrawPos; 
 	// UPDATE SCREEN FROM TARGET BUFFER IN INFINITE LOOP.
 	while (true) {
 		// DRAW TIME ELAPSED SINCE KERNEL INITIALIZATION IN TOP RIGHT (PIT).
-		gRend.DrawPos = {600, 0};
+		gRend.DrawPos = {500, 0};
 		gRend.putstr("Elapsed: ");
 		gRend.putstr(to_string(get_seconds()));
 		gRend.putstr("s");
+		// PRINT REAL TIME
+		gRTC.get_date_time();
+		print_now(500);
+		// PRINT MEMORY INFO
+		print_memory_info();
+		// UPDATE ACTIVE RENDER BUFFER FROM TARGET.
 		gRend.swap();
 	}
 	// HALT LOOP (KERNEL INACTIVE).

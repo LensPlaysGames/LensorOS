@@ -65,7 +65,7 @@ void prepare_acpi(BootInfo* bInfo) {
 	ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table(xsdt, (char*)"MCFG");
 	PCI::enumerate_pci(mcfg);
 }
- 
+
 Framebuffer target;
 KernelInfo kernel_init(BootInfo* bInfo) {
 	// DISABLE INTERRUPTS.
@@ -82,6 +82,9 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	init_heap((void*)0x700000000000, 1);
 	// SETUP SERIAL I/O.
 	srl = UARTDriver();
+	const char* bootMsg = "\r\n\r\n\r\n<<>><<<!===--- You are now booting into LensorOS ---===!>>><<>>\r\n";
+	srl.writestr(bootMsg);
+	srl.writestr("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
 	// SETUP GOP RENDERER.
 	target = *bInfo->framebuffer;
 	// GOP = Graphics Output Protocol.
@@ -103,6 +106,27 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	// CREATE GLOBAL RENDERER
 	gRend = BasicRenderer(bInfo->framebuffer, &target, bInfo->font);
 	gRend.clear();
+	gRend.putstr(bootMsg);
+	gRend.crlf();
+	gRend.swap();
+	srl.writestr("[kUtil]: Successfully created GOP Renderer\r\n");
+	// DRAW A FACE :)
+	// left eye
+	gRend.DrawPos = {420, 420};
+	gRend.drawrect({42, 42}, 0xff00ffff);
+	// left pupil
+	gRend.DrawPos = {440, 440};
+	gRend.drawrect({20, 20}, 0xffff0000);
+	// right eye
+	gRend.DrawPos = {520, 420};
+	gRend.drawrect({42, 42}, 0xff00ffff);
+	// right pupil
+	gRend.DrawPos = {540, 440};
+	gRend.drawrect({20, 20}, 0xffff0000);
+	// mouth
+	gRend.DrawPos = {400, 520};
+	gRend.drawrect({182, 20}, 0xff00ffff);
+	gRend.swap();
 	// PREPARE HARDWARE INTERRUPTS (IDT).
 	// IDT = INTERRUPT DESCRIPTOR TABLE.
 	// Call assembly `lidt`.
@@ -111,14 +135,27 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	// SYSTEM TIMER.
 	u64 pitFreq = 2000;
 	initialize_timer(pitFreq);
-	srl.writestr("Programmable Interval Timer initialized (");
+	srl.writestr("Programmable Interval Timer initialized to ");
 	srl.writestr(to_string(pitFreq));
-	srl.writestr("hz).\r\n");
+	srl.writestr("hz.\r\n");
 	// PREPARE PS/2 MOUSE.
 	init_ps2_mouse();
 	// CREATE GLOBAL DATE/TIME (RTC INIT)
 	gRTC = RTC();
 	srl.writestr("Real Time Clock initialized.\r\n");
+	srl.writestr("Now is ");
+	srl.writestr(to_string((u64)gRTC.time.hour));
+	srl.writeb(':');
+	srl.writestr(to_string((u64)gRTC.time.minute));
+	srl.writeb(':');
+	srl.writestr(to_string((u64)gRTC.time.second));
+	srl.writestr(" on ");
+	srl.writestr(to_string((u64)gRTC.time.year));
+	srl.writeb('-');
+	srl.writestr(to_string((u64)gRTC.time.month));
+	srl.writeb('-');
+	srl.writestr(to_string((u64)gRTC.time.date));
+	srl.writestr("\r\n");
 	// SYSTEM INFORMATION IS FOUND IN ACPI TABLE
 	prepare_acpi(bInfo);
 	srl.writestr("ACPI prepared.\r\n");

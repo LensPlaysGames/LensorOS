@@ -180,6 +180,7 @@ namespace AHCI {
 	///   This driver is instantiated for each SATA controller found on
 	///     the PCI bus, and will parse all the ports that are active and
 	///     valid for later use.
+	// TODO: Store created driver in some sort of device tree
 	class AHCIDriver {
 	public:
 		/// Address of PCI device header (expected SATA Controller, AHCI 1.0).
