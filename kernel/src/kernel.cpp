@@ -10,8 +10,7 @@
 //   - Another filesystem better suited for mass storage (Ext2? Proprietary?)
 // - Write ASM interrupt wrapper (no longer rely on `__attribute__((interrupt))`)
 //   - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/
-// - Test different memcpy implementations
-//   - See https://stackoverflow.com/questions/22387586/measuring-execution-time-of-a-function-in-c
+// - Move includes to forward declarations where possible, move includes from `.h` to `.cpp`
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
 
 void print_memory_info() {
