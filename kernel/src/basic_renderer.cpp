@@ -3,7 +3,7 @@
 // Define global renderer for use anywhere within the kernel.
 BasicRenderer gRend;
 
-inline void BasicRenderer::ValidateDrawPos() {
+inline void BasicRenderer::clamp_draw_position() {
 	if (DrawPos.x < 0) { DrawPos.x = 0; }
 	else if (DrawPos.x > Target->PixelWidth) { DrawPos.x = Target->PixelWidth; }
 	if (DrawPos.y < 0) { DrawPos.y = 0; }
@@ -11,8 +11,12 @@ inline void BasicRenderer::ValidateDrawPos() {
 }
 
 void BasicRenderer::swap(Vector2 position, Vector2 size) {
-    if (position.x > Target->PixelWidth) { position.x = Target->PixelWidth; }
-	if (position.y > Target->PixelHeight) { position.y = Target->PixelHeight; }
+	// Can't update nothing.
+	if (size.x == 0 || size.y == 0) { return; }
+	// Only swap what is within the bounds of the framebuffer.
+    if (position.x < 0 || position.x > Target->PixelWidth
+		|| position.y < 0 || position.y > Target->PixelHeight) { return; }
+	// Ensure size doesn't over-run edge of framebuffer.
 	u64 diffX = Target->PixelWidth - position.x;
 	u64 diffY = Target->PixelHeight - position.y;
 	if (diffX < size.x) { size.x = diffX; }
@@ -23,12 +27,12 @@ void BasicRenderer::swap(Vector2 position, Vector2 size) {
 									+ (position.y * Target->PixelsPerScanLine));
 	u32* renderBaseAddress = (u32*)((u64)Render->BaseAddress
 									+ position.x
-									+ (position.y * Target->PixelsPerScanLine));
+									+ (position.y * Render->PixelsPerScanLine));
 	// Copy rectangle line-by-line.
 	u64 bytesPerLine = BytesPerPixel * size.x;
 	for (u64 y = 0; y < size.y; ++y) {
 		targetBaseAddress += Target->PixelsPerScanLine;
-		renderBaseAddress += Target->PixelsPerScanLine;
+		renderBaseAddress += Render->PixelsPerScanLine;
 		memcpy(targetBaseAddress, renderBaseAddress, bytesPerLine);
 	}
 }
@@ -40,14 +44,14 @@ void BasicRenderer::cret() {
 		DrawPos.y
 	};
 }
-// Newline ('\n') or LineFeed (LF)
+/// Newline ('\n') or LineFeed (LF)
 void BasicRenderer::newl() {
 	DrawPos = {
 		DrawPos.x,
 		DrawPos.y + Font->PSF1_Header->CharacterSize
 	};
 }
-// Carriage return line feed; CRLF ('\r' + '\n')
+/// Carriage return line feed; CRLF ('\r' + '\n')
 void BasicRenderer::crlf() {
 	DrawPos = {
 		0,
@@ -55,7 +59,7 @@ void BasicRenderer::crlf() {
 	};
 }
 
-// Carriage return offset by given argument value pixels, then newline.
+/// Carriage return, offset by given argument value pixels, then newline.
 void BasicRenderer::crlf(u32 offset) {
 	DrawPos = {
 		offset,
@@ -64,7 +68,7 @@ void BasicRenderer::crlf(u32 offset) {
 }
 
 void BasicRenderer::drawrect(Vector2 size, u32 color) {
-    ValidateDrawPos();
+    clamp_draw_position();
 	u32 diffX = Target->PixelWidth - DrawPos.x;
 	u32 diffY = Target->PixelHeight - DrawPos.y;
 	if (diffX < size.x) { size.x = diffX; }
@@ -77,9 +81,10 @@ void BasicRenderer::drawrect(Vector2 size, u32 color) {
 	}
 }
 
+/// Read `size` of pixel framebuffer starting at `DrawPos` into `buffer`.
 void BasicRenderer::readpix(Vector2 size, u32* buffer) {
 	if (buffer == nullptr) { return; }
-	ValidateDrawPos();
+	clamp_draw_position();
 	u32 initX = size.x;
 	u32 diffX = Target->PixelWidth - DrawPos.x;
 	u32 diffY = Target->PixelHeight - DrawPos.y;
@@ -94,9 +99,10 @@ void BasicRenderer::readpix(Vector2 size, u32* buffer) {
 	}
 }
 
+/// Draw `size` of `pixels` linear buffer starting at `DrawPos`.
 void BasicRenderer::drawpix(Vector2 size, u32* pixels) {
 	if (pixels == nullptr) { return; }
-    ValidateDrawPos();
+    clamp_draw_position();
 	u32 initX = size.x;
 	u32 diffX = Target->PixelWidth - DrawPos.x;
 	u32 diffY = Target->PixelHeight - DrawPos.y;
@@ -111,9 +117,11 @@ void BasicRenderer::drawpix(Vector2 size, u32* pixels) {
 	}
 }
 
+/// Draw `size` of a bitmap `bitmap`, using passed color `color`
+///   where bitmap is `1` and `BackgroundColor` where it is `0`.
 void BasicRenderer::drawbmp(Vector2 size, u8* bitmap, u32 color) {
 	if (bitmap == nullptr) { return; }
-	ValidateDrawPos();
+	clamp_draw_position();
 	u32 initX = size.x;
 	u32 diffX = Target->PixelWidth - DrawPos.x;
 	u32 diffY = Target->PixelHeight - DrawPos.y;
@@ -133,9 +141,10 @@ void BasicRenderer::drawbmp(Vector2 size, u8* bitmap, u32 color) {
 	}
 }
 
+/// Draw `size` of a bitmap `bitmap`, using passed color `color` where bitmap is `1`.
 void BasicRenderer::drawbmpover(Vector2 size, u8* bitmap, u32 color) {
 	if (bitmap == nullptr) { return; }
-	ValidateDrawPos();
+	clamp_draw_position();
 	u32 initX = size.x;
 	u32 diffX = Target->PixelWidth - DrawPos.x;
 	u32 diffY = Target->PixelHeight - DrawPos.y;
@@ -152,6 +161,7 @@ void BasicRenderer::drawbmpover(Vector2 size, u8* bitmap, u32 color) {
 	}
 }
 
+/// Draw a character at the current `DrawPos` using the renderer's bitmap font.
 void BasicRenderer::drawchar(char c, u32 color) {
 	// Draw character.
 	drawbmp({8, Font->PSF1_Header->CharacterSize},
@@ -159,6 +169,8 @@ void BasicRenderer::drawchar(char c, u32 color) {
 			color);
 }
 
+/// Draw a character using the renderer's bitmap font, then increment `DrawPos`
+///   as such that another character would not overlap with the previous (ie. typing).
 void BasicRenderer::putchar(char c, u32 color)
 {
     gRend.drawchar(c, color);
@@ -170,6 +182,8 @@ void BasicRenderer::putchar(char c, u32 color)
 	}
 }
 
+/// Clear a single character to the background color behind the current `DrawPos`.
+/// Effectively 'backspace'.
 void BasicRenderer::clearchar() {
 	// Move up line if necessary.
 	if (DrawPos.x < 8) {
@@ -185,6 +199,7 @@ void BasicRenderer::clearchar() {
     drawrect({8, Font->PSF1_Header->CharacterSize}, BackgroundColor);
 }
 
+/// Put a string of characters `str` (must be null terminated) to the screen with color `color`.
 void BasicRenderer::putstr(const char* str, u32 color) {
 	// Set current character to first character in string.
 	char* c = (char*)str;

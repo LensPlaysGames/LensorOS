@@ -92,10 +92,12 @@ void print_now(u64 xOffset = 0) {
 }
 
 extern "C" void _start(BootInfo* bInfo) {
+	// The heavy lifting is done within `kUtility.cpp`.
 	KernelInfo info = kernel_init(bInfo);
-	// Uncomment the next line to clear initial information about
-	//   kernel setup (printed to screen during kernel_init).
+	
+	// Clear screen (ensure known state).
 	gRend.clear();
+	
 	/// GPLv3 LICENSE REQUIREMENT (interactive terminal must print cpy notice).
 	const char* GPLv3 = "<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>";
 	// TO SERIAL
@@ -108,19 +110,15 @@ extern "C" void _start(BootInfo* bInfo) {
 	gRend.crlf();
 	gRend.swap();
 	/// END GPLv3 LICENSE REQUIREMENT.
+	
 	srl_memory_info();
-	print_now();
-	gRend.swap();
+
 	// Start keyboard input at draw position, not origin.
 	gTextPosition = gRend.DrawPos; 
 	// UPDATE SCREEN FROM TARGET BUFFER IN INFINITE LOOP.
 	while (true) {
-		// DRAW TIME ELAPSED SINCE KERNEL INITIALIZATION IN TOP RIGHT (PIT).
-		gRend.DrawPos = {500, 0};
-		gRend.putstr("Elapsed: ");
-		gRend.putstr(to_string(get_seconds()));
-		gRend.putstr("s");
 		// PRINT REAL TIME
+		gRend.DrawPos = {500, 0};
 		gRTC.get_date_time();
 		print_now(500);
 		// PRINT MEMORY INFO

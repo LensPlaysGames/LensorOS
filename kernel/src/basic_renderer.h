@@ -67,7 +67,7 @@ public:
 	}
 
 	/// ENSURE DRAW POSITION IS WITHIN FRAMEBUFFER.
-	void ValidateDrawPos();
+	void clamp_draw_position();
 
 	/// UPDATE MEMORY CONTENTS OF RENDER FROM TARGET
     inline void swap() {
