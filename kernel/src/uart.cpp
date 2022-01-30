@@ -30,6 +30,7 @@ UARTDriver::UARTDriver() {
 	outb(COM1 + 4, 0b00001111);
 }
 
+/// Read a byte of data over the serial communications port COM1.
 u8 UARTDriver::readb() {
 	u16 maxSpins = (u16)1000000;
 	while (inb(COM1 + 5) & 0b00000001
@@ -40,11 +41,11 @@ u8 UARTDriver::readb() {
 	return inb(COM1);
 }
 
+/// Write a byte of data over the serial communications port COM1.
 void UARTDriver::writeb(u8 data) {
+	/// Spin (halt execution) until port is available or maxSpins iterations is reached.
 	u16 maxSpins = (u16)1000000;
-	while (inb(COM1 + 5) & 0b00100000
-		   && maxSpins > 0)
-	{
+	while (inb(COM1 + 5) & 0b00100000 && maxSpins > 0) {
 		maxSpins--;
 	}
 	outb(COM1, data);
