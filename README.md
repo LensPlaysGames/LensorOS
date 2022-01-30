@@ -71,7 +71,7 @@ On Windows, `WSL` is required. I use `Ubuntu 20.04` distro.
 
 Open a Linux terminal, then `cd` to the root directory of the repository.
 
-Ensure that you have previously ran `sudo apt install build-essentials mtools` to get all necessary compilation tools.
+Ensure that you have previously ran `sudo apt install build-essential mtools` to get all necessary compilation tools.
 
 To initialize the directories needed, `cd` to the `kernel` folder and run the following: \
 `make setup`
