@@ -22,56 +22,26 @@ void print_memory_info() {
     gRend.crlf(startOffset);
 	gRend.putstr("| Free RAM: ");
 	gRend.putstr(to_string(gAlloc.get_free_ram() / 1024));
-	gRend.putstr(" kB (");
+	gRend.putstr(" KiB (");
 	gRend.putstr(to_string(gAlloc.get_free_ram() / 1024 / 1024));
-	gRend.putstr(" mB)");
+	gRend.putstr(" MiB)");
     gRend.crlf(startOffset);
 	gRend.putstr("|\\");
     gRend.crlf(startOffset);
 	gRend.putstr("| Used RAM: ");
 	gRend.putstr(to_string(gAlloc.get_used_ram() / 1024));
-	gRend.putstr(" kB (");
+	gRend.putstr(" KiB (");
 	gRend.putstr(to_string(gAlloc.get_used_ram() / 1024 / 1024));
-	gRend.putstr(" mB)");
+	gRend.putstr(" MiB)");
     gRend.crlf(startOffset);
 	gRend.putstr(" \\");
     gRend.crlf(startOffset);
 	gRend.putstr("  Reserved RAM: ");
 	gRend.putstr(to_string(gAlloc.get_reserved_ram() / 1024));
-	gRend.putstr(" kB (");
+	gRend.putstr(" KiB (");
 	gRend.putstr(to_string(gAlloc.get_reserved_ram() / 1024 / 1024));
-	gRend.putstr(" mB)");
+	gRend.putstr(" MiB)");
 	gRend.crlf(startOffset);
-}
-
-void srl_memory_info() {
-	srl.writestr("\r\n");
-	srl.writestr("Memory Info:");
-	srl.writestr("\r\n");
-	srl.writestr("|\\");
-    srl.writestr("\r\n");
-	srl.writestr("| Free RAM: ");
-	srl.writestr(to_string(gAlloc.get_free_ram() / 1024));
-	srl.writestr(" kB (");
-	srl.writestr(to_string(gAlloc.get_free_ram() / 1024 / 1024));
-	srl.writestr(" mB)");
-    srl.writestr("\r\n");
-	srl.writestr("|\\");
-    srl.writestr("\r\n");
-	srl.writestr("| Used RAM: ");
-	srl.writestr(to_string(gAlloc.get_used_ram() / 1024));
-	srl.writestr(" kB (");
-	srl.writestr(to_string(gAlloc.get_used_ram() / 1024 / 1024));
-	srl.writestr(" mB)");
-    srl.writestr("\r\n");
-	srl.writestr(" \\");
-    srl.writestr("\r\n");
-	srl.writestr("  Reserved RAM: ");
-	srl.writestr(to_string(gAlloc.get_reserved_ram() / 1024));
-	srl.writestr(" kB (");
-	srl.writestr(to_string(gAlloc.get_reserved_ram() / 1024 / 1024));
-	srl.writestr(" mB)");
-	srl.writestr("\r\n");
 }
 
 void print_now(u64 xOffset = 0) {
@@ -91,6 +61,36 @@ void print_now(u64 xOffset = 0) {
 	gRend.crlf(xOffset);
 }
 
+void srl_memory_info() {
+	srl.writestr("\r\n");
+	srl.writestr("Memory Info:");
+	srl.writestr("\r\n");
+	srl.writestr("|\\");
+    srl.writestr("\r\n");
+	srl.writestr("| Free RAM: ");
+	srl.writestr(to_string(gAlloc.get_free_ram() / 1024));
+	srl.writestr(" KiB (");
+	srl.writestr(to_string(gAlloc.get_free_ram() / 1024 / 1024));
+	srl.writestr(" MiB)");
+    srl.writestr("\r\n");
+	srl.writestr("|\\");
+    srl.writestr("\r\n");
+	srl.writestr("| Used RAM: ");
+	srl.writestr(to_string(gAlloc.get_used_ram() / 1024));
+	srl.writestr(" KiB (");
+	srl.writestr(to_string(gAlloc.get_used_ram() / 1024 / 1024));
+	srl.writestr(" MiB)");
+    srl.writestr("\r\n");
+	srl.writestr(" \\");
+    srl.writestr("\r\n");
+	srl.writestr("  Reserved RAM: ");
+	srl.writestr(to_string(gAlloc.get_reserved_ram() / 1024));
+	srl.writestr(" KiB (");
+	srl.writestr(to_string(gAlloc.get_reserved_ram() / 1024 / 1024));
+	srl.writestr(" MiB)");
+	srl.writestr("\r\n");
+}
+
 extern "C" void _start(BootInfo* bInfo) {
 	// The heavy lifting is done within `kUtility.cpp`.
     kernel_init(bInfo);
@@ -98,7 +98,7 @@ extern "C" void _start(BootInfo* bInfo) {
 	// Clear screen (ensure known state).
 	gRend.clear();
 	
-	/// GPLv3 LICENSE REQUIREMENT (interactive terminal must print cpy notice).
+	/// GPLv3 LICENSE REQUIREMENT (interactive terminal must print copyright notice).
 	const char* GPLv3 = "<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>";
 	// TO SERIAL
 	srl.writestr("\r\n");
@@ -110,16 +110,14 @@ extern "C" void _start(BootInfo* bInfo) {
 	gRend.crlf();
 	gRend.swap();
 	/// END GPLv3 LICENSE REQUIREMENT.
-	
-	srl_memory_info();
 
 	// Start keyboard input at draw position, not origin.
 	gTextPosition = gRend.DrawPos; 
 	// UPDATE SCREEN FROM TARGET BUFFER IN INFINITE LOOP.
 	while (true) {
 		// PRINT REAL TIME
-		gRend.DrawPos = {500, 0};
 		gRTC.get_date_time();
+		gRend.DrawPos = {500, 0};
 		print_now(500);
 		// PRINT MEMORY INFO
 		print_memory_info();
