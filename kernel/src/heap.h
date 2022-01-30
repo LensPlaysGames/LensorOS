@@ -35,5 +35,12 @@ inline void  operator delete[] (void* address) { return free(address);    }
 
 /// According to www.cplusplus.com on the C++14 standard, delete calls
 ///   with an extra `unsigned long` parameter just calls delete.
-inline void operator delete (void* address, u64 unused) { return free(address); }
+inline void operator delete (void* address, u64 unused) {
+  (void)unused;
+  return free(address);
+}
+inline void operator delete[] (void* address, u64 unused) {
+  (void)unused;
+  return free(address);
+}
 #endif
