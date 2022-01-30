@@ -30,7 +30,7 @@ void prepare_memory(BootInfo* bInfo) {
 }
 
 IDTR idtr;
-void set_idt_gate(u64 handler, u8 entryOffset, u8 type_attr, u8 selector) {
+void set_idt_gate(u64 handler, u8 entryOffset, u8 type_attr = IDT_TA_InterruptGate, u8 selector = 0x08) {
 	IDTDescEntry* interrupt = (IDTDescEntry*)(idtr.Offset + entryOffset * sizeof(IDTDescEntry));
 	interrupt->SetOffset(handler);
 	interrupt->type_attr = type_attr;
@@ -42,15 +42,16 @@ void prepare_interrupts() {
 	idtr.Offset = (u64)gAlloc.request_page();
 	// SET CALLBACK TO HANDLER BASED ON INTERRUPT ENTRY OFFSET.
 	// IRQ0: SYSTEM TIMER  (PIT CHIP)
-	set_idt_gate((u64)system_timer_handler,				0x20, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((u64)system_timer_handler,				0x20);
 	// IRQ1: PS/2 KEYBOARD (SERIAL)
-	set_idt_gate((u64)keyboard_handler,					0x21, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((u64)keyboard_handler,					0x21);
+	set_idt_gate((u64)rtc_periodic_handler,             0x28);
 	// IRQ12: PS/2 MOUSE   (SERIAL)
-	set_idt_gate((u64)mouse_handler,						0x2c, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((u64)mouse_handler,					0x2c);
 	// FAULTS (CALLED BEFORE FAULTY INSTRUCTION EXECUTES)
-	set_idt_gate((u64)double_fault_handler,	            0x08, IDT_TA_InterruptGate, 0x08);
-	set_idt_gate((u64)general_protection_fault_handler,	0x0D, IDT_TA_InterruptGate, 0x08);
-	set_idt_gate((u64)page_fault_handler,					0x0E, IDT_TA_InterruptGate, 0x08);
+	set_idt_gate((u64)double_fault_handler,	            0x08);
+	set_idt_gate((u64)general_protection_fault_handler,	0x0D);
+	set_idt_gate((u64)page_fault_handler,				0x0E);
 	// LOAD INTERRUPT DESCRIPTOR TABLE.
 	asm ("lidt %0" :: "m" (idtr));
 	// REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
@@ -140,9 +141,10 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	srl.writestr("hz.\r\n");
 	// PREPARE PS/2 MOUSE.
 	init_ps2_mouse();
-	// CREATE GLOBAL DATE/TIME (RTC INIT)
+	// INITIALIZE REAL TIME CLOCK.
 	gRTC = RTC();
 	srl.writestr("Real Time Clock initialized.\r\n");
+	// PRINT REAL TIME TO SERIAL OUTPUT.
 	srl.writestr("Now is ");
 	srl.writestr(to_string((u64)gRTC.time.hour));
 	srl.writeb(':');
@@ -156,6 +158,8 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	srl.writeb('-');
 	srl.writestr(to_string((u64)gRTC.time.date));
 	srl.writestr("\r\n");
+	// SET RTC PERIODIC INTERRUPTS ENABLED.
+	gRTC.set_interrupts_enabled(true);
 	// PREPARE DRIVERS.
 	gFATDriver = FATDriver();
 	// TODO: PREPARE DEVICE TREE.
@@ -166,7 +170,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	// 0 = UNMASKED, ALLOWED TO HAPPEN
 	outb(PIC1_DATA, 0b11111000);
 	io_wait();
-	outb(PIC2_DATA, 0b11101111);
+	outb(PIC2_DATA, 0b11101110);
 	io_wait();
 	// ENABLE INTERRUPTS.
 	asm ("sti");

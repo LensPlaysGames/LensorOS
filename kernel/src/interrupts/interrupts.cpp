@@ -1,43 +1,44 @@
 #include "interrupts.h"
+/// For decoding what type of rtc periodic interrupt happened.
+#include "../rtc.h"
 
-inline void end_master_pic() {
-	outb(PIC1_COMMAND, PIC_EOI);
-}
-
-inline void end_slave_pic() {
-	outb(PIC2_COMMAND, PIC_EOI);
+inline void end_of_interrupt(u8 IRQx) {
+	if (IRQx >= 8) { outb(PIC2_COMMAND, PIC_EOI); }
 	outb(PIC1_COMMAND, PIC_EOI);
 }
 
 // HARDWARE INTERRUPT HANDLERS (IRQs)
+/// IRQ0: SYSTEM TIMER
 __attribute__((interrupt)) void system_timer_handler(InterruptFrame* frame) {
 	gTicks += 1;
-	// End interrupt
-	end_master_pic();
+	end_of_interrupt(0);
 }
 
+/// IRQ1: PS/2 KEYBOARD
 __attribute__((interrupt)) void keyboard_handler(InterruptFrame* frame) {
 	u8 scancode = inb(0x60);
 	handle_keyboard(scancode);
-	// End interrupt	
-	end_master_pic();
+	end_of_interrupt(1);
 }
 
+/// IRQ8: PERIODIC (REAL TIME CLOCK)
+__attribute__((interrupt)) void rtc_periodic_handler(InterruptFrame* frame) {
+	end_of_interrupt(8);
+}
+
+/// IRQ12: PS/2 MOUSE
 __attribute__((interrupt)) void mouse_handler(InterruptFrame* frame) {
 	u8 data = inb(0x60);
 	handle_ps2_mouse_interrupt(data);
 	// End interrupt
-	end_slave_pic();
+	end_of_interrupt(12);
 }
 
 // FAULT INTERRUPT HANDLERS
-__attribute__((interrupt)) void page_fault_handler(InterruptFrame* frame) {
+__attribute__((interrupt)) void page_fault_handler(InterruptFrame* frame, u64 err) {
 	// POP ERROR CODE FROM STACK
 	u64 address;
 	asm volatile ("mov %%cr2, %0" : "=r" (address));
-	u32 err;
-	asm volatile ("pop %%rax\n\t"
-				  "mov %%eax, %0" : "=r" (err));
 	// If bit 0 == 0, page not present
 	if ((err & 0b1) == 0) {
 		panic("Page fault detected (page not present)");
@@ -63,18 +64,15 @@ __attribute__((interrupt)) void page_fault_handler(InterruptFrame* frame) {
 	}
 }
 
-__attribute__((interrupt)) void double_fault_handler(InterruptFrame* frame) {
-	// ERROR CODE FROM DOUBLE FAULT ALWAYS ZERO (never useful).
-	asm volatile ("pop %rax");
+__attribute__((interrupt)) void double_fault_handler(InterruptFrame* frame, u64 err) {
 	panic("Double fault detected!");
 	while (true) {
 		asm ("hlt");
 	}
 }
 
-__attribute__((interrupt)) void general_protection_fault_handler(InterruptFrame* frame) {
-	// POP ERROR CODE FROM STACK (segment selector if segment related fault)
-	asm volatile ("pop %rax");
+__attribute__((interrupt)) void general_protection_fault_handler(InterruptFrame* frame, u64 err) {
+	// Segment selector if segment related fault.
 	panic("General protection fault detected!");
 	while (true) {
 		asm ("hlt");

@@ -2,6 +2,25 @@
 
 RTC gRTC;
 
+u8 RTC::is_rtc_updating() {
+	outb(CMOS_ADDR, 0x0a);
+	return inb(CMOS_DATA) & 0x80;
+}
+u8 RTC::read_register(u8 reg) {
+	outb(CMOS_ADDR, reg);
+	return inb(CMOS_DATA);
+}
+
+// TODO: Support setting RTC interrupt frequency (default 1024hz).
+/// Set IRQ8 interrupt enabled or disabled.
+/// NOTE: Must be called when interrupts are disabled (in-between `cli` and `sti`)!
+void RTC::set_interrupts_enabled(bool enabled) {
+    u8 statusB = read_register(0x8b);
+	outb(CMOS_ADDR, 0x8b);
+	if (enabled) { outb(CMOS_DATA, statusB | 0b01000000); }
+	else         { outb(CMOS_DATA, statusB & 0b10111111); }
+}
+
 void RTC::get_rtc_data(RTCData& data) {
 	data.second  = read_register(0x00);
 	data.minute  = read_register(0x02);
@@ -70,7 +89,7 @@ void RTC::get_date_time() {
 		time.hour = ((time.hour & 0x7f) + 12) % 24;
 	}
 
-	// CCYY -> YYYY
+	// Century + Year -> YYYY
 	if (CENTURY_REGISTER != 0) {
 		time.year += time.century * 100;
 	}

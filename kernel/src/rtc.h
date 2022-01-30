@@ -10,7 +10,7 @@
 #define CMOS_DATA 0x71
 
 // RTC; Real-Time Clock
-//   As close to real-time as it gets, at least. It's no atomic clock.
+//   As close to real-time as it gets, although it's no atomic clock.
 // REGISTER MAP
 // 0x00 = Seconds [0-59]
 // 0x02 = Minutes [0-59]
@@ -56,16 +56,11 @@ public:
 	RTCData time;
 	RTC() { get_date_time(); }
 	void get_date_time();
+	void set_interrupts_enabled(bool);
 private:
-	inline u8 is_rtc_updating() {
-		outb(CMOS_ADDR, 0x0a);
-		return inb(CMOS_DATA) & 0x80;
-	}
-	inline u8 read_register(u8 reg) {
-		outb(CMOS_ADDR, reg);
-		return inb(CMOS_DATA);
-	}
-	void get_rtc_data(RTCData& data);
+	inline u8 is_rtc_updating();
+	inline u8 read_register(u8 reg);
+	void get_rtc_data(RTCData&);
 };
 
 extern RTC gRTC;
