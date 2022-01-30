@@ -77,7 +77,7 @@ void handle_ps2_mouse_interrupt(u8 data) {
 	switch (mouse_cycle) {
 	case 0:
 		// Ensure always one bit is one.
-		if (data & 0b00001000 == 0) { break; }
+		if ((data & 0b00001000) == 0) { break; }
 		mouse_packet[0] = data;
 		mouse_cycle++;
 		break;

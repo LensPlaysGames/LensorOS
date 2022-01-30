@@ -5,7 +5,7 @@ u64 get_memory_size(EFI_MEMORY_DESCRIPTOR* map, u64 mapEntries, u64 mapDescSize)
 	static u64 s_memory_size_in_bytes = 0;
 	if (s_memory_size_in_bytes > 0) { return s_memory_size_in_bytes; }
 
-	for (int i = 0; i < mapEntries; ++i) {
+	for (u64 i = 0; i < mapEntries; ++i) {
 		// Get descriptor for each map entry.
 		EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)map + (i * mapDescSize));
 		// Add memory size from descriptor to total memory size.

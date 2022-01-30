@@ -3,74 +3,79 @@
 
 #include "../integers.h"
 
-// The idea is to create a tree of nodes that can be traversed to get a page of memory.
-// A 'page' is equal to 4096 bytes (4 kB) of memory.
-// A Modern OS gives each program virtual addresses that start at
-//   zero for ease of use, however the physical address of each page of
-//   memory can vary wildly.
-// The virtual address is an address that is used to lookup the physical
-//   address of a page within the page map level four table (see PML4 TABLE example below).
+/*
+The idea is to create a tree of nodes that can be traversed to get a page of memory.
+A 'page' is equal to 4096 bytes (4 kB) of memory.
+A Modern OS gives each program virtual addresses that start at
+  zero for ease of use, however the physical address of each page of
+  memory can vary wildly.
+The virtual address is an address that is used to lookup the physical
+  address of a page within the page map level four table (see PML4 TABLE example below).
 
-// PML4 TABLE [512]
-// |\
-// | Page Directory Pointer Table [512]
-// | |\
-// | | Page Directory Table [512]
-// | | |\
-// | | | Page Table [512]
-// | | | |\
-// | | | | Page
-// | | | |\
-// | | | | Page
-// | | |  \
-// | | |   Page...
-// | | |\
-// | | | Page Table [512]
-// | | | |\
-// | | | | Page
-// | | | |\
-// | | | | Page
-// | | |  \
-// | | |   Page...
-// | |  \
-// | |   Page Table [512]
-// | |   |\
-// | |   | Page
-// | |   |\
-// | |   | Page
-// | |    \
-// | |     Page...
-// |\
-// | Page Directory Pointer Table [512]
-// | |\
-// | | Page Directory Table [512]
-// | | |\
-// | | | Page Table [512]
-// | | | |\
-// | | | | Page
-// | | | |\
-// | | | | Page
-// | | |  \
-// | | |   Page...
-// | | |\
-// | | | Page Table [512]
-// | | | |\
-// | | | | Page
-// | | | |\
-// | | | | Page
-// | | |  \
-// | | |   Page...
-// | |  \
-// | |   Page Table [512]
-// | |   |\
-// | |   | Page
-// | |   |\
-// | |   | Page
-// | |    \
-// | |     Page...
-//  \
-//   Page Directory Pointer Table [512]...
-
+PML4 TABLE [512]
+|\
+| Page Directory Pointer Table [512]
+| |\
+| | Page Directory Table [512]
+| | |\
+| | | Page Table [512]
+| | | |\
+| | | | Page
+| | | |\
+| | | | Page
+| | |  \
+| | |   Page...
+| | |\
+| | | Page Table [512]
+| | | |\
+| | | | Page
+| | | |\
+| | | | Page
+| | |  \
+| | |   Page...
+| |  \
+| |   Page Table [512]
+| |   |\
+| |   | Page
+| |   |\
+| |   | Page
+| |    \
+| |     Page...
+| \
+|  Page Directory Table [512]...
+|\
+| Page Directory Pointer Table [512]
+| |\
+| | Page Directory Table [512]
+| | |\
+| | | Page Table [512]
+| | | |\
+| | | | Page
+| | | |\
+| | | | Page
+| | |  \
+| | |   Page...
+| | |\
+| | | Page Table [512]
+| | | |\
+| | | | Page
+| | | |\
+| | | | Page
+| | |  \
+| | |   Page...
+| |  \
+| |   Page Table [512]
+| |   |\
+| |   | Page
+| |   |\
+| |   | Page
+| |    \
+| |     Page...
+| \
+|  Page Directory Table [512]...
+\
+ Page Directory Pointer Table [512]...
+*/
 struct PageMapIndexer {
 	u64 PageDirectoryPointerIndex;
 	u64 PageDirectoryIndex;

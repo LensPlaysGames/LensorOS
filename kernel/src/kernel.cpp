@@ -1,7 +1,7 @@
 #include "kUtility.h"
 
 // TODO:
-// - Handle two-byte width characters (somehow).
+// - Handle utf-8 characters (somehow).
 // - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
 // - Save parsed PCI devices for quick lookup (device tree).
 // - FILE SYSTEM:
@@ -93,7 +93,7 @@ void print_now(u64 xOffset = 0) {
 
 extern "C" void _start(BootInfo* bInfo) {
 	// The heavy lifting is done within `kUtility.cpp`.
-	KernelInfo info = kernel_init(bInfo);
+    kernel_init(bInfo);
 	
 	// Clear screen (ensure known state).
 	gRend.clear();
