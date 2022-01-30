@@ -2,8 +2,8 @@
 
 // globally accessible mouse information
 u8 gMouseID;
-Vector2 gMousePosition = {0, 0};
-Vector2 gOldMousePosition = {0, 0};
+uVector2 gMousePosition = {0, 0};
+uVector2 gOldMousePosition = {0, 0};
 
 void mouse_wait() {
 	u64 timeout = 100000;
@@ -118,7 +118,7 @@ u32 pixels_under_mouse_cursor[MouseCursorSize * MouseCursorSize + 1];
 
 // DRAW MOUSE CURSOR AT gMousePosition
 void DrawMouseCursor() {
-	Vector2 cachedPos = gRend.DrawPos;
+	uVector2 cachedPos = gRend.DrawPos;
 	// Skip first iteration in order to accurately read what is under the cursor before it is drawn.
 	static bool skip = true;
 	if (skip == false) {
@@ -200,13 +200,11 @@ void process_mouse_packet() {
 		}
 	}
 	// CLAMP MOUSE POSITION
-	if (gMousePosition.x < 0) { gMousePosition.x = 0; }
-	else if (gMousePosition.x > gRend.Target->PixelWidth-1) {
-		gMousePosition.x = gRend.Target->PixelWidth-1;
+	if (gMousePosition.x >= gRend.Target->PixelWidth) {
+		gMousePosition.x = gRend.Target->PixelWidth  - 1;
 	}
-	if (gMousePosition.y < 0) { gMousePosition.y = 0; }
-	else if (gMousePosition.y > gRend.Target->PixelHeight-1) {
-		gMousePosition.y = gRend.Target->PixelHeight-1;
+	if (gMousePosition.y >= gRend.Target->PixelHeight) {
+		gMousePosition.y = gRend.Target->PixelHeight - 1;
 	}
 
 	DrawMouseCursor();
