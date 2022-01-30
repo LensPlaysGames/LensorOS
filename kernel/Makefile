@@ -24,6 +24,9 @@ OBJS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SRC))
 OBJS += $(patsubst $(SRCDIR)/%.asm, $(OBJDIR)/%_asm.o, $(ASMSRC))
 DIRS = $(wildcard $(SRCDIR)/*)
 
+.PHONY: default
+default: all;
+
 setup:
 	@mkdir $(BUILDDIR)
 	@mkdir $(OBJDIR)
@@ -32,6 +35,7 @@ clean:
 	rm -r $(OBJDIR)
 
 image:
+	@echo "\n!===--- Creating FAT32 formatted bootable image ---===!\n"
 	dd if=/dev/zero of=$(BUILDDIR)/$(OSNAME).img count=93750
 	mformat -i $(BUILDDIR)/$(OSNAME).img -F ::
 	mmd -i $(BUILDDIR)/$(OSNAME).img ::/EFI
@@ -43,6 +47,7 @@ image:
 	mcopy -i $(BUILDDIR)/$(OSNAME).img $(BUILDDIR)/dfltfont.psf ::/LensorOS
 
 fat12_image:
+	@echo "\n!===--- Creating FAT12 formatted bootable image ---===!\n"
 	dd if=/dev/zero of=$(BUILDDIR)/$(OSNAME).img count=93750
 	mformat -i $(BUILDDIR)/$(OSNAME).img -f 1440 ::
 	mmd -i $(BUILDDIR)/$(OSNAME).img ::/EFI
@@ -76,6 +81,7 @@ $(OBJDIR)/%_asm.o: $(SRCDIR)/%.asm
 	$(ASMC) -g $(ASMFLAGS) $^ -o $@
 
 link:
+	@echo "\n!===--- Linking kernel ---===!\n"
 	$(LD) $(LDFLAGS) -o $(BUILDDIR)/kernel.elf $(OBJS)
 
 rekernel:
@@ -87,4 +93,5 @@ all:
 	$(MAKE) image
 
 run:
+	@echo "\n!===--- Running QEMU ---===!\n"
 	qemu-system-x86_64 -cpu qemu64 -m 100M -rtc base=localtime,clock=host,driftfix=none -machine q35 -serial stdio -vga cirrus -drive format=raw,file=$(BUILDDIR)/$(OSNAME).img -drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE-pure-efi.fd",readonly=on -drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS-pure-efi.fd" -net none
