@@ -1,13 +1,13 @@
 #include "keyboard.h"
 
-Vector2 gTextPosition;
+uVector2 gTextPosition;
 
 bool isCAPS;
 bool isLSHIFT;
 bool isRSHIFT;
 
 void handle_keyboard(uint8_t scancode) {
-	Vector2 cachedPos = gRend.DrawPos;
+	uVector2 cachedPos = gRend.DrawPos;
 	switch (scancode) {
 	case LSHIFT:
 		isLSHIFT = true;
