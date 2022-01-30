@@ -67,7 +67,7 @@ If on Linux, run `make run` and QEMU should boot up into LensorOS. \
 QEMU does need to be installed, so make sure you first run (`sudo apt install qemu-system`).
 
 ### Building LensorOS <a name="build"></a>
-On Windows, `WSL` is required. I use `Ubuntu 20.04` distro.
+On Windows, some way of accessing a linux command-line environment is necessary. Personally, I use `WSL` with the `Ubuntu 20.04` distro. Alternatively, one could use a virtual machine that emulates a linux distro (ie. `VirtualBox` running `Linux Mint`, or something), and develop from there. There's also things like `Cygwin`, if you want to stay on Windows 100% of the time.
 
 Open a Linux terminal, then `cd` to the root directory of the repository.
 
