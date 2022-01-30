@@ -73,16 +73,18 @@ Open a Linux terminal, then `cd` to the root directory of the repository.
 
 Ensure that you have previously ran `sudo apt install build-essential mtools` to get all necessary compilation tools.
 
-To initialize the directories needed, `cd` to the `kernel` folder and run the following: \
-`make setup`
-
-After this, `cd` to the `gnu-efi` folder and run the following: \
+First, `cd` to the `gnu-efi` directory, and run the following: \
+`make` \
 `make bootloader`
 
-To complete the build, run: \
-`cd ../kernel` \
+To build the kernel, `cd` to the `kernel` directory of the repository and run the following: \
+`make setup` \
 `make kernel`
 
 This will generate a `.efi` file from the kernel source code. 
 
-If you are changing the kernel source code and need to recompile headers, there is a make target for ease-of-use: `make rekernel`. All this does is run `make clean` followed by `make kernel` under the hood.
+NOTE: One only needs to run `make` for the bootloader, and `make setup` for the kernel, once. Following that, simply using the `bootloader` and `kernel` targets respectively will re-build all `.c` or `.cpp` files that have changed.
+
+If one needs to recompile headers, there is a make target for ease-of-use: `make rekernel`. All this does is run `make clean` followed by `make kernel` under the hood.
+
+If you would like to debug the kernel, use the `kernel_debug` make target to generate a kernel `.efi` file with debug symbols embedded.
