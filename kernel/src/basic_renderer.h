@@ -33,13 +33,6 @@ struct Framebuffer {
 		PixelHeight = 0;
 		PixelsPerScanLine = 0;
 	}
-
-	Framebuffer(const Framebuffer& copy) {
-		BufferSize = copy.BufferSize;
-		PixelWidth = copy.PixelWidth;
-		PixelHeight = copy.PixelHeight;
-		PixelsPerScanLine = copy.PixelsPerScanLine;
-	}
 };
 
 const u32 BytesPerPixel = 4;
