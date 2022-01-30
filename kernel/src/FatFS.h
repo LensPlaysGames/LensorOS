@@ -38,10 +38,12 @@ public:
 
 	void read (Inode* inode) override {
 		// TODO: Read from FAT file-system based on VFS intermediate-representation's data.
+		(void)inode;
 	}
 	
 	void write(Inode* inode) override {
 		// TODO: Write to FAT file-system based on VFS intermediate-representation's data.
+		(void)inode;
 	}
 
 	u64 get_total_size() override {
