@@ -435,6 +435,8 @@ namespace PCI {
 				return "Satellite Voice Controller";
 			case 0x4:
 				return "Satellite Data Controller";
+			default:
+				return to_hexstring(subclass);
 			}
 		case 0x10:
 			// Encryption Controller
@@ -554,6 +556,7 @@ namespace PCI {
 					return to_hexstring(progIF);
 				}
 			}
+			return to_hexstring(progIF);
 		case 0x06:
 			// Bridge
 			switch (subclass) {
@@ -587,6 +590,8 @@ namespace PCI {
 				default:
 					return to_hexstring(progIF);
 				}
+			default:
+				return to_hexstring(progIF);
 			}
 		case 0x07:
 			// Simple Communication Controller
@@ -712,6 +717,7 @@ namespace PCI {
 				else if (progIF == 0x10) { return "Extended"; }
 				else { return to_hexstring(progIF); }
 			}
+			return to_hexstring(progIF);
 		case 0xc:
 			// Serial Bus Controller
 			switch (subclass) {
@@ -743,6 +749,7 @@ namespace PCI {
 				if      (progIF == 0x0) { return "SMIC";                      }
 				else if (progIF == 0x1) { return "Keyboard Controller Style"; }
 				else if (progIF == 0x2) { return "Block Transfer";            }
+				else                    { return to_hexstring(progIF);        }
 			default:
 				return to_hexstring(progIF);
 			}
