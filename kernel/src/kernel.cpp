@@ -1,7 +1,6 @@
 #include "kUtility.h"
 
 // TODO:
-// - Handle utf-8 characters (somehow).
 // - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
 // - Save parsed PCI devices for quick lookup (device tree).
 // - FILE SYSTEM:

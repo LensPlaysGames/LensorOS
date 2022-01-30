@@ -20,48 +20,41 @@ void FATDriver::write_from_inode(AHCI::AHCIDriver* ahci, u8 portNumber, Inode* i
 	return;
 }
 
-u32 FATDriver::get_total_sectors(BootRecord* BR) {
-	if (BR->BPB.TotalSectors16 == 0) {
-		return BR->BPB.TotalSectors32;
-	}
-	return BR->BPB.TotalSectors16;
-}
-
-u32 FATDriver::get_total_fat_sectors(BootRecord* BR) {
+u32 FATDriver::get_total_fat_sectors(BootRecord* BR) const {
 	if (BR->BPB.NumSectorsPerFAT == 0) {
 		return (*(BootRecordExtension32*)&BR->Extended).NumSectorsPerFAT;
 	}
 	return BR->BPB.NumSectorsPerFAT;
 }
 
-u32 FATDriver::get_root_directory_sectors(BootRecord* BR) {
+u32 FATDriver::get_root_directory_sectors(BootRecord* BR) const {
 	return ((BR->BPB.NumEntriesInRoot * FAT_DIRECTORY_SIZE_BYTES)
 			+ (BR->BPB.NumBytesPerSector-1))
 		/ BR->BPB.NumBytesPerSector;
 }
 
-u32 FATDriver::get_total_data_sectors(BootRecord* BR) {
+u32 FATDriver::get_total_data_sectors(BootRecord* BR) const {
 	return get_total_sectors(BR)
 		- (BR->BPB.NumReservedSectors
 		   + (BR->BPB.NumFATsPresent * get_total_fat_sectors(BR))
 		   + get_root_directory_sectors(BR));
 }
 
-u32 FATDriver::get_first_data_sector(BootRecord* BR) {
+u32 FATDriver::get_first_data_sector(BootRecord* BR) const {
 	return BR->BPB.NumReservedSectors
 		+ (BR->BPB.NumFATsPresent * get_total_fat_sectors(BR))
 		+ get_root_directory_sectors(BR);
 }
 
-u32 FATDriver::get_total_clusters(BootRecord* BR) {
+u32 FATDriver::get_total_clusters(BootRecord* BR) const {
 	return get_total_data_sectors(BR) / BR->BPB.NumSectorsPerCluster;
 }
 
-u32 FATDriver::get_first_sector_in_cluster(BootRecord* BR, u32 cluster_number) {
+u32 FATDriver::get_first_sector_in_cluster(BootRecord* BR, u32 cluster_number) const {
 	return ((cluster_number - 2) * BR->BPB.NumSectorsPerCluster) + get_first_data_sector(BR);
 }
 
-FATType FATDriver::get_type(BootRecord* BR) {
+FATType FATDriver::get_type(BootRecord* BR) const {
 	// TODO: More fool-proof method of detecting FAT type.
 	// Get FAT type based on total cluster amount (mostly correct).
 	u32 totalClusters = get_total_clusters(BR);
