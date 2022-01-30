@@ -1,5 +1,7 @@
 #include "ahci.h"
-#include "filesystems/fs_fat.h"
+#include "FATDriver.h"
+#include "FatFS.h"
+#include "FAT_definitions.h"
 
 namespace AHCI {
 #define HBA_PORT_DEVICE_PRESENT 0x3
@@ -179,55 +181,42 @@ namespace AHCI {
 		srl.writestr(to_string((u64)MAX_READ_PAGES * 4));
 		srl.writestr("kib\r\n");
 
-		// TODO: Manage file system drivers better
-		//         (non-local; global would need
-		//         custom amount of devices in array).
-		FatFS::FATDriver FAT;
-		for(u32 i = 0; i < numPorts; ++i) {
-			Ports[i]->Configure();			
+		for (u8 i = 0; i < numPorts; ++i) {
+			Ports[i]->Configure();
 			Ports[i]->buffer = (u8*)gAlloc.request_pages(MAX_READ_PAGES);
 			if (Ports[i]->buffer != nullptr) {
-				// Set port buffer to expected state (all zeroes).
-				memset((void*)Ports[i]->buffer, 0, MAX_READ_PAGES * 0x1000);
-				/// Check device if it is valid for each supported format until valid is found.
-				// Check if device is FAT formatted.
-				if (FAT.is_device_fat(Ports[i])) {
-					srl.writestr("[AHCI]: Device at port ");
-					srl.writestr(to_string((u64)i));
-					u16 FATdeviceIndex = FAT.numDevices - 1;
-					if (FAT.devices[FATdeviceIndex].Type == FatFS::FATType::FAT32) {
-						srl.writestr(" is FAT32 formatted.");
-					}
-					else if (FAT.devices[FATdeviceIndex].Type == FatFS::FATType::FAT16) {
-						srl.writestr(" is FAT16 formatted.");
-					}
-					else if (FAT.devices[FATdeviceIndex].Type == FatFS::FATType::FAT12) {
-					    srl.writestr(" is FAT12 formatted.");
-					}
-					else if (FAT.devices[FATdeviceIndex].Type == FatFS::FATType::ExFAT) {
-						srl.writestr(" is ExFAT formatted.");
-					}
-					else {
-						srl.writestr(" has INVALID format\r\n");
-						continue;
-					}
-					srl.writestr("\r\n  Total Size: ");
-					srl.writestr(to_string(FAT.devices[FAT.numDevices].get_total_size() / 1024 / 1024));
-					srl.writestr("MiB\r\n  Usable Size: ");
-					srl.writestr(to_string(FAT.devices[FAT.numDevices].get_data_size() / 1024 / 1024));
-					srl.writestr("MiB\r\n");
-				}
-				else {
-					srl.writestr("[AHCI]: Device at port ");
-					srl.writestr(to_string((u64)i));
-					srl.writestr(" has an unrecognizable format.\r\n");
-					// TODO: Handle un-used port. (deallocate buffer?)
-				}
-			}
-			else {
 				srl.writestr("[AHCI]: Port ");
 				srl.writestr(to_string((u64)i));
-				srl.writestr(" could not be configured.\r\n");
+				srl.writestr(" configured successfully.\r\n");
+				memset((void*)Ports[i]->buffer, 0, MAX_READ_PAGES * 0x1000);
+				if (gFATDriver.is_device_valid_filesystem(this, i)) {
+					// TODO: Cache file-system for later use.
+					FatFS* fs = new FatFS(this, i);
+					srl.writestr("[AHCI]: Device at port ");
+					srl.writestr(to_string((u64)i));
+
+					switch (fs->Type) {
+					case FATType::INVALID: 
+						srl.writestr(" has INVALID format.");
+						break;
+					case FATType::FAT32:   
+						srl.writestr(" is FAT32 formatted.");
+						break;
+					case FATType::FAT16:   
+						srl.writestr(" is FAT16 formatted.");
+						break;
+					case FATType::FAT12:   
+						srl.writestr(" is FAT12 formatted.");
+						break;
+					case FATType::ExFAT:   
+						srl.writestr(" is ExFAT formatted.");
+						break;
+					}
+					srl.writestr("\r\n");
+					srl.writestr("  Total Size: ");
+					srl.writestr(to_string((u64)fs->get_total_size() / 1024 / 1024));
+					srl.writestr(" mib\r\n");
+				}
 			}
 		}
 		srl.writestr("[AHCI]: Driver constructed.\r\n");

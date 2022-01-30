@@ -156,6 +156,9 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	srl.writeb('-');
 	srl.writestr(to_string((u64)gRTC.time.date));
 	srl.writestr("\r\n");
+	// PREPARE DRIVERS.
+	gFATDriver = FATDriver();
+	// TODO: PREPARE DEVICE TREE.
 	// SYSTEM INFORMATION IS FOUND IN ACPI TABLE
 	prepare_acpi(bInfo);
 	srl.writestr("ACPI prepared.\r\n");

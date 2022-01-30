@@ -197,8 +197,8 @@ namespace AHCI {
 		
 	};
 
+	// TODO: Transition using global ahci driver to storing them in the device tree.
 	extern AHCIDriver* gAHCI;
 }
-
 
 #endif

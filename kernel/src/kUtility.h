@@ -25,6 +25,7 @@
 #include "pci.h"
 // SERIAL COMMUNICATIONS
 #include "uart.h"
+#include "FATDriver.h"
 
 struct BootInfo {
 	Framebuffer* framebuffer;

@@ -29,6 +29,8 @@ namespace PCI {
 		 		if (pciDevHdr->ProgIF == 0x01) {
 		 			// AHCI 1.0 Device
 					srl.writestr("Found AHCI 1.0 Serial ATA Mass Storage Controller\r\n");
+					// TODO: Do not use global ahci driver (potentially over-writing it if there are multiple).
+ 					//       The AHCI driver's really should be stored in the device tree.
 					AHCI::gAHCI = new AHCI::AHCIDriver(pciDevHdr);
 		 		}
 			}
