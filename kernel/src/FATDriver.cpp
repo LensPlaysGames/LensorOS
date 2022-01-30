@@ -81,7 +81,6 @@ bool FATDriver::is_device_valid_filesystem(AHCI::AHCIDriver* ahci, u8 portNumber
 		// Allocate memory for a FAT boot record.
 		BootRecord* br = new BootRecord;
 		// Copy data read from boot sector into FAT boot record.
-		srl.writestr(to_string((u64)sizeof(BootRecord)));
 		memcpy((void*)ahci->Ports[portNumber]->buffer, (void*)br, sizeof(BootRecord));
 		// Validate boot sector is of FAT format.
 		// Thanks to Gigasoft of osdev forums for this list

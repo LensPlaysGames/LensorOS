@@ -189,12 +189,13 @@ namespace AHCI {
 				srl.writestr(to_string((u64)i));
 				srl.writestr(" configured successfully.\r\n");
 				memset((void*)Ports[i]->buffer, 0, MAX_READ_PAGES * 0x1000);
+				// Check if storage media at current port has a file-system LensorOS recognizes.
+				// FAT (File Allocation Table):
 				if (gFATDriver.is_device_valid_filesystem(this, i)) {
 					// TODO: Cache file-system for later use.
 					FatFS* fs = new FatFS(this, i);
 					srl.writestr("[AHCI]: Device at port ");
 					srl.writestr(to_string((u64)i));
-
 					switch (fs->Type) {
 					case FATType::INVALID: 
 						srl.writestr(" has INVALID format.");
