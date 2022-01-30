@@ -55,7 +55,7 @@ public:
 	Framebuffer* Render          {nullptr};
 	Framebuffer* Target          {nullptr};
 	PSF1_FONT*   Font            {nullptr};
-	Vector2      DrawPos         {0, 0};
+	uVector2      DrawPos         {0, 0};
 	// I = ignore                 0xIIRRGGBB
 	u32 BackgroundColor {0x00000000};
 
@@ -75,9 +75,9 @@ public:
 	}
 
 	/// UPDATE SIZE of MEMORY CONTENTS OF RENDER FROM TARGET AT POSITION
-    void swap(Vector2 position, Vector2 size);
+    void swap(uVector2 position, uVector2 size);
 
-	void readpix(Vector2 size, u32* buffer);
+	void readpix(uVector2 size, u32* buffer);
 	
 	// Change every pixel in the target framebuffer to BackgroundColor.
 	void clear() {
@@ -108,14 +108,14 @@ public:
 	void crlf(u32 offset);
 
 	// Draw `size` of rectangle as `color`.
-	void drawrect(Vector2 size, u32 color = 0xffffffff);
+	void drawrect(uVector2 size, u32 color = 0xffffffff);
 	// Draw `size` of `pixels` buffer into target framebuffer.
-	void drawpix(Vector2 size, u32* pixels);
+	void drawpix(uVector2 size, u32* pixels);
 	// Draw `size` of `bitmap` as `color`.
-	void drawbmp(Vector2 size, u8* bitmap, u32 color = 0xffffffff);
+	void drawbmp(uVector2 size, u8* bitmap, u32 color = 0xffffffff);
 	// Draw `size` of `bitmap` as `color`, but don't clear `0` to background color.
 	// This allows the use of bitmaps acting on alpha as well as color.
-	void drawbmpover(Vector2 size, u8* bitmap, u32 color = 0xffffffff);
+	void drawbmpover(uVector2 size, u8* bitmap, u32 color = 0xffffffff);
 	// Use PSF1 bitmap font to draw a character to the screen (don't advance).
 	void drawchar(char c, u32 color = 0xffffffff);
 	

@@ -4,18 +4,16 @@
 BasicRenderer gRend;
 
 inline void BasicRenderer::clamp_draw_position() {
-	if (DrawPos.x < 0) { DrawPos.x = 0; }
-	else if (DrawPos.x > Target->PixelWidth) { DrawPos.x = Target->PixelWidth; }
-	if (DrawPos.y < 0) { DrawPos.y = 0; }
-	else if (DrawPos.y > Target->PixelHeight) { DrawPos.y = Target->PixelHeight; }
+	if (DrawPos.x > Target->PixelWidth)  { DrawPos.x = Target->PixelWidth;  }
+	if (DrawPos.y > Target->PixelHeight) { DrawPos.y = Target->PixelHeight; }
 }
 
-void BasicRenderer::swap(Vector2 position, Vector2 size) {
+void BasicRenderer::swap(uVector2 position, uVector2 size) {
 	// Can't update nothing.
 	if (size.x == 0 || size.y == 0) { return; }
 	// Only swap what is within the bounds of the framebuffer.
-    if (position.x < 0 || position.x > Target->PixelWidth
-		|| position.y < 0 || position.y > Target->PixelHeight) { return; }
+    if (position.x > Target->PixelWidth
+		|| position.y > Target->PixelHeight) { return; }
 	// Ensure size doesn't over-run edge of framebuffer.
 	u64 diffX = Target->PixelWidth - position.x;
 	u64 diffY = Target->PixelHeight - position.y;
@@ -67,7 +65,7 @@ void BasicRenderer::crlf(u32 offset) {
 	};
 }
 
-void BasicRenderer::drawrect(Vector2 size, u32 color) {
+void BasicRenderer::drawrect(uVector2 size, u32 color) {
     clamp_draw_position();
 	u32 diffX = Target->PixelWidth - DrawPos.x;
 	u32 diffY = Target->PixelHeight - DrawPos.y;
@@ -82,7 +80,7 @@ void BasicRenderer::drawrect(Vector2 size, u32 color) {
 }
 
 /// Read `size` of pixel framebuffer starting at `DrawPos` into `buffer`.
-void BasicRenderer::readpix(Vector2 size, u32* buffer) {
+void BasicRenderer::readpix(uVector2 size, u32* buffer) {
 	if (buffer == nullptr) { return; }
 	clamp_draw_position();
 	u32 initX = size.x;
@@ -100,7 +98,7 @@ void BasicRenderer::readpix(Vector2 size, u32* buffer) {
 }
 
 /// Draw `size` of `pixels` linear buffer starting at `DrawPos`.
-void BasicRenderer::drawpix(Vector2 size, u32* pixels) {
+void BasicRenderer::drawpix(uVector2 size, u32* pixels) {
 	if (pixels == nullptr) { return; }
     clamp_draw_position();
 	u32 initX = size.x;
@@ -119,7 +117,7 @@ void BasicRenderer::drawpix(Vector2 size, u32* pixels) {
 
 /// Draw `size` of a bitmap `bitmap`, using passed color `color`
 ///   where bitmap is `1` and `BackgroundColor` where it is `0`.
-void BasicRenderer::drawbmp(Vector2 size, u8* bitmap, u32 color) {
+void BasicRenderer::drawbmp(uVector2 size, u8* bitmap, u32 color) {
 	if (bitmap == nullptr) { return; }
 	clamp_draw_position();
 	u32 initX = size.x;
@@ -142,7 +140,7 @@ void BasicRenderer::drawbmp(Vector2 size, u8* bitmap, u32 color) {
 }
 
 /// Draw `size` of a bitmap `bitmap`, using passed color `color` where bitmap is `1`.
-void BasicRenderer::drawbmpover(Vector2 size, u8* bitmap, u32 color) {
+void BasicRenderer::drawbmpover(uVector2 size, u8* bitmap, u32 color) {
 	if (bitmap == nullptr) { return; }
 	clamp_draw_position();
 	u32 initX = size.x;
