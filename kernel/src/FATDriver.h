@@ -14,9 +14,9 @@ class FATDriver {
 public:
 	FATDriver() {}
 	
-	void read_to_inode (AHCI::AHCIDriver* ahci, u8 portNumber, Inode* inode);
-	void write_from_inode (AHCI::AHCIDriver* ahci, u8 portNumber, Inode* inode);
-	bool is_device_valid_filesystem (AHCI::AHCIDriver* achi, u8 portNumber);
+	void read_to_inode           (AHCI::AHCIDriver* ahci, u8 portNumber, Inode* inode);
+	void write_from_inode        (AHCI::AHCIDriver* ahci, u8 portNumber, Inode* inode);
+	bool is_device_fat_formatted (AHCI::AHCIDriver* achi, u8 portNumber);
 
 	inline u32 get_total_sectors           (BootRecord* BR);
 	inline u32 get_total_fat_sectors       (BootRecord* BR);

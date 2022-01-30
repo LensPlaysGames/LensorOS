@@ -74,7 +74,7 @@ FATType FATDriver::get_type(BootRecord* BR) {
 
 /// Try to parse a FAT boot record from the first boot sector of the SATA device.
 /// This is used by the AHCI driver to determine which file system to create for a given device.
-bool FATDriver::is_device_valid_filesystem(AHCI::AHCIDriver* ahci, u8 portNumber) {
+bool FATDriver::is_device_fat_formatted(AHCI::AHCIDriver* ahci, u8 portNumber) {
 	bool result = true;
 	if (ahci->Ports[portNumber]->Read(0, 1, ahci->Ports[portNumber]->buffer)) {
 		// Read successful.
