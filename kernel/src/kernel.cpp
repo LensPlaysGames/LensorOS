@@ -1,5 +1,7 @@
 #include "kUtility.h"
 
+#include "ahci.h"
+
 // TODO:
 // - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
 // - Save parsed PCI devices for quick lookup (device tree).
@@ -109,6 +111,10 @@ extern "C" void _start(BootInfo* bInfo) {
 	gRend.crlf();
 	gRend.swap();
 	/// END GPLv3 LICENSE REQUIREMENT.
+
+	// AHCI DRIVER TEST
+	// FIXME FIXME FIXME
+    AHCI::gAHCI->~AHCIDriver();
 	
 	// Start keyboard input at draw position, not origin.
 	gTextPosition = gRend.DrawPos; 

@@ -227,6 +227,7 @@ namespace AHCI {
 	    srl.writestr("[AHCI]: Deconstructing AHCI Driver\r\n");
 		for(u32 i = 0; i < numPorts; ++i) {
 			gAlloc.free_pages((void*)Ports[i]->buffer, MAX_READ_PAGES);
+			delete Ports[i];
 		}
 	}
 }
