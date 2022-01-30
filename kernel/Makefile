@@ -26,7 +26,6 @@ DIRS = $(wildcard $(SRCDIR)/*)
 
 setup:
 	@mkdir $(BUILDDIR)
-	@mkdir $(SRCDIR)
 	@mkdir $(OBJDIR)
 
 clean:
