@@ -6,10 +6,17 @@
 FATDriver gFATDriver;
 
 void FATDriver::read_to_inode(AHCI::AHCIDriver* ahci, u8 portNumber, Inode* inode) {
+	// TODO: Implement reading a FAT file/directory (world) into an inode.
+	(void)ahci;
+	(void)portNumber;
+	(void)inode;
 	return;
 }
 
 void FATDriver::write_from_inode(AHCI::AHCIDriver* ahci, u8 portNumber, Inode* inode) {
+	(void)ahci;
+	(void)portNumber;
+	(void)inode;
 	return;
 }
 
