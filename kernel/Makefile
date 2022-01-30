@@ -8,7 +8,7 @@ CC = gcc
 LD = ld
 
 ASMFLAGS = -f elf64
-CFLAGS = -ffreestanding -fno-rtti -fshort-wchar -mno-red-zone -fno-exceptions -Wall
+CFLAGS = -ffreestanding -fno-rtti -fshort-wchar -mno-red-zone -fno-exceptions -Wall -Wextra -Werror
 LDFLAGS = -T $(LDS) -static -Bsymbolic -nostdlib
 
 SRCDIR := src
