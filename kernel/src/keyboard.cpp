@@ -1,6 +1,6 @@
 #include "keyboard.h"
 
-uVector2 gTextPosition;
+uVector2 gTextPosition {0, 0};
 
 bool isCAPS;
 bool isLSHIFT;
@@ -33,6 +33,7 @@ void handle_keyboard(uint8_t scancode) {
 		gRend.DrawPos = gTextPosition;
 	 	gRend.clearchar();
 		gTextPosition = gRend.DrawPos;
+		gRend.swap(gTextPosition, {8, 24});
 		gRend.DrawPos = cachedPos;
 	 	return;
 	case BACKSPACE + 0x80:
@@ -40,6 +41,7 @@ void handle_keyboard(uint8_t scancode) {
 	case SPACE:
 		gRend.DrawPos = gTextPosition;
 		gRend.putchar(' ');
+		gRend.swap(gTextPosition, {8, 24});
 		gTextPosition = gRend.DrawPos;
 		gRend.DrawPos = cachedPos;
 		return;
@@ -56,6 +58,7 @@ void handle_keyboard(uint8_t scancode) {
 	if (ascii != 0) {
 		gRend.DrawPos = gTextPosition;
 		gRend.putchar(ascii);
+		gRend.swap(gTextPosition, {8, 24});
 		gTextPosition = gRend.DrawPos;
 		gRend.DrawPos = cachedPos;
 	}

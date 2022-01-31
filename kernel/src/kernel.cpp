@@ -134,7 +134,7 @@ extern "C" void _start(BootInfo* bInfo) {
 		// PRINT MEMORY INFO
 		print_memory_info();
 		// UPDATE ACTIVE RENDER BUFFER FROM TARGET.
-		gRend.swap();
+		gRend.swap({500, 0}, {80000, 80000});
 	}
 	// HALT LOOP (KERNEL INACTIVE).
 	while (true) {

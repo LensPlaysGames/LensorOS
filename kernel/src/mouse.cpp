@@ -119,6 +119,25 @@ u32 pixels_under_mouse_cursor[MouseCursorSize * MouseCursorSize + 1];
 // DRAW MOUSE CURSOR AT gMousePosition
 void DrawMouseCursor() {
 	uVector2 cachedPos = gRend.DrawPos;
+
+	uVector2 refreshPos = gOldMousePosition;
+	uVector2 refreshSize = {MouseCursorSize, MouseCursorSize};
+
+	if (gMousePosition.x > refreshPos.x) {
+		refreshSize.x += gMousePosition.x - refreshPos.x;
+	}
+	else if (gMousePosition.x < refreshPos.x) {
+		refreshSize.x += refreshPos.x - gMousePosition.x;
+		refreshPos.x = gMousePosition.x;
+	}
+	if (gMousePosition.y > refreshPos.y) {
+		refreshSize.y += gMousePosition.y - refreshPos.y;
+	}
+	else if (gMousePosition.y < refreshPos.y) {
+		refreshSize.y += refreshPos.y - gMousePosition.y;
+		refreshPos.y = gMousePosition.y;
+	}
+	
 	// Skip first iteration in order to accurately read what is under the cursor before it is drawn.
 	static bool skip = true;
 	if (skip == false) {
@@ -128,12 +147,14 @@ void DrawMouseCursor() {
 	else {
 		skip = false;
 	}
+	
 	gRend.DrawPos = gMousePosition;
 	// READ PIXELS UNDER NEW MOUSE POSITION INTO BUFFER.
 	gRend.readpix({MouseCursorSize, MouseCursorSize}, &pixels_under_mouse_cursor[0]);
 	// DRAW MOUSE CUSOR AT NEW POSITION.
 	gRend.drawbmpover({MouseCursorSize, MouseCursorSize}, &mouse_cursor[0], 0xffffffff);
 	gOldMousePosition = gMousePosition;
+	gRend.swap(refreshPos, refreshSize);
 	// RETURN GLOBAL DRAW POSITION.
 	gRend.DrawPos = cachedPos;
 }
