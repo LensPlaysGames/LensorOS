@@ -66,8 +66,9 @@ public:
 
 	void readpix(uVector2 size, u32* buffer);
 	
-	// Change every pixel in the target framebuffer to BackgroundColor.
+	/// Change every pixel in the target framebuffer to BackgroundColor.
 	void clear() {
+		// TODO: make more efficient (set first line, memcpy that to each line?)
 		// Draw background color to every pixel.
 		u32* pixel_ptr = (u32*)Target->BaseAddress;
 		for (u64 y = 0; y < Target->PixelHeight; y++) {
@@ -78,11 +79,15 @@ public:
 		// Re-initialize draw position.
 		DrawPos = {0, 0};
 	}
-	// Update BackgroundColor to given color, then clear screen.
+	/// Update BackgroundColor to given color, then clear screen.
 	void clear(u32 color) {
 		BackgroundColor = color;
 		clear();
 	}
+
+	void clear(uVector2 position, uVector2 size);
+	void clear(uVector2 position, uVector2 size, u32 color);
+
 	// Remove a single character behind DrawPos.
 	void clearchar();
 	
