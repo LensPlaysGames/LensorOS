@@ -18,7 +18,7 @@ void RTC::set_periodic_int_enabled(bool enabled) {
 	}
 }
 
-void RTC::update_rtc_data(RTCData& data) {
+void RTC::get_rtc_data(RTCData& data) {
 	data.second  = read_register(0x00);
 	data.minute  = read_register(0x02);
 	data.hour    = read_register(0x04);
@@ -31,11 +31,11 @@ void RTC::update_rtc_data(RTCData& data) {
 	}
 }
 	
-void RTC::get_date_time() {
+void RTC::update_data() {
 	// SPIN UNTIL RTC IS NOT UPDATING
 	//   This may be up to one second.
 	while (is_rtc_updating() != 0);
-	update_rtc_data(Time);
+	get_rtc_data(Time);
 	RTCData newTime;
 	// SPIN UNTIL RTC IS NOT UPDATING AGAIN
 	//   This paired with the following comparison
@@ -44,10 +44,10 @@ void RTC::get_date_time() {
 	//     function's execution.
 	while (is_rtc_updating() != 0);
 	do {
-		update_rtc_data(newTime);
+		get_rtc_data(newTime);
 		// Wait for update to read again.
 		while (is_rtc_updating() != 0);
-		update_rtc_data(Time);
+		get_rtc_data(Time);
 	}
 	while ((newTime.second     != Time.second)
 		   || (newTime.minute  != Time.minute)

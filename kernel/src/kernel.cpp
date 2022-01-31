@@ -101,7 +101,6 @@ extern "C" void _start(BootInfo* bInfo) {
 	srl.writestr("!===--- You have now booted into LensorOS ---===!\r\n");
 	// Clear screen (ensure known state).
 	gRend.clear();
-
 	/// GPLv3 LICENSE REQUIREMENT (interactive terminal must print copyright notice).
 	const char* GPLv3 = "<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>";
 	// TO SERIAL
@@ -114,27 +113,26 @@ extern "C" void _start(BootInfo* bInfo) {
 	gRend.crlf();
 	gRend.swap();
 	/// END GPLv3 LICENSE REQUIREMENT.
-	
 	// Start keyboard input at draw position, not origin.
 	gTextPosition = gRend.DrawPos; 
-	// UPDATE SCREEN FROM TARGET BUFFER IN INFINITE LOOP.
 	while (true) {
-		// PRINT PIT ELAPSED TIME
+		// PRINT PIT ELAPSED TIME.
 		gRend.DrawPos = {500, 0};
 		gRend.putstr("PIT Elapsed: ");
 		gRend.putstr(to_string(gPIT.seconds_since_boot()));
 		gRend.crlf();
-		// PRINT REAL TIME
-		gRTC.get_date_time();
+		// PRINT REAL TIME.
+		gRTC.update_data();
 		print_now(500);
+		// PRINT RTC ELAPSED TIME.
 		gRend.putstr("It has been ");
-		gRend.putstr(to_string((double)gRTC.Ticks / RTC_PERIODIC_HERTZ));
+		gRend.putstr(to_string(gRTC.seconds_since_boot()));
 		gRend.putstr(" seconds since boot");
 		gRend.crlf(500);
-		// PRINT MEMORY INFO
+		// PRINT MEMORY INFO.
 		print_memory_info();
-		// UPDATE ACTIVE RENDER BUFFER FROM TARGET.
-		gRend.swap({500, 0}, {80000, 80000});
+		// UPDATE TOP RIGHT OF SCREEN ONLY.
+		gRend.swap({500, 0}, {80000, 400});
 	}
 	// HALT LOOP (KERNEL INACTIVE).
 	while (true) {

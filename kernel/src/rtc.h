@@ -109,7 +109,7 @@ public:
 	u64 Ticks {0};
 
 	RTC() {
-		get_date_time();
+		update_data();
 		/// Set divisor for a 1024hz periodic interrupt.
 		u8 statusA = read_register(0x8a);
 		outb(CMOS_ADDR, 0x8a);
@@ -127,10 +127,14 @@ public:
 		return inb(CMOS_DATA);
 	}
 
-	void get_date_time();
+	double seconds_since_boot() {
+		return (double)Ticks / RTC_PERIODIC_HERTZ;
+	}
+
+	void update_data();
 	void set_periodic_int_enabled(bool);
 private:
-	void update_rtc_data(RTCData&);
+	void get_rtc_data(RTCData&);
 };
 
 extern RTC gRTC;
