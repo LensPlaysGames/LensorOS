@@ -102,8 +102,8 @@ struct RTCData {
 
 class RTC {
 public:
-	RTCData time;
-	u64 ticks {0};
+	RTCData Time;
+	u64 Ticks {0};
 
 	RTC() {
 		get_date_time();

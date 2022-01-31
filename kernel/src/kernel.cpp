@@ -51,17 +51,17 @@ void print_memory_info() {
 void print_now(u64 xOffset = 0) {
 	gRend.crlf(xOffset);
 	gRend.putstr("Now is ");
-	gRend.putstr(to_string((u64)gRTC.time.hour));
+	gRend.putstr(to_string((u64)gRTC.Time.hour));
 	gRend.putchar(':');
-	gRend.putstr(to_string((u64)gRTC.time.minute));
+	gRend.putstr(to_string((u64)gRTC.Time.minute));
 	gRend.putchar(':');
-	gRend.putstr(to_string((u64)gRTC.time.second));
+	gRend.putstr(to_string((u64)gRTC.Time.second));
 	gRend.putstr(" on ");
-	gRend.putstr(to_string((u64)gRTC.time.year));
+	gRend.putstr(to_string((u64)gRTC.Time.year));
 	gRend.putchar('-');
-	gRend.putstr(to_string((u64)gRTC.time.month));
+	gRend.putstr(to_string((u64)gRTC.Time.month));
 	gRend.putchar('-');
-	gRend.putstr(to_string((u64)gRTC.time.date));
+	gRend.putstr(to_string((u64)gRTC.Time.date));
 	gRend.crlf(xOffset);
 }
 
@@ -119,12 +119,16 @@ extern "C" void _start(BootInfo* bInfo) {
 	gTextPosition = gRend.DrawPos; 
 	// UPDATE SCREEN FROM TARGET BUFFER IN INFINITE LOOP.
 	while (true) {
+		// PRINT PIT ELAPSED TIME
+		gRend.DrawPos = {500, 0};
+		gRend.putstr("PIT Elapsed: ");
+		gRend.putstr(to_string(gPIT.seconds_since_boot()));
+		gRend.crlf();
 		// PRINT REAL TIME
 		gRTC.get_date_time();
-		gRend.DrawPos = {500, 0};
 		print_now(500);
 		gRend.putstr("It has been ");
-		gRend.putstr(to_string((double)gRTC.ticks / RTC_PERIODIC_HERTZ));
+		gRend.putstr(to_string((double)gRTC.Ticks / RTC_PERIODIC_HERTZ));
 		gRend.putstr(" seconds since boot");
 		gRend.crlf(500);
 		// PRINT MEMORY INFO

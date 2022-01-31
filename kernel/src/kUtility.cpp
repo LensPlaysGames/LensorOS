@@ -84,7 +84,9 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	// SETUP SERIAL I/O.
 	srl = UARTDriver();
 	const char* bootMsg = "<<>><<<!===--- You are now booting into LensorOS ---===!>>><<>>";
+	srl.writestr("\r\n\r\n");
 	srl.writestr(bootMsg);
+	srl.writestr("\r\n\r\n");
 	srl.writestr("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
 	// SETUP GOP RENDERER.
 	target = *bInfo->framebuffer;
@@ -134,42 +136,49 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	prepare_interrupts();
 	srl.writestr("[kUtil]: Interrupts prepared.\r\n");
 	// SYSTEM TIMER.
-	u64 pitFreq = 2000;
-	initialize_timer(pitFreq);
-	srl.writestr("Programmable Interval Timer initialized to ");
-	srl.writestr(to_string(pitFreq));
+	gPIT = PIT();
+	gPIT.initialize_pit();
+	srl.writestr("[kUtil]: Programmable Interval Timer initialized.\r\n");
+	srl.writestr("  Channel 0, H/L Bit Access\r\n");
+	srl.writestr("  Rate Generator, BCD Disabled\r\n");
+	srl.writestr("  Periodic interrupts at ");
+	srl.writestr(to_string(PIT_FREQUENCY));
 	srl.writestr("hz.\r\n");
-	// PREPARE PS/2 MOUSE.
-	init_ps2_mouse();
 	// INITIALIZE REAL TIME CLOCK.
 	gRTC = RTC();
-	srl.writestr("Real Time Clock initialized.\r\n");
-	// PRINT REAL TIME TO SERIAL OUTPUT.
-	srl.writestr("Now is ");
-	srl.writestr(to_string((u64)gRTC.time.hour));
-	srl.writeb(':');
-	srl.writestr(to_string((u64)gRTC.time.minute));
-	srl.writeb(':');
-	srl.writestr(to_string((u64)gRTC.time.second));
-	srl.writestr(" on ");
-	srl.writestr(to_string((u64)gRTC.time.year));
-	srl.writeb('-');
-	srl.writestr(to_string((u64)gRTC.time.month));
-	srl.writeb('-');
-	srl.writestr(to_string((u64)gRTC.time.date));
-	srl.writestr("\r\n");
-	// SET RTC PERIODIC INTERRUPTS ENABLED.
+	srl.writestr("[kUtil]: Real Time Clock initialized.\r\n");
 	gRTC.set_periodic_int_enabled(true);
+	srl.writestr("  Periodic interrupts at ");
+	srl.writestr(to_string((double)RTC_PERIODIC_HERTZ));
+	srl.writestr("hz\r\n");
+	// PRINT REAL TIME TO SERIAL OUTPUT.
+	srl.writestr("[kUtil]: Now is ");
+	srl.writestr(to_string((u64)gRTC.Time.hour));
+	srl.writeb(':');
+	srl.writestr(to_string((u64)gRTC.Time.minute));
+	srl.writeb(':');
+	srl.writestr(to_string((u64)gRTC.Time.second));
+	srl.writestr(" on ");
+	srl.writestr(to_string((u64)gRTC.Time.year));
+	srl.writeb('-');
+	srl.writestr(to_string((u64)gRTC.Time.month));
+	srl.writeb('-');
+	srl.writestr(to_string((u64)gRTC.Time.date));
+	srl.writestr("\r\n");
 	// PREPARE DRIVERS.
 	gFATDriver = FATDriver();
 	// TODO: PREPARE DEVICE TREE.
 	// SYSTEM INFORMATION IS FOUND IN ACPI TABLE
 	prepare_acpi(bInfo);
 	srl.writestr("ACPI prepared.\r\n");
-	// INTERRUPT MASKS.
+	// PREPARE PS/2 MOUSE.
+	init_ps2_mouse();
+	// INTERRUPT MASKS (IRQs).
 	// 0 = UNMASKED, ALLOWED TO HAPPEN
+	/// System Timer, PS/2 Keyboard, Interrupts Enabled
 	outb(PIC1_DATA, 0b11111000);
 	io_wait();
+	/// Real time clock, PS/2 Mouse
 	outb(PIC2_DATA, 0b11101110);
 	io_wait();
 	// ENABLE INTERRUPTS.

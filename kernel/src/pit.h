@@ -4,8 +4,9 @@
 #include "integers.h"
 #include "io.h"
 
-#define MIN_FREQ 20
-#define MAX_FREQ 1193180
+#define PIT_MAX_FREQ 1193180
+#define PIT_DIVISOR 59659
+#define PIT_FREQUENCY ((double)PIT_MAX_FREQ / PIT_DIVISOR)
 
 #define PIT_CH0_DAT 0x40
 #define PIT_CH1_DAT 0x41
@@ -35,37 +36,18 @@
 //   1 0 =      channel 2
 //   1 1 =      read-back command (8254 only)
 
-void set_frequency(u32 freq);
-void initialize_timer(u32 freq);
+class PIT {
+public:
+	u64 Ticks {0};
 
-extern u64 gTicks;
-extern u32 gFreq;
+	PIT() {}
 
-// Stopwatch functionality
-extern u64 start;
-extern u64 end;
+	void initialize_pit();
 
-// Get seconds elapsed for a given amount of ticks.
-double get_seconds(u64 ticks);
-// Get total seconds since bootup.
-double get_seconds();
+	double seconds_since_boot();
+};
 
-inline void timer_start() {
-	start = gTicks;
-}
-
-inline void timer_end() {
-	end = gTicks;
-}
-
-inline u64 timer_elapsed_ticks() {
-	return end - start;
-}
-
-double timer_elapsed_seconds();
-
-// Halt cpu execution for given amount of time.
-void sleep_sec(double seconds);
-void sleep_ms(u64 milliseconds);
+// TODO: Store in device tree.
+extern PIT gPIT;
 
 #endif

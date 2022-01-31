@@ -18,7 +18,7 @@
 // SERIAL BUS COMMUNICATION
 #include "io.h"
 // TIMING
-#include "timer.h"
+#include "pit.h"
 #include "rtc.h"
 // SYSTEM TABLES
 #include "acpi.h"

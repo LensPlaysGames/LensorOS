@@ -10,7 +10,7 @@ inline void end_of_interrupt(u8 IRQx) {
 // HARDWARE INTERRUPT HANDLERS (IRQs)
 /// IRQ0: SYSTEM TIMER
 __attribute__((interrupt)) void system_timer_handler(InterruptFrame* frame) {
-	gTicks += 1;
+	gPIT.Ticks += 1;
 	end_of_interrupt(0);
 }
 
@@ -33,7 +33,7 @@ __attribute__((interrupt)) void keyboard_handler(InterruptFrame* frame) {
 __attribute__((interrupt)) void rtc_periodic_handler(InterruptFrame* frame) {
 	u8 statusC = gRTC.read_register(0x0C);
 	if (statusC & 0b01000000) {
-		gRTC.ticks += 1;
+		gRTC.Ticks += 1;
 	}
 	end_of_interrupt(8);
 }

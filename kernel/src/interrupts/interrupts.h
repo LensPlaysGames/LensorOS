@@ -16,9 +16,13 @@
 #include "../basic_renderer.h"
 #include "../panic.h"
 #include "../io.h"
+/// IRQ0
+#include "../pit.h"
+/// IRQ1
 #include "../keyboard.h"
+/// IRQ12
 #include "../mouse.h"
-#include "../timer.h"
+
 
 struct InterruptFrame;
 // HARDWARE INTERRUPT REQUESTS (IRQs)
