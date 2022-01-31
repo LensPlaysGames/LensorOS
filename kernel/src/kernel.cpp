@@ -1,6 +1,9 @@
 #include "kUtility.h"
 
 // TODO:
+// - Port kernel to a new build system (as many as possible)
+//   - Ideally something like CMake could be used, but with the linux-dependant tool-chain I don't see that happening.
+//   - Something like `tup` or `ninja` could be good to implement as they would scale much better than `make`.
 // - Rename `timer.h` + `timer.cpp` to `pit.h` and `pit.cpp` respectively.
 //   - Abstract `timer` class (namespace?) that will be used for an API for things like `sleep`
 // - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
@@ -120,12 +123,9 @@ extern "C" void _start(BootInfo* bInfo) {
 		gRTC.get_date_time();
 		gRend.DrawPos = {500, 0};
 		print_now(500);
-		gRend.putstr(to_string(gRTC.ticks));
-		gRend.putstr(" RTC ticks since boot.");
-		gRend.crlf(500);
 		gRend.putstr("It has been ");
-		gRend.putstr(to_string(gRTC.ticks / RTC_PERIODIC_HERTZ));
-		gRend.putstr(" seconds since boot.");
+		gRend.putstr(to_string((double)gRTC.ticks / RTC_PERIODIC_HERTZ));
+		gRend.putstr(" seconds since boot");
 		gRend.crlf(500);
 		// PRINT MEMORY INFO
 		print_memory_info();

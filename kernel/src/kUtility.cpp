@@ -83,7 +83,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	init_heap((void*)0x700000000000, 1);
 	// SETUP SERIAL I/O.
 	srl = UARTDriver();
-	const char* bootMsg = "\r\n\r\n\r\n<<>><<<!===--- You are now booting into LensorOS ---===!>>><<>>\r\n";
+	const char* bootMsg = "<<>><<<!===--- You are now booting into LensorOS ---===!>>><<>>";
 	srl.writestr(bootMsg);
 	srl.writestr("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
 	// SETUP GOP RENDERER.
