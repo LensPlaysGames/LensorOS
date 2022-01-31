@@ -88,8 +88,16 @@ rekernel:
 	$(MAKE) clean
 	$(MAKE) kernel
 
+rekernel_debug:
+	$(MAKE) clean
+	$(MAKE) kernel_debug
+
 all:
 	$(MAKE) rekernel
+	$(MAKE) image
+
+debug:
+	$(MAKE) rekernel_debug
 	$(MAKE) image
 
 run:
