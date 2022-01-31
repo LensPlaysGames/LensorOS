@@ -16,9 +16,9 @@ enum class FileSystemFormat {
 
 class FileSystem {
 public:
-	FileSystemFormat Format;
+	FileSystemFormat Format {FileSystemFormat::UNKNOWN};
 	AHCI::AHCIDriver* AHCI;
-    u8 PortNumber;
+    u8 PortNumber {0};
 
 	FileSystem() {}
 	virtual ~FileSystem() {}
