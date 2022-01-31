@@ -37,7 +37,7 @@ clean:
 image:
 	@echo "\n!===--- Creating FAT32 formatted bootable image ---===!\n"
 	dd if=/dev/zero of=$(BUILDDIR)/$(OSNAME).img count=93750
-	mformat -i $(BUILDDIR)/$(OSNAME).img -F ::
+	mformat -i $(BUILDDIR)/$(OSNAME).img -F -v "bootdisk" ::
 	mmd -i $(BUILDDIR)/$(OSNAME).img ::/EFI
 	mmd -i $(BUILDDIR)/$(OSNAME).img ::/EFI/BOOT
 	mmd -i $(BUILDDIR)/$(OSNAME).img ::/LensorOS
@@ -49,11 +49,11 @@ image:
 fat12_image:
 	@echo "\n!===--- Creating FAT12 formatted bootable image ---===!\n"
 	dd if=/dev/zero of=$(BUILDDIR)/$(OSNAME).img count=93750
-	mformat -i $(BUILDDIR)/$(OSNAME).img -f 1440 ::
-	mmd -i $(BUILDDIR)/$(OSNAME).img ::/EFI
-	mmd -i $(BUILDDIR)/$(OSNAME).img ::/EFI/BOOT
+	mformat -i $(BUILDDIR)/$(OSNAME).img -f 1440 -v "bootdisk" ::
+	mmd -i $(BUILDDIR)/$(OSNAME).img ::/efi
+	mmd -i $(BUILDDIR)/$(OSNAME).img ::/efi/boot
 	mmd -i $(BUILDDIR)/$(OSNAME).img ::/LensorOS
-	mcopy -i $(BUILDDIR)/$(OSNAME).img $(BOOTEFI) ::/EFI/BOOT
+	mcopy -i $(BUILDDIR)/$(OSNAME).img $(BOOTEFI) ::/efi/boot
 	mcopy -i $(BUILDDIR)/$(OSNAME).img startup.nsh ::
 	mcopy -i $(BUILDDIR)/$(OSNAME).img $(BUILDDIR)/kernel.elf ::/LensorOS
 	mcopy -i $(BUILDDIR)/$(OSNAME).img $(BUILDDIR)/dfltfont.psf ::/LensorOS
