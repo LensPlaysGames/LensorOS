@@ -73,12 +73,12 @@ Status Register `D`:
 #define CENTURY_REGISTER 0x00
 
 struct RTCData {
-	u8  second	{0};
-	u8  minute	{0};
-	u8  hour	{0};
+	u8  second  {0};
+	u8  minute  {0};
+	u8  hour    {0};
 	u8  weekday {0};
-	u8  date	{0};
-	u8  month	{0};
+	u8  date    {0};
+	u8  month   {0};
 	u32 year    {0};
 	u8  century {0};
 

@@ -38,18 +38,12 @@ struct Framebuffer {
 const u32 BytesPerPixel = 4;
 
 class BasicRenderer {
-/* IMPROVEMENTS
-	 - Linked List of RenderObjects that are rendered in a `render()` function.
-	   - RenderObject struct = data to draw object (DrawPos, Size, u8* Bitmap, Color, Size).
-	   - render() = iterate object list, drawbmp of each one.
-*/
 public:
 	// Target = framebuffer to draw to in memory
 	Framebuffer* Render          {nullptr};
 	Framebuffer* Target          {nullptr};
 	PSF1_FONT*   Font            {nullptr};
-	uVector2      DrawPos         {0, 0};
-	// I = ignore                 0xIIRRGGBB
+	uVector2      DrawPos        {0, 0};
 	u32 BackgroundColor {0x00000000};
 
 	BasicRenderer() {}
