@@ -25,11 +25,11 @@ OBJS += $(patsubst $(SRCDIR)/%.asm, $(OBJDIR)/%_asm.o, $(ASMSRC))
 DIRS = $(wildcard $(SRCDIR)/*)
 
 .PHONY: default
-default: all;
+default: all
 
 setup:
-	@mkdir $(BUILDDIR)
-	@mkdir $(OBJDIR)
+	@mkdir -p $(BUILDDIR)
+	@mkdir -p $(OBJDIR)
 
 clean:
 	rm -r $(OBJDIR)
@@ -61,24 +61,13 @@ fat12_image:
 kernel: $(OBJS) link
 $(OBJDIR)/interrupts/interrupts.o: $(SRCDIR)/interrupts/interrupts.cpp
 	@mkdir -p $(@D)
-	$(CC) -mno-red-zone -mgeneral-regs-only -ffreestanding -fno-exceptions -c $^ -o $@
+	$(CC) $(DEBUGFLAGS) -mno-red-zone -mgeneral-regs-only -ffreestanding -fno-exceptions -c $^ -o $@
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -c $^ -o $@
+	$(CC) $(DEBUGFLAGS) $(CFLAGS) -c $^ -o $@
 $(OBJDIR)/%_asm.o: $(SRCDIR)/%.asm
 	@mkdir -p $(@D)
-	$(ASMC) $(ASMFLAGS) $^ -o $@
-
-kernel_debug: $(OBJS) link
-$(OBJDIR)/interrupts/interrupts.o: $(SRCDIR)/interrupts/interrupts.cpp
-	@mkdir -p $(@D)
-	$(CC) -g -mno-red-zone -mgeneral-regs-only -ffreestanding -fno-exceptions -c $^ -o $@
-$(OBJDIR)/%.o: $(SRCDIR)/%.cpp
-	@mkdir -p $(@D)
-	$(CC) -g $(CFLAGS) -c $^ -o $@
-$(OBJDIR)/%_asm.o: $(SRCDIR)/%.asm
-	@mkdir -p $(@D)
-	$(ASMC) -g $(ASMFLAGS) $^ -o $@
+	$(ASMC) $(DEBUGFLAGS) $(ASMFLAGS) $^ -o $@
 
 link:
 	@echo "\n!===--- Linking kernel ---===!\n"
@@ -88,17 +77,14 @@ rekernel:
 	$(MAKE) clean
 	$(MAKE) kernel
 
-rekernel_debug:
-	$(MAKE) clean
-	$(MAKE) kernel_debug
-
-all:
+build:
 	$(MAKE) rekernel
 	$(MAKE) image
 
+all: build
+
 debug:
-	$(MAKE) rekernel_debug
-	$(MAKE) image
+	$(MAKE) all DEBUGFLAGS="-g"
 
 run:
 	@echo "\n!===--- Running QEMU ---===!\n"
