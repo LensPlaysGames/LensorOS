@@ -214,6 +214,31 @@ namespace AHCI {
 						break;
 					}
 					srl.writestr("\r\n");
+					// Write label and type of FAT device.
+					switch (fs->Type) {
+					case FATType::FAT12:
+					case FATType::FAT16:
+						srl.writestr("  Label: ");
+						srl.writestr((char*)&((BootRecordExtension16*)&fs->BR.Extended)->VolumeLabel[0], 11);
+						srl.writestr("\r\n");
+						srl.writestr(("  Type: "));
+						srl.writestr((char*)&((BootRecordExtension16*)&fs->BR.Extended)->FatTypeLabel[0], 8);
+						srl.writestr("\r\n");
+						break;
+					case FATType::FAT32:
+					case FATType::ExFAT:
+						srl.writestr("  Label: ");
+						srl.writestr((char*)&((BootRecordExtension32*)&fs->BR.Extended)->VolumeLabel[0], 11);
+						srl.writestr("\r\n");
+						srl.writestr(("  Type: "));
+						srl.writestr((char*)&((BootRecordExtension32*)&fs->BR.Extended)->FatTypeLabel[0], 8);
+						srl.writestr("\r\n");
+						break;
+					default:
+						break;
+					}
+
+
 					srl.writestr("  Total Size: ");
 					srl.writestr(to_string((u64)fs->get_total_size() / 1024 / 1024));
 					srl.writestr(" mib\r\n");

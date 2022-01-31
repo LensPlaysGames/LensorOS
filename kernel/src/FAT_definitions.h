@@ -61,12 +61,12 @@ struct BootRecordExtension32 {
 
 /// Boot Record
 ///   Starting at logical sector zero of the partition, occupies one sector.
-///   Contains both data and code mixed together.
+///   Contains both data and code mixed together for compatibility reasons.
 struct BootRecord {
 	// See above.
 	BIOSParameterBlock BPB;
-	// This will be cast to it's specific type once the driver parses
-	//   what type of FAT this is (extended 16 or extended 32).
+	/* This will be cast to it's specific type when the driver needs it
+	     based on what type of FAT the current device is (12/16 or Ex/32). */
 	u8 Extended[54];
 } __attribute__((packed));
 
