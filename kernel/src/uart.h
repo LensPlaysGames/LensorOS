@@ -69,6 +69,7 @@ public:
 
 	/// Write a C-style null-terminated byte-string to the serial output COM1.
 	void writestr(const char* str);
+	void writestr(char* str, u64 numChars);
 };
 
 extern UARTDriver srl;
