@@ -20,6 +20,9 @@ public:
 	AHCI::AHCIDriver* AHCI;
     u8 PortNumber;
 
+	FileSystem() {}
+	virtual ~FileSystem() {}
+
 	virtual void read (Inode* inode) = 0;
 	virtual void write(Inode* inode) = 0;
 

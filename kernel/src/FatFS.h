@@ -36,6 +36,8 @@ public:
 		}
 	}
 
+	virtual ~FatFS() {}
+
 	void read (Inode* inode) override {
 		// TODO: Read from FAT file-system based on VFS intermediate-representation's data.
 		(void)inode;
