@@ -2,26 +2,23 @@
 
 RTC gRTC;
 
-u8 RTC::is_rtc_updating() {
-	outb(CMOS_ADDR, 0x0a);
-	return inb(CMOS_DATA) & 0x80;
-}
-u8 RTC::read_register(u8 reg) {
-	outb(CMOS_ADDR, reg);
-	return inb(CMOS_DATA);
-}
-
-// TODO: Support setting RTC interrupt frequency (default 1024hz).
-/// Set IRQ8 interrupt enabled or disabled.
+/// Set IRQ8 periodic interrupt enabled or disabled.
 /// NOTE: Must be called when interrupts are disabled (in-between `cli` and `sti`)!
-void RTC::set_interrupts_enabled(bool enabled) {
+void RTC::set_periodic_int_enabled(bool enabled) {
     u8 statusB = read_register(0x8b);
-	outb(CMOS_ADDR, 0x8b);
-	if (enabled) { outb(CMOS_DATA, statusB | 0b01000000); }
-	else         { outb(CMOS_DATA, statusB & 0b10111111); }
+	if (enabled) {
+		// Enable periodic interrupt.
+		outb(CMOS_ADDR, 0x8b);
+		outb(CMOS_DATA, statusB | 0b01000000);
+	}
+	else {
+		// Disable periodic interrupt.
+		outb(CMOS_ADDR, 0x8b);
+		outb(CMOS_DATA, statusB & 0b10111111);
+	}
 }
 
-void RTC::get_rtc_data(RTCData& data) {
+void RTC::update_rtc_data(RTCData& data) {
 	data.second  = read_register(0x00);
 	data.minute  = read_register(0x02);
 	data.hour    = read_register(0x04);
@@ -38,7 +35,7 @@ void RTC::get_date_time() {
 	// SPIN UNTIL RTC IS NOT UPDATING
 	//   This may be up to one second.
 	while (is_rtc_updating() != 0);
-	get_rtc_data(time);
+	update_rtc_data(time);
 	RTCData new_time;
 	// SPIN UNTIL RTC IS NOT UPDATING AGAIN
 	//   This paired with the following comparison
@@ -47,10 +44,10 @@ void RTC::get_date_time() {
 	//     function's execution.
 	while (is_rtc_updating() != 0);
 	do {
-		get_rtc_data(new_time);
+		update_rtc_data(new_time);
 		// Wait for update to read again.
 		while (is_rtc_updating() != 0);
-		get_rtc_data(time);
+		update_rtc_data(time);
 	}
 	while ((new_time.second  != time.second)
 		   || (new_time.minute  != time.minute)

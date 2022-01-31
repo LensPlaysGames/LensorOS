@@ -1,10 +1,12 @@
 #include "kUtility.h"
 
 // TODO:
+// - Rename `timer.h` + `timer.cpp` to `pit.h` and `pit.cpp` respectively.
+//   - Abstract `timer` class (namespace?) that will be used for an API for things like `sleep`
 // - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
 // - Save parsed PCI devices for quick lookup (device tree).
 // - FILE SYSTEM:
-//   - Virtual File System that will store intermediate representation of files/folders/storage media devices
+//   - Virtual File System that will store intermediate representation of files/folders/worlds/storage media devices
 //   - AHCI Driver Update: DMA ATA Write implementation
 //   - Another filesystem better suited for mass storage (Ext2? Proprietary?)
 // - Write ASM interrupt wrapper (no longer rely on `__attribute__((interrupt))`)
@@ -91,7 +93,7 @@ void srl_memory_info() {
 }
 
 extern "C" void _start(BootInfo* bInfo) {
-	// The heavy lifting is done within `kUtility.cpp`.
+	// The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
     kernel_init(bInfo);
 	srl.writestr("!===--- You have now booted into LensorOS ---===!\r\n");
 	// Clear screen (ensure known state).
@@ -118,6 +120,13 @@ extern "C" void _start(BootInfo* bInfo) {
 		gRTC.get_date_time();
 		gRend.DrawPos = {500, 0};
 		print_now(500);
+		gRend.putstr(to_string(gRTC.ticks));
+		gRend.putstr(" RTC ticks since boot.");
+		gRend.crlf(500);
+		gRend.putstr("It has been ");
+		gRend.putstr(to_string(gRTC.ticks / RTC_PERIODIC_HERTZ));
+		gRend.putstr(" seconds since boot.");
+		gRend.crlf(500);
 		// PRINT MEMORY INFO
 		print_memory_info();
 		// UPDATE ACTIVE RENDER BUFFER FROM TARGET.

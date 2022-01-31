@@ -159,7 +159,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
 	srl.writestr(to_string((u64)gRTC.time.date));
 	srl.writestr("\r\n");
 	// SET RTC PERIODIC INTERRUPTS ENABLED.
-	gRTC.set_interrupts_enabled(true);
+	gRTC.set_periodic_int_enabled(true);
 	// PREPARE DRIVERS.
 	gFATDriver = FATDriver();
 	// TODO: PREPARE DEVICE TREE.

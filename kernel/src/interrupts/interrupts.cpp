@@ -22,7 +22,19 @@ __attribute__((interrupt)) void keyboard_handler(InterruptFrame* frame) {
 }
 
 /// IRQ8: PERIODIC (REAL TIME CLOCK)
+/// NOTE: If register 'C' is not read from inside this handler,
+///         no further interrupts of this type will be sent.
+/// Status Register `C`:
+///   Bits 0-3: Reserved (do not touch)
+///          4: Update-ended interrupt
+///          5: Alarm interrupt
+///          6: Periodic Interrupt
+///          7: Interrupt Request (IRQ)
 __attribute__((interrupt)) void rtc_periodic_handler(InterruptFrame* frame) {
+	u8 statusC = gRTC.read_register(0x0C);
+	if (statusC & 0b01000000) {
+		gRTC.ticks += 1;
+	}
 	end_of_interrupt(8);
 }
 
