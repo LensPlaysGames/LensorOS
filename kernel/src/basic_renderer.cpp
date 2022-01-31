@@ -9,30 +9,10 @@ inline void BasicRenderer::clamp_draw_position() {
 }
 
 void BasicRenderer::swap(uVector2 position, uVector2 size) {
-	// Can't update nothing.
-	if (size.x == 0 || size.y == 0) { return; }
-	// Only swap what is within the bounds of the framebuffer.
+    // Only swap what is within the bounds of the framebuffer.
     if (position.x > Target->PixelWidth
-		|| position.y > Target->PixelHeight) { return; }
-	// Ensure size doesn't over-run edge of framebuffer.
-	u64 diffX = Target->PixelWidth - position.x;
-	u64 diffY = Target->PixelHeight - position.y;
-	if (diffX < size.x) { size.x = diffX; }
-	if (diffY < size.y) { size.y = diffY; }
-	// Calculate addresses.
-    u32* targetBaseAddress = (u32*)((u64)Target->BaseAddress
-									+ position.x
-									+ (position.y * Target->PixelsPerScanLine));
-	u32* renderBaseAddress = (u32*)((u64)Render->BaseAddress
-									+ position.x
-									+ (position.y * Render->PixelsPerScanLine));
-	// Copy rectangle line-by-line.
-	u64 bytesPerLine = BytesPerPixel * size.x;
-	for (u64 y = 0; y < size.y; ++y) {
-		targetBaseAddress += Target->PixelsPerScanLine;
-		renderBaseAddress += Render->PixelsPerScanLine;
-		memcpy(targetBaseAddress, renderBaseAddress, bytesPerLine);
-	}
+        || position.y > Target->PixelHeight) { return; }
+    u64 diffY = Target->PixelHeight - position.y;
 }
 
 // Carriage return ('\r')
