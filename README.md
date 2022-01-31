@@ -88,3 +88,6 @@ NOTE: One only needs to run `make` for the bootloader, and `make setup` for the 
 If one needs to recompile headers, there is a make target for ease-of-use: `make rekernel`. All this does is run `make clean` followed by `make kernel` under the hood.
 
 If you would like to debug the kernel, use the `kernel_debug` make target to generate a kernel `.efi` file with debug symbols embedded.
+
+If building for real hardware, ensure to remove `-DQEMU` from the Makefile `CFLAGS` variable. \
+This allows for the hardware timers to be used to their full potential (asking QEMU for 1000hz interrupts from multiple devices overloads the emulator and guest time falls behind drastically; to counter-act this, very slow frequency periodic interrupts are setup as to allow the emulator to process them accordingly, allowing for accurate time-keeping even in QEMU).

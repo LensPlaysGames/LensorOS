@@ -5,7 +5,11 @@
 #include "io.h"
 
 #define PIT_MAX_FREQ 1193180
+#ifdef QEMU
 #define PIT_DIVISOR 59659
+#else
+#define PIT_DIVISOR 1193
+#endif
 #define PIT_FREQUENCY ((double)PIT_MAX_FREQ / PIT_DIVISOR)
 
 #define PIT_CH0_DAT 0x40

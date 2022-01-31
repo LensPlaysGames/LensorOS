@@ -96,10 +96,13 @@ struct RTCData {
 	}
 };
 
-// NOTE: QEMU does not accurately call interrupts if this is around ten or lower.
-#define RTC_PERIODIC_RATE 10
-#define RTC_PERIODIC_HERTZ (32768 >> (RTC_PERIODIC_RATE - 1))
 
+#ifdef QEMU
+#define RTC_PERIODIC_RATE 10
+#else
+#define RTC_PERIODIC_RATE 6
+#endif
+#define RTC_PERIODIC_HERTZ (32768 >> (RTC_PERIODIC_RATE - 1))
 class RTC {
 public:
 	RTCData Time;
