@@ -127,9 +127,7 @@ public:
 		return inb(CMOS_DATA);
 	}
 
-	double seconds_since_boot() {
-		return (double)Ticks / RTC_PERIODIC_HERTZ;
-	}
+	double seconds_since_boot();
 
 	void update_data();
 	void set_periodic_int_enabled(bool);
