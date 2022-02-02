@@ -151,7 +151,7 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
     u32 entryOffset   {0};
     u32 tableValue    {0};
     while (true) {
-        srl.writestr("Reading cluster ");
+        srl.writestr("[FATDriver]: \r\n  Reading cluster ");
         srl.writestr(to_string((u64)clusterIndex));
         srl.writestr("\r\n");
         ahci->Ports[portNumber]->Read(get_first_sector_in_cluster(BR, clusterIndex),
@@ -180,13 +180,14 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
                 continue;
             }
 
+            bool is_file = false;
             /// Read Only: 0b00000001
             /// Hidden:    0b00000010
             /// System:    0b00000100
             /// Volume ID: 0b00001000
             /// Directory: 0b00010000
             /// Archive:   0b00100000
-            srl.writeb((u8)' ');
+            srl.writestr("   ");
             if (clEntry->Attributes & 0b00000001) {
                 srl.writestr(" Read-only ");
             }
@@ -204,7 +205,10 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
             else if (clEntry->Attributes & 0b00001000) {
                 srl.writestr("Volume Label");
             }
-            else { srl.writestr("File"); }
+            else {
+                is_file = true;
+                srl.writestr("File");
+            }
 
             // Write file name
             if (lfnBufferFull) {
@@ -221,12 +225,14 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
                 srl.writestr("\r\n");
             }
 
-            srl.writestr("    File Size: ");
-            srl.writestr(to_string((u64)clEntry->FileSizeInBytes / 1024 / 1024));
-            srl.writestr(" MiB (");
-            srl.writestr(to_string((u64)clEntry->FileSizeInBytes / 1024));
-            srl.writestr(" KiB)\r\n");
-
+            if (is_file) {
+                srl.writestr("      File Size: ");
+                srl.writestr(to_string((u64)clEntry->FileSizeInBytes / 1024 / 1024));
+                srl.writestr(" MiB (");
+                srl.writestr(to_string((u64)clEntry->FileSizeInBytes / 1024));
+                srl.writestr(" KiB)\r\n");
+            }
+            
             // Increment to next entry in cluster.
             clEntry++;
         }
