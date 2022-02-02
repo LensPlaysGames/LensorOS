@@ -186,25 +186,25 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
             /// Volume ID: 0b00001000
             /// Directory: 0b00010000
             /// Archive:   0b00100000
+            srl.writeb((u8)' ');
+            if (clEntry->Attributes & 0b00000001) {
+                srl.writestr(" Read-only ");
+            }
+            if (clEntry->Attributes & 0b00000010) {
+                srl.writestr(" Hidden ");
+            }
+            if (clEntry->Attributes & 0b00000100) {
+                srl.writestr(" System ");
+            }
+            else { srl.writeb((u8)' '); }
+            
             if (clEntry->Attributes & 0b00010000) {
-                srl.writestr("  Directory");
+                srl.writestr("Directory");
             }
             else if (clEntry->Attributes & 0b00001000) {
-                srl.writestr("  Volume Label");
+                srl.writestr("Volume Label");
             }
-            else {
-                if (clEntry->Attributes & 0b00000001) {
-                    srl.writestr("  Read-only");
-                }
-                else if (clEntry->Attributes & 0b00000010) {
-                    srl.writestr("  Hidden");
-                }
-                else if (clEntry->Attributes & 0b00000100) {
-                    srl.writestr("  System");
-                }
-                else { srl.writestr(" "); }
-                srl.writestr(" File");
-            }
+            else { srl.writestr("File"); }
 
             // Write file name
             if (lfnBufferFull) {
