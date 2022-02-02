@@ -2,6 +2,7 @@
 #include "FATDriver.h"
 #include "FatFS.h"
 #include "FAT_definitions.h"
+#include "vfs_inode.h"
 
 namespace AHCI {
 #define HBA_PORT_DEVICE_PRESENT 0x3
@@ -194,6 +195,10 @@ namespace AHCI {
 				if (gFATDriver.is_device_fat_formatted(this, i)) {
 					// TODO: Cache file-system for later use.
 					FatFS* fs = new FatFS(this, i);
+
+					Inode inode = Inode();
+					fs->read(&inode);
+
 					srl.writestr("[AHCI]: Device at port ");
 					srl.writestr(to_string((u64)i));
 					switch (fs->Type) {
@@ -214,6 +219,7 @@ namespace AHCI {
 						break;
 					}
 					srl.writestr("\r\n");
+
 					// Write label and type of FAT device.
 					switch (fs->Type) {
 					case FATType::FAT12:
@@ -237,8 +243,6 @@ namespace AHCI {
 					default:
 						break;
 					}
-
-
 					srl.writestr("  Total Size: ");
 					srl.writestr(to_string((u64)fs->get_total_size() / 1024 / 1024));
 					srl.writestr(" mib\r\n");

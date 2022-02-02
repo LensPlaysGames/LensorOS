@@ -41,8 +41,11 @@ public:
 	void read (Inode* inode) override {
 		// TODO: Read from FAT file-system based on VFS intermediate-representation's data.
 		(void)inode;
+
+		// For now this just lists the files in the root directory.
+		Driver->read_root_dir(AHCI, PortNumber, &BR, Type);
 	}
-	
+
 	void write(Inode* inode) override {
 		// TODO: Write to FAT file-system based on VFS intermediate-representation's data.
 		(void)inode;

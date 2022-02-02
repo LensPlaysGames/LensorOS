@@ -2,10 +2,9 @@
 
 // TODO:
 // - Port kernel to a new build system (as many as possible)
-//   - Ideally something like CMake could be used, but with the linux-dependant tool-chain I don't see that happening.
+//   - Ideally something like CMake could be used, but with the linux-dependant tool-chain I don't see the use of a multi-platform build system.
 //   - Something like `tup` or `ninja` could be good to implement as they would scale much better than `make`.
-// - Rename `timer.h` + `timer.cpp` to `pit.h` and `pit.cpp` respectively.
-//   - Abstract `timer` class (namespace?) that will be used for an API for things like `sleep`
+// - Abstract `timer` class (namespace?) that will be used for an API for things like `sleep`
 // - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
 // - Save parsed PCI devices for quick lookup (device tree).
 // - FILE SYSTEM:

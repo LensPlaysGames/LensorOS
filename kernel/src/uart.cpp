@@ -67,9 +67,7 @@ void UARTDriver::writestr(const char* str) {
 
 /// Write a given number of characters from a given string to serial output COM1.
 void UARTDriver::writestr(char* str, u64 numChars) {
-	// Check for null-terminator at current character.
-	while (numChars > 0)
-	{
+	while (numChars > 0) {
 		// Write current character to serial out.
 		writeb((u8)*str);
 		// Increment to next character.

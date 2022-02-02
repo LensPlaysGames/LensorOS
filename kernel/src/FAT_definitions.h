@@ -8,19 +8,19 @@
 struct BIOSParameterBlock {
 	/// Infinite loop to catch a computer trying to
 	///   boot from non-bootable drive: `EB FE 90`.
-	u8 JumpCode[3];
+	u8  JumpCode[3];
 	/// OEM Identifier
-	u8 OEMID[8];
+	u8  OEMID[8];
 	u16 NumBytesPerSector;
-	u8 NumSectorsPerCluster;
+	u8  NumSectorsPerCluster;
 	/// Boot record sectors included in this value.
 	u16 NumReservedSectors;
-	u8 NumFATsPresent;
+	u8  NumFATsPresent;
 	u16 NumEntriesInRoot;
 	/// Total sectors in logical volume.
 	/// If zero, count is stored in `TotalSectors32`.
 	u16 TotalSectors16;
-	u8 MediaDescriptorType;
+	u8  MediaDescriptorType;
 	/// FAT12/FAT16 ONLY.
 	u16 NumSectorsPerFAT;
 	u16 NumSectorsPerTrack;
@@ -34,12 +34,12 @@ struct BIOSParameterBlock {
 } __attribute__((packed));
 
 struct BootRecordExtension16 {
-	u8 BIOSDriveNumber;
-	u8 Reserved;
-	u8 BootSignature;
+	u8  BIOSDriveNumber;
+	u8  Reserved;
+	u8  BootSignature;
 	u32 VolumeID;
-	u8 VolumeLabel[11];
-	u8 FatTypeLabel[8];
+	u8  VolumeLabel[11];
+	u8  FatTypeLabel[8];
 } __attribute__((packed));
 
 struct BootRecordExtension32 {
@@ -50,13 +50,13 @@ struct BootRecordExtension32 {
 	u16 FATInformation;
 	/// Location of backup of boot record (in case of bad read/corruption).
 	u16 BackupBootRecordSector;
-	u8 Reserved0[12];
-	u8 DriveNumber;
-	u8 Reserved1;
-	u8 BootSignature;
+	u8  Reserved0[12];
+	u8  DriveNumber;
+	u8  Reserved1;
+	u8  BootSignature;
 	u32 VolumeID;
-	u8 VolumeLabel[11];
-	u8 FatTypeLabel[8];
+	u8  VolumeLabel[11];
+	u8  FatTypeLabel[8];
 } __attribute__((packed));
 
 /// Boot Record
@@ -77,5 +77,47 @@ enum class FATType {
 	FAT32 = 3,
 	ExFAT = 4
 };
+
+struct ClusterEntry {
+	// First 8 characters = name, last 3 = extension
+	u8  FileName[11];
+	/// READ_ONLY=0x01,  HIDDEN=0x02,     SYSTEM=0x04,
+	/// VOLUME_ID=0x08,  DIRECTORY=0x10,  ARCHIVE=0x20,
+	///	LFN=0x0f
+	u8  Attributes;
+	u8  Reserved0;
+	u8  CTimeTenthsSecond;
+	/// 5 bits for seconds, 6 bits for minutes, 5 bits for hour.
+	u16 CTime;
+	/// 5 bits for day, 4 bits for month, 7 bits for year.
+	u16 CDate;
+	u16 ADate;
+	u16 ClusterNumberH;
+	u16 MTime;
+	u16 MDate;
+	u16 ClusterNumberL;
+	u32 FileSizeInBytes;
+} __attribute__((packed));
+
+/// Long File Name Cluster Entry
+/// ALWAYS placed directly before their 8.3 entry (seen above).
+struct LFNClusterEntry {
+	u8  Order;
+	/// Five two-byte characters.
+	u16 Characters1[5];
+	/// Always 0x0f.
+	u8  Attribute;
+	/// Zero for name entries.
+	u8  LongEntryType;
+	/// Checksum generated from short file-name when file was created.
+	u8  Checksum;
+	/// Six two-byte characters.
+	u16 Characters2[6];
+	u16 Zero;
+	/// Two two-byte characters.
+	u16 Characters3[2];
+} __attribute__((packed));
+
+// TODO: ExFAT directory entry struct.
 
 #endif
