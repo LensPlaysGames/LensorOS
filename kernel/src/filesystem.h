@@ -17,6 +17,8 @@ enum class FileSystemFormat {
 
 class FileSystem {
 public:
+    // Index within `FileSystems` table.
+    u16 Index;
     FileSystemFormat Format {FileSystemFormat::UNKNOWN};
     AHCI::AHCIDriver* AHCI;
     u8 PortNumber {0};

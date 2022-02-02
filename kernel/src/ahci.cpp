@@ -195,8 +195,7 @@ namespace AHCI {
                 // FAT (File Allocation Table):
                 if (gFATDriver.is_device_fat_formatted(this, i)) {
                     // TODO: Cache file-system for later use.
-                    FatFS* fs = new FatFS(this, i);
-
+                    FatFS* fs = new FatFS(NumFileSystems, this, i);
                     FileSystems[NumFileSystems] = fs;
                     ++NumFileSystems;
 
