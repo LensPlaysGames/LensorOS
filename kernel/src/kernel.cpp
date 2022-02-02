@@ -12,6 +12,7 @@
 // - Abstract `timer` class (namespace?) that will be used for an API for things like `sleep`
 // - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
 // - Save parsed PCI devices for quick lookup (device tree).
+// - A slab-style memory allocator.
 // - FILE SYSTEM:
 //   - Virtual File System that will store intermediate representation of files/folders/worlds/storage media devices
 //   - AHCI Driver Update: DMA ATA Write implementation
@@ -138,6 +139,7 @@ extern "C" void _start(BootInfo* bInfo) {
         // UPDATE TOP RIGHT OF SCREEN ONLY.
         gRend.swap({500, 0}, {80000, 400});
     }
+    
     // HALT LOOP (KERNEL INACTIVE).
     while (true) {
         asm ("hlt");
