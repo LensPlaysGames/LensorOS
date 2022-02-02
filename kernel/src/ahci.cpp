@@ -197,6 +197,9 @@ namespace AHCI {
                     // TODO: Cache file-system for later use.
                     FatFS* fs = new FatFS(this, i);
 
+                    FileSystems[NumFileSystems] = fs;
+                    ++NumFileSystems;
+
                     Inode inode = Inode();
                     fs->read(&inode);
 
