@@ -14,10 +14,10 @@ class FATDriver {
 public:
     FATDriver() {}
     
-    void read_to_inode           (AHCI::AHCIDriver*, u8, Inode*);
-    void write_from_inode        (AHCI::AHCIDriver*, u8, Inode*);
-    bool is_device_fat_formatted (AHCI::AHCIDriver*, u8);
-    void read_root_dir           (AHCI::AHCIDriver*, u8, BootRecord*, FATType type);
+    void read_to_inode           (AHCI::AHCIDriver*, u8 portNumber, Inode*);
+    void write_from_inode        (AHCI::AHCIDriver*, u8 portNumber, Inode*);
+    bool is_device_fat_formatted (AHCI::AHCIDriver*, u8 portNumber);
+    void read_root_dir           (AHCI::AHCIDriver*, u8 portNumber, BootRecord*, FATType type);
 
     u32 get_total_sectors           (BootRecord* BR) const {
         if (BR->BPB.TotalSectors16 == 0) {

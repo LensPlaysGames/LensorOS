@@ -180,17 +180,43 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
                 continue;
             }
 
+            /// Read Only: 0b00000001
+            /// Hidden:    0b00000010
+            /// System:    0b00000100
+            /// Volume ID: 0b00001000
+            /// Directory: 0b00010000
+            /// Archive:   0b00100000
+            if (clEntry->Attributes & 0b00010000) {
+                srl.writestr("  Directory");
+            }
+            else if (clEntry->Attributes & 0b00001000) {
+                srl.writestr("  Volume Label");
+            }
+            else {
+                if (clEntry->Attributes & 0b00000001) {
+                    srl.writestr("  Read-only");
+                }
+                else if (clEntry->Attributes & 0b00000010) {
+                    srl.writestr("  Hidden");
+                }
+                else if (clEntry->Attributes & 0b00000100) {
+                    srl.writestr("  System");
+                }
+                else { srl.writestr(" "); }
+                srl.writestr(" File");
+            }
+
             // Write file name
             if (lfnBufferFull) {
                 // TODO: Apply long file name to current entry...
                 //       This should be stored in VFS structure for later use.
-                srl.writestr("  Entry with long file name: ");
+                srl.writestr(" with long name: ");
                 srl.writestr((char*)&lfnBuffer[0], 26);
                 srl.writestr("\r\n");
                 lfnBufferFull = false;
             }
             else {
-                srl.writestr("  Standard file/folder entry: ");
+                srl.writestr(": ");
                 srl.writestr((char*)&clEntry->FileName[0], 11);
                 srl.writestr("\r\n");
             }
@@ -209,34 +235,81 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
         clusterNumber = clEntry->ClusterNumberL;
         clusterNumber |= (u32)clEntry->ClusterNumberH << 16;
 
-        if (type == FATType::FAT32) {
+        if (type == FATType::FAT12) {
+            FAToffset = clusterNumber + (clusterNumber / 2);
+        }
+        else if (type == FATType::FAT16) {
+            FAToffset = clusterNumber * 2;
+        }
+        else if (type == FATType::FAT32
+                 || type == FATType::ExFAT)
+        {
             FAToffset = clusterNumber * 4;
-            FATsector = BR->BPB.NumReservedSectors + (FAToffset / BR->BPB.NumBytesPerSector);
-            entryOffset = FAToffset % BR->BPB.NumBytesPerSector;
+        }
 
-            if (FATsector == lastFATsector) {
-                // Don't read same file twice in a row.
-                break;
+        FATsector = BR->BPB.NumReservedSectors + (FAToffset / BR->BPB.NumBytesPerSector);
+        entryOffset = FAToffset % BR->BPB.NumBytesPerSector;
+        // Entries under index 0 and 1 are reserved.
+        if (entryOffset <= 1) { break; }
+
+        // Don't read same file twice in a row.
+        if (FATsector == lastFATsector) { break; }
+
+        ahci->Ports[portNumber]->Read(FATsector, 1, (void*)FAT);
+        lastFATsector = FATsector;
+        
+        if (type == FATType::FAT12) {
+            /* If table value is greater or equal to 0x0ff8,
+                 then there are no more clusters in the cluster chain (entire file read).
+               Else if table value is equal to 0x0ff7,
+                 then this cluster is marked as "bad" (prone to errors, should be avoided).
+               Else, table value contains the cluster number of the next cluster in the file. */
+            tableValue = *(u32*)((u16*)&FAT[entryOffset]);
+            if (clusterNumber & 0b1) {
+                tableValue = tableValue >> 4;
             }
-
-            ahci->Ports[portNumber]->Read(FATsector, 1, (void*)FAT);
-            lastFATsector = FATsector;
-
-            tableValue = *(u32*)&FAT[entryOffset];
-            tableValue &= 0x0fffffff;
+            else {
+                tableValue = tableValue & 0x0fff;
+            }
+            if      (tableValue == 0x0ff8) { break;    }
+            else if (tableValue == 0x0ff7) { continue; }
+        }
+        else if (type == FATType::FAT16) {
+            /* If table value is greater or equal to 0xfff8,
+                 then there are no more clusters in the cluster chain (entire file read).
+               Else if table value is equal to 0xfff7,
+                 then this cluster is marked as "bad" (prone to errors, should be avoided).
+               Else, table value contains the cluster number of the next cluster in the file. */
+            tableValue = *(u32*)((u16*)&FAT[entryOffset]);
+            if (clusterNumber & 0b1) {
+                tableValue = tableValue >> 4;
+            }
+            else {
+                tableValue = tableValue & 0x0fff;
+            }
+            if      (tableValue == 0xfff8) { break;    }
+            else if (tableValue == 0xfff7) { continue; }
+        }
+        else if (type == FATType::FAT32) {
             /* If table value is greater or equal to 0x0ffffff8,
                  then there are no more clusters in the cluster chain (entire file read).
                Else if table value is equal to 0x0ffffff7,
                  then this cluster is marked as "bad" (prone to errors, should be avoided).
                Else, table value contains the cluster number of the next cluster in the file. */
-            if (tableValue >= 0x0ffffff8
-                || tableValue <= 1)
-            {
-                break;
-            }
-            else if (tableValue == 0x0ffffff7) {
-                continue;
-            }
+            tableValue = *(u32*)&FAT[entryOffset];
+            tableValue &= 0x0fffffff;
+            if      (tableValue >= 0x0ffffff8) { break;    }
+            else if (tableValue == 0x0ffffff7) { continue; }
+        }
+        else if (type == FATType::ExFAT) {
+            /* If table value is greater or equal to 0xfffffff8,
+                 then there are no more clusters in the cluster chain (entire file read).
+               Else if table value is equal to 0xfffffff7,
+                 then this cluster is marked as "bad" (prone to errors, should be avoided).
+               Else, table value contains the cluster number of the next cluster in the file. */
+            tableValue = *(u32*)&FAT[entryOffset];
+            if      (tableValue >= 0xfffffff8) { break;    }
+            else if (tableValue == 0xfffffff7) { continue; }
         }
         
         // Read next cluster based on tableValue giving cluster number
