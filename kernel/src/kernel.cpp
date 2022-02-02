@@ -2,6 +2,12 @@
 
 // TODO:
 // - Set up a barebones TSS with an ESP0 stack.
+//   - Each task needs three things:
+//     - Task Execution Space (CS, SS for each privilege level, and one or more DS).
+//     - Task-state Segment, or TSS (Segments that make up task execution space, storage for task-state info).
+//     - Page Map Level 4 (Loaded into CR3)
+//   - Each task is identified by segment selector for it's TSS.
+//   - See "Section 7.1.1: Task Structure" of the Intel Software Manual, Volume 3-A.
 // - Port kernel to a new build system (as many as possible).
 // - Abstract `timer` class (namespace?) that will be used for an API for things like `sleep`
 // - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
