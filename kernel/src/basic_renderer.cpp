@@ -163,6 +163,15 @@ void BasicRenderer::drawchar(char c, u32 color) {
             color);
 }
 
+/// Draw a character at the current `DrawPos` using the renderer's bitmap font,
+///   without clearing what's behind the character.
+void BasicRenderer::drawcharover(char c, u32 color) {
+    // Draw character.
+    drawbmpover({8, Font->PSF1_Header->CharacterSize},
+                (u8*)Font->GlyphBuffer + (c * Font->PSF1_Header->CharacterSize),
+                color);
+}
+
 /// Draw a character using the renderer's bitmap font, then increment `DrawPos`
 ///   as such that another character would not overlap with the previous (ie. typing).
 void BasicRenderer::putchar(char c, u32 color)
@@ -193,40 +202,40 @@ void BasicRenderer::clear(uVector2 position, uVector2 size) {
     for (u64 y = 0; y < size.y; ++y) {
         for (u64 x = 0; x < size.x; ++x) {
             *(renderBaseAddress + x) = BackgroundColor;
-    	}
-		renderBaseAddress += Render->PixelsPerScanLine;
-	}
+        }
+        renderBaseAddress += Render->PixelsPerScanLine;
+    }
 }
 void BasicRenderer::clear(uVector2 position, uVector2 size, u32 color) {
-	BackgroundColor = color;
-	clear(position, size);
+    BackgroundColor = color;
+    clear(position, size);
 }
 
 /// Clear a single character to the background color behind the current `DrawPos`.
 /// Effectively 'backspace'.
 void BasicRenderer::clearchar() {
-	// Move up line if necessary.
-	if (DrawPos.x < 8) {
-		DrawPos.x = Target->PixelWidth;
-		if (DrawPos.y >= Font->PSF1_Header->CharacterSize) {
-			DrawPos.y -= Font->PSF1_Header->CharacterSize;
-		}
-		else {
-		    DrawPos = {8, 0};
-		}
-	}
+    // Move up line if necessary.
+    if (DrawPos.x < 8) {
+        DrawPos.x = Target->PixelWidth;
+        if (DrawPos.y >= Font->PSF1_Header->CharacterSize) {
+            DrawPos.y -= Font->PSF1_Header->CharacterSize;
+        }
+        else {
+            DrawPos = {8, 0};
+        }
+    }
     DrawPos.x -= 8;
     drawrect({8, Font->PSF1_Header->CharacterSize}, BackgroundColor);
 }
 
 /// Put a string of characters `str` (must be null terminated) to the screen with color `color`.
 void BasicRenderer::putstr(const char* str, u32 color) {
-	// Set current character to first character in string.
-	char* c = (char*)str;
-	// Loop over string until null-terminator.
-	while (*c != 0) {
-		// put current character of string at current pixel position.
-		putchar(*c, color);
-		c++;
-	}
+    // Set current character to first character in string.
+    char* c = (char*)str;
+    // Loop over string until null-terminator.
+    while (*c != 0) {
+        // put current character of string at current pixel position.
+        putchar(*c, color);
+        c++;
+    }
 }
