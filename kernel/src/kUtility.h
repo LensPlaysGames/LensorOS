@@ -25,19 +25,20 @@
 #include "pci.h"
 // SERIAL COMMUNICATIONS
 #include "uart.h"
+// FILESYSTEM/DISK DRIVERS
 #include "FATDriver.h"
 
 struct BootInfo {
-	Framebuffer* framebuffer;
-	PSF1_FONT* font;
-	EFI_MEMORY_DESCRIPTOR* map;
-	u64 mapSize;
-	u64 mapDescSize;
-	ACPI::RSDP2* rsdp;
+    Framebuffer* framebuffer;
+    PSF1_FONT* font;
+    EFI_MEMORY_DESCRIPTOR* map;
+    u64 mapSize;
+    u64 mapDescSize;
+    ACPI::RSDP2* rsdp;
 };
 
 struct KernelInfo {
-	PageTableManager* PTM;
+    PageTableManager* PTM;
 };
 
 extern u64 _KernelStart;

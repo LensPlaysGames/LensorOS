@@ -129,7 +129,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     // mouth
     gRend.DrawPos = {400, 520};
     gRend.drawrect({182, 20}, 0xff00ffff);
-    gRend.swap();
+    gRend.swap({400, 420}, {182, 120});
     // PREPARE HARDWARE INTERRUPTS (IDT).
     // IDT = INTERRUPT DESCRIPTOR TABLE.
     // Call assembly `lidt`.
@@ -182,6 +182,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     outb(PIC2_DATA, 0b11101110);
     io_wait();
     // ENABLE INTERRUPTS.
+    srl.writestr("[kUtil]: Interrupt masks sent, enabling interrupts.\r\n");
     asm ("sti");
     srl.writestr("[kUtil]: Interrupts enabled.\r\n");
     return kInfo;

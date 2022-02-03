@@ -7,19 +7,17 @@ uVector2 gOldMousePosition = {0, 0};
 
 void mouse_wait() {
     u64 timeout = 100000;
-    while (timeout--){
-        if ((inb(0x64) & 0b10) == 0) {
+    while (timeout--) {
+        if ((inb(0x64) & 0b10) == 0)
             return;
-        }
     }
 }
 
 void mouse_wait_input() {
     u64 timeout = 100000;
-    while (timeout--){
-        if (inb(0x64) & 0b1) {
+    while (timeout--) {
+        if (inb(0x64) & 0b1)
             return;
-        }
     }
 }
 
@@ -69,11 +67,9 @@ u8 mouse_cycle {0};
 u8 mouse_packet[4];
 bool mouse_packet_ready = false;
 void handle_ps2_mouse_interrupt(u8 data) {
+    // Skip first mouse packet (garbage data).
     static bool skip = true;
-    if (skip) {
-        skip = false;
-        return;
-    }
+    if (skip) { skip = false; return; }
     switch (mouse_cycle) {
     case 0:
         // Ensure always one bit is one.
@@ -159,74 +155,76 @@ void DrawMouseCursor() {
     gRend.DrawPos = cachedPos;
 }
 
+u32 DrawColor = 0xffffffff;
+void randomize_draw_color() {
+    DrawColor = (u32)(1103515245 * DrawColor + 12345);
+}
+
 void process_mouse_packet() {
     // ONLY PROCESS A PACKET THAT IS READY
-    if (mouse_packet_ready == false) {
+    if (mouse_packet_ready == false)
         return;
-    }
+    
     // MOUSE BUTTONS
+    // Left Mouse Button (LMB)
     if (mouse_packet[0] & PS2LBTN) {
-        // LEFT CLICK
+        uVector2 cachedPos = gRend.DrawPos;
+        gRend.DrawPos = {gMousePosition.x - 4, gMousePosition.y - gRend.Font->PSF1_Header->CharacterSize};
+        gRend.drawcharover('.', DrawColor);
+        gRend.swap(gRend.DrawPos, {8, gRend.Font->PSF1_Header->CharacterSize});
+        gRend.DrawPos = cachedPos;
     }
+    // Right Mouse Button (RMB)
     else if (mouse_packet[0] & PS2RBTN) {
-        // RIGHT CLICK
+        randomize_draw_color();
     }
-    else if (mouse_packet[0] & PS2MBTN) {
-        // MIDDLE (SCROLL WHEEL) CLICK
-    }
+    // Middle Mouse Button (MMB, Scroll-wheel)
+    else if (mouse_packet[0] & PS2MBTN) {}
+    
     // MOUSE MOVEMENT
     bool isXNegative  {false};
     bool isYNegative  {false};
     bool xOverflow    {false};
     bool yOverflow    {false};
     // DECODE BIT-FLAGS FROM FIRST PACKET
-    if (mouse_packet[0] & PS2XSIGN) {
+    if (mouse_packet[0] & PS2XSIGN)
         isXNegative = true;
-    }
-    if (mouse_packet[0] & PS2YSIGN) {
+    if (mouse_packet[0] & PS2YSIGN)
         isYNegative = true;
-    }
-    if (mouse_packet[0] & PS2XOVERFLOW) {
+    if (mouse_packet[0] & PS2XOVERFLOW)
         xOverflow = true;
-    }
-    if (mouse_packet[0] & PS2YOVERFLOW) {
+    if (mouse_packet[0] & PS2YOVERFLOW)
         yOverflow = true;
-    }
+    
     // ACCUMULATE X MOUSE POSITION FROM SECOND PACKET
     if (isXNegative) {
         mouse_packet[1] = 256 - mouse_packet[1];
         gMousePosition.x -= mouse_packet[1];
-        if (xOverflow) {
+        if (xOverflow)
             gMousePosition.x -= 255;
-        }
     }
     else {
         gMousePosition.x += mouse_packet[1];
-        if (xOverflow) {
+        if (xOverflow)
             gMousePosition.x += 255;
-        }
     }
     // ACCUMULATE Y MOUSE POSITION FROM THIRD PACKET
     if (isYNegative) {
         mouse_packet[2] = 256 - mouse_packet[2];
         gMousePosition.y += mouse_packet[2];
-        if (yOverflow) {
+        if (yOverflow)
             gMousePosition.y += 255;
-        }
     }
     else {
         gMousePosition.y -= mouse_packet[2];
-        if (yOverflow) {
+        if (yOverflow)
             gMousePosition.y -= 255;
-        }
     }
     // CLAMP MOUSE POSITION
-    if (gMousePosition.x >= gRend.Target->PixelWidth) {
+    if (gMousePosition.x >= gRend.Target->PixelWidth)
         gMousePosition.x = gRend.Target->PixelWidth  - 1;
-    }
-    if (gMousePosition.y >= gRend.Target->PixelHeight) {
+    if (gMousePosition.y >= gRend.Target->PixelHeight)
         gMousePosition.y = gRend.Target->PixelHeight - 1;
-    }
 
     DrawMouseCursor();
     
