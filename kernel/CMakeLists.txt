@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(LensorOperatingSystem VERSION 0.0.1 LANGUAGES ASM_NASM C CXX)
+project(LensorOS VERSION 0.0.1 LANGUAGES ASM_NASM C CXX)
 
 # Output files to `kernel/bin` directory
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
@@ -75,17 +75,18 @@ set(HEADERS
 	src/vfs_inode.h
 )
 
-add_executable(LensorOperatingSystem ${SOURCES} ${HEADERS})
+add_executable(Kernel ${SOURCES} ${HEADERS})
+target_compile_definitions(Kernel PUBLIC -DQEMU)
 
-target_compile_options(LensorOperatingSystem PUBLIC -ffreestanding -fno-rtti -fshort-wchar -mno-red-zone -fno-exceptions -DQEMU -Wall -Wextra -Werror)
+target_compile_options(Kernel PUBLIC -ffreestanding -fno-rtti -fshort-wchar -mno-red-zone -fno-exceptions -Wall -Wextra -Werror)
 
-target_link_options(LensorOperatingSystem
+target_link_options(Kernel
 	PUBLIC -T ${CMAKE_SOURCE_DIR}/kernel.ld -static -Bsymbolic -nostdlib
 )							
 
-target_link_libraries(LensorOperatingSystem PUBLIC Interrupts)
-target_link_libraries(LensorOperatingSystem PUBLIC Assembly)
-set_target_properties(LensorOperatingSystem PROPERTIES OUTPUT_NAME kernel.elf)
+target_link_libraries(Kernel PUBLIC Interrupts)
+target_link_libraries(Kernel PUBLIC Assembly)
+set_target_properties(Kernel PROPERTIES OUTPUT_NAME kernel.elf)
 
 add_custom_target(EnsureBinDirectory ALL COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/bin)
 add_custom_command(TARGET EnsureBinDirectory POST_BUILD
