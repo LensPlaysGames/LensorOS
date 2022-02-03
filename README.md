@@ -4,7 +4,17 @@ Those tutorials were abandoned just after setting up a very basic AHCI driver, s
 
 A large thanks to the huge portions of inspiration, knowledge, and help that came from the OSDev [wiki](https://wiki.osdev.org/Expanded_Main_Page) and [forums](https://forum.osdev.org/).
 
-### Running LensorOS on hardware
+---
+
+### Table of Contents
+- [Booting into LensorOS on hardware](#hardware-boot)
+- [Booting into LensorOS using QEMU](#qemu-boot)
+- [Building LensorOS](#build)
+  - [A bug regarding CMake's ASM_NASM Makefile generation](#cmake-bug)
+  
+---
+
+### Booting into LensorOS on hardware <a name="hardware-boot"></a>
 ###### DISCLAIMER: LensorOS IS IN NO WAY GUARANTEED TO BE 'SAFE'; RUN AT YOUR OWN RISK! (see LICENSE)
 
 (pre-compiled binaries coming soon, for now see [the build section](#build))
@@ -41,7 +51,9 @@ USB
   startup.nsh
 ```
 
-### Running LensorOS on an emulator
+---
+
+### Booting into LensorOS using QEMU <a name="qemu-boot"></a>
 (pre-compiled binaries coming soon, for now see [the build section](#build))
 
 First, one must copy the `.psf` font into the `/kernel/bin/` directory that was created upon building the source code. \
@@ -66,7 +78,14 @@ There is also a `rundbg.bat` that will launch QEMU with the appropriate flags to
 If on Linux, run `make run` and QEMU should boot up into LensorOS. \
 QEMU does need to be installed, so make sure you first run (`sudo apt install qemu-system`).
 
+---
+
 ### Building LensorOS <a name="build"></a>
+To begin, clone this repository to your local machine (or fork it then clone it, it's up to you if you'd like to make your own version, or contribute to this one through pull requests).
+
+Example clone command: \
+`git clone https://github.com/LensPlaysGames/LensorOS`
+
 On Windows, some way of accessing a linux command-line environment is necessary. Personally, I use `WSL` with the `Ubuntu 20.04` distro. Alternatively, one could use a virtual machine that emulates a linux distro (ie. `VirtualBox` running `Linux Mint`, or something), and develop from there. There's also things like `Cygwin`, if you want to stay on Windows 100% of the time.
 
 Open a Linux terminal, then `cd` to the root directory of the repository.
@@ -77,11 +96,23 @@ First, `cd` to the `gnu-efi` directory, and run the following: \
 `make` \
 `make bootloader`
 
-To build the kernel, `cd` to the `kernel` directory of the repository and run the following: \
+To build the kernel, two methods are currently supported: `Make` and `CMake`. \
+Either way, `cd` to the `kernel` directory of the repository.
+
+To build the kernel with `Make`,  run the following: \
 `make setup` \
 `make kernel`
 
+To build the kernel with `CMake`,  run the following: \
+`cmake -S . -B out` \
+`cd out` \
+`cmake .` \
+`make`
+
 This will generate a `.efi` file from the kernel source code. 
+
+If you are familiar with CMake, this might look *slightly* strange to you (namely the second `cmake` command). \
+See the [CMake bug](#cmake-bug) section for more details on why it is needed, and maybe you have an even better fix.
 
 NOTE: One only needs to run `make` for the bootloader, and `make setup` for the kernel, once. Following that, simply using the `bootloader` and `kernel` targets respectively will re-build all `.c` or `.cpp` files that have changed.
 
@@ -91,3 +122,33 @@ If you would like to debug the kernel, use the `kernel_debug` make target to gen
 
 If building for real hardware, ensure to remove `-DQEMU` from the Makefile `CFLAGS` variable. \
 This allows for the hardware timers to be used to their full potential (asking QEMU for 1000hz interrupts from multiple devices overloads the emulator and guest time falls behind drastically; to counter-act this, very slow frequency periodic interrupts are setup as to allow the emulator to process them accordingly, allowing for accurate time-keeping even in QEMU).
+
+
+#### A bug regarding CMake's ASM_NASM Makefile generation <a name="cmake-bug"></a>
+
+It may very well be that the bug is within the user error domain. If that is the case, I'll be thoroughly embarassed yet glad to fix my mistake.
+
+The reason for re-building the CMake-generated build system directly after doing it for the first time is to fix a bug that appears to be within the ASM_NASM CMake Makefile generation. \
+This bug causes any objects built with NASM to be 32-bit (no bueno for our 64-bit project). \
+I've found that, for some reason, re-building the system right away like this fixes the issue.
+If you would like to look into this, pay attention to `CMakeFiles/Assembly.dir/build.make`; how it appears before the `cmake .` command, and how it appears after. \
+One way this can be achieved is using the common linux command: `diff`. \
+It simply displays any differences between two given files, displaying nothing if they are the same.
+
+My `diff` output on the before and after (I saved a copy of the generated `build.make` as `build_.make`):
+```
+lensor-radii@Garry:~/LensorOS/kernel/out$ diff CMakeFiles/Assembly.dir/build.make CMakeFiles/Assembly.dir/build_.make
+lensor-radii@Garry:~/LensorOS/kernel/out$ cmake .
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/lensor-radii/LensorOS/kernel/out
+lensor-radii@Garry:~/LensorOS/kernel/out$ diff CMakeFiles/Assembly.dir/build.make CMakeFiles/Assembly.dir/build_.make
+63c63
+<       /usr/bin/nasm $(ASM_NASM_INCLUDES) $(ASM_NASM_FLAGS) -f elf64 -o CMakeFiles/Assembly.dir/src/gdt.asm.o /home/lensor-radii/LensorOS/kernel/src/gdt.asm
+---
+>       /usr/bin/nasm $(ASM_NASM_INCLUDES) $(ASM_NASM_FLAGS) -f elf -o CMakeFiles/Assembly.dir/src/gdt.asm.o /home/lensor-radii/LensorOS/kernel/src/gdt.asm
+lensor-radii@Garry:~/LensorOS/kernel/out$
+```
+
+As you can see, the file `build.make` has been changed by the `cmake .` command, altering it to actually use the flags I pass in `kernel/CMakeLists.txt` with the `target_compile_options()` CMake function. \
+I don't know why the re-build is necessary, and it takes very little time, but if you know anything on why this occurs I would greatly appreciate you letting me know.

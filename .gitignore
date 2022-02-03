@@ -38,6 +38,7 @@
 
 # Kernel Build Stuff
 /kernel/bin/
+/kernel/out/
 
 # Local resources
 /fonts/
