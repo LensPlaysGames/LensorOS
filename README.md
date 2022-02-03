@@ -56,9 +56,8 @@ USB
 ### Booting into LensorOS using QEMU <a name="qemu-boot"></a>
 (pre-compiled binaries coming soon, for now see [the build section](#build))
 
-If one used `Make` to build the kernel, one must copy the `.psf` font into the `/kernel/bin/` directory that was created by `make setup`. \
-Next, the font file should be renamed to `dfltfont.psf`. \
-NOTE: Font used must be of PSF1 format (not PSF2). For a few fonts that are compatible, check out [this repository](https://github.com/ercanersoy/PSF-Fonts)
+To change the font, replace `dfltfont.psf` in the `kernel/res` folde r with any PSF1 font (not PSF2). \
+For a few fonts that are compatible, check out [this repository](https://github.com/ercanersoy/PSF-Fonts)
 
 It takes just one command to generate a disk image that is bootable from a virtual machine like QEMU (uses `dd`, `mmd`, and `mcopy`): \
 `sh mkimg.sh`
@@ -74,6 +73,11 @@ There is also a `rundbg.bat` that will launch QEMU with the appropriate flags to
 If on Linux, run `sh run.sh` and QEMU should boot up into LensorOS. \
 QEMU does need to be installed, so make sure you first run (`sudo apt install qemu-system-x86`).
 
+For debugging with gdb, run `sh rundbg.sh` instead. This will launch QEMU but wait to start your OS until gdb has connected on port `1234` of `localhost`.
+
+NOTE: When debugging with gdb, the kernel must be built with debug symbols ("-g" compile flag). To achieve this, run cmake with the following definition: \
+`-DCMAKE_BUILD_TYPE=Debug`
+
 ---
 
 ### Building LensorOS <a name="build"></a>
@@ -82,7 +86,10 @@ To begin, clone this repository to your local machine (or fork it then clone it,
 Example clone command: \
 `git clone https://github.com/LensPlaysGames/LensorOS`
 
-On Windows, some way of accessing a linux command-line environment is necessary. Personally, I use `WSL` with the `Ubuntu 20.04` distro. Alternatively, one could use a virtual machine that emulates a linux distro (ie. `VirtualBox` running `Linux Mint`, or something), and develop from there. There's also things like `Cygwin`, if you want to stay on Windows 100% of the time.
+On Windows, some way of accessing a linux command-line environment is necessary. \
+Personally, I use `WSL` with the `Ubuntu 20.04` distro. \
+Alternatively, one could use a virtual machine that emulates a linux distro (ie. `VirtualBox` running `Linux Mint`, or something), and develop from there. \
+There's also things like `Cygwin`, if you want to stay on Windows 100% of the time.
 
 Open a Linux terminal, then `cd` to the root directory of the repository.
 
@@ -92,33 +99,24 @@ First, `cd` to the `gnu-efi` directory, and run the following: \
 `make` \
 `make bootloader`
 
-To build the kernel, two methods are currently supported: `Make` and `CMake`. \
-Either way, `cd` to the `kernel` directory of the repository.
+Next, `cd` to the `kernel` directory of the repository.
 
-To build the kernel with `Make`,  run the following: \
-`make setup` \
-`make kernel`
-
-To build the kernel with `CMake`,  run the following: \
+To build the kernel, run the following: \
 `cmake -S . -B out` \
 `cd out` \
 `cmake .` \
 `make`
 
-This will generate a `.efi` file from the kernel source code. 
+This will generate a `.efi` file from the kernel source code within the `kernel/bin` directory.
 
 If you are familiar with CMake, this might look *slightly* strange to you (namely the second `cmake` command). \
 See the [CMake bug](#cmake-bug) section for more details on why it is needed, and maybe you have an even better fix.
 
-NOTE: One only needs to run `make` for the bootloader, and `make setup` for the kernel, once. Following that, simply using the `bootloader` and `kernel` targets respectively will re-build all `.c` or `.cpp` files that have changed.
+NOTE: One only needs to run `make` for the bootloader once. \
+Following that, simply using the `bootloader` target will be sufficient to build the bootloader.
 
-If one needs to recompile headers, there is a make target for ease-of-use: `make rekernel`. All this does is run `make clean` followed by `make kernel` under the hood.
-
-If you would like to debug the kernel, use the `kernel_debug` make target to generate a kernel `.efi` file with debug symbols embedded.
-
-If building for real hardware, ensure to remove `-DQEMU` from the Makefile `CFLAGS` variable. \
+If building for real hardware, ensure to remove `-DQEMU` from CMakeLists.txt. \
 This allows for the hardware timers to be used to their full potential (asking QEMU for 1000hz interrupts from multiple devices overloads the emulator and guest time falls behind drastically; to counter-act this, very slow frequency periodic interrupts are setup as to allow the emulator to process them accordingly, allowing for accurate time-keeping even in QEMU).
-
 
 #### A bug regarding CMake's ASM_NASM Makefile generation <a name="cmake-bug"></a>
 
