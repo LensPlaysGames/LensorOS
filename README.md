@@ -56,13 +56,12 @@ USB
 ### Booting into LensorOS using QEMU <a name="qemu-boot"></a>
 (pre-compiled binaries coming soon, for now see [the build section](#build))
 
-First, one must copy the `.psf` font into the `/kernel/bin/` directory that was created upon building the source code. \
-Next, the font file should be renamed to `dfltfont.psf`.
-
+If one used `Make` to build the kernel, one must copy the `.psf` font into the `/kernel/bin/` directory that was created by `make setup`. \
+Next, the font file should be renamed to `dfltfont.psf`. \
 NOTE: Font used must be of PSF1 format (not PSF2). For a few fonts that are compatible, check out [this repository](https://github.com/ercanersoy/PSF-Fonts)
 
-It takes just one command to generate a disk image that is bootable from something like QEMU (uses `dd`, `mmd`, and `mcopy`): \
-`make image`
+It takes just one command to generate a disk image that is bootable from a virtual machine like QEMU (uses `dd`, `mmd`, and `mcopy`): \
+`sh mkimg.sh`
 
 This will generate a `.iso` image file that can be used as a boot disk in a virtual machine like [QEMU](https://www.qemu.org/).
 
