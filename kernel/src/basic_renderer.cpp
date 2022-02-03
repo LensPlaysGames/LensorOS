@@ -4,8 +4,10 @@
 BasicRenderer gRend;
 
 inline void BasicRenderer::clamp_draw_position() {
-    if (DrawPos.x > Target->PixelWidth)  { DrawPos.x = Target->PixelWidth;  }
-    if (DrawPos.y > Target->PixelHeight) { DrawPos.y = Target->PixelHeight; }
+    if (DrawPos.x > Target->PixelWidth)
+        DrawPos.x = Target->PixelWidth;
+    if (DrawPos.y > Target->PixelHeight)
+        DrawPos.y = Target->PixelHeight;
 }
 
 void BasicRenderer::swap(uVector2 position, uVector2 size) {
@@ -15,8 +17,10 @@ void BasicRenderer::swap(uVector2 position, uVector2 size) {
     // Ensure size doesn't over-run edge of framebuffer.
     u64 diffX = Target->PixelWidth - position.x;
     u64 diffY = Target->PixelHeight - position.y;
-    if (diffX < size.x) { size.x = diffX; }
-    if (diffY < size.y) { size.y = diffY; }
+    if (diffX < size.x)
+        size.x = diffX;
+    if (diffY < size.y)
+        size.y = diffY;
     // Calculate addresses.
     u64 offset = ((BytesPerPixel * position.x)
                   + (BytesPerPixel * position.y * Target->PixelsPerScanLine));
@@ -65,8 +69,10 @@ void BasicRenderer::drawrect(uVector2 size, u32 color) {
     clamp_draw_position();
     u32 diffX = Target->PixelWidth - DrawPos.x;
     u32 diffY = Target->PixelHeight - DrawPos.y;
-    if (diffX < size.x) { size.x = diffX; }
-    if (diffY < size.y) { size.y = diffY; }
+    if (diffX < size.x)
+        size.x = diffX;
+    if (diffY < size.y)
+        size.y = diffY;
     u32* pixel_ptr = (u32*)Target->BaseAddress;
     for (u64 y = DrawPos.y; y < DrawPos.y + size.y; y++) {
         for (u64 x = DrawPos.x; x < DrawPos.x + size.x; x++) {
@@ -77,13 +83,16 @@ void BasicRenderer::drawrect(uVector2 size, u32 color) {
 
 /// Read `size` of pixel framebuffer starting at `DrawPos` into `buffer`.
 void BasicRenderer::readpix(uVector2 size, u32* buffer) {
-    if (buffer == nullptr) { return; }
+    if (buffer == nullptr)
+        return;
     clamp_draw_position();
     u32 initX = size.x;
     u32 diffX = Target->PixelWidth - DrawPos.x;
     u32 diffY = Target->PixelHeight - DrawPos.y;
-    if (diffX < size.x) { size.x = diffX; }
-    if (diffY < size.y) { size.y = diffY; }
+    if (diffX < size.x)
+        size.x = diffX;
+    if (diffY < size.y)
+        size.y = diffY;
     u32* pixel_ptr = (u32*)Target->BaseAddress;
     for (u64 y = DrawPos.y; y < DrawPos.y + size.y; y++) {
         for (u64 x = DrawPos.x; x < DrawPos.x + size.x; x++) {
@@ -95,13 +104,16 @@ void BasicRenderer::readpix(uVector2 size, u32* buffer) {
 
 /// Draw `size` of `pixels` linear buffer starting at `DrawPos`.
 void BasicRenderer::drawpix(uVector2 size, u32* pixels) {
-    if (pixels == nullptr) { return; }
+    if (pixels == nullptr)
+        return;
     clamp_draw_position();
     u32 initX = size.x;
     u32 diffX = Target->PixelWidth - DrawPos.x;
     u32 diffY = Target->PixelHeight - DrawPos.y;
-    if (diffX < size.x) { size.x = diffX; }
-    if (diffY < size.y) { size.y = diffY; }
+    if (diffX < size.x)
+        size.x = diffX;
+    if (diffY < size.y)
+        size.y = diffY;
     u32* pixel_ptr = (u32*)Target->BaseAddress;
     for (u64 y = DrawPos.y; y < DrawPos.y + size.y; y++) {
         for (u64 x = DrawPos.x; x < DrawPos.x + size.x; x++) {
@@ -114,30 +126,31 @@ void BasicRenderer::drawpix(uVector2 size, u32* pixels) {
 /// Draw `size` of a bitmap `bitmap`, using passed color `color`
 ///   where bitmap is `1` and `BackgroundColor` where it is `0`.
 void BasicRenderer::drawbmp(uVector2 size, u8* bitmap, u32 color) {
-    if (bitmap == nullptr) { return; }
+    if (bitmap == nullptr)
+        return;
     clamp_draw_position();
     u32 initX = size.x;
     u32 diffX = Target->PixelWidth - DrawPos.x;
     u32 diffY = Target->PixelHeight - DrawPos.y;
-    if (diffX < size.x) { size.x = diffX; }
-    if (diffY < size.y) { size.y = diffY; }
+    if (diffX < size.x)
+        size.x = diffX;
+    if (diffY < size.y)
+        size.y = diffY;
     u32* pixel_ptr = (u32*)Target->BaseAddress;
     for (u64 y = DrawPos.y; y < DrawPos.y + size.y; y++) {
         for (u64 x = DrawPos.x; x < DrawPos.x + size.x; x++) {
             s32 byte = ((x - DrawPos.x) + ((y - DrawPos.y) * initX)) / 8;
-            if ((bitmap[byte] & (0b10000000 >> ((x - DrawPos.x) % 8))) > 0) {
+            if ((bitmap[byte] & (0b10000000 >> ((x - DrawPos.x) % 8))) > 0)
                 *(u32*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
-            }
-            else {
-                *(u32*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = BackgroundColor;
-            }
+            else *(u32*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = BackgroundColor;
         }
     }
 }
 
 /// Draw `size` of a bitmap `bitmap`, using passed color `color` where bitmap is `1`.
 void BasicRenderer::drawbmpover(uVector2 size, u8* bitmap, u32 color) {
-    if (bitmap == nullptr) { return; }
+    if (bitmap == nullptr)
+        return;
     clamp_draw_position();
     u32 initX = size.x;
     u32 diffX = Target->PixelWidth - DrawPos.x;
@@ -148,9 +161,8 @@ void BasicRenderer::drawbmpover(uVector2 size, u8* bitmap, u32 color) {
     for (u64 y = DrawPos.y; y < DrawPos.y + size.y; y++) {
         for (u64 x = DrawPos.x; x < DrawPos.x + size.x; x++) {
             s32 byte = ((x - DrawPos.x) + ((y - DrawPos.y) * initX)) / 8;
-            if ((bitmap[byte] & (0b10000000 >> ((x - DrawPos.x) % 8))) > 0) {
+            if ((bitmap[byte] & (0b10000000 >> ((x - DrawPos.x) % 8))) > 0)
                 *(u32*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
-            }
         }
     }
 }
@@ -174,15 +186,13 @@ void BasicRenderer::drawcharover(char c, u32 color) {
 
 /// Draw a character using the renderer's bitmap font, then increment `DrawPos`
 ///   as such that another character would not overlap with the previous (ie. typing).
-void BasicRenderer::putchar(char c, u32 color)
-{
+void BasicRenderer::putchar(char c, u32 color) {
     gRend.drawchar(c, color);
     // Increment pixel position horizontally by one character.
     DrawPos.x += 8;
     // Newline if next character would be off-screen.
-    if (DrawPos.x + 8 > Target->PixelWidth) {
+    if (DrawPos.x + 8 > Target->PixelWidth)
         crlf();
-    }
 }
 
 void BasicRenderer::clear(uVector2 position, uVector2 size) {
@@ -192,8 +202,10 @@ void BasicRenderer::clear(uVector2 position, uVector2 size) {
     // Ensure size doesn't over-run edge of framebuffer.
     u64 diffX = Target->PixelWidth - position.x;
     u64 diffY = Target->PixelHeight - position.y;
-    if (diffX < size.x) { size.x = diffX; }
-    if (diffY < size.y) { size.y = diffY; }
+    if (diffX < size.x)
+        size.x = diffX;
+    if (diffY < size.y)
+        size.y = diffY;
     // Calculate addresses.
     u32* renderBaseAddress = (u32*)((u64)Render->BaseAddress
                                     + (BytesPerPixel * position.x)
@@ -217,19 +229,16 @@ void BasicRenderer::clearchar() {
     // Move up line if necessary.
     if (DrawPos.x < 8) {
         DrawPos.x = Target->PixelWidth;
-        if (DrawPos.y >= Font->PSF1_Header->CharacterSize) {
+        if (DrawPos.y >= Font->PSF1_Header->CharacterSize)
             DrawPos.y -= Font->PSF1_Header->CharacterSize;
-        }
-        else {
-            DrawPos = {8, 0};
-        }
+        else DrawPos = {8, 0};
     }
     DrawPos.x -= 8;
     drawrect({8, Font->PSF1_Header->CharacterSize}, BackgroundColor);
 }
 
 /// Put a string of characters `str` (must be null terminated) to the screen with color `color`.
-void BasicRenderer::putstr(const char* str, u32 color) {
+void BasicRenderer::puts(const char* str, u32 color) {
     // Set current character to first character in string.
     char* c = (char*)str;
     // Loop over string until null-terminator.

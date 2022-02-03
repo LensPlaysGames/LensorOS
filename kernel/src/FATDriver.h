@@ -20,9 +20,8 @@ public:
     void read_root_dir           (AHCI::AHCIDriver*, u8 portNumber, BootRecord*, FATType type);
 
     u32 get_total_sectors           (BootRecord* BR) const {
-        if (BR->BPB.TotalSectors16 == 0) {
+        if (BR->BPB.TotalSectors16 == 0)
             return BR->BPB.TotalSectors32;
-        }
         return BR->BPB.TotalSectors16;
     }
     

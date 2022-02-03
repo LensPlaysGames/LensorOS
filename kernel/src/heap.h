@@ -5,17 +5,17 @@
 #include "paging/page_table_manager.h"
 
 struct HeapSegmentHeader {
-	// Doubly linked list
-	HeapSegmentHeader* last;
-	HeapSegmentHeader* next;
-	// Data fields
-	u64 length;
-	bool free;
-	// Fragmentation Prevention
-	void combine_forward();
-	void combine_backward();
-	// Allocation
-	HeapSegmentHeader* split(u64 splitLength);
+    // Doubly linked list
+    HeapSegmentHeader* last;
+    HeapSegmentHeader* next;
+    // Data fields
+    u64 length;
+    bool free;
+    // Fragmentation Prevention
+    void combine_forward();
+    void combine_backward();
+    // Allocation
+    HeapSegmentHeader* split(u64 splitLength);
 };
 
 // INITIALIZATION

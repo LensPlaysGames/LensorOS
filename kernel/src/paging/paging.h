@@ -77,31 +77,31 @@ PML4 TABLE [512]
  Page Directory Pointer Table [512]...
 */
 struct PageMapIndexer {
-	u64 PageDirectoryPointerIndex;
-	u64 PageDirectoryIndex;
-	u64 PageTableIndex;
-	u64 PageIndex;
+    u64 PageDirectoryPointerIndex;
+    u64 PageDirectoryIndex;
+    u64 PageTableIndex;
+    u64 PageIndex;
 
-	PageMapIndexer(u64 virtualAddress) {
-		virtualAddress >>= 12;
-		PageIndex =                 virtualAddress & 0x1ff;
-		virtualAddress >>= 9;
-		PageTableIndex =            virtualAddress & 0x1ff;
-		virtualAddress >>= 9;
-		PageDirectoryIndex =        virtualAddress & 0x1ff;
-		virtualAddress >>= 9;
-		PageDirectoryPointerIndex = virtualAddress & 0x1ff;
-	}
+    PageMapIndexer(u64 virtualAddress) {
+        virtualAddress >>= 12;
+        PageIndex =                 virtualAddress & 0x1ff;
+        virtualAddress >>= 9;
+        PageTableIndex =            virtualAddress & 0x1ff;
+        virtualAddress >>= 9;
+        PageDirectoryIndex =        virtualAddress & 0x1ff;
+        virtualAddress >>= 9;
+        PageDirectoryPointerIndex = virtualAddress & 0x1ff;
+    }
 };
 
 enum PT_Flag {
-	Present = 0,
-	ReadWrite = 1,
-	UserSuper = 2,
-	WriteThrough = 3,
-	CacheDisabled = 4,
-	Accessed = 5,
-	LargerPages = 7,
+    Present = 0,
+    ReadWrite = 1,
+    UserSuper = 2,
+    WriteThrough = 3,
+    CacheDisabled = 4,
+    Accessed = 5,
+    LargerPages = 7,
     Custom0 = 9,
     Custom1 = 10,
     Custom2 = 11,
@@ -109,12 +109,12 @@ enum PT_Flag {
 };
 
 struct PageDirEntry {
-	u64 Value;
-	
-	void set_flag(PT_Flag flag, bool enabled);
-	bool get_flag(PT_Flag flag);
-	void set_address(u64 addr);
-	u64 get_address();
+    u64 Value;
+    
+    void set_flag(PT_Flag flag, bool enabled);
+    bool get_flag(PT_Flag flag);
+    void set_address(u64 addr);
+    u64 get_address();
 };
 
 struct PageTable {

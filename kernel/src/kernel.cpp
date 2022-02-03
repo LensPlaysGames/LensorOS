@@ -25,48 +25,48 @@
 void print_memory_info() {
     u32 startOffset = gRend.DrawPos.x;
     gRend.crlf(startOffset);
-    gRend.putstr("Memory Info:");
+    gRend.puts("Memory Info:");
     gRend.crlf(startOffset);
-    gRend.putstr("|\\");
+    gRend.puts("|\\");
     gRend.crlf(startOffset);
-    gRend.putstr("| Free RAM: ");
-    gRend.putstr(to_string(gAlloc.get_free_ram() / 1024));
-    gRend.putstr(" KiB (");
-    gRend.putstr(to_string(gAlloc.get_free_ram() / 1024 / 1024));
-    gRend.putstr(" MiB)");
+    gRend.puts("| Free RAM: ");
+    gRend.puts(to_string(gAlloc.get_free_ram() / 1024));
+    gRend.puts(" KiB (");
+    gRend.puts(to_string(gAlloc.get_free_ram() / 1024 / 1024));
+    gRend.puts(" MiB)");
     gRend.crlf(startOffset);
-    gRend.putstr("|\\");
+    gRend.puts("|\\");
     gRend.crlf(startOffset);
-    gRend.putstr("| Used RAM: ");
-    gRend.putstr(to_string(gAlloc.get_used_ram() / 1024));
-    gRend.putstr(" KiB (");
-    gRend.putstr(to_string(gAlloc.get_used_ram() / 1024 / 1024));
-    gRend.putstr(" MiB)");
+    gRend.puts("| Used RAM: ");
+    gRend.puts(to_string(gAlloc.get_used_ram() / 1024));
+    gRend.puts(" KiB (");
+    gRend.puts(to_string(gAlloc.get_used_ram() / 1024 / 1024));
+    gRend.puts(" MiB)");
     gRend.crlf(startOffset);
-    gRend.putstr(" \\");
+    gRend.puts(" \\");
     gRend.crlf(startOffset);
-    gRend.putstr("  Reserved RAM: ");
-    gRend.putstr(to_string(gAlloc.get_reserved_ram() / 1024));
-    gRend.putstr(" KiB (");
-    gRend.putstr(to_string(gAlloc.get_reserved_ram() / 1024 / 1024));
-    gRend.putstr(" MiB)");
+    gRend.puts("  Reserved RAM: ");
+    gRend.puts(to_string(gAlloc.get_reserved_ram() / 1024));
+    gRend.puts(" KiB (");
+    gRend.puts(to_string(gAlloc.get_reserved_ram() / 1024 / 1024));
+    gRend.puts(" MiB)");
     gRend.crlf(startOffset);
 }
 
 void print_now(u64 xOffset = 0) {
     gRend.crlf(xOffset);
-    gRend.putstr("Now is ");
-    gRend.putstr(to_string((u64)gRTC.Time.hour));
+    gRend.puts("Now is ");
+    gRend.puts(to_string((u64)gRTC.Time.hour));
     gRend.putchar(':');
-    gRend.putstr(to_string((u64)gRTC.Time.minute));
+    gRend.puts(to_string((u64)gRTC.Time.minute));
     gRend.putchar(':');
-    gRend.putstr(to_string((u64)gRTC.Time.second));
-    gRend.putstr(" on ");
-    gRend.putstr(to_string((u64)gRTC.Time.year));
+    gRend.puts(to_string((u64)gRTC.Time.second));
+    gRend.puts(" on ");
+    gRend.puts(to_string((u64)gRTC.Time.year));
     gRend.putchar('-');
-    gRend.putstr(to_string((u64)gRTC.Time.month));
+    gRend.puts(to_string((u64)gRTC.Time.month));
     gRend.putchar('-');
-    gRend.putstr(to_string((u64)gRTC.Time.date));
+    gRend.puts(to_string((u64)gRTC.Time.date));
     gRend.crlf(xOffset);
 }
 
@@ -113,7 +113,7 @@ extern "C" void _start(BootInfo* bInfo) {
     srl.writestr("\r\n");
     // TO SCREEN
     gRend.BackgroundColor = 0xffffffff;
-    gRend.putstr(GPLv3, 0x00000000);
+    gRend.puts(GPLv3, 0x00000000);
     gRend.BackgroundColor = 0x00000000;
     gRend.crlf();
     gRend.swap();
@@ -123,16 +123,16 @@ extern "C" void _start(BootInfo* bInfo) {
     while (true) {
         // PRINT PIT ELAPSED TIME.
         gRend.DrawPos = {500, 0};
-        gRend.putstr("PIT Elapsed: ");
-        gRend.putstr(to_string(gPIT.seconds_since_boot()));
+        gRend.puts("PIT Elapsed: ");
+        gRend.puts(to_string(gPIT.seconds_since_boot()));
         gRend.crlf();
         // PRINT REAL TIME.
         gRTC.update_data();
         print_now(500);
         // PRINT RTC ELAPSED TIME.
-        gRend.putstr("It has been ");
-        gRend.putstr(to_string(gRTC.seconds_since_boot()));
-        gRend.putstr(" seconds since boot");
+        gRend.puts("It has been ");
+        gRend.puts(to_string(gRTC.seconds_since_boot()));
+        gRend.puts(" seconds since boot");
         gRend.crlf(500);
         // PRINT MEMORY INFO.
         print_memory_info();

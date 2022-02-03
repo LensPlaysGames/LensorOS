@@ -6,8 +6,8 @@
 class FileSystem;
 
 struct Inode {
-	// TODO: File data.
-	FileSystem* fs;
+    // TODO: File data.
+    FileSystem* fs;
 };
 
 #endif

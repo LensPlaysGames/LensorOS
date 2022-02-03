@@ -115,7 +115,7 @@ public:
     // Use font to put a character to the screen (advance draw position).
     void putchar(char c, u32 color = 0xffffffff);
     // Put a null-terminated string of characters to the screen, wrapping if necessary.
-    void putstr(const char* str, u32 color = 0xffffffff);
+    void puts(const char* str, u32 color = 0xffffffff);
 };
 
 extern BasicRenderer gRend;

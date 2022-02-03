@@ -42,13 +42,13 @@
 
 class PIT {
 public:
-	u64 Ticks {0};
+    u64 Ticks {0};
 
-	PIT() {}
+    PIT() {}
 
-	void initialize_pit();
+    void initialize_pit();
 
-	double seconds_since_boot();
+    double seconds_since_boot();
 };
 
 // TODO: Store in device tree.

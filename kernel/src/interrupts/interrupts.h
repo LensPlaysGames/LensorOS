@@ -27,13 +27,13 @@
 struct InterruptFrame;
 // HARDWARE INTERRUPT REQUESTS (IRQs)
 __attribute__((interrupt)) void system_timer_handler (InterruptFrame*);
-__attribute__((interrupt)) void keyboard_handler	 (InterruptFrame*);
+__attribute__((interrupt)) void keyboard_handler     (InterruptFrame*);
 __attribute__((interrupt)) void rtc_periodic_handler (InterruptFrame*);
-__attribute__((interrupt)) void mouse_handler		 (InterruptFrame*);
+__attribute__((interrupt)) void mouse_handler        (InterruptFrame*);
 // FAULT/TRAP HANDLING
 __attribute__((interrupt)) void double_fault_handler             (InterruptFrame*, u64);
 __attribute__((interrupt)) void general_protection_fault_handler (InterruptFrame*, u64);
-__attribute__((interrupt)) void page_fault_handler				 (InterruptFrame*, u64);
+__attribute__((interrupt)) void page_fault_handler               (InterruptFrame*, u64);
 
 void remap_pic();
 

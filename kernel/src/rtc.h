@@ -51,7 +51,7 @@ Status Register `B`:
       4: Enable update-ended interrupt
       5: Enable alarm interrupt
       6: Enable periodic interrupt
-	  7: Set clock
+      7: Set clock
 
 Status Register `C`:
   Bits 0-3: Reserved (do not touch)
@@ -73,27 +73,27 @@ Status Register `D`:
 #define CENTURY_REGISTER 0x00
 
 struct RTCData {
-	u8  second  {0};
-	u8  minute  {0};
-	u8  hour    {0};
-	u8  weekday {0};
-	u8  date    {0};
-	u8  month   {0};
-	u32 year    {0};
-	u8  century {0};
+    u8  second  {0};
+    u8  minute  {0};
+    u8  hour    {0};
+    u8  weekday {0};
+    u8  date    {0};
+    u8  month   {0};
+    u32 year    {0};
+    u8  century {0};
 
-	RTCData() {}
+    RTCData() {}
 
-	void operator = (const RTCData& other) {
-		second  = other.second;
-		minute  = other.minute;
-		hour    = other.hour;
-		weekday = other.weekday;
-		date    = other.date;
-		month   = other.month;
-		year    = other.year;
-		century = other.century;
-	}
+    void operator = (const RTCData& other) {
+        second  = other.second;
+        minute  = other.minute;
+        hour    = other.hour;
+        weekday = other.weekday;
+        date    = other.date;
+        month   = other.month;
+        year    = other.year;
+        century = other.century;
+    }
 };
 
 
@@ -105,34 +105,34 @@ struct RTCData {
 #define RTC_PERIODIC_HERTZ (32768 >> (RTC_PERIODIC_RATE - 1))
 class RTC {
 public:
-	RTCData Time;
-	u64 Ticks {0};
+    RTCData Time;
+    u64 Ticks {0};
 
-	RTC() {
-		update_data();
-		/// Set divisor for a 1024hz periodic interrupt.
-		u8 statusA = read_register(0x8a);
-		outb(CMOS_ADDR, 0x8a);
-		outb(CMOS_DATA, (statusA & 0x11110000) | RTC_PERIODIC_RATE);
-	}
+    RTC() {
+        update_data();
+        /// Set divisor for a 1024hz periodic interrupt.
+        u8 statusA = read_register(0x8a);
+        outb(CMOS_ADDR, 0x8a);
+        outb(CMOS_DATA, (statusA & 0x11110000) | RTC_PERIODIC_RATE);
+    }
 
-	/// When this returns zero, RTC is not currently updating.
-	u8 is_rtc_updating() {
-		outb(CMOS_ADDR, 0x0a);
-		return inb(CMOS_DATA) & 0b10000000;
-	}
+    /// When this returns zero, RTC is not currently updating.
+    u8 is_rtc_updating() {
+        outb(CMOS_ADDR, 0x0a);
+        return inb(CMOS_DATA) & 0b10000000;
+    }
 
     u8 read_register(u8 reg) {
-		outb(CMOS_ADDR, reg);
-		return inb(CMOS_DATA);
-	}
+        outb(CMOS_ADDR, reg);
+        return inb(CMOS_DATA);
+    }
 
-	double seconds_since_boot();
+    double seconds_since_boot();
 
-	void update_data();
-	void set_periodic_int_enabled(bool);
+    void update_data();
+    void set_periodic_int_enabled(bool);
 private:
-	void get_rtc_data(RTCData&);
+    void get_rtc_data(RTCData&);
 };
 
 extern RTC gRTC;

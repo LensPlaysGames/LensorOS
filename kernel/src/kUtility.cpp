@@ -109,7 +109,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     // CREATE GLOBAL RENDERER
     gRend = BasicRenderer(bInfo->framebuffer, &target, bInfo->font);
     gRend.clear();
-    gRend.putstr(bootMsg);
+    gRend.puts(bootMsg);
     gRend.crlf();
     gRend.swap();
     srl.writestr("[kUtil]: Successfully created GOP Renderer\r\n");

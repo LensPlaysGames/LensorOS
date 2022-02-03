@@ -62,14 +62,14 @@ Port Register Offsets ([PORT] + [OFFSET])
 // TODO: Add capability for selecting communication channel (COM1, COM2, etc).
 class UARTDriver {
 public:
-	UARTDriver();
+    UARTDriver();
 
-	u8 readb();
-	void writeb(u8 data);
+    u8 readb();
+    void writeb(u8 data);
 
-	/// Write a C-style null-terminated byte-string to the serial output COM1.
-	void writestr(const char* str);
-	void writestr(char* str, u64 numChars);
+    /// Write a C-style null-terminated byte-string to the serial output COM1.
+    void writestr(const char* str);
+    void writestr(char* str, u64 numChars);
 };
 
 extern UARTDriver srl;
