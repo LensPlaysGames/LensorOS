@@ -65,17 +65,14 @@ It takes just one command to generate a disk image that is bootable from a virtu
 
 This will generate a `.iso` image file that can be used as a boot disk in a virtual machine like [QEMU](https://www.qemu.org/).
 
-One could also run `make all` and it will re-compile (build) all source code, as well as generate a FAT32 image that can be booted from by any virtual machine that supports OVMF (ideally, I've only tested with QEMU so far).
-
-If on Windows, a `run.bat` file is included. Simply double click this to run QEMU, booting into a UEFI environment that will load the LensorOS bootloader. 
-
+If on Windows, a `run.bat` file is included. Simply double click this to run QEMU, booting into a UEFI environment that will load the LensorOS bootloader. \
 The batch file requires the directory that the QEMU executable resides in be added to the system's PATH variable. [See this stackoverflow thread for help](https://stackoverflow.com/questions/9546324/adding-a-directory-to-the-path-environment-variable-in-windows). \
-If editing the PATH variable isn't working, the batch script could always be edited to use the exact path to the QEMU executable.
+If editing the PATH variable isn't working, the batch script could always be edited to use the exact path to the QEMU executable on your local machine.
 
 There is also a `rundbg.bat` that will launch QEMU with the appropriate flags to wait for `gdb` to connect on port `1234`.
 
-If on Linux, run `make run` and QEMU should boot up into LensorOS. \
-QEMU does need to be installed, so make sure you first run (`sudo apt install qemu-system`).
+If on Linux, run `sh run.sh` and QEMU should boot up into LensorOS. \
+QEMU does need to be installed, so make sure you first run (`sudo apt install qemu-system-x86`).
 
 ---
 
