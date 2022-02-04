@@ -117,6 +117,9 @@ extern "C" void _start(BootInfo* bInfo) {
     gRend.crlf();
     gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize});
     /// END GPLv3 LICENSE REQUIREMENT.
+
+    srl.writestr("\033[31mThis \033[33mis \033[32ma \033[34mcolor \033[36mtest\033[0m!");
+
     // Start keyboard input at draw position, not origin.
     gTextPosition = gRend.DrawPos;
     u32 debugInfoX = gRend.Target->PixelWidth - 300;

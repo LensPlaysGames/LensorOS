@@ -56,26 +56,36 @@ USB
 ### Booting into LensorOS using QEMU <a name="qemu-boot"></a>
 (pre-compiled binaries coming soon, for now see [the build section](#build))
 
-To change the font, replace `dfltfont.psf` in the `kernel/res` folde r with any PSF1 font (not PSF2). \
+To change the font, replace `dfltfont.psf` in the `kernel/res` folder with any PSF1 font (not PSF2). \
 For a few fonts that are compatible, check out [this repository](https://github.com/ercanersoy/PSF-Fonts)
 
-It takes just one command to generate a disk image that is bootable from a virtual machine like QEMU (uses `dd`, `mmd`, and `mcopy`): \
-`bash mkimg.sh`
+#### On Linux
 
-This will generate a `.iso` image file that can be used as a boot disk in a virtual machine like [QEMU](https://www.qemu.org/).
+`bash mkimg.sh` will generate a `.iso` disk image file that can be used as a boot drive by a virtual machine that supports OVMF like [QEMU](https://www.qemu.org/).
 
-If on Windows, a `run.bat` file is included. Simply double click this to run QEMU, booting into a UEFI environment that will load the LensorOS bootloader. \
-The batch file requires the directory that the QEMU executable resides in be added to the system's PATH variable. [See this stackoverflow thread for help](https://stackoverflow.com/questions/9546324/adding-a-directory-to-the-path-environment-variable-in-windows). \
-If editing the PATH variable isn't working, the batch script could always be edited to use the exact path to the QEMU executable on your local machine.
-
-There is also a `rundbg.bat` that will launch QEMU with the appropriate flags to wait for `gdb` to connect on port `1234`.
-
-If on Linux, run `bash run.sh` and QEMU should boot up into LensorOS. \
+`bash run.sh` will boot up QEMU into LensorOS. \
 QEMU does need to be installed, so make sure you first run (`sudo apt install qemu-system-x86`).
 
-For debugging with gdb, run `bash rundbg.sh` instead. This will launch QEMU but wait to start your OS until gdb has connected on port `1234` of `localhost`.
+See [a note about debugging](#gdb-debug-note-1).
 
-NOTE: When debugging with gdb, the kernel must be built with debug symbols ("-g" compile flag). To achieve this, run cmake with the following definition: \
+For debugging with gdb, run `bash rundbg.sh` instead. This will launch QEMU but wait to start cpu execution until `gdb` has connected on port `1234` of `localhost`.
+
+#### On Windows
+
+In a linux terminal (WSL, Cygwin, etc), run `bash /path/to/LensorOS/kernel/mkimg.sh` to generate a disk image file that will be used by QEMU as a boot drive.
+
+To launch QEMU from the generated disk image, A `run.bat` file is included. \
+By simply double clicking this, QEMU will run, booting into a UEFI environment that will load the LensorOS bootloader. The batch file requires the directory that the QEMU executable resides in be added to the system's PATH variable. [See this stackoverflow thread for help](https://stackoverflow.com/questions/9546324/adding-a-directory-to-the-path-environment-variable-in-windows). \
+If editing the PATH variable isn't working, the batch script could always be edited to use the exact path to the QEMU executable on your local machine.
+
+If you're terminal output looks rather mangled (ie. left-pointing arrows, open square-brackets, etc), it is likely the terminal you are using doesn't support ANSI color codes. \
+This is how it is when I use Windows Explorer to launch the `run` batch script, and makes debugging using the serial output rather difficult. \
+To get around this, I use the (rather life-changing) [Windows Terminal](https://github.com/Microsoft/Terminal). It should be the default terminal, and should have been for five years now, but I'm glad it is available and open source none-the-less. \
+This new terminal allows both WSL and PowerShell to be open in the same terminal, but separate tabs. By running `& '\\wsl$\your-linux-distro\path\to\LensorOS\kernel\run.bat'` from within a PowerShell in the new Windows Terminal, you will experience glorious full-color, formatted serial output.
+
+There is also a `rundbg.bat` that will launch QEMU with the appropriate flags to wait for `gdb` to connect on port `1234` of `localhost`.
+
+<a name="gdb-debug-note-1"></a>NOTE: When debugging with gdb, the kernel must be built with debug symbols ("-g" compile flag). To achieve this, run cmake with the following definition: \
 `-DCMAKE_BUILD_TYPE=Debug`
 
 ---
