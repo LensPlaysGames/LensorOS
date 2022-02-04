@@ -24,7 +24,6 @@
 
 void print_memory_info() {
     u32 startOffset = gRend.DrawPos.x;
-    gRend.crlf(startOffset);
     gRend.puts("Memory Info:");
     gRend.crlf(startOffset);
     gRend.puts("|\\");
@@ -54,7 +53,6 @@ void print_memory_info() {
 }
 
 void print_now(u64 xOffset = 0) {
-    gRend.crlf(xOffset);
     gRend.puts("Now is ");
     gRend.puts(to_string(gRTC.Time.hour));
     gRend.putchar(':');
@@ -119,29 +117,28 @@ extern "C" void _start(BootInfo* bInfo) {
     gRend.crlf();
     gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize});
     /// END GPLv3 LICENSE REQUIREMENT.
-
-    gRend.puts(to_hexstring((u64)0xdeadbeef));
-    gRend.swap({0, gRend.Font->PSF1_Header->CharacterSize}, {80000, gRend.Font->PSF1_Header->CharacterSize});
     // Start keyboard input at draw position, not origin.
-    gTextPosition = gRend.DrawPos; 
+    gTextPosition = gRend.DrawPos;
+    u32 debugInfoX = gRend.Target->PixelWidth - 300;
     while (true) {
+        gRend.DrawPos = {debugInfoX, 0};
+        // PRINT REAL TIME
+        gRTC.update_data();
+        print_now(debugInfoX);
+        gRend.crlf(debugInfoX);
         // PRINT PIT ELAPSED TIME.
-        gRend.DrawPos = {500, 0};
         gRend.puts("PIT Elapsed: ");
         gRend.puts(to_string(gPIT.seconds_since_boot()));
-        gRend.crlf();
-        // PRINT REAL TIME.
-        gRTC.update_data();
-        print_now(500);
+        gRend.crlf(debugInfoX);
         // PRINT RTC ELAPSED TIME.
-        gRend.puts("It has been ");
+        gRend.puts("RTC Elapsed: ");
         gRend.puts(to_string(gRTC.seconds_since_boot()));
-        gRend.puts(" seconds since boot");
-        gRend.crlf(500);
+        gRend.crlf(debugInfoX);
         // PRINT MEMORY INFO.
+        gRend.crlf(debugInfoX);
         print_memory_info();
-        // UPDATE TOP RIGHT OF SCREEN ONLY.
-        gRend.swap({500, 0}, {80000, 400});
+        // UPDATE TOP RIGHT CORNER OF SCREEN.
+        gRend.swap({debugInfoX, 0}, {80000, 400});
     }
     
     // HALT LOOP (KERNEL INACTIVE).
