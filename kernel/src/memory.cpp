@@ -31,10 +31,6 @@ void memset(void* start, u8 value, u64 numBytes) {
         for (; i <= numBytes - 8; i += 8) {
             *(u64*)((u64)start + i) = qWordValue;
         }
-        // Finish up leftover bits.
-        for (; i < numBytes; ++i) {
-            *(u8*)((u64)start + i) = value;
-        }
     }
     for (u64 i = 0; i < numBytes; ++i) {
         *(u8*)((u64)start + i) = value;
