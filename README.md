@@ -29,7 +29,7 @@ Finally, navigate back to the root directory of the USB (where the `efi` folder 
 Create a folder. `LensorOS`, then move the following resources into the directory: \
 - `kernel.elf` from `/kernel/bin/`
 - Any `.psf` version 1 font renamed to `dfltfont.psf`
-  - A font is included for ease of use: `zap-vga16.psf`. 
+  - A font is included for ease of use: `zap-vga16.psf` found at `kernel/res/dfltfont.psf`. 
   - Many free fonts can be found [here](https://github.com/ercanersoy/PSF-Fonts)
 
 ```
@@ -99,6 +99,9 @@ First, `cd` to the `gnu-efi` directory, and run the following: \
 `make` \
 `make bootloader`
 
+NOTE: One only needs to run `make` for the bootloader once. \
+Following that, simply using the `bootloader` target will be sufficient to build the bootloader.
+
 Next, `cd` to the `kernel` directory of the repository.
 
 To build the kernel, run the following: \
@@ -107,13 +110,10 @@ To build the kernel, run the following: \
 `cmake .` \
 `make`
 
-This will generate a `.efi` file from the kernel source code within the `kernel/bin` directory.
+This final step will generate `kernel.elf` within the `kernel/bin` directory, ready to be used in a boot usb or formatted into an image.
 
 If you are familiar with CMake, this might look *slightly* strange to you (namely the second `cmake` command). \
 See the [CMake bug](#cmake-bug) section for more details on why it is needed, and maybe you have an even better fix.
-
-NOTE: One only needs to run `make` for the bootloader once. \
-Following that, simply using the `bootloader` target will be sufficient to build the bootloader.
 
 If building for real hardware, ensure to remove `-DQEMU` from CMakeLists.txt. \
 This allows for the hardware timers to be used to their full potential (asking QEMU for 1000hz interrupts from multiple devices overloads the emulator and guest time falls behind drastically; to counter-act this, very slow frequency periodic interrupts are setup as to allow the emulator to process them accordingly, allowing for accurate time-keeping even in QEMU).
