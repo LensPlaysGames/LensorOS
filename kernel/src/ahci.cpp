@@ -169,7 +169,7 @@ namespace AHCI {
         // Map ABAR into memory.
         gPTM.map_memory(ABAR, ABAR);
         
-        srl.writestr("[AHCI]: Probing AHCI 1.0 Controller at ");
+        srl.writestr("[AHCI]: Probing AHCI 1.0 Controller at 0x");
         srl.writestr(to_hexstring((u64)PCIBaseAddress));
         srl.writestr("\r\n");
 

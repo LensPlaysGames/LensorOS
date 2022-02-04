@@ -162,7 +162,7 @@ void process_mouse_packet() {
         return;
     // MOUSE BUTTONS
     // Left Mouse Button (LMB)
-    const uVector2 DrawSize {2ULL, 2ULL};
+    const uVector2 DrawSize {2, 2};
     if (mouse_packet[0] & PS2LBTN) {
         uVector2 cachedPos = gRend.DrawPos;
         gRend.DrawPos = gMousePosition - DrawSize;
