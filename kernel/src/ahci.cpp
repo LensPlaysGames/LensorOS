@@ -177,10 +177,10 @@ namespace AHCI {
         probe_ports();
         
         srl.writestr("[AHCI]: Found ");
-        srl.writestr(to_string((u64)numPorts));
+        srl.writestr(to_string(numPorts));
         srl.writestr(" open and active ports\r\n");
         srl.writestr("[AHCI]: Read/write buffer size: ");
-        srl.writestr(to_string((u64)MAX_READ_PAGES * 4));
+        srl.writestr(to_string(MAX_READ_PAGES * 4));
         srl.writestr("kib\r\n");
 
         for (u8 i = 0; i < numPorts; ++i) {
@@ -188,7 +188,7 @@ namespace AHCI {
             Ports[i]->buffer = (u8*)gAlloc.request_pages(MAX_READ_PAGES);
             if (Ports[i]->buffer != nullptr) {
                 srl.writestr("[AHCI]: Port ");
-                srl.writestr(to_string((u64)i));
+                srl.writestr(to_string(i));
                 srl.writestr(" configured successfully.\r\n");
                 memset((void*)Ports[i]->buffer, 0, MAX_READ_PAGES * 0x1000);
                 // Check if storage media at current port has a file-system LensorOS recognizes.
@@ -203,7 +203,7 @@ namespace AHCI {
                     fs->read(&inode);
 
                     srl.writestr("[AHCI]: Device at port ");
-                    srl.writestr(to_string((u64)i));
+                    srl.writestr(to_string(i));
                     switch (fs->Type) {
                     case FATType::INVALID: 
                         srl.writestr(" has INVALID format.");
@@ -241,7 +241,7 @@ namespace AHCI {
                         break;
                     }
                     srl.writestr("  Total Size: ");
-                    srl.writestr(to_string((u64)fs->get_total_size() / 1024 / 1024));
+                    srl.writestr(to_string(fs->get_total_size() / 1024 / 1024));
                     srl.writestr(" mib\r\n");
                 }
             }

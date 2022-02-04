@@ -135,7 +135,7 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
     u32 tableValue    {0};
     while (true) {
         srl.writestr("[FATDriver]: \r\n  Reading cluster ");
-        srl.writestr(to_string((u64)clusterIndex));
+        srl.writestr(to_string(clusterIndex));
         srl.writestr("\r\n");
         ahci->Ports[portNumber]->Read(get_first_sector_in_cluster(BR, clusterIndex),
                                       BR->BPB.NumSectorsPerCluster,
@@ -205,9 +205,9 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
 
             if (is_file) {
                 srl.writestr("      File Size: ");
-                srl.writestr(to_string((u64)clEntry->FileSizeInBytes / 1024 / 1024));
+                srl.writestr(to_string(clEntry->FileSizeInBytes / 1024 / 1024));
                 srl.writestr(" MiB (");
-                srl.writestr(to_string((u64)clEntry->FileSizeInBytes / 1024));
+                srl.writestr(to_string(clEntry->FileSizeInBytes / 1024));
                 srl.writestr(" KiB)\r\n");
             }
             

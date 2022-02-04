@@ -153,17 +153,17 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     srl.writestr("hz\r\n");
     // PRINT REAL TIME TO SERIAL OUTPUT.
     srl.writestr("[kUtil]: Now is ");
-    srl.writestr(to_string((u64)gRTC.Time.hour));
+    srl.writestr(to_string(gRTC.Time.hour));
     srl.writeb(':');
-    srl.writestr(to_string((u64)gRTC.Time.minute));
+    srl.writestr(to_string(gRTC.Time.minute));
     srl.writeb(':');
-    srl.writestr(to_string((u64)gRTC.Time.second));
+    srl.writestr(to_string(gRTC.Time.second));
     srl.writestr(" on ");
-    srl.writestr(to_string((u64)gRTC.Time.year));
+    srl.writestr(to_string(gRTC.Time.year));
     srl.writeb('-');
-    srl.writestr(to_string((u64)gRTC.Time.month));
+    srl.writestr(to_string(gRTC.Time.month));
     srl.writeb('-');
-    srl.writestr(to_string((u64)gRTC.Time.date));
+    srl.writestr(to_string(gRTC.Time.date));
     srl.writestr("\r\n");
     // PREPARE DRIVERS.
     gFATDriver = FATDriver();

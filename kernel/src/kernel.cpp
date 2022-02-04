@@ -56,17 +56,17 @@ void print_memory_info() {
 void print_now(u64 xOffset = 0) {
     gRend.crlf(xOffset);
     gRend.puts("Now is ");
-    gRend.puts(to_string((u64)gRTC.Time.hour));
+    gRend.puts(to_string(gRTC.Time.hour));
     gRend.putchar(':');
-    gRend.puts(to_string((u64)gRTC.Time.minute));
+    gRend.puts(to_string(gRTC.Time.minute));
     gRend.putchar(':');
-    gRend.puts(to_string((u64)gRTC.Time.second));
+    gRend.puts(to_string(gRTC.Time.second));
     gRend.puts(" on ");
-    gRend.puts(to_string((u64)gRTC.Time.year));
+    gRend.puts(to_string(gRTC.Time.year));
     gRend.putchar('-');
-    gRend.puts(to_string((u64)gRTC.Time.month));
+    gRend.puts(to_string(gRTC.Time.month));
     gRend.putchar('-');
-    gRend.puts(to_string((u64)gRTC.Time.date));
+    gRend.puts(to_string(gRTC.Time.date));
     gRend.crlf(xOffset);
 }
 

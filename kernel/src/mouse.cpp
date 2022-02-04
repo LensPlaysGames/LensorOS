@@ -59,7 +59,7 @@ void init_ps2_mouse() {
     gMouseID = mouse_read();
 
     srl.writestr("[Mouse]: Successfully initialized PS2 mouse using serial port (ID: ");
-    srl.writestr(to_string((u64)gMouseID));
+    srl.writestr(to_string(gMouseID));
     srl.writestr(")\r\n");
 }
 
