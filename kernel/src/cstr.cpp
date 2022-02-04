@@ -3,7 +3,7 @@
 char uint_to_str_buf[20];
 char* to_string(u64 value) {
     // Get necessary string length.
-    u8 length;
+    u8 length = 0;
     u64 val_cpy = value;
     while (val_cpy / 10 > 0) {
         val_cpy /= 10;
@@ -25,6 +25,10 @@ char* to_string(u64 value) {
     return uint_to_str_buf;
 }
 
+char* to_string(u32 value) { return to_string((u64)value); }
+char* to_string(u16 value) { return to_string((u64)value); }
+char* to_string(u8  value) { return to_string((u64)value); }
+
 char int_to_str_buf[20];
 char* to_string(s64 value) {
     // Add negation symbol before negative values.
@@ -35,7 +39,7 @@ char* to_string(s64 value) {
         int_to_str_buf[0] = '-';
     }
     // Get necessary string length.
-    u8 length;
+    u8 length = 0;
     u64 val_cpy = value;
     while (val_cpy / 10 > 0) {
         val_cpy /= 10;
@@ -56,6 +60,10 @@ char* to_string(s64 value) {
     int_to_str_buf[isNegative + length + 1] = 0;
     return int_to_str_buf;
 }
+
+char* to_string(s32 value) { return to_string((s64)value); }
+char* to_string(s16 value) { return to_string((s64)value); }
+char* to_string(s8  value) { return to_string((s64)value); }
 
 char dbl_to_str_buf[40];
 char* to_string(double value, u8 decimalPlaces) {
@@ -85,19 +93,24 @@ char* to_string(double value, u8 decimalPlaces) {
     return dbl_to_str_buf;
 }
 
-char hex_to_string_buf[128];
-char* to_hexstring(u64 value) {
-    u64* val_ptr = &value;
-    u8* ptr;
-    u8 tmp;
-    const u8 size = 15;
-    for (u8 i = 0; i < size; i++) {
-        ptr = ((u8*)val_ptr + i);
-        tmp = ((*ptr & 0xF0) >> 4);
-        hex_to_string_buf[size - (i * 2 + 1)] = tmp + (tmp > 9 ? 55 : '0');
-        tmp = ((*ptr & 0x0F));
-        hex_to_string_buf[size - (i * 2)]     = tmp + (tmp > 9 ? 55 : '0');
+
+// Shout-out to User:Pancakes on the osdev wiki!
+// https://wiki.osdev.org/User:Pancakes
+const u8 size = 15;
+const char* hexmap = "0123456789abcdef";
+const char* hexmap_capital = "0123456789ABCDEF";
+char hex_to_string_buf[20];
+char* to_hexstring(u64 value, bool capital) {
+    s8 n = (s8)size;
+    u8 i {0};
+    u8 tmp {0};
+    for (; n >= 0; --n) {
+        tmp = (value >> (n * 4)) & 0xf;
+        if (capital)
+            hex_to_string_buf[i] = hexmap_capital[tmp];
+        else hex_to_string_buf[i] = hexmap[tmp];
+        ++i;
     }
-    hex_to_string_buf[size + 1] = 0;
+    hex_to_string_buf[i] = 0;
     return hex_to_string_buf;
 }

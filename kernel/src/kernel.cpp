@@ -104,8 +104,9 @@ extern "C" void _start(BootInfo* bInfo) {
     // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
     kernel_init(bInfo);
     srl.writestr("!===--- You have now booted into LensorOS ---===!\r\n");
-    // Clear screen (ensure known state).
-    gRend.clear();
+    // Clear + swap screen (ensure known state: blank).
+    gRend.clear(0x00000000);
+    gRend.swap();
     /// GPLv3 LICENSE REQUIREMENT (interactive terminal must print copyright notice).
     const char* GPLv3 = "<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>";
     // TO SERIAL
@@ -116,8 +117,11 @@ extern "C" void _start(BootInfo* bInfo) {
     gRend.puts(GPLv3, 0x00000000);
     gRend.BackgroundColor = 0x00000000;
     gRend.crlf();
-    gRend.swap();
+    gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize});
     /// END GPLv3 LICENSE REQUIREMENT.
+
+    gRend.puts(to_hexstring((u64)0xdeadbeef));
+    gRend.swap({0, gRend.Font->PSF1_Header->CharacterSize}, {80000, gRend.Font->PSF1_Header->CharacterSize});
     // Start keyboard input at draw position, not origin.
     gTextPosition = gRend.DrawPos; 
     while (true) {
