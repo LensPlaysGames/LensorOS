@@ -1,8 +1,8 @@
-#!/bin/sh
-
+#!/bin/bash
 OSName="LensorOS"
-BuildDirectory="bin"
-BootloaderEFI="../gnu-efi/x86_64/bootloader/main.efi"
+ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+BuildDirectory="$ScriptDirectory/bin"
+BootloaderEFI="$ScriptDirectory/../gnu-efi/x86_64/bootloader/main.efi"
 
 run(){
     set -x
@@ -19,7 +19,7 @@ run mmd -i $BuildDirectory/$OSName.img ::/EFI/BOOT
 run mmd -i $BuildDirectory/$OSName.img ::/LensorOS
 echo "    Directories initialized."
 run mcopy -i $BuildDirectory/$OSName.img $BootloaderEFI ::/EFI/BOOT
-run mcopy -i $BuildDirectory/$OSName.img startup.nsh ::
+run mcopy -i $BuildDirectory/$OSName.img $ScriptDirectory/startup.nsh ::
 run mcopy -i $BuildDirectory/$OSName.img $BuildDirectory/kernel.elf ::/LensorOS
 run mcopy -i $BuildDirectory/$OSName.img $BuildDirectory/dfltfont.psf ::/LensorOS
 echo "    Resources copied."

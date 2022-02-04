@@ -60,7 +60,7 @@ To change the font, replace `dfltfont.psf` in the `kernel/res` folde r with any 
 For a few fonts that are compatible, check out [this repository](https://github.com/ercanersoy/PSF-Fonts)
 
 It takes just one command to generate a disk image that is bootable from a virtual machine like QEMU (uses `dd`, `mmd`, and `mcopy`): \
-`sh mkimg.sh`
+`bash mkimg.sh`
 
 This will generate a `.iso` image file that can be used as a boot disk in a virtual machine like [QEMU](https://www.qemu.org/).
 
@@ -70,10 +70,10 @@ If editing the PATH variable isn't working, the batch script could always be edi
 
 There is also a `rundbg.bat` that will launch QEMU with the appropriate flags to wait for `gdb` to connect on port `1234`.
 
-If on Linux, run `sh run.sh` and QEMU should boot up into LensorOS. \
+If on Linux, run `bash run.sh` and QEMU should boot up into LensorOS. \
 QEMU does need to be installed, so make sure you first run (`sudo apt install qemu-system-x86`).
 
-For debugging with gdb, run `sh rundbg.sh` instead. This will launch QEMU but wait to start your OS until gdb has connected on port `1234` of `localhost`.
+For debugging with gdb, run `bash rundbg.sh` instead. This will launch QEMU but wait to start your OS until gdb has connected on port `1234` of `localhost`.
 
 NOTE: When debugging with gdb, the kernel must be built with debug symbols ("-g" compile flag). To achieve this, run cmake with the following definition: \
 `-DCMAKE_BUILD_TYPE=Debug`
