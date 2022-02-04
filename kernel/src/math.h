@@ -16,11 +16,17 @@ struct uVector2 {
         y = _y;
     }
 
-    friend inline bool operator==(const uVector2& lhs, const uVector2& rhs) {
+    friend inline bool operator == (const uVector2& lhs, const uVector2& rhs) {
         return (lhs.x == rhs.x && lhs.y == rhs.y);
     }
-    friend inline bool operator!=(const uVector2& lhs, const uVector2& rhs) {
+    friend inline bool operator != (const uVector2& lhs, const uVector2& rhs) {
         return !(lhs == rhs);
+    }
+    friend inline uVector2 operator + (const uVector2& lhs, const uVector2& rhs) {
+        return {lhs.x + rhs.x, lhs.y + rhs.y};
+    }
+    friend inline uVector2 operator - (const uVector2& lhs, const uVector2& rhs) {
+        return {lhs.x - rhs.x, lhs.y - rhs.y};
     }
 };
 
