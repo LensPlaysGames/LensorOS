@@ -156,27 +156,25 @@ void DrawMouseCursor() {
 }
 
 u32 DrawColor = 0xffffffff;
-void randomize_draw_color() {
-    DrawColor = (u32)(1103515245 * DrawColor + 12345);
-}
-
 void process_mouse_packet() {
     // ONLY PROCESS A PACKET THAT IS READY
     if (mouse_packet_ready == false)
         return;
-    
     // MOUSE BUTTONS
     // Left Mouse Button (LMB)
+    const uVector2 DrawSize {2ULL, 2ULL};
     if (mouse_packet[0] & PS2LBTN) {
         uVector2 cachedPos = gRend.DrawPos;
-        gRend.DrawPos = {gMousePosition.x - 4, gMousePosition.y - gRend.Font->PSF1_Header->CharacterSize};
-        gRend.drawcharover('.', DrawColor);
-        gRend.swap(gRend.DrawPos, {8, gRend.Font->PSF1_Header->CharacterSize});
+        gRend.DrawPos = gMousePosition - DrawSize;
+        gRend.drawrect(DrawSize, DrawColor);
+        gRend.swap();
         gRend.DrawPos = cachedPos;
     }
     // Right Mouse Button (RMB)
     else if (mouse_packet[0] & PS2RBTN) {
-        randomize_draw_color();
+        // Linear Congruential Random Number Generator
+        // Terrible distribution, but quick and easy.
+        DrawColor = (u32)(1103515245 * DrawColor + 12345);
     }
     // Middle Mouse Button (MMB, Scroll-wheel)
     else if (mouse_packet[0] & PS2MBTN) {}
