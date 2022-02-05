@@ -159,7 +159,7 @@ namespace AHCI {
     }
 
     AHCIDriver::AHCIDriver(PCI::PCIDeviceHeader* pciBaseAddress) {
-        srl.writestr("[AHCI]: Constructing driver.\r\n");
+        srl->writestr("[AHCI]: Constructing driver.\r\n");
 
         PCIBaseAddress = pciBaseAddress;
         
@@ -167,27 +167,27 @@ namespace AHCI {
         // Map ABAR into memory.
         gPTM.map_memory(ABAR, ABAR);
         
-        srl.writestr("[AHCI]: Probing AHCI 1.0 Controller at 0x");
-        srl.writestr(to_hexstring((u64)PCIBaseAddress));
-        srl.writestr("\r\n");
+        srl->writestr("[AHCI]: Probing AHCI 1.0 Controller at 0x");
+        srl->writestr(to_hexstring((u64)PCIBaseAddress));
+        srl->writestr("\r\n");
 
         // Probe ABAR for port info.
         probe_ports();
         
-        srl.writestr("  Found ");
-        srl.writestr(to_string(numPorts));
-        srl.writestr(" open and active ports\r\n");
-        srl.writestr("  Read/write buffer size: ");
-        srl.writestr(to_string(MAX_READ_PAGES * 4));
-        srl.writestr("kib\r\n");
+        srl->writestr("  Found ");
+        srl->writestr(to_string(numPorts));
+        srl->writestr(" open and active ports\r\n");
+        srl->writestr("  Read/write buffer size: ");
+        srl->writestr(to_string(MAX_READ_PAGES * 4));
+        srl->writestr("kib\r\n");
 
         for (u8 i = 0; i < numPorts; ++i) {
             Ports[i]->Configure();
             Ports[i]->buffer = (u8*)gAlloc.request_pages(MAX_READ_PAGES);
             if (Ports[i]->buffer != nullptr) {
-                srl.writestr("[AHCI]: \033[32mPort ");
-                srl.writestr(to_string(i));
-                srl.writestr(" configured successfully.\033[0m\r\n");
+                srl->writestr("[AHCI]: \033[32mPort ");
+                srl->writestr(to_string(i));
+                srl->writestr(" configured successfully.\033[0m\r\n");
                 memset((void*)Ports[i]->buffer, 0, MAX_READ_PAGES * 0x1000);
                 // Check if storage media at current port has a file-system LensorOS recognizes.
                 // FAT (File Allocation Table):
@@ -199,60 +199,60 @@ namespace AHCI {
                     Inode inode = Inode();
                     fs->read(&inode);
 
-                    srl.writestr("[AHCI]: Device at port ");
-                    srl.writestr(to_string(i));
+                    srl->writestr("[AHCI]: Device at port ");
+                    srl->writestr(to_string(i));
                     switch (fs->Type) {
                     case FATType::INVALID: 
-                        srl.writestr(" has \033[31mINVALID\033[0m format.");
+                        srl->writestr(" has \033[31mINVALID\033[0m format.");
                         break;
                     case FATType::FAT32:   
-                        srl.writestr(" is FAT32 formatted.");
+                        srl->writestr(" is FAT32 formatted.");
                         break;
                     case FATType::FAT16:   
-                        srl.writestr(" is FAT16 formatted.");
+                        srl->writestr(" is FAT16 formatted.");
                         break;
                     case FATType::FAT12:   
-                        srl.writestr(" is FAT12 formatted.");
+                        srl->writestr(" is FAT12 formatted.");
                         break;
                     case FATType::ExFAT:   
-                        srl.writestr(" is ExFAT formatted.");
+                        srl->writestr(" is ExFAT formatted.");
                         break;
                     }
-                    srl.writestr("\r\n");
+                    srl->writestr("\r\n");
 
                     // Write label and type of FAT device.
                     switch (fs->Type) {
                     case FATType::FAT12:
                     case FATType::FAT16:
-                        srl.writestr("  Label: ");
-                        srl.writestr((char*)&((BootRecordExtension16*)&fs->BR.Extended)->VolumeLabel[0], 11);
-                        srl.writestr("\r\n");
+                        srl->writestr("  Label: ");
+                        srl->writestr((char*)&((BootRecordExtension16*)&fs->BR.Extended)->VolumeLabel[0], 11);
+                        srl->writestr("\r\n");
                         break;
                     case FATType::FAT32:
                     case FATType::ExFAT:
-                        srl.writestr("  Label: ");
-                        srl.writestr((char*)&((BootRecordExtension32*)&fs->BR.Extended)->VolumeLabel[0], 11);
-                        srl.writestr("\r\n");
+                        srl->writestr("  Label: ");
+                        srl->writestr((char*)&((BootRecordExtension32*)&fs->BR.Extended)->VolumeLabel[0], 11);
+                        srl->writestr("\r\n");
                         break;
                     default:
                         break;
                     }
-                    srl.writestr("  Total Size: ");
-                    srl.writestr(to_string(fs->get_total_size() / 1024 / 1024));
-                    srl.writestr(" mib\r\n");
+                    srl->writestr("  Total Size: ");
+                    srl->writestr(to_string(fs->get_total_size() / 1024 / 1024));
+                    srl->writestr(" mib\r\n");
                 }
                 else {
-                    srl.writestr("[AHCI]: \033[31mDevice at port ");
-                    srl.writestr(to_string(i));
-                    srl.writestr(" has an unrecognizable format.\033[0m\r\n");
+                    srl->writestr("[AHCI]: \033[31mDevice at port ");
+                    srl->writestr(to_string(i));
+                    srl->writestr(" has an unrecognizable format.\033[0m\r\n");
                 }
             }
         }
-        srl.writestr("[AHCI]: \033[32mDriver constructed.\033[0m\r\n");
+        srl->writestr("[AHCI]: \033[32mDriver constructed.\033[0m\r\n");
     }
     
     AHCIDriver::~AHCIDriver() {
-        srl.writestr("[AHCI]: Deconstructing AHCI Driver\r\n");
+        srl->writestr("[AHCI]: Deconstructing AHCI Driver\r\n");
         for(u32 i = 0; i < numPorts; ++i) {
             gAlloc.free_pages((void*)Ports[i]->buffer, MAX_READ_PAGES);
             delete Ports[i];

@@ -12,24 +12,24 @@ namespace PCI {
         if (pciDevHdr->DeviceID == 0xFFFF)
             return;
         // PRINT HUMAN READABLE INFORMATION
-        // srl.writestr("  ");
-        // srl.writestr(get_vendor_name(pciDevHdr->VendorID));
-        // srl.writestr(" / ");
-        // srl.writestr(get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID));
-        // srl.writestr(" / ");
-        // srl.writestr(DeviceClasses[pciDevHdr->Class]);
-        // srl.writestr(" / ");
-        // srl.writestr(get_subclass_name(pciDevHdr->Class, pciDevHdr->Subclass));
-        // srl.writestr(" / ");
-        // srl.writestr(get_prog_if_name(pciDevHdr->Class, pciDevHdr->Subclass, pciDevHdr->ProgIF));
-        // srl.writestr("\r\n");
+        // srl->writestr("  ");
+        // srl->writestr(get_vendor_name(pciDevHdr->VendorID));
+        // srl->writestr(" / ");
+        // srl->writestr(get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID));
+        // srl->writestr(" / ");
+        // srl->writestr(DeviceClasses[pciDevHdr->Class]);
+        // srl->writestr(" / ");
+        // srl->writestr(get_subclass_name(pciDevHdr->Class, pciDevHdr->Subclass));
+        // srl->writestr(" / ");
+        // srl->writestr(get_prog_if_name(pciDevHdr->Class, pciDevHdr->Subclass, pciDevHdr->ProgIF));
+        // srl->writestr("\r\n");
         if (pciDevHdr->Class == 0x01) {
             // Mass Storage Controller
             if (pciDevHdr->Subclass == 0x06) {
                 // Serial ATA
                 if (pciDevHdr->ProgIF == 0x01) {
                     // AHCI 1.0 Device
-                    srl.writestr("[PCI]: Found AHCI 1.0 Serial ATA Mass Storage Controller\r\n");
+                    srl->writestr("[PCI]: Found AHCI 1.0 Serial ATA Mass Storage Controller\r\n");
                     AHCI::Drivers[AHCI::NumDrivers] = new AHCI::AHCIDriver(pciDevHdr);
                     ++AHCI::NumDrivers;
                 }
@@ -64,7 +64,7 @@ namespace PCI {
     }
     
     void enumerate_pci(ACPI::MCFGHeader* mcfg) {
-        // srl.writestr("[PCI]: \r\n");
+        // srl->writestr("[PCI]: \r\n");
         int entries = ((mcfg->Header.Length) - sizeof(ACPI::MCFGHeader)) / sizeof(ACPI::DeviceConfig);
         for (int t = 0; t < entries; ++t) {
             ACPI::DeviceConfig* devCon = (ACPI::DeviceConfig*)((u64)mcfg

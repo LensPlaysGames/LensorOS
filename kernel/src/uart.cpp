@@ -1,7 +1,7 @@
 #include "uart.h"
 
 // Global serial driver.
-UARTDriver srl;
+UARTDriver* srl;
 
 UARTDriver::UARTDriver() {
     // Disable all interrupts.

@@ -83,38 +83,38 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     init_heap((void*)0x00000000000, 1);
     // SETUP SERIAL I/O.
     srl = new UARTDriver;
-    srl.writestr("\r\n\r\n<<>><<<!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!>>><<>>\r\n\r\n");
-    srl.writestr("[kUtil]:\r\n  Kernel loaded from 0x");
-    srl.writestr(to_hexstring((u64)&_KernelStart));
-    srl.writestr(" to 0x");
-    srl.writestr(to_hexstring((u64)&_KernelEnd));
-    srl.writestr("\r\n");
-    srl.writestr("    .text:   0x");
-    srl.writestr(to_hexstring((u64)&_TextStart));
-    srl.writestr(" thru 0x");
-    srl.writestr(to_hexstring((u64)&_TextEnd));
-    srl.writestr("\r\n");
-    srl.writestr("    .data:   0x");
-    srl.writestr(to_hexstring((u64)&_DataStart));
-    srl.writestr(" thru 0x");
-    srl.writestr(to_hexstring((u64)&_DataEnd));
-    srl.writestr("\r\n");
-    srl.writestr("    .rodata: 0x");
-    srl.writestr(to_hexstring((u64)&_ReadOnlyDataStart));
-    srl.writestr(" thru 0x");
-    srl.writestr(to_hexstring((u64)&_ReadOnlyDataEnd));
-    srl.writestr("\r\n");
-    srl.writestr("    .bss:    0x");
-    srl.writestr(to_hexstring((u64)&_BlockStartingSymbolsStart));
-    srl.writestr(" thru 0x");
-    srl.writestr(to_hexstring((u64)&_BlockStartingSymbolsEnd));
-    srl.writestr("\r\n");
-    srl.writestr("  Heap mapped to 0x");
-    srl.writestr(to_hexstring((u64)sHeapStart));
-    srl.writestr(" thru 0x");
-    srl.writestr(to_hexstring((u64)sHeapEnd));
-    srl.writestr("\r\n\r\n");
-    srl.writestr("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
+    srl->writestr("\r\n\r\n<<>><<<!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!>>><<>>\r\n\r\n");
+    srl->writestr("[kUtil]:\r\n  Kernel loaded from 0x");
+    srl->writestr(to_hexstring((u64)&_KernelStart));
+    srl->writestr(" to 0x");
+    srl->writestr(to_hexstring((u64)&_KernelEnd));
+    srl->writestr("\r\n");
+    srl->writestr("    .text:   0x");
+    srl->writestr(to_hexstring((u64)&_TextStart));
+    srl->writestr(" thru 0x");
+    srl->writestr(to_hexstring((u64)&_TextEnd));
+    srl->writestr("\r\n");
+    srl->writestr("    .data:   0x");
+    srl->writestr(to_hexstring((u64)&_DataStart));
+    srl->writestr(" thru 0x");
+    srl->writestr(to_hexstring((u64)&_DataEnd));
+    srl->writestr("\r\n");
+    srl->writestr("    .rodata: 0x");
+    srl->writestr(to_hexstring((u64)&_ReadOnlyDataStart));
+    srl->writestr(" thru 0x");
+    srl->writestr(to_hexstring((u64)&_ReadOnlyDataEnd));
+    srl->writestr("\r\n");
+    srl->writestr("    .bss:    0x");
+    srl->writestr(to_hexstring((u64)&_BlockStartingSymbolsStart));
+    srl->writestr(" thru 0x");
+    srl->writestr(to_hexstring((u64)&_BlockStartingSymbolsEnd));
+    srl->writestr("\r\n");
+    srl->writestr("  Heap mapped to 0x");
+    srl->writestr(to_hexstring((u64)sHeapStart));
+    srl->writestr(" thru 0x");
+    srl->writestr(to_hexstring((u64)sHeapEnd));
+    srl->writestr("\r\n\r\n");
+    srl->writestr("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
     // SETUP GOP RENDERER.
     target = *bInfo->framebuffer;
     // GOP = Graphics Output Protocol.
@@ -139,7 +139,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     gRend.puts("<<>><<<!===--- You are now booting into LensorOS ---===!>>><<>>");
     gRend.crlf();
     gRend.swap();
-    srl.writestr("    \033[32mGOP Renderer setup successful\033[0m\r\n");
+    srl->writestr("    \033[32mGOP Renderer setup successful\033[0m\r\n");
     // DRAW A FACE :)
     // left eye
     gRend.DrawPos = {420, 420};
@@ -160,45 +160,45 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     // PREPARE HARDWARE INTERRUPTS (IDT).
     // IDT = INTERRUPT DESCRIPTOR TABLE.
     // Call assembly `lidt`.
-    srl.writestr("[kUtil]: Preparing interrupts.\r\n");
+    srl->writestr("[kUtil]: Preparing interrupts.\r\n");
     prepare_interrupts();
-    srl.writestr("  \033[32mInterrupts prepared successfully.\033[0m\r\n");
+    srl->writestr("  \033[32mInterrupts prepared successfully.\033[0m\r\n");
     // SYSTEM TIMER.
     gPIT = PIT();
     gPIT.initialize_pit();
-    srl.writestr("[kUtil]: Programmable Interval Timer initialized.\r\n");
-    srl.writestr("  Channel 0, H/L Bit Access\r\n");
-    srl.writestr("  Rate Generator, BCD Disabled\r\n");
-    srl.writestr("  Periodic interrupts at ");
-    srl.writestr(to_string(PIT_FREQUENCY));
-    srl.writestr("hz.\r\n");
+    srl->writestr("[kUtil]: Programmable Interval Timer initialized.\r\n");
+    srl->writestr("  Channel 0, H/L Bit Access\r\n");
+    srl->writestr("  Rate Generator, BCD Disabled\r\n");
+    srl->writestr("  Periodic interrupts at ");
+    srl->writestr(to_string(PIT_FREQUENCY));
+    srl->writestr("hz.\r\n");
     // INITIALIZE REAL TIME CLOCK.
     gRTC = RTC();
-    srl.writestr("[kUtil]: Real Time Clock initialized.\r\n");
+    srl->writestr("[kUtil]: Real Time Clock initialized.\r\n");
     gRTC.set_periodic_int_enabled(true);
-    srl.writestr("  Periodic interrupts at ");
-    srl.writestr(to_string((double)RTC_PERIODIC_HERTZ));
-    srl.writestr("hz\r\n");
+    srl->writestr("  Periodic interrupts at ");
+    srl->writestr(to_string((double)RTC_PERIODIC_HERTZ));
+    srl->writestr("hz\r\n");
     // PRINT REAL TIME TO SERIAL OUTPUT.
-    srl.writestr("[kUtil]: \033[33mNow is ");
-    srl.writestr(to_string(gRTC.Time.hour));
-    srl.writeb(':');
-    srl.writestr(to_string(gRTC.Time.minute));
-    srl.writeb(':');
-    srl.writestr(to_string(gRTC.Time.second));
-    srl.writestr(" on ");
-    srl.writestr(to_string(gRTC.Time.year));
-    srl.writeb('-');
-    srl.writestr(to_string(gRTC.Time.month));
-    srl.writeb('-');
-    srl.writestr(to_string(gRTC.Time.date));
-    srl.writestr("\033[0m\r\n");
+    srl->writestr("[kUtil]: \033[33mNow is ");
+    srl->writestr(to_string(gRTC.Time.hour));
+    srl->writeb(':');
+    srl->writestr(to_string(gRTC.Time.minute));
+    srl->writeb(':');
+    srl->writestr(to_string(gRTC.Time.second));
+    srl->writestr(" on ");
+    srl->writestr(to_string(gRTC.Time.year));
+    srl->writeb('-');
+    srl->writestr(to_string(gRTC.Time.month));
+    srl->writeb('-');
+    srl->writestr(to_string(gRTC.Time.date));
+    srl->writestr("\033[0m\r\n");
     // PREPARE DRIVERS.
     gFATDriver = FATDriver();
     // TODO: PREPARE DEVICE TREE.
     // SYSTEM INFORMATION IS FOUND IN ACPI TABLE
     prepare_acpi(bInfo);
-    srl.writestr("[kUtil]: ACPI prepared.\r\n");
+    srl->writestr("[kUtil]: ACPI prepared.\r\n");
     // PREPARE PS/2 MOUSE.
     init_ps2_mouse();
     /// INTERRUPT MASKS (IRQs).
@@ -210,8 +210,8 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     outb(PIC2_DATA, 0b11101110);
     io_wait();
     // ENABLE INTERRUPTS.
-    srl.writestr("[kUtil]: Interrupt masks sent, enabling interrupts.\r\n");
+    srl->writestr("[kUtil]: Interrupt masks sent, enabling interrupts.\r\n");
     asm ("sti");
-    srl.writestr("    \033[32mInterrupts enabled.\033[0m\r\n");
+    srl->writestr("    \033[32mInterrupts enabled.\033[0m\r\n");
     return kInfo;
 }

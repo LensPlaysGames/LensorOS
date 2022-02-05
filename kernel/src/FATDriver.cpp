@@ -134,9 +134,9 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
     u32 entryOffset   {0};
     u32 tableValue    {0};
     while (true) {
-        srl.writestr("[FATDriver]: \r\n  Reading cluster ");
-        srl.writestr(to_string(clusterIndex));
-        srl.writestr("\r\n");
+        srl->writestr("[FATDriver]: \r\n  Reading cluster ");
+        srl->writestr(to_string(clusterIndex));
+        srl->writestr("\r\n");
         ahci->Ports[portNumber]->Read(get_first_sector_in_cluster(BR, clusterIndex),
                                       BR->BPB.NumSectorsPerCluster,
                                       ahci->Ports[portNumber]->buffer);
@@ -170,45 +170,45 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
             /// Volume ID: 0b00001000
             /// Directory: 0b00010000
             /// Archive:   0b00100000
-            srl.writestr("   ");
+            srl->writestr("   ");
             if (clEntry->Attributes & 0b00000001)
-                srl.writestr(" Read-only ");
+                srl->writestr(" Read-only ");
             if (clEntry->Attributes & 0b00000010)
-                srl.writestr(" Hidden ");
+                srl->writestr(" Hidden ");
             if (clEntry->Attributes & 0b00000100)
-                srl.writestr(" System ");
-            else srl.writeb((u8)' ');
+                srl->writestr(" System ");
+            else srl->writeb((u8)' ');
             
             if (clEntry->Attributes & 0b00010000)
-                srl.writestr("Directory");
+                srl->writestr("Directory");
             else if (clEntry->Attributes & 0b00001000)
-                srl.writestr("Volume Label");
+                srl->writestr("Volume Label");
             else {
                 is_file = true;
-                srl.writestr("File");
+                srl->writestr("File");
             }
 
             // Write file name
             if (lfnBufferFull) {
                 // TODO: Apply long file name to current entry...
                 //       This should be stored in VFS structure for later use.
-                srl.writestr(" with long name: ");
-                srl.writestr((char*)&lfnBuffer[0], 26);
-                srl.writestr("\r\n");
+                srl->writestr(" with long name: ");
+                srl->writestr((char*)&lfnBuffer[0], 26);
+                srl->writestr("\r\n");
                 lfnBufferFull = false;
             }
             else {
-                srl.writestr(": ");
-                srl.writestr((char*)&clEntry->FileName[0], 11);
-                srl.writestr("\r\n");
+                srl->writestr(": ");
+                srl->writestr((char*)&clEntry->FileName[0], 11);
+                srl->writestr("\r\n");
             }
 
             if (is_file) {
-                srl.writestr("      File Size: ");
-                srl.writestr(to_string(clEntry->FileSizeInBytes / 1024 / 1024));
-                srl.writestr(" MiB (");
-                srl.writestr(to_string(clEntry->FileSizeInBytes / 1024));
-                srl.writestr(" KiB)\r\n");
+                srl->writestr("      File Size: ");
+                srl->writestr(to_string(clEntry->FileSizeInBytes / 1024 / 1024));
+                srl->writestr(" MiB (");
+                srl->writestr(to_string(clEntry->FileSizeInBytes / 1024));
+                srl->writestr(" KiB)\r\n");
             }
             
             // Increment to next entry in cluster.

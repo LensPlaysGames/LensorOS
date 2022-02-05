@@ -31,9 +31,9 @@ public:
         }
         else {
             // Read from device failed.
-            srl.writestr("[FatFS]: ERROR -> Could not read from device at port ");
-            srl.writestr(to_string(portNumber));
-            srl.writestr("\r\n");
+            srl->writestr("[FatFS]: ERROR -> Could not read from device at port ");
+            srl->writestr(to_string(portNumber));
+            srl->writestr("\r\n");
         }
     }
 

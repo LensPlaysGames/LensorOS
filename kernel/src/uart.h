@@ -70,6 +70,6 @@ public:
     void writestr(char* str, u64 numChars);
 };
 
-extern UARTDriver srl;
+extern UARTDriver* srl;
 
 #endif
