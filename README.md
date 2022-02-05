@@ -81,7 +81,7 @@ If editing the PATH variable isn't working, the batch script could always be edi
 If you're terminal output looks rather mangled (ie. left-pointing arrows, open square-brackets, etc), it is likely the terminal you are using doesn't support ANSI color codes. \
 This is how it is when I use Windows Explorer to launch the `run` batch script, and makes debugging using the serial output rather difficult. \
 To get around this, I use the (rather life-changing) [Windows Terminal](https://github.com/Microsoft/Terminal). It should be the default terminal, and should have been for five years now, but I'm glad it is available and open source none-the-less. \
-This new terminal allows both WSL and PowerShell to be open in the same terminal, but separate tabs. By running `& '\\wsl$\your-linux-distro\path\to\LensorOS\kernel\run.bat'` from within a PowerShell in the new Windows Terminal, you will experience glorious full-color, formatted serial output.
+This new terminal allows both WSL and PowerShell to be open in the same terminal, but separate tabs. By running `& '\\wsl$\your-linux-distro\path\to\LensorOS\kernel\run.bat'` from within a PowerShell in the new Windows Terminal, you will experience glorious full-color, formatted serial output. If you are having none of this, and would prefer to have a very monotone serial output that is also not mangled with ANSI color codes, define `LENSOR_OS_UART_HIDE_COLOR_CODES` and all color codes will be hidden from serial output.
 
 There is also a `rundbg.bat` that will launch QEMU with the appropriate flags to wait for `gdb` to connect on port `1234` of `localhost`.
 

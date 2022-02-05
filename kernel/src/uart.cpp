@@ -56,11 +56,21 @@ void UARTDriver::writestr(const char* str) {
     // Set current character to beginning of string.
     char* c = (char*)str;
     // Check for null-terminator at current character.
-    while (*c != 0)
-    {
-        // Write current character to serial out.
+    while (*c != 0) {
+#ifdef LENSOR_OS_UART_HIDE_COLOR_CODES
+        if (*c == '\33' || *c == '\033' || *c == '\x1b' || *c == '\x1B') {
+            // Loop until null terminator or 'm'.
+            do { c++; } while (*c != 'm' && *c != 0);
+            // Don't read memory past null terminator!
+            if (*c == 0)
+                return;
+            // Skip the 'm'.
+            c++;
+            if (*c == 0)
+                return;
+        }
+#endif
         writeb((u8)*c);
-        // Roll Credits! (increment to next character)
         c++;
     }
 }
@@ -68,11 +78,24 @@ void UARTDriver::writestr(const char* str) {
 /// Write a given number of characters from a given string to serial output COM1.
 void UARTDriver::writestr(char* str, u64 numChars) {
     while (numChars > 0) {
-        // Write current character to serial out.
+#ifdef LENSOR_OS_UART_HIDE_COLOR_CODES
+        if (*str == '\33' || *str == '\033' || *str == '\x1b' || *str == '\x1B') {
+            // Loop until no more chars or 'm'
+            do {
+                str++;
+                numChars--;
+            } while (*str != 'm' && numChars > 0);
+            if (*str == 'm') {
+                str++;
+                numChars--;
+            }
+            if (numChars == 0)
+                return;
+        }
+#endif
         writeb((u8)*str);
-        // Increment to next character.
         str++;
-        numChars--;
+        numChars--;    
     }
 }
 
