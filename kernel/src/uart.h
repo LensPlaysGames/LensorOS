@@ -8,8 +8,6 @@
 #define BAUD_RATE 115200
 #define BAUD_DIVISOR (BAUD_FREQ / BAUD_RATE)
 
-#define MAX_SERIAL_STRING_LENGTH 1024
-
 #define COM1 0x3f8
 
 /*

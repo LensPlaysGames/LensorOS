@@ -1,5 +1,8 @@
 #include "uart.h"
 
+// Global serial driver.
+UARTDriver srl;
+
 UARTDriver::UARTDriver() {
     u8 divisorL = (u8)BAUD_DIVISOR;
     u8 divisorH = (u16)BAUD_DIVISOR >> 8;
@@ -98,6 +101,3 @@ void UARTDriver::writestr(char* str, u64 numChars) {
         numChars--;    
     }
 }
-
-// Global serial driver.
-UARTDriver srl;
