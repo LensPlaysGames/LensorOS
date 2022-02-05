@@ -43,4 +43,8 @@ inline void operator delete[] (void* address, u64 unused) {
   (void)unused;
   return free(address);
 }
+
+extern void* sHeapStart;
+extern void* sHeapEnd;
+
 #endif

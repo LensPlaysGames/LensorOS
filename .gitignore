@@ -39,6 +39,10 @@
 # Kernel Build Stuff
 /kernel/bin/
 /kernel/out/
+/kernel/build/
+/kernel/ninja/
+/kernel/make/
+/kernel/bld/
 
 # Local resources
 /fonts/
