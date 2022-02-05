@@ -18,7 +18,6 @@ SECTIONS
     _DataEnd = .;
     }
 
-
     .rodata : ALIGN(0x1000)
     {
     _ReadOnlyDataStart = .;

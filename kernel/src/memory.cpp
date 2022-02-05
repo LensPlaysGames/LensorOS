@@ -37,21 +37,19 @@ void memset(void* start, u8 value, u64 numBytes) {
     }
 }
 
+// The signed comparison does limit `numBytes` to ~9 billion.
+// I think I'm okay with that, as nobody will be moving 8192 pebibytes
+//   around in memory any time soon. If you are, rewrite this, nerd :^)
 void memcpy(void* src, void* dest, u64 numBytes) {
     s64 i = 0;
-    for (; i <= (s64)numBytes - 2048; i += 2048) {
+    for (; i <= (s64)numBytes - 2048; i += 2048)
         *(u16384*)((u64)dest + i) = *(u16384*)((u64)src + i);
-    }
-    for (; i <= (s64)numBytes - 128; i += 128) {
+    for (; i <= (s64)numBytes - 128; i += 128)
         *(u1024*)((u64)dest + i) = *(u1024*)((u64)src + i);
-    }
-    for (; i <= (s64)numBytes - 32; i += 32) {
+    for (; i <= (s64)numBytes - 32; i += 32)
         *(u256*)((u64)dest + i) = *(u256*)((u64)src + i);
-    }
-    for (; i <= (s64)numBytes - 8; i += 8) {
+    for (; i <= (s64)numBytes - 8; i += 8)
         *(u64*)((u64)dest + i) = *(u64*)((u64)src + i);
-    }
-    for (; i < (s64)numBytes; ++i) {
+    for (; i < (s64)numBytes; ++i)
         *(u8*)((u64)dest + i) = *(u8*)((u64)src + i);
-    }
 }
