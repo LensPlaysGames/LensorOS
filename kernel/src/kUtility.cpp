@@ -89,6 +89,26 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     srl.writestr(" to 0x");
     srl.writestr(to_hexstring((u64)&_KernelEnd));
     srl.writestr("\r\n");
+    srl.writestr("  .text:   0x");
+    srl.writestr(to_string((u64)&_TextStart));
+    srl.writestr(" thru 0x");
+    srl.writestr(to_string((u64)&_TextEnd));
+    srl.writestr("\r\n");
+    srl.writestr("  .data:   0x");
+    srl.writestr(to_string((u64)&_DataStart));
+    srl.writestr(" thru 0x");
+    srl.writestr(to_string((u64)&_DataEnd));
+    srl.writestr("\r\n");
+    srl.writestr("  .rodata: 0x");
+    srl.writestr(to_string((u64)&_ReadOnlyDataStart));
+    srl.writestr(" thru 0x");
+    srl.writestr(to_string((u64)&_ReadOnlyDataEnd));
+    srl.writestr("\r\n");
+    srl.writestr("  .bss:    0x");
+    srl.writestr(to_string((u64)&_BlockStartingSymbolsStart));
+    srl.writestr(" thru 0x");
+    srl.writestr(to_string((u64)&_BlockStartingSymbolsEnd));
+    srl.writestr("\r\n");
     srl.writestr("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
     // SETUP GOP RENDERER.
     target = *bInfo->framebuffer;

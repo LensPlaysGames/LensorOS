@@ -44,4 +44,13 @@ struct KernelInfo {
 extern u64 _KernelStart;
 extern u64 _KernelEnd;
 
+extern u64 _TextStart;
+extern u64 _TextEnd;
+extern u64 _DataStart;
+extern u64 _DataEnd;
+extern u64 _ReadOnlyDataStart;
+extern u64 _ReadOnlyDataEnd;
+extern u64 _BlockStartingSymbolsStart;
+extern u64 _BlockStartingSymbolsEnd;
+
 KernelInfo kernel_init(BootInfo* info);

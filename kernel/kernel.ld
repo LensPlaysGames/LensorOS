@@ -3,26 +3,35 @@ ENTRY(_start)
 
 SECTIONS
 {
-	_KernelStart = .;
-	.text : ALIGN(0x1000)
-	{
-		*(.text)
-	}
+    _KernelStart = .;
+    .text : ALIGN(0x1000)
+    {
+    _TextStart = .;
+        *(.text)
+    _TextEnd = .;
+    }
 
-	.data : ALIGN(0x1000)
-	{
-		*(.data)
-	}
+    .data : ALIGN(0x1000)
+    {
+    _DataStart = .;
+        *(.data)
+    _DataEnd = .;
+    }
 
-	.rodata : ALIGN(0x1000)
-	{
-		*(.rodata)
-	}
 
-	.bss : ALIGN(0x1000)
-	{
-		*(COMMON)
-		*(.bss)
-	}
-	_KernelEnd = .;
+    .rodata : ALIGN(0x1000)
+    {
+    _ReadOnlyDataStart = .;
+        *(.rodata)
+    _ReadOnlyDataEnd = .;
+    }
+
+    .bss : ALIGN(0x1000)
+    {
+    _BlockStartingSymbolsStart = .;
+        *(COMMON)
+        *(.bss)
+    _BlockStartingSymbolsEnd = .;
+    }
+    _KernelEnd = .;
 }
