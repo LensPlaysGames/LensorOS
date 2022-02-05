@@ -83,10 +83,12 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     init_heap((void*)0x700000000000, 1);
     // SETUP SERIAL I/O.
     srl = UARTDriver();
-    const char* bootMsg = "<<>><<<!===--- You are now booting into LensorOS ---===!>>><<>>";
-    srl.writestr("\r\n\r\n");
-    srl.writestr(bootMsg);
-    srl.writestr("\r\n\r\n");
+    srl.writestr("\r\n\r\n\033[2m<<>><<<!===--- \033[0m\033[1;33mYou\033[0m \033[2mare now booting into LensorOS ---===!>>><<>>\033[0m\r\n");
+    srl.writestr("\033[2m<<>><<<!===--- You \033[0m\033[1;33mare\033[0m \033[2mnow booting into LensorOS ---===!>>><<>>\033[0m\r\n");
+    srl.writestr("\033[2m<<>><<<!===--- You are \033[0m\033[1;33mnow\033[0m \033[2mbooting into LensorOS ---===!>>><<>>\033[0m\r\n");
+    srl.writestr("\033[2m<<>><<<!===--- You are now \033[0m\033[1;33mbooting\033[0m \033[2minto LensorOS ---===!>>><<>>\033[0m\r\n");
+    srl.writestr("\033[2m<<>><<<!===--- You are now booting \033[0m\033[1;33minto\033[0m \033[2mLensorOS ---===!>>><<>>\033[0m\r\n");
+    srl.writestr("\033[2m<<>><<<!===--- You are now booting into \033[0m\033[1;33mLensorOS\033[0m \033[2m---===!>>><<>>\033[0m\r\n\r\n");
     srl.writestr("[kUtil]: Kernel loaded from 0x");
     srl.writestr(to_hexstring((u64)&_KernelStart));
     srl.writestr(" to 0x");
@@ -114,10 +116,10 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     // CREATE GLOBAL RENDERER
     gRend = BasicRenderer(bInfo->framebuffer, &target, bInfo->font);
     gRend.clear();
-    gRend.puts(bootMsg);
+    gRend.puts("<<>><<<!===--- You are now booting into LensorOS ---===!>>><<>>");
     gRend.crlf();
     gRend.swap();
-    srl.writestr("    GOP Renderer setup successful\r\n");
+    srl.writestr("    \033[32mGOP Renderer setup successful\033[0m\r\n");
     // DRAW A FACE :)
     // left eye
     gRend.DrawPos = {420, 420};
@@ -138,8 +140,9 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     // PREPARE HARDWARE INTERRUPTS (IDT).
     // IDT = INTERRUPT DESCRIPTOR TABLE.
     // Call assembly `lidt`.
+    srl.writestr("[kUtil]: Preparing interrupts.\r\n");
     prepare_interrupts();
-    srl.writestr("[kUtil]: Interrupts prepared.\r\n");
+    srl.writestr("  \033[32mInterrupts prepared successfully.\033[0m\r\n");
     // SYSTEM TIMER.
     gPIT = PIT();
     gPIT.initialize_pit();
@@ -157,7 +160,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     srl.writestr(to_string((double)RTC_PERIODIC_HERTZ));
     srl.writestr("hz\r\n");
     // PRINT REAL TIME TO SERIAL OUTPUT.
-    srl.writestr("[kUtil]: Now is ");
+    srl.writestr("[kUtil]: \033[33mNow is ");
     srl.writestr(to_string(gRTC.Time.hour));
     srl.writeb(':');
     srl.writestr(to_string(gRTC.Time.minute));
@@ -169,7 +172,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     srl.writestr(to_string(gRTC.Time.month));
     srl.writeb('-');
     srl.writestr(to_string(gRTC.Time.date));
-    srl.writestr("\r\n");
+    srl.writestr("\033[0m\r\n");
     // PREPARE DRIVERS.
     gFATDriver = FATDriver();
     // TODO: PREPARE DEVICE TREE.
@@ -189,6 +192,6 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     // ENABLE INTERRUPTS.
     srl.writestr("[kUtil]: Interrupt masks sent, enabling interrupts.\r\n");
     asm ("sti");
-    srl.writestr("    Interrupts enabled.\r\n");
+    srl.writestr("    \033[32mInterrupts enabled.\033[0m\r\n");
     return kInfo;
 }

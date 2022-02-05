@@ -71,7 +71,6 @@ namespace AHCI {
         hbaPort->fisBaseAddress = (u32)(u64)fisBase;
         hbaPort->fisBaseAddressUpper = (u32)((u64)fisBase >> 32);
         memset(fisBase, 0, 256);
-
         HBACommandHeader* cmdHdr = (HBACommandHeader*)((u64)hbaPort->commandListBase + ((u64)hbaPort->commandListBaseUpper << 32));
         for (u64 i = 0; i < 32; ++i) {
             cmdHdr[i].prdtLength = 8;
@@ -81,7 +80,6 @@ namespace AHCI {
             cmdHdr[i].commandTableBaseAddressUpper = (u32)((u64)address >> 32);
             memset(cmdTableAddress, 0, 256);
         }
-        
         StartCMD();
     }
 
@@ -176,10 +174,10 @@ namespace AHCI {
         // Probe ABAR for port info.
         probe_ports();
         
-        srl.writestr("[AHCI]: Found ");
+        srl.writestr("  Found ");
         srl.writestr(to_string(numPorts));
         srl.writestr(" open and active ports\r\n");
-        srl.writestr("[AHCI]: Read/write buffer size: ");
+        srl.writestr("  Read/write buffer size: ");
         srl.writestr(to_string(MAX_READ_PAGES * 4));
         srl.writestr("kib\r\n");
 
@@ -187,14 +185,13 @@ namespace AHCI {
             Ports[i]->Configure();
             Ports[i]->buffer = (u8*)gAlloc.request_pages(MAX_READ_PAGES);
             if (Ports[i]->buffer != nullptr) {
-                srl.writestr("[AHCI]: Port ");
+                srl.writestr("[AHCI]: \033[32mPort ");
                 srl.writestr(to_string(i));
-                srl.writestr(" configured successfully.\r\n");
+                srl.writestr(" configured successfully.\033[0m\r\n");
                 memset((void*)Ports[i]->buffer, 0, MAX_READ_PAGES * 0x1000);
                 // Check if storage media at current port has a file-system LensorOS recognizes.
                 // FAT (File Allocation Table):
                 if (gFATDriver.is_device_fat_formatted(this, i)) {
-                    // TODO: Cache file-system for later use.
                     FatFS* fs = new FatFS(NumFileSystems, this, i);
                     FileSystems[NumFileSystems] = fs;
                     ++NumFileSystems;
@@ -206,7 +203,7 @@ namespace AHCI {
                     srl.writestr(to_string(i));
                     switch (fs->Type) {
                     case FATType::INVALID: 
-                        srl.writestr(" has INVALID format.");
+                        srl.writestr(" has \033[31mINVALID\033[0m format.");
                         break;
                     case FATType::FAT32:   
                         srl.writestr(" is FAT32 formatted.");
@@ -244,9 +241,14 @@ namespace AHCI {
                     srl.writestr(to_string(fs->get_total_size() / 1024 / 1024));
                     srl.writestr(" mib\r\n");
                 }
+                else {
+                    srl.writestr("[AHCI]: \033[31mDevice at port ");
+                    srl.writestr(to_string(i));
+                    srl.writestr(" has an unrecognizable format.\033[0m\r\n");
+                }
             }
         }
-        srl.writestr("[AHCI]: Driver constructed.\r\n");
+        srl.writestr("[AHCI]: \033[32mDriver constructed.\033[0m\r\n");
     }
     
     AHCIDriver::~AHCIDriver() {

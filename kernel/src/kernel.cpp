@@ -101,7 +101,7 @@ void srl_memory_info() {
 extern "C" void _start(BootInfo* bInfo) {
     // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
     kernel_init(bInfo);
-    srl.writestr("!===--- You have now booted into LensorOS ---===!\r\n");
+    srl.writestr("\033[30;47m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
     // Clear + swap screen (ensure known state: blank).
     gRend.clear(0x00000000);
     gRend.swap();
@@ -117,9 +117,6 @@ extern "C" void _start(BootInfo* bInfo) {
     gRend.crlf();
     gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize});
     /// END GPLv3 LICENSE REQUIREMENT.
-
-    srl.writestr("\033[31mThis \033[33mis \033[32ma \033[34mcolor \033[36mtest\033[0m!");
-
     // Start keyboard input at draw position, not origin.
     gTextPosition = gRend.DrawPos;
     u32 debugInfoX = gRend.Target->PixelWidth - 300;
