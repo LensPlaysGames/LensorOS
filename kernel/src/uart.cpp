@@ -4,15 +4,13 @@
 UARTDriver srl;
 
 UARTDriver::UARTDriver() {
-    u8 divisorL = (u8)BAUD_DIVISOR;
-    u8 divisorH = (u16)BAUD_DIVISOR >> 8;
     // Disable all interrupts.
     outb(COM1 + 1, 0x00);
     // Enable DLAB (most significant bit)
     outb(COM1 + 3, 0b10000000);
     // Set divisor
-    outb(COM1, divisorL);
-    outb(COM1 + 1, divisorH);
+    outb(COM1, (u8)BAUD_DIVISOR);
+    outb(COM1 + 1, (u8)((u16)BAUD_DIVISOR >> 8));
     // Set Line Control
     outb(COM1 + 3, 0b00000011);
     // Enable FIFO, clear them, 14-byte threshold
@@ -21,14 +19,12 @@ UARTDriver::UARTDriver() {
     outb(COM1 + 4, 0b00001011);
     // Enable loop-back.
     outb(COM1 + 4, 0b00011110);
-
     // Loop-back test.
     outb(COM1, 0xae);
     if (inb(COM1) != 0xae) {
         // Error! No good.
         // TODO: Something about it.
     }
-
     // Enable all interrupts except for loop-back.
     outb(COM1 + 4, 0b00001111);
 }
@@ -78,7 +74,7 @@ void UARTDriver::writestr(const char* str) {
     }
 }
 
-/// Write a given number of characters from a given string to serial output COM1.
+/// Write a given number of characters from a given string of characters to serial output COM1.
 void UARTDriver::writestr(char* str, u64 numChars) {
     while (numChars > 0) {
 #ifdef LENSOR_OS_UART_HIDE_COLOR_CODES
