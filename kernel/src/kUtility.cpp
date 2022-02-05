@@ -80,7 +80,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     // PREPARE MEMORY.
     prepare_memory(bInfo);
     // SETUP KERNEL HEAP.
-    init_heap((void*)0x00000000000, 1);
+    init_heap((void*)0x700000000000, 1);
     // SETUP SERIAL I/O.
     srl = new UARTDriver;
     srl->writestr("\r\n\r\n<<>><<<!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!>>><<>>\r\n\r\n");
@@ -108,12 +108,12 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     srl->writestr(to_hexstring((u64)&_BlockStartingSymbolsStart));
     srl->writestr(" thru 0x");
     srl->writestr(to_hexstring((u64)&_BlockStartingSymbolsEnd));
-    srl->writestr("\r\n");
-    srl->writestr("  Heap mapped to 0x");
+    srl->writestr("\r\n\r\n");
+    srl->writestr("[kUtil]: Heap mapped to 0x");
     srl->writestr(to_hexstring((u64)sHeapStart));
     srl->writestr(" thru 0x");
     srl->writestr(to_hexstring((u64)sHeapEnd));
-    srl->writestr("\r\n\r\n");
+    srl->writestr("\r\n");
     srl->writestr("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
     // SETUP GOP RENDERER.
     target = *bInfo->framebuffer;
@@ -124,9 +124,15 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     // ALLOCATE PAGES IN BITMAP FOR ACTIVE FRAMEBUFFER (CURRENT DISPLAY MEMORY).
     gAlloc.lock_pages(bInfo->framebuffer->BaseAddress, fbPages);
     // Map active framebuffer physical address to virtual addresses 1:1.
-    for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000) {
+    for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
         gPTM.map_memory((void*)t, (void*)t);
-    }
+
+    srl->writestr("  Framebuffer mapped to 0x");
+    srl->writestr(to_hexstring(fbBase));
+    srl->writestr(" thru ");
+    srl->writestr(to_hexstring(fbBase + fbSize));
+    srl->writestr("\r\n");
+    
     // ALLOCATE PAGES IN BITMAP FOR TARGET FRAMEBUFFER (WRITABLE).
     target.BaseAddress = gAlloc.request_pages(fbPages);
     fbBase = (u64)target.BaseAddress;
@@ -162,7 +168,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     // Call assembly `lidt`.
     srl->writestr("[kUtil]: Preparing interrupts.\r\n");
     prepare_interrupts();
-    srl->writestr("  \033[32mInterrupts prepared successfully.\033[0m\r\n");
+    srl->writestr("    \033[32mInterrupts prepared successfully.\033[0m\r\n");
     // SYSTEM TIMER.
     gPIT = PIT();
     gPIT.initialize_pit();
