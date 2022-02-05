@@ -3,7 +3,8 @@
 
 u64 get_memory_size(EFI_MEMORY_DESCRIPTOR* map, u64 mapEntries, u64 mapDescSize) {
     static u64 s_memory_size_in_bytes = 0;
-    if (s_memory_size_in_bytes > 0) { return s_memory_size_in_bytes; }
+    if (s_memory_size_in_bytes > 0)
+        return s_memory_size_in_bytes;
 
     for (u64 i = 0; i < mapEntries; ++i) {
         // Get descriptor for each map entry.
@@ -28,13 +29,11 @@ void memset(void* start, u8 value, u64 numBytes) {
         qWordValue |= (u64)value << 48;
         qWordValue |= (u64)value << 56;
         u64 i = 0;
-        for (; i <= numBytes - 8; i += 8) {
+        for (; i <= numBytes - 8; i += 8)
             *(u64*)((u64)start + i) = qWordValue;
-        }
     }
-    for (u64 i = 0; i < numBytes; ++i) {
+    for (u64 i = 0; i < numBytes; ++i)
         *(u8*)((u64)start + i) = value;
-    }
 }
 
 // The signed comparison does limit `numBytes` to ~9 billion.
