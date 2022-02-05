@@ -101,7 +101,7 @@ void srl_memory_info() {
 extern "C" void _start(BootInfo* bInfo) {
     // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
     kernel_init(bInfo);
-    srl.writestr("\033[30;47m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
+    srl.writestr("\r\n\033[30;47m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
     // Clear + swap screen (ensure known state: blank).
     gRend.clear(0x00000000);
     gRend.swap();

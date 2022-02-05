@@ -83,12 +83,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     init_heap((void*)0x700000000000, 1);
     // SETUP SERIAL I/O.
     srl = UARTDriver();
-    srl.writestr("\r\n\r\n\033[2m<<>><<<!===--- \033[0m\033[1;33mYou\033[0m \033[2mare now booting into LensorOS ---===!>>><<>>\033[0m\r\n");
-    srl.writestr("\033[2m<<>><<<!===--- You \033[0m\033[1;33mare\033[0m \033[2mnow booting into LensorOS ---===!>>><<>>\033[0m\r\n");
-    srl.writestr("\033[2m<<>><<<!===--- You are \033[0m\033[1;33mnow\033[0m \033[2mbooting into LensorOS ---===!>>><<>>\033[0m\r\n");
-    srl.writestr("\033[2m<<>><<<!===--- You are now \033[0m\033[1;33mbooting\033[0m \033[2minto LensorOS ---===!>>><<>>\033[0m\r\n");
-    srl.writestr("\033[2m<<>><<<!===--- You are now booting \033[0m\033[1;33minto\033[0m \033[2mLensorOS ---===!>>><<>>\033[0m\r\n");
-    srl.writestr("\033[2m<<>><<<!===--- You are now booting into \033[0m\033[1;33mLensorOS\033[0m \033[2m---===!>>><<>>\033[0m\r\n\r\n");
+    srl.writestr("\r\n\r\n<<>><<<!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!>>><<>>\r\n\r\n");
     srl.writestr("[kUtil]: Kernel loaded from 0x");
     srl.writestr(to_hexstring((u64)&_KernelStart));
     srl.writestr(" to 0x");
