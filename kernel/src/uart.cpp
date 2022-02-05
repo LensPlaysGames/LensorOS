@@ -1,7 +1,9 @@
 #include "uart.h"
 
+#include "heap.h"
+
 // Global serial driver.
-UARTDriver* srl;
+UARTDriver* srl = nullptr;
 
 UARTDriver::UARTDriver() {
     // Disable all interrupts.
@@ -27,6 +29,12 @@ UARTDriver::UARTDriver() {
     }
     // Enable all interrupts except for loop-back.
     outb(COM1 + 4, 0b00001111);
+
+    buffer = new u8[LENSOR_OS_UART_MAX_BUF_SZ_BEFORE_FLUSH];
+}
+
+UARTDriver::~UARTDriver() {
+    delete[] buffer;
 }
 
 /// Read a byte of data over the serial communications port COM1.
@@ -42,12 +50,22 @@ u8 UARTDriver::readb() {
 
 /// Write a byte of data over the serial communications port COM1.
 void UARTDriver::writeb(u8 data) {
-    /// Spin (halt execution) until port is available or maxSpins iterations is reached.
-    u16 maxSpins = (u16)1000000;
-    while (inb(COM1 + 5) & 0b00100000 && maxSpins > 0) {
-        maxSpins--;
+    buffer[current] = data;
+    current++;
+    if (current == LENSOR_OS_UART_MAX_BUF_SZ_BEFORE_FLUSH || data == '\n')
+        flush_buffer();
+}
+
+void UARTDriver::flush_buffer() {
+    for (u64 i = 0; i < current; ++i) {
+        /// Spin (halt execution) until port is available or maxSpins iterations is reached.
+        u16 maxSpins = (u16)1000000;
+        while (inb(COM1 + 5) & 0b00100000 && maxSpins > 0) {
+            maxSpins--;
+        }
+        outb(COM1, buffer[i]);
     }
-    outb(COM1, data);
+    current = 0;
 }
 
 /// Write a C-style null-terminated byte-string to the serial output COM1.

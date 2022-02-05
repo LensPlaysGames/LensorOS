@@ -57,10 +57,18 @@ Port Register Offsets ([PORT] + [OFFSET])
 7: Scratch
 */
 
+#define LENSOR_OS_UART_MAX_BUF_SZ_BEFORE_FLUSH 256
+
 // TODO: Add capability for selecting communication channel (COM1, COM2, etc).
 class UARTDriver {
+    u64 current {0};
+    u8* buffer;
+
+    void flush_buffer();
+    
 public:
     UARTDriver();
+    ~UARTDriver();
 
     u8 readb();
     void writeb(u8 data);
