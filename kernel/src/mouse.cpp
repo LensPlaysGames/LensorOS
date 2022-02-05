@@ -1,5 +1,7 @@
 #include "mouse.h"
 
+#include "random_lcg.h"
+
 // globally accessible mouse information
 u8 gMouseID;
 uVector2 gMousePosition = {0, 0};
@@ -164,6 +166,7 @@ void process_mouse_packet() {
     // Left Mouse Button (LMB)
     const uVector2 DrawSize {2, 2};
     if (mouse_packet[0] & PS2LBTN) {
+        // Draw a rectangle of size `DrawSize` with color of `DrawColor`
         uVector2 cachedPos = gRend.DrawPos;
         gRend.DrawPos = gMousePosition - DrawSize;
         gRend.drawrect(DrawSize, DrawColor);
@@ -172,9 +175,9 @@ void process_mouse_packet() {
     }
     // Right Mouse Button (RMB)
     else if (mouse_packet[0] & PS2RBTN) {
-        // Linear Congruential Random Number Generator
-        // Terrible distribution, but quick and easy.
-        DrawColor = (u32)(1103515245 * DrawColor + 12345);
+        // Use pseudo-random linear congruential number
+        //   generator to get a new color to draw with.
+        DrawColor = (u32)gRandomLCG.get();
     }
     // Middle Mouse Button (MMB, Scroll-wheel)
     else if (mouse_packet[0] & PS2MBTN) {}
