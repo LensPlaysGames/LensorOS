@@ -159,25 +159,25 @@ namespace AHCI {
     }
 
     AHCIDriver::AHCIDriver(PCI::PCIDeviceHeader* pciBaseAddress) {
-        srl->writestr("[AHCI]: Constructing driver.\r\n");
-
+        srl->writestr("[AHCI]: Constructing driver for AHCI 1.0 Controller at 0x");
+        srl->writestr(to_hexstring((u64)pciBaseAddress));
+        srl->writestr("\r\n");
+        
         PCIBaseAddress = pciBaseAddress;
         
         ABAR = (HBAMemory*)(u64)(((PCI::PCIHeader0*)PCIBaseAddress)->BAR5);
         // Map ABAR into memory.
         gPTM.map_memory(ABAR, ABAR);
-        
-        srl->writestr("[AHCI]: Probing AHCI 1.0 Controller at 0x");
-        srl->writestr(to_hexstring((u64)PCIBaseAddress));
-        srl->writestr("\r\n");
 
-        // Probe ABAR for port info.
+        srl->writestr("[AHCI]:\r\n  Mapping AHCI Base Memory Register (ABAR) to 0x");
+        srl->writestr(to_hexstring((u64)ABAR));
+        srl->writestr("\r\n");
+        srl->writestr("  Probing ABAR for open and active ports.\r\n");
         probe_ports();
-        
         srl->writestr("  Found ");
         srl->writestr(to_string(numPorts));
         srl->writestr(" open and active ports\r\n");
-        srl->writestr("  Read/write buffer size: ");
+        srl->writestr("    Port read/write buffer size: ");
         srl->writestr(to_string(MAX_READ_PAGES * 4));
         srl->writestr("kib\r\n");
 
@@ -203,7 +203,7 @@ namespace AHCI {
                     srl->writestr(to_string(i));
                     switch (fs->Type) {
                     case FATType::INVALID: 
-                        srl->writestr(" has \033[31mINVALID\033[0m format.");
+                        srl->writestr(" has \033[31mINVALID\033[0m FAT format.");
                         break;
                     case FATType::FAT32:   
                         srl->writestr(" is FAT32 formatted.");

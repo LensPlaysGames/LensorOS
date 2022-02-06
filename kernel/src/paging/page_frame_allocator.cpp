@@ -12,7 +12,8 @@ u64 used_memory {0};
 bool initialized = false;
 
 void PageFrameAllocator::read_efi_memory_map(EFI_MEMORY_DESCRIPTOR* map, u64 mapSize, u64 mapDescSize) {
-    if (initialized) { return; }
+    if (initialized)
+        return;
     u64 mapEntries = mapSize / mapDescSize;
     void* largestFreeMemorySegment = NULL;
     u64 largestFreeMemorySegmentSize = 0;
@@ -44,9 +45,8 @@ void PageFrameAllocator::read_efi_memory_map(EFI_MEMORY_DESCRIPTOR* map, u64 map
 void PageFrameAllocator::initialize_bitmap(u64 bitmapSize, void* bufAddress) {
     PageBitmap.Size = bitmapSize;
     PageBitmap.Buffer = (u8*)bufAddress;
-    for (u64 i = 0; i < PageBitmap.Size; ++i) {
+    for (u64 i = 0; i < PageBitmap.Size; ++i)
         *(u8*)(PageBitmap.Buffer + i) = 0;
-    }
 }
 
 // Find first empty page, lock it, return address.

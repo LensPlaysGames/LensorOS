@@ -19,12 +19,10 @@ void prepare_memory(BootInfo* bInfo) {
     kInfo.PTM = &gPTM;
     // Map all physical RAM addresses to virtual addresses 1:1, store them in the PML4.
     // This means that virtual addresses will be equal to physical addresses.
-    for (u64 t = 0;
-         t < get_memory_size(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize);
-         t+=0x1000)
-    {
+    u64 memSize = get_memory_size(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize);
+    for (u64 t = 0; t < memSize; t+=0x1000)
         gPTM.map_memory((void*)t, (void*)t);
-    }
+
     // Value of Control Register 3 = Address of the page directory in physical form.
     asm ("mov %0, %%cr3" : : "r" (PML4));
 }
@@ -84,6 +82,11 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     // SETUP SERIAL I/O.
     srl = new UARTDriver;
     srl->writestr("\r\n\r\n<<>><<<!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!>>><<>>\r\n\r\n");
+    srl->writestr("[kUtil]: Mapped physical memory from 0x");
+    srl->writestr(to_hexstring(0ULL));
+    srl->writestr(" thru ");
+    srl->writestr(to_hexstring((u64)get_memory_size(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize)));
+    srl->writestr("\r\n");
     srl->writestr("[kUtil]:\r\n  Kernel loaded from 0x");
     srl->writestr(to_hexstring((u64)&_KernelStart));
     srl->writestr(" to 0x");
@@ -127,18 +130,23 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
         gPTM.map_memory((void*)t, (void*)t);
 
-    srl->writestr("  Framebuffer mapped to 0x");
+    srl->writestr("  Active GOP framebuffer mapped to 0x");
     srl->writestr(to_hexstring(fbBase));
     srl->writestr(" thru ");
     srl->writestr(to_hexstring(fbBase + fbSize));
     srl->writestr("\r\n");
-    
-    // ALLOCATE PAGES IN BITMAP FOR TARGET FRAMEBUFFER (WRITABLE).
+    // ALLOCATE PAGES IN BITMAP FOR TARGET FRAMEBUFFER (ARBITRARY WRITE).
     target.BaseAddress = gAlloc.request_pages(fbPages);
     fbBase = (u64)target.BaseAddress;
-    for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000) {
+    for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
         gPTM.map_memory((void*)t, (void*)t);
-    }
+
+    srl->writestr("  Deferred GOP framebuffer mapped to 0x");
+    srl->writestr(to_hexstring(fbBase));
+    srl->writestr(" thru ");
+    srl->writestr(to_hexstring(fbBase + fbSize));
+    srl->writestr("\r\n");
+
     // CREATE GLOBAL RENDERER
     gRend = BasicRenderer(bInfo->framebuffer, &target, bInfo->font);
     gRend.clear();
