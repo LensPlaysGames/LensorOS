@@ -46,7 +46,7 @@ struct GDTEntry {
 /// A given ring may access anything in any ring larger than itself;
 ///   however, a ring may not access anything in any ring smaller than itself.
 /// This allows for the kernel (ring zero) to access all programs, drivers, etc.
-///   but dis-allow programs from tampering with the kernel, drivers, etc.
+///   but dis-allow userland programs from tampering with the kernel, drivers, etc.
 struct GDT {
     GDTEntry Null;
     GDTEntry Ring0Code;

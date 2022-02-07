@@ -34,6 +34,7 @@ set(SOURCES
     src/gdt.cpp
     src/heap.cpp
     src/interrupts/idt.cpp
+    src/interrupts/syscalls.cpp
     src/io.cpp
     src/kernel.cpp
     src/keyboard.cpp
@@ -68,6 +69,7 @@ set(HEADERS
     src/heap.h
     src/integers.h
     src/interrupts/idt.h
+    src/interrupts/syscalls.h
     src/io.h
     src/keyboard.h
     src/keyboard_scancode_translation.h

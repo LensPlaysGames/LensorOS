@@ -50,6 +50,8 @@ void prepare_interrupts() {
     set_idt_gate((u64)double_fault_handler,             0x08);
     set_idt_gate((u64)general_protection_fault_handler, 0x0D);
     set_idt_gate((u64)page_fault_handler,               0x0E);
+    // USER MODE SYSTEM CALLS
+    set_idt_gate((u64)system_call_handler_asm,          0x80, IDT_TA_UserInterruptGate);
     // LOAD INTERRUPT DESCRIPTOR TABLE.
     asm ("lidt %0" :: "m" (idtr));
     // REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.

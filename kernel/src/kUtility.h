@@ -15,6 +15,7 @@
 // INTERRUPTS
 #include "interrupts/idt.h"
 #include "interrupts/interrupts.h"
+#include "interrupts/syscalls.h"
 // SERIAL BUS COMMUNICATION
 #include "io.h"
 // TIMING

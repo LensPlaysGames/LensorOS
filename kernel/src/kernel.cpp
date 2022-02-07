@@ -8,6 +8,7 @@
 //     - Page Map Level 4 (Loaded into CR3)
 //   - Each task is identified by segment selector for it's TSS.
 //   - See "Section 7.1.1: Task Structure" of the Intel Software Manual, Volume 3-A.
+// - TLB (Translation Lookaside Buffer)
 // - Abstract `timer` class (namespace?) that will be used for an API for things like `sleep`
 // - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
 // - Save parsed PCI devices for quick lookup (device tree).
@@ -116,6 +117,21 @@ extern "C" void _start(BootInfo* bInfo) {
     gRend.crlf();
     gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize});
     /// END GPLv3 LICENSE REQUIREMENT.
+
+    // FIXME
+    // SYSTEM CALL TESTING
+    // Test system call 0 (a test).
+    asm volatile ("mov $0, %rax\r\n\t"
+                  "int $0x80\r\n\t");
+    // Test system call 1 (a test).
+    asm volatile ("mov $1, %rax\r\n\t"
+                  "int $0x80\r\n\t");
+    // Test that invalid system call codes do nothing.
+    asm volatile ("mov $2, %rax\r\n\t"
+                  "int $0x80\r\n\t");
+    asm volatile ("mov $45, %rax\r\n\t"
+                  "int $0x80\r\n\t");
+    
     // Start keyboard input at draw position, not origin.
     gTextPosition = gRend.DrawPos;
     u32 debugInfoX = gRend.Target->PixelWidth - 300;
