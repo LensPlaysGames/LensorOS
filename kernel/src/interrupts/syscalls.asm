@@ -1,3 +1,6 @@
+;;; System Call Assembly Wrapper for C++ System Call Functions
+;;; Inspiration taking from: https://www.cs.usfca.edu/~benson/cs326/pintos/pintos/src
+
     [BITS 64]
     
     extern syscalls             ; Table of system call functions defined in "syscalls.h"

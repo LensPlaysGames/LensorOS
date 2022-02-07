@@ -32,6 +32,7 @@
 //   - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/
 // - Move includes to forward declarations where possible, move includes from `.h` to `.cpp`
 // - Implement actually useful system calls
+// - UART: Override "<<" or something to writestr() for ease on the eyes.
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
 
 void print_memory_info() {
