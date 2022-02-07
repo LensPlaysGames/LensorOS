@@ -19,8 +19,7 @@ system_call_handler_asm:        ; Accepts system call number in register 'A' (ra
     cmp rax, [num_syscalls]       ; Number of system calls
     jae invalid_system_call
     ;; Save CPU state to be restored after system call.
-    ;; TODO: `swapgs`
-    ;; call do_swapgs
+    call do_swapgs
     push rax
     push gs
     push fs
@@ -60,8 +59,7 @@ system_call_handler_asm:        ; Accepts system call number in register 'A' (ra
     pop fs
     pop gs
     add rsp, 8                  ; Eat `rax` off the stack
-    ;; TODO: `swapgs`
-    ;; call do_swapgs
+    call do_swapgs
     iretq                       ; iretq -> interrupt return quad word (64 bit)
 
 invalid_system_call:            ; If system call code is invalid, do nothing
