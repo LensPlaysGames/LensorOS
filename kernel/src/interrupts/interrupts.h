@@ -13,15 +13,6 @@
 #define ICW4_8086     0x01
 
 #include "../integers.h"
-#include "../basic_renderer.h"
-#include "../panic.h"
-#include "../io.h"
-/// IRQ0
-#include "../pit.h"
-/// IRQ1
-#include "../keyboard.h"
-/// IRQ12
-#include "../mouse.h"
 
 struct InterruptFrame {
     // Instruction Pointer
@@ -41,6 +32,7 @@ __attribute__((interrupt)) void keyboard_handler     (InterruptFrame*);
 __attribute__((interrupt)) void rtc_periodic_handler (InterruptFrame*);
 __attribute__((interrupt)) void mouse_handler        (InterruptFrame*);
 // FAULT/TRAP HANDLING
+__attribute__((interrupt)) void divide_by_zero_handler           (InterruptFrame*);
 __attribute__((interrupt)) void double_fault_handler             (InterruptFrame*, u64);
 __attribute__((interrupt)) void general_protection_fault_handler (InterruptFrame*, u64);
 __attribute__((interrupt)) void page_fault_handler               (InterruptFrame*, u64);

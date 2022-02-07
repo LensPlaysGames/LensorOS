@@ -1,5 +1,14 @@
 #include "kUtility.h"
 
+#include "paging/page_frame_allocator.h"
+
+#include "basic_renderer.h"
+#include "uart.h"
+
+#include "keyboard.h"
+#include "pit.h"
+#include "rtc.h"
+
 // TODO:
 // - Set up a barebones TSS with an ESP0 stack.
 //   - Each task needs three things:
@@ -20,6 +29,7 @@
 // - Write ASM interrupt wrapper (no longer rely on `__attribute__((interrupt))`)
 //   - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/
 // - Move includes to forward declarations where possible, move includes from `.h` to `.cpp`
+// - Implement actually useful system calls
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
 
 void print_memory_info() {
@@ -131,6 +141,10 @@ extern "C" void _start(BootInfo* bInfo) {
                   "int $0x80\r\n\t");
     asm volatile ("mov $45, %rax\r\n\t"
                   "int $0x80\r\n\t");
+
+    u64* bad_ptr = (u64*)0xdeadc0dedeadbeef;
+    u64 fault_here = *bad_ptr;
+    (void)fault_here;
     
     // Start keyboard input at draw position, not origin.
     gTextPosition = gRend.DrawPos;

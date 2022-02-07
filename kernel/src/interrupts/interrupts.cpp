@@ -1,6 +1,17 @@
 #include "interrupts.h"
-/// For decoding what type of rtc periodic interrupt happened.
+#include "../io.h"
+
+#include "../basic_renderer.h"
+#include "../panic.h"
+
+/// IRQ0
+#include "../pit.h"
+/// IRQ1
+#include "../keyboard.h"
+/// IRQ8
 #include "../rtc.h"
+/// IRQ12
+#include "../mouse.h"
 
 inline void end_of_interrupt(u8 IRQx) {
     if (IRQx >= 8)
@@ -47,31 +58,39 @@ __attribute__((interrupt)) void mouse_handler(InterruptFrame* frame) {
 }
 
 // FAULT INTERRUPT HANDLERS
+__attribute__((interrupt)) void divide_by_zero_handler(InterruptFrame* frame) {
+    panic(frame, "Divide by zero detected!");
+    while (true) {
+        asm ("hlt");
+    }
+}
+
 __attribute__((interrupt)) void page_fault_handler(InterruptFrame* frame, u64 err) {
     // POP ERROR CODE FROM STACK
     u64 address;
     asm volatile ("mov %%cr2, %0" : "=r" (address));
     // If bit 0 == 0, page not present
     if ((err & 0b1) == 0)
-        panic("Page fault detected (page not present)");
+        panic(frame, "Page fault detected (page not present)");
     // If bit 1 == 1, caused by page write access
     else if (((err & 0b10) >> 1) == 1)
-        panic("Page fault detected (Invalid page write access)");
+        panic(frame, "Page fault detected (Invalid page write access)");
     // If bit 5 == 1, caused by a protection key violation.
     else if (((err & 0b10000) >> 4) == 1)
-        panic("Page fault detected (Protection-key violation)");
+        panic(frame, "Page fault detected (Protection-key violation)");
     // If bit 6 == 1, caused by a shadow stack access.
     else if (((err & 0b100000) >> 5) == 1)
-        panic("Page fault detected (Shadow stack access)");
-    else panic("Page fault detected");
+        panic(frame, "Page fault detected (Shadow stack access)");
+    else panic(frame, "Page fault detected");
     gRend.puts(to_string(address));
+    gRend.swap();
     while (true) {
         asm ("hlt");
     }
 }
 
 __attribute__((interrupt)) void double_fault_handler(InterruptFrame* frame, u64 err) {
-    panic("Double fault detected!");
+    panic(frame, "Double fault detected!");
     while (true) {
         asm ("hlt");
     }
@@ -79,7 +98,7 @@ __attribute__((interrupt)) void double_fault_handler(InterruptFrame* frame, u64 
 
 __attribute__((interrupt)) void general_protection_fault_handler(InterruptFrame* frame, u64 err) {
     // Segment selector if segment related fault.
-    panic("General protection fault detected!");
+    panic(frame, "General protection fault detected!");
     while (true) {
         asm ("hlt");
     }
