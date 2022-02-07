@@ -23,8 +23,18 @@
 /// IRQ12
 #include "../mouse.h"
 
+struct InterruptFrame {
+    // Instruction Pointer
+    u64 ip;
+    // Code Segment
+    u64 cs;
+    u64 flags;
+    // Stack Pointer
+    u64 sp;
+    // Segment Selector
+    u64 ss;
+} __attribute__((packed));
 
-struct InterruptFrame;
 // HARDWARE INTERRUPT REQUESTS (IRQs)
 __attribute__((interrupt)) void system_timer_handler (InterruptFrame*);
 __attribute__((interrupt)) void keyboard_handler     (InterruptFrame*);
