@@ -230,7 +230,7 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     srl->writestr(to_string((double)RTC_PERIODIC_HERTZ));
     srl->writestr("hz\r\n");
     // PRINT REAL TIME TO SERIAL OUTPUT.
-    srl->writestr("[kUtil]: \033[33mNow is ");
+    srl->writestr("[kUtil]: \033[1;33mNow is ");
     srl->writestr(to_string(gRTC.Time.hour));
     srl->writeb(':');
     srl->writestr(to_string(gRTC.Time.minute));
