@@ -9,6 +9,8 @@
 #include "pit.h"
 #include "rtc.h"
 
+#include "interrupts/interrupts.h"
+
 // TODO:
 // - Set up a barebones TSS with an ESP0 stack.
 //   - Each task needs three things:
@@ -119,7 +121,7 @@ extern "C" void _start(BootInfo* bInfo) {
     const char* GPLv3 = "<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>";
     // TO SERIAL
     srl->writestr(GPLv3);
-    srl->writestr("\r\n");
+    srl->writestr("\r\n\r\n");
     // TO SCREEN
     gRend.BackgroundColor = 0xffffffff;
     gRend.puts(GPLv3, 0x00000000);
@@ -142,10 +144,6 @@ extern "C" void _start(BootInfo* bInfo) {
     asm volatile ("mov $45, %rax\r\n\t"
                   "int $0x80\r\n\t");
 
-    u64* bad_ptr = (u64*)0xdeadc0dedeadbeef;
-    u64 fault_here = *bad_ptr;
-    (void)fault_here;
-    
     // Start keyboard input at draw position, not origin.
     gTextPosition = gRend.DrawPos;
     u32 debugInfoX = gRend.Target->PixelWidth - 300;

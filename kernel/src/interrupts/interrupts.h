@@ -37,6 +37,11 @@ __attribute__((interrupt)) void double_fault_handler             (InterruptFrame
 __attribute__((interrupt)) void general_protection_fault_handler (InterruptFrame*, u64);
 __attribute__((interrupt)) void page_fault_handler               (InterruptFrame*, u64);
 
+// HELPER FUNCTIONS TO TRIGGER HANDLERS FOR TESTING
+void cause_div_by_zero(u8 one = 1);
+void cause_page_not_present();
+void cause_general_protection();
+
 void remap_pic();
 
 #endif

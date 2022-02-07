@@ -2,6 +2,7 @@
 #include "../io.h"
 
 #include "../basic_renderer.h"
+#include "../uart.h"
 #include "../panic.h"
 
 /// IRQ0
@@ -17,6 +18,22 @@ inline void end_of_interrupt(u8 IRQx) {
     if (IRQx >= 8)
         outb(PIC2_COMMAND, PIC_EOI);
     outb(PIC1_COMMAND, PIC_EOI);
+}
+
+void cause_div_by_zero(u8 one) {
+    one /= one - 1;
+}
+
+void cause_page_not_present() {
+    u8* badAddr = (u8*)0xdeadc0de;
+    u8 faultHere = *badAddr;
+    (void)faultHere;
+}
+
+void cause_general_protection() {
+    u8* badAddr = (u8*)0xdeadbeefdeadc0decafebabeb00bface;
+    u8 faultHere = *badAddr;
+    (void)faultHere;
 }
 
 // HARDWARE INTERRUPT HANDLERS (IRQs)
@@ -82,7 +99,11 @@ __attribute__((interrupt)) void page_fault_handler(InterruptFrame* frame, u64 er
     else if (((err & 0b100000) >> 5) == 1)
         panic(frame, "Page fault detected (Shadow stack access)");
     else panic(frame, "Page fault detected");
-    gRend.puts(to_string(address));
+    srl->writestr("  Faulty Address: 0x");
+    srl->writestr(to_hexstring(address));
+    srl->writestr("\r\n");
+    gRend.puts("Faulty Address: 0x", 0x00000000);
+    gRend.puts(to_hexstring(address), 0x00000000);
     gRend.swap();
     while (true) {
         asm ("hlt");
