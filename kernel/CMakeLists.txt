@@ -4,11 +4,23 @@ project(LensorOS VERSION 0.0.1 LANGUAGES ASM_NASM C CXX)
 # Output files to `kernel/bin` directory
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 
-add_library(Interrupts src/interrupts/interrupts.cpp src/interrupts/interrupts.h)
+add_library(
+Interrupts
+    src/interrupts/interrupts.cpp
+    src/interrupts/interrupts.h
+)
 target_compile_options(Interrupts PRIVATE -mno-red-zone -mgeneral-regs-only -ffreestanding -fno-exceptions -c)
 
-add_library(Assembly src/gdt.asm)
-target_compile_options(Assembly PRIVATE -felf64)
+add_library(
+Assembly
+    src/interrupts/syscalls.asm
+    src/gdt.asm
+)
+target_compile_options(
+Assembly PRIVATE
+    -felf64
+    $<$<CONFIG:Debug>:-g>
+)
 
 set(SOURCES
     src/acpi.cpp

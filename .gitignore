@@ -43,6 +43,7 @@
 /kernel/ninja/
 /kernel/make/
 /kernel/bld/
+/kernel/dbg/
 
 # Local resources
 /fonts/
