@@ -1,5 +1,8 @@
 #include "syscalls.h"
 
+#include "../basic_renderer.h"
+#include "../uart.h"
+
 void sys$0_test0() {
     srl->writestr("[SYS$]: System call 'test0'\r\n");
 }

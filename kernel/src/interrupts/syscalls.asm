@@ -18,10 +18,12 @@ skip_swap:
 ;;;   rax  --  System Call Code
 ;;; 
 ;;; System Call Code: Index offset into syscalls table.
-system_call_handler_asm:        ; Accepts system call number in register 'A' (rax)
-    cmp rax, [num_syscalls]       ; Number of system calls
+system_call_handler_asm:
+;;; Do nothing if system call code is invalid:
+;;; Syscall code invalid if greater than or equal to total number of syscalls.
+    cmp rax, [num_syscalls]
     jae invalid_system_call
-    ;; Save CPU state to be restored after system call.
+;;; Save CPU state to be restored after system call.
     call do_swapgs
     push rax
     push gs
@@ -41,10 +43,10 @@ system_call_handler_asm:        ; Accepts system call number in register 'A' (ra
     push rcx
     push rbx
     push rsp
-    ;; Actually execute the system call.
-    call [syscalls + rax * 8]   ; 8 = sizeof(pointer) in 64 bit
-    ;; Restore CPU state, as system call is no longer executing.
-    add rsp, 8                  ; Eat `rsp` off the stack
+;;; Execute the system call.
+    call [syscalls + rax * 8]   ; 8 = sizeof(pointer) in 64 bit.
+;;; Restore CPU state, as system call is no longer executing.
+    add rsp, 8                  ; Eat `rsp` off the stack.
     pop rbx
     pop rcx
     pop rdx
