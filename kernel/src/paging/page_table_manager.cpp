@@ -5,7 +5,8 @@ PageTableManager gPTM {nullptr};
 PageTableManager::PageTableManager(PageTable* PML4Address)
     : PML4(PML4Address) {}
 
-// Map a virtual address to a physical address.
+/// Map a virtual address to a physical address.
+// TODO: Don't set every piece of memory within every page map to user accessible (rather unsafe).
 void PageTableManager::map_memory(void* virtualMemory, void* physicalMemory) {
     PageMapIndexer indexer((u64)virtualMemory);
     PageDirEntry PDE;
@@ -18,11 +19,10 @@ void PageTableManager::map_memory(void* virtualMemory, void* physicalMemory) {
         PDE.set_address((u64)PDP >> 12);
         PDE.set_flag(PT_Flag::Present, true);
         PDE.set_flag(PT_Flag::ReadWrite, true);
+        PDE.set_flag(PT_Flag::UserSuper, true);
         PML4->entries[indexer.PageDirectoryPointerIndex] = PDE;
     }
-    else {
-        PDP = (PageTable*)((u64)PDE.get_address() << 12);
-    }
+    else PDP = (PageTable*)((u64)PDE.get_address() << 12);
 
     PDE = PDP->entries[indexer.PageDirectoryIndex];
     PageTable* PD;
@@ -32,11 +32,10 @@ void PageTableManager::map_memory(void* virtualMemory, void* physicalMemory) {
         PDE.set_address((u64)PD >> 12);
         PDE.set_flag(PT_Flag::Present, true);
         PDE.set_flag(PT_Flag::ReadWrite, true);
+        PDE.set_flag(PT_Flag::UserSuper, true);
         PDP->entries[indexer.PageDirectoryIndex] = PDE;
     }
-    else {
-        PD = (PageTable*)((u64)PDE.get_address() << 12);
-    }
+    else PD = (PageTable*)((u64)PDE.get_address() << 12);
 
     PDE = PD->entries[indexer.PageTableIndex];
     PageTable* PT;
@@ -46,15 +45,19 @@ void PageTableManager::map_memory(void* virtualMemory, void* physicalMemory) {
         PDE.set_address((u64)PT >> 12);
         PDE.set_flag(PT_Flag::Present, true);
         PDE.set_flag(PT_Flag::ReadWrite, true);
+        PDE.set_flag(PT_Flag::UserSuper, true);
         PD->entries[indexer.PageTableIndex] = PDE;
     }
-    else {
-        PT = (PageTable*)((u64)PDE.get_address() << 12);
-    }
+    else PT = (PageTable*)((u64)PDE.get_address() << 12);
 
     PDE = PT->entries[indexer.PageIndex];
     PDE.set_address((u64)physicalMemory >> 12);
     PDE.set_flag(PT_Flag::Present, true);
     PDE.set_flag(PT_Flag::ReadWrite, true);
+    
+    // FIXME FIXME FIXME
+    // NOT ALL PAGES SHOULD BE ACCESSIBLE TO USER MODE!!!
+    PDE.set_flag(PT_Flag::UserSuper, true);
+    
     PT->entries[indexer.PageIndex] = PDE;
 }

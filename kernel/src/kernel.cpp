@@ -11,10 +11,14 @@
 
 #include "interrupts/interrupts.h"
 
+#include "tss.h"
+#include "gdt.h"
+
 // TODO:
 // - Set up a barebones TSS with an ESP0 stack.
 //   - Each task needs three things:
 //     - Task Execution Space, or TES (CS, SS for each privilege level, and one or more DS).
+//       - This just means it needs an entry in the GDT.
 //     - Task-state Segment, or TSS (Segments that make up task execution space, storage for task-state info).
 //     - Page Map Level 4 (Loaded into CR3)
 //   - Each task is identified by segment selector for it's TSS.
@@ -32,6 +36,7 @@
 //   - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/
 // - Move includes to forward declarations where possible, move includes from `.h` to `.cpp`
 // - Implement actually useful system calls
+//   - Useful list of things every OS needs: https://www.gnu.org/software/coreutils/
 // - UART: Override "<<" or something to writestr() for ease on the eyes.
 // - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
 
@@ -111,6 +116,17 @@ void srl_memory_info() {
     srl->writestr("\r\n");
 }
 
+void test_userland_function() {
+    for (;;) {
+        asm volatile ("mov $0, %rax\r\n\t"
+                      "int $0x80\r\n\t");
+    }
+}
+
+void* userland_function;
+TSSEntry tss_entry;
+void* tss;
+
 extern "C" void _start(BootInfo* bInfo) {
     // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
     kernel_init(bInfo);
@@ -144,6 +160,26 @@ extern "C" void _start(BootInfo* bInfo) {
                   "int $0x80\r\n\t");
     asm volatile ("mov $45, %rax\r\n\t"
                   "int $0x80\r\n\t");
+
+    memset((void*)&tss_entry, 0, sizeof(TSSEntry));
+    
+    u32 limit = sizeof(TSSEntry);
+    u64 base = (u64)&tss_entry;
+    // Setup GDT entry base and limit for TSS
+    gGDT.TSS0.Limit0 = limit;
+    if (limit > 255) {
+        u8 flags = gGDT.TSS0.Limit1_Flags;
+        gGDT.TSS0.Limit1_Flags = limit >> 16;
+        gGDT.TSS0.Limit1_Flags |= flags;
+    }
+    gGDT.TSS0.Base0 = base;
+    gGDT.TSS0.Base1 = base >> 16;
+    gGDT.TSS0.Base2 = base >> 24;
+    *(u32*)&gGDT.TSS1.Base0 = base >> 32;
+
+    tss = (void*)&tss_entry;
+    userland_function = (void*)test_userland_function;
+    jump_to_userland_function();
 
     // Start keyboard input at draw position, not origin.
     gTextPosition = gRend.DrawPos;

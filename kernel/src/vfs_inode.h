@@ -5,8 +5,8 @@
 
 class FileSystem;
 
+// FIXME: This is a stub, obviously.
 struct Inode {
-    // TODO: File data.
     FileSystem* fs;
 };
 
