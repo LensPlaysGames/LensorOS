@@ -82,8 +82,9 @@ void prepare_interrupts() {
     // FAULTS (CALLED BEFORE FAULTY INSTRUCTION EXECUTES)
     set_idt_gate((u64)divide_by_zero_handler,           0x00);
     set_idt_gate((u64)double_fault_handler,             0x08);
-    set_idt_gate((u64)general_protection_fault_handler, 0x0D);
-    set_idt_gate((u64)page_fault_handler,               0x0E);
+    set_idt_gate((u64)stack_segment_fault_handler,      0x0c);
+    set_idt_gate((u64)general_protection_fault_handler, 0x0d);
+    set_idt_gate((u64)page_fault_handler,               0x0e);
     // USER MODE SYSTEM CALLS
     set_idt_gate((u64)system_call_handler_asm,          0x80, IDT_TA_UserInterruptGate);
     // LOAD INTERRUPT DESCRIPTOR TABLE.

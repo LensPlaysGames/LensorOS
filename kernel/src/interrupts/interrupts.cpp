@@ -117,9 +117,61 @@ __attribute__((interrupt)) void double_fault_handler(InterruptFrame* frame, u64 
     }
 }
 
+__attribute__((interrupt)) void stack_segment_fault_handler(InterruptFrame* frame, u64 err) {
+    if (err == 0)
+        panic(frame, "Stack segment fault detected (0)");
+    else panic(frame, "Stack segment fault detected (selector)!");
+    srl->writestr("  Error Code: 0x");
+    srl->writestr(to_hexstring(err));
+    srl->writestr("\r\n");
+    if (err & 0b1)
+        srl->writestr("  External\r\n");
+    
+    u8 table = (err & 0b110) >> 1;
+    if (table == 0b00)
+        srl->writestr("  GDT");
+    else if (table == 0b01 || table == 0b11)
+        srl->writestr("  IDT");
+    else if (table == 0b01)
+        srl->writestr("  LDT");
+    
+    srl->writestr(" Selector Index: ");
+    srl->writestr(to_hexstring(((err & 0b1111111111111000) >> 3)));
+    srl->writestr("\r\n");
+
+    gRend.puts("Err: 0x", 0x00000000);
+    gRend.puts(to_hexstring(err), 0x00000000);
+    gRend.crlf();
+    gRend.swap();
+}
+
 __attribute__((interrupt)) void general_protection_fault_handler(InterruptFrame* frame, u64 err) {
-    // Segment selector if segment related fault.
-    panic(frame, "General protection fault detected!");
+    if (err == 0)
+        panic(frame, "General protection fault detected (0)!");
+    else panic(frame, "General protection fault detected (selector)!");
+    srl->writestr("  Error Code: 0x");
+    srl->writestr(to_hexstring(err));
+    srl->writestr("\r\n");
+    
+    if (err & 0b1)
+        srl->writestr("  External\r\n");
+    
+    u8 table = (err & 0b110) >> 1;
+    if (table == 0b00)
+        srl->writestr("  GDT");
+    else if (table == 0b01 || table == 0b11)
+        srl->writestr("  IDT");
+    else if (table == 0b01)
+        srl->writestr("  LDT");
+    
+    srl->writestr(" Selector Index: ");
+    srl->writestr(to_hexstring(((err & 0b1111111111111000) >> 3)));
+    srl->writestr("\r\n");
+    
+    gRend.puts("Err: 0x", 0x00000000);
+    gRend.puts(to_hexstring(err), 0x00000000);
+    gRend.crlf();
+    gRend.swap();
     while (true) {
         asm ("hlt");
     }
