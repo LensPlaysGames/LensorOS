@@ -101,21 +101,20 @@ enum PT_Flag {
     WriteThrough = 3,
     CacheDisabled = 4,
     Accessed = 5,
+    Dirty = 6,
     LargerPages = 7,
-    Custom0 = 9,
-    Custom1 = 10,
-    Custom2 = 11,
-    NX = 63, // only if supported
+    Global = 8,
+    NX = 63,
 };
 
 struct PageDirEntry {
-    u64 Value;
+    u64 Value {0};
     
     void set_flag(PT_Flag flag, bool enabled);
     bool get_flag(PT_Flag flag);
     void set_address(u64 addr);
     u64 get_address();
-};
+} __attribute__((packed));
 
 struct PageTable {
   PageDirEntry entries[512];
