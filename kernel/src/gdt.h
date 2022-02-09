@@ -21,14 +21,17 @@ struct GDTEntry {
     /// Base 23:16
     u8 Base1;
     /// 0b00000000
-    ///       ====  Type
+    ///          =  Accessed
+    ///         =   Readable/Writable
+    ///        =    Direction/Conforming
+    ///       =     Executable
     ///      =      Descriptor Type
     ///    ==       Descriptor Privilege Level
     ///   =         Segment Present
     u8 AccessByte;
     /// 0b00000000
     ///       ==== Limit 19:16
-    ///      =     Available for use by system software (cool!)
+    ///      =     Available
     ///     =      64-bit code segment
     ///    =       Default Operation Size
     ///   =        Granularity
@@ -48,12 +51,15 @@ struct GDTEntry {
 /// This allows for the kernel (ring zero) to access all programs, drivers, etc.
 ///   but dis-allow userland programs from tampering with the kernel, drivers, etc.
 struct GDT {
-    GDTEntry Null;
-    GDTEntry Ring0Code;
-    GDTEntry Ring0Data;
-    GDTEntry Ring3Null;
-    GDTEntry Ring3Code;
-    GDTEntry Ring3Data;
+    GDTEntry Null;      // 0x00
+    GDTEntry Ring0Code; // 0x08
+    GDTEntry Ring0Data; // 0x10
+    GDTEntry Ring3Null; // 0x18
+    GDTEntry Ring3Code; // 0x20
+    GDTEntry Ring3Data; // 0x28
+    GDTEntry TSS0;      // 0x30
+    GDTEntry TSS1;      // 0x38
+
 }__attribute__((packed)) __attribute__((aligned(0x1000)));
 
 extern GDT gGDT;
