@@ -13,8 +13,9 @@ target_compile_options(Interrupts PRIVATE -mno-red-zone -mgeneral-regs-only -ffr
 
 add_library(
 Assembly
-    src/interrupts/syscalls.asm
     src/gdt.asm
+    src/interrupts/syscalls.asm
+    src/userswitch.asm
 )
 target_compile_options(
 Assembly PRIVATE

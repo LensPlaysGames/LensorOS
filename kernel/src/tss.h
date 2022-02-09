@@ -29,4 +29,6 @@ struct TSSEntry {
     u16 IOMapBaseAddress;
 } __attribute__((packed));
 
+extern "C" void jump_to_userland_function(void);
+
 #endif
