@@ -1,5 +1,8 @@
     [BITS 64]
 
+;;; Very useful resource: https://nfil.dev/kernel/rust/coding/rust-kernel-to-userspace-and-back/
+;;; (Check wayback machine if link is dead, I've archived it)
+
     extern userland_function    ; Pointer to a function that will execute in user mode.
     extern tss                  ; Pointer to 64-bit TSS Entry structure.
 
