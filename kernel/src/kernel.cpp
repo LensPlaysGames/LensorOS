@@ -147,25 +147,9 @@ extern "C" void _start(BootInfo* bInfo) {
     gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize});
     /// END GPLv3 LICENSE REQUIREMENT.
 
-    // FIXME
-    // SYSTEM CALL TESTING
-    // Test system call 0 (a test).
-    asm volatile ("mov $0, %rax\r\n\t"
-                  "int $0x80\r\n\t");
-    // Test system call 1 (a test).
-    asm volatile ("mov $1, %rax\r\n\t"
-                  "int $0x80\r\n\t");
-    // Test that invalid system call codes do nothing.
-    asm volatile ("mov $2, %rax\r\n\t"
-                  "int $0x80\r\n\t");
-    asm volatile ("mov $45, %rax\r\n\t"
-                  "int $0x80\r\n\t");
-
     memset((void*)&tss_entry, 0, sizeof(TSSEntry));
-    
     u32 limit = sizeof(TSSEntry);
     u64 base = (u64)&tss_entry;
-    // Setup GDT entry base and limit for TSS
     gGDT.TSS0.Limit0 = limit;
     if (limit > 255) {
         u8 flags = gGDT.TSS0.Limit1_Flags;
@@ -176,10 +160,9 @@ extern "C" void _start(BootInfo* bInfo) {
     gGDT.TSS0.Base1 = base >> 16;
     gGDT.TSS0.Base2 = base >> 24;
     *(u32*)&gGDT.TSS1.Base0 = base >> 32;
-
     tss = (void*)&tss_entry;
     userland_function = (void*)test_userland_function;
-    jump_to_userland_function();
+    //jump_to_userland_function();
 
     // Start keyboard input at draw position, not origin.
     gTextPosition = gRend.DrawPos;
