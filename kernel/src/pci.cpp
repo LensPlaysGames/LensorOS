@@ -1,5 +1,11 @@
 #include "pci.h"
+
 #include "ahci.h"
+#include "acpi.h"
+#include "cstr.h"
+#include "heap.h"
+#include "paging/page_table_manager.h"
+#include "uart.h"
 
 namespace PCI {
     void enumerate_function(u64 device_address, u64 function_number) {

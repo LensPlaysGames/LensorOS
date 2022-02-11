@@ -2,11 +2,10 @@
 #define LENSOR_OS_PCI_H
 
 #include "integers.h"
-#include "acpi.h"
-#include "paging/page_table_manager.h"
-#include "heap.h"
-#include "cstr.h"
-#include "uart.h"
+
+namespace ACPI {
+    struct MCFGHeader;
+}
 
 namespace PCI {
     struct PCIDeviceHeader {
