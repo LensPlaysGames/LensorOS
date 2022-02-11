@@ -14,32 +14,28 @@
 #include "tss.h"
 #include "gdt.h"
 
-// TODO:
-// - Set up a barebones TSS with an ESP0 stack.
-//   - Each task needs three things:
-//     - Task Execution Space, or TES (CS, SS for each privilege level, and one or more DS).
-//       - This just means it needs an entry in the GDT.
-//     - Task-state Segment, or TSS (Segments that make up task execution space, storage for task-state info).
-//     - Page Map Level 4 (Loaded into CR3)
-//   - Each task is identified by segment selector for it's TSS.
-//   - See "Section 7.1.1: Task Structure" of the Intel Software Manual, Volume 3-A.
-// - TLB (Translation Lookaside Buffer)
-// - Abstract `timer` class (namespace?) that will be used for an API for things like `sleep`
-// - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
-// - Save parsed PCI devices for quick lookup (device tree).
-// - A slab-style memory allocator.
-// - FILE SYSTEM:
-//   - Virtual File System that will store intermediate representation of files/folders/worlds/storage media devices
-//   - AHCI Driver Update: DMA ATA Write implementation
-//   - Another filesystem better suited for mass storage (Ext2? Proprietary?)
-// - Write ASM interrupt wrapper (no longer rely on `__attribute__((interrupt))`)
-//   - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/
-// - Move includes to forward declarations where possible, move includes from `.h` to `.cpp`
-// - Implement actually useful system calls
-//   - Useful list of things every OS needs: https://www.gnu.org/software/coreutils/
-// - UART: Override "<<" or something to writestr() for ease on the eyes.
-// - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
-
+/* TODO:
+ *   - Think about how Task State Segment Interrupt S? Table (TSS IST) could be used.
+ *   - Contemplate swapping MMU Page Map when switching to userland, and/or
+ *       utilizing Translation Lookaside Buffer (TLB) flushes.
+ *   - Abstract `timer` class (namespace?) that will be used for an API for things like `sleep`
+ *   - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
+ *   - Save parsed PCI devices for quick lookup (device tree).
+ *   - A slab-style memory allocator.
+ *   - FILE SYSTEM:
+ *     - Virtual File System that will store intermediate representation of files/folders/worlds/storage media devices
+ *     - AHCI Driver Update: DMA ATA Write implementation
+ *     - Another filesystem better suited for mass storage (Ext2? Proprietary?)
+ *   - Write ASM interrupt wrapper (no longer rely on `__attribute__((interrupt))`)
+ *     - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/
+ *         as well as the syscall handler in assembly (`src/interrupts/syscalls.asm`).
+ *   - Move includes to forward declarations where possible, move includes from `.h` to `.cpp`
+ *   - Implement actually useful system calls
+ *     - Figure out how to pass variables to system calls (it's kind of just up to me).
+ *     - Useful list of 'things every OS needs': https://www.gnu.org/software/coreutils/
+ *   - UART: Override "<<" or something to writestr() for ease on the eyes.
+ *   - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
+ */
 void print_memory_info() {
     u32 startOffset = gRend.DrawPos.x;
     gRend.puts("Memory Info:");
