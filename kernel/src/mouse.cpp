@@ -207,6 +207,9 @@ void process_mouse_packet() {
         gMousePosition.x -= mouse_packet[1];
         if (xOverflow)
             gMousePosition.x -= 255;
+        // CLAMP MOUSE POSITION (OVERFLOW DETECTION)
+        if (gMousePosition.x > gOldMousePosition.x)
+            gMousePosition.x = 0;
     }
     else {
         gMousePosition.x += mouse_packet[1];
@@ -224,15 +227,17 @@ void process_mouse_packet() {
         gMousePosition.y -= mouse_packet[2];
         if (yOverflow)
             gMousePosition.y -= 255;
+        // CLAMP MOUSE POSITION (OVERFLOW DETECTION)
+        if (gMousePosition.y > gOldMousePosition.y)
+            gMousePosition.y = 0;
     }
     // CLAMP MOUSE POSITION
     if (gMousePosition.x >= gRend.Target->PixelWidth)
         gMousePosition.x = gRend.Target->PixelWidth  - 1;
     if (gMousePosition.y >= gRend.Target->PixelHeight)
         gMousePosition.y = gRend.Target->PixelHeight - 1;
-
+    // USE GLOBAL OUTPUT PROTOCOL RENDERER TO DRAW THE MOUSE CURSOR.
     DrawMouseCursor();
-    
     // PACKET USED; DISCARD READY STATE
     mouse_packet_ready = false;
 }
