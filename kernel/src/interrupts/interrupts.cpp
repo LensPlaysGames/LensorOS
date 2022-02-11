@@ -75,6 +75,7 @@ __attribute__((interrupt)) void mouse_handler(InterruptFrame* frame) {
 }
 
 // FAULT INTERRUPT HANDLERS
+
 __attribute__((interrupt)) void divide_by_zero_handler(InterruptFrame* frame) {
     panic(frame, "Divide by zero detected!");
     while (true) {
@@ -149,10 +150,10 @@ __attribute__((interrupt)) void general_protection_fault_handler(InterruptFrame*
     if (err == 0)
         panic(frame, "General protection fault detected (0)!");
     else panic(frame, "General protection fault detected (selector)!");
+
     srl->writestr("  Error Code: 0x");
     srl->writestr(to_hexstring(err));
     srl->writestr("\r\n");
-    
     if (err & 0b1)
         srl->writestr("  External\r\n");
     
@@ -167,7 +168,6 @@ __attribute__((interrupt)) void general_protection_fault_handler(InterruptFrame*
     srl->writestr(" Selector Index: ");
     srl->writestr(to_hexstring(((err & 0b1111111111111000) >> 3)));
     srl->writestr("\r\n");
-    
     gRend.puts("Err: 0x", 0x00000000);
     gRend.puts(to_hexstring(err), 0x00000000);
     gRend.crlf();
@@ -178,39 +178,38 @@ __attribute__((interrupt)) void general_protection_fault_handler(InterruptFrame*
 }
 
 void remap_pic() {
-    // SAVE INTERRUPT MASKS
+    // SAVE INTERRUPT MASKS.
     u8 masterMasks;
     u8 slaveMasks;
     masterMasks = inb(PIC1_DATA);
     io_wait();
     slaveMasks = inb(PIC2_DATA);
     io_wait();
-    // START INIT IN CASCADE MODE
+    // INITIALIZE BOTH CHIPS IN CASCADE MODE.
     outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
     io_wait();
     outb(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
     io_wait();
-    // SET VECTOR OFFSET OF MASTER PIC
-    outb(PIC1_DATA, 0x20);
-    io_wait();
-    // SET VECTOR OFFSET OF SLAVE PIC
+    // SET VECTOR OFFSET OF MASTER PIC.
     //   This allows software to throw low interrupts as normal (0-32)
-    //     without triggering an IRQ. This allows specific software and
-    //     hardware error handling.
-    outb(PIC2_DATA, 0x28);
+    //     without triggering an IRQ that would normally be attributed to hardware.
+    outb(PIC1_DATA, PIC_IRQ_VECTOR_OFFSET);
     io_wait();
-    // TELL MASTER THERE IS A SLAVE ON IRQ2
+    // SET VECTOR OFFSET OF SLAVE PIC.
+    outb(PIC2_DATA, PIC_IRQ_VECTOR_OFFSET + 8);
+    io_wait();
+    // TELL MASTER THERE IS A SLAVE ON IRQ2.
     outb(PIC1_DATA, 4);
     io_wait();
-    // TELL SLAVE IT'S CASCADE IDENTITY
+    // TELL SLAVE IT'S CASCADE IDENTITY.
     outb(PIC2_DATA, 2);
     io_wait();
-    // NOT QUITE SURE WHAT THIS DOES YET
+    // NOT QUITE SURE WHAT THIS DOES YET.
     outb(PIC1_DATA, ICW4_8086);
     io_wait();
     outb(PIC2_DATA, ICW4_8086);
     io_wait();
-    // LOAD INTERRUPT MASKS
+    // LOAD INTERRUPT MASKS.
     outb(PIC1_DATA, masterMasks);
     io_wait();
     outb(PIC2_DATA, slaveMasks);

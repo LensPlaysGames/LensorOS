@@ -59,38 +59,23 @@ void prepare_memory(BootInfo* bInfo) {
     asm ("mov %0, %%cr3" : : "r" (PML4));
 }
 
-IDTR idtr;
-void set_idt_gate(u64 handler, u8 entryOffset, u8 type_attr = IDT_TA_InterruptGate, u8 selector = 0x08) {
-    IDTDescEntry* interrupt = (IDTDescEntry*)(idtr.Offset + entryOffset * sizeof(IDTDescEntry));
-    interrupt->SetOffset(handler);
-    interrupt->type_attr = type_attr;
-    interrupt->selector = selector;
-}
-
 void prepare_interrupts() {
-    idtr.Limit = 0x0fff;
-    idtr.Offset = (u64)gAlloc.request_page();
-    // SET CALLBACK TO HANDLER BASED ON INTERRUPT ENTRY OFFSET.
-    // IRQ0: SYSTEM TIMER  (PIT CHIP)
-    set_idt_gate((u64)system_timer_handler,             0x20);
-    // IRQ1: PS/2 KEYBOARD (SERIAL)
-    set_idt_gate((u64)keyboard_handler,                 0x21);
-    set_idt_gate((u64)rtc_periodic_handler,             0x28);
-    // IRQ12: PS/2 MOUSE   (SERIAL)
-    set_idt_gate((u64)mouse_handler,                    0x2c);
-    // FAULTS (CALLED BEFORE FAULTY INSTRUCTION EXECUTES)
-    set_idt_gate((u64)divide_by_zero_handler,           0x00);
-    set_idt_gate((u64)double_fault_handler,             0x08);
-    set_idt_gate((u64)stack_segment_fault_handler,      0x0c);
-    set_idt_gate((u64)general_protection_fault_handler, 0x0d);
-    set_idt_gate((u64)page_fault_handler,               0x0e);
-    // USER MODE SYSTEM CALLS
-    set_idt_gate((u64)system_call_handler_asm,          0x80, IDT_TA_UserInterruptGate);
-    // LOAD INTERRUPT DESCRIPTOR TABLE.
-    asm ("lidt %0" :: "m" (idtr));
     // REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
-    // IRQs now start at 0x20 (what was `int 0` is now `int 32`).
     remap_pic();
+    // CREATE INTERRUPT DESCRIPTOR TABLE.
+    gIDT = IDTR(0x0fff, (u64)gAlloc.request_page());
+    // POPULATE TABLE.
+    gIDT.install_handler((u64)system_timer_handler,             PIC_IRQ0);
+    gIDT.install_handler((u64)keyboard_handler,                 PIC_IRQ1);
+    gIDT.install_handler((u64)rtc_periodic_handler,             PIC_IRQ8);
+    gIDT.install_handler((u64)mouse_handler,                    PIC_IRQ12);
+    gIDT.install_handler((u64)divide_by_zero_handler,           0x00);
+    gIDT.install_handler((u64)double_fault_handler,             0x08);
+    gIDT.install_handler((u64)stack_segment_fault_handler,      0x0c);
+    gIDT.install_handler((u64)general_protection_fault_handler, 0x0d);
+    gIDT.install_handler((u64)page_fault_handler,               0x0e);
+    gIDT.install_handler((u64)system_call_handler_asm,          0x80, IDT_TA_UserInterruptGate);
+    gIDT.flush();
 }
 
 void prepare_acpi(BootInfo* bInfo) {
@@ -186,7 +171,6 @@ void kernel_init(BootInfo* bInfo) {
     srl->writestr(" thru ");
     srl->writestr(to_hexstring(fbBase + fbSize));
     srl->writestr("\r\n");
-
     // CREATE GLOBAL RENDERER
     gRend = BasicRenderer(bInfo->framebuffer, &target, bInfo->font);
     gRend.clear();
