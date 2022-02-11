@@ -5,67 +5,92 @@
 // Global serial driver.
 UARTDriver* srl = nullptr;
 
+const char* get_uart_chip_name(UARTChip chip) {
+    switch (chip) {
+    case UARTChip::NONE:
+        return "Invalid UART chip";
+    case UARTChip::_8250:
+        return "8250";
+    case UARTChip::_16450:
+        return "16450";
+    case UARTChip::_16550:
+        return "16550";
+    case UARTChip::_16550A:
+        return "16550A";
+    case UARTChip::_16750:
+        return "16750";
+    default:
+        return "Unrecognized UART chip";
+    }
+}
+
 UARTDriver::UARTDriver() {
     // Disable all interrupts.
-    outb(COM1 + 1, 0x00);
-    // Enable DLAB (most significant bit)
-    outb(COM1 + 3, 0b10000000);
-    // Set divisor
-    outb(COM1, (u8)BAUD_DIVISOR);
-    outb(COM1 + 1, (u8)((u16)BAUD_DIVISOR >> 8));
-    // Set Line Control
-    outb(COM1 + 3, 0b00000011);
-    // Enable FIFO, clear them, 14-byte threshold
-    outb(COM1 + 2, 0xc7);
-    // IRQs enabled, Data Terminal Ready and Request to Send are set.
-    outb(COM1 + 4, 0b00001011);
-    // Enable loop-back.
-    outb(COM1 + 4, 0b00011110);
+    outb(INTERRUPT_PORT(COM1), 0x00);
+    // Enable DLAB (most significant bit).
+    outb(LINE_CONTROL_PORT(COM1), 0b10000000);
+    // Set divisor.
+    outb(DIVL_PORT(COM1), (u8)BAUD_DIVISOR);
+    outb(DIVH_PORT(COM1), (u8)((u16)BAUD_DIVISOR >> 8));
+    // Set Line Control (8 data bits, 1 stop bit, no parity).
+    outb(LINE_CONTROL_PORT(COM1), 0b00000011);
+    // Enable FIFO, largest buffer possible.
+    outb(FIFO_CONTROL_PORT(COM1), 0b11000111);
+    u8 fifo_test = inb(INT_ID_PORT(COM1));
+    if (fifo_test & (1 << 6)) {
+        if (fifo_test & (1 << 7)) {
+            if (fifo_test & (1 << 5))
+                chip = UARTChip::_16750;
+            else chip = UARTChip::_16550A;
+        }
+        else chip = UARTChip::_16550;
+    }
+    else {
+        u8 test_byte = 0x2a;
+        outb(SCRATCH_PORT(COM1), test_byte);
+        u8 scratch_returned = inb(SCRATCH_PORT(COM1));
+        if (scratch_returned == test_byte)
+            chip = UARTChip::_16450;
+        else chip = UARTChip::_8250;
+    }
     // Loop-back test.
-    outb(COM1, 0xae);
-    if (inb(COM1) != 0xae) {
+    outb(MODEM_CONTROL_PORT(COM1), 0b00011111);
+    u8 test_byte = 0xae;
+    outb(COM1, test_byte);
+    if (inb(COM1) != test_byte) {
         // Error! No good.
         // TODO: Something about it.
     }
-    // Enable all interrupts except for loop-back.
-    outb(COM1 + 4, 0b00001111);
+    // Disable loop-back, enable IRQs, set 'Data Terminal Ready' and 'Request to Send'.
+    outb(MODEM_CONTROL_PORT(COM1), 0b00001111);
 
-    buffer = new u8[LENSOR_OS_UART_MAX_BUF_SZ_BEFORE_FLUSH];
-}
-
-UARTDriver::~UARTDriver() {
-    delete[] buffer;
+    // First serial messages output from the OS.
+    writestr("\r\n\r\n\r\nWelcome to \033[5;1;33mLensorOS\033[0m\r\n\r\n");
+    writestr("[UART]: Initialized driver\r\n  Detected '");
+    writestr(get_uart_chip_name(chip));
+    writestr("' chip\r\n");
 }
 
 /// Read a byte of data over the serial communications port COM1.
 u8 UARTDriver::readb() {
+    // Wait until the UART chip flags data is ready to be read from the device.
     u16 maxSpins = (u16)1000000;
-    while (inb(COM1 + 5) & 0b00000001
-           && maxSpins > 0)
-    {
+    while ((inb(LINE_STATUS_PORT(COM1)) & 0b1) == 0 && maxSpins > 0)
         maxSpins--;
-    }
-    return inb(COM1);
+    if (maxSpins == 0) return 0;
+    return inb(DATA_PORT(COM1));
 }
 
 /// Write a byte of data over the serial communications port COM1.
 void UARTDriver::writeb(u8 data) {
-    buffer[current] = data;
-    current++;
-    if (current == LENSOR_OS_UART_MAX_BUF_SZ_BEFORE_FLUSH || data == '\n')
-        flush_buffer();
-}
+    // Wait for UART chip to empty it's transmit buffer before
+    //   potentially over-writing data that was not yet sent.
+    u16 maxSpins = (u16)1000000;
+    while ((inb(LINE_STATUS_PORT(COM1)) & (1 << 5)) == 0 && maxSpins > 0)
+        maxSpins--;
+    if (maxSpins == 0) return;
 
-void UARTDriver::flush_buffer() {
-    for (u64 i = 0; i < current; ++i) {
-        /// Spin (halt execution) until port is available or maxSpins iterations is reached.
-        u16 maxSpins = (u16)1000000;
-        while (inb(COM1 + 5) & 0b00100000 && maxSpins > 0) {
-            maxSpins--;
-        }
-        outb(COM1, buffer[i]);
-    }
-    current = 0;
+    outb(COM1, data);
 }
 
 /// Write a C-style null-terminated byte-string to the serial output COM1.

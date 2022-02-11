@@ -43,9 +43,9 @@ namespace PCI {
         PCIDeviceHeader* pciDevHdr = (PCIDeviceHeader*)device_address;
         if (pciDevHdr->DeviceID == 0x0000
             || pciDevHdr->DeviceID == 0xffff) { return; }
-        srl->writestr("[PCI]: Mapped ");
+        srl->writestr("[PCI]: Mapped '");
         srl->writestr(get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID));
-        srl->writestr(" to ");
+        srl->writestr("' to ");
         srl->writestr(to_hexstring(device_address));
         srl->writestr("\r\n");
         

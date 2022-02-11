@@ -5,71 +5,132 @@
 #include "integers.h"
 
 #define BAUD_FREQ 115200
-#define BAUD_RATE 115200
+#define BAUD_RATE 9600
 #define BAUD_DIVISOR (BAUD_FREQ / BAUD_RATE)
 
-#define COM1 0x3f8
+#define COM1         0x3f8
 
-/*
-Port Register Offsets ([PORT] + [OFFSET])
-0: Data
-     When DLAB (Divisor Latch Access Bit) is 1, Least Significant Byte of Divisor
-1: Interrupt Enable
-     Bit 0: Data Available
-         1: Transmitter Empty
-         2: Break/Error
-         3: Status Change
-         4-7: Unused
-     When DLAB is 1, Most Significant Byte of Divisor
-2: Interrupt ID & FIFO Control
-3: Line Control (Most Significan Bit is DLAB)
-     Bits 0-1: Number of Data Bits
-       0 0 = 5,  0 1 = 6,  1 0 = 7,  1 1 = 8
-     2: Stop Bits
-       0 = 1,  1 = 1.5/2 (depends on data bits)
-     3-5: Parity
-       0 0 0 = NONE, 0 0 1 = ODD, 0 1 1 = EVEN, 1 0 1 = MARK, 1 1 1 = SPACE  
-4: Modem Control
-     Bit 0: Data Terminal Ready
-         1: Request to Send
-         2: Out 1
-         3: Out 2
-         4: Loop
-         5-7: Unused
-5: Line Status
-     Bit 0: Data Ready
-         1: Overrun Error
-         2: Parity Error
-         3: Framing Error
-         4: Break Indicator
-         5: Transmitter Holding Register Empty
-         6: Trasmitter Empty
-         7: Impending Error
-6: Modem Status
-     Bit 0: Delta Clear to Send
-         1: Delta Data Set Ready
-         2: Trailing Edge of Ring Indicator
-         3: Deltra Data Carrier Detect
-         4: Clear to Send
-         5: Data Set Ready
-         6: Ring Indicator
-         7: Data Carrier Detect
-7: Scratch
-*/
+#define DATA_PORT(base)           (base + 0)
+#define RECIEVE_BUFFER_PORT(base) (base + 0)
+#define DIVL_PORT(base)           (base + 0)
+#define DIVH_PORT(base)           (base + 1)
+#define INTERRUPT_PORT(base)      (base + 1)
+#define INT_ID_PORT(base)         (base + 2)
+#define FIFO_CONTROL_PORT(base)   (base + 2)
+#define LINE_CONTROL_PORT(base)   (base + 3)
+#define MODEM_CONTROL_PORT(base)  (base + 4)
+#define LINE_STATUS_PORT(base)    (base + 5)
+#define MODEM_STATUS_PORT(base)   (base + 6)
+#define SCRATCH_PORT(base)        (base + 7)
 
-#define LENSOR_OS_UART_MAX_BUF_SZ_BEFORE_FLUSH 256
+/* Port Register Offsets ([PORT] + [OFFSET])
+ * 
+ * 0: Data
+ *      When DLAB (Divisor Latch Access Bit) is 1, Least Significant Byte of Divisor.
+ * 1: Interrupt Enable
+ *      When DLAB is 1, Most Significant Byte of Divisor
+ *      Bit 0: Recieved Data Available
+ *               Incoming data is now available within the buffer.
+ *          1: Transmitter Holding Register Empty
+ *               Output buffer is empty and data transmission can be completed.
+ *          2: On Line Status Changed
+ *          3: On Modem Status Changed
+ *          4-7: Unused
+ *      16750 ONLY:
+ *        4: Sleep Mode
+ *        5: Low Power Mode
+ *        6-7: Unused
+ * 
+ * 2: Interrupt ID (read-only)
+ *      Bit 0: Interrupt Pending Flag
+ *          1-3: Type of interrupt
+ *            000  --  Modem Status
+ *            001  --  Transmitter Holding Register Empty
+ *            010  --  Data Available
+ *            011  --  Receiver Line Status Changed
+ *            100  --  Reserved
+ *            101  --  Reserved
+ *            110  --  Time-out Interrupt Pending (16550 & later)
+ *            111  --  Reserved
+ *          4-5: Reserved
+ *          6-7: FIFO Info
+ *            00  --  No FIFO on chip
+ *            01  --  Reserved
+ *            01  --  FIFO Enabled, Doesn't Work
+ *            11  --  FIFO Enabled
+ *      16750 ONLY:
+ *        Bit 5: 64 Byte FIFO Enabled
+ * 2: FIFO Control (write-only)
+ *      Bit 0: Enable FIFOs
+ *          1: Clear Recieve FIFOs
+ *          2: Clear Transmit FIFOs
+ *          3: DMA Mode Select
+ *          4-5: Reserved
+ *          6-7: FIFO Control (buffer size)
+ *            00  --  1 Byte    (1 Byte)
+ *            01  --  4 Bytes   (16 Bytes)
+ *            10  --  8 Bytes   (32 Bytes)
+ *            11  --  14 Bytes  (56 Bytes)
+ *      16750 ONLY:
+ *        Bit 5: Enable 64 Byte FIFO
+ * 3: Line Control (Most Significan Bit is DLAB)
+ *      Bits 0-1: Number of Data Bits
+ *        0 0 = 5,  0 1 = 6,  1 0 = 7,  1 1 = 8
+ *      2: Stop Bits
+ *        0 = 1,  1 = 1.5/2 (depends on data bits)
+ *      3-5: Parity
+ *        0 0 0 = NONE, 0 0 1 = ODD, 0 1 1 = EVEN, 1 0 1 = MARK, 1 1 1 = SPACE  
+ * 4: Modem Control
+ *      Bit 0: Data Terminal Ready
+ *          1: Request to Send
+ *          2: Auxiliary Output 1
+ *          3: Auxiliary Output 2
+ *          4: Loopback Mode
+ *          5-7: Unused
+ *      16750 ONLY:
+ *        Bit 5: Autoflow Control Enabled
+ * 5: Line Status
+ *      Bit 0: Data Ready
+ *          1: Overrun Error
+ *          2: Parity Error
+ *          3: Framing Error
+ *          4: Break Indicator
+ *          5: Capable of Data Reception
+ *          6: Transmit Buffer Empty, Shift Register Done
+ *          6: Empty Data Holding Registers
+ *          7: Error in Received FIFO
+ * 6: Modem Status
+ *      Bit 0: Delta Clear to Send
+ *          1: Delta Data Set Ready
+ *          2: Trailing Edge of Ring Indicator
+ *          3: Deltra Data Carrier Detect
+ *          4: Clear to Send
+ *          5: Data Set Ready
+ *          6: Ring Indicator
+ *          7: Data Carrier Detect
+ * 7: Scratch
+ *      On newer UART chips (>8250x), this register will relay whatever
+ *        was last written to it when read from.
+ */
+
+enum class UARTChip {
+    NONE = 0,
+    _8250,
+    _16450,
+    _16550,
+    _16550A,
+    _16750,
+};
+
+const char* get_uart_chip_name(UARTChip chip);
 
 // TODO: Add capability for selecting communication channel (COM1, COM2, etc).
 class UARTDriver {
-    u64 current {0};
-    u8* buffer;
-
-    void flush_buffer();
-    
 public:
     UARTDriver();
-    ~UARTDriver();
-
+    
+    UARTChip chip { UARTChip::NONE };
+    
     u8 readb();
     void writeb(u8 data);
 
