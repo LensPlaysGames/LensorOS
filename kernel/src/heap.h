@@ -2,7 +2,6 @@
 #define LENSOR_OS_HEAP_H
 
 #include "integers.h"
-#include "paging/page_table_manager.h"
 
 struct HeapSegmentHeader {
     // Doubly linked list

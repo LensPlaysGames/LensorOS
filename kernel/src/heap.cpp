@@ -1,11 +1,12 @@
 #include "heap.h"
+#include "paging/page_table_manager.h"
 
 void* sHeapStart;
 void* sHeapEnd;
 HeapSegmentHeader* sLastHeader;
 
 void HeapSegmentHeader::combine_forward() {
-    if (next == nullptr)    
+    if (next == nullptr)
         return;
     if (next->free == false)
         return;
