@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_KB_SCANCODE_TRANSLATION_H
 #define LENSOR_OS_KB_SCANCODE_TRANSLATION_H
 
-#include <stdint.h>
+#include "integers.h"
 
 namespace Keyboard {
     namespace QWERTY {
@@ -20,7 +20,7 @@ namespace Keyboard {
 #define SCROLLLOCK 0x46
   
         extern const char ASCII[];
-        char Translate(uint8_t scancode, bool capital);
+        char Translate(u8 scancode, bool capital);
     }
 }
 #endif
