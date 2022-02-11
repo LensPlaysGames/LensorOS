@@ -1,4 +1,8 @@
 #include "ahci.h"
+#include "pci.h"
+
+#include "paging/page_table_manager.h"
+
 #include "FATDriver.h"
 #include "FatFS.h"
 #include "FAT_definitions.h"

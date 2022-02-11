@@ -2,9 +2,11 @@
 #define LENSOR_OS_AHCI_H
 
 #include "integers.h"
-#include "paging/page_table_manager.h"
-#include "pci.h"
-#include "uart.h"
+
+namespace PCI {
+    class PCIDeviceHeader;
+    class PCIHeader0;
+}
 
 /// AHCI (Advance Host Controller Interface) developed by Intel
 ///   Facilitates handling of Serial ATA devices.
