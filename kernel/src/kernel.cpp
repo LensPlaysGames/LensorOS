@@ -1,17 +1,14 @@
 #include "kUtility.h"
 
-#include "paging/page_frame_allocator.h"
-
 #include "basic_renderer.h"
-#include "uart.h"
-
+#include "cstr.h"
+#include "interrupts/interrupts.h"
 #include "keyboard.h"
+#include "paging/page_frame_allocator.h"
 #include "pit.h"
 #include "rtc.h"
-
-#include "interrupts/interrupts.h"
-
 #include "tss.h"
+#include "uart.h"
 
 /* TODO:
  *   - Write a bootloader in C (no longer rely on GNU-EFI bootloader).
