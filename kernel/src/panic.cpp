@@ -1,5 +1,6 @@
 #include "panic.h"
 
+#include "cstr.h"
 #include "basic_renderer.h"
 #include "uart.h"
 #include "interrupts/interrupts.h"

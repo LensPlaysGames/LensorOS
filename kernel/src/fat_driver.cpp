@@ -5,9 +5,12 @@
 /// HARDWARE DISK DRIVER
 #include "ahci.h"
 /// DYNAMIC MEMORY ALLOCATION
+#include "memory.h"
 #include "heap.h"
 /// SERIAL OUT FOR DEBUG PURPOSES
 #include "uart.h"
+// NUMBER -> STRING FUNCTIONS
+#include "cstr.h"
 
 FATDriver gFATDriver;
 
