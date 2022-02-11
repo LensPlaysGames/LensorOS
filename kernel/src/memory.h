@@ -1,7 +1,9 @@
 #ifndef LENSOR_OS_MEMORY_H
 #define LENSOR_OS_MEMORY_H
 
-#include "efi_memory.h"
+#include "integers.h"
+
+struct EFI_MEMORY_DESCRIPTOR;
 
 u64 get_memory_size(EFI_MEMORY_DESCRIPTOR* map, u64 mapEntries, u64 mapDescSize);
 

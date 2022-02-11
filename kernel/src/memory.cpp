@@ -1,4 +1,6 @@
 #include "memory.h"
+#include "efi_memory.h"
+#include "integers.h"
 #include "large_integers.h"
 
 u64 get_memory_size(EFI_MEMORY_DESCRIPTOR* map, u64 mapEntries, u64 mapDescSize) {
