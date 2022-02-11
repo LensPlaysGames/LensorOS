@@ -31,7 +31,7 @@ void cause_page_not_present() {
 }
 
 void cause_general_protection() {
-    u8* badAddr = (u8*)0xdeadbeefdeadc0decafebabeb00bface;
+    u8* badAddr = (u8*)0xdeadbeefb00bface;
     u8 faultHere = *badAddr;
     (void)faultHere;
 }
