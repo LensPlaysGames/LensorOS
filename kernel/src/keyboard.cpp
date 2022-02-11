@@ -1,7 +1,8 @@
 #include "keyboard.h"
 
-#include "keyboard_scancode_translation.h"
 #include "basic_renderer.h"
+#include "keyboard_scancode_translation.h"
+
 
 namespace Keyboard {
     uVector2 gTextPosition {0, 0};

@@ -1,21 +1,14 @@
 #include "interrupts.h"
 
-#include "../cstr.h"
 #include "../basic_renderer.h"
-
-#include "../panic.h"
-
+#include "../cstr.h"
 #include "../io.h"
-/// IRQ0
-#include "../pit.h"
-/// IRQ1
 #include "../keyboard.h"
-/// IRQ4
-#include "../uart.h"
-/// IRQ8
-#include "../rtc.h"
-/// IRQ12
 #include "../mouse.h"
+#include "../panic.h"
+#include "../pit.h"
+#include "../rtc.h"
+#include "../uart.h"
 
 inline void end_of_interrupt(u8 IRQx) {
     if (IRQx >= 8)

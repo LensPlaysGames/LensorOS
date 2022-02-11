@@ -1,41 +1,28 @@
 #include "kUtility.h"
 
-// GRAPHICS
+#include "acpi.h"
 #include "basic_renderer.h"
-// BITMAP ABSTRACTION
 #include "bitmap.h"
-// to_string, to_hexstring
 #include "cstr.h"
-// MEMORY MANAGEMENT
 #include "efi_memory.h"
-#include "memory.h"
-#include "paging/paging.h"
-#include "paging/page_frame_allocator.h"
-#include "paging/page_table_manager.h"
-#include "heap.h"
-// GLOBAL DESCRIPTOR TABLE
+#include "fat_definitions.h"
+#include "fat_driver.h"
 #include "gdt.h"
-// INTERRUPTS
+#include "heap.h"
 #include "interrupts/idt.h"
 #include "interrupts/interrupts.h"
 #include "interrupts/syscalls.h"
-// SERIAL BUS COMMUNICATION
 #include "io.h"
-// TIMING
+#include "memory.h"
+#include "mouse.h"
+#include "paging/paging.h"
+#include "paging/page_frame_allocator.h"
+#include "paging/page_table_manager.h"
+#include "pci.h"
 #include "pit.h"
 #include "rtc.h"
-// SYSTEM TABLES
-#include "acpi.h"
-#include "pci.h"
-// SERIAL COMMUNICATIONS
-#include "uart.h"
-// FILESYSTEM/DISK DRIVERS
-#include "fat_definitions.h"
-#include "fat_driver.h"
-// INPUT
-#include "mouse.h"
-// SETUP FOR SWITCH TO USER MODE
 #include "tss.h"
+#include "uart.h"
 
 void prepare_memory(BootInfo* bInfo) {
     // Setup global page frame allocator.

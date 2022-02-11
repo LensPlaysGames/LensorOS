@@ -14,8 +14,8 @@
  *   - Write a bootloader in C (no longer rely on GNU-EFI bootloader).
  *   - Make read-only section of kernel read only within Page Map (PML4) using Page Table Manager (PTM).
  *   - Think about how Task State Segment Interrupt Stack Table (TSS IST) could be used.
- *   - Contemplate swapping MMU Page Map when switching to userland, and/or
- *       utilizing Translation Lookaside Buffer (TLB) flushes.
+ *   - Contemplate swapping Memory Management Unit (MMU) Page Map (PML4) when switching to 
+ *       userland, and/or utilizing Translation Lookaside Buffer (TLB) partial flushes.
  *   - Abstract `timer` class (namespace?) that will be used for an API for things like `sleep`
  *   - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
  *   - Save parsed PCI devices for quick lookup (device tree).

@@ -1,8 +1,8 @@
 #ifndef LENSOR_OS_FAT_DRIVER_H
 #define LENSOR_OS_FAT_DRIVER_H
 
-#include "integers.h"
 #include "fat_definitions.h"
+#include "integers.h"
 
 enum class FATType;
 

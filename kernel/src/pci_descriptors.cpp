@@ -1,5 +1,6 @@
-#include <stdint.h>
+
 #include "cstr.h"
+#include "integers.h"
 
 namespace PCI {
     const char* DeviceClasses[] {
@@ -25,7 +26,7 @@ namespace PCI {
         "Non Essential Instrumentation"
     };
 
-    const char* get_vendor_name(uint16_t vendorID) {
+    const char* get_vendor_name(u16 vendorID) {
         switch (vendorID) {
         case 0x8086:
             return "Intel Corp";
@@ -40,7 +41,7 @@ namespace PCI {
         }
     }
 
-    const char* get_device_name(uint16_t vendorID, uint16_t deviceID) {
+    const char* get_device_name(u16 vendorID, u16 deviceID) {
         switch (vendorID) {
         case 0x8086:
             // Intel Corp
@@ -141,7 +142,7 @@ namespace PCI {
         }
     }
 
-    const char* get_subclass_name(uint8_t _class, uint8_t subclass) {
+    const char* get_subclass_name(u8 _class, u8 subclass) {
         switch (_class) {
         case 0x00:
             // Unclassified
@@ -471,7 +472,7 @@ namespace PCI {
         }
     }
 
-    const char* get_prog_if_name(uint8_t _class, uint8_t subclass, uint8_t progIF) {
+    const char* get_prog_if_name(u8 _class, u8 subclass, u8 progIF) {
         switch (_class) {
         case 0x01:
             // Mass Storage Controller

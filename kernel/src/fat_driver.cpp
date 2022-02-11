@@ -1,16 +1,12 @@
-/// FILE SYSTEM & FORMAT
 #include "fat_driver.h"
-#include "fat_definitions.h"
-#include "vfs_inode.h"
-/// HARDWARE DISK DRIVER
+
 #include "ahci.h"
-/// DYNAMIC MEMORY ALLOCATION
-#include "memory.h"
-#include "heap.h"
-/// SERIAL OUT FOR DEBUG PURPOSES
-#include "uart.h"
-// NUMBER -> STRING FUNCTIONS
 #include "cstr.h"
+#include "fat_definitions.h"
+#include "heap.h"
+#include "memory.h"
+#include "uart.h"
+#include "vfs_inode.h"
 
 FATDriver gFATDriver;
 
