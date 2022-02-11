@@ -14,6 +14,9 @@
 #include "tss.h"
 
 /* TODO:
+ *   - Write a bootloader in C (no longer rely on GNU-EFI bootloader).
+ *   - Draw a bitmap font (and figure how to make a PSF1 formatted file).
+ *   - Make read-only section of kernel read only within Page Map (PML4) using Page Table Manager (PTM).
  *   - Think about how Task State Segment Interrupt S? Table (TSS IST) could be used.
  *   - Contemplate swapping MMU Page Map when switching to userland, and/or
  *       utilizing Translation Lookaside Buffer (TLB) flushes.
