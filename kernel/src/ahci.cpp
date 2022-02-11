@@ -1,11 +1,12 @@
 #include "ahci.h"
-#include "pci.h"
 
-#include "paging/page_table_manager.h"
-
+#include "fat_definitions.h"
 #include "fat_driver.h"
 #include "fat_fs.h"
-#include "fat_definitions.h"
+#include "memory.h"
+#include "paging/page_frame_allocator.h"
+#include "paging/page_table_manager.h"
+#include "pci.h"
 #include "vfs_inode.h"
 
 namespace AHCI {

@@ -1,5 +1,9 @@
 #include "page_table_manager.h"
 
+#include "../memory.h"
+#include "paging.h"
+#include "page_frame_allocator.h"
+
 PageTableManager gPTM {nullptr};
 
 PageTableManager::PageTableManager(PageTable* PML4Address)

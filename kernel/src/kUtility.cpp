@@ -10,6 +10,7 @@
 #include "efi_memory.h"
 #include "memory.h"
 #include "paging/paging.h"
+#include "paging/page_frame_allocator.h"
 #include "paging/page_table_manager.h"
 #include "heap.h"
 // GLOBAL DESCRIPTOR TABLE

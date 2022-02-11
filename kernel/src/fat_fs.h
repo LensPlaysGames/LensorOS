@@ -1,8 +1,15 @@
 #ifndef LENSOR_OS_FAT_FS_H
 #define LENSOR_OS_FAT_FS_H
 
+/// NUMBER -> STRING FUNCTIONS
+#include "cstr.h"
+/// FILE SYSTEM
 #include "filesystem.h"
 #include "fat_definitions.h"
+/// MEMORY MANIPULATION: `memcpy`
+#include "memory.h"
+/// SERIAL COMMUNICATION FO RDEBUG PURPOSES
+#include "uart.h"
 
 /// Resource Used: https://wiki.osdev.org/FAT
 
