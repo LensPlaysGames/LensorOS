@@ -3,7 +3,8 @@
 
 // Included with compiler, not std library
 //   (which makes the name very confusing).
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 /// Unsigned Integer Alias Declaration
 using uint = unsigned int;
