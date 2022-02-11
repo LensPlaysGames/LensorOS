@@ -45,9 +45,23 @@ __attribute__((interrupt)) void system_timer_handler(InterruptFrame* frame) {
 
 /// IRQ1: PS/2 KEYBOARD
 __attribute__((interrupt)) void keyboard_handler(InterruptFrame* frame) {
-    u8 scancode = inb(0x60);
-    handle_keyboard(scancode);
+    Keyboard::handle_scancode(inb(0x60));
     end_of_interrupt(1);
+}
+
+__attribute__((interrupt)) void uart_com1_handler(InterruptFrame* frame) {
+    u8 data = srl->readb();
+    end_of_interrupt(4);
+    if (data == 0x8) {
+        Keyboard::clear_char();        
+        return;
+    }
+    if (data == 0xd) {
+        Keyboard::newline();
+        return;
+    }
+    Keyboard::gCachedPos = gRend.DrawPos;
+    Keyboard::put_char(data);
 }
 
 /// IRQ8: PERIODIC (REAL TIME CLOCK)

@@ -8,7 +8,8 @@
 #define BAUD_RATE 9600
 #define BAUD_DIVISOR (BAUD_FREQ / BAUD_RATE)
 
-#define COM1         0x3f8
+#define COM1 0x3f8
+#define COM2 0x2f8
 
 #define DATA_PORT(base)           (base + 0)
 #define RECIEVE_BUFFER_PORT(base) (base + 0)
@@ -23,8 +24,12 @@
 #define MODEM_STATUS_PORT(base)   (base + 6)
 #define SCRATCH_PORT(base)        (base + 7)
 
+#define INTERRUPT_PORT_DATA_AVAILABLE 1
+#define INTERRUPT_PORT_TRANSMITTER_HOLDING_REGISTER_EMPTY (1 << 1)
+#define INTERRUPT_PORT_LINE_STATUS_CHANGED                (1 << 2)
+#define INTERRUPT_PORT_MODEM_STATUS_CHANGED               (1 << 3)
+
 /* Port Register Offsets ([PORT] + [OFFSET])
- * 
  * 0: Data
  *      When DLAB (Divisor Latch Access Bit) is 1, Least Significant Byte of Divisor.
  * 1: Interrupt Enable
@@ -33,14 +38,12 @@
  *               Incoming data is now available within the buffer.
  *          1: Transmitter Holding Register Empty
  *               Output buffer is empty and data transmission can be completed.
- *          2: On Line Status Changed
- *          3: On Modem Status Changed
+ *          2: Break/Error
+ *          3: On Status Changed
  *          4-7: Unused
  *      16750 ONLY:
- *        4: Sleep Mode
- *        5: Low Power Mode
- *        6-7: Unused
- * 
+ *        Bit 4: Sleep Mode
+ *            5: Low Power Mode
  * 2: Interrupt ID (read-only)
  *      Bit 0: Interrupt Pending Flag
  *          1-3: Type of interrupt

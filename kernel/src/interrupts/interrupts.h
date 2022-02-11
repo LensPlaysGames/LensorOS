@@ -47,6 +47,7 @@ struct InterruptFrame {
 // HARDWARE INTERRUPT REQUESTS (IRQs)
 __attribute__((interrupt)) void system_timer_handler (InterruptFrame*);
 __attribute__((interrupt)) void keyboard_handler     (InterruptFrame*);
+__attribute__((interrupt)) void uart_com1_handler    (InterruptFrame*);
 __attribute__((interrupt)) void rtc_periodic_handler (InterruptFrame*);
 __attribute__((interrupt)) void mouse_handler        (InterruptFrame*);
 // FAULT/TRAP HANDLING

@@ -5,8 +5,13 @@
 #include "keyboard_scancode_translation.h"
 #include "basic_renderer.h"
 
-void handle_keyboard(u8 scancode);
-
-extern uVector2 gTextPosition;
+namespace Keyboard {
+    void newline();
+    void put_char(u8);
+    void clear_char();
+    void handle_scancode(u8);
+    extern uVector2 gTextPosition;
+    extern uVector2 gCachedPos;
+}
 
 #endif

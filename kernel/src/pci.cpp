@@ -9,7 +9,8 @@ namespace PCI {
         PCIDeviceHeader* pciDevHdr = (PCIDeviceHeader*)function_address;
         if (pciDevHdr->DeviceID == 0x0000
             || pciDevHdr->DeviceID == 0xffff) { return; }
-        
+
+        // TODO: Cache human readable information with device in device tree.
         // PRINT HUMAN READABLE INFORMATION
         //srl->writestr("  ");
         //srl->writestr(get_vendor_name(pciDevHdr->VendorID));

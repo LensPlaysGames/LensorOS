@@ -3,8 +3,9 @@
 
 #include <stdint.h>
 
-namespace QWERTY {
-	// For release counter-part, add 0x80.
+namespace Keyboard {
+    namespace QWERTY {
+        // For release counter-part, add 0x80.
 #define ESCAPE     0x01
 #define BACKSPACE  0x0e
 #define TAB        0x0f
@@ -18,8 +19,8 @@ namespace QWERTY {
 #define NUMLOCK    0x45
 #define SCROLLLOCK 0x46
   
-	extern const char ASCII[];
-	char Translate(uint8_t scancode, bool capital);
+        extern const char ASCII[];
+        char Translate(uint8_t scancode, bool capital);
+    }
 }
-
 #endif

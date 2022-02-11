@@ -67,6 +67,7 @@ void prepare_interrupts() {
     // POPULATE TABLE.
     gIDT.install_handler((u64)system_timer_handler,             PIC_IRQ0);
     gIDT.install_handler((u64)keyboard_handler,                 PIC_IRQ1);
+    gIDT.install_handler((u64)uart_com1_handler,                PIC_IRQ4);
     gIDT.install_handler((u64)rtc_periodic_handler,             PIC_IRQ8);
     gIDT.install_handler((u64)mouse_handler,                    PIC_IRQ12);
     gIDT.install_handler((u64)divide_by_zero_handler,           0x00);
@@ -254,8 +255,8 @@ void kernel_init(BootInfo* bInfo) {
     tss = (void*)&tss_entry;
     /// INTERRUPT MASKS (IRQs).
     /// 0 = UNMASKED, ALLOWED TO HAPPEN
-    /// System Timer, PS/2 Keyboard, Interrupts Enabled
-    outb(PIC1_DATA, 0b11111000);
+    /// System Timer, PS/2 Keyboard, Slave PIC enabled, UART
+    outb(PIC1_DATA, 0b11101000);
     io_wait();
     /// Real time clock, PS/2 Mouse
     outb(PIC2_DATA, 0b11101110);

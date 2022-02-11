@@ -15,9 +15,8 @@
 
 /* TODO:
  *   - Write a bootloader in C (no longer rely on GNU-EFI bootloader).
- *   - Draw a bitmap font (and figure how to make a PSF1 formatted file).
  *   - Make read-only section of kernel read only within Page Map (PML4) using Page Table Manager (PTM).
- *   - Think about how Task State Segment Interrupt S? Table (TSS IST) could be used.
+ *   - Think about how Task State Segment Interrupt Stack Table (TSS IST) could be used.
  *   - Contemplate swapping MMU Page Map when switching to userland, and/or
  *       utilizing Translation Lookaside Buffer (TLB) flushes.
  *   - Abstract `timer` class (namespace?) that will be used for an API for things like `sleep`
@@ -35,7 +34,6 @@
  *   - Implement actually useful system calls
  *     - Figure out how to pass variables to system calls (it's kind of just up to me).
  *     - Useful list of 'things every OS needs': https://www.gnu.org/software/coreutils/
- *   - UART: Override "<<" or something to writestr() for ease on the eyes.
  *   - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
  */
 void print_memory_info() {
@@ -144,12 +142,12 @@ extern "C" void _start(BootInfo* bInfo) {
     gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize});
     /// END GPLv3 LICENSE REQUIREMENT.
 
-    // USERLAND SWITCH TESTING
+    // FIXME: USERLAND SWITCH TESTING
     //userland_function = (void*)test_userland_function;
     //jump_to_userland_function();
 
     // Start keyboard input at draw position, not origin.
-    gTextPosition = gRend.DrawPos;
+    Keyboard::gTextPosition = gRend.DrawPos;
     u32 debugInfoX = gRend.Target->PixelWidth - 300;
     while (true) {
         gRend.DrawPos = {debugInfoX, 0};

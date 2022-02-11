@@ -32,7 +32,7 @@ UARTDriver::UARTDriver() {
     // Set divisor.
     outb(DIVL_PORT(COM1), (u8)BAUD_DIVISOR);
     outb(DIVH_PORT(COM1), (u8)((u16)BAUD_DIVISOR >> 8));
-    // Set Line Control (8 data bits, 1 stop bit, no parity).
+    // Disable DLAB, set 8 data bits, 1 stop bit, no parity.
     outb(LINE_CONTROL_PORT(COM1), 0b00000011);
     // Enable FIFO, largest buffer possible.
     outb(FIFO_CONTROL_PORT(COM1), 0b11000111);
@@ -61,7 +61,7 @@ UARTDriver::UARTDriver() {
         // Error! No good.
         // TODO: Something about it.
     }
-    // Disable loop-back, enable IRQs, set 'Data Terminal Ready' and 'Request to Send'.
+    // Disable loop-back, set 'Data Terminal Ready' and 'Request to Send'.
     outb(MODEM_CONTROL_PORT(COM1), 0b00001111);
 
     // First serial messages output from the OS.
@@ -69,6 +69,9 @@ UARTDriver::UARTDriver() {
     writestr("[UART]: Initialized driver\r\n  Detected '");
     writestr(get_uart_chip_name(chip));
     writestr("' chip\r\n");
+
+    // Enable IRQs for data available interrupts.
+    outb(INTERRUPT_PORT(COM1), INTERRUPT_PORT_DATA_AVAILABLE);
 }
 
 /// Read a byte of data over the serial communications port COM1.
