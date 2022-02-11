@@ -34,6 +34,8 @@
 #include "mouse.h"
 
 KernelInfo kInfo;
+// SETUP FOR SWITCH TO USER MODE
+#include "tss.h"
 
 void prepare_memory(BootInfo* bInfo) {
     // Setup global page frame allocator.
@@ -101,6 +103,10 @@ void prepare_acpi(BootInfo* bInfo) {
     ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table(xsdt, (char*)"MCFG");
     PCI::enumerate_pci(mcfg);
 }
+
+TSSEntry tss_entry;
+// 'tss' USED IN 'src/userswitch.asm' AS EXTERNAL SYMBOL.
+void* tss;
 
 Framebuffer target;
 KernelInfo kernel_init(BootInfo* bInfo) {
@@ -252,6 +258,19 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     srl->writestr("[kUtil]: ACPI prepared.\r\n");
     // PREPARE PS/2 MOUSE.
     init_ps2_mouse();
+    // SETUP TASK STATE SEGMENT ENTRY FOR EVENTUAL SWITCH TO USERLAND.
+    memset((void*)&tss_entry, 0, sizeof(TSSEntry));
+    u32 limit = sizeof(TSSEntry) - 1;
+    u64 base = (u64)&tss_entry;
+    gGDT.TSS0.Limit0 = limit;
+    u8 flags = gGDT.TSS0.Limit1_Flags;
+    gGDT.TSS0.Limit1_Flags = limit >> 16;
+    gGDT.TSS0.Limit1_Flags |= flags;
+    gGDT.TSS0.Base0 = base;
+    gGDT.TSS0.Base1 = base >> 16;
+    gGDT.TSS0.Base2 = base >> 24;
+    *(u32*)&gGDT.TSS1.Base0 = base >> 32;
+    tss = (void*)&tss_entry;
     /// INTERRUPT MASKS (IRQs).
     /// 0 = UNMASKED, ALLOWED TO HAPPEN
     /// System Timer, PS/2 Keyboard, Interrupts Enabled

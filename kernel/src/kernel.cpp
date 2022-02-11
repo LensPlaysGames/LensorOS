@@ -12,7 +12,6 @@
 #include "interrupts/interrupts.h"
 
 #include "tss.h"
-#include "gdt.h"
 
 /* TODO:
  *   - Think about how Task State Segment Interrupt S? Table (TSS IST) could be used.
@@ -119,9 +118,8 @@ void test_userland_function() {
     }
 }
 
+// 'userland_function' USED IN 'userswitch.asm' AS EXTERNAL SYMBOL.
 void* userland_function;
-TSSEntry tss_entry;
-void* tss;
 
 extern "C" void _start(BootInfo* bInfo) {
     // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
@@ -143,21 +141,8 @@ extern "C" void _start(BootInfo* bInfo) {
     gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize});
     /// END GPLv3 LICENSE REQUIREMENT.
 
-    memset((void*)&tss_entry, 0, sizeof(TSSEntry));
-    u32 limit = sizeof(TSSEntry);
-    u64 base = (u64)&tss_entry;
-    gGDT.TSS0.Limit0 = limit;
-    if (limit > 255) {
-        u8 flags = gGDT.TSS0.Limit1_Flags;
-        gGDT.TSS0.Limit1_Flags = limit >> 16;
-        gGDT.TSS0.Limit1_Flags |= flags;
-    }
-    gGDT.TSS0.Base0 = base;
-    gGDT.TSS0.Base1 = base >> 16;
-    gGDT.TSS0.Base2 = base >> 24;
-    *(u32*)&gGDT.TSS1.Base0 = base >> 32;
-    tss = (void*)&tss_entry;
-    userland_function = (void*)test_userland_function;
+    // USERLAND SWITCH TESTING
+    //userland_function = (void*)test_userland_function;
     //jump_to_userland_function();
 
     // Start keyboard input at draw position, not origin.
