@@ -4,8 +4,6 @@ struct Framebuffer;
 struct PSF1_FONT;
 
 struct EFI_MEMORY_DESCRIPTOR;
-class PageTableManager;
-
 namespace ACPI {
     struct RSDP2;
 }
@@ -17,10 +15,6 @@ struct BootInfo {
     u64 mapSize;
     u64 mapDescSize;
     ACPI::RSDP2* rsdp;
-};
-
-struct KernelInfo {
-    PageTableManager* PTM;
 };
 
 extern u64 _KernelStart;
@@ -35,4 +29,4 @@ extern u64 _ReadOnlyDataEnd;
 extern u64 _BlockStartingSymbolsStart;
 extern u64 _BlockStartingSymbolsEnd;
 
-KernelInfo kernel_init(BootInfo* info);
+void kernel_init(BootInfo* info);

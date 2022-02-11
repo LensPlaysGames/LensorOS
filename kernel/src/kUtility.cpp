@@ -32,8 +32,6 @@
 #include "FATDriver.h"
 // INPUT
 #include "mouse.h"
-
-KernelInfo kInfo;
 // SETUP FOR SWITCH TO USER MODE
 #include "tss.h"
 
@@ -51,7 +49,6 @@ void prepare_memory(BootInfo* bInfo) {
     PageTable* PML4 = (PageTable*)gAlloc.request_page();
     // PAGE TABLE MANAGER
     gPTM = PageTableManager(PML4);
-    kInfo.PTM = &gPTM;
     // Map all physical RAM addresses to virtual addresses 1:1, store them in the PML4.
     // This means that virtual addresses will be equal to physical addresses.
     u64 memSize = get_memory_size(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize);
@@ -109,7 +106,7 @@ TSSEntry tss_entry;
 void* tss;
 
 Framebuffer target;
-KernelInfo kernel_init(BootInfo* bInfo) {
+void kernel_init(BootInfo* bInfo) {
     // DISABLE INTERRUPTS.
     asm ("cli");
     // SETUP GDT DESCRIPTOR.
@@ -283,5 +280,4 @@ KernelInfo kernel_init(BootInfo* bInfo) {
     srl->writestr("[kUtil]: Interrupt masks sent, enabling interrupts.\r\n");
     asm ("sti");
     srl->writestr("    \033[32mInterrupts enabled.\033[0m\r\n");
-    return kInfo;
 }
