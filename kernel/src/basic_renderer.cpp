@@ -1,4 +1,5 @@
 #include "basic_renderer.h"
+#include "cstr.h"
 
 // Define global renderer for use anywhere within the kernel.
 BasicRenderer gRend;

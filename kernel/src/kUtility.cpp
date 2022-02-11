@@ -148,7 +148,7 @@ void kernel_init(BootInfo* bInfo) {
     target = *bInfo->framebuffer;
     // GOP = Graphics Output Protocol.
     u64 fbBase = (u64)bInfo->framebuffer->BaseAddress;
-    u64 fbSize = (u64)bInfo->framebuffer->BufferSize + 0x1000;
+    u64 fbSize = bInfo->framebuffer->BufferSize + 0x1000;
     u64 fbPages = fbSize / 0x1000 + 1;
     // ALLOCATE PAGES IN BITMAP FOR ACTIVE FRAMEBUFFER (CURRENT DISPLAY MEMORY).
     gAlloc.lock_pages(bInfo->framebuffer->BaseAddress, fbPages);

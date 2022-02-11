@@ -1,9 +1,7 @@
 #ifndef LENSOR_OS_BASIC_RENDERER_H
 #define LENSOR_OS_BASIC_RENDERER_H
 
-#include <stddef.h>
-#include <stdint.h>
-#include "cstr.h"
+#include "integers.h"
 #include "math.h"
 #include "memory.h"
 
@@ -21,7 +19,7 @@ struct PSF1_FONT {
 
 struct Framebuffer {
     void* BaseAddress;
-    size_t BufferSize;
+    u64 BufferSize;
     u32 PixelWidth;
     u32 PixelHeight;
     u32 PixelsPerScanLine;
@@ -57,7 +55,7 @@ public:
     void clamp_draw_position();
 
     /// UPDATE MEMORY CONTENTS OF RENDER FROM TARGET
-    inline void swap() {
+    void swap() {
         memcpy(Target->BaseAddress, Render->BaseAddress, Render->BufferSize);
     }
 
@@ -68,7 +66,7 @@ public:
     
     /// Change every pixel in the target framebuffer to BackgroundColor.
     void clear() {
-        // TODO: make more efficient (set first line, memcpy that to each line?)
+        // TODO: Make this more efficient (don't loop over every pixel).
         // Draw background color to every pixel.
         u32* pixel_ptr = (u32*)Target->BaseAddress;
         for (u64 y = 0; y < Target->PixelHeight; y++) {
