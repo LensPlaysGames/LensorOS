@@ -10,11 +10,7 @@
 #define PS2YOVERFLOW 0b10000000
 
 #include "integers.h"
-#include "basic_renderer.h"
-#include "cstr.h"
-#include "io.h"
 #include "math.h"
-#include "uart.h"
 
 void init_ps2_mouse();
 void handle_ps2_mouse_interrupt(u8 data);

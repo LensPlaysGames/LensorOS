@@ -1,14 +1,17 @@
 #include "interrupts.h"
-#include "../io.h"
 
+#include "../cstr.h"
 #include "../basic_renderer.h"
-#include "../uart.h"
+
 #include "../panic.h"
 
+#include "../io.h"
 /// IRQ0
 #include "../pit.h"
 /// IRQ1
 #include "../keyboard.h"
+/// IRQ4
+#include "../uart.h"
 /// IRQ8
 #include "../rtc.h"
 /// IRQ12

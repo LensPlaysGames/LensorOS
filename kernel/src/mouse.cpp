@@ -1,6 +1,10 @@
 #include "mouse.h"
 
 #include "random_lcg.h"
+#include "basic_renderer.h"
+#include "cstr.h"
+#include "io.h"
+#include "uart.h"
 
 // globally accessible mouse information
 u8 gMouseID;
