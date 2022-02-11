@@ -1,6 +1,6 @@
 /// FILE SYSTEM & FORMAT
-#include "FATDriver.h"
-#include "FAT_definitions.h"
+#include "fat_driver.h"
+#include "fat_definitions.h"
 #include "vfs_inode.h"
 /// HARDWARE DISK DRIVER
 #include "ahci.h"

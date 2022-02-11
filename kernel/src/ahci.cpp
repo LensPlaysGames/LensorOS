@@ -3,9 +3,9 @@
 
 #include "paging/page_table_manager.h"
 
-#include "FATDriver.h"
-#include "FatFS.h"
-#include "FAT_definitions.h"
+#include "fat_driver.h"
+#include "fat_fs.h"
+#include "fat_definitions.h"
 #include "vfs_inode.h"
 
 namespace AHCI {

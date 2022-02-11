@@ -2,7 +2,9 @@
 #define LENSOR_OS_FAT_DRIVER_H
 
 #include "integers.h"
-#include "FAT_definitions.h"
+#include "fat_definitions.h"
+
+enum class FATType;
 
 namespace AHCI {
     class AHCIDriver;
@@ -19,7 +21,7 @@ public:
     bool is_device_fat_formatted (AHCI::AHCIDriver*, u8 portNumber);
     void read_root_dir           (AHCI::AHCIDriver*, u8 portNumber, BootRecord*, FATType type);
 
-    u32 get_total_sectors           (BootRecord* BR) const {
+    u32 get_total_sectors(BootRecord* BR) const {
         if (BR->BPB.TotalSectors16 == 0)
             return BR->BPB.TotalSectors32;
         return BR->BPB.TotalSectors16;

@@ -30,7 +30,7 @@ set(SOURCES
     src/bitmap.cpp
     src/cstr.cpp
     src/efi_memory.cpp
-    src/FATDriver.cpp
+    src/fat_driver.cpp
     src/filesystem.cpp
     src/gdt.cpp
     src/heap.cpp
@@ -63,8 +63,9 @@ set(HEADERS
     src/bitmap.h
     src/cstr.h
     src/efi_memory.h
-    src/FAT_definitions.h
-    src/FatFS.h
+    src/fat_driver.h
+    src/fat_definitions.h
+    src/fat_fs.h
     src/filesystem.h
     src/gdt.h
     src/heap.h

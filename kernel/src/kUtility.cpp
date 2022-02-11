@@ -29,7 +29,8 @@
 // SERIAL COMMUNICATIONS
 #include "uart.h"
 // FILESYSTEM/DISK DRIVERS
-#include "FATDriver.h"
+#include "fat_definitions.h"
+#include "fat_driver.h"
 // INPUT
 #include "mouse.h"
 // SETUP FOR SWITCH TO USER MODE

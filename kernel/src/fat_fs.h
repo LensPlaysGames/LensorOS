@@ -2,15 +2,14 @@
 #define LENSOR_OS_FAT_FS_H
 
 #include "filesystem.h"
-#include "FAT_definitions.h"
+#include "fat_definitions.h"
+
+/// Resource Used: https://wiki.osdev.org/FAT
 
 /// The FAT File System
 /// FAT = File Allocation Table
 
-// Resource Used: https://wiki.osdev.org/FAT
-
 /// This class will be created for each FAT-formatted file-system found using the AHCI driver.
-/// It will store information about the device (size,)
 class FatFS final : public FileSystem {
 public:
     FATDriver* Driver;
