@@ -25,7 +25,7 @@ void mouse_wait_input() {
 
 void mouse_write(u8 value) {
     mouse_wait_input();
-    outb(0x64, 0xD4);
+    outb(0x64, 0xd4);
     mouse_wait();
     outb(0x60, value);
 }
@@ -50,13 +50,13 @@ void init_ps2_mouse() {
     mouse_wait();
     outb(0x60, status);
 
-    mouse_write(0xF6);
+    mouse_write(0xf6);
     mouse_read(); // ACKNOWLEDGE
 
-    mouse_write(0xF4);
+    mouse_write(0xf4);
     mouse_read(); // ACK
 
-    mouse_write(0xF2);
+    mouse_write(0xf2);
     mouse_read(); // ACK
     gMouseID = mouse_read();
 

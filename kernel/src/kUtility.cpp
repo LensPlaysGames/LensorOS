@@ -71,7 +71,7 @@ void set_idt_gate(u64 handler, u8 entryOffset, u8 type_attr = IDT_TA_InterruptGa
 }
 
 void prepare_interrupts() {
-    idtr.Limit = 0x0FFF;
+    idtr.Limit = 0x0fff;
     idtr.Offset = (u64)gAlloc.request_page();
     // SET CALLBACK TO HANDLER BASED ON INTERRUPT ENTRY OFFSET.
     // IRQ0: SYSTEM TIMER  (PIT CHIP)
