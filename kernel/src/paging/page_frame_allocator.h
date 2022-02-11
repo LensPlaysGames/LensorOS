@@ -1,19 +1,18 @@
 #ifndef LENSOR_OS_PAGE_FRAME_ALLOCATOR
 #define LENSOR_OS_PAGE_FRAME_ALLOCATOR
 
-#include <cstddef>
-#include "../integers.h"
-#include "../efi_memory.h"
 #include "../bitmap.h"
-#include "../memory.h"
-#include "../cstr.h"
+#include "../integers.h"
+
+class EFI_MEMORY_DESCRIPTOR;
 
 class PageFrameAllocator {
 public:
+    Bitmap PageBitmap;
+
     PageFrameAllocator() {}
     
     void read_efi_memory_map(EFI_MEMORY_DESCRIPTOR* map, u64 mapSize, u64 mapDescSize);
-    Bitmap PageBitmap;
     void free_page(void* addr);
     void lock_page(void* addr);
     void free_pages(void* addr, u64 numPages);

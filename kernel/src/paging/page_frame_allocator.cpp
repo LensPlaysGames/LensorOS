@@ -1,5 +1,9 @@
 #include "page_frame_allocator.h"
 
+#include "../cstr.h"
+#include "../efi_memory.h"
+#include "../memory.h"
+
 // Define global allocator for use anywhere within the kernel.
 PageFrameAllocator gAlloc;
 
