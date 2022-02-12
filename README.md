@@ -116,7 +116,7 @@ Following that, simply using the `bootloader` target will be sufficient to updat
 
 #### 3.) Build the kernel
 Before compiling the kernel, you must build the toolchain that LensorOS uses. \
-See [README.toolchain](kernel/README.toolchain) within the `/kernel/` directory of the repository for explicit build instructions.
+See [README.toolchain](kernel/README.toolchain.md) within the `/kernel/` directory of the repository for explicit build instructions.
 
 Parts of the kernel are written in assembly intended for the Netwide Assembler. \
 Ensure it is installed on your system before continuing:
