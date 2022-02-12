@@ -35,6 +35,7 @@
 **/*~
 **/#*#
 **/.#*
+**/*.backup
 
 # Kernel Build Stuff
 /kernel/bin/
