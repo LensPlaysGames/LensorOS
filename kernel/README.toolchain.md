@@ -60,14 +60,14 @@ export TARGET=x86_64-lensoros-elf
 
 #### 4.) Configure Binutils
 Within the `$HOME/cross/src/` directory, create a new directory named `build-binutils`, or similar.
-```
+```bash
 cd $HOME/cross/src/
 mkdir build-binutils
 cd build-binutils
 ```
 
 Next, from within that newly created directory, run the configure script supplied with the Binutils source code.
-```
+```bash
 ../binutils-2.38/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot --disable-nls --disable-werror
 ```
 
@@ -94,7 +94,7 @@ cd $HOME/cross/src/gcc-11.2.0
 ```
 
 Next, GCC must be configured, much like Binutils.
-```
+```bash
 cd $HOME/cross/src/
 mkdir build-gcc
 cd build-gcc
