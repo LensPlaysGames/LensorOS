@@ -91,42 +91,58 @@ There is also a `rundbg.bat` that will launch QEMU with the appropriate flags to
 ---
 
 ### Building LensorOS <a name="build"></a>
-To begin, clone this repository to your local machine (or fork it then clone it, it's up to you if you'd like to make your own version, or contribute to this one through pull requests).
-
-Example clone command: \
-`git clone https://github.com/LensPlaysGames/LensorOS`
-
 On Windows, some way of accessing a linux command-line environment is necessary. \
 Personally, I use `WSL` with the `Ubuntu 20.04` distro. \
 Alternatively, one could use a virtual machine that emulates a linux distro (ie. `VirtualBox` running `Linux Mint`, or something), and develop from there. \
 There's also things like `Cygwin`, if you want to stay on Windows 100% of the time.
 
+#### 1.) Obtain the source code
+To begin, clone this repository to your local machine (or fork it then clone it, it's up to you if you'd like to make your own version, or contribute to this one through pull requests).
+
+Example clone command: \
+`git clone https://github.com/LensPlaysGames/LensorOS`
+
 Open a Linux terminal, then `cd` to the root directory of the repository.
 
-Ensure that you have previously ran `sudo apt install build-essential mtools` to get all necessary compilation tools.
+#### 2.) Build the bootloader
+Ensure that you have previously ran `sudo apt install build-essential mtools` to get the necessary compilation pre-requisites.
 
 First, `cd` to the `gnu-efi` directory, and run the following: \
 `make` \
 `make bootloader`
 
 NOTE: One only needs to run `make` for the bootloader once. \
-Following that, simply using the `bootloader` target will be sufficient to build the bootloader.
+Following that, simply using the `bootloader` target will be sufficient to update the bootloader.
 
-Next, `cd` to the `kernel` directory of the repository.
+#### 3.) Build the kernel
+Before compiling the kernel, you must build the toolchain that LensorOS uses. \
+See [README.toolchain](kernel/README.toolchain) within the `/kernel/` directory of the repository for explicit build instructions.
 
-To build the kernel, run the following: \
+Parts of the kernel are written in assembly intended for the Netwide Assembler. \
+Ensure it is installed on your system before continuing:
+- On Linux: `sudo apt install nasm`
+- On Windows, see [NASM's Official Site]((https://nasm.us/)).
+
+Once the toolchain is up and running (added to `$PATH` and everything), continue the following steps.
+
+NOTE: It is possible to use your host compiler to build the kernel. It is not recommended, and likely won't work, but who am I to stop you. Simply remove/comment out the `set(CMAKE_C_COMPILER` and `set(CMAKE_CXX_COMPILER` lines within [CMakeLists.txt](CMakeLists.txt). This will instruct CMake to use your host machine's default compiler (again, **not** recommended).
+
+First, `cd` to the `kernel` directory of the repository. \
+To build the kernel with GNU `make`, run the following: \
 `cmake -S . -B out` \
 `cd out` \
 `cmake .` \
 `make`
 
-This final step will generate `kernel.elf` within the `kernel/bin` directory, ready to be used in a boot usb or formatted into an image.
+This final step will generate `kernel.elf` within the `/kernel/bin` directory, ready to be used in a boot usb or formatted into an image.
 
-If you are familiar with CMake, this might look *slightly* strange to you (namely the second `cmake` command). \
-See the [CMake bug](#cmake-bug) section for more details on why it is needed, and maybe you have an even better fix.
+Alternatively, generate any build system of your choice that is supported by CMake (I recommend Ninja, it's fast).
 
 If building for real hardware, ensure to remove `-DQEMU` from CMakeLists.txt. \
 This allows for the hardware timers to be used to their full potential (asking QEMU for 1000hz interrupts from multiple devices overloads the emulator and guest time falls behind drastically; to counter-act this, very slow frequency periodic interrupts are setup as to allow the emulator to process them accordingly, allowing for accurate time-keeping even in QEMU).
+
+If you are familiar with CMake, this sequence might look *slightly* strange to you (namely the second `cmake` command). \
+See the [CMake bug](#cmake-bug) section for more details on why it is needed, and maybe you have an even better fix.
 
 #### A bug regarding CMake's ASM_NASM Makefile generation <a name="cmake-bug"></a>
 
