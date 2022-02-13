@@ -121,7 +121,7 @@ See [README.toolchain](kernel/README.toolchain.md) within the `/kernel/` directo
 Parts of the kernel are written in assembly intended for the Netwide Assembler. \
 Ensure it is installed on your system before continuing:
 - On Linux: `sudo apt install nasm`
-- On Windows, see [NASM's Official Site]((https://nasm.us/)).
+- On Windows, see [NASM's Official Site](https://nasm.us/).
 
 Once the toolchain is up and running (added to `$PATH` and everything), continue the following steps.
 
