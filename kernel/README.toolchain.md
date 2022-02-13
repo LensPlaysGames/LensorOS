@@ -25,11 +25,11 @@ For now, this step is very much required.
 
 Create an extensionless file named `t-x86_64-elf` within the GCC source code at `/gcc/config/i386/`, and save the following within that file:
 ```
-# Add libgcc multilib variant without red-zone requirement
- 
 MULTILIB_OPTIONS += mno-red-zone
 MULTILIB_DIRNAMES += no-red-zone
 ```
+
+This adds a new multilib configuration to `libgcc` that doesn't use a red zone.
 
 By default this newly created configuration will not be used, so we must also edit `gcc/config.gcc`.
 
