@@ -1,10 +1,6 @@
 #ifndef LENSOR_OS_KEYBOARD_H
 #define LENSOR_OS_KEYBOARD_H
 
-#include "keyboard_scancode_translation.h"
-#include "uart.h"
-#include "cstr.h"
-
 #include "integers.h"
 #include "math.h"
 #include "basic_renderer.h"
