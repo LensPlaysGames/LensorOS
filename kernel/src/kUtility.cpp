@@ -13,6 +13,7 @@
 #include "interrupts/interrupts.h"
 #include "interrupts/syscalls.h"
 #include "io.h"
+#include "keyboard.h"
 #include "memory.h"
 #include "mouse.h"
 #include "paging/paging.h"
@@ -242,6 +243,8 @@ void kernel_init(BootInfo* bInfo) {
     gGDT.TSS0.Base2 = base >> 24;
     *(u32*)&gGDT.TSS1.Base0 = base >> 32;
     tss = (void*)&tss_entry;
+    // BASIC KEYBOARD HANDLER
+    Keyboard::gText = Keyboard::BasicTextRenderer();
     /// INTERRUPT MASKS (IRQs).
     /// 0 = UNMASKED, ALLOWED TO HAPPEN
     /// System Timer, PS/2 Keyboard, Slave PIC enabled, UART

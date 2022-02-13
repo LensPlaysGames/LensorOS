@@ -11,7 +11,10 @@
 #include "uart.h"
 
 /* TODO:
+ *   - Further modify cross compiler to make an OS specific toolchain.
+ *     - This would allow for customizing default include/default library (aka our own libc).
  *   - Write a bootloader in C (no longer rely on GNU-EFI bootloader).
+ *     - I realize this is insane, but so is making an OS, I guess.
  *   - Make read-only section of kernel read only within Page Map (PML4) using Page Table Manager (PTM).
  *   - Think about how Task State Segment Interrupt Stack Table (TSS IST) could be used.
  *   - Contemplate swapping Memory Management Unit (MMU) Page Map (PML4) when switching to 
@@ -27,7 +30,6 @@
  *   - Write ASM interrupt wrapper (no longer rely on `__attribute__((interrupt))`)
  *     - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/
  *         as well as the syscall handler in assembly (`src/interrupts/syscalls.asm`).
- *   - Move includes to forward declarations where possible, move includes from `.h` to `.cpp`
  *   - Implement actually useful system calls
  *     - Figure out how to pass variables to system calls (it's kind of just up to me).
  *     - Useful list of 'things every OS needs': https://www.gnu.org/software/coreutils/
@@ -144,7 +146,7 @@ extern "C" void _start(BootInfo* bInfo) {
     //jump_to_userland_function();
 
     // Start keyboard input at draw position, not origin.
-    Keyboard::gTextPosition = gRend.DrawPos;
+    Keyboard::gText.set_cursor_from_pixel_position(gRend.DrawPos);
     u32 debugInfoX = gRend.Target->PixelWidth - 300;
     while (true) {
         gRend.DrawPos = {debugInfoX, 0};

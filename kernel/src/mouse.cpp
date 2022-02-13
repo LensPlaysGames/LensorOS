@@ -146,9 +146,7 @@ void DrawMouseCursor() {
         gRend.DrawPos = gOldMousePosition;
         gRend.drawpix({MouseCursorSize, MouseCursorSize}, &pixels_under_mouse_cursor[0]);
     }
-    else {
-        skip = false;
-    }
+    else skip = false;
     
     gRend.DrawPos = gMousePosition;
     // READ PIXELS UNDER NEW MOUSE POSITION INTO BUFFER.
