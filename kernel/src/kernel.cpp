@@ -11,29 +11,45 @@
 #include "uart.h"
 
 /* TODO:
- *   - Further modify cross compiler to make an OS specific toolchain.
- *     - This would allow for customizing default include/default library (aka our own libc).
- *   - Write a bootloader in C (no longer rely on GNU-EFI bootloader).
- *     - I realize this is insane, but so is making an OS, I guess.
- *   - Make read-only section of kernel read only within Page Map (PML4) using Page Table Manager (PTM).
- *   - Think about how Task State Segment Interrupt Stack Table (TSS IST) could be used.
- *   - Contemplate swapping Memory Management Unit (MMU) Page Map (PML4) when switching to 
- *       userland, and/or utilizing Translation Lookaside Buffer (TLB) partial flushes.
- *   - Abstract `timer` class (namespace?) that will be used for an API for things like `sleep`
- *   - Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
- *   - Save parsed PCI devices for quick lookup (device tree).
- *   - A slab-style memory allocator.
- *   - FILE SYSTEM:
- *     - Virtual File System that will store intermediate representation of files/folders/worlds/storage media devices
- *     - AHCI Driver Update: DMA ATA Write implementation
- *     - Another filesystem better suited for mass storage (Ext2? Proprietary?)
- *   - Write ASM interrupt wrapper (no longer rely on `__attribute__((interrupt))`)
- *     - See James Molloy's tutorials for an example: http://www.jamesmolloy.co.uk/tutorial_html/
- *         as well as the syscall handler in assembly (`src/interrupts/syscalls.asm`).
- *   - Implement actually useful system calls
- *     - Figure out how to pass variables to system calls (it's kind of just up to me).
- *     - Useful list of 'things every OS needs': https://www.gnu.org/software/coreutils/
- *   - Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
+ *   |- Further modify cross compiler to make an OS specific toolchain.
+ *   |  `- This would allow for customizing default include,
+ *   |       and default library (aka our own libc/libk).
+ *   |
+ *   |- Write a bootloader in C (no longer rely on GNU-EFI bootloader).
+ *   |  `- I realize this is an insanely large project,
+ *   |       but so is making an OS, I guess.
+ *   |
+ *   |- Make read-only section of kernel read only within 
+ *   |    Page Map (PML4) using Page Table Manager (PTM).
+ *   |
+ *   |- Think about how Task State Segment Interrupt Stack 
+ *   |    Table (TSS IST) could be used.
+ *   |
+ *   |- Contemplate swapping Memory Management Unit (MMU) 
+ *   |    Page Map (PML4) when switching to userland, and/or 
+ *   |    utilizing Translation Lookaside Buffer (TLB) partial flushes.
+ *   |
+ *   |- Abstract `timer` class (namespace?) -> an API for things like `sleep`
+ *   |- Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
+ *   |- Save parsed PCI devices for quick lookup (device tree).
+ *   |- A slab-style memory allocator.
+ *   |- File System:
+ *   |  |- Virtual File System that will store intermediate representation
+ *   |  |    of files/folders/worlds/storage media devices.
+ *   |  |- AHCI Driver Update: DMA ATA Write implementation.
+ *   |  `- Another filesystem better suited for mass storage (Ext2? Proprietary?)
+ *   |
+ *   |- Write ASM interrupt wrapper (no longer rely on `__attribute__((interrupt))`)
+ *   |  `- See: 
+ *   |     |- James Molloy's tutorials for an example: 
+ *   |     |    http://www.jamesmolloy.co.uk/tutorial_html/
+ *   |     `- The syscall handler in NASM assembly (`src/interrupts/syscalls.asm`).
+ *   |
+ *   |- Implement actually useful system calls
+ *   |  |- Figure out how to pass variables to system calls (it's kind of just up to me).
+ *   |  `- Useful list of 'things every OS needs': https://www.gnu.org/software/coreutils/
+ *   |
+ *   `- Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
  */
 void print_memory_info() {
     u32 startOffset = gRend.DrawPos.x;
