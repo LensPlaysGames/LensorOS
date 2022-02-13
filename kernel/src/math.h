@@ -28,6 +28,12 @@ struct uVector2 {
     friend inline uVector2 operator - (const uVector2& lhs, const uVector2& rhs) {
         return {lhs.x - rhs.x, lhs.y - rhs.y};
     }
+    friend inline uVector2 operator * (const uVector2& lhs, const uVector2& rhs) {
+        return {lhs.x * rhs.x, lhs.y * rhs.y};
+    }
+    friend inline uVector2 operator / (const uVector2& lhs, const uVector2& rhs) {
+        return {lhs.x / rhs.x, lhs.y / rhs.y};
+    }
 };
 
 #endif
