@@ -1,6 +1,6 @@
 #include "mouse.h"
 
-#include "random_lcg.h"
+#include "random_lfsr.h"
 #include "basic_renderer.h"
 #include "cstr.h"
 #include "io.h"
@@ -177,9 +177,9 @@ void process_mouse_packet() {
     }
     // Right Mouse Button (RMB)
     else if (mouse_packet[0] & PS2RBTN) {
-        // Use pseudo-random linear congruential number
-        //   generator to get a new color to draw with.
-        DrawColor = (u32)gRandomLCG.get();
+        // Use pseudo-random number generator
+        //   to get a new color to draw with.
+        DrawColor = (u32)gRandomLFSR.get();
     }
     // Middle Mouse Button (MMB, Scroll-wheel)
     else if (mouse_packet[0] & PS2MBTN) {}
