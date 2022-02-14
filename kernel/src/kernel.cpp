@@ -11,9 +11,44 @@
 #include "uart.h"
 
 /* TODO:
+ *   |- 1.) Kernel Process Scheduler
+ *   |      `- Resources
+ *   |         |- https://wiki.osdev.org/User:Mariuszp/Scheduler_Tutorial
+ *   |         |- https://wiki.osdev.org/Brendan%27s_Multi-tasking_Tutorial
+ *   |         `- https://wiki.osdev.org/Scheduling_Algorithms
+ *   |
+ *   |- Userland: How does the desktop happen?
+ *   |  |- I presume that the memory for the framebuffer must be mapped in a userland process.
+ *   |  |  `- This process must be supplied by the OS, of course.
+ *   |  |     `- Something like ScreenManager sounds sufficient (Compositor?). 
+ *   |  |        |- If we 'pass' the framebuffer to this in-house userland program,
+ *   |  |        |    it would have full read/write control over the screen of the OS.
+ *   |  |        |- To avoid constantly updating the screen within the kernel,
+ *   |  |        |  | the WindowManager will accept signals from applications
+ *   |  |        |  | that signify the window is dirty and need to be re-painted.
+ *   |  |        |  `- This will call the ScreenManager to update the framebuffer memory.
+ *   |  |        `- The ScreenManager will also draw OS-wide things (taskbar? clock? etc.)
+ *   |  |- To actually write userland programs that can be used,
+ *   |  |  | I need to figure out GCC cross compiler sysroot stuff.
+ *   |  |  `- This will allow me to write userland programs that 
+ *   |  |       will be installed into the OS's root directory.
+ *   |  `- I'll also need a Scheduler to hijack the IRQ0, 
+ *   |     | or use a hardware-abstracted timer.
+ *   |     `- This pre-emptive software task switcher will allow the kernel
+ *   |          to stop programs from hogging the CPU, and also allow multiple
+ *   |          programs to be run at the same time :*)
+ *   |
  *   |- Further modify cross compiler to make an OS specific toolchain.
  *   |  `- This would allow for customizing default include,
  *   |       and default library (aka our own libc/libk).
+ *   |
+ *   |- Abstract functionality from hardware where possible (currently x86_64 only).
+ *   |  |- Memory Allocation (./paging/)
+ *   |  |- GDT/IDT
+ *   |  |- Serial Communications (UART)
+ *   |
+ *   |- Create Smart Pointer Class(es).
+ *   |- Create Container Class(es) -- Vector, LinkedList, etc.
  *   |
  *   |- Write a bootloader in C (no longer rely on GNU-EFI bootloader).
  *   |  `- I realize this is an insanely large project,

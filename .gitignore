@@ -31,11 +31,12 @@
 *.out
 *.app
 
-# Emacs backups
+# Backups
 **/*~
 **/#*#
 **/.#*
 **/*.backup
+**/.swp
 
 # Kernel Build Stuff
 /kernel/bin/
