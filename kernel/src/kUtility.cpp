@@ -24,6 +24,7 @@
 #include "random_lcg.h"
 #include "random_lfsr.h"
 #include "rtc.h"
+#include "scheduler.h"
 #include "tss.h"
 #include "uart.h"
 
@@ -57,7 +58,7 @@ void prepare_interrupts() {
     // CREATE INTERRUPT DESCRIPTOR TABLE.
     gIDT = IDTR(0x0fff, (u64)gAlloc.request_page());
     // POPULATE TABLE.
-    gIDT.install_handler((u64)system_timer_handler,             PIC_IRQ0);
+    gIDT.install_handler((u64)irq0_handler,                     PIC_IRQ0);
     gIDT.install_handler((u64)keyboard_handler,                 PIC_IRQ1);
     gIDT.install_handler((u64)uart_com1_handler,                PIC_IRQ4);
     gIDT.install_handler((u64)rtc_periodic_handler,             PIC_IRQ8);
@@ -250,6 +251,8 @@ void kernel_init(BootInfo* bInfo) {
     // SETUP RANDOM NUMBER GENERATOR(S)
     gRandomLCG = LCG();
     gRandomLFSR = LFSR();
+    // KERNEL PROCESS SWITCHING USING SCHEDULER
+    Scheduler::Initialize(gPTM.PML4);
     /// INTERRUPT MASKS (IRQs).
     /// 0 = UNMASKED, ALLOWED TO HAPPEN
     /// System Timer, PS/2 Keyboard, Slave PIC enabled, UART

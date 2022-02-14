@@ -19,6 +19,7 @@ add_library(
 Assembly
     src/gdt.asm
     src/interrupts/syscalls.asm
+    src/scheduler.asm
     src/userswitch.asm
 )
 target_compile_options(
@@ -61,6 +62,7 @@ set(HEADERS
     src/random_lcg.h
     src/random_lfsr.h
     src/rtc.h
+    src/scheduler.h
     src/uart.h
     src/vfs_inode.h
 )
@@ -96,6 +98,7 @@ set(SOURCES
     src/random_lcg.cpp
     src/random_lfsr.cpp
     src/rtc.cpp
+    src/scheduler.cpp
     src/uart.cpp
 )
 

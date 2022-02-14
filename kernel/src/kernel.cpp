@@ -50,6 +50,7 @@
  *   |- Create Smart Pointer Class(es).
  *   |- Create Container Class(es) -- Vector, LinkedList, etc.
  *   |- Create `integers_forward.h` for `integers.h`; replace occurences.
+ *   |- Make kernel less architecture specific (it's very x86_64 specific).
  *   |
  *   |- Write a bootloader in C (no longer rely on GNU-EFI bootloader).
  *   |  `- I realize this is an insanely large project,
