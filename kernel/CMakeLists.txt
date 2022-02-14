@@ -27,39 +27,6 @@ Assembly PRIVATE
     $<$<CONFIG:Debug>:-g>
 )
 
-set(SOURCES
-    src/acpi.cpp
-    src/ahci.cpp
-    src/basic_renderer.cpp
-    src/bitmap.cpp
-    src/cstr.cpp
-    src/efi_memory.cpp
-    src/fat_driver.cpp
-    src/filesystem.cpp
-    src/gdt.cpp
-    src/heap.cpp
-    src/interrupts/idt.cpp
-    src/interrupts/syscalls.cpp
-    src/io.cpp
-    src/kernel.cpp
-    src/keyboard.cpp
-    src/keyboard_scancode_translation.cpp
-    src/kUtility.cpp
-    src/memory.cpp
-    src/mouse.cpp
-    src/paging/page_frame_allocator.cpp
-    src/paging/page_table_manager.cpp
-    src/paging/paging.cpp
-    src/panic.cpp
-    src/pci.cpp
-    src/pci_descriptors.cpp
-    src/pit.cpp
-    src/pure_virtuals.cpp
-    src/random_lcg.cpp
-    src/rtc.cpp
-    src/uart.cpp
-)
-
 set(HEADERS
     src/acpi.h
     src/ahci.h
@@ -95,6 +62,39 @@ set(HEADERS
     src/rtc.h
     src/uart.h
     src/vfs_inode.h
+)
+
+set(SOURCES
+    src/acpi.cpp
+    src/ahci.cpp
+    src/basic_renderer.cpp
+    src/bitmap.cpp
+    src/cstr.cpp
+    src/efi_memory.cpp
+    src/fat_driver.cpp
+    src/filesystem.cpp
+    src/gdt.cpp
+    src/heap.cpp
+    src/interrupts/idt.cpp
+    src/interrupts/syscalls.cpp
+    src/io.cpp
+    src/kernel.cpp
+    src/keyboard.cpp
+    src/keyboard_scancode_translation.cpp
+    src/kUtility.cpp
+    src/memory.cpp
+    src/mouse.cpp
+    src/paging/page_frame_allocator.cpp
+    src/paging/page_table_manager.cpp
+    src/paging/paging.cpp
+    src/panic.cpp
+    src/pci.cpp
+    src/pci_descriptors.cpp
+    src/pit.cpp
+    src/pure_virtuals.cpp
+    src/random_lcg.cpp
+    src/rtc.cpp
+    src/uart.cpp
 )
 
 add_executable(Kernel ${SOURCES} ${HEADERS})
