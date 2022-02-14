@@ -49,6 +49,7 @@
  *   |
  *   |- Create Smart Pointer Class(es).
  *   |- Create Container Class(es) -- Vector, LinkedList, etc.
+ *   |- Create `integers_forward.h` for `integers.h`; replace occurences.
  *   |
  *   |- Write a bootloader in C (no longer rely on GNU-EFI bootloader).
  *   |  `- I realize this is an insanely large project,
@@ -192,7 +193,7 @@ extern "C" void _start(BootInfo* bInfo) {
     gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize});
     /// END GPLv3 LICENSE REQUIREMENT.
 
-    // FIXME: USERLAND SWITCH TESTING
+    // USERLAND SWITCH TESTING
     //userland_function = (void*)test_userland_function;
     //jump_to_userland_function();
 

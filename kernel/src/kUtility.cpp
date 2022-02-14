@@ -21,6 +21,8 @@
 #include "paging/page_table_manager.h"
 #include "pci.h"
 #include "pit.h"
+#include "random_lcg.h"
+#include "random_lfsr.h"
 #include "rtc.h"
 #include "tss.h"
 #include "uart.h"
@@ -245,6 +247,9 @@ void kernel_init(BootInfo* bInfo) {
     tss = (void*)&tss_entry;
     // BASIC KEYBOARD HANDLER
     Keyboard::gText = Keyboard::BasicTextRenderer();
+    // SETUP RANDOM NUMBER GENERATOR(S)
+    gRandomLCG = LCG();
+    gRandomLFSR = LFSR();
     /// INTERRUPT MASKS (IRQs).
     /// 0 = UNMASKED, ALLOWED TO HAPPEN
     /// System Timer, PS/2 Keyboard, Slave PIC enabled, UART

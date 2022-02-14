@@ -59,6 +59,7 @@ set(HEADERS
     src/pit.h
     src/pure_virtuals.h
     src/random_lcg.h
+    src/random_lfsr.h
     src/rtc.h
     src/uart.h
     src/vfs_inode.h
@@ -93,6 +94,7 @@ set(SOURCES
     src/pit.cpp
     src/pure_virtuals.cpp
     src/random_lcg.cpp
+    src/random_lfsr.cpp
     src/rtc.cpp
     src/uart.cpp
 )
