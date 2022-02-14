@@ -11,9 +11,9 @@ public:
     /// Get a random 64-bit number.
     u64 get();
     /// Get a random number between zero and given `max` (inclusive/exclusive).
-    inline u64 get(u64);
+    u64 get(u64);
     /// Get a random number between a given `min` and `max` (inclusive/exclusive).
-    inline u64 get(u64, u64);
+    u64 get(u64, u64);
 };
 
 extern LCG gRandomLCG;
