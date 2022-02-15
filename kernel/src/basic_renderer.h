@@ -56,7 +56,7 @@ public:
 
     /// UPDATE MEMORY CONTENTS OF RENDER FROM TARGET
     void swap() {
-        memcpy(Target->BaseAddress, Render->BaseAddress, Render->BufferSize);
+        memcpy(Target->BaseAddress, Render->BaseAddress, Target->BufferSize);
     }
 
     /// UPDATE SIZE of MEMORY CONTENTS OF RENDER FROM TARGET AT POSITION
