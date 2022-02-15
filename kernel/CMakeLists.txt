@@ -13,7 +13,7 @@ Interrupts
     src/interrupts/interrupts.cpp
     src/interrupts/interrupts.h
 )
-target_compile_options(Interrupts PRIVATE -mno-red-zone -mgeneral-regs-only -ffreestanding -fno-exceptions -c)
+target_compile_options(Interrupts PRIVATE -O2 -mno-red-zone -mgeneral-regs-only -ffreestanding -fno-exceptions -c)
 
 add_library(
 Assembly
@@ -105,7 +105,7 @@ set(SOURCES
 add_executable(Kernel ${SOURCES} ${HEADERS})
 target_compile_definitions(Kernel PUBLIC -DQEMU)
 
-target_compile_options(Kernel PUBLIC -ffreestanding -fno-rtti -fshort-wchar -mno-red-zone -fno-exceptions -Wall -Wextra -Werror)
+target_compile_options(Kernel PUBLIC -O1 -ffreestanding -fno-rtti -fshort-wchar -mno-red-zone -fno-exceptions -Wall -Wextra -Werror)
 
 target_link_options(Kernel
     PUBLIC -T ${CMAKE_SOURCE_DIR}/kernel.ld -static -Bsymbolic -nostdlib
