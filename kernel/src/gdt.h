@@ -40,6 +40,13 @@ struct GDTEntry {
     u8 Base2;
 } __attribute__((packed));
 
+struct TSS_GDTEntry {
+    GDTEntry Entry;
+    /// Base 63:32
+    u32 Base3;
+    u32 Reserved;
+} __attribute__((packed));
+
 /// Global Descriptor Table
 /// The `Code` entry is loaded into CS,
 ///   the `Data` entry is loaded into all other segment selector registers.
@@ -57,9 +64,7 @@ struct GDT {
     GDTEntry Ring3Null; // 0x18
     GDTEntry Ring3Code; // 0x20
     GDTEntry Ring3Data; // 0x28
-    GDTEntry TSS0;      // 0x30
-    GDTEntry TSS1;      // 0x38
-
+    TSS_GDTEntry TSS;   // 0x30
 }__attribute__((packed)) __attribute__((aligned(0x1000)));
 
 extern GDT gGDT;

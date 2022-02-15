@@ -136,10 +136,10 @@ void kernel_init(BootInfo* bInfo) {
     srl->writestr(" thru 0x");
     srl->writestr(to_hexstring((u64)sHeapEnd));
     srl->writestr("\r\n");
-    srl->writestr("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
     // SETUP GOP RENDERER.
-    target = *bInfo->framebuffer;
     // GOP = Graphics Output Protocol.
+    srl->writestr("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
+    target = *bInfo->framebuffer;
     u64 fbBase = (u64)bInfo->framebuffer->BaseAddress;
     u64 fbSize = bInfo->framebuffer->BufferSize + 0x1000;
     u64 fbPages = fbSize / 0x1000 + 1;
@@ -237,14 +237,14 @@ void kernel_init(BootInfo* bInfo) {
     memset((void*)&tss_entry, 0, sizeof(TSSEntry));
     u32 limit = sizeof(TSSEntry) - 1;
     u64 base = (u64)&tss_entry;
-    gGDT.TSS0.Limit0 = limit;
-    u8 flags = gGDT.TSS0.Limit1_Flags;
-    gGDT.TSS0.Limit1_Flags = limit >> 16;
-    gGDT.TSS0.Limit1_Flags |= flags;
-    gGDT.TSS0.Base0 = base;
-    gGDT.TSS0.Base1 = base >> 16;
-    gGDT.TSS0.Base2 = base >> 24;
-    *(u32*)&gGDT.TSS1.Base0 = base >> 32;
+    gGDT.TSS.Entry.Limit0 = limit;
+    u8 flags = gGDT.TSS.Entry.Limit1_Flags;
+    gGDT.TSS.Entry.Limit1_Flags = limit >> 16;
+    gGDT.TSS.Entry.Limit1_Flags |= flags;
+    gGDT.TSS.Entry.Base0 = base;
+    gGDT.TSS.Entry.Base1 = base >> 16;
+    gGDT.TSS.Entry.Base2 = base >> 24;
+    gGDT.TSS.Base3 = base >> 32;
     tss = (void*)&tss_entry;
     // BASIC KEYBOARD HANDLER
     Keyboard::gText = Keyboard::BasicTextRenderer();
