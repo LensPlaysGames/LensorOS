@@ -3,6 +3,7 @@
 #include "fat_definitions.h"
 #include "fat_driver.h"
 #include "fat_fs.h"
+#include "heap.h"
 #include "memory.h"
 #include "paging/page_frame_allocator.h"
 #include "paging/page_table_manager.h"
@@ -51,10 +52,9 @@ namespace AHCI {
         for (u64 i = 0; i < 32; ++i) {
             if (ports & (1 << i)) {
                 PortType type = get_port_type(&ABAR->ports[i]);
-                if (type == PortType::SATA
-                    || type == PortType::SATAPI)
-                {
+                if (type == PortType::SATA || type == PortType::SATAPI) {
                     Ports[numPorts] = new Port;
+                    Ports[numPorts]->buffer = (u8*)gAlloc.request_pages(MAX_READ_PAGES);
                     Ports[numPorts]->hbaPort = &ABAR->ports[i];
                     Ports[numPorts]->type = type;
                     Ports[numPorts]->number = numPorts;
@@ -111,15 +111,13 @@ namespace AHCI {
         {
             spin++;
         }
-        if (spin == maxSpin) {
+        if (spin == maxSpin)
             return false;
-        }
 
         u32 sectorL = (u32)sector;
         u32 sectorH = (u32)(sector >> 32);
-
+        // Disable interrupts during command construction.
         hbaPort->interruptStatus = (u32)-1;
-
         HBACommandHeader* cmdHdr = (HBACommandHeader*)(u64)hbaPort->commandListBase;
         cmdHdr->commandFISLength = sizeof(FIS_REG_H2D)/sizeof(u32);
         cmdHdr->write = 0;
@@ -132,34 +130,35 @@ namespace AHCI {
         cmdTable->prdtEntry[0].interruptOnCompletion = 1;
         FIS_REG_H2D* cmdFIS = (FIS_REG_H2D*)(&cmdTable->commandFIS);
         cmdFIS->type = FIS_TYPE::REG_H2D;
-        // take control of command
+        // Take control of command
         cmdFIS->commandControl = 1;
         cmdFIS->command = ATA_CMD_READ_DMA_EX;
-        // assign lba's
+        // Assign lba's
         cmdFIS->lba0 = (u8)(sectorL);
         cmdFIS->lba1 = (u8)(sectorL >> 8);
         cmdFIS->lba2 = (u8)(sectorL >> 16);
         cmdFIS->lba3 = (u8)(sectorH);
         cmdFIS->lba4 = (u8)(sectorH >> 8);
         cmdFIS->lba5 = (u8)(sectorH >> 16);
-        // use lba mode.
+        // Use lba mode.
         cmdFIS->deviceRegister = 1 << 6;
-        // set sector count.
+        // Set sector count.
         cmdFIS->countLow  = (numSectors)      & 0xff;
         cmdFIS->countHigh = (numSectors >> 8) & 0xff;
-        // issue command.
+        // Issue command.
         hbaPort->commandIssue = 1;
         // Wait until command is completed.
-        while (true) {
-            if (hbaPort->commandIssue == 0) { break; }
-            if (hbaPort->interruptStatus & HBA_PxIS_TFES) {
+        while (hbaPort->commandIssue != 0) {
+            // I don't know why this is needed, but without
+            //   this `nop` instruction, this loop never exits.
+            asm volatile ("nop");
+            if (hbaPort->interruptStatus & HBA_PxIS_TFES)
                 return false;
-            }
         }
         // Check once more after break that read did not fail.
-        if (hbaPort->interruptStatus & HBA_PxIS_TFES) {
+        if (hbaPort->interruptStatus & HBA_PxIS_TFES)
             return false;
-        }
+        
         return true;
     }
 
@@ -188,7 +187,6 @@ namespace AHCI {
 
         for (u8 i = 0; i < numPorts; ++i) {
             Ports[i]->Configure();
-            Ports[i]->buffer = (u8*)gAlloc.request_pages(MAX_READ_PAGES);
             if (Ports[i]->buffer != nullptr) {
                 srl->writestr("[AHCI]: \033[32mPort ");
                 srl->writestr(to_string(i));
