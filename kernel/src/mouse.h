@@ -1,13 +1,13 @@
 #ifndef LENSOR_OS_MOUSE_H
 #define LENSOR_OS_MOUSE_H
 
-#define PS2LBTN      0b00000001
-#define PS2RBTN      0b00000010
-#define PS2MBTN      0b00000100
-#define PS2XSIGN     0b00010000
-#define PS2YSIGN     0b00100000
-#define PS2XOVERFLOW 0b01000000
-#define PS2YOVERFLOW 0b10000000
+#define PS2_LEFT_BUTTON   0b00000001
+#define PS2_RIGHT_BUTTON  0b00000010
+#define PS2_MIDDLE_BUTTON 0b00000100
+#define PS2_X_SIGN        0b00010000
+#define PS2_Y_SIGN        0b00100000
+#define PS2_X_OVERFLOW    0b01000000
+#define PS2_Y_OVERFLOW    0b10000000
 
 #include "integers.h"
 #include "math.h"

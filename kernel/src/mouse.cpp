@@ -139,7 +139,7 @@ void DrawMouseCursor() {
         refreshSize.y += refreshPos.y - gMousePosition.y;
         refreshPos.y = gMousePosition.y;
     }
-    
+
     // Skip first iteration in order to accurately read what is under the cursor before it is drawn.
     static bool skip = true;
     if (skip == false) {
@@ -167,22 +167,22 @@ void process_mouse_packet() {
     // MOUSE BUTTONS
     // Left Mouse Button (LMB)
     const uVector2 DrawSize {2, 2};
-    if (mouse_packet[0] & PS2LBTN) {
+    if (mouse_packet[0] & PS2_LEFT_BUTTON) {
         // Draw a rectangle of size `DrawSize` with color of `DrawColor`
         uVector2 cachedPos = gRend.DrawPos;
         gRend.DrawPos = gMousePosition - DrawSize;
         gRend.drawrect(DrawSize, DrawColor);
-        gRend.swap();
+        gRend.swap({DrawSize}, {gRend.DrawPos});
         gRend.DrawPos = cachedPos;
     }
     // Right Mouse Button (RMB)
-    else if (mouse_packet[0] & PS2RBTN) {
+    else if (mouse_packet[0] & PS2_RIGHT_BUTTON) {
         // Use pseudo-random number generator
         //   to get a new color to draw with.
         DrawColor = (u32)gRandomLFSR.get();
     }
-    // Middle Mouse Button (MMB, Scroll-wheel)
-    else if (mouse_packet[0] & PS2MBTN) {}
+    // Middle Mouse Button (MMB)
+    else if (mouse_packet[0] & PS2_MIDDLE_BUTTON) {}
     
     // MOUSE MOVEMENT
     bool isXNegative  {false};
@@ -190,13 +190,13 @@ void process_mouse_packet() {
     bool xOverflow    {false};
     bool yOverflow    {false};
     // DECODE BIT-FLAGS FROM FIRST PACKET
-    if (mouse_packet[0] & PS2XSIGN)
+    if (mouse_packet[0] & PS2_X_SIGN)
         isXNegative = true;
-    if (mouse_packet[0] & PS2YSIGN)
+    if (mouse_packet[0] & PS2_Y_SIGN)
         isYNegative = true;
-    if (mouse_packet[0] & PS2XOVERFLOW)
+    if (mouse_packet[0] & PS2_X_OVERFLOW)
         xOverflow = true;
-    if (mouse_packet[0] & PS2YOVERFLOW)
+    if (mouse_packet[0] & PS2_Y_OVERFLOW)
         yOverflow = true;
     
     // ACCUMULATE X MOUSE POSITION FROM SECOND PACKET
