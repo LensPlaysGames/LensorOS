@@ -2,18 +2,15 @@
 
 namespace ACPI {
     void* find_table(SDTHeader* header, char* signature) {
-        int entries = (header->Length - sizeof(ACPI::SDTHeader)) / 8;
-        for (int t = 0; t < entries; ++t) {
+        u64 entries = (header->Length - sizeof(ACPI::SDTHeader)) / 8;
+        for (u64 t = 0; t < entries; ++t) {
             ACPI::SDTHeader* sdt = (ACPI::SDTHeader*)*(u64*)((u64)header + sizeof(ACPI::SDTHeader) + (t * 8));
-            for (int i = 0; i < 4; ++i) {
-                if (sdt->Signature[i] != signature[i]) {
-                    // Signature does not match given, check next header.
+            for (u8 i = 0; i < 4; ++i) {
+                if (sdt->Signature[i] != signature[i])
                     break;
-                }
-                else if (i == 3) {
-                    // Successfully matched 4 char signature
+
+                if (i == 3)
                     return sdt;
-                }
             }
         }
         // Could not find table.
