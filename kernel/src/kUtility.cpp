@@ -227,6 +227,7 @@ void kernel_init(BootInfo* bInfo) {
     srl->writestr("\033[0m\r\n");
     // PREPARE DRIVERS.
     gFATDriver = FATDriver();
+    srl->writestr("[kUtil]: \033[32mFilesystem drivers created successfully.\033[0m\r\n");
     // TODO: PREPARE DEVICE TREE.
     // SYSTEM INFORMATION IS FOUND IN ACPI TABLE
     prepare_acpi(bInfo);
@@ -251,7 +252,7 @@ void kernel_init(BootInfo* bInfo) {
     // SETUP RANDOM NUMBER GENERATOR(S)
     gRandomLCG = LCG();
     gRandomLFSR = LFSR();
-    // KERNEL PROCESS SWITCHING USING SCHEDULER
+    // USE KERNEL PROCESS SWITCHING
     Scheduler::Initialize(gPTM.PML4);
     /// INTERRUPT MASKS (IRQs).
     /// 0 = UNMASKED, ALLOWED TO HAPPEN

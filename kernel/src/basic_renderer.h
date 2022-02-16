@@ -41,7 +41,7 @@ public:
     Framebuffer* Render          {nullptr};
     Framebuffer* Target          {nullptr};
     PSF1_FONT*   Font            {nullptr};
-    uVector2      DrawPos        {0, 0};
+    uVector2     DrawPos         {0, 0};
     u32 BackgroundColor {0x00000000};
 
     BasicRenderer() {}

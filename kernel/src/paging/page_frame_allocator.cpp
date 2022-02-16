@@ -7,10 +7,13 @@
 // Define global allocator for use anywhere within the kernel.
 PageFrameAllocator gAlloc;
 
+// Total amount of memory on the system.
+u64 total_memory {0};
 // Reserved by OS/hardware.
 u64 reserved_memory {0};
-// Available memory to use.
+// Available memory to be used when needed.
 u64 free_memory {0};
+// Memory that is currently in use.
 u64 used_memory {0};
 
 bool initialized = false;
@@ -33,6 +36,7 @@ void PageFrameAllocator::read_efi_memory_map(EFI_MEMORY_DESCRIPTOR* map, u64 map
         }
     }
     u64 memorySize = get_memory_size(map, mapEntries, mapDescSize);
+    total_memory = memorySize;
     free_memory = memorySize;
     u64 bitmapSize = memorySize / 4096 / 8 + 1;
     initialize_bitmap(bitmapSize, largestFreeMemorySegment);
@@ -170,6 +174,7 @@ void PageFrameAllocator::reserve_pages(void* addr, u64 numPages) {
     }
 }
 
+u64 PageFrameAllocator::get_total_ram()    { return total_memory;    }
 u64 PageFrameAllocator::get_free_ram()     { return free_memory;     }
 u64 PageFrameAllocator::get_used_ram()     { return used_memory;     }
 u64 PageFrameAllocator::get_reserved_ram() { return reserved_memory; }

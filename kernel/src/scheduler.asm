@@ -45,7 +45,7 @@ irq0_handler:
     mov rax, [timer_ticks]
     add QWORD [rax], 1
     mov [timer_ticks], rax
-;;; PASS POINTER TO CPU STATE TO `switch_task(CPUState*)`
+;;; CALL C++ FUNCTION; ARGUMENT IN `rdi`
     mov rdi, rsp
     call [scheduler_switch_task]
 ;;; END INTERRUPT
@@ -69,9 +69,8 @@ irq0_handler:
     pop r15
     pop fs
     pop gs
-    add rsp, 8                  ; Eat `rax` off of stack.
+    pop rax
     call do_swapgs
-
     iretq
 
 GLOBAL irq0_handler

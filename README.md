@@ -59,6 +59,9 @@ USB
 To change the font, replace `dfltfont.psf` in the `kernel/res` folder with any PSF1 font (not PSF2). \
 For a few fonts that are compatible, check out [this repository](https://github.com/ercanersoy/PSF-Fonts)
 
+NOTE: If using VirtualBox, you will need to use the following QEMU tool to create a bootable virtual disk (`.vdi`):
+`qemu-img convert -f raw -O vdi LensorOS/kernel/bin/LensorOS.img path/to/LensorOS.vdi`
+
 #### On Linux
 
 `bash mkimg.sh` will generate a `.iso` disk image file that can be used as a boot drive by a virtual machine that supports OVMF like [QEMU](https://www.qemu.org/).

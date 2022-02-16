@@ -17,6 +17,7 @@ public:
     void lock_page(void* addr);
     void free_pages(void* addr, u64 numPages);
     void lock_pages(void* addr, u64 numPages);
+    u64 get_total_ram();
     u64 get_free_ram();
     u64 get_used_ram();
     u64 get_reserved_ram();

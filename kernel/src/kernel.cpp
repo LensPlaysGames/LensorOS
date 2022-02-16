@@ -11,12 +11,6 @@
 #include "uart.h"
 
 /* TODO:
- *   |- 1.) Kernel Process Scheduler
- *   |      `- Resources
- *   |         |- https://wiki.osdev.org/User:Mariuszp/Scheduler_Tutorial
- *   |         |- https://wiki.osdev.org/Brendan%27s_Multi-tasking_Tutorial
- *   |         `- https://wiki.osdev.org/Scheduling_Algorithms
- *   |
  *   |- Userland: How does the desktop happen?
  *   |  |- I presume that the memory for the framebuffer must be mapped in a userland process.
  *   |  |  `- This process must be supplied by the OS, of course.
@@ -58,6 +52,12 @@
  *   |
  *   |- Make read-only section of kernel read only within 
  *   |    Page Map (PML4) using Page Table Manager (PTM).
+ *   |
+ *   |- Update Kernel Process Scheduler (and actually use it).
+ *   |  |- Current Inspiration: https://wiki.osdev.org/User:Mariuszp/Scheduler_Tutorial
+ *   |  `- Future Inspiration:
+ *   |     |- https://wiki.osdev.org/Brendan%27s_Multi-tasking_Tutorial
+ *   |     `- https://wiki.osdev.org/Scheduling_Algorithms
  *   |
  *   |- Think about how Task State Segment Interrupt Stack 
  *   |    Table (TSS IST) could be used.
