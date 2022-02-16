@@ -97,7 +97,7 @@ PSF1_FONT* LoadPSF1Font(EFI_FILE* dir, CHAR16* path) {
     if (font_hdr->Magic[0] != PSF1_MAGIC0
         || font_hdr->Magic[1] != PSF1_MAGIC1)
     {
-        Print(L"[ERR]: Invalid font format");
+        Print(L"ERROR: Invalid font format");
         return NULL;
     }
 
@@ -129,10 +129,10 @@ Framebuffer* InitializeGOP() {
  
     status = uefi_call_wrapper(BS->LocateProtocol, 3, &gopGuid, NULL, (void**)&gop);
     if(EFI_ERROR(status)) {
-        Print(L"Unable to locate GOP\n");
+        Print(L"ERROR: Unable to locate GOP\n");
         return NULL;
     }
-    Print(L"[LOG]: GOP located successfully\n");
+    Print(L"GOP located successfully\n");
 
     framebuffer.BaseAddress = (void*)gop->Mode->FrameBufferBase;
     framebuffer.BufferSize = gop->Mode->FrameBufferSize;
@@ -163,16 +163,16 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     // FIND LensorOS DIRECTORY
     EFI_FILE* bin = LoadFile(NULL, L"LensorOS");
     if (bin == NULL) {
-        Print(L"[ERR]: Could not load OS Directory\n");
+        Print(L"ERROR: Could not load directory: \"/LensorOS/\"\n");
         return 1;
     }
     // FIND KERNEL WITHIN LensorOS DIRECTORY
     EFI_FILE* kernel = LoadFile(bin, L"kernel.elf");
     if (kernel == NULL) {
-        Print(L"[ERR]: Could not load kernel\n");
+        Print(L"ERROR: Could not load kernel from /LensorOS/kernel.elf\n");
         return 1;
     }
-    Print(L"[LOG]: LensorOS kernel has been found\n");
+    Print(L"Kernel has been found\n");
 
     // LOAD KERNEL ELF64 HEADER INTO MEMORY
     Elf64_Ehdr elf_header;
@@ -202,10 +202,10 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
         || elf_header.e_machine != EM_X86_64
         || elf_header.e_version != EV_CURRENT)
     {
-        Print(L"[ERR]: Invalid kernel format\n");
+        Print(L"ERROR: Invalid kernel format\n");
         return 1;
     }
-    Print(L"[LOG]: LensorOS kernel format verified successfully\n");
+    Print(L"Kernel format verified successfully\n");
 
     // LOAD KERNEL INTO MEMORY
     Elf64_Phdr* program_hdrs;
@@ -231,13 +231,12 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
             kernel->Read(kernel, &size, (void*)segment);
         }
     }
-    Print(L"[LOG]: LensorOS kernel loaded successfully\n");
+    Print(L"Kernel loaded successfully\n");
 
     // Initialize Unified Extensible Firmware Interface Graphics Output Protocol.
     // Let's call that the 'GOP' from now on.
     Framebuffer* gop_fb = InitializeGOP();
-    Print(L"UEFI GOP INFO:\n"
-          L"  Base: 0x%08X\n"
+    Print(L"  Base: 0x%08X\n"
           L"  Size: 0x%x\n"
           L"  Pixel Width: %d\n"
           L"  Pixel Height: %d\n"
@@ -251,11 +250,10 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     // Read default font from root directory.
     PSF1_FONT* dflt_font = LoadPSF1Font(bin, L"dfltfont.psf");
     if (dflt_font == NULL) {
-        Print(L"[ERR]: Failed to load default font\n");
+        Print(L"ERROR: Failed to load default font\n");
     }
     else {
-        Print(L"[LOG]: Default font loaded successfully\n"
-              L"Default Font (PSF1) Info:\n"
+        Print(L"Default font loaded successfully\n"
               L"  Mode:           %d\n"
               L"  Character Size: 8x%d\n",
               dflt_font->PSF1_Header->Mode,
@@ -271,7 +269,7 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
       gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
       gSystemTable->BootServices->AllocatePool(EfiLoaderData, MapSize, (void**)&Map);
       gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
-      Print(L"[LOG]: EFI memory map successfully parsed\n");
+      Print(L"EFI memory map successfully parsed\n");
     }
 
     // ACPI 2.0
@@ -282,7 +280,7 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
         if (CompareGuid(&ConfigTable[index].VendorGuid, &ACPI2TableGuid)) {
             // Found ACPI 2.0 Table in System Table.
             if (strcmp((CHAR8*)"RSD PTR ", (CHAR8*)ConfigTable->VendorTable, 8)) {
-                Print(L"[LOG]: Found RSDP\n");
+                Print(L"Found RSDP\n");
                 rsdp = (void*)ConfigTable->VendorTable;
             }
         }
@@ -299,7 +297,7 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
 
     // Exit boot services: free system resources dedicated to UEFI boot services,
     //   as well as prevent UEFI from shutting down automatically after 5 minutes.
-    Print(L"[LOG]: Exiting boot services");
+    Print(L"Exiting boot services\nJumping to kernel start\n");
     gSystemTable->BootServices->ExitBootServices(gImageHandle, MapKey);
 
     // Define kernel entry point.

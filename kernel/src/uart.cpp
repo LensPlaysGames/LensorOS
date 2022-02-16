@@ -65,7 +65,7 @@ UARTDriver::UARTDriver() {
     outb(MODEM_CONTROL_PORT(COM1), 0b00001111);
 
     // First serial messages output from the OS.
-    writestr("\r\n\r\n\r\nWelcome to \033[5;1;33mLensorOS\033[0m\r\n\r\n");
+    writestr("\r\n\r\nWelcome to \033[5;1;33mLensorOS\033[0m\r\n\r\n");
     writestr("[UART]: Initialized driver\r\n  Detected '");
     writestr(get_uart_chip_name(chip));
     writestr("' chip\r\n");
