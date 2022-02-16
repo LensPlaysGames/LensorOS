@@ -13,8 +13,13 @@ namespace PCI {
         u64 function_address = device_address + offset;
         gPTM.map_memory((void*)function_address, (void*)function_address);
         PCIDeviceHeader* pciDevHdr = (PCIDeviceHeader*)function_address;
-        if (pciDevHdr->DeviceID == 0x0000
-            || pciDevHdr->DeviceID == 0xffff) { return; }
+        if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
+            gPTM.unmap_memory((void*)function_address);
+            return;
+        }
+        srl->writestr("  Mapped function at 0x");
+        srl->writestr(to_hexstring(function_address));
+        srl->writestr("\r\n");
 
         // TODO: Cache human readable information with device in device tree.
         // PRINT HUMAN READABLE INFORMATION
@@ -48,14 +53,15 @@ namespace PCI {
         u64 device_address = bus_address + offset;
         gPTM.map_memory((void*)device_address, (void*)device_address);
         PCIDeviceHeader* pciDevHdr = (PCIDeviceHeader*)device_address;
-        if (pciDevHdr->DeviceID == 0x0000
-            || pciDevHdr->DeviceID == 0xffff) { return; }
-        srl->writestr("[PCI]: Mapped '");
+        if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
+            gPTM.unmap_memory((void*)device_address);
+            return;
+        }
+        srl->writestr("  Mapped '");
         srl->writestr(get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID));
         srl->writestr("' to ");
         srl->writestr(to_hexstring(device_address));
         srl->writestr("\r\n");
-        
         for (u64 function = 0; function < 8; ++function)
             enumerate_function(device_address, function);
     }
@@ -65,18 +71,24 @@ namespace PCI {
         u64 bus_address = base_address + offset;
         gPTM.map_memory((void*)bus_address, (void*)bus_address);
         PCIDeviceHeader* pciDevHdr = (PCIDeviceHeader*)bus_address;
-        if (pciDevHdr->DeviceID == 0x0000
-            || pciDevHdr->DeviceID == 0xffff) { return; }
+        if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
+            gPTM.unmap_memory((void*)bus_address);
+            return;
+        }
+
+        srl->writestr("  Mapped bus at 0x");
+        srl->writestr(to_hexstring(bus_address));
+        srl->writestr("\r\n");
+
         for (u64 device = 0; device < 32; ++device)
             enumerate_device(bus_address, device);
     }
     
     void enumerate_pci(ACPI::MCFGHeader* mcfg) {
-        // srl->writestr("[PCI]: \r\n");
+        srl->writestr("[PCI]: Begin MCFG bus enumeration\r\n");
         int entries = ((mcfg->Header.Length) - sizeof(ACPI::MCFGHeader)) / sizeof(ACPI::DeviceConfig);
         for (int t = 0; t < entries; ++t) {
-            ACPI::DeviceConfig* devCon = (ACPI::DeviceConfig*)((u64)mcfg
-                                                               + sizeof(ACPI::MCFGHeader)
+            ACPI::DeviceConfig* devCon = (ACPI::DeviceConfig*)((u64)mcfg + sizeof(ACPI::MCFGHeader)
                                                                + (sizeof(ACPI::DeviceConfig) * t));
             for (u64 bus = devCon->StartBus; bus < devCon->EndBus; ++bus)
                 enumerate_bus(devCon->BaseAddress, bus);
