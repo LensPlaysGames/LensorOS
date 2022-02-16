@@ -65,3 +65,18 @@ void PageTableManager::map_memory(void* virtualMemory, void* physicalMemory) {
     
     PT->entries[indexer.PageIndex] = PDE;
 }
+
+void PageTableManager::unmap_memory(void* virtualMemory) {
+    PageMapIndexer indexer((u64)virtualMemory);
+    PageDirEntry PDE;
+    PDE = PML4->entries[indexer.PageDirectoryPointerIndex];
+    PageTable* PDP = (PageTable*)((u64)PDE.get_address() << 12);
+    PDE = PDP->entries[indexer.PageDirectoryIndex];
+    PageTable* PD = (PageTable*)((u64)PDE.get_address() << 12);
+    PDE = PD->entries[indexer.PageTableIndex];
+    PageTable* PT = (PageTable*)((u64)PDE.get_address() << 12);
+    PDE = PT->entries[indexer.PageIndex];
+    PDE.set_flag(PT_Flag::Present, false);
+    PT->entries[indexer.PageIndex] = PDE;
+}
+

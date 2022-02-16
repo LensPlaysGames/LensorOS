@@ -11,6 +11,7 @@ public:
     PageTable* PML4;
 
     void map_memory(void* virtualMemory, void* physicalMemory);
+    void unmap_memory(void* virtualMemory);
 };
 
 extern PageTableManager gPTM;
