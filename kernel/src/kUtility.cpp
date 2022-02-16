@@ -73,6 +73,10 @@ void prepare_interrupts() {
 }
 
 void prepare_acpi(BootInfo* bInfo) {
+    if (bInfo->rsdp == NULL) {
+        srl->writestr("[kUtil]: ERROR: RSDP is null!");
+        return;
+    }
     // eXtended System Descriptor Table
     ACPI::SDTHeader* xsdt = (ACPI::SDTHeader*)(bInfo->rsdp->XSDTAddress);
     // Memory-mapped ConFiguration Table
