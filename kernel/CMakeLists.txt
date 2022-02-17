@@ -50,6 +50,7 @@ set(HEADERS
     src/keyboard_scancode_translation.h
     src/kUtility.h
     src/large_integers.h
+    src/linked_list.h
     src/math.h
     src/memory.h
     src/mouse.h
