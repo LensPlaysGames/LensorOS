@@ -27,19 +27,16 @@
  *   |  |  `- This will allow me to write userland programs that 
  *   |  |       will be installed into the OS's root directory.
  *   |  `- I'll also need a Scheduler to hijack the IRQ0, 
- *   |     | or use a hardware-abstracted timer.
- *   |     `- This pre-emptive software task switcher will allow the kernel
- *   |          to stop programs from hogging the CPU, and also allow multiple
- *   |          programs to be run at the same time :*)
+ *   |     `- I've done this! See `scheduler.[h/cpp/asm]`
  *   |
  *   |- Further modify cross compiler to make an OS specific toolchain.
  *   |  `- This would allow for customizing default include,
- *   |       and default library (aka our own libc/libk).
+ *   |       and default library (aka our own libc/libk; currenty running with no C RunTime).
  *   |
- *   |- Abstract functionality from hardware where possible (currently x86_64 only).
+ *   |- Abstract functionality from hardware (currently very x86_64 specific).
  *   |  |- Memory Allocation (./paging/)
  *   |  |- GDT/IDT
- *   |  |- Serial Communications (UART)
+ *   |  `- Serial Communications (UART)
  *   |
  *   |- Create Smart Pointer Class(es).
  *   |- Create Container Class(es) -- Vector, LinkedList, etc.

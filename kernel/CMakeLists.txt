@@ -44,6 +44,7 @@ set(HEADERS
     src/integers.h
     src/interrupts/idt.h
     src/interrupts/syscalls.h
+    src/inode.h
     src/io.h
     src/keyboard.h
     src/keyboard_scancode_translation.h
@@ -64,7 +65,6 @@ set(HEADERS
     src/rtc.h
     src/scheduler.h
     src/uart.h
-    src/vfs_inode.h
 )
 
 set(SOURCES

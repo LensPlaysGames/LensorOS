@@ -6,7 +6,7 @@
 #include "heap.h"
 #include "memory.h"
 #include "uart.h"
-#include "vfs_inode.h"
+#include "inode.h"
 
 FATDriver gFATDriver;
 

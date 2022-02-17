@@ -13,6 +13,7 @@ class LFSR {
     void next();
 public:
     LFSR() {
+        // TODO: Use current time as seed for initial state.
         // Initialize state.
         ShiftRegister[15] = 0b10000000;
         ShiftRegister[14] = 0b00000000;

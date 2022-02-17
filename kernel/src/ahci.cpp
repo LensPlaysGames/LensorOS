@@ -8,7 +8,7 @@
 #include "paging/page_frame_allocator.h"
 #include "paging/page_table_manager.h"
 #include "pci.h"
-#include "vfs_inode.h"
+#include "inode.h"
 
 namespace AHCI {
 #define HBA_PORT_DEVICE_PRESENT 0x3
@@ -199,7 +199,8 @@ namespace AHCI {
                     FileSystems[NumFileSystems] = fs;
                     ++NumFileSystems;
 
-                    Inode inode = Inode();
+                    // FIXME: Dummy inode creation.
+                    Inode inode = Inode(*FileSystems[NumFileSystems], 0);
                     fs->read(&inode);
 
                     srl->writestr("[AHCI]: Device at port ");
