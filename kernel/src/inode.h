@@ -6,51 +6,21 @@
 
 class FileSystem;
 
-struct InodeStat {
-    u64 DeviceID;
-    u64 InodeNumber;
-    u64 Mode;
-    u64 LinkCount;
-    u64 UserID;
-    u64 GroupID;
-    u64 SpecialDeviceID;
-    u64 SizeInBytes;
-    u64 BlockSize;  // Block size for filesystem I/O.
-    u64 BlockCount; // Number of 512-byte blocks.
-    s64 AccessedSeconds;
-    u64 AccessedNanoseconds;
-    s64 ModifiedSeconds;
-    u64 ModifiedNanoseconds;
-    s64 ChangedSeconds;
-    u64 ChangedNanoseconds;
-};
+/* An Inode, or Index Node, is a unit within a filesystem
+ *   that holds the whereabouts of data on a given partition.
+ * Inodes can not be transferred from file system to file system due to
+ *   potential clash of Inode number, the only identifier classically present.
+ * Inode-based file systems can run out of free Inodes, even if more
+ *   space is present on the present; this is one major flaw.
+ * Inode holds meta-data about the file (permissions, mainly), as well as
+ *   the common stuff like status changed, modified, and accessed times.
+ *
+ * So it seems simple, right? Just have the VFS store a path 
+ *   in/with/for each inode, and each filesystem can parse the path
+ *   accordingly to actually get to the correct data.
+ * Caching could be implemented within the VFS on a per-filesystem basis.
+ */
 
-/// An Inode, or Index Node, is a unit within a filesystem
-///   that holds the whereabouts of data on a given partition.
-/// Inode's can not be transferred from file system to file system due to
-///   potential clash of Inode number, the only identifier present.
-/// Inode-based file systems can run out of free Inodes, even if more
-///   space is present on the disk. Luckily for the VFS it's never on disk.
-/// Inode holds meta-data about the file (permissions, mainly), as well as
-///   the common stuff like creation, modified, and accessed times.
-
-/*
-My problem: 
-|- FAT can not convert an inode index into a resolved file.
-|- The FAT has to be traversed according to a given path.
-|- For example: "/usr/textfile.txt" would search root directory
-|    for "usr" directory, then if that directory is found,
-|    search it for a file named "textfile" with a "txt" extension.
-|
-|-So it seems simple, right? 
-| `- Just have the VFS store a path in each inode, and each filesystem 
-|    | can parse the path accordingly to actually get to the correct data.
-|    `- Yes, but how does an inode-based filesystem get an index from a file path?
-|       `- I don't know at all.
-*/
-
-// TODO:
-// `- Implement a/c/m/d time and hard-link count.
 class Inode {
 public:
     Inode(FileSystem& fs, u64 i)
