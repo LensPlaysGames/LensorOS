@@ -10,8 +10,6 @@
 #include "tss.h"
 #include "uart.h"
 
-#include "linked_list.h"
-
 /* TODO:
  *   |- Userland: How does the desktop happen?
  *   |  |- I presume that the memory for the framebuffer must be mapped in a userland process.
@@ -41,7 +39,7 @@
  *   |  `- Serial Communications (UART)
  *   |
  *   |- Create Smart Pointer Class(es).
- *   |- Create Container Class(es) -- Vector, LinkedList, etc.
+ *   |- Create Container Class(es) -- Vector, HashMap, etc.
  *   |- Create `integers_forward.h` for `integers.h`; replace occurences.
  *   |- Make kernel less architecture specific (it's very x86_64 specific).
  *   |
@@ -196,17 +194,6 @@ extern "C" void _start(BootInfo* bInfo) {
     // USERLAND SWITCH TESTING
     //userland_function = (void*)test_userland_function;
     //jump_to_userland_function();
-
-    srl->writestr("Linked list testing:\r\n");
-    SinglyLinkedList<u8> list;
-    for (u8 i = 0; i < 10; ++i)
-        list.add(i);
-
-    list.for_each([](auto* it) {
-        srl->writestr(to_string(it->value()));
-        srl->writestr(" -> ");
-    });
-    srl->writestr("\r\n");
 
     // Start keyboard input at draw position, not origin.
     Keyboard::gText.set_cursor_from_pixel_position(gRend.DrawPos);
