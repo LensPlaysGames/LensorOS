@@ -65,6 +65,7 @@ set(HEADERS
     src/random_lfsr.h
     src/rtc.h
     src/scheduler.h
+    src/smart_pointer.h
     src/uart.h
 )
 
