@@ -126,36 +126,57 @@ bool FATDriver::is_device_fat_formatted(AHCI::AHCIDriver* ahci, u8 portNumber) {
     return result;
 }
 
-void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord* BR, FATType type) {
-    u32 clusterIndex = get_root_directory_cluster(BR, type);
-    bool lfnBufferFull {false};
+void FATDriver::read_directory
+(
+ AHCI::AHCIDriver* ahci
+ , u8 portNumber
+ , BootRecord* BR
+ , FATType type
+ , u32 directoryClusterIndex
+ , u32 indentLevel)
+{
+    static const char* indent = "  ";
+    
+    u32 clusterIndex = directoryClusterIndex;
+    bool lfnBufferFull { false };
     u16* lfnBuffer = new u16[13];
     u8* FAT = new u8[BR->BPB.NumBytesPerSector];
-    ClusterEntry* clEntry;
-    u32 clusterNumber {0};
-    u32 FAToffset     {0};
-    u32 FATsector     {0};
-    u32 lastFATsector {0};
-    u32 entryOffset   {0};
-    u32 tableValue    {0};
-    while (true) {
-        srl->writestr("[FATDriver]: \r\n  Reading cluster ");
-        srl->writestr(to_string(clusterIndex));
-        srl->writestr("\r\n");
-        ahci->Ports[portNumber]->Read(get_first_sector_in_cluster(BR, clusterIndex),
-                                      BR->BPB.NumSectorsPerCluster,
-                                      ahci->Ports[portNumber]->buffer);
-        clEntry = (ClusterEntry*)ahci->Ports[portNumber]->buffer;
-        lfnBufferFull = false;
-        while (true) {
-            if (clEntry->FileName[0] == 0)
-                break;
-            if (clEntry->FileName[0] == 0xe5)
+    ClusterEntry* current { nullptr };
+    u32 clusterNumber { 0 };
+    u32 FAToffset     { 0 };
+    u32 FATsector     { 0 };
+    u32 lastFATsector { 0 };
+    u32 entryOffset   { 0 };
+    u32 tableValue    { 0 };
+
+    // Follow clusters while there are more in the chain.
+    bool moreClusters { true };
+    do {
+        // Read cluster into AHCI buffer.
+        u64 clusterSizeInBytes = BR->BPB.NumSectorsPerCluster * BR->BPB.NumBytesPerSector;
+        u8* clusterContents = new u8[clusterSizeInBytes];
+        if (ahci->Ports[portNumber]->Read(get_first_sector_in_cluster(BR, clusterIndex)
+                                          , BR->BPB.NumSectorsPerCluster) == false)
+        {
+            srl->writestr(indent);
+            for (u32 i = 0; i < indentLevel; ++i)
+                srl->writestr(indent);
+            srl->writestr("\033[31mRead failed.\033[0m\r\n");
+            return;
+        }
+        memcpy((void*)ahci->Ports[portNumber]->buffer, (void*)clusterContents, clusterSizeInBytes);
+        current = (ClusterEntry*)clusterContents;
+        // Get all entries within cluster.
+        // The end is signified by an entry with
+        //   the first byte of the file name set to zero.
+        // Entries with an initial byte of 0xe5 are skipped.
+        do {
+            if (current->FileName[0] == 0xe5)
                 continue;
 
             // Detect a long file name entry
-            if (clEntry->Attributes == 0x0f) {
-                LFNClusterEntry* lfn = (LFNClusterEntry*)clEntry;
+            if (current->Attributes == 0x0f) {
+                LFNClusterEntry* lfn = (LFNClusterEntry*)current;
                 // Copy long file name into buffer.
                 // First five two-byte characters.
                 memcpy(&lfn->Characters1[0], &lfnBuffer[0], 10);
@@ -164,66 +185,93 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
                 // Last two characters.
                 memcpy(&lfn->Characters3[0], &lfnBuffer[11], 4);
                 lfnBufferFull = true;
-                clEntry++;
+                current++;
                 continue;
             }
 
+            // Parse attributes of file.
+            bool is_dir = current->Attributes & FAT_ATTR_DIRECTORY;
             bool is_file = false;
-            /// Read Only: 0b00000001
-            /// Hidden:    0b00000010
-            /// System:    0b00000100
-            /// Volume ID: 0b00001000
-            /// Directory: 0b00010000
-            /// Archive:   0b00100000
-            srl->writestr("   ");
-            if (clEntry->Attributes & 0b00000001)
-                srl->writestr(" Read-only ");
-            if (clEntry->Attributes & 0b00000010)
-                srl->writestr(" Hidden ");
-            if (clEntry->Attributes & 0b00000100)
-                srl->writestr(" System ");
-            else srl->writeb((u8)' ');
-            
-            if (clEntry->Attributes & 0b00010000)
-                srl->writestr("Directory");
-            else if (clEntry->Attributes & 0b00001000)
+            srl->writestr(indent);
+            for (u32 i = 0; i < indentLevel; ++i)
+                srl->writestr(indent);
+            if (current->Attributes & FAT_ATTR_READ_ONLY)
+                srl->writestr("Read-only ");
+            if (current->Attributes & FAT_ATTR_HIDDEN)
+                srl->writestr("Hidden ");
+            if (current->Attributes & FAT_ATTR_SYSTEM)
+                srl->writestr("System ");
+
+            if (is_dir)
+                srl->writestr("Directory");             
+            else if (current->Attributes & FAT_ATTR_VOLUME_ID)
                 srl->writestr("Volume Label");
+            else if (current->Attributes & FAT_ATTR_ARCHIVE) {
+                is_file = true;
+                srl->writestr("Archive");
+            }
             else {
                 is_file = true;
                 srl->writestr("File");
             }
-
-            // Write file name
+            
+            // Write file name to serial output.
             if (lfnBufferFull) {
-                // TODO: Apply long file name to current entry...
-                //       This should be stored in VFS structure for later use.
+                // Apply long file name to current entry.
                 srl->writestr(" with long name: ");
                 srl->writestr((char*)&lfnBuffer[0], 26);
-                srl->writestr("\r\n");
                 lfnBufferFull = false;
             }
             else {
                 srl->writestr(": ");
-                srl->writestr((char*)&clEntry->FileName[0], 11);
-                srl->writestr("\r\n");
+                srl->writestr((char*)&current->FileName[0], 11);
             }
+            srl->writestr("\r\n");
 
             if (is_file) {
-                srl->writestr("      File Size: ");
-                srl->writestr(to_string(clEntry->FileSizeInBytes / 1024 / 1024));
+                // Print file size.
+                srl->writestr(indent);
+                srl->writestr(indent);
+                srl->writestr(indent);
+                for (u32 i = 0; i < indentLevel; ++i)
+                    srl->writestr(indent);
+                srl->writestr("File Size: ");
+                srl->writestr(to_string(current->FileSizeInBytes / 1024 / 1024));
                 srl->writestr(" MiB (");
-                srl->writestr(to_string(clEntry->FileSizeInBytes / 1024));
+                srl->writestr(to_string(current->FileSizeInBytes / 1024));
                 srl->writestr(" KiB)\r\n");
+                // Print first 8 bytes of file.
+                srl->writestr(indent);
+                srl->writestr(indent);
+                srl->writestr(indent);
+                for (u32 i = 0; i < indentLevel; ++i)
+                    srl->writestr(indent);
+                srl->writestr("First 8 Bytes: \033[30;47m");
+                u8* buffer = new u8[8];
+                if (ahci->Ports[portNumber]->Read(get_first_sector_in_cluster(BR, current->get_cluster_number())
+                                                  , BR->BPB.NumSectorsPerCluster))
+                {
+                    memcpy(ahci->Ports[portNumber]->buffer, buffer, 8);
+                    srl->writestr((char*)buffer, 8);
+                    srl->writestr("\033[0m\r\n");
+                }
+                else srl->writestr("\033[31mRead failed.\033[0m\r\n");
+                delete[] buffer;
             }
-            
-            // Increment to next entry in cluster.
-            clEntry++;
-        }
+            else if (is_dir && (strcmp((char*)&current->FileName[0], ".          ", 11)
+                                || strcmp((char*)&current->FileName[0], "..         ", 11)) == false)
+            {
+                // If entry is directory and entry is not a subdirectory helper
+                //   (ie: ".          " or "..         "), also read that directory recursively.
+                // FIXME: Must be a better way of doing this than strcmp the name...
+                read_directory(ahci, portNumber, BR, type, current->get_cluster_number(), indentLevel + 1);
+            }
+
+            current++;
+        } while (current->FileName[0] != 0);
 
         // Check if this is last cluster in chain.
-        clusterNumber = clEntry->ClusterNumberL;
-        clusterNumber |= (u32)clEntry->ClusterNumberH << 16;
-
+        clusterNumber = current->get_cluster_number();
         if (type == FATType::FAT12)
             FAToffset = clusterNumber + (clusterNumber / 2);
         else if (type == FATType::FAT16)
@@ -233,15 +281,13 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
 
         FATsector = BR->BPB.NumReservedSectors + (FAToffset / BR->BPB.NumBytesPerSector);
         entryOffset = FAToffset % BR->BPB.NumBytesPerSector;
-        
         // Entries under index 0 and 1 are reserved.
         // Don't read same file twice in a row.
         if (entryOffset <= 1 || FATsector == lastFATsector)
             break;
-
+        // Read File Allocation Table from disk.
         ahci->Ports[portNumber]->Read(FATsector, 1, (void*)FAT);
         lastFATsector = FATsector;
-
         if (type == FATType::FAT12) {
             tableValue = *(u32*)((u16*)&FAT[entryOffset]);
             /* If table value is greater or equal to 0x0ff8,
@@ -255,7 +301,7 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
             else tableValue = tableValue & 0x0fff;
             
             if (tableValue == 0x0ff8)
-                break;
+                moreClusters = false;
             else if (tableValue == 0x0ff7)
                 continue;
         }
@@ -268,7 +314,7 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
              * Else, table value contains the cluster number of the next cluster in the file. 
              */
             if (tableValue == 0xfff8)
-                break;
+                moreClusters = false;
             else if (tableValue == 0xfff7)
                 continue;
         }
@@ -282,7 +328,7 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
              * Else, table value contains the cluster number of the next cluster in the file. 
              */
             if (tableValue >= 0x0ffffff8)
-                break;
+                moreClusters = false;
             else if (tableValue == 0x0ffffff7)
                 continue;
         }
@@ -294,13 +340,22 @@ void FATDriver::read_root_dir(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord*
              *   as "bad", meaning it is prone to errors and should be avoided.
              * Else, table value contains the cluster number of the next cluster in the file. 
              */
-            if      (tableValue >= 0xfffffff8) { break;    }
-            else if (tableValue == 0xfffffff7) { continue; }
+            if (tableValue >= 0xfffffff8)
+                moreClusters = false;
+            else if (tableValue == 0xfffffff7)
+                continue;
         }
-        
         // Read next cluster based on tableValue giving cluster number
         clusterIndex = tableValue;
-    }
+    } while (moreClusters);
+
+    // Clean-up allocated memory that is no longer needed.
     delete[] lfnBuffer;
     delete[] FAT;
+}
+
+void FATDriver::read_root_directory(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord* BR, FATType type) {
+    srl->writestr("[FATDriver]:\r\n");
+    u32 clusterIndex = get_root_directory_cluster(BR, type);
+    read_directory(ahci, portNumber, BR, type, clusterIndex);
 }

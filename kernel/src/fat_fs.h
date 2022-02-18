@@ -16,6 +16,10 @@
 /// The FAT File System
 /// FAT = File Allocation Table
 
+/* TODO:
+ * `- Cache useful data (total size, amount free/used, File Allocation Table, etc)
+ */
+
 /// This class will be created for each FAT-formatted file-system found using the AHCI driver.
 class FatFS final : public FileSystem {
 public:
@@ -50,7 +54,7 @@ public:
         (void)inode;
 
         // For now this just lists the files in the root directory.
-        Driver->read_root_dir(AHCI, PortNumber, &BR, Type);
+        Driver->read_root_directory(AHCI, PortNumber, &BR, Type);
     }
 
     void write(Inode* inode) override {

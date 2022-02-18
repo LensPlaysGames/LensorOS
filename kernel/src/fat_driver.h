@@ -11,6 +11,11 @@ namespace AHCI {
 }
 class Inode;
 
+/* TODO:
+ * |- Implement write functions.
+ * `- Have read functions do more than just print data to serial out (return something).
+ */
+
 /// The FAT driver wraps around the AHCI driver and parse data into/out of VFS format (inode).
 class FATDriver {
 public:
@@ -19,7 +24,8 @@ public:
     void read_to_inode           (AHCI::AHCIDriver*, u8 portNumber, Inode*);
     void write_from_inode        (AHCI::AHCIDriver*, u8 portNumber, Inode*);
     bool is_device_fat_formatted (AHCI::AHCIDriver*, u8 portNumber);
-    void read_root_dir           (AHCI::AHCIDriver*, u8 portNumber, BootRecord*, FATType type);
+    void read_directory          (AHCI::AHCIDriver*, u8 portNumber, BootRecord*, FATType, u32 cluster, u32 indentLevel = 0);
+    void read_root_directory     (AHCI::AHCIDriver*, u8 portNumber, BootRecord*, FATType);
 
     u32 get_total_sectors(BootRecord* BR) const {
         if (BR->BPB.TotalSectors16 == 0)

@@ -5,6 +5,17 @@
 
 #define FAT_DIRECTORY_SIZE_BYTES 32
 
+// FAT File Attributes (ClusterEntry Attributes field)
+#define FAT_ATTR_READ_ONLY 0b00000001
+#define FAT_ATTR_HIDDEN    0b00000010
+#define FAT_ATTR_SYSTEM    0b00000100
+#define FAT_ATTR_VOLUME_ID 0b00001000
+#define FAT_ATTR_DIRECTORY 0b00010000
+#define FAT_ATTR_ARCHIVE   0b00100000
+// Unused
+#define FAT_ATTR_DEVICE    0b01000000
+#define FAT_ATTR_UNUSED    0b10000000
+
 struct BIOSParameterBlock {
     /// Infinite loop to catch a computer trying to
     ///   boot from non-bootable drive: `EB FE 90`.
@@ -97,6 +108,12 @@ struct ClusterEntry {
     u16 MDate;
     u16 ClusterNumberL;
     u32 FileSizeInBytes;
+
+    u32 get_cluster_number() {
+        u32 result = ClusterNumberL;
+        result |= (u32)ClusterNumberH << 16;
+        return result;
+    }
 } __attribute__((packed));
 
 /// Long File Name Cluster Entry
@@ -208,7 +225,7 @@ struct ExFATStreamExtensionEntry {
 } __attribute__((packed));
 
 struct ExFATFileNameEntry {
-    u8  Type;
+    u8 Type;
     u8 Flags;
     u8 FileName[30];
 } __attribute__((packed));
