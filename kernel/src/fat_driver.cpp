@@ -95,7 +95,7 @@ FATType FATDriver::get_type(BootRecord* BR) const {
 }
 
 /// Try to parse a FAT boot record from the first boot sector of the SATA device.
-/// This is used by the AHCI driver to determine which file system to create for a given device.
+/// This is used by the AHCI driver to determine if this file system is suitable for a given device.
 bool FATDriver::is_device_fat_formatted(AHCI::AHCIDriver* ahci, u8 portNumber) {
     bool result = true;
     if (ahci->Ports[portNumber]->Read(0, 1)) {
@@ -138,7 +138,8 @@ void FATDriver::read_directory
  , BootRecord* BR
  , FATType type
  , u32 directoryClusterIndex
- , u32 indentLevel)
+ , u32 indentLevel
+ )
 {
     static const char* indent = "  ";
     u32 clusterIndex = directoryClusterIndex;
@@ -152,10 +153,8 @@ void FATDriver::read_directory
     u32 lastFATsector { 0 };
     u32 entryOffset   { 0 };
     u32 tableValue    { 0 };
-
-    // Follow clusters while there are more in the chain.
     bool moreClusters { true };
-    do {
+    do /* while moreClusters is true */ {
         // Read cluster into AHCI buffer.
         u64 clusterSizeInBytes = BR->BPB.NumSectorsPerCluster * BR->BPB.NumBytesPerSector;
         SmartPtr<u8[]> clusterContents(new u8[clusterSizeInBytes], clusterSizeInBytes);
