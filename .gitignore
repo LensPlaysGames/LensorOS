@@ -46,6 +46,7 @@
 /kernel/make/
 /kernel/bld/
 /kernel/dbg/
+/kernel/rls/
 
 # Local resources
 /fonts/
