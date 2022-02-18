@@ -175,7 +175,7 @@ namespace AHCI {
         void Configure();
         void StartCMD();
         void StopCMD();
-        bool Read(u64 sector, u16 numSectors, void* buffer);
+        bool Read(u64 sector, u16 numSectors, void* buffer = nullptr);
     };
 
     /// Advance Host Controller Interface Driver

@@ -103,7 +103,7 @@ namespace AHCI {
                && hbaPort->cmdSts & HBA_PxCMD_CR);
     }
 
-    bool Port::Read(u64 sector, u16 numSectors, void* buffer) {
+    bool Port::Read(u64 sector, u16 numSectors, void* phys_addr_of_buffer) {
         const u64 maxSpin = 1000000;
         u64 spin = 0;
         while ((hbaPort->taskFileData & (ATA_DEV_BUSY | ATA_DEV_DRQ))
@@ -113,6 +113,10 @@ namespace AHCI {
         }
         if (spin == maxSpin)
             return false;
+
+        if (phys_addr_of_buffer == nullptr) {
+            phys_addr_of_buffer = buffer;
+        }
 
         u32 sectorL = (u32)sector;
         u32 sectorH = (u32)(sector >> 32);
@@ -124,8 +128,8 @@ namespace AHCI {
         cmdHdr->prdtLength = 1;
         HBACommandTable* cmdTable = (HBACommandTable*)(u64)cmdHdr->commandTableBaseAddress;
         memset(cmdTable, 0, sizeof(HBACommandTable) + ((cmdHdr->prdtLength-1) * sizeof(HBA_PRDTEntry)));
-        cmdTable->prdtEntry[0].dataBaseAddress = (u32)(u64)buffer;
-        cmdTable->prdtEntry[0].dataBaseAddressUpper = (u32)((u64)buffer >> 32);
+        cmdTable->prdtEntry[0].dataBaseAddress = (u32)(u64)phys_addr_of_buffer;
+        cmdTable->prdtEntry[0].dataBaseAddressUpper = (u32)((u64)phys_addr_of_buffer >> 32);
         cmdTable->prdtEntry[0].byteCount = (numSectors << 9) - 1;
         cmdTable->prdtEntry[0].interruptOnCompletion = 1;
         FIS_REG_H2D* cmdFIS = (FIS_REG_H2D*)(&cmdTable->commandFIS);
