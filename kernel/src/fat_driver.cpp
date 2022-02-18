@@ -4,9 +4,10 @@
 #include "cstr.h"
 #include "fat_definitions.h"
 #include "heap.h"
-#include "memory.h"
-#include "uart.h"
 #include "inode.h"
+#include "memory.h"
+#include "smart_pointer.h"
+#include "uart.h"
 
 FATDriver gFATDriver;
 
@@ -100,9 +101,9 @@ bool FATDriver::is_device_fat_formatted(AHCI::AHCIDriver* ahci, u8 portNumber) {
     if (ahci->Ports[portNumber]->Read(0, 1, ahci->Ports[portNumber]->buffer)) {
         // Read successful.
         // Allocate memory for a FAT boot record.
-        BootRecord* br = new BootRecord;
+        SmartPtr<BootRecord> br = SmartPtr(new BootRecord);
         // Copy data read from boot sector into FAT boot record.
-        memcpy((void*)ahci->Ports[portNumber]->buffer, (void*)br, sizeof(BootRecord));
+        memcpy((void*)ahci->Ports[portNumber]->buffer, (void*)br.get(), sizeof(BootRecord));
         // Validate boot sector is of FAT format.
         // Thanks to Gigasoft of osdev forums for this list
         // What makes a FAT filesystem valid ([x] means it's something this driver checks.):
@@ -117,15 +118,16 @@ bool FATDriver::is_device_fat_formatted(AHCI::AHCIDriver* ahci, u8 portNumber) {
         // [ ] File system version is zero (FAT32)
         // [x] NumFATsPresent greater than zero
         bool invalid = (*(u16*)((u64)ahci->Ports[portNumber]->buffer + 510) != 0xaa55
-                        || br->BPB.NumFATsPresent <= 0 || get_total_sectors(br) == 0);
+                        || br->BPB.NumFATsPresent <= 0 || get_total_sectors(br.get()) == 0);
         if (invalid)
             result = false;
-        delete br;
     }
     else result = false;
     return result;
 }
 
+// FIXME: This is spaghetti code, I need to re-do this.
+//          FAT doesn't make it easy, but I can do it.
 void FATDriver::read_directory
 (
  AHCI::AHCIDriver* ahci
@@ -136,11 +138,10 @@ void FATDriver::read_directory
  , u32 indentLevel)
 {
     static const char* indent = "  ";
-    
     u32 clusterIndex = directoryClusterIndex;
     bool lfnBufferFull { false };
-    u16* lfnBuffer = new u16[13];
-    u8* FAT = new u8[BR->BPB.NumBytesPerSector];
+    SmartPtr<u16[]> lfnBuffer(new u16[13], 13);
+    SmartPtr<u8[]> FAT(new u8[BR->BPB.NumBytesPerSector], BR->BPB.NumBytesPerSector);
     ClusterEntry* current { nullptr };
     u32 clusterNumber { 0 };
     u32 FAToffset     { 0 };
@@ -154,18 +155,18 @@ void FATDriver::read_directory
     do {
         // Read cluster into AHCI buffer.
         u64 clusterSizeInBytes = BR->BPB.NumSectorsPerCluster * BR->BPB.NumBytesPerSector;
-        u8* clusterContents = new u8[clusterSizeInBytes];
+        SmartPtr<u8[]> clusterContents(new u8[clusterSizeInBytes], clusterSizeInBytes);
         if (ahci->Ports[portNumber]->Read(get_first_sector_in_cluster(BR, clusterIndex)
                                           , BR->BPB.NumSectorsPerCluster) == false)
         {
             srl->writestr(indent);
             for (u32 i = 0; i < indentLevel; ++i)
                 srl->writestr(indent);
-            srl->writestr("\033[31mRead failed.\033[0m\r\n");
+            srl->writestr("\033[31mCluster read failed.\033[0m\r\n");
             return;
         }
-        memcpy((void*)ahci->Ports[portNumber]->buffer, (void*)clusterContents, clusterSizeInBytes);
-        current = (ClusterEntry*)clusterContents;
+        memcpy((void*)ahci->Ports[portNumber]->buffer, (void*)clusterContents.get(), clusterSizeInBytes);
+        current = (ClusterEntry*)clusterContents.get();
         // Get all entries within cluster.
         // The end is signified by an entry with
         //   the first byte of the file name set to zero.
@@ -247,16 +248,15 @@ void FATDriver::read_directory
                 for (u32 i = 0; i < indentLevel; ++i)
                     srl->writestr(indent);
                 srl->writestr("First 8 Bytes: \033[30;47m");
-                u8* buffer = new u8[8];
+                SmartPtr<u8[]> buffer(new u8[8], 8);
                 if (ahci->Ports[portNumber]->Read(get_first_sector_in_cluster(BR, current->get_cluster_number())
                                                   , BR->BPB.NumSectorsPerCluster))
                 {
-                    memcpy(ahci->Ports[portNumber]->buffer, buffer, 8);
-                    srl->writestr((char*)buffer, 8);
+                    memcpy(ahci->Ports[portNumber]->buffer, buffer.get(), 8);
+                    srl->writestr((char*)&buffer[0], 8);
                     srl->writestr("\033[0m\r\n");
                 }
                 else srl->writestr("\033[31mRead failed.\033[0m\r\n");
-                delete[] buffer;
             }
             else if (is_dir && (strcmp((char*)&current->FileName[0], ".          ", 11)
                                 || strcmp((char*)&current->FileName[0], "..         ", 11)) == false)
@@ -285,8 +285,10 @@ void FATDriver::read_directory
         // Don't read same file twice in a row.
         if (entryOffset <= 1 || FATsector == lastFATsector)
             break;
-        // Read File Allocation Table from disk.
-        ahci->Ports[portNumber]->Read(FATsector, 1, (void*)FAT);
+        // Read File Allocation Table from disk (one sector).
+        u16 sectorsPerFAT = BR->BPB.NumSectorsPerFAT == 0 ? 1 : BR->BPB.NumSectorsPerFAT;
+        ahci->Ports[portNumber]->Read(FATsector, sectorsPerFAT);
+        memcpy(ahci->Ports[portNumber]->buffer, FAT.get(), sectorsPerFAT * BR->BPB.NumBytesPerSector);
         lastFATsector = FATsector;
         if (type == FATType::FAT12) {
             tableValue = *(u32*)((u16*)&FAT[entryOffset]);
@@ -348,10 +350,6 @@ void FATDriver::read_directory
         // Read next cluster based on tableValue giving cluster number
         clusterIndex = tableValue;
     } while (moreClusters);
-
-    // Clean-up allocated memory that is no longer needed.
-    delete[] lfnBuffer;
-    delete[] FAT;
 }
 
 void FATDriver::read_root_directory(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord* BR, FATType type) {
