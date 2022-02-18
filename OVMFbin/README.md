@@ -80,6 +80,13 @@ With `MdeModulePkg` built, we can move on to building `OvmfPkg` to get our `.fd`
 cd $HOME/EDK2/edk2 && build -p OvmfPkg/OvmfPkgX64.dsc
 ```
 
+A specific size, `x`, of `OVMF.fd` may be defined by appending the following to the above `build` command:
+```bash
+-DFD_SIZE_IN_KB=x
+```
+
+The included OVMF binaries are built using `-DFD_SIZE_IN_KB=2048` for a 2MiB image.
+
 With that, you have successfully built OVMF from source! Congratulations. \
 Within the `Build` sub-directory you should be able to find two files within `OvmfX64/FV/`:
 - `OVMF_CODE.fd`
