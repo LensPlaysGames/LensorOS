@@ -16,6 +16,7 @@
 #define FAT_ATTR_DEVICE    0b01000000
 #define FAT_ATTR_UNUSED    0b10000000
 
+// 36 BYTES
 struct BIOSParameterBlock {
     /// Infinite loop to catch a computer trying to
     ///   boot from non-bootable drive: `EB FE 90`.
@@ -44,6 +45,7 @@ struct BIOSParameterBlock {
     u32 TotalSectors32;
 } __attribute__((packed));
 
+// 26 BYTES
 struct BootRecordExtension16 {
     u8  BIOSDriveNumber;
     u8  Reserved;
@@ -53,6 +55,7 @@ struct BootRecordExtension16 {
     u8  FatTypeLabel[8];
 } __attribute__((packed));
 
+// 54 BYTES
 struct BootRecordExtension32 {
     u32 NumSectorsPerFAT;
     u16 ExtendFlags;
@@ -78,7 +81,11 @@ struct BootRecord {
     BIOSParameterBlock BPB;
     /* This will be cast to it's specific type when the driver needs it
          based on what type of FAT the current device is (12/16 or Ex/32). */
-    u8 Extended[54];
+    u8  Extended[54];
+    u8  BootCode[420];
+    u16 Magic; // 0xaa55
+
+    
 } __attribute__((packed));
 
 enum class FATType {

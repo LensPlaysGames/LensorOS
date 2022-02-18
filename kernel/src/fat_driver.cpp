@@ -98,27 +98,30 @@ FATType FATDriver::get_type(BootRecord* BR) const {
 /// This is used by the AHCI driver to determine which file system to create for a given device.
 bool FATDriver::is_device_fat_formatted(AHCI::AHCIDriver* ahci, u8 portNumber) {
     bool result = true;
-    if (ahci->Ports[portNumber]->Read(0, 1, ahci->Ports[portNumber]->buffer)) {
+    if (ahci->Ports[portNumber]->Read(0, 1)) {
         // Read successful.
         // Allocate memory for a FAT boot record.
         SmartPtr<BootRecord> br = SmartPtr(new BootRecord);
         // Copy data read from boot sector into FAT boot record.
         memcpy((void*)ahci->Ports[portNumber]->buffer, (void*)br.get(), sizeof(BootRecord));
-        // Validate boot sector is of FAT format.
-        // Thanks to Gigasoft of osdev forums for this list
-        // What makes a FAT filesystem valid ([x] means it's something this driver checks.):
-        // [x] Word at 0x1fe (510) equates to 0xaa55
-        // [ ] Sector size is power of two between 512-4096 (inclusive)
-        // [ ] Cluster size is a power of two
-        // [ ] Media type is 0xf0 or greater or equal to 0xf8
-        // [ ] FAT size is not zero
-        // [x] Number of sectors is not zero
-        // [ ] Number of root directory entries is (zero if fat32) (not zero if fat12/16)
-        // [ ] Root cluster is valid (FAT32)
-        // [ ] File system version is zero (FAT32)
-        // [x] NumFATsPresent greater than zero
-        bool invalid = (*(u16*)((u64)ahci->Ports[portNumber]->buffer + 510) != 0xaa55
-                        || br->BPB.NumFATsPresent <= 0 || get_total_sectors(br.get()) == 0);
+        /* Validate boot sector is of FAT format.
+         * Thanks to Gigasoft of osdev forums for this list
+         * TODO: Use more of these sanity checks before assuming it is valid FAT filesystem.
+         * What makes a FAT filesystem valid ([x] means it's something this driver checks.):
+         * [x] Word at byte offset 510 equates to 0xaa55
+         * [ ] Sector size is power of two between 512-4096 (inclusive)
+         * [ ] Cluster size is a power of two
+         * [ ] Media type is 0xf0 or greater or equal to 0xf8
+         * [ ] FAT size is not zero
+         * [x] Number of sectors is not zero
+         * [ ] Number of root directory entries is (zero if fat32) (not zero if fat12/16)
+         * [ ] Root cluster is valid (FAT32)
+         * [ ] File system version is zero (FAT32)
+         * [x] NumFATsPresent greater than zero
+         */
+        bool invalid = (br->Magic != 0xaa55
+                        || br->BPB.NumFATsPresent <= 0
+                        || get_total_sectors(br.get()) == 0);
         if (invalid)
             result = false;
     }
