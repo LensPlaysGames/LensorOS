@@ -3,6 +3,8 @@
 
 #include "integers.h"
 
+bool strcmp(const char* a, const char* b, u64 length);
+
 char* to_string(u64);
 char* to_string(u32);
 char* to_string(u16);

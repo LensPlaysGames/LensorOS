@@ -1,5 +1,16 @@
 #include "cstr.h"
 
+bool strcmp(const char* a, const char* b, u64 length) {
+    for (u64 i = 0; i < length; ++i) {
+        if (*a != *b)
+            return false;
+
+        ++a;
+        ++b;
+    }
+    return true;
+}
+
 char uint_to_str_buf[20];
 char* to_string(u64 value) {
     // Get necessary string length.
