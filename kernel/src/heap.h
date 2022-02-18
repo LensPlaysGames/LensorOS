@@ -15,7 +15,7 @@ struct HeapSegmentHeader {
     void combine_backward();
     // Allocation
     HeapSegmentHeader* split(u64 splitLength);
-};
+} __attribute__((packed));
 
 // INITIALIZATION
 void init_heap(void* startAddress, u64 numInitialPages);
