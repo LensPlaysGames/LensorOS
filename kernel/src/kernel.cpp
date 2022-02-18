@@ -22,12 +22,10 @@
  *   |  |        |  | that signify the window is dirty and need to be re-painted.
  *   |  |        |  `- This will call the ScreenManager to update the framebuffer memory.
  *   |  |        `- The ScreenManager will also draw OS-wide things (taskbar? clock? etc.)
- *   |  |- To actually write userland programs that can be used,
- *   |  |  | I need to figure out GCC cross compiler sysroot stuff.
- *   |  |  `- This will allow me to write userland programs that 
- *   |  |       will be installed into the OS's root directory.
- *   |  `- I'll also need a Scheduler to hijack the IRQ0, 
- *   |     `- I've done this! See `scheduler.[h/cpp/asm]`
+ *   |  `- To actually write userland programs that can be used,
+ *   |     | I need to figure out GCC cross compiler sysroot stuff.
+ *   |     `- This will allow me to write userland programs that will know where to
+ *   |          look for libc and standard includes relative to LensorOS's root directory.
  *   |
  *   |- Further modify cross compiler to make an OS specific toolchain.
  *   |  `- This would allow for customizing default include,
@@ -38,30 +36,34 @@
  *   |  |- GDT/IDT
  *   |  `- Serial Communications (UART)
  *   |
- *   |- Create Smart Pointer Class(es).
- *   |- Create Container Class(es) -- Vector, HashMap, etc.
- *   |- Create `integers_forward.h` for `integers.h`; replace occurences.
+ *   |- Create Smart Pointer Template Class(es) -> Wrappers around
+ *   |  | regular pointers that make using `new` and `delete` much easier.
+ *   |  `- Types of smart pointer:
+ *   |     |- Reference Counting Pointer -> Count number of references to itself,
+ *   |     |    and delete itself only if there are no references remaining.
+ *   |     `- Smart Pointer -> Deletes itself as soon as it goes out of scope.
+ *   |        `- I've implemented this, now it's time to find and replace!
+ *   |
+ *   |- Create Container Class(es) -> Vector, HashMap, etc.
  *   |- Make kernel less architecture specific (it's very x86_64 specific).
  *   |
  *   |- Write a bootloader in C (no longer rely on GNU-EFI bootloader).
  *   |  `- I realize this is an insanely large project,
  *   |       but so is making an OS, I guess.
  *   |
- *   |- Make read-only section of kernel read only within 
- *   |    Page Map (PML4) using Page Table Manager (PTM).
+ *   |- Make read-only section (of kernel) read only memory.
  *   |
- *   |- Update Kernel Process Scheduler (and actually use it).
+ *   |- Update Kernel Process Scheduler.
  *   |  |- Current Inspiration: https://wiki.osdev.org/User:Mariuszp/Scheduler_Tutorial
  *   |  `- Future Inspiration:
  *   |     |- https://wiki.osdev.org/Brendan%27s_Multi-tasking_Tutorial
  *   |     `- https://wiki.osdev.org/Scheduling_Algorithms
  *   |
  *   |- Think about how Task State Segment Interrupt Stack 
- *   |    Table (TSS IST) could be used.
+ *   |    Table (TSS IST) could be used (known good stacks).
  *   |
- *   |- Contemplate swapping Memory Management Unit (MMU) 
- *   |    Page Map (PML4) when switching to userland, and/or 
- *   |    utilizing Translation Lookaside Buffer (TLB) partial flushes.
+ *   |- Memory Management Unit (MMU) Page Map (PML4) when switching to userland, 
+ *   |    and/or utilizing Translation Lookaside Buffer (TLB) partial flushes.
  *   |
  *   |- Abstract `timer` class (namespace?) -> an API for things like `sleep`
  *   |- Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
@@ -73,7 +75,7 @@
  *   |  |- AHCI Driver Update: DMA ATA Write implementation.
  *   |  `- Another filesystem better suited for mass storage (Ext2? Proprietary?)
  *   |
- *   |- Write ASM interrupt wrapper (no longer rely on `__attribute__((interrupt))`)
+ *   |- Write ASM hardware interrupt (IRQ) wrapper (no longer rely on `__attribute__((interrupt))`)
  *   |  `- See: 
  *   |     |- James Molloy's tutorials for an example: 
  *   |     |    http://www.jamesmolloy.co.uk/tutorial_html/
@@ -174,7 +176,7 @@ void* userland_function;
 extern "C" void _start(BootInfo* bInfo) {
     // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
     kernel_init(bInfo);
-    srl->writestr("\r\n\033[30;47m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
+    srl->writestr("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
     // Clear + swap screen (ensure known state: blank).
     gRend.clear(0x00000000);
     gRend.swap();

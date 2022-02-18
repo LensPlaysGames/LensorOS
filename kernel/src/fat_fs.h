@@ -34,7 +34,7 @@ public:
         PortNumber = portNumber;
         Driver = &gFATDriver;
         // Get boot record from device.
-        if (ahci->Ports[portNumber]->Read(0, 1, ahci->Ports[portNumber]->buffer)) {
+        if (ahci->Ports[portNumber]->Read(0, 1)) {
             memcpy((void*)ahci->Ports[portNumber]->buffer, &BR, sizeof(BootRecord));
             // Set type based on boot record information.
             Type = ((FATDriver*)Driver)->get_type(&BR);

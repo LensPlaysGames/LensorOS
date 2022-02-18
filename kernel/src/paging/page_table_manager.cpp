@@ -79,4 +79,3 @@ void PageTableManager::unmap_memory(void* virtualMemory) {
     PDE.set_flag(PT_Flag::Present, false);
     PT->entries[indexer.PageIndex] = PDE;
 }
-

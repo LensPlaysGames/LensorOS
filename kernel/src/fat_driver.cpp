@@ -159,11 +159,12 @@ void FATDriver::read_directory
         // Read cluster into AHCI buffer.
         u64 clusterSizeInBytes = BR->BPB.NumSectorsPerCluster * BR->BPB.NumBytesPerSector;
         SmartPtr<u8[]> clusterContents(new u8[clusterSizeInBytes], clusterSizeInBytes);
-        if (ahci->Ports[portNumber]->Read(get_first_sector_in_cluster(BR, clusterIndex)
-                                          , BR->BPB.NumSectorsPerCluster) == false)
-        {
-            srl->writestr(indent);
-            for (u32 i = 0; i < indentLevel; ++i)
+        u64 firstSectorOfCluster = get_first_sector_in_cluster(BR, clusterIndex);
+        // FIXME: This is very unsafe to fill the buffer, then get the contents from it with a memcpy().
+        //        I need a helper function in AHCIDriver to fill a (virtual-addressed) buffer with Port contents,
+        //          with a lock of some sort to ensure the buffer doesn't get stomped on by another thread.
+        if (ahci->Ports[portNumber]->Read(firstSectorOfCluster, BR->BPB.NumSectorsPerCluster) == false) {
+            for (u32 i = 0; i < indentLevel + 1; ++i)
                 srl->writestr(indent);
             srl->writestr("\033[31mCluster read failed.\033[0m\r\n");
             return;
@@ -174,7 +175,7 @@ void FATDriver::read_directory
         // The end is signified by an entry with
         //   the first byte of the file name set to zero.
         // Entries with an initial byte of 0xe5 are skipped.
-        do {
+        do /* while current->FileName[0] != 0 */ {
             if (current->FileName[0] == 0xe5)
                 continue;
 
@@ -196,8 +197,7 @@ void FATDriver::read_directory
             // Parse attributes of file.
             bool is_dir = current->Attributes & FAT_ATTR_DIRECTORY;
             bool is_file = false;
-            srl->writestr(indent);
-            for (u32 i = 0; i < indentLevel; ++i)
+            for (u32 i = 0; i < indentLevel + 1; ++i)
                 srl->writestr(indent);
             if (current->Attributes & FAT_ATTR_READ_ONLY)
                 srl->writestr("Read-only ");
@@ -234,10 +234,7 @@ void FATDriver::read_directory
 
             if (is_file) {
                 // Print file size.
-                srl->writestr(indent);
-                srl->writestr(indent);
-                srl->writestr(indent);
-                for (u32 i = 0; i < indentLevel; ++i)
+                for (u32 i = 0; i < indentLevel + 3; ++i)
                     srl->writestr(indent);
                 srl->writestr("File Size: ");
                 srl->writestr(to_string(current->FileSizeInBytes / 1024 / 1024));
@@ -245,15 +242,12 @@ void FATDriver::read_directory
                 srl->writestr(to_string(current->FileSizeInBytes / 1024));
                 srl->writestr(" KiB)\r\n");
                 // Print first 8 bytes of file.
-                srl->writestr(indent);
-                srl->writestr(indent);
-                srl->writestr(indent);
-                for (u32 i = 0; i < indentLevel; ++i)
+                for (u32 i = 0; i < indentLevel + 3; ++i)
                     srl->writestr(indent);
                 srl->writestr("First 8 Bytes: \033[30;47m");
                 SmartPtr<u8[]> buffer(new u8[8], 8);
-                if (ahci->Ports[portNumber]->Read(get_first_sector_in_cluster(BR, current->get_cluster_number())
-                                                  , BR->BPB.NumSectorsPerCluster))
+                u64 firstSectorOfCluster = get_first_sector_in_cluster(BR, current->get_cluster_number());
+                if (ahci->Ports[portNumber]->Read(firstSectorOfCluster, BR->BPB.NumSectorsPerCluster))
                 {
                     memcpy(ahci->Ports[portNumber]->buffer, buffer.get(), 8);
                     srl->writestr((char*)&buffer[0], 8);
