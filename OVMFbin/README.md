@@ -56,42 +56,32 @@ export EDK_TOOLS_PATH=$HOME/EDK2/edk2/BaseTools
 . edksetup.sh BaseTools
 ```
 
-Once the build tools have been built and setup correctly, configuration files should have been made in the `$HOME/EDK2/edk2/Conf` directory.
-The following edits are to files within that directory:
-
+Once the build tools have been built and setup correctly, 
+configuration files should have been made in the `$HOME/EDK2/edk2/Conf` directory. \
 Find the following lines within `target.txt`:
-- "ACTIVE_PLATFORM       = EmulatorPkg/EmulatorPkg.dsc"
+- "TARGET                = DEBUG"
 - "TARGET_ARCH           = IA32"
 - "TOOL_CHAIN_TAG        = VS2015x86"
 
 Replace them with the following:
-- "ACTIVE_PLATFORM       = MdeModulePkg/MdeModulePkg.dsc"
+- "TARGET                = DEBUG RELEASE"
 - "TARGET_ARCH           = X64"
 - "TOOL_CHAIN_TAG        = GCC5"
 
-This instructs the following `build` command to use GCC to build `MdeModulePkg` for the x86_64 CPU architecture in both `DEBUG` and `RELEASE` configurations.
+You may be tempted (like me), to try out different versions of GCC, but it turns out `GCC5` is EDK2's way of saying GCC5 *or greater*.
 
-Due to the `Conf/` setup, all that's required to build `MdeModulePkg` is the one-liner:
+To build `MdeModulePkg`, a dependency of `OvmfPkg`, run the following one-liner:
 ```bash
-cd $HOME/EDK2/edk2 && build
+cd $HOME/EDK2/edk2 && build -p MdeModulePkg/MdeModulePkg.dsc
 ```
 
-With `MdeModulePkg` built, we can move on to building OVMF to get our `.fd` files necessary for QEMU to boot.
-
-Within `$HOME/EDK2/edk2/Conf/target.txt`, find the following lines:
-- "ACTIVE_PLATFORM       = MdeModulePkg/MdeModulePkg.dsc"
-- "TARGET                = DEBUG"
-
-Then, update the lines to the following::
-- "ACTIVE_PLATFORM       = OvmfPkg/OvmfPkgX64.dsc"
-- "TARGET                = DEBUG RELEASE"
-
-With that done, run `build` once more:
+With `MdeModulePkg` built, we can move on to building `OvmfPkg` to get our `.fd` files necessary for QEMU to boot into a UEFI environment:
 ```bash
-cd $HOME/EDK2/edk2 && build
+cd $HOME/EDK2/edk2 && build -p OvmfPkg/OvmfPkgX64.dsc
 ```
 
-With that, you have successfully built OVMF from source! Congratulations. Within the `Build` sub-directory you should be able to find two files within `OvmfX64/FV/`:
+With that, you have successfully built OVMF from source! Congratulations. \
+Within the `Build` sub-directory you should be able to find two files within `OvmfX64/FV/`:
 - `OVMF_CODE.fd`
 - `OVMF_VARS.fd`
 
