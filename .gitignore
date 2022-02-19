@@ -40,14 +40,4 @@
 
 # Kernel Build Stuff
 /kernel/bin/
-/kernel/out/
-/kernel/build/
-/kernel/ninja/
-/kernel/make/
-/kernel/bld/
-/kernel/dbg/
-/kernel/rls/
 
-# Local resources
-/fonts/
-/usb_boot/
