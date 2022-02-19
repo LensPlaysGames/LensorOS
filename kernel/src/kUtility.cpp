@@ -48,7 +48,22 @@ void prepare_memory(BootInfo* bInfo) {
     for (u64 t = 0; t < memSize; t+=0x1000)
         gPTM.map_memory((void*)t, (void*)t);
 
-    // Value of Control Register 3 = Address of the page directory in physical form.
+    /* x86: Control Register 3 = Address of the page directory in physical form.
+     *   A page directory is a multi-level page map; a four-level map is standard
+     *     on x86_64 CPUs, so that's what I use.
+     *   Modern CPUs have the ability to use a five-level map, but for now there
+     *     is no absolutely no need; it would be easy to add this ability in the future.
+     *
+     *   The Transition Lookaside Buffer (Virtual Address -> Physical Address HashMap)
+     *     is hardware based in x86; by writing to CR3, it is flushed (reset to empty).
+     *   A single TLB entry may be invalidated using the `INVLPG <addr>` instruction.
+     *
+     *   Most processes share most memory; this means (parts of) the page table 
+     *     may be shared until a thread tries to write to the memory. 
+     *   This will cause a copy to occur, and that thread will now have it's
+     *       own object, ensuring thread-safety.
+     *   This technique is called Copy On Write (COW).
+     */
     asm ("mov %0, %%cr3" : : "r" (PML4));
 }
 
@@ -74,14 +89,17 @@ void prepare_interrupts() {
 
 void prepare_acpi(BootInfo* bInfo) {
     if (bInfo->rsdp == NULL) {
-        srl->writestr("[kUtil]: ERROR: RSDP is null!");
+        srl->writestr("[kUtil]: ERROR: RSDP is null!\r\n");
         return;
     }
     // eXtended System Descriptor Table
     ACPI::SDTHeader* xsdt = (ACPI::SDTHeader*)(bInfo->rsdp->XSDTAddress);
     // Memory-mapped ConFiguration Table
     ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table(xsdt, (char*)"MCFG");
-    PCI::enumerate_pci(mcfg);
+    if (mcfg) {
+        srl->writestr("[kUtil]: Found MCFG within ACPI 2.0 Table\r\n");
+        PCI::enumerate_pci(mcfg);       
+    }
 }
 
 TSSEntry tss_entry;
