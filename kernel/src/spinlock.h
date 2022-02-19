@@ -23,9 +23,9 @@ public:
     inline void unlock();
 
 private:
-    Spinlock Lock;
+    Spinlock& Lock;
 
-    inline void lock(Spinlock&);
+    inline void lock();
 
     /* Compare and Swap
      *   If value at pointer is equal to expected value, 
@@ -34,11 +34,9 @@ private:
      *   This can be done atomically using the x86
      *     `cmpxchg` instruction with a `lock` prefix.
      *
-     *   Returns `true` when lock has been acquired given
-     *     expected_value_before_swap = `false`, `new_value` = `true`,
-     *     and pointer_to_lock_flag points to `Lock.locked`.
+     *   Returns `true` when lock has been acquired.
      */
-    inline bool compare_and_swap(bool* pointer_to_lock_flag, bool expected_value_before_swap, bool new_value);
+    inline bool compare_and_swap_lock();
 
     /* Test and Set
      *   Cache original value of lock, then set the value to the new value.
@@ -47,10 +45,9 @@ private:
      *   This can be done atomically using the x86
      *     `xchg` instruction with a `lock` prefix.
      *
-     *   Returns `false` when lock has been acquired given
-     *     new_value = `true` and pointer_to_lock_flag points to `Lock.locked`.
+     *   Returns `false` when lock has been acquired.
      */
-    inline bool test_and_set(bool* pointer_to_lock_flag, bool new_value);
+    inline bool test_and_set_lock();
 };
 
 #endif /* if !defined LENSOR_OS_SPIN_LOCK_H */

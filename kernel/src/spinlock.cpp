@@ -1,14 +1,6 @@
 #include "spinlock.h"
 
-bool SpinlockLocker::compare_and_swap
-(
- bool* pointer_to_lock_flag
- , bool expected_value_before_swap
- , bool new_value
- )
-{
-    // It can be determined the lock was free and has been
-    //   acquired by passing an expected value before swap of `false`.
+bool SpinlockLocker::compare_and_swap_lock() {
     /* Inline Assembly:
      * |- Desc:
      * |  |- `lock`                  -- Ensures that the following instruction runs atomically.
@@ -25,13 +17,13 @@ bool SpinlockLocker::compare_and_swap
     bool ret;
     asm volatile("lock cmpxchg %2, %1\n"
                  "sete %0\n"
-                 : "=q" (ret), "=m" (*pointer_to_lock_flag)
-                 : "r" (new_value), "m" (*pointer_to_lock_flag), "a" (expected_value_before_swap)
+                 : "=q" (ret), "=m" (Lock.locked)
+                 : "r" (true), "m" (Lock.locked), "a" (false)
                  : "memory");
     return ret;
 }
 
-bool SpinlockLocker::test_and_set(bool* pointer_to_lock_flag, bool new_value) {
+bool SpinlockLocker::test_and_set_lock() {
     /* In x86, when an instruction is prefixed with `lock`, 
      *   it is guaranteed to be run atomically (thread-safe).
      * The `xchg` instruction sets a memory address or register 
@@ -52,22 +44,22 @@ bool SpinlockLocker::test_and_set(bool* pointer_to_lock_flag, bool new_value) {
      *    `- "r"  -- Any register; new lock flag value
      */
     bool old_value;
-    asm volatile ("lock xchg %0, %1" : "=a" (old_value) : "m" (pointer_to_lock_flag), "r" (new_value));
+    asm volatile ("lock xchg %0, %1" : "=a" (old_value) : "m" (&Lock.locked), "r" (true));
     return old_value;
 }
 
-SpinlockLocker::SpinlockLocker(Spinlock& lock) {
-    Lock = lock;
-    lock.locked = false;
+SpinlockLocker::SpinlockLocker(Spinlock& l)
+    : Lock(l)
+{
+    lock();
 }
 
 SpinlockLocker::~SpinlockLocker() {
     unlock();
 }
 
-void SpinlockLocker::lock(Spinlock& lock) {
-    // Spin CPU until atomic exchange returns false, meaning lock has been acquired.
-    while (compare_and_swap(&lock.locked, false, true) == true);
+void SpinlockLocker::lock() {
+    while (compare_and_swap_lock() == true);
 }
 
 void SpinlockLocker::unlock() {
