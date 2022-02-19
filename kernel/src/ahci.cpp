@@ -65,8 +65,8 @@ namespace AHCI {
         }
     }
 
-    void Port::Configure() {
-        StopCMD();
+    void Port::initialize() {
+        stop_commands();
         // Command Base
         void* base = gAlloc.request_page();
         hbaPort->commandListBase = (u32)(u64)base;
@@ -86,18 +86,18 @@ namespace AHCI {
             cmdHdr[i].commandTableBaseAddressUpper = (u32)((u64)address >> 32);
             memset(cmdTableAddress, 0, 256);
         }
-        StartCMD();
+        start_commands();
     }
 
 
-    void Port::StartCMD() {
+    void Port::start_commands() {
         // Spin until not busy.
         while (hbaPort->cmdSts & HBA_PxCMD_CR);
         hbaPort->cmdSts |= HBA_PxCMD_FRE;
         hbaPort->cmdSts |= HBA_PxCMD_ST;
     }
     
-    void Port::StopCMD() {
+    void Port::stop_commands() {
         hbaPort->cmdSts &= ~HBA_PxCMD_ST;
         hbaPort->cmdSts &= ~HBA_PxCMD_FRE;
         while (hbaPort->cmdSts & HBA_PxCMD_FR
@@ -199,11 +199,11 @@ namespace AHCI {
         srl->writestr("kib\r\n");
 
         for (u8 i = 0; i < numPorts; ++i) {
-            Ports[i]->Configure();
+            Ports[i]->initialize();
             if (Ports[i]->buffer != nullptr) {
                 srl->writestr("[AHCI]: \033[32mPort ");
                 srl->writestr(to_string(i));
-                srl->writestr(" configured successfully.\033[0m\r\n");
+                srl->writestr(" initialized successfully.\033[0m\r\n");
                 memset((void*)Ports[i]->buffer, 0, MAX_READ_PAGES * 0x1000);
                 // Check if storage media at current port has a file-system LensorOS recognizes.
                 // FAT (File Allocation Table):

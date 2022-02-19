@@ -168,17 +168,21 @@ namespace AHCI {
     };
     
     class Port {
+        friend class AHCIDriver;
+
     public:
         Spinlock lock;
         HBAPort* hbaPort;
         PortType type;
         u8* buffer;
         u8  number;
-        void Configure();
-        void StartCMD();
-        void StopCMD();
-        bool read_low_level(u64 sector, u16 numSectors);
+
         bool read(u64 sector, u16 numSectors, void* buffer, u64 numBytesToCopy);
+    private:
+        void initialize();
+        void start_commands();
+        void stop_commands();
+        bool read_low_level(u64 sector, u16 numSectors);
     };
 
     /// Advance Host Controller Interface Driver
