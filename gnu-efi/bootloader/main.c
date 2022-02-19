@@ -6,11 +6,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* TODO:
- *   - Parse PSF2 font format (or leave it to the kernel to read files).
- *       https://www.win.tue.nl/~aeb/linux/kbd/font-formats-1.html
- */
-
 EFI_HANDLE        gImageHandle;
 EFI_SYSTEM_TABLE* gSystemTable;
 
@@ -25,8 +20,12 @@ int memcmp (const void* aptr, const void* bptr, size_t n) {
 }
 
 UINTN strcmp (CHAR8* a, CHAR8* b, UINTN length) {
-    for (UINTN i = 0; i < length; i++) {
-        if (*a != *b) { return 0; }
+    for (UINTN i = 0; i < length; ++i) {
+        if (*a != *b)
+            return 0;
+
+        ++a;
+        ++b;
     }
     return 1;
 }
@@ -143,12 +142,12 @@ Framebuffer* InitializeGOP() {
 }
 
 typedef struct {
-  Framebuffer* framebuffer;
-  PSF1_FONT* font;
-  EFI_MEMORY_DESCRIPTOR* map;
-  UINTN mapSize;
-  UINTN mapDescSize;
-  void* RSDP;
+    Framebuffer* framebuffer;
+    PSF1_FONT* font;
+    EFI_MEMORY_DESCRIPTOR* map;
+    UINTN mapSize;
+    UINTN mapDescSize;
+    void* RSDP;
 } BootInfo;
 
 // ENTRY POINT
@@ -184,8 +183,8 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
         kernel->GetInfo(kernel, &gEfiFileInfoGuid, &fileInfoSize, NULL);
         // Allocate memory pool for kernel.
         gSystemTable->BootServices->AllocatePool(EfiLoaderData,
-                                                fileInfoSize,
-                                                (void**)&fileInfo);
+                                                 fileInfoSize,
+                                                 (void**)&fileInfo);
         // Fill memory with information from loaded kernel file.
         kernel->GetInfo(kernel, &gEfiFileInfoGuid,
                         &fileInfoSize, (void**)&fileInfo);
@@ -266,10 +265,10 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     UINTN DescriptorSize;
     UINT32 DescriptorVersion;
     {
-      gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
-      gSystemTable->BootServices->AllocatePool(EfiLoaderData, MapSize, (void**)&Map);
-      gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
-      Print(L"EFI memory map successfully parsed\n");
+        gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
+        gSystemTable->BootServices->AllocatePool(EfiLoaderData, MapSize, (void**)&Map);
+        gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
+        Print(L"EFI memory map successfully parsed\n");
     }
 
     // ACPI 2.0
@@ -278,10 +277,23 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     EFI_GUID ACPI2TableGuid = ACPI_20_TABLE_GUID;
     for (UINTN index = 0; index < gSystemTable->NumberOfTableEntries; index++) {
         if (CompareGuid(&ConfigTable[index].VendorGuid, &ACPI2TableGuid)) {
-            // Found ACPI 2.0 Table in System Table.
             if (strcmp((CHAR8*)"RSD PTR ", (CHAR8*)ConfigTable->VendorTable, 8)) {
-                Print(L"Found RSDP\n");
-                rsdp = (void*)ConfigTable->VendorTable;
+                Print(L"Found Root System Descriptor Pointer (RSDP) Table 2.0");
+                UINTN sum = 0;
+                // Validate checksum
+                // RSDP2.0 table = 36 bytes, trailing three are reserved (not included).
+                for (UINT8 i = 0; i < 33; ++i)
+                    sum += *((UINT8*)ConfigTable->VendorTable + i);
+
+                UINT8 checksum = (UINT8)sum;
+                if ((UINT8)checksum != 0) {
+                    Print(L", but checksum is invalid (expecting zero)!\n");
+                    Print(L"  Checksum: %d\n", checksum);
+                }
+                else {
+                    Print(L" with valid checksum\n");
+                    rsdp = (void*)ConfigTable->VendorTable;
+                }
             }
         }
         ConfigTable++;
