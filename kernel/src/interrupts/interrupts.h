@@ -1,6 +1,29 @@
 #ifndef LENSOR_OS_INTERRUPTS_H
 #define LENSOR_OS_INTERRUPTS_H
 
+/* x86: Interrupt Request Vector Offsets 
+ *   Programmable Interrupt Chip (some say Peripheral interrupt chip, who knows)
+ *   Vector Capacity = 256
+ *   IRQ vector offsets are reserved to be triggered by hardware only.
+ *   
+ *   IRQ Descriptions:
+ *     0  -- System Timer (PIT, most likely)
+ *     1  -- PS/2 Keyboard
+ *     2  -- Cascaded signal from IRQs 8-15
+ *     3  -- Serial Port Controller for COM2 & COM4
+ *     4  -- Serial Port Controller for COM1 & COM3
+ *     5  -- Parallel Port 3 or Sound Card
+ *     6  -- Floppy Disk Controller
+ *     7  -- Parallel Port 1 and Parallel Port 2
+ *     8  -- Real Time Clock
+ *     9  -- Intel: Advanced Configuration and Power Interface
+ *           Other: IRQ2 redirects here
+ *     11 -- Open for Peripherals (SCSI or NIC)
+ *     12 -- PS/2 Mouse
+ *     13 -- Co-processor or integrated FPU or inter-processor interrupt
+ *     14 -- Primary ATA Channel
+ *     15 -- Secondary ATA Channel
+ */
 #define PIC_IRQ_VECTOR_OFFSET 0x20
 #define PIC_IRQ0  PIC_IRQ_VECTOR_OFFSET + 0
 #define PIC_IRQ1  PIC_IRQ_VECTOR_OFFSET + 1
