@@ -102,6 +102,7 @@ set(SOURCES
     src/random_lfsr.cpp
     src/rtc.cpp
     src/scheduler.cpp
+    src/spinlock.cpp
     src/uart.cpp
 )
 
