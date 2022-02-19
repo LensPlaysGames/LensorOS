@@ -34,8 +34,7 @@ public:
         PortNumber = portNumber;
         Driver = &gFATDriver;
         // Get boot record from device.
-        if (ahci->Ports[portNumber]->Read(0, 1)) {
-            memcpy((void*)ahci->Ports[portNumber]->buffer, &BR, sizeof(BootRecord));
+        if (ahci->Ports[portNumber]->read(0, 1, &BR, sizeof(BootRecord))) {
             // Set type based on boot record information.
             Type = ((FATDriver*)Driver)->get_type(&BR);
         }
@@ -54,7 +53,7 @@ public:
         (void)inode;
 
         // For now this just lists the files in the root directory.
-        Driver->read_root_directory(AHCI, PortNumber, &BR, Type);
+        Driver->read_root_directory(AHCI->Ports[PortNumber], &BR, Type);
     }
 
     void write(Inode* inode) override {

@@ -8,6 +8,7 @@ enum class FATType;
 
 namespace AHCI {
     class AHCIDriver;
+    class Port;
 }
 class Inode;
 
@@ -21,11 +22,11 @@ class FATDriver {
 public:
     FATDriver() {}
     
-    void read_to_inode           (AHCI::AHCIDriver*, u8 portNumber, Inode*);
-    void write_from_inode        (AHCI::AHCIDriver*, u8 portNumber, Inode*);
-    bool is_device_fat_formatted (AHCI::AHCIDriver*, u8 portNumber);
-    void read_directory          (AHCI::AHCIDriver*, u8 portNumber, BootRecord*, FATType, u32 cluster, u32 indentLevel = 0);
-    void read_root_directory     (AHCI::AHCIDriver*, u8 portNumber, BootRecord*, FATType);
+    void read_to_inode           (AHCI::Port*, Inode*);
+    void write_from_inode        (AHCI::Port*, Inode*);
+    bool is_device_fat_formatted (AHCI::Port*);
+    void read_directory          (AHCI::Port*, BootRecord*, FATType, u32 cluster, u32 indentLevel = 0);
+    void read_root_directory     (AHCI::Port*, BootRecord*, FATType);
 
     u32 get_total_sectors(BootRecord* BR) const {
         if (BR->BPB.TotalSectors16 == 0)

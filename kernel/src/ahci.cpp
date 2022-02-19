@@ -4,11 +4,12 @@
 #include "fat_driver.h"
 #include "fat_fs.h"
 #include "heap.h"
+#include "inode.h"
 #include "memory.h"
 #include "paging/page_frame_allocator.h"
 #include "paging/page_table_manager.h"
 #include "pci.h"
-#include "inode.h"
+#include "spinlock.h"
 
 namespace AHCI {
 #define HBA_PORT_DEVICE_PRESENT 0x3
@@ -103,20 +104,17 @@ namespace AHCI {
                && hbaPort->cmdSts & HBA_PxCMD_CR);
     }
 
-    bool Port::Read(u64 sector, u16 numSectors, void* phys_addr_of_buffer) {
+    // Do not use this directly, as buffer contents may be
+    //   changed by another thread before accessing the buffer.
+    bool Port::read_low_level(u64 sector, u16 numSectors) {
+        // Ensure hardware port is not busy.
         const u64 maxSpin = 1000000;
         u64 spin = 0;
-        while ((hbaPort->taskFileData & (ATA_DEV_BUSY | ATA_DEV_DRQ))
-               && spin < maxSpin)
-        {
+        while ((hbaPort->taskFileData & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < maxSpin) {
             spin++;
         }
         if (spin == maxSpin)
             return false;
-
-        if (phys_addr_of_buffer == nullptr) {
-            phys_addr_of_buffer = buffer;
-        }
 
         u32 sectorL = (u32)sector;
         u32 sectorH = (u32)(sector >> 32);
@@ -128,8 +126,8 @@ namespace AHCI {
         cmdHdr->prdtLength = 1;
         HBACommandTable* cmdTable = (HBACommandTable*)(u64)cmdHdr->commandTableBaseAddress;
         memset(cmdTable, 0, sizeof(HBACommandTable) + ((cmdHdr->prdtLength-1) * sizeof(HBA_PRDTEntry)));
-        cmdTable->prdtEntry[0].dataBaseAddress = (u32)(u64)phys_addr_of_buffer;
-        cmdTable->prdtEntry[0].dataBaseAddressUpper = (u32)((u64)phys_addr_of_buffer >> 32);
+        cmdTable->prdtEntry[0].dataBaseAddress = (u32)((u64)buffer);
+        cmdTable->prdtEntry[0].dataBaseAddressUpper = (u32)((u64)buffer >> 32);
         cmdTable->prdtEntry[0].byteCount = (numSectors << 9) - 1;
         cmdTable->prdtEntry[0].interruptOnCompletion = 1;
         FIS_REG_H2D* cmdFIS = (FIS_REG_H2D*)(&cmdTable->commandFIS);
@@ -166,6 +164,17 @@ namespace AHCI {
         return true;
     }
 
+    // Read a number of sectors starting at sector into port's physically-addressed buffer,
+    //   then copy from the port's buffer into a given buffer without the possibility of the
+    //   port's buffer being over-written by a read() call from a different thread.
+    bool Port::read(u64 sector, u16 numSectors, void* dest, u64 numBytesToCopy) {
+        SpinlockLocker locker(lock);
+        bool status = read_low_level(sector, numSectors);
+        if (status)
+            memcpy(buffer, dest, numBytesToCopy);
+        return status;
+    }
+
     AHCIDriver::AHCIDriver(PCI::PCIDeviceHeader* pciBaseAddress) {
         srl->writestr("[AHCI]: Constructing driver for AHCI 1.0 Controller at 0x");
         srl->writestr(to_hexstring((u64)pciBaseAddress));
@@ -198,7 +207,7 @@ namespace AHCI {
                 memset((void*)Ports[i]->buffer, 0, MAX_READ_PAGES * 0x1000);
                 // Check if storage media at current port has a file-system LensorOS recognizes.
                 // FAT (File Allocation Table):
-                if (gFATDriver.is_device_fat_formatted(this, i)) {
+                if (gFATDriver.is_device_fat_formatted(Ports[i])) {
                     FatFS* fs = new FatFS(NumFileSystems, this, i);
                     FileSystems[NumFileSystems] = fs;
                     ++NumFileSystems;

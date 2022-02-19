@@ -2,6 +2,7 @@
 #define LENSOR_OS_AHCI_H
 
 #include "integers.h"
+#include "spinlock.h"
 
 namespace PCI {
     class PCIDeviceHeader;
@@ -168,6 +169,7 @@ namespace AHCI {
     
     class Port {
     public:
+        Spinlock lock;
         HBAPort* hbaPort;
         PortType type;
         u8* buffer;
@@ -175,7 +177,8 @@ namespace AHCI {
         void Configure();
         void StartCMD();
         void StopCMD();
-        bool Read(u64 sector, u16 numSectors, void* buffer = nullptr);
+        bool read_low_level(u64 sector, u16 numSectors);
+        bool read(u64 sector, u16 numSectors, void* buffer, u64 numBytesToCopy);
     };
 
     /// Advance Host Controller Interface Driver
@@ -185,18 +188,26 @@ namespace AHCI {
     // TODO: Store created driver in some sort of device tree
     class AHCIDriver {
     public:
-        /// Address of PCI device header (expected SATA Controller, AHCI 1.0).
-        PCI::PCIDeviceHeader* PCIBaseAddress;
-        /// AHCI Base Memory Register
-        HBAMemory* ABAR;
+        Port* Ports[32];
+        u8 numPorts;
 
         AHCIDriver(PCI::PCIDeviceHeader* pciBaseAddress);
         ~AHCIDriver();
 
-        Port* Ports[32];
-        u8 numPorts;
         void probe_ports();
+
+        bool read(u64 sector, u64 numSectors, u8 portNumber, void* buffer, u64 numBytes) {
+            if (portNumber >= numPorts)
+                return false;
+            
+            return Ports[portNumber]->read(sector, numSectors, buffer, numBytes);
+        }
         
+    private:
+        /// Address of PCI device header (expected SATA Controller, AHCI 1.0).
+        PCI::PCIDeviceHeader* PCIBaseAddress;
+        /// AHCI Base Memory Register
+        HBAMemory* ABAR;        
     };
 
     /// Store list of pointers to drivers that are created for later use.

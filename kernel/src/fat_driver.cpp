@@ -11,17 +11,15 @@
 
 FATDriver gFATDriver;
 
-void FATDriver::read_to_inode(AHCI::AHCIDriver* ahci, u8 portNumber, Inode* inode) {
+void FATDriver::read_to_inode(AHCI::Port* port, Inode* inode) {
     // TODO: Implement reading a FAT file/directory (world) into an inode.
-    (void)ahci;
-    (void)portNumber;
+    (void)port;
     (void)inode;
     return;
 }
 
-void FATDriver::write_from_inode(AHCI::AHCIDriver* ahci, u8 portNumber, Inode* inode) {
-    (void)ahci;
-    (void)portNumber;
+void FATDriver::write_from_inode(AHCI::Port* port, Inode* inode) {
+    (void)port;
     (void)inode;
     return;
 }
@@ -96,14 +94,11 @@ FATType FATDriver::get_type(BootRecord* BR) const {
 
 /// Try to parse a FAT boot record from the first boot sector of the SATA device.
 /// This is used by the AHCI driver to determine if this file system is suitable for a given device.
-bool FATDriver::is_device_fat_formatted(AHCI::AHCIDriver* ahci, u8 portNumber) {
+bool FATDriver::is_device_fat_formatted(AHCI::Port* port) {
     bool result = true;
-    if (ahci->Ports[portNumber]->Read(0, 1)) {
-        // Read successful.
-        // Allocate memory for a FAT boot record.
-        SmartPtr<BootRecord> br = SmartPtr(new BootRecord);
-        // Copy data read from boot sector into FAT boot record.
-        memcpy((void*)ahci->Ports[portNumber]->buffer, (void*)br.get(), sizeof(BootRecord));
+    // Allocate memory for a FAT boot record.
+    SmartPtr<BootRecord> br = SmartPtr(new BootRecord);
+    if (port->read(0, 1, br.get(), sizeof(BootRecord))) {
         /* Validate boot sector is of FAT format.
          * Thanks to Gigasoft of osdev forums for this list
          * TODO: Use more of these sanity checks before assuming it is valid FAT filesystem.
@@ -133,8 +128,7 @@ bool FATDriver::is_device_fat_formatted(AHCI::AHCIDriver* ahci, u8 portNumber) {
 //          FAT doesn't make it easy, but I can do it.
 void FATDriver::read_directory
 (
- AHCI::AHCIDriver* ahci
- , u8 portNumber
+ AHCI::Port* port
  , BootRecord* BR
  , FATType type
  , u32 directoryClusterIndex
@@ -159,16 +153,12 @@ void FATDriver::read_directory
         u64 clusterSizeInBytes = BR->BPB.NumSectorsPerCluster * BR->BPB.NumBytesPerSector;
         SmartPtr<u8[]> clusterContents(new u8[clusterSizeInBytes], clusterSizeInBytes);
         u64 firstSectorOfCluster = get_first_sector_in_cluster(BR, clusterIndex);
-        // FIXME: This is very unsafe to fill the buffer, then get the contents from it with a memcpy().
-        //        I need a helper function in AHCIDriver to fill a (virtual-addressed) buffer with Port contents,
-        //          with a lock of some sort to ensure the buffer doesn't get stomped on by another thread.
-        if (ahci->Ports[portNumber]->Read(firstSectorOfCluster, BR->BPB.NumSectorsPerCluster) == false) {
+        if (port->read(firstSectorOfCluster, BR->BPB.NumSectorsPerCluster, clusterContents.get(), clusterSizeInBytes) == false) {
             for (u32 i = 0; i < indentLevel + 1; ++i)
                 srl->writestr(indent);
             srl->writestr("\033[31mCluster read failed.\033[0m\r\n");
             return;
         }
-        memcpy((void*)ahci->Ports[portNumber]->buffer, (void*)clusterContents.get(), clusterSizeInBytes);
         current = (ClusterEntry*)clusterContents.get();
         // Get all entries within cluster.
         // The end is signified by an entry with
@@ -243,13 +233,15 @@ void FATDriver::read_directory
                 // Print first 8 bytes of file.
                 for (u32 i = 0; i < indentLevel + 3; ++i)
                     srl->writestr(indent);
-                srl->writestr("First 8 Bytes: \033[30;47m");
-                SmartPtr<u8[]> buffer(new u8[8], 8);
+
+                const u8 tmp_buffer_size = 8;
+                srl->writestr("First ");
+                srl->writestr(to_string(tmp_buffer_size));
+                srl->writestr(" Bytes: \033[30;47m");
+                SmartPtr<u8[]> buffer(new u8[tmp_buffer_size], tmp_buffer_size);
                 u64 firstSectorOfCluster = get_first_sector_in_cluster(BR, current->get_cluster_number());
-                if (ahci->Ports[portNumber]->Read(firstSectorOfCluster, BR->BPB.NumSectorsPerCluster))
-                {
-                    memcpy(ahci->Ports[portNumber]->buffer, buffer.get(), 8);
-                    srl->writestr((char*)&buffer[0], 8);
+                if (port->read(firstSectorOfCluster, BR->BPB.NumSectorsPerCluster, buffer.get(), tmp_buffer_size)) {
+                    srl->writestr((char*)&buffer[0], tmp_buffer_size);
                     srl->writestr("\033[0m\r\n");
                 }
                 else srl->writestr("\033[31mRead failed.\033[0m\r\n");
@@ -260,7 +252,7 @@ void FATDriver::read_directory
                 // If entry is directory and entry is not a subdirectory helper
                 //   (ie: ".          " or "..         "), also read that directory recursively.
                 // FIXME: Must be a better way of doing this than strcmp the name...
-                read_directory(ahci, portNumber, BR, type, current->get_cluster_number(), indentLevel + 1);
+                read_directory(port, BR, type, current->get_cluster_number(), indentLevel + 1);
             }
 
             current++;
@@ -283,8 +275,7 @@ void FATDriver::read_directory
             break;
         // Read File Allocation Table from disk (one sector).
         u16 sectorsPerFAT = BR->BPB.NumSectorsPerFAT == 0 ? 1 : BR->BPB.NumSectorsPerFAT;
-        ahci->Ports[portNumber]->Read(FATsector, sectorsPerFAT);
-        memcpy(ahci->Ports[portNumber]->buffer, FAT.get(), sectorsPerFAT * BR->BPB.NumBytesPerSector);
+        port->read(FATsector, sectorsPerFAT, FAT.get(), sectorsPerFAT * BR->BPB.NumBytesPerSector);
         lastFATsector = FATsector;
         if (type == FATType::FAT12) {
             tableValue = *(u32*)((u16*)&FAT[entryOffset]);
@@ -348,8 +339,8 @@ void FATDriver::read_directory
     } while (moreClusters);
 }
 
-void FATDriver::read_root_directory(AHCI::AHCIDriver* ahci, u8 portNumber, BootRecord* BR, FATType type) {
+void FATDriver::read_root_directory(AHCI::Port* port, BootRecord* BR, FATType type) {
     srl->writestr("[FATDriver]:\r\n");
     u32 clusterIndex = get_root_directory_cluster(BR, type);
-    read_directory(ahci, portNumber, BR, type, clusterIndex);
+    read_directory(port, BR, type, clusterIndex);
 }
