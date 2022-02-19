@@ -3,6 +3,10 @@
 
 #include "integers.h"
 
+/* String Compare
+ *   Returns `true` only if all characters within 
+ *     both strings up to length are exactly equal.
+ */
 bool strcmp(const char* a, const char* b, u64 length);
 
 char* to_string(u64);
