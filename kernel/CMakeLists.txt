@@ -66,6 +66,7 @@ set(HEADERS
     src/rtc.h
     src/scheduler.h
     src/smart_pointer.h
+    src/spinlock.h
     src/uart.h
 )
 

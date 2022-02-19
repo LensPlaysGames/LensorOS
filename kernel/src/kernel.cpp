@@ -42,14 +42,13 @@
  *   |     |- Reference Counting Pointer -> Count number of references to itself,
  *   |     |    and delete itself only if there are no references remaining.
  *   |     `- Smart Pointer -> Deletes itself as soon as it goes out of scope.
- *   |        `- I've implemented this, now it's time to find and replace!
+ *   |        `- I've implemented this! See `fat_driver.cpp` for it in use.
  *   |
  *   |- Create Container Class(es) -> Vector, HashMap, etc.
  *   |- Make kernel less architecture specific (it's very x86_64 specific).
  *   |
  *   |- Write a bootloader in C (no longer rely on GNU-EFI bootloader).
- *   |  `- I realize this is an insanely large project,
- *   |       but so is making an OS, I guess.
+ *   |  `- I realize this is an insanely large project, but so is making an OS, I guess.
  *   |
  *   |- Make read-only section (of kernel) read only memory.
  *   |
@@ -72,7 +71,9 @@
  *   |- File System:
  *   |  |- Virtual File System that will store intermediate representation
  *   |  |    of files/folders/worlds/storage media devices.
- *   |  |- AHCI Driver Update: DMA ATA Write implementation.
+ *   |  |- AHCI Driver Update: 
+ *   |  |  |- DMA ATA Write implementation.
+ *   |  |  `- Concurrency Issues in `AHCI::Port::Read()`
  *   |  `- Another filesystem better suited for mass storage (Ext2? Proprietary?)
  *   |
  *   |- Write ASM hardware interrupt (IRQ) wrapper (no longer rely on `__attribute__((interrupt))`)
