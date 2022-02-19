@@ -72,8 +72,7 @@
  *   |  |- Virtual File System that will store intermediate representation
  *   |  |    of files/folders/worlds/storage media devices.
  *   |  |- AHCI Driver Update: 
- *   |  |  |- DMA ATA Write implementation.
- *   |  |  `- Concurrency Issues in `AHCI::Port::Read()`
+ *   |  |  `- DMA ATA Write implementation.
  *   |  `- Another filesystem better suited for mass storage (Ext2? Proprietary?)
  *   |
  *   |- Write ASM hardware interrupt (IRQ) wrapper (no longer rely on `__attribute__((interrupt))`)

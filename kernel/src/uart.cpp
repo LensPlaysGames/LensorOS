@@ -2,6 +2,10 @@
 
 #include "heap.h"
 
+#ifdef COM1_INPUT_DEBUG
+#include "cstr.h"
+#endif
+
 // Global serial driver.
 UARTDriver* srl = nullptr;
 
@@ -70,6 +74,11 @@ UARTDriver::UARTDriver() {
     writestr(get_uart_chip_name(chip));
     writestr("' chip\r\n");
 
+#ifdef COM1_INPUT_DEBUG
+    writestr("[UART]: Data recieved over COM1 will be looped back in the following format:\r\n");
+    writestr("  \"[UART]: COM1 INPUT -> <hexadecimal> <integer> <raw byte>\"");
+#endif
+
     // Enable IRQs for data available interrupts.
     outb(INTERRUPT_PORT(COM1), INTERRUPT_PORT_DATA_AVAILABLE);
 }
@@ -80,8 +89,23 @@ u8 UARTDriver::readb() {
     u16 maxSpins = (u16)1000000;
     while ((inb(LINE_STATUS_PORT(COM1)) & 0b1) == 0 && maxSpins > 0)
         maxSpins--;
-    if (maxSpins == 0) return 0;
-    return inb(DATA_PORT(COM1));
+
+    if (maxSpins == 0)
+        return 0;
+
+    u8 data = inb(DATA_PORT(COM1));
+
+#ifdef COM1_INPUT_DEBUG
+    writestr("[UART]: COM1 INPUT -> 0x");
+    writestr(to_hexstring(data));
+    writeb((u8)' ');
+    writestr(to_string(data));
+    writestr(" \033[37;40m");
+    writeb(data);
+    writestr("\033[0m\r\n");
+#endif
+
+    return data;
 }
 
 /// Write a byte of data over the serial communications port COM1.

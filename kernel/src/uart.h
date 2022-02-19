@@ -29,6 +29,11 @@
 #define INTERRUPT_PORT_LINE_STATUS_CHANGED                (1 << 2)
 #define INTERRUPT_PORT_MODEM_STATUS_CHANGED               (1 << 3)
 
+// Uncomment the following preprocessor directive to print the
+//   input recieved in COM1 back out to COM1 in the following format.
+// "[UART]: COM1 INPUT -> <hexadecimal> <integer> <raw byte>"
+// #define COM1_INPUT_DEBUG
+
 /* Port Register Offsets ([PORT] + [OFFSET])
  * 0: Data
  *      When DLAB (Divisor Latch Access Bit) is 1, Least Significant Byte of Divisor.
