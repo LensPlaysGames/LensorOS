@@ -100,7 +100,7 @@ u8 UARTDriver::readb() {
     writestr(to_hexstring(data));
     writeb((u8)' ');
     writestr(to_string(data));
-    writestr(" \033[37;40m");
+    writestr(" \033[30;47m");
     writeb(data);
     writestr("\033[0m\r\n");
 #endif
