@@ -41,3 +41,6 @@
 # Kernel Build Stuff
 /kernel/bin/
 
+# OVMF
+OVMFbin/OVMF_VARS_LensorOS.fd
+
