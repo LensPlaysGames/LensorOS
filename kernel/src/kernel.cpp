@@ -47,6 +47,19 @@
  *   |- Create Container Class(es) -> Vector, HashMap, etc.
  *   |- Make kernel less architecture specific (it's very x86_64 specific).
  *   |
+ *   |- Initialize HPET
+ *   |  |- https://wiki.osdev.org/HPET
+ *   |  |- 1.) Get address from ACPI table.
+ *   |  |- 2.) Calculate HPET frequency (10^15 / period).
+ *   |  |- 3.) Save minimal tick.
+ *   |  |- 4.) Initialize comparators.
+ *   |  |      |- 1.) Determine if timer N is periodic capable; cache.
+ *   |  |      `- 2.) Determine allowed interrupt routing for current timer, allocate interrupt for it.
+ *   |  `- 5.) Set Main Counter Enable bit
+ *   |
+ *   |- Support APIC (LAPIC & I/O APIC)
+ *   |  `- https://wiki.osdev.org/APIC
+ *   |
  *   |- Write a bootloader in C (no longer rely on GNU-EFI bootloader).
  *   |  `- I realize this is an insanely large project, but so is making an OS, I guess.
  *   |

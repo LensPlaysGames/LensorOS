@@ -1,13 +1,9 @@
 #ifndef LENSOR_OS_ACPI_H
 #define LENSOR_OS_ACPI_H
 
-/* Advanced Configuration and Power Interface 
- *   Resources:
- *   |- https://github.com/torvalds/linux/blob/master/Documentation/arm64/acpi_object_usage.rst
- *   |- https://wiki.osdev.org/RSDP
- *   `- https://wiki.osdev.org/XSDT
- *
- *   ACPI Spec 5.2 Table 5.5 DESCRIPTION_HEADER Signatures for tables
+/* Advanced Configuration and Power Interface
+ *   ACPI Spec 6.4 Table 5.5 DESCRIPTION_HEADER Signatures for tables
+ *   |- https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html?highlight=system%20descript#description-header-signatures-for-tables-defined-by-acpi
  *   |- "APIC"  -- Multiple APIC Description Table (MADT)
  *   |- "BGRT"  -- Boot Graphics Resource Table (BGRT; UEFI-only)
  *   |- "BERT"  -- Boot Error Record Table (BERT)
@@ -38,7 +34,8 @@
  *   |- "SSDT"  -- Secondary System Descriptor Table (SSDT)
  *   `- "XSDT"  -- Extended System Descriptor Table (XSDT)
  *
- *   ACPI Spec 5.2 Table 5.6 DESCRIPTION_HEADER Signatures for reserved tables
+ *   ACPI Spec 6.4 Table 5.6 DESCRIPTION_HEADER Signatures for reserved tables
+ *   |- https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html?highlight=system%20descript#description-header-signatures-for-tables-reserved-by-acpi
  *   |- "AEST"  -- Arm Error Source Table
  *   |- "BDAT"  -- BIOS Data ACPI Table
  *   |- "BOOT"  -- Reserved Signature
@@ -82,7 +79,11 @@
 #include "integers.h"
 
 namespace ACPI {
-    // 36 BYTES
+    /* Root System Descriptor Pointer
+     *   36 BYTES
+     *
+     *   https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html?highlight=system%20descript#rsdp-structure
+     */ 
     struct RSDP2 {
         unsigned char Signature[8];
         u8  Checksum;
@@ -96,7 +97,11 @@ namespace ACPI {
         u8  Reserved[3];
     } __attribute__((packed));
 
-    // 36 BYTES
+    /* System Descriptor Table Header
+     *   36 BYTES
+     *
+     *   https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html?highlight=system%20descript#description-header-fields
+     */
     struct SDTHeader {
         unsigned char Signature[4];
         u32 Length;
@@ -109,15 +114,20 @@ namespace ACPI {
         u32 CreatorRevision;
     } __attribute__((packed));
 
-    // 44 BYTES
-    /* https://wiki.osdev.org/PCI_Express */
-    struct MCFGHeader {
-        SDTHeader Header;
+    /* Memory-mapped ConFiguration Space Header
+     *   44 BYTES
+     *
+     *   https://wiki.osdev.org/PCI_Express 
+     */
+    struct MCFGHeader : public SDTHeader{
         u64 Reserved;
     } __attribute__((packed));
 
-    // 12 BYTES
-    /* https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#generic-address-structure-gas */
+    /* Generic Address Structure Format
+     *   12 BYTES
+     *
+     *   https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html?highlight=system%20descript#generic-address-structure-gas
+     */
     struct GenericAddressStructure {
         /* ID of address space format
          *   0x00  -- System Memory space
@@ -170,10 +180,41 @@ namespace ACPI {
         u64 Address;
     } __attribute__((packed));
 
-    // 276 BYTES
-    /* https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#fixed-acpi-description-table-fadt */
-    struct FADTHeader {
-        SDTHeader Header;
+
+    /* High Precision Event Timer Table 
+     *   56 BYTES
+     *   https://github.com/freebsd/freebsd-src/blob/97c0b5ab18b6131ab11ed03b38d5e239fc811a3e/sys/contrib/dev/acpica/include/actbl1.h#L2010
+     *   https://wiki.osdev.org/HPET
+     */
+    struct HPETTable : public SDTHeader{
+        u8  RevisionID;
+        u8  ID;
+        u16 PCIvendorID;
+        GenericAddressStructure Address;
+        u8  Number;
+        u16 MinimumTick;
+        u8  PageProtection;
+    } __attribute__((packed));
+
+    /* HPET Identifier sub-fields */
+#define ACPI_HPET_ID_COMPARATORS      0b00011111
+#define ACPI_HPET_ID_COUNT_SIZE_CAP   0b00100000
+#define ACPI_HPET_ID_LEGACY_CAPABLE   0b10000000
+
+    /* HPET Flags masks */
+#define ACPI_HPET_FLAGS_PAGE_PROTECT_MASK (0b11)
+
+    enum class HPETPageProtect {
+        NO_PAGE_PROTECT  = 0,
+        PAGE_PROTECT4    = 1,
+        PAGE_PROTECT64   = 2,
+    };
+
+    /* Fixed ACPI Description Table
+     *   276 BYTES
+     *   https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#fixed-acpi-description-table-fadt 
+     */
+    struct FADTHeader : public SDTHeader {
         u32 FIRMWARE_CTRL;
         /* Physical memory address of Differentiated System Descriptor Table */
         u32 DSDT;

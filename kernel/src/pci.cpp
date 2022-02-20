@@ -86,7 +86,7 @@ namespace PCI {
     
     void enumerate_pci(ACPI::MCFGHeader* mcfg) {
         srl->writestr("[PCI]: Begin MCFG bus enumeration\r\n");
-        int entries = ((mcfg->Header.Length) - sizeof(ACPI::MCFGHeader)) / sizeof(ACPI::DeviceConfig);
+        int entries = ((mcfg->Length) - sizeof(ACPI::MCFGHeader)) / sizeof(ACPI::DeviceConfig);
         for (int t = 0; t < entries; ++t) {
             ACPI::DeviceConfig* devCon = (ACPI::DeviceConfig*)((u64)mcfg + sizeof(ACPI::MCFGHeader)
                                                                + (sizeof(ACPI::DeviceConfig) * t));
