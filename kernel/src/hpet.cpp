@@ -85,11 +85,9 @@ bool HPET::initialize(ACPI::HPETHeader* header) {
     if (NumberOfComparators < HPET_MIN_COMPARATORS
         || NumberOfComparators > HPET_MAX_COMPARATORS)
     {
-#ifdef LENSOR_OS_DEBUG
         srl->writestr("  Number of Comparators: ");
         srl->writestr(to_string(NumberOfComparators));
         srl->writestr("\r\n");
-#endif /* if not defined LENSOR_OS_DEBUG */
         hpet_init_failed("Number of comparators is invalid.");
         return false;
     }
@@ -145,7 +143,7 @@ void HPET::reset_counter() {
 }
 
 void HPET::print_state() {
-        srl->writestr("[HPET]: \033[32mInitialized\033[0m\r\n");
+    srl->writestr("[HPET]: \033[32mInitialized\033[0m\r\n");
     srl->writestr("  Revision ID: 0x");
     srl->writestr(to_hexstring(Header->RevisionID));
     srl->writestr("\r\n");
@@ -173,8 +171,6 @@ void HPET::print_state() {
     srl->writestr("  Minimum Tick: ");
     srl->writestr(to_string(Header->MinimumTick));
     srl->writestr("\r\n");
-    // FIXME TESTING TESTING FIXME FIXME TESTING TESTING KL:SDJFKL:SJDF:KLSJFLJSDKL:JL:KSDJF:SDJFKL:SDJLFJSDKLFJSDKL:FJKL:DSJ:F
-#ifdef LENSOR_OS_DEBUG
     srl->writestr("  Period: ");
     srl->writestr(to_string(Period));
     srl->writestr("\r\n");
@@ -187,5 +183,4 @@ void HPET::print_state() {
     srl->writestr("  Page Protection: ");
     srl->writestr(to_string(Header->PageProtection));
     srl->writestr("\r\n");
-#endif
 }

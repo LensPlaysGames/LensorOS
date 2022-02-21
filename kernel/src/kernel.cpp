@@ -27,6 +27,8 @@
  *   |     `- This will allow me to write userland programs that will know where to
  *   |          look for libc and standard includes relative to LensorOS's root directory.
  *   |
+ *   |- HPET: Final step to get it to work (init comparators).
+ *   |
  *   |- Further modify cross compiler to make an OS specific toolchain.
  *   |  `- This would allow for customizing default include,
  *   |       and default library (aka our own libc/libk; currenty running with no C RunTime).
