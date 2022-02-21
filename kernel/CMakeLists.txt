@@ -109,7 +109,7 @@ set(SOURCES
 )
 
 add_executable(Kernel ${SOURCES} ${HEADERS})
-target_compile_definitions(Kernel PUBLIC -DQEMU)
+target_compile_definitions(Kernel PUBLIC QEMU)
 
 target_compile_options(Kernel PUBLIC -O4 -ffreestanding -fno-rtti -fshort-wchar -mno-red-zone -fno-exceptions -Wall -Wextra -Werror)
 
