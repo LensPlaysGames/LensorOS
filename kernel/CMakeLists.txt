@@ -41,6 +41,7 @@ set(HEADERS
     src/filesystem.h
     src/gdt.h
     src/heap.h
+    src/hpet.h
     src/integers.h
     src/interrupts/idt.h
     src/interrupts/syscalls.h
@@ -81,6 +82,7 @@ set(SOURCES
     src/filesystem.cpp
     src/gdt.cpp
     src/heap.cpp
+    src/hpet.cpp
     src/interrupts/idt.cpp
     src/interrupts/syscalls.cpp
     src/io.cpp

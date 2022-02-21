@@ -185,30 +185,38 @@ namespace ACPI {
      *   56 BYTES
      *   https://github.com/freebsd/freebsd-src/blob/97c0b5ab18b6131ab11ed03b38d5e239fc811a3e/sys/contrib/dev/acpica/include/actbl1.h#L2010
      *   https://wiki.osdev.org/HPET
+     *   https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf Table 3 (page 30-31)
      */
     struct HPETHeader : public SDTHeader{
+        /* Event Timer Block ID */
         u8  RevisionID;
+        /* 0b00000000
+        *       =====  Number of comparators
+        *      =       If set, main counter capable of 64-bit.
+        *     =        Reserved.
+        *    =         LegacyReplacement IRQ Routing Capable.
+        */
         u8  ID;
         u16 PCIvendorID;
+        /* Base address of HPET registers. */
         GenericAddressStructure Address;
+        /* HPET sequence number. */
         u8  Number;
+        /* Minimum clock ticks that must be waited 
+         *   between interrupts for no lost interrupts.
+         * Chipset and/or platform dependent.
+         */
         u16 MinimumTick;
+        /* Page Protection and OEM Attribute
+         *   Bits 0-3:
+         *          0000  -- No gaurantee for page protection.
+         *          0001  -- 4KiB page protected
+         *          0010  -- 64KiB page protected 
+         *          xxxx  -- The rest are reserved.
+         *   Bits 4-7: Reserved for OEM specific attributes. 
+         */
         u8  PageProtection;
     } __attribute__((packed));
-
-    /* HPET Identifier sub-fields */
-#define ACPI_HPET_ID_COMPARATORS      0b00011111
-#define ACPI_HPET_ID_COUNT_SIZE_CAP   0b00100000
-#define ACPI_HPET_ID_LEGACY_CAPABLE   0b10000000
-
-    /* HPET Flags masks */
-#define ACPI_HPET_FLAGS_PAGE_PROTECT_MASK (0b11)
-
-    enum class HPETPageProtect {
-        NO_PAGE_PROTECT  = 0,
-        PAGE_PROTECT4    = 1,
-        PAGE_PROTECT64   = 2,
-    };
 
     /* Fixed ACPI Description Table
      *   276 BYTES

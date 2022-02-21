@@ -99,7 +99,13 @@ void prepare_acpi(BootInfo* bInfo) {
     ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table(xsdt, (char*)"MCFG");
     if (mcfg) {
         srl->writestr("[kUtil]: Found MCFG within ACPI 2.0 Table\r\n");
-        PCI::enumerate_pci(mcfg);       
+        PCI::enumerate_pci(mcfg);
+    }
+
+    ACPI::HPETHeader* hpet = (ACPI::HPETHeader*)ACPI::find_table(xsdt, (char*)"HPET");
+    if (hpet) {
+        srl->writestr("[kUtil]: Found HPET within ACPI 2.0 Table\r\n");
+        gHPET.initialize(hpet);
     }
 }
 
@@ -234,6 +240,8 @@ void kernel_init(BootInfo* bInfo) {
     srl->writestr("  Periodic interrupts at ");
     srl->writestr(to_string((double)RTC_PERIODIC_HERTZ));
     srl->writestr("hz\r\n");
+    // HIGH PRECISION EVENT TIMER EARLY CREATE.
+    gHPET = HPET();
     // PRINT REAL TIME TO SERIAL OUTPUT.
     srl->writestr("[kUtil]: \033[1;33mNow is ");
     srl->writestr(to_string(gRTC.Time.hour));

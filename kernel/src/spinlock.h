@@ -20,7 +20,7 @@ public:
     SpinlockLocker(Spinlock&);
     ~SpinlockLocker();
 
-    inline void unlock();
+    void unlock();
 
 private:
     Spinlock& Lock;
@@ -50,4 +50,4 @@ private:
     inline bool test_and_set_lock();
 };
 
-#endif /* if !defined LENSOR_OS_SPIN_LOCK_H */
+#endif /* if not defined LENSOR_OS_SPIN_LOCK_H */
