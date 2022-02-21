@@ -186,7 +186,7 @@ namespace ACPI {
      *   https://github.com/freebsd/freebsd-src/blob/97c0b5ab18b6131ab11ed03b38d5e239fc811a3e/sys/contrib/dev/acpica/include/actbl1.h#L2010
      *   https://wiki.osdev.org/HPET
      */
-    struct HPETTable : public SDTHeader{
+    struct HPETHeader : public SDTHeader{
         u8  RevisionID;
         u8  ID;
         u16 PCIvendorID;

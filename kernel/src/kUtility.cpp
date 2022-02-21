@@ -9,6 +9,7 @@
 #include "fat_driver.h"
 #include "gdt.h"
 #include "heap.h"
+#include "hpet.h"
 #include "interrupts/idt.h"
 #include "interrupts/interrupts.h"
 #include "interrupts/syscalls.h"
