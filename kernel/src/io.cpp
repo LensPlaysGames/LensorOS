@@ -1,14 +1,34 @@
 #include "io.h"
 
-#include "basic_renderer.h"
-#include "cstr.h"
+#include "integers.h"
 
-void outb(uint16_t port, uint8_t value) {
+void out8(u16 port, uint8_t value) {
     asm volatile ("outb %0, %1" : : "a"(value), "Nd"(port));
 }
-uint8_t inb(uint16_t port) {
-    uint8_t retValue;
+
+void out16(u16 port, u16 value) {
+    asm volatile ("outw %0, %1" : : "a"(value), "Nd"(port));
+}
+
+void out32(u16 port, u32 value) {
+    asm volatile ("outl %0, %1" : : "a"(value), "Nd"(port));
+}
+
+u8 in8(u16 port) {
+    u8 retValue;
     asm volatile ("inb %1, %0" : "=a"(retValue) : "Nd"(port));
+    return retValue;
+}
+
+u16 in16(u16 port) {
+    u16 retValue;
+    asm volatile ("inw %1, %0" : "=a"(retValue) : "Nd"(port));
+    return retValue;
+}
+
+u32 in32(u16 port) {
+    u32 retValue;
+    asm volatile ("inl %1, %0" : "=a"(retValue) : "Nd"(port));
     return retValue;
 }
 
