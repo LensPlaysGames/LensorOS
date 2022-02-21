@@ -1,11 +1,14 @@
 cmake_minimum_required(VERSION 3.14)
 project(LensorOS VERSION 0.0.1 LANGUAGES ASM_NASM C CXX)
 
-# Use cross compiler
+# Use cross compiler.
 set(CMAKE_C_COMPILER   x86_64-lensoros-elf-gcc)
 set(CMAKE_CXX_COMPILER x86_64-lensoros-elf-g++)
 
-# Output files to `kernel/bin` directory
+# Export compilation database in JSON format.
+set(CMAKE_EXPORT_COMPILE_COMMANDS on)
+
+# Output files to `kernel/bin` directory.
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 
 add_library(
