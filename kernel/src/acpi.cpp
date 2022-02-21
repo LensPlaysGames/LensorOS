@@ -7,13 +7,13 @@
 /* Helpful resource: https://github.com/freebsd/freebsd-src/blob/main/usr.sbin/acpi/acpidump/acpi.c */
 
 namespace ACPI {
-    int checksum(void* pointer, u64 length) {
+    u8 checksum(void* pointer, u64 length) {
         u8* base = (u8*)pointer;
         u8 sum = 0;
         for (; length > 0; length--, base++)
             sum += *base;
 
-        return (sum);
+        return sum;
     }
     
     void* find_table(SDTHeader* header, char* signature) {
