@@ -279,10 +279,10 @@ void kernel_init(BootInfo* bInfo) {
     /// INTERRUPT MASKS (IRQs).
     /// 0 = UNMASKED, ALLOWED TO HAPPEN
     /// System Timer, PS/2 Keyboard, Slave PIC enabled, UART
-    outb(PIC1_DATA, 0b11101000);
+    out8(PIC1_DATA, 0b11101000);
     io_wait();
     /// Real time clock, PS/2 Mouse
-    outb(PIC2_DATA, 0b11101110);
+    out8(PIC2_DATA, 0b11101110);
     io_wait();
     // ENABLE INTERRUPTS.
     srl->writestr("[kUtil]: Interrupt masks sent, enabling interrupts.\r\n");

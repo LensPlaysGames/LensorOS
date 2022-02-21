@@ -31,6 +31,8 @@
  *   |  `- This would allow for customizing default include,
  *   |       and default library (aka our own libc/libk; currenty running with no C RunTime).
  *   |
+ *   |- See Page Table Entry Flag PT_FLAG::Global : Prevent kernel from being flushed from TLB.
+ *   |
  *   |- Abstract functionality from hardware (currently very x86_64 specific).
  *   |  |- Memory Allocation (./paging/)
  *   |  |- GDT/IDT

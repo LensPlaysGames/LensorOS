@@ -12,8 +12,8 @@
 
 inline void end_of_interrupt(u8 IRQx) {
     if (IRQx >= 8)
-        outb(PIC2_COMMAND, PIC_EOI);
-    outb(PIC1_COMMAND, PIC_EOI);
+        out8(PIC2_COMMAND, PIC_EOI);
+    out8(PIC1_COMMAND, PIC_EOI);
 }
 
 void cause_div_by_zero(u8 one) {
@@ -41,7 +41,7 @@ __attribute__((interrupt)) void system_timer_handler(InterruptFrame* frame) {
 
 /// IRQ1: PS/2 KEYBOARD
 __attribute__((interrupt)) void keyboard_handler(InterruptFrame* frame) {
-    Keyboard::gText.handle_scancode(inb(0x60));
+    Keyboard::gText.handle_scancode(in8(0x60));
     end_of_interrupt(1);
 }
 
@@ -69,7 +69,7 @@ __attribute__((interrupt)) void rtc_periodic_handler(InterruptFrame* frame) {
 
 /// IRQ12: PS/2 MOUSE
 __attribute__((interrupt)) void mouse_handler(InterruptFrame* frame) {
-    u8 data = inb(0x60);
+    u8 data = in8(0x60);
     handle_ps2_mouse_interrupt(data);
     // End interrupt
     end_of_interrupt(12);
@@ -182,37 +182,37 @@ void remap_pic() {
     // SAVE INTERRUPT MASKS.
     u8 masterMasks;
     u8 slaveMasks;
-    masterMasks = inb(PIC1_DATA);
+    masterMasks = in8(PIC1_DATA);
     io_wait();
-    slaveMasks = inb(PIC2_DATA);
+    slaveMasks = in8(PIC2_DATA);
     io_wait();
     // INITIALIZE BOTH CHIPS IN CASCADE MODE.
-    outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
+    out8(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
     io_wait();
-    outb(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
+    out8(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
     io_wait();
     // SET VECTOR OFFSET OF MASTER PIC.
     //   This allows software to throw low interrupts as normal (0-32)
     //     without triggering an IRQ that would normally be attributed to hardware.
-    outb(PIC1_DATA, PIC_IRQ_VECTOR_OFFSET);
+    out8(PIC1_DATA, PIC_IRQ_VECTOR_OFFSET);
     io_wait();
     // SET VECTOR OFFSET OF SLAVE PIC.
-    outb(PIC2_DATA, PIC_IRQ_VECTOR_OFFSET + 8);
+    out8(PIC2_DATA, PIC_IRQ_VECTOR_OFFSET + 8);
     io_wait();
     // TELL MASTER THERE IS A SLAVE ON IRQ2.
-    outb(PIC1_DATA, 4);
+    out8(PIC1_DATA, 4);
     io_wait();
     // TELL SLAVE IT'S CASCADE IDENTITY.
-    outb(PIC2_DATA, 2);
+    out8(PIC2_DATA, 2);
     io_wait();
     // NOT QUITE SURE WHAT THIS DOES YET.
-    outb(PIC1_DATA, ICW4_8086);
+    out8(PIC1_DATA, ICW4_8086);
     io_wait();
-    outb(PIC2_DATA, ICW4_8086);
+    out8(PIC2_DATA, ICW4_8086);
     io_wait();
     // LOAD INTERRUPT MASKS.
-    outb(PIC1_DATA, masterMasks);
+    out8(PIC1_DATA, masterMasks);
     io_wait();
-    outb(PIC2_DATA, slaveMasks);
+    out8(PIC2_DATA, slaveMasks);
     io_wait();
 }

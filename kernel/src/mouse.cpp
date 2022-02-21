@@ -14,7 +14,7 @@ uVector2 gOldMousePosition = {0, 0};
 void mouse_wait() {
     u64 timeout = 100000;
     while (timeout--) {
-        if ((inb(0x64) & 0b10) == 0)
+        if ((in8(0x64) & 0b10) == 0)
             return;
     }
 }
@@ -22,37 +22,37 @@ void mouse_wait() {
 void mouse_wait_input() {
     u64 timeout = 100000;
     while (timeout--) {
-        if (inb(0x64) & 0b1)
+        if (in8(0x64) & 0b1)
             return;
     }
 }
 
 void mouse_write(u8 value) {
     mouse_wait_input();
-    outb(0x64, 0xd4);
+    out8(0x64, 0xd4);
     mouse_wait();
-    outb(0x60, value);
+    out8(0x60, value);
 }
 
 u8 mouse_read() {
     mouse_wait_input();
-    return inb(0x60);
+    return in8(0x60);
 }
 
 void init_ps2_mouse() {
     // Enable mouse.
-    outb(0x64, 0xA8);
+    out8(0x64, 0xA8);
     mouse_wait();
     // Tell keyboard controller a mouse message is incoming.
-    outb(0x64, 0x20);
+    out8(0x64, 0x20);
     
     mouse_wait_input();
-    u8 status = inb(0x60);
+    u8 status = in8(0x60);
     status |= 0b10;
     mouse_wait();
-    outb(0x64, 0x60);
+    out8(0x64, 0x60);
     mouse_wait();
-    outb(0x60, status);
+    out8(0x60, status);
 
     mouse_write(0xf6);
     mouse_read(); // ACKNOWLEDGE

@@ -12,13 +12,13 @@ void RTC::set_periodic_int_enabled(bool enabled) {
     u8 statusB = read_register(0x8b);
     if (enabled) {
         // Enable periodic interrupt.
-        outb(CMOS_ADDR, 0x8b);
-        outb(CMOS_DATA, statusB | 0b01000000);
+        out8(CMOS_ADDR, 0x8b);
+        out8(CMOS_DATA, statusB | 0b01000000);
     }
     else {
         // Disable periodic interrupt.
-        outb(CMOS_ADDR, 0x8b);
-        outb(CMOS_DATA, statusB & 0b10111111);
+        out8(CMOS_ADDR, 0x8b);
+        out8(CMOS_DATA, statusB & 0b10111111);
     }
 }
 

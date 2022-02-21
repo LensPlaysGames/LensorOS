@@ -112,19 +112,19 @@ public:
         update_data();
         /// Set divisor for a 1024hz periodic interrupt.
         u8 statusA = read_register(0x8a);
-        outb(CMOS_ADDR, 0x8a);
-        outb(CMOS_DATA, (statusA & 0x11110000) | RTC_PERIODIC_RATE);
+        out8(CMOS_ADDR, 0x8a);
+        out8(CMOS_DATA, (statusA & 0x11110000) | RTC_PERIODIC_RATE);
     }
 
     /// When this returns zero, RTC is not currently updating.
     u8 is_rtc_updating() {
-        outb(CMOS_ADDR, 0x0a);
-        return inb(CMOS_DATA) & 0b10000000;
+        out8(CMOS_ADDR, 0x0a);
+        return in8(CMOS_DATA) & 0b10000000;
     }
 
     u8 read_register(u8 reg) {
-        outb(CMOS_ADDR, reg);
-        return inb(CMOS_DATA);
+        out8(CMOS_ADDR, reg);
+        return in8(CMOS_DATA);
     }
 
     double seconds_since_boot();
