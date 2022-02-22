@@ -227,7 +227,7 @@ extern "C" void _start(BootInfo* bInfo) {
         // UPDATE TOP RIGHT CORNER OF SCREEN.
         gRend.swap({debugInfoX, 0}, {80000, 400});
     }
-    
+
     // HALT LOOP (KERNEL INACTIVE).
     while (true) {
         asm ("hlt");
