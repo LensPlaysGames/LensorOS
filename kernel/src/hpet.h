@@ -5,6 +5,7 @@
  * Resources & Inspiration:
  * |- INTEL SD's HPET SPEC Table 1
  * |    https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
+ * |- https://github.com/Meulengracht/MollenOS/blob/master/kernel/acpi/hpet.c
  * |- https://github.com/torvalds/linux/blob/master/arch/x86/kernel/hpet.c
  * `- https://wiki.osdev.org/HPET
  */
@@ -70,6 +71,7 @@
  *   Bits 0-63: When main counter value is equal to this value, an interrupt will be generated.
  */
 
+// Data cache for each HPET comparator.
 struct Comparator {
     /* 64-bit Comparator Width */
     bool LargeCounterSupport;
@@ -77,21 +79,28 @@ struct Comparator {
     bool PeriodicCapable;
 };
 
+// High Precision Event Timer
 class HPET {
 public:
     HPET() {};
 
-    bool initialize(ACPI::HPETHeader*);
+    bool initialize();
 
     void start_main_counter();
     void stop_main_counter();
 
+    /// Get the value of the HPET main counter.
     u64 get();
+    /* Get the amount of seconds passed based on main counter.
+     * NOTE: This is inaccurate as counter is paused/started often.
+     */
     double get_seconds();
 
+    /// Disable counting, set the main counter to the given value, then enable counting.
     void set_main_counter(u64 value);
+    /// Disable counting, set main counter to zero, then enable counting.
     void reset_counter();
-
+    /// Print the current state of this HPET (address, freq, etc) to serial out.
     void print_state();
 
 private:

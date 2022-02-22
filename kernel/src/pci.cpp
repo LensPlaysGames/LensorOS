@@ -17,9 +17,10 @@ namespace PCI {
             gPTM.unmap_memory((void*)function_address);
             return;
         }
-        srl->writestr("  Mapped function at 0x");
-        srl->writestr(to_hexstring(function_address));
-        srl->writestr("\r\n");
+
+        //srl->writestr("  Mapped function at 0x");
+        //srl->writestr(to_hexstring(function_address));
+        //srl->writestr("\r\n");
 
         // TODO: Cache human readable information with device in device tree.
         // PRINT HUMAN READABLE INFORMATION
@@ -76,9 +77,9 @@ namespace PCI {
             return;
         }
 
-        srl->writestr("  Mapped bus at 0x");
-        srl->writestr(to_hexstring(bus_address));
-        srl->writestr("\r\n");
+        //srl->writestr("  Mapped bus at 0x");
+        //srl->writestr(to_hexstring(bus_address));
+        //srl->writestr("\r\n");
 
         for (u64 device = 0; device < 32; ++device)
             enumerate_device(bus_address, device);

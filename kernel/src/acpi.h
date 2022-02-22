@@ -543,7 +543,21 @@ namespace ACPI {
         u32 Reserved;
     } __attribute__((packed));
 
+    /// Find XSDT in RSDP and cache in `gXSDT`, ensuring nothing is null.
+    void initialize(RSDP2*);
+
+    /// Find an ACPI system descriptor table with a matching signature.
     void* find_table(SDTHeader* sdt, char* signature);
+    /// Helper function that finds an ACPI SDT by signature within globally stored XSDT.
+    void* find_table(const char* signature);
+    /// Helper function that finds an ACPI SDT by signature within globally stored XSDT.
+    void* find_table(char* signature);
+    /* ACPI Checksum
+     *   Sums `length` bytes starting at `pointer`.
+     */
+    u8 checksum(void* pointer, u64 length);
+
+    extern SDTHeader* gXSDT;
 }
 
 #endif

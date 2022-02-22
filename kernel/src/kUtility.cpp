@@ -88,24 +88,13 @@ void prepare_interrupts() {
     gIDT.flush();
 }
 
-void prepare_acpi(BootInfo* bInfo) {
-    if (bInfo->rsdp == NULL) {
-        srl->writestr("[kUtil]: ERROR: RSDP is null!\r\n");
-        return;
-    }
-    // eXtended System Descriptor Table
-    ACPI::SDTHeader* xsdt = (ACPI::SDTHeader*)(bInfo->rsdp->XSDTAddress);
+void prepare_pci() {
     // Memory-mapped ConFiguration Table
-    ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table(xsdt, (char*)"MCFG");
+    ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table("MCFG");
     if (mcfg) {
-        srl->writestr("[kUtil]: Found MCFG within ACPI 2.0 Table\r\n");
+        srl->writestr("[kUtil]: Found Memory-mapped Configuration Space\r\n");
         PCI::enumerate_pci(mcfg);
-    }
-
-    ACPI::HPETHeader* hpet = (ACPI::HPETHeader*)ACPI::find_table(xsdt, (char*)"HPET");
-    if (hpet) {
-        srl->writestr("[kUtil]: Found HPET within ACPI 2.0 Table\r\n");
-        gHPET.initialize(hpet);
+        srl->writestr("[kUtil]: \033[32mPCI Prepared\033[0m\r\n");
     }
 }
 
@@ -240,8 +229,6 @@ void kernel_init(BootInfo* bInfo) {
     srl->writestr("  Periodic interrupts at ");
     srl->writestr(to_string((double)RTC_PERIODIC_HERTZ));
     srl->writestr("hz\r\n");
-    // HIGH PRECISION EVENT TIMER EARLY CREATE.
-    gHPET = HPET();
     // PRINT REAL TIME TO SERIAL OUTPUT.
     srl->writestr("[kUtil]: \033[1;33mNow is ");
     srl->writestr(to_string(gRTC.Time.hour));
@@ -259,10 +246,14 @@ void kernel_init(BootInfo* bInfo) {
     // PREPARE DRIVERS.
     gFATDriver = FATDriver();
     srl->writestr("[kUtil]: \033[32mFilesystem drivers created successfully.\033[0m\r\n");
-    // TODO: PREPARE DEVICE TREE.
-    // SYSTEM INFORMATION IS FOUND IN ACPI TABLE
-    prepare_acpi(bInfo);
+    // INITIALIZE ADVANCED CONFIGURATION AND POWER MANAGEMENT INTERFACE.
+    ACPI::initialize(bInfo->rsdp);
     srl->writestr("[kUtil]: ACPI prepared.\r\n");
+    // PCI ENUMERATION.
+    prepare_pci();
+    srl->writestr("[kUtil]: PCI prepared.\r\n");
+    // INITIALIZE HIGH PRECISION EVENT TIMER.
+    gHPET.initialize();
     // PREPARE PS/2 MOUSE.
     init_ps2_mouse();
     // SETUP TASK STATE SEGMENT ENTRY FOR EVENTUAL SWITCH TO USERLAND.

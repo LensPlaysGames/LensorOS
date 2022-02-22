@@ -28,10 +28,10 @@ void hpet_init_failed(const char* msg) {
     srl->writestr("\r\n");
 }
 
-bool HPET::initialize(ACPI::HPETHeader* header) {
+bool HPET::initialize() {
     // This shouldn't be called by multiple threads ever, but it doesn't hurt :^).
     SpinlockLocker locker(Lock);
-    Header = header;
+    Header = (ACPI::HPETHeader*)ACPI::find_table("HPET");
     if (Header == nullptr) {
         hpet_init_failed("Header is NULL!");
         return false;
@@ -48,7 +48,7 @@ bool HPET::initialize(ACPI::HPETHeader* header) {
         hpet_init_failed("Invalid Address Space ID");
         return false;
     }
-    
+
     /* If bit 13 of general cap. & ID register is set, 
      *   HPET is capable of a 64-bit main counter value.
      */
@@ -70,6 +70,9 @@ bool HPET::initialize(ACPI::HPETHeader* header) {
         hpet_init_failed("Period must not be zero!");
         return false;
     }
+    /* Frequency can not be zero if Period is a 32-bit unsigned integer.
+     * As Period grows past 49-bits wide, Frequency may become zero.
+     */ 
     Frequency = 1000000000000000 / Period;
 
     /* The last five bits of the Header ID field 
