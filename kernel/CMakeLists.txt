@@ -5,6 +5,9 @@ project(LensorOS VERSION 0.0.1 LANGUAGES ASM_NASM C CXX)
 set(CMAKE_C_COMPILER   x86_64-lensoros-elf-gcc)
 set(CMAKE_CXX_COMPILER x86_64-lensoros-elf-g++)
 
+# Export compilation database in JSON format.
+set(CMAKE_EXPORT_COMPILE_COMMANDS on)
+
 # Output files to `kernel/bin` directory.
 # This gives language servers like `clangd` all the info they need.
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
@@ -14,7 +17,15 @@ Interrupts
     src/interrupts/interrupts.cpp
     src/interrupts/interrupts.h
 )
-target_compile_options(Interrupts PRIVATE -O4 -mno-red-zone -mgeneral-regs-only -ffreestanding -fno-exceptions -c)
+target_compile_options(
+Interrupts PRIVATE
+    -O4
+    -mno-red-zone
+    -mgeneral-regs-only
+    -ffreestanding
+    -fno-exceptions
+    -c
+)
 
 add_library(
 Assembly
@@ -25,11 +36,11 @@ Assembly
 )
 target_compile_options(
 Assembly PRIVATE
-    -felf64
     $<$<CONFIG:Debug>:-g>
 )
 
-set(HEADERS
+set(
+HEADERS
     src/acpi.h
     src/ahci.h
     src/basic_renderer.h
@@ -72,7 +83,8 @@ set(HEADERS
     src/uart.h
 )
 
-set(SOURCES
+set(
+SOURCES
     src/acpi.cpp
     src/ahci.cpp
     src/basic_renderer.cpp
@@ -110,17 +122,32 @@ set(SOURCES
 )
 
 add_executable(Kernel ${SOURCES} ${HEADERS})
+set_target_properties(Kernel PROPERTIES OUTPUT_NAME kernel.elf)
+
 target_compile_definitions(Kernel PUBLIC QEMU)
-
-target_compile_options(Kernel PUBLIC -O4 -ffreestanding -fno-rtti -fshort-wchar -mno-red-zone -fno-exceptions -Wall -Wextra -Werror)
-
-target_link_options(Kernel
-    PUBLIC -T ${CMAKE_SOURCE_DIR}/kernel.ld -static -Bsymbolic -nostdlib
+target_compile_options(
+Kernel PUBLIC
+    -O4
+    -ffreestanding
+    -fno-rtti
+    -fshort-wchar
+    -mno-red-zone
+    -fno-exceptions
+    -Wall
+    -Wextra
+    -Werror
+)
+target_link_options(
+Kernel PUBLIC
+    -T ${CMAKE_SOURCE_DIR}/kernel.ld
+    -static
+    -Bsymbolic
+    -nostdlib
 )                           
 
 target_link_libraries(Kernel PUBLIC Interrupts)
 target_link_libraries(Kernel PUBLIC Assembly)
-set_target_properties(Kernel PROPERTIES OUTPUT_NAME kernel.elf)
+
 
 add_custom_target(EnsureBinDirectory ALL COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/bin)
 add_custom_command(TARGET EnsureBinDirectory POST_BUILD
