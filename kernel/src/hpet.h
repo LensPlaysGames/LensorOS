@@ -22,9 +22,9 @@
 #define HPET_REG_GENERAL_CONFIGURATION       0x010
 #define HPET_REG_GENERAL_INTERRUPT_STATUS    0x020
 #define HPET_REG_MAIN_COUNTER_VALUE          0x0f0
-#define HPET_REG_TIMER_N_CONFIG_AND_CAPABILITIES(n) ((0x100 + 0x20 * n) - (0x107 + 0x20 * n))
-#define HPET_REG_TIMER_N_COMPARATOR_VALUE(n)        ((0x108 + 0x20 * n) - (0x10f + 0x20 * n))
-#define HPET_REG_TIMER_N_FSB_INTERRUPT_ROUTE(n)     ((0x110 + 0x20 * n) - (0x117 + 0x20 * n))
+#define HPET_REG_TIMER_N_CONFIG_AND_CAPABILITIES(n) (0x100 + 0x20 * n)
+#define HPET_REG_TIMER_N_COMPARATOR_VALUE(n)        (0x108 + 0x20 * n)
+#define HPET_REG_TIMER_N_FSB_INTERRUPT_ROUTE(n)     (0x110 + 0x20 * n)
 
 /* HPET Registers 
  * General Capabilities and ID (read-only):

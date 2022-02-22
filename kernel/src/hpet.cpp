@@ -139,8 +139,9 @@ u64 HPET::get() {
 }
 
 void HPET::set_main_counter(u64 value) {
-    // Kind of Spinlock heavy, but it will get better with time.
     stop_main_counter();
+    // FIXME: Another thread could lock in-between `stop_main_counter()`
+    //   unlocking and this spinlock locker constructor locking it.
     SpinlockLocker locker(Lock);
     writel(HPET_REG_MAIN_COUNTER_VALUE, (u32)value);
     writel(HPET_REG_MAIN_COUNTER_VALUE + 4, (u32)(value >> 32));
