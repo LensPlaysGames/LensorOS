@@ -54,3 +54,29 @@ void memcpy(void* src, void* dest, u64 numBytes) {
     for (; i < (s64)numBytes; ++i)
         *(u8*)((u64)dest + i) = *(u8*)((u64)src + i);
 }
+
+void volatile_read(const volatile void* ptr, volatile void* out, u64 length) {
+    // FIXME: Are memory barries necessary for the memcpy call?
+    if (length == 1)
+        *(u8*)out = *(volatile u8*)ptr;
+    else if (length == 2)
+        *(u16*)out = *(volatile u16*)ptr;
+    else if (length == 4)
+        *(u32*)out = *(volatile u32*)ptr;
+    else if (length == 8)
+        *(u64*)out = *(volatile u64*)ptr;
+    else memcpy((void*)ptr, (void*)out, length);
+}
+
+void volatile_write(void* data, volatile void* ptr, u64 length) {
+    // FIXME: Are memory barriers necessary for the memcpy call?
+    if (length == 1)
+        *(volatile u8*)ptr = *(u8*)data;
+    if (length == 2)
+        *(volatile u16*)ptr = *(u16*)data;
+    if (length == 4)
+        *(volatile u32*)ptr = *(u32*)data;
+    if (length == 8)
+        *(volatile u64*)ptr = *(u64*)data;
+    else memcpy(data, (void*)ptr, length);
+}
