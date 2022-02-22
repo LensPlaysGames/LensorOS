@@ -9,19 +9,11 @@
 HPET gHPET;
 
 void HPET::writel(u16 offset, u32 value) {
-    if (Type == AddressType::MEMORY)
-        *(u32*)(Header->Address.Address + offset) = value;
-    else if (Type == AddressType::IO)
-        out32(Header->Address.Address + offset, value);
+    *(u32*)(Header->Address.Address + offset) = value;
 }
 
 u32 HPET::readl(u16 offset) {
-    u32 ret { 0 };
-    if (Type == AddressType::MEMORY)
-        ret = *(u32*)(Header->Address.Address + offset);
-    else if (Type == AddressType::IO)
-        ret = in32(Header->Address.Address + offset);
-
+    u32 ret = *(u32*)(Header->Address.Address + offset);
     return ret;
 }
 
@@ -44,6 +36,14 @@ bool HPET::initialize(ACPI::HPETHeader* header) {
         return false;
     }
 
+    if (Header->Address.AddressSpaceID == 0) {
+        gPTM.map_memory((void*)Header->Address.Address, (void*)Header->Address.Address);
+    }
+    else {
+        hpet_init_failed("Invalid Address Space ID");
+        return false;
+    }
+    
     /* If bit 13 of general cap. & ID register is set, 
      *   HPET is capable of a 64-bit main counter value.
      */
@@ -54,17 +54,10 @@ bool HPET::initialize(ACPI::HPETHeader* header) {
      */
     LegacyInterruptSupport = static_cast<bool>(readl(HPET_REG_GENERAL_CAPABILITIES_AND_ID) & (1 << 15));
 
-    if (Header->Address.AddressSpaceID == 0) {
-        Type = AddressType::MEMORY;
-        gPTM.map_memory((void*)Header->Address.Address, (void*)Header->Address.Address);
-    }
-    else if (Header->Address.AddressSpaceID == 1) {
-        Type = AddressType::IO;
-    }
-    else {
-        hpet_init_failed("Invalid Address Space ID");
-        return false;
-    }
+    // Disable legacy replacement interrupt routing.
+    u32 config = readl(HPET_REG_GENERAL_CONFIGURATION);
+    config &= ~2;
+    writel(HPET_REG_GENERAL_CONFIGURATION, config);
 
     // Calculate Frequency (f = 10^15 / Period)
     Period = readl(HPET_MAIN_COUNTER_PERIOD);
@@ -99,6 +92,8 @@ bool HPET::initialize(ACPI::HPETHeader* header) {
      *                so it's only done if the HPET is actually used as main timer).
      */
 
+    locker.unlock();
+    
     start_main_counter();
     Initialized = true;
 
@@ -122,9 +117,24 @@ void HPET::stop_main_counter() {
 }
 
 u64 HPET::get() {
+    stop_main_counter();
     SpinlockLocker locker(Lock);
-    u64 result = readl(HPET_REG_MAIN_COUNTER_VALUE);
-    result |= (u64)readl(HPET_REG_MAIN_COUNTER_VALUE + 4) << 32;
+    u64 result { 0 };
+    if (LargeCounterSupport) {
+        u32 low  { 0 };
+        u32 high = readl(HPET_REG_MAIN_COUNTER_VALUE + 4);
+        for(;;) {
+            low = readl(HPET_REG_MAIN_COUNTER_VALUE);
+            u32 newHigh = readl(HPET_REG_MAIN_COUNTER_VALUE + 4);
+            if (newHigh == high)
+                break;
+            high = newHigh;
+        }
+        result = ((u64)high << 32) | low;
+    }
+    else result = readl(HPET_REG_MAIN_COUNTER_VALUE);
+    locker.unlock();
+    start_main_counter();
     return result;
 }
 

@@ -75,12 +75,6 @@ struct Comparator {
 };
 
 class HPET {
-    enum class AddressType {
-        NONE = 0,
-        MEMORY = 1,
-        IO = 2,
-    };
-    
 public:
     HPET() {};
 
@@ -99,22 +93,15 @@ public:
 private:
     Spinlock Lock;
     ACPI::HPETHeader* Header;
-    AddressType Type { AddressType::NONE };
     bool Initialized { false };
     bool LargeCounterSupport { false };
     bool LegacyInterruptSupport { false };
     u32 Period    { 0 };
     u64 Frequency { 0 };
-
     /* Number of comparators implemented; can vary from 3-32. */
     u8 NumberOfComparators { 0 };
     Comparator Comparators[HPET_MAX_COMPARATORS];
-
-    /* To read from/write to the HPET, an ACPI general address structure is provided.
-     * This means it may be in memory mapped IO, providing a physical memory address, 
-     *   or it may communicate using the hardware serial bus, providing an IO serial port address. 
-     * These functions handle that based on `Type` which is set when initialized.
-     * NOTE: Registers may only be read from/written to at 32-byte boundaries.
+    /* NOTE: Registers may only be read from/written to at 32-byte boundaries.
      *   To extract a single byte, the caller must do it manually (mask & shift).
      */
     void writel(u16 offset, u32 value);
