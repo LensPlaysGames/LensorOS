@@ -3,17 +3,22 @@
 #include "cstr.h"
 #include "integers.h"
 #include "io.h"
+#include "memory.h"
 #include "paging/page_table_manager.h"
 #include "uart.h"
 
 HPET gHPET;
 
+/* Software doesn't know about hardware changing it's mmio 
+ *   registers, so they must be marked as volatile! 
+ */
 void HPET::writel(u16 offset, u32 value) {
-    *(u32*)(Header->Address.Address + offset) = value;
+    volatile_write(&value, (volatile void*)(Header->Address.Address + (offset)), 4);
 }
 
 u32 HPET::readl(u16 offset) {
-    u32 ret = *(u32*)(Header->Address.Address + offset);
+    u32 ret { 0 };
+    volatile_read((const volatile void*)(Header->Address.Address + (offset)), &ret, 4);
     return ret;
 }
 
@@ -104,7 +109,7 @@ bool HPET::initialize(ACPI::HPETHeader* header) {
 void HPET::start_main_counter() {
     SpinlockLocker locker(Lock);
     u32 config = readl(HPET_REG_GENERAL_CONFIGURATION);
-    config &= 1;
+    config |= 1;
     writel(HPET_REG_GENERAL_CONFIGURATION, config);
 }
 
