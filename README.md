@@ -120,6 +120,8 @@ git clone https://github.com/LensPlaysGames/LensorOS
 
 Open a Linux terminal, then `cd` to the root directory of the repository.
 
+NOTE: If on Windows using WSL, I recommend cloning onto your Windows machine partition. If you use the WSL partition to store LensorOS, many tools can not access the fake network path that is used (ie. `\\wsl$\`), and it over-all just causes a head-ache.
+
 #### 2.) Build the bootloader
 Ensure that you have previously ran `sudo apt install build-essential mtools` to get the necessary compilation pre-requisites.
 
