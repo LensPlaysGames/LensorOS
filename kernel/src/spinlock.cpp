@@ -44,7 +44,7 @@ bool SpinlockLocker::test_and_set_lock() {
      *    `- "r"  -- Any register; new lock flag value
      */
     bool old_value;
-    asm volatile ("lock xchg %0, %1" : "=a" (old_value) : "m" (&Lock.locked), "r" (true));
+    asm volatile ("lock xchg %0, %1" : "=a" (old_value) : "m" (Lock.locked), "r" (true));
     return old_value;
 }
 
