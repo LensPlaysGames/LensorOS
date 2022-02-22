@@ -2,6 +2,7 @@
 
 #include "basic_renderer.h"
 #include "cstr.h"
+#include "hpet.h"
 #include "interrupts/interrupts.h"
 #include "keyboard.h"
 #include "paging/page_frame_allocator.h"
@@ -49,7 +50,6 @@
  *   |        `- I've implemented this! See `fat_driver.cpp` for it in use.
  *   |
  *   |- Create Container Class(es) -> Vector, HashMap, etc.
- *   |- Make kernel less architecture specific (it's very x86_64 specific).
  *   |
  *   |- Support APIC (LAPIC & I/O APIC)
  *   |  `- https://wiki.osdev.org/APIC
@@ -220,6 +220,10 @@ extern "C" void _start(BootInfo* bInfo) {
         // PRINT RTC ELAPSED TIME.
         gRend.puts("RTC Elapsed: ");
         gRend.puts(to_string(gRTC.seconds_since_boot()));
+        gRend.crlf(debugInfoX);
+        // PRINT HPET ELAPSED TICKS.
+        gRend.puts("HPET Elapsed: ");
+        gRend.puts(to_string(gHPET.get()));
         gRend.crlf(debugInfoX);
         // PRINT MEMORY INFO.
         gRend.crlf(debugInfoX);
