@@ -71,6 +71,9 @@
  */
 
 struct Comparator {
+    /* 64-bit Comparator Width */
+    bool LargeCounterSupport;
+    /* Capable of providing a regular, repeating interrupt. */
     bool PeriodicCapable;
 };
 
@@ -84,6 +87,7 @@ public:
     void stop_main_counter();
 
     u64 get();
+    double get_seconds();
 
     void set_main_counter(u64 value);
     void reset_counter();

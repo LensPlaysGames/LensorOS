@@ -223,7 +223,7 @@ extern "C" void _start(BootInfo* bInfo) {
         gRend.crlf(debugInfoX);
         // PRINT HPET ELAPSED TICKS.
         gRend.puts("HPET Elapsed: ");
-        gRend.puts(to_string(gHPET.get()));
+        gRend.puts(to_string(gHPET.get_seconds()));
         gRend.crlf(debugInfoX);
         // PRINT MEMORY INFO.
         gRend.crlf(debugInfoX);

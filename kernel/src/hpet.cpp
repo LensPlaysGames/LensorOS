@@ -143,6 +143,10 @@ u64 HPET::get() {
     return result;
 }
 
+double HPET::get_seconds() {
+    return static_cast<double>(get()) / Frequency;
+}
+
 void HPET::set_main_counter(u64 value) {
     stop_main_counter();
     // FIXME: Another thread could lock in-between `stop_main_counter()`
@@ -168,6 +172,9 @@ void HPET::print_state() {
     srl->writestr("\r\n");
     srl->writestr("  PCI Vendor ID: 0x");
     srl->writestr(to_hexstring(Header->PCIvendorID));
+    srl->writestr("\r\n");
+    srl->writestr("  Main Counter Enabled: ");
+    srl->writestr(to_string(readl(HPET_REG_GENERAL_CONFIGURATION) & 1));
     srl->writestr("\r\n");
     srl->writestr("  64-bit Main Counter Support: ");
     srl->writestr(to_string(static_cast<u8>(LargeCounterSupport)));
