@@ -121,15 +121,42 @@ void draw_boot_gfx() {
 }
 
 void kernel_init(BootInfo* bInfo) {
+    /* 
+     *   - Prepare physical/virtual memory
+     *   - Load Global Descriptor Table
+     *   - Load Interrupt Descriptor Table
+     *   - Prepare the heap
+     *   - Setup output to the user (serial driver, graphical renderers).
+     *     - UARTDriver         -- serial output
+     *     - BasicRenderer      -- drawing graphics
+     *     - BasicTextRenderer  -- draw keyboard input on screen, keep track of text cursor, etc
+     *   - Setup basic timers
+     *     - Programmable Interval Timer (PIT)
+     *     - Real Time Clock (RTC)
+     *   - Prepare device drivers
+     *     - FATDriver  -- Filesystem driver
+     *   - Initialize ACPI (find System Descriptor Table (XSDT))
+     *   - Enumerate PCI devices
+     *   - Prepare devices
+     *     - High Precision Event Timer (HPET)
+     *     - PS2 Mouse
+     *   - Setup scheduler (TSS descriptor, task switching)
+     */
+
     // Disable interrupts (with no IDT, not much was happening anyway).
     asm ("cli");
+    // Parse memory map passed by bootloader.
+    prepare_memory(bInfo);
     // Prepare Global Descriptor Table Descriptor.
     GDTDescriptor GDTD = GDTDescriptor(sizeof(GDT) - 1, (u64)&gGDT);
     LoadGDT(&GDTD);
-    // Parse memory map passed by bootloader.
-    prepare_memory(bInfo);
+    // Prepare Interrupt Descriptor Table.
+    prepare_interrupts();
     // Setup dynamic memory allocation.
     init_heap((void*)0x700000000000, 1);
+    // Setup random number generators.
+    gRandomLCG = LCG();
+    gRandomLFSR = LFSR();
     // Setup serial input/output.
     srl = new UARTDriver;
     srl->writestr("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
@@ -173,10 +200,8 @@ void kernel_init(BootInfo* bInfo) {
     gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
     srl->writestr("    \033[32msetup successful\033[0m\r\n");
     draw_boot_gfx();
-    // Prepare Interrupt Descriptor Table.
-    srl->writestr("[kUtil]: Preparing interrupts.\r\n");
-    prepare_interrupts();
-    srl->writestr("    \033[32mInterrupts prepared successfully.\033[0m\r\n");
+    // Create basic text renderer for the keyboard.
+    Keyboard::gText = Keyboard::BasicTextRenderer();
     // Initialize the Programmable Interval Timer.
     gPIT = PIT();
     srl->writestr("[kUtil]: Programmable Interval Timer initialized.\r\n");
@@ -216,17 +241,11 @@ void kernel_init(BootInfo* bInfo) {
     prepare_pci();
     srl->writestr("[kUtil]: \033[32mPCI prepared\033[0m.\r\n");
     // Initialize High Precision Event Timer.
-    if (gHPET.initialize())
-        srl->writestr("[kUtil]: \033[32mHPET initialized\033[0m.\r\n");
+    (void)gHPET.initialize();
     // Prepare PS2 mouse.
     init_ps2_mouse();
     // Setup task state segment for eventual switch to user-land.
     TSS::initialize();
-    // Create basic text renderer for the keyboard.
-    Keyboard::gText = Keyboard::BasicTextRenderer();
-    // Setup random number generators.
-    gRandomLCG = LCG();
-    gRandomLFSR = LFSR();
     // Use kernel process switching.
     Scheduler::initialize(gPTM.PML4);
     // Enable IRQ interrupts that will be used.
