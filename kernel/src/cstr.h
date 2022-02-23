@@ -9,6 +9,8 @@
  */
 bool strcmp(const char* a, const char* b, u64 length);
 
+const char* to_string(bool);
+
 char* to_string(u64);
 char* to_string(u32);
 char* to_string(u16);

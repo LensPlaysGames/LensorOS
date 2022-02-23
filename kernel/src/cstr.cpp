@@ -11,6 +11,12 @@ bool strcmp(const char* a, const char* b, u64 length) {
     return true;
 }
 
+const char* t = "True";
+const char* f = "False";
+const char* to_string(bool b) {
+    return b ? t : f;
+}
+
 char uint_to_str_buf[20];
 char* to_string(u64 value) {
     // Get necessary string length.
