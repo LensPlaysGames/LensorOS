@@ -80,6 +80,7 @@ HEADERS
     src/scheduler.h
     src/smart_pointer.h
     src/spinlock.h
+    src/tss.h
     src/uart.h
 )
 
@@ -118,6 +119,7 @@ SOURCES
     src/rtc.cpp
     src/scheduler.cpp
     src/spinlock.cpp
+    src/tss.cpp
     src/uart.cpp
 )
 

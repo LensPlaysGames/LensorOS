@@ -119,10 +119,6 @@ void draw_boot_gfx() {
     gRend.swap();
 }
 
-TSSEntry tss_entry;
-// 'tss' USED IN 'src/userswitch.asm' AS EXTERNAL SYMBOL.
-void* tss;
-
 void kernel_init(BootInfo* bInfo) {
     // Disable interrupts (with no IDT, not much was happening anyway).
     asm ("cli");
@@ -176,13 +172,11 @@ void kernel_init(BootInfo* bInfo) {
     gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
     srl->writestr("    \033[32msetup successful\033[0m\r\n");
     draw_boot_gfx();
-    // PREPARE HARDWARE INTERRUPTS (IDT).
-    // IDT = INTERRUPT DESCRIPTOR TABLE.
-    // Call assembly `lidt`.
+    // Prepare Interrupt Descriptor Table.
     srl->writestr("[kUtil]: Preparing interrupts.\r\n");
     prepare_interrupts();
     srl->writestr("    \033[32mInterrupts prepared successfully.\033[0m\r\n");
-    // SYSTEM TIMER.
+    // Initialize the Programmable Interval Timer.
     gPIT = PIT();
     srl->writestr("[kUtil]: Programmable Interval Timer initialized.\r\n");
     srl->writestr("  Channel 0, H/L Bit Access\r\n");
@@ -190,14 +184,14 @@ void kernel_init(BootInfo* bInfo) {
     srl->writestr("  Periodic interrupts at ");
     srl->writestr(to_string(PIT_FREQUENCY));
     srl->writestr("hz.\r\n");
-    // INITIALIZE REAL TIME CLOCK.
+    // Initialize the Real Time Clock.
     gRTC = RTC();
-    srl->writestr("[kUtil]: Real Time Clock initialized.\r\n");
     gRTC.set_periodic_int_enabled(true);
-    srl->writestr("  Periodic interrupts at ");
+    srl->writestr("[kUtil]: Real Time Clock initialized.\r\n");
+    srl->writestr("  Periodic interrupts enabled at ");
     srl->writestr(to_string((double)RTC_PERIODIC_HERTZ));
     srl->writestr("hz\r\n");
-    // PRINT REAL TIME TO SERIAL OUTPUT.
+    // Print real time to serial output.
     srl->writestr("[kUtil]: \033[1;33mNow is ");
     srl->writestr(to_string(gRTC.Time.hour));
     srl->writeb(':');
@@ -211,32 +205,22 @@ void kernel_init(BootInfo* bInfo) {
     srl->writeb('-');
     srl->writestr(to_string(gRTC.Time.date));
     srl->writestr("\033[0m\r\n");
-    // PREPARE DRIVERS.
+    // Prepare filesystem drivers.
     gFATDriver = FATDriver();
-    srl->writestr("[kUtil]: \033[32mFilesystem drivers created successfully.\033[0m\r\n");
-    // INITIALIZE ADVANCED CONFIGURATION AND POWER MANAGEMENT INTERFACE.
+    srl->writestr("[kUtil]: \033[32mFilesystem drivers prepared successfully\033[0m\r\n");
+    // Initialize Advanced Configuration and Power Management Interface.
     ACPI::initialize(bInfo->rsdp);
-    srl->writestr("[kUtil]: ACPI prepared.\r\n");
-    // PCI ENUMERATION.
+    srl->writestr("[kUtil]: \033[32mACPI initialized\033[0m\r\n");
+    // Enumerate PCI (find hardware devices).
     prepare_pci();
-    srl->writestr("[kUtil]: PCI prepared.\r\n");
-    // INITIALIZE HIGH PRECISION EVENT TIMER.
-    gHPET.initialize();
-    // PREPARE PS/2 MOUSE.
+    srl->writestr("[kUtil]: \033[32mPCI prepared\033[0m.\r\n");
+    // Initialize High Precision Event Timer.
+    if (gHPET.initialize())
+        srl->writestr("[kUtil]: \033[32mHPET initialized\033[0m.\r\n");
+    // Prepare PS2 mouse.
     init_ps2_mouse();
-    // SETUP TASK STATE SEGMENT ENTRY FOR EVENTUAL SWITCH TO USERLAND.
-    memset((void*)&tss_entry, 0, sizeof(TSSEntry));
-    u32 limit = sizeof(TSSEntry) - 1;
-    u64 base = (u64)&tss_entry;
-    gGDT.TSS.Entry.Limit0 = limit;
-    u8 flags = gGDT.TSS.Entry.Limit1_Flags;
-    gGDT.TSS.Entry.Limit1_Flags = limit >> 16;
-    gGDT.TSS.Entry.Limit1_Flags |= flags;
-    gGDT.TSS.Entry.Base0 = base;
-    gGDT.TSS.Entry.Base1 = base >> 16;
-    gGDT.TSS.Entry.Base2 = base >> 24;
-    gGDT.TSS.Base3 = base >> 32;
-    tss = (void*)&tss_entry;
+    // Setup task state segment for eventual switch to user-land.
+    TSS::initialize();
     // BASIC KEYBOARD HANDLER
     Keyboard::gText = Keyboard::BasicTextRenderer();
     // SETUP RANDOM NUMBER GENERATOR(S)

@@ -1,6 +1,8 @@
 #ifndef LENSOR_OS_TSS_H
 #define LENSOR_OS_TSS_H
 
+#include "integers.h"
+
 struct TSSEntry {
     u32 Reserved0;
     u32 l_RSP0;
@@ -28,6 +30,10 @@ struct TSSEntry {
     u16 Reserved3;
     u16 IOMapBaseAddress;
 } __attribute__((packed));
+
+namespace TSS {
+    void initialize();
+}
 
 extern "C" void jump_to_userland_function(void);
 
