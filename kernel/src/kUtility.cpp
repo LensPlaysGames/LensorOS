@@ -77,7 +77,7 @@ void prepare_interrupts() {
     gIDT.install_handler((u64)irq0_handler,                     PIC_IRQ0);
     gIDT.install_handler((u64)keyboard_handler,                 PIC_IRQ1);
     gIDT.install_handler((u64)uart_com1_handler,                PIC_IRQ4);
-    gIDT.install_handler((u64)rtc_periodic_handler,             PIC_IRQ8);
+    gIDT.install_handler((u64)rtc_handler,                      PIC_IRQ8);
     gIDT.install_handler((u64)mouse_handler,                    PIC_IRQ12);
     gIDT.install_handler((u64)divide_by_zero_handler,           0x00);
     gIDT.install_handler((u64)double_fault_handler,             0x08);
