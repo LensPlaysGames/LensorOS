@@ -74,7 +74,8 @@ void prepare_interrupts() {
     // CREATE INTERRUPT DESCRIPTOR TABLE.
     gIDT = IDTR(0x0fff, (u64)gAlloc.request_page());
     // POPULATE TABLE.
-    gIDT.install_handler((u64)irq0_handler,                     PIC_IRQ0);
+    // NOTE: IRQ0 uses this handler by default, but scheduler over-rides this!
+    gIDT.install_handler((u64)system_timer_handler,             PIC_IRQ0);
     gIDT.install_handler((u64)keyboard_handler,                 PIC_IRQ1);
     gIDT.install_handler((u64)uart_com1_handler,                PIC_IRQ4);
     gIDT.install_handler((u64)rtc_handler,                      PIC_IRQ8);
@@ -221,12 +222,12 @@ void kernel_init(BootInfo* bInfo) {
     init_ps2_mouse();
     // Setup task state segment for eventual switch to user-land.
     TSS::initialize();
-    // BASIC KEYBOARD HANDLER
+    // Create basic text renderer for the keyboard.
     Keyboard::gText = Keyboard::BasicTextRenderer();
-    // SETUP RANDOM NUMBER GENERATOR(S)
+    // Setup random number generators.
     gRandomLCG = LCG();
     gRandomLFSR = LFSR();
-    // USE KERNEL PROCESS SWITCHING
+    // Use kernel process switching.
     Scheduler::initialize(gPTM.PML4);
     /// INTERRUPT MASKS (IRQs).
     /// 0 = UNMASKED, ALLOWED TO HAPPEN

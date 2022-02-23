@@ -1,6 +1,7 @@
 #include "scheduler.h"
 
 #include "cstr.h"
+#include "interrupts/idt.h"
 #include "memory.h"
 #include "pit.h"
 #include "uart.h"
@@ -42,4 +43,6 @@ void Scheduler::initialize(PageTable* bootPageMap) {
     // Setup start process as current executing code.
     StartupProcess.CR3 = bootPageMap;
     StartupProcess.Next = nullptr;
+    // Install IRQ0 handler found in `scheduler.asm` (over-write default system timer handler).
+    gIDT.install_handler((u64)irq0_handler, PIC_IRQ0);
 }

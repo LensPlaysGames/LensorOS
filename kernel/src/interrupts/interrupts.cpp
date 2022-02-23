@@ -34,6 +34,12 @@ void cause_general_protection() {
 }
 
 // HARDWARE INTERRUPT HANDLERS (IRQs)
+/// IRQ0: SYSTEM TIMER
+__attribute__((interrupt)) void system_timer_handler(InterruptFrame* frame) {
+    gPIT.tick();
+    end_of_interrupt(0);
+}
+
 /// IRQ1: PS/2 KEYBOARD
 __attribute__((interrupt)) void keyboard_handler(InterruptFrame* frame) {
     Keyboard::gText.handle_scancode(in8(0x60));
