@@ -1,8 +1,58 @@
 #include "basic_renderer.h"
+
 #include "cstr.h"
+#include "paging/page_frame_allocator.h"
+#include "paging/page_table_manager.h"
+#include "uart.h"
 
 // Define global renderer for use anywhere within the kernel.
 BasicRenderer gRend;
+
+Framebuffer target;
+BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
+    : Render(render), Font(f)
+{
+    // Framebuffer supplied by GOP is in physical memory; map the
+    //   physical memory dedicated to the framebuffer into virtual memory.
+
+    // Calculate size of framebuffer in pages.
+    u64 fbBase = (u64)render->BaseAddress;
+    u64 fbSize = render->BufferSize + 0x1000;
+    u64 fbPages = fbSize / 0x1000 + 1;
+    // Allocate physical pages for Render framebuffer.
+    gAlloc.lock_pages(render->BaseAddress, fbPages);
+    // Map active framebuffer physical address to virtual addresses 1:1.
+    for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
+        gPTM.map_memory((void*)t, (void*)t);
+
+    srl->writestr("  Active GOP framebuffer mapped to 0x");
+    srl->writestr(to_hexstring(fbBase));
+    srl->writestr(" thru ");
+    srl->writestr(to_hexstring(fbBase + fbSize));
+    srl->writestr("\r\n");
+    
+    // Create a new framebuffer. This memory is what will be drawn to.
+    // When the screen should be updated, this new framebuffer is copied into the active one.
+    // This helps performance as the active framebuffer is very slow to read/write from.
+    // Copy render framebuffer data to target.
+    target = *render;
+    // Find physical pages for target framebuffer and allocate them.
+    target.BaseAddress = gAlloc.request_pages(fbPages);
+    fbBase = (u64)target.BaseAddress;
+    for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
+        gPTM.map_memory((void*)t, (void*)t);
+
+    srl->writestr("  Deferred GOP framebuffer mapped to 0x");
+    srl->writestr(to_hexstring(fbBase));
+    srl->writestr(" thru ");
+    srl->writestr(to_hexstring(fbBase + fbSize));
+    srl->writestr("\r\n");
+
+    Target = &target;
+
+    clear();
+    swap();
+}
 
 inline void BasicRenderer::clamp_draw_position() {
     if (DrawPos.x > Target->PixelWidth)

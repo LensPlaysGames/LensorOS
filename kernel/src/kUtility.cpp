@@ -102,7 +102,6 @@ TSSEntry tss_entry;
 // 'tss' USED IN 'src/userswitch.asm' AS EXTERNAL SYMBOL.
 void* tss;
 
-Framebuffer target;
 void kernel_init(BootInfo* bInfo) {
     // Disable interrupts (with no IDT, not much was happening anyway).
     asm ("cli");
@@ -153,39 +152,11 @@ void kernel_init(BootInfo* bInfo) {
     srl->writestr("\r\n");
     // Create basic framebuffer renderer.
     srl->writestr("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
-    target = *bInfo->framebuffer;
-    u64 fbBase = (u64)bInfo->framebuffer->BaseAddress;
-    u64 fbSize = bInfo->framebuffer->BufferSize + 0x1000;
-    u64 fbPages = fbSize / 0x1000 + 1;
-    // ALLOCATE PAGES IN BITMAP FOR ACTIVE FRAMEBUFFER (CURRENT DISPLAY MEMORY).
-    gAlloc.lock_pages(bInfo->framebuffer->BaseAddress, fbPages);
-    // Map active framebuffer physical address to virtual addresses 1:1.
-    for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
-        gPTM.map_memory((void*)t, (void*)t);
-
-    srl->writestr("  Active GOP framebuffer mapped to 0x");
-    srl->writestr(to_hexstring(fbBase));
-    srl->writestr(" thru ");
-    srl->writestr(to_hexstring(fbBase + fbSize));
-    srl->writestr("\r\n");
-    // ALLOCATE PAGES IN BITMAP FOR TARGET FRAMEBUFFER (ARBITRARY WRITE).
-    target.BaseAddress = gAlloc.request_pages(fbPages);
-    fbBase = (u64)target.BaseAddress;
-    for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
-        gPTM.map_memory((void*)t, (void*)t);
-
-    srl->writestr("  Deferred GOP framebuffer mapped to 0x");
-    srl->writestr(to_hexstring(fbBase));
-    srl->writestr(" thru ");
-    srl->writestr(to_hexstring(fbBase + fbSize));
-    srl->writestr("\r\n");
-    // CREATE GLOBAL RENDERER
-    gRend = BasicRenderer(bInfo->framebuffer, &target, bInfo->font);
-    gRend.clear();
+    gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
+    srl->writestr("    \033[32msetup successful\033[0m\r\n");
     gRend.puts("<<>><<<!===--- You are now booting into LensorOS ---===!>>><<>>");
     gRend.crlf();
     gRend.swap();
-    srl->writestr("    \033[32mGOP Renderer setup successful\033[0m\r\n");
     // DRAW A FACE :)
     // left eye
     gRend.DrawPos = {420, 420};

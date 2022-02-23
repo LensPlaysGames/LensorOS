@@ -45,11 +45,7 @@ public:
     u32 BackgroundColor {0x00000000};
 
     BasicRenderer() {}
-    BasicRenderer(Framebuffer* render, Framebuffer* target, PSF1_FONT* f) {
-        Render = render;
-        Target = target;
-        Font = f;
-    }
+    BasicRenderer(Framebuffer* render, PSF1_FONT* f);
 
     /// ENSURE DRAW POSITION IS WITHIN FRAMEBUFFER.
     void clamp_draw_position();
