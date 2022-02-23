@@ -2,7 +2,7 @@
 
 #include "integers.h"
 
-void out8(u16 port, uint8_t value) {
+void out8(u16 port, u8 value) {
     asm volatile ("outb %0, %1" : : "a"(value), "Nd"(port));
 }
 
@@ -33,5 +33,6 @@ u32 in32(u16 port) {
 }
 
 void io_wait() {
+    // Port 0x80 -- Unused port that is safe to read/write
     asm volatile ("outb %%al, $0x80" : : "a"(0));
 }
