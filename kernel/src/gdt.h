@@ -6,6 +6,10 @@
 struct GDTDescriptor {
     u16 Size;
     u64 Offset;
+
+    GDTDescriptor() {}
+    GDTDescriptor(u16 size, u64 offset)
+        : Size(size), Offset(offset) {}
 } __attribute__((packed));
 
 /// Info taken from "Section 3.4.5: Segment Descriptors" and

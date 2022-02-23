@@ -104,19 +104,16 @@ void* tss;
 
 Framebuffer target;
 void kernel_init(BootInfo* bInfo) {
-    // DISABLE INTERRUPTS.
+    // Disable interrupts (with no IDT, not much was happening anyway).
     asm ("cli");
-    // SETUP GDT DESCRIPTOR.
-    GDTDescriptor GDTD = GDTDescriptor();
-    GDTD.Size = sizeof(GDT) - 1;
-    GDTD.Offset = (u64)&gGDT;
-    // Call assembly `lgdt`.
+    // Prepare Global Descriptor Table Descriptor.
+    GDTDescriptor GDTD = GDTDescriptor(sizeof(GDT) - 1, (u64)&gGDT);
     LoadGDT(&GDTD);
-    // PREPARE MEMORY.
+    // Parse memory map passed by bootloader.
     prepare_memory(bInfo);
-    // SETUP KERNEL HEAP.
+    // Setup dynamic memory allocation.
     init_heap((void*)0x700000000000, 1);
-    // SETUP SERIAL I/O.
+    // Setup serial input/output.
     srl = new UARTDriver;
     srl->writestr("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
     srl->writestr("[kUtil]: Mapped physical memory from 0x");
@@ -154,8 +151,7 @@ void kernel_init(BootInfo* bInfo) {
     srl->writestr(" thru 0x");
     srl->writestr(to_hexstring((u64)sHeapEnd));
     srl->writestr("\r\n");
-    // SETUP GOP RENDERER.
-    // GOP = Graphics Output Protocol.
+    // Create basic framebuffer renderer.
     srl->writestr("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
     target = *bInfo->framebuffer;
     u64 fbBase = (u64)bInfo->framebuffer->BaseAddress;
