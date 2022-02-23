@@ -2,7 +2,7 @@
 
     ;; External symbols provided in `scheduler.h` && `scheduler.cpp`
     ;; A pointer to task switching handler function.
-    extern scheduler_switch_task
+    extern scheduler_switch_func
     ;; Total amount of times IRQ0 has been called since boot.
     extern timer_ticks
 
@@ -47,7 +47,7 @@ irq0_handler:
     mov [timer_ticks], rax
 ;;; CALL C++ FUNCTION; ARGUMENT IN `rdi`
     mov rdi, rsp
-    call [scheduler_switch_task]
+    call [scheduler_switch_func]
 ;;; END INTERRUPT
     mov ax, 0x20
     out 0x20, ax

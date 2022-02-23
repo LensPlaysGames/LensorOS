@@ -50,30 +50,29 @@ struct KernelProcess {
     KernelProcess* Next;
 };
 
+// The proess that acts as the beginning thread.
 extern KernelProcess StartupProcess;
 
-namespace Scheduler {
+/// The scheduler handles multi-tasking within the kernel.
+class Scheduler {
     /* TODO:
      * |- load_binary() that will read a flat binary and add it to process list.
      * `- load_elf() that will read an elf executable and add it to process list.
      */
-
-    // ProcessQueue and CurrentProcess can NOT be a
-    //   nullptr, or things will definitely break.
-    extern KernelProcess* ProcessQueue;
-    extern KernelProcess* CurrentProcess;
-
-    void add_task(KernelProcess*);
-    
+public:
+    static void initialize(PageTable*);
     /* Switch to the next available task.
      * | Called by IRQ0 Handler (System Timer Interrupt).
      * |- Copy registers saved from IRQ0 to current process.
      * |- Update current process to next available process.
      * `- Manipulate stack to trick `iretq` into doing what we want.
      */
-    void switch_task(CPUState*);
+    static void switch_process(CPUState*);
+    static void add_kernel_process(KernelProcess*);
 
-    void Initialize(PageTable*);
+private:
+    static KernelProcess* ProcessQueue;
+    static KernelProcess* CurrentProcess;
 };
 
 #endif

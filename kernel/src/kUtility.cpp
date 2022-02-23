@@ -184,7 +184,6 @@ void kernel_init(BootInfo* bInfo) {
     srl->writestr("    \033[32mInterrupts prepared successfully.\033[0m\r\n");
     // SYSTEM TIMER.
     gPIT = PIT();
-    gPIT.initialize_pit();
     srl->writestr("[kUtil]: Programmable Interval Timer initialized.\r\n");
     srl->writestr("  Channel 0, H/L Bit Access\r\n");
     srl->writestr("  Rate Generator, BCD Disabled\r\n");
@@ -244,7 +243,7 @@ void kernel_init(BootInfo* bInfo) {
     gRandomLCG = LCG();
     gRandomLFSR = LFSR();
     // USE KERNEL PROCESS SWITCHING
-    Scheduler::Initialize(gPTM.PML4);
+    Scheduler::initialize(gPTM.PML4);
     /// INTERRUPT MASKS (IRQs).
     /// 0 = UNMASKED, ALLOWED TO HAPPEN
     /// System Timer, PS/2 Keyboard, Slave PIC enabled, UART

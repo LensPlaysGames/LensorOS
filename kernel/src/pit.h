@@ -1,5 +1,5 @@
-#ifndef LENSOR_OS_TIMER_H
-#define LENSOR_OS_TIMER_H
+#ifndef LENSOR_OS_PIT_H
+#define LENSOR_OS_PIT_H
 
 #include "integers.h"
 #include "io.h"
@@ -40,18 +40,24 @@
 //   1 0 =      channel 2
 //   1 1 =      read-back command (8254 only)
 
+class Scheduler;
+
 class PIT {
+    friend class Scheduler;
+
 public:
-    u64 Ticks {0};
+    PIT();
 
-    PIT() {}
+    void tick() { Ticks += 1; }
 
-    void initialize_pit();
-
+    u64 get() { return Ticks; }
     double seconds_since_boot();
+
+private:
+    u64 Ticks { 0 };
 };
 
 // TODO: Store in device tree.
 extern PIT gPIT;
 
-#endif
+#endif /* LENSOR_OS_PIT_H */

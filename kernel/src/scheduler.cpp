@@ -6,15 +6,15 @@
 #include "uart.h"
 
 // External symbols for `scheduler.asm`
-void* scheduler_switch_task;
+void* scheduler_switch_func;
 u64* timer_ticks;
 
 KernelProcess StartupProcess;
 
-KernelProcess* Scheduler::ProcessQueue   { &StartupProcess };
-KernelProcess* Scheduler::CurrentProcess { &StartupProcess };
+KernelProcess* Scheduler::ProcessQueue   { nullptr };
+KernelProcess* Scheduler::CurrentProcess { nullptr };
 
-void Scheduler::add_task(KernelProcess* process) {
+void Scheduler::add_kernel_process(KernelProcess* process) {
     KernelProcess* last = ProcessQueue;
     while (CurrentProcess->Next != nullptr) {
         last = CurrentProcess->Next;
@@ -23,7 +23,7 @@ void Scheduler::add_task(KernelProcess* process) {
 }
 
 /// Called from System Timer Interrupt (IRQ0)
-void Scheduler::switch_task(CPUState* cpu) {
+void Scheduler::switch_process(CPUState* cpu) {
     memcpy(&cpu, &CurrentProcess->CPU, sizeof(CPUState));
     if (CurrentProcess->Next == nullptr)
         CurrentProcess = ProcessQueue;
@@ -32,10 +32,13 @@ void Scheduler::switch_task(CPUState* cpu) {
     asm volatile ("mov %0, %%cr3" : : "r" (CurrentProcess->CR3));
 }
 
-void Scheduler::Initialize(PageTable* bootPageMap) {
-    // Setup external symbols.
+void Scheduler::initialize(PageTable* bootPageMap) {
+    ProcessQueue = &StartupProcess;
+    CurrentProcess = &StartupProcess;
+    // IRQ handler in assembly needs to increment PIT ticks counter.
     timer_ticks = &gPIT.Ticks;
-    scheduler_switch_task = (void*)&switch_task;
+    // IRQ handler in assembly needs to call a function to switch process.
+    scheduler_switch_func = (void*)switch_process;
     // Setup start process as current executing code.
     StartupProcess.CR3 = bootPageMap;
     StartupProcess.Next = nullptr;

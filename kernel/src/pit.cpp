@@ -2,7 +2,7 @@
 
 PIT gPIT;
 
-void PIT::initialize_pit() {
+PIT::PIT() {
     /// Configure PIT:
     ///   Channel 0
     ///   H/L Bit Access
@@ -13,7 +13,7 @@ void PIT::initialize_pit() {
     out8(PIT_CH0_DAT, (u8) ((u16)PIT_DIVISOR & 0x00ff));
     out8(PIT_CH0_DAT, (u8)(((u16)PIT_DIVISOR & 0xff00) >> 8));
 }
-        
+
 double PIT::seconds_since_boot() {
     return (double)Ticks / PIT_FREQUENCY;
 }
