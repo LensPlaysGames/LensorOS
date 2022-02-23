@@ -29,6 +29,7 @@ Interrupts PRIVATE
 
 add_library(
 Assembly
+    src/cpuid.asm
     src/gdt.asm
     src/interrupts/syscalls.asm
     src/scheduler.asm
@@ -45,6 +46,7 @@ HEADERS
     src/ahci.h
     src/basic_renderer.h
     src/bitmap.h
+    src/cpuid.h
     src/cstr.h
     src/efi_memory.h
     src/fat_driver.h
@@ -90,6 +92,7 @@ SOURCES
     src/ahci.cpp
     src/basic_renderer.cpp
     src/bitmap.cpp
+    src/cpuid.cpp
     src/cstr.cpp
     src/efi_memory.cpp
     src/fat_driver.cpp
