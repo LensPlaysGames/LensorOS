@@ -37,7 +37,7 @@ void LFSR::next() {
     ShiftRegister[128 / 8 - 1] |= newbit;
 }
 
-// `index` counts from right side (big-endian).
+// `index` counts from right side.
 bool LFSR::get_bit(u8 index) {
     return (ShiftRegister[index / 8] & (0b00000001 << (index % 8))) > 0;
 }
@@ -48,12 +48,7 @@ u8 LFSR::get_bit_value(u8 index) {
 
 u64 LFSR::get() {
     u64 result { 0 };
-    for(u8 i = 0; i < 128; ++i) {
-        if (get_bit(0))
-            result |= 1;
-        else result &= 0b1111111111111111111111111111111111111111111111111111111111111110;
-
-        next();
+    for(u8 i = 0; i < 64; ++i) {
         if (get_bit(0))
             result |= 1;
 
