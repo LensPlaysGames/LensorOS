@@ -42,10 +42,26 @@ struct GDTEntry {
     u8 Limit1_Flags;
     /// Base 31:24
     u8 Base2;
+
+    // Limit is 20 bits and spread across two variables.
+    // This helper function makes it easy to set the limit.
+    void set_limit(u32 limit) {
+        u8 flags = Limit1_Flags;
+        Limit0 = limit;
+        Limit1_Flags = limit >> 16;
+        Limit1_Flags |= flags;
+    }
+
+    // Base is 32 bits and spread across three variables.
+    // This helper function makes it easy to set the base address.
+    void set_base(u32 base) {
+        Base0 = base;
+        Base1 = base >> 16;
+        Base2 = base >> 24;
+    }
 } __attribute__((packed));
 
-struct TSS_GDTEntry {
-    GDTEntry Entry;
+struct TSS_GDTEntry : public GDTEntry {
     /// Base 63:32
     u32 Base3;
     u32 Reserved;
