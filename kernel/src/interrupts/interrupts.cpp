@@ -209,6 +209,41 @@ __attribute__((interrupt)) void general_protection_fault_handler(InterruptFrame*
     }
 }
 
+__attribute__((interrupt)) void simd_exception_handler(InterruptFrame* frame) {
+    // NOTE: Data about why exception occurred can be found in MXCSR register.
+    /* 0b00000000
+     *          =   -- invalid operation flag
+     *         =    -- denormal flag
+     *        =     -- divide-by-zero flag
+     *       =      -- overflow flag
+     *      =       -- underflow flag
+     *     =        -- precision flag
+     *    =         -- denormals are zeros flag
+     */
+
+    u32 mxcsr { 0 };
+    asm volatile ("ldmxcsr %0"::"m"(mxcsr));
+
+    if (mxcsr & 0b00000001)
+        panic(frame, "Single instruction, multiple data fault detected (Invalid Operation)!");
+    else if (mxcsr & 0b00000010)
+        panic(frame, "Single instruction, multiple data fault detected (Denormal)!");
+    else if (mxcsr & 0b00000100)
+        panic(frame, "Single instruction, multiple data fault detected (Divide by Zero)!");
+    else if (mxcsr & 0b00001000)
+        panic(frame, "Single instruction, multiple data fault detected (Overflow)!");
+    else if (mxcsr & 0b00010000)
+        panic(frame, "Single instruction, multiple data fault detected (Underflow)!");
+    else if (mxcsr & 0b00100000)
+        panic(frame, "Single instruction, multiple data fault detected (Precision)!");
+    else if (mxcsr & 0b01000000)
+        panic(frame, "Single instruction, multiple data fault detected (Denormals are Zero)!");
+
+    while (true) {
+        asm ("hlt");
+    }
+}
+
 void remap_pic() {
     // SAVE INTERRUPT MASKS.
     u8 masterMasks;

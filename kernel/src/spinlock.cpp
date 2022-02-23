@@ -5,7 +5,7 @@ bool SpinlockLocker::compare_and_swap_lock() {
      * |- Desc:
      * |  |- `lock`                  -- Ensures that the following instruction runs atomically.
      * |  |- `cmpxchg <op0>, <op1>`  -- Compare 'A' register with <op0>; if equal, swap <op1> and <op0>.
-     * |  |- `sete <op0>`            -- Assign <op0> to the 'equal' flag of the CPU (ZF==1).
+     * |  `- `sete <op0>`            -- Assign <op0> to the 'equal' flag of the CPU (ZF==1).
      * |- Outputs:
      * |  |- "=q"  -- Write-only low-byte-accessible register; return value
      * |  `- "=m"  -- Write-only memory address; lock flag

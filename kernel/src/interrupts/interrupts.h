@@ -92,12 +92,13 @@ __attribute__((interrupt)) void keyboard_handler     (InterruptFrame*);
 __attribute__((interrupt)) void uart_com1_handler    (InterruptFrame*);
 __attribute__((interrupt)) void rtc_handler          (InterruptFrame*);
 __attribute__((interrupt)) void mouse_handler        (InterruptFrame*);
-// FAULT/TRAP HANDLING
+// EXCEPTION HANDLING
 __attribute__((interrupt)) void divide_by_zero_handler           (InterruptFrame*);
 __attribute__((interrupt)) void double_fault_handler             (InterruptFrame*, u64);
 __attribute__((interrupt)) void stack_segment_fault_handler      (InterruptFrame*, u64);
 __attribute__((interrupt)) void general_protection_fault_handler (InterruptFrame*, u64);
 __attribute__((interrupt)) void page_fault_handler               (InterruptFrame*, u64);
+__attribute__((interrupt)) void simd_exception_handler           (InterruptFrame*);
 
 // HELPER FUNCTIONS TO TRIGGER HANDLERS FOR TESTING
 void cause_div_by_zero(u8 one = 1);
