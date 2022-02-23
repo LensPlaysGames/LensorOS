@@ -98,6 +98,27 @@ void prepare_pci() {
     }
 }
 
+void draw_boot_gfx() {
+    gRend.puts("<<>><<<!===--- You are now booting into LensorOS ---===!>>><<>>");
+    // DRAW A FACE :)
+    // left eye
+    gRend.DrawPos = {420, 420};
+    gRend.drawrect({42, 42}, 0xff00ffff);
+    // left pupil
+    gRend.DrawPos = {440, 440};
+    gRend.drawrect({20, 20}, 0xffff0000);
+    // right eye
+    gRend.DrawPos = {520, 420};
+    gRend.drawrect({42, 42}, 0xff00ffff);
+    // right pupil
+    gRend.DrawPos = {540, 440};
+    gRend.drawrect({20, 20}, 0xffff0000);
+    // mouth
+    gRend.DrawPos = {400, 520};
+    gRend.drawrect({182, 20}, 0xff00ffff);
+    gRend.swap();
+}
+
 TSSEntry tss_entry;
 // 'tss' USED IN 'src/userswitch.asm' AS EXTERNAL SYMBOL.
 void* tss;
@@ -154,26 +175,7 @@ void kernel_init(BootInfo* bInfo) {
     srl->writestr("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
     gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
     srl->writestr("    \033[32msetup successful\033[0m\r\n");
-    gRend.puts("<<>><<<!===--- You are now booting into LensorOS ---===!>>><<>>");
-    gRend.crlf();
-    gRend.swap();
-    // DRAW A FACE :)
-    // left eye
-    gRend.DrawPos = {420, 420};
-    gRend.drawrect({42, 42}, 0xff00ffff);
-    // left pupil
-    gRend.DrawPos = {440, 440};
-    gRend.drawrect({20, 20}, 0xffff0000);
-    // right eye
-    gRend.DrawPos = {520, 420};
-    gRend.drawrect({42, 42}, 0xff00ffff);
-    // right pupil
-    gRend.DrawPos = {540, 440};
-    gRend.drawrect({20, 20}, 0xffff0000);
-    // mouth
-    gRend.DrawPos = {400, 520};
-    gRend.drawrect({182, 20}, 0xff00ffff);
-    gRend.swap({400, 420}, {182, 120});
+    draw_boot_gfx();
     // PREPARE HARDWARE INTERRUPTS (IDT).
     // IDT = INTERRUPT DESCRIPTOR TABLE.
     // Call assembly `lidt`.
