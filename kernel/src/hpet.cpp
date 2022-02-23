@@ -179,11 +179,11 @@ void HPET::print_state() {
     srl->writestr("  Main Counter Enabled: ");
     srl->writestr(to_string(readl(HPET_REG_GENERAL_CONFIGURATION) & 1));
     srl->writestr("\r\n");
-    srl->writestr("  64-bit Main Counter Support: ");
-    srl->writestr(to_string(static_cast<u8>(LargeCounterSupport)));
+    srl->writestr("  Supports 64-bit Main Counter: ");
+    srl->writestr(to_string(LargeCounterSupport));
     srl->writestr("\r\n");
-    srl->writestr("  Legacy Interrupt Mapping Support: ");
-    srl->writestr(to_string(static_cast<u8>(LegacyInterruptSupport)));
+    srl->writestr("  Supports Legacy Interrupt Mapping: ");
+    srl->writestr(to_string(LegacyInterruptSupport));
     srl->writestr("\r\n");
     srl->writestr("  Base Address: 0x");
     srl->writestr(to_hexstring(Header->Address.Address));
