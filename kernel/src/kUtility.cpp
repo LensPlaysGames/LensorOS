@@ -37,8 +37,9 @@ void prepare_memory(BootInfo* bInfo) {
     // Setup memory state from EFI memory map.
     gAlloc.read_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     // _KernelStart and _KernelEnd defined in linker script "../kernel.ld"
-    u64 kernelPagesNeeded = (((u64)&_KernelEnd - (u64)&_KernelStart) / 4096) + 1;
-    gAlloc.lock_pages(&_KernelStart, kernelPagesNeeded);
+    u64 kernelPagesNeeded = (((u64)&KERNEL_END - (u64)&KERNEL_START) / 4096) + 1;
+    // TODO: Map kernel to explicitly to virtual physical memory.
+    gAlloc.lock_pages(&KERNEL_START, kernelPagesNeeded);
     // PAGE MAP LEVEL FOUR (see paging.h).
     PageTable* PML4 = (PageTable*)gAlloc.request_page();
     // PAGE TABLE MANAGER
@@ -58,12 +59,6 @@ void prepare_memory(BootInfo* bInfo) {
      *   The Transition Lookaside Buffer (Virtual Address -> Physical Address HashMap)
      *     is hardware based in x86; by writing to CR3, it is flushed (reset to empty).
      *   A single TLB entry may be invalidated using the `INVLPG <addr>` instruction.
-     *
-     *   Most processes share most memory; this means (parts of) the page table 
-     *     may be shared until a thread tries to write to the memory. 
-     *   This will cause a copy to occur, and that thread will now have it's
-     *       own object, ensuring thread-safety.
-     *   This technique is called Copy On Write (COW).
      */
     asm ("mov %0, %%cr3" : : "r" (PML4));
 }
@@ -166,29 +161,29 @@ void kernel_init(BootInfo* bInfo) {
     srl->writestr(to_hexstring((u64)get_memory_size(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize)));
     srl->writestr("\r\n");
     srl->writestr("[kUtil]:\r\n  Kernel loaded from 0x");
-    srl->writestr(to_hexstring((u64)&_KernelStart));
+    srl->writestr(to_hexstring((u64)&KERNEL_START));
     srl->writestr(" to 0x");
-    srl->writestr(to_hexstring((u64)&_KernelEnd));
+    srl->writestr(to_hexstring((u64)&KERNEL_END));
     srl->writestr("\r\n");
     srl->writestr("    .text:   0x");
-    srl->writestr(to_hexstring((u64)&_TextStart));
+    srl->writestr(to_hexstring((u64)&TEXT_START));
     srl->writestr(" thru 0x");
-    srl->writestr(to_hexstring((u64)&_TextEnd));
+    srl->writestr(to_hexstring((u64)&TEXT_END));
     srl->writestr("\r\n");
     srl->writestr("    .data:   0x");
-    srl->writestr(to_hexstring((u64)&_DataStart));
+    srl->writestr(to_hexstring((u64)&DATA_START));
     srl->writestr(" thru 0x");
-    srl->writestr(to_hexstring((u64)&_DataEnd));
+    srl->writestr(to_hexstring((u64)&DATA_END));
     srl->writestr("\r\n");
     srl->writestr("    .rodata: 0x");
-    srl->writestr(to_hexstring((u64)&_ReadOnlyDataStart));
+    srl->writestr(to_hexstring((u64)&READ_ONLY_DATA_START));
     srl->writestr(" thru 0x");
-    srl->writestr(to_hexstring((u64)&_ReadOnlyDataEnd));
+    srl->writestr(to_hexstring((u64)&READ_ONLY_DATA_END));
     srl->writestr("\r\n");
     srl->writestr("    .bss:    0x");
-    srl->writestr(to_hexstring((u64)&_BlockStartingSymbolsStart));
+    srl->writestr(to_hexstring((u64)&BLOCK_STARTING_SYMBOLS_END));
     srl->writestr(" thru 0x");
-    srl->writestr(to_hexstring((u64)&_BlockStartingSymbolsEnd));
+    srl->writestr(to_hexstring((u64)&BLOCK_STARTING_SYMBOLS_END));
     srl->writestr("\r\n\r\n");
     srl->writestr("[kUtil]: Heap mapped to 0x");
     srl->writestr(to_hexstring((u64)sHeapStart));

@@ -1,38 +1,44 @@
 OUTPUT_FORMAT(elf64-x86-64)
 ENTRY(_start)
-
 SECTIONS
 {
-    _KernelStart = .;
-    .text : ALIGN(0x1000)
+    /* FIXME: Map kernel to something that isn't zero! */
+    KERNEL_VIRTUAL = 0x0;
+    . = KERNEL_VIRTUAL;
+    KERNEL_START = .;
+    .text : AT(ADDR(.text) - KERNEL_VIRTUAL)
     {
-    _TextStart = .;
+        TEXT_START = .;
         *(.text)
-    _TextEnd = .;
+        TEXT_END = .;
+        . = ALIGN(0x1000);
     }
 
-    .data : ALIGN(0x1000)
+    .data : AT(ADDR(.data) - KERNEL_VIRTUAL)
     {
-    _DataStart = .;
+        DATA_START = .;
         *(.data)
-    _DataEnd = .;
+        DATA_END = .;
+        . = ALIGN(0x1000);
     }
 
-    .rodata : ALIGN(0x1000)
+    .rodata : AT(ADDR(.rodata) - KERNEL_VIRTUAL)
     {
-    _ReadOnlyDataStart = .;
+        READ_ONLY_DATA_START = .;
         *(.rodata)
-    _ReadOnlyDataEnd = .;
+        READ_ONLY_DATA_END = .;
+        . = ALIGN(0x1000);
     }
 
-    .bss : ALIGN(0x1000)
+    .bss : AT(ADDR(.bss) - KERNEL_VIRTUAL)
     {
-    _BlockStartingSymbolsStart = .;
+        BLOCK_STARTING_SYMBOLS_START = .;
         *(COMMON)
         *(.bss)
-    _BlockStartingSymbolsEnd = .;
+        BLOCK_STARTING_SYMBOLS_END = .;
+        . = ALIGN(0x1000);
     }
-    _KernelEnd = .;
+    KERNEL_END = .;
 
     /DISCARD/ :
     {
