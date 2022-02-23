@@ -10,6 +10,35 @@
 #include "../rtc.h"
 #include "../uart.h"
 
+void enable_interrupt(u8 irq) {
+    if (irq > 15)
+        return;
+
+    u16 port = PIC2_DATA;
+    if (irq < 8)
+        port = PIC1_DATA;
+    else irq -= 8;
+    u8 value = in8(port) & ~IRQ_BIT(irq);
+    out8(port, value);
+}
+
+void disable_interrupt(u8 irq) {
+    if (irq > 15)
+        return;
+
+    u16 port = PIC2_DATA;
+    if (irq < 8)
+        port = PIC1_DATA;
+    else irq -= 8;
+    u8 value = in8(port) | IRQ_BIT(irq);
+    out8(port, value);
+}
+
+void disable_all_interrupts() {
+    out8(PIC1_DATA, 0);
+    out8(PIC2_DATA, 0);
+}
+
 __attribute__((no_caller_saved_registers))
 inline void end_of_interrupt(u8 IRQx) {
     if (IRQx >= 8)

@@ -229,15 +229,15 @@ void kernel_init(BootInfo* bInfo) {
     gRandomLFSR = LFSR();
     // Use kernel process switching.
     Scheduler::initialize(gPTM.PML4);
-    /// INTERRUPT MASKS (IRQs).
-    /// 0 = UNMASKED, ALLOWED TO HAPPEN
-    /// System Timer, PS/2 Keyboard, Slave PIC enabled, UART
-    out8(PIC1_DATA, 0b11101000);
-    io_wait();
-    /// Real time clock, PS/2 Mouse
-    out8(PIC2_DATA, 0b11101110);
-    io_wait();
-    // ENABLE INTERRUPTS.
+    // Enable IRQ interrupts that will be used.
+    disable_all_interrupts();
+    enable_interrupt(IRQ_SYSTEM_TIMER);
+    enable_interrupt(IRQ_PS2_KEYBOARD);
+    enable_interrupt(IRQ_CASCADED_PIC);
+    enable_interrupt(IRQ_UART_COM1);
+    enable_interrupt(IRQ_REAL_TIMER);
+    enable_interrupt(IRQ_PS2_MOUSE);
+    // Allow interrupts to trigger.
     srl->writestr("[kUtil]: Interrupt masks sent, enabling interrupts.\r\n");
     asm ("sti");
     srl->writestr("    \033[32mInterrupts enabled.\033[0m\r\n");

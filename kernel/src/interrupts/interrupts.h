@@ -42,6 +42,25 @@
 #define PIC_IRQ14 PIC_IRQ_VECTOR_OFFSET + 14
 #define PIC_IRQ15 PIC_IRQ_VECTOR_OFFSET + 15
 
+#define IRQ_SYSTEM_TIMER   0
+#define IRQ_PS2_KEYBOARD   1
+#define IRQ_CASCADED_PIC   2
+#define IRQ_UART_COM2      3
+#define IRQ_UART_COM1      4
+#define IRQ_LPT2           5
+#define IRQ_FLOPPY_DISK    6
+#define IRQ_LPT1           7
+#define IRQ_REAL_TIMER     8
+#define IRQ_PERIPHERAL_0   9
+#define IRQ_PERIPHERAL_1   10
+#define IRQ_PERIPHERAL_2   11
+#define IRQ_PS2_MOUSE      12
+#define IRQ_INTERPROCESSOR 13
+#define IRQ_PRIMARY_ATA    14
+#define IRQ_SECONDARY_ATA  15
+
+#define IRQ_BIT(IRQx) (1 << IRQx)
+
 // Define PIC chip ports
 #define PIC_EOI       0x20
 #define PIC1_COMMAND  0x20
@@ -86,5 +105,12 @@ void cause_page_not_present();
 void cause_general_protection();
 
 void remap_pic();
+
+// Enable IRQx within the PIC masks.
+void enable_interrupt(u8 irq);
+// Disable IRQx within the PIC masks.
+void disable_interrupt(u8 irq);
+// Disable all IRQs within the PIC masks.
+void disable_all_interrupts();
 
 #endif
