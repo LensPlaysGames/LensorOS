@@ -19,7 +19,7 @@ void print_efi_memory_map(EFI_MEMORY_DESCRIPTOR* map, u64 mapSize, u64 mapDescSi
         srl->writestr(to_string(sizeKiB / 1024));
         srl->writestr("MiB (");
         srl->writestr(to_string(sizeKiB));
-        srl->writestr("KiB)\r\n\033[0m");
+        srl->writestr("KiB)\033[0m\r\n");
     }
 }
 
@@ -34,14 +34,14 @@ void print_efi_memory_map_summed(EFI_MEMORY_DESCRIPTOR* map, u64 mapSize, u64 ma
             typePageSums[desc->type] += desc->numPages;
     }
     for (u8 i = 0; i < 14; ++i) {
-        srl->writestr("[MEMORY REGION]: ");
+        srl->writestr("\033[36m[MEMORY REGION]: ");
         srl->writestr(EFI_MEMORY_TYPE_STRINGS[i]);
         srl->writestr("\r\n  Total Size: ");
         u64 sizeKiB = typePageSums[i] * 4096 / 1024;
         srl->writestr(to_string(sizeKiB / 1024));
         srl->writestr("MiB (");
         srl->writestr(to_string(sizeKiB));
-        srl->writestr("KiB)\r\n");
+        srl->writestr("KiB)\033[0m\r\n");
     }
 }
 

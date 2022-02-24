@@ -368,7 +368,6 @@ void kernel_init(BootInfo* bInfo) {
     srl->writestr("[kUtil]: \033[32mACPI initialized\033[0m\r\n");
     // Enumerate PCI (find hardware devices).
     prepare_pci();
-    srl->writestr("[kUtil]: \033[32mPCI prepared\033[0m.\r\n");
     // Initialize High Precision Event Timer.
     (void)gHPET.initialize();
     // Prepare PS2 mouse.

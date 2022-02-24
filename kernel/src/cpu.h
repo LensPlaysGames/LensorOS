@@ -72,7 +72,7 @@ private:
         srl->writestr(to_string(Core));
         srl->writeb(':');
         srl->writestr(to_string(LogicalCore));
-        srl->writestr("\r\n  CPU Description Address: 0x");
+        srl->writestr("\r\n    CPU Description Address: 0x");
         srl->writestr(to_hexstring((u64)Description));
         srl->writestr("\r\n");
     }
