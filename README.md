@@ -196,3 +196,19 @@ lensor-radii@Garry:~/LensorOS/kernel/out$
 
 As you can see, the file `build.make` has been changed by the `cmake .` command, altering it to actually use the flags I pass in `kernel/CMakeLists.txt` with the `target_compile_options()` CMake function. \
 I don't know why the re-build is necessary, and it takes very little time, but if you know anything on why this occurs I would greatly appreciate you letting me know.
+
+### Contributions
+If you see something you would like to work on, do it! Pull requests will be reviewed and merged.
+
+Code format is currently defined as follows:
+- snake_case function names.
+- camelCase local variables.
+- PascalCase classes, structs, members.
+- SCREAMING_SNAKE_CASE all preprocessor directives.
+- Header include guard also uses SCREAMING_SNAKE_CASE:
+```cpp
+#ifndef LENSOR_OS_NAME_OF_FILE_H
+#define LENSOR_OS_NAME_OF_FILE_H
+... header contents ...
+#endif /* LENSOR_OS_NAME_OF_FILE_H */
+```
