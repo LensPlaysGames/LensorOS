@@ -39,7 +39,7 @@ void prepare_memory(BootInfo* bInfo) {
     gAlloc.read_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     // _KernelStart and _KernelEnd defined in linker script "../kernel.ld"
     u64 kernelPagesNeeded = (((u64)&KERNEL_END - (u64)&KERNEL_START) / 4096) + 1;
-    // TODO: Map kernel to explicitly to virtual physical memory.
+    // TODO: Map kernel explicitly to virtual physical memory.
     gAlloc.lock_pages(&KERNEL_START, kernelPagesNeeded);
     // PAGE MAP LEVEL FOUR (see paging.h).
     PageTable* PML4 = (PageTable*)gAlloc.request_page();
@@ -220,6 +220,17 @@ void kernel_init(BootInfo* bInfo) {
         srl->writestr(cpuVendorID);
         srl->writestr("\r\n");
 
+        /* Current functionality of giant `if` statemnt:
+         * |- Setup FXSAVE/FXRSTOR
+         * |  |- Setup FPU
+         * |  `- Setup SSE
+         * `- Setup XSAVE
+         *    `- Setup AVX
+         *
+         * To peek further down the rabbit hole, check out the following link:
+         *   https://wiki.osdev.org/Detecting_CPU_Topology_(80x86)#Using_CPUID
+         */
+
         CPUIDRegisters regs;
         cpuid(1, regs);
 
@@ -245,48 +256,6 @@ void kernel_init(BootInfo* bInfo) {
                               "fninit\n"
                               ::: "rax", "rdx");
                 srl->writestr("  \033[32mFPU Enabled\033[0m\r\n");
-                // If FXSAVE/FXRSTOR and FPU are supported and present, setup SSE.
-                if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)) {
-                    /* Enable SSE
-                     * |- Clear CR0.EM bit   (bit 2  -- coprocessor emulation) 
-                     * |- Set CR0.MP bit     (bit 1  -- coprocessor monitoring)
-                     * |- Set CR4.OSFXSR bit (bit 9  -- OS provides FXSAVE/FXRSTOR functionality)
-                     * `- Set CR4.OSXMMEXCPT (bit 10 -- OS provides #XM exception handler)
-                     */
-                    asm volatile ("mov %%cr0, %%rax\n"
-                                  "and $0b1111111111110011, %%ax\n"
-                                  "or $0b10, %%ax\n"
-                                  "mov %%rax, %%cr0\n"
-                                  "mov %%cr4, %%rax\n"
-                                  "or $0b11000000000, %%rax\n"
-                                  "mov %%rax, %%cr4\n"
-                                  ::: "rax");
-                    srl->writestr("  \033[32mSSE Enabled\033[0m\r\n");
-                }
-                else srl->writestr("  \033[31mSSE Not Supported\033[0m\r\n");
-                // If FXSAVE/FXRSTOR and FPU are supported, enable XSAVE feature set.
-                if (regs.C & static_cast<u32>(CPUID_FEATURE::ECX_XSAVE)) {
-                    // Enable XSAVE feature set
-                    // `- Set CR4.OSXSAVE bit (bit 18  -- OS provides )
-                    asm volatile ("mov %cr4, %rax\n"
-                                  "or 0b1000000000000000000, %rax\n"
-                                  "mov %rax, %cr4\n");
-                    srl->writestr("  \033[32mXSAVE Enabled\033[0m\r\n");
-                }
-                else srl->writestr("  \033[32mXSAVE Not Supported\033[0m\r\n");
-
-                // If FXSAVE/FXRSTOR, FPU, SSE, AND XSAVE are supported,
-                //   setup AVX feature set.
-                if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)
-                    && regs.C & static_cast<u32>(CPUID_FEATURE::ECX_XSAVE))
-                {
-                    asm volatile ("xor %%rcx, %%rcx\n"
-                                  "xgetbv\n"
-                                  "or $0b111, %%eax\n"
-                                  "xsetbv\n"
-                                  ::: "rax", "rbx", "rdx");
-                    srl->writestr("  \033[32mAVX Enabled\033[0m\r\n");
-                }
             }
             else {
                 // FPU not supported, ensure it is disabled.
@@ -296,7 +265,48 @@ void kernel_init(BootInfo* bInfo) {
                               ::: "rdx");
                 srl->writestr("  \033[31mFPU Not Supported\033[0m\r\n");
             }
+            // If FXSAVE/FXRSTOR and FPU are supported and present, setup SSE.
+            if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)) {
+                /* Enable SSE
+                 * |- Clear CR0.EM bit   (bit 2  -- coprocessor emulation) 
+                 * |- Set CR0.MP bit     (bit 1  -- coprocessor monitoring)
+                 * |- Set CR4.OSFXSR bit (bit 9  -- OS provides FXSAVE/FXRSTOR functionality)
+                 * `- Set CR4.OSXMMEXCPT (bit 10 -- OS provides #XM exception handler)
+                 */
+                asm volatile ("mov %%cr0, %%rax\n"
+                              "and $0b1111111111110011, %%ax\n"
+                              "or $0b10, %%ax\n"
+                              "mov %%rax, %%cr0\n"
+                              "mov %%cr4, %%rax\n"
+                              "or $0b11000000000, %%rax\n"
+                              "mov %%rax, %%cr4\n"
+                              ::: "rax");
+                srl->writestr("  \033[32mSSE Enabled\033[0m\r\n");
+            }
+            else srl->writestr("  \033[31mSSE Not Supported\033[0m\r\n");
         }
+        // Enable XSAVE feature set if CPU supports it.
+        if (regs.C & static_cast<u32>(CPUID_FEATURE::ECX_XSAVE)) {
+            // Enable XSAVE feature set
+            // `- Set CR4.OSXSAVE bit (bit 18  -- OS provides )
+            asm volatile ("mov %cr4, %rax\n"
+                          "or 0b1000000000000000000, %rax\n"
+                          "mov %rax, %cr4\n");
+            srl->writestr("  \033[32mXSAVE Enabled\033[0m\r\n");
+            // If SSE, AND XSAVE are supported, setup AVX feature set.
+            if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)
+                && regs.C & static_cast<u32>(CPUID_FEATURE::ECX_AVX))
+            {
+                asm volatile ("xor %%rcx, %%rcx\n"
+                              "xgetbv\n"
+                              "or $0b111, %%eax\n"
+                              "xsetbv\n"
+                              ::: "rax", "rbx", "rdx");
+                srl->writestr("  \033[32mAVX Enabled\033[0m\r\n");
+            }
+            else srl->writestr("  \033[31mAVX Not Supported\033[0m\r\n");
+        }
+        else srl->writestr("  \033[31mXSAVE Not Supported\033[0m\r\n");
     }        
 
     // Initialize the Real Time Clock.
