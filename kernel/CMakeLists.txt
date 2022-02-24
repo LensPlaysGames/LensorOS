@@ -46,6 +46,7 @@ HEADERS
     src/ahci.h
     src/basic_renderer.h
     src/bitmap.h
+    src/cpu.h
     src/cpuid.h
     src/cstr.h
     src/efi_memory.h
