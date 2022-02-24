@@ -21,5 +21,6 @@ char* to_string(s16);
 char* to_string(s8);
 char* to_string(double, u8 decimalPlaces = 2);
 char* to_hexstring(u64, bool capital = false);
+char* to_hexstring(void*, bool capital = false);
 
 #endif

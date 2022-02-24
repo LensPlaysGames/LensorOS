@@ -131,3 +131,7 @@ char* to_hexstring(u64 value, bool capital) {
     hex_to_string_buf[i] = 0;
     return hex_to_string_buf;
 }
+
+char* to_hexstring(void* ptr, bool capital) {
+    return to_hexstring((u64)ptr, capital);
+}
