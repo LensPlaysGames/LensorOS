@@ -18,6 +18,7 @@
 #include "io.h"
 #include "keyboard.h"
 #include "memory.h"
+#include "memory/memory_manager.h"
 #include "mouse.h"
 #include "paging/paging.h"
 #include "paging/page_frame_allocator.h"
@@ -155,6 +156,9 @@ void kernel_init(BootInfo* bInfo) {
     asm ("cli");
     // Parse memory map passed by bootloader.
     prepare_memory(bInfo);
+    // Parse memory map passed by bootloader :^)
+    Memory::init_efi(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    Memory::print_debug();
     // Prepare Global Descriptor Table Descriptor.
     GDTDescriptor GDTD = GDTDescriptor(sizeof(GDT) - 1, (u64)&gGDT);
     LoadGDT(&GDTD);
