@@ -46,6 +46,7 @@ public:
             Tail = Head;
         }
         else Head = new Node(value, Head);
+        Length += 1;
     }
 
     template <typename Callback>
@@ -57,10 +58,12 @@ public:
         }
     }
 
+    u64 length() { return Length; }
     Node* head() { return Head; }
     Node* tail() { return Tail; }
 
 private:
+    u64 Length { 0 };
     Node* Head { nullptr };
     Node* Tail { nullptr };
 };
