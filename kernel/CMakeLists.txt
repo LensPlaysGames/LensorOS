@@ -69,6 +69,7 @@ HEADERS
     src/linked_list.h
     src/math.h
     src/memory.h
+    src/memory/memory_manager.h
     src/mouse.h
     src/paging/page_frame_allocator.h
     src/paging/page_table_manager.h
@@ -79,6 +80,7 @@ HEADERS
     src/pure_virtuals.h
     src/random_lcg.h
     src/random_lfsr.h
+    src/memory/region.h
     src/rtc.h
     src/scheduler.h
     src/smart_pointer.h
@@ -109,6 +111,7 @@ SOURCES
     src/keyboard_scancode_translation.cpp
     src/kUtility.cpp
     src/memory.cpp
+    src/memory/memory_manager.cpp
     src/mouse.cpp
     src/paging/page_frame_allocator.cpp
     src/paging/page_table_manager.cpp
