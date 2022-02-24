@@ -201,7 +201,7 @@ I don't know why the re-build is necessary, and it takes very little time, but i
 If you see something you would like to work on, do it! Pull requests will be reviewed and merged.
 
 Code format is currently defined as follows:
-- snake_case function names.
+- snake_case file and function names.
 - camelCase local variables.
 - PascalCase classes, structs, members.
 - SCREAMING_SNAKE_CASE all preprocessor directives.

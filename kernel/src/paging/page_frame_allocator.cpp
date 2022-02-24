@@ -21,6 +21,7 @@ bool initialized = false;
 void PageFrameAllocator::read_efi_memory_map(EFI_MEMORY_DESCRIPTOR* map, u64 mapSize, u64 mapDescSize) {
     if (initialized)
         return;
+
     u64 mapEntries = mapSize / mapDescSize;
     void* largestFreeMemorySegment = NULL;
     u64 largestFreeMemorySegmentSize = 0;

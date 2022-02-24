@@ -151,7 +151,6 @@ void kernel_init(BootInfo* bInfo) {
      *     - PS2 Mouse
      *   - Setup scheduler (TSS descriptor, task switching)
      */
-
     // Disable interrupts (with no IDT, not much was happening anyway).
     asm ("cli");
     // Parse memory map passed by bootloader.
@@ -168,6 +167,8 @@ void kernel_init(BootInfo* bInfo) {
     gRandomLFSR = LFSR();
     // Setup serial input/output.
     srl = new UARTDriver;
+    print_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     srl->writestr("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
     srl->writestr("[kUtil]: Mapped physical memory from 0x");
     srl->writestr(to_hexstring(0ULL));

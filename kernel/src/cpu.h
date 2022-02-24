@@ -7,6 +7,31 @@
 #include "memory.h"
 #include "uart.h"
 
+/* System
+ * |- Central Processing Unit(s)
+ * |  `- CPUDescription
+ * |     |- Capabilities (feature set)
+ * |     |- Features Enabled
+ * |     `- CPUs present
+ * |
+ * |- Random Access Memory
+ * |  |- PageFrameAllocator (gAlloc)
+ * |  |  `- Bitmap of used/free pages
+ * |  `- PageTableManager (gPTM)
+ * |     `- Modification operations for a PageTable (map_memory, unmap_memory)
+ * |
+ * |- Input/Output Bus
+ * |  |- Programmable Interrupt Controller (PIC)
+ * |  |- Programmable Interval Timer (PIT)
+ * |  `- Real Time Clock (RTC)
+ * |
+ * |- ACPI
+ * |  `- High Precision Event Timer (HPET)
+ * |
+ * `- PCI(e) Bus
+ * 
+ */
+
 class CPUDescription;
 class CPU {
     friend class CPUDescription;
@@ -83,8 +108,6 @@ public:
         srl->writestr("\r\n    AVX: ");
         srl->writestr(to_string(AVXCapable));
         srl->writestr("\r\n  Enabled: ");
-        srl->writestr("\r\n    AVX: ");
-        srl->writestr(to_string(AVXEnabled));
         srl->writestr("\r\n    FXSR: ");
         srl->writestr(to_string(FXSREnabled));
         srl->writestr("\r\n    FPU: ");
