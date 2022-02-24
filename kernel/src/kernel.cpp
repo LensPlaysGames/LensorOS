@@ -12,87 +12,102 @@
 #include "uart.h"
 
 /* TODO:
- *   |- Userland: How does the desktop happen?
- *   |  |- I presume that the memory for the framebuffer must be mapped in a userland process.
- *   |  |  `- This process must be supplied by the OS, of course.
- *   |  |     `- Something like ScreenManager sounds sufficient (Compositor?). 
- *   |  |        |- If we 'pass' the framebuffer to this in-house userland program,
- *   |  |        |    it would have full read/write control over the screen of the OS.
- *   |  |        |- To avoid constantly updating the screen within the kernel,
- *   |  |        |  | the WindowManager will accept signals from applications
- *   |  |        |  | that signify the window is dirty and need to be re-painted.
- *   |  |        |  `- This will call the ScreenManager to update the framebuffer memory.
- *   |  |        `- The ScreenManager will also draw OS-wide things (taskbar? clock? etc.)
- *   |  `- To actually write userland programs that can be used,
- *   |     | I need to figure out GCC cross compiler sysroot stuff.
- *   |     `- This will allow me to write userland programs that will know where to
- *   |          look for libc and standard includes relative to LensorOS's root directory.
- *   |
- *   |- HPET: Final step to get it to work (init comparators).
- *   |
- *   |- Further modify cross compiler to make an OS specific toolchain.
- *   |  `- This would allow for customizing default include,
- *   |       and default library (aka our own libc/libk; currenty running with no C RunTime).
- *   |
- *   |- See Page Table Entry Flag PT_FLAG::Global : Prevent kernel from being flushed from TLB.
- *   |
- *   |- Abstract functionality from hardware (currently very x86_64 specific).
- *   |  |- Memory Allocation (./paging/)
- *   |  |- GDT/IDT
- *   |  `- Serial Communications (UART)
- *   |
- *   |- Create Smart Pointer Template Class(es) -> Wrappers around
- *   |  | regular pointers that make using `new` and `delete` much easier.
- *   |  `- Types of smart pointer:
- *   |     |- Reference Counting Pointer -> Count number of references to itself,
- *   |     |    and delete itself only if there are no references remaining.
- *   |     `- Smart Pointer -> Deletes itself as soon as it goes out of scope.
- *   |        `- I've implemented this! See `fat_driver.cpp` for it in use.
- *   |
- *   |- Create Container Class(es) -> Vector, HashMap, etc.
- *   |
- *   |- Support APIC (LAPIC & I/O APIC)
- *   |  `- https://wiki.osdev.org/APIC
- *   |
- *   |- Write a bootloader in C (no longer rely on GNU-EFI bootloader).
- *   |  `- I realize this is an insanely large project, but so is making an OS, I guess.
- *   |
- *   |- Make read-only section (of kernel) read only memory.
- *   |
- *   |- Update Kernel Process Scheduler.
- *   |  |- Current Inspiration: https://wiki.osdev.org/User:Mariuszp/Scheduler_Tutorial
- *   |  `- Future Inspiration:
- *   |     |- https://wiki.osdev.org/Brendan%27s_Multi-tasking_Tutorial
- *   |     `- https://wiki.osdev.org/Scheduling_Algorithms
- *   |
- *   |- Think about how Task State Segment Interrupt Stack 
- *   |    Table (TSS IST) could be used (known good stacks).
- *   |
- *   |- Memory Management Unit (MMU) Page Map (PML4) when switching to userland, 
- *   |    and/or utilizing Translation Lookaside Buffer (TLB) partial flushes.
- *   |
- *   |- Abstract `timer` class (namespace?) -> an API for things like `sleep`
- *   |- Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
- *   |- Save parsed PCI devices for quick lookup (device tree).
- *   |- A slab-style memory allocator.
- *   |- File System:
- *   |  |- Virtual File System that will store intermediate representation
- *   |  |    of files/folders/worlds/storage media devices.
- *   |  |- AHCI Driver Update: 
- *   |  |  `- DMA ATA Write implementation.
- *   |  `- Another filesystem better suited for mass storage (Ext2? Proprietary?)
- *   |
- *   |- Write ASM hardware interrupt (IRQ) wrapper (no longer rely on `__attribute__((interrupt))`)
- *   |  `- See: 
- *   |     |- James Molloy's tutorials for an example: 
- *   |     |    http://www.jamesmolloy.co.uk/tutorial_html/
- *   |     `- The syscall handler in NASM assembly (`src/interrupts/syscalls.asm`).
- *   |
- *   |- Implement actually useful system calls
- *   |  |- Figure out how to pass variables to system calls (it's kind of just up to me).
- *   |  `- Useful list of 'things every OS needs': https://www.gnu.org/software/coreutils/
- *   |
- *   `- Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
+ * |- x86 Multi-threading Steps
+ * |  |- Resources
+ * |  |  |- https://wiki.osdev.org/Multiprocessing
+ * |  |  `- https://wiki.osdev.org/Detecting_CPU_Topology_(80x86)
+ * |  |- Parse ACPI MADT Table, construct `CPUs` list of `CPUDescription SystemCPU`
+ * |  |  `- Store APICID for each CPU.
+ * |  |- Parse ACPI SRAT Table
+ * |  |  `- If entry is CPU (not memory), store NUMA domain/chip for CPU (ProximityDomain = NUMADomain).
+ * |  |- Sort list of CPUs in order of NUMADomain (sorted within each domain by APIC ID)
+ * |  |- Determine number of bits in APIC ID that are used to identify which logical CPU.
+ * |  `- Determine number of bits in APIC ID that are used to identify which physical CPU.
+ * |  
+ * |- Reconstruct memory managers from the ground up (VMM, PMM).
+ * |  `- Start with what the kernel recieves: EFI Memory Map (and go from there!)
+ * |
+ * |- Userland: How does the desktop happen?
+ * |  |- I presume that the memory for the framebuffer must be mapped in a userland process.
+ * |  |  `- This process must be supplied by the OS, of course.
+ * |  |     `- Something like ScreenManager sounds sufficient (Compositor?). 
+ * |  |        |- If we 'pass' the framebuffer to this in-house userland program,
+ * |  |        |    it would have full read/write control over the screen of the OS.
+ * |  |        |- To avoid constantly updating the screen within the kernel,
+ * |  |        |  | the WindowManager will accept signals from applications
+ * |  |        |  | that signify the window is dirty and need to be re-painted.
+ * |  |        |  `- This will call the ScreenManager to update the framebuffer memory.
+ * |  |        `- The ScreenManager will also draw OS-wide things (taskbar? clock? etc.)
+ * |  `- To actually write userland programs that can be used,
+ * |     | I need to figure out GCC cross compiler sysroot stuff.
+ * |     `- This will allow me to write userland programs that will know where to
+ * |          look for libc and standard includes relative to LensorOS's root directory.
+ * |
+ * |- HPET: Final step to get it to work (init comparators).
+ * |
+ * |- Further modify cross compiler to make an OS specific toolchain.
+ * |  `- This would allow for customizing default include,
+ * |       and default library (aka our own libc/libk; currenty running with no C RunTime).
+ * |
+ * |- See Page Table Entry Flag PT_FLAG::Global : Prevent kernel from being flushed from TLB.
+ * |
+ * |- Abstract functionality from hardware (currently very x86_64 specific).
+ * |  |- Memory Allocation (./paging/)
+ * |  |- GDT/IDT
+ * |  `- Serial Communications (UART)
+ * |
+ * |- Create Smart Pointer Template Class(es) -> Wrappers around
+ * |  | regular pointers that make using `new` and `delete` much easier.
+ * |  `- Types of smart pointer:
+ * |     |- Reference Counting Pointer -> Count number of references to itself,
+ * |     |    and delete itself only if there are no references remaining.
+ * |     `- Smart Pointer -> Deletes itself as soon as it goes out of scope.
+ * |        `- I've implemented this! See `fat_driver.cpp` for it in use.
+ * |
+ * |- Create Container Class(es) -> Vector, HashMap, etc.
+ * |
+ * |- Support APIC (LAPIC & I/O APIC)
+ * |  `- https://wiki.osdev.org/APIC
+ * |
+ * |- Write a bootloader in C (no longer rely on GNU-EFI bootloader).
+ * |  `- I realize this is an insanely large project, but so is making an OS, I guess.
+ * |
+ * |- Make read-only section (of kernel) read only memory.
+ * |
+ * |- Update Kernel Process Scheduler.
+ * |  |- Current Inspiration: https://wiki.osdev.org/User:Mariuszp/Scheduler_Tutorial
+ * |  `- Future Inspiration:
+ * |     |- https://wiki.osdev.org/Brendan%27s_Multi-tasking_Tutorial
+ * |     `- https://wiki.osdev.org/Scheduling_Algorithms
+ * |
+ * |- Think about how Task State Segment Interrupt Stack 
+ * |    Table (TSS IST) could be used (known good stacks).
+ * |
+ * |- Memory Management Unit (MMU) Page Map (PML4) when switching to userland, 
+ * |    and/or utilizing Translation Lookaside Buffer (TLB) partial flushes.
+ * |
+ * |- Abstract `timer` class (namespace?) -> an API for things like `sleep`
+ * |- Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
+ * |- Save parsed PCI devices for quick lookup (device tree).
+ * |- A slab-style memory allocator.
+ * |- File System:
+ * |  |- Virtual File System that will store intermediate representation
+ * |  |    of files/folders/worlds/storage media devices.
+ * |  |- AHCI Driver Update: 
+ * |  |  `- DMA ATA Write implementation.
+ * |  `- Another filesystem better suited for mass storage (Ext2? Proprietary?)
+ * |
+ * |- Write ASM hardware interrupt (IRQ) wrapper (no longer rely on `__attribute__((interrupt))`)
+ * |  `- See: 
+ * |     |- James Molloy's tutorials for an example: 
+ * |     |    http://www.jamesmolloy.co.uk/tutorial_html/
+ * |     `- The syscall handler in NASM assembly (`src/interrupts/syscalls.asm`).
+ * |
+ * |- Implement actually useful system calls
+ * |  |- Figure out how to pass variables to system calls (it's kind of just up to me).
+ * |  `- Useful list of 'things every OS needs': https://www.gnu.org/software/coreutils/
+ * |
+ * `- Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
  */
 void print_memory_info() {
     u32 startOffset = gRend.DrawPos.x;
