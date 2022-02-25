@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_HEAP_H
 #define LENSOR_OS_HEAP_H
 
-#include "integers.h"
+#include "../integers.h"
 
 struct HeapSegmentHeader {
     // Doubly linked list

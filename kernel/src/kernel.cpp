@@ -5,7 +5,7 @@
 #include "hpet.h"
 #include "interrupts/interrupts.h"
 #include "keyboard.h"
-#include "paging/page_frame_allocator.h"
+#include "memory/memory_manager.h"
 #include "pit.h"
 #include "rtc.h"
 #include "tss.h"
@@ -113,30 +113,40 @@ void print_memory_info() {
     u32 startOffset = gRend.DrawPos.x;
     gRend.puts("Memory Info:");
     gRend.crlf(startOffset);
-    gRend.puts("|\\");
+    gRend.puts("|- Total RAM: ");
+    gRend.puts(to_string(Memory::get_total_ram() / 1024 / 1024));
+    gRend.puts(" MiB (");
+    gRend.puts(to_string(Memory::get_total_ram() / 1024));
+    gRend.puts(" KiB)");
     gRend.crlf(startOffset);
-    gRend.puts("| Free RAM: ");
-    gRend.puts(to_string(gAlloc.get_free_ram() / 1024));
-    gRend.puts(" KiB (");
-    gRend.puts(to_string(gAlloc.get_free_ram() / 1024 / 1024));
-    gRend.puts(" MiB)");
+    gRend.puts("|- Free RAM: ");
+    gRend.puts(to_string(Memory::get_free_ram() / 1024 / 1024));
+    gRend.puts(" MiB (");
+    gRend.puts(to_string(Memory::get_free_ram() / 1024));
+    gRend.puts(" KiB)");
     gRend.crlf(startOffset);
-    gRend.puts("|\\");
+    gRend.puts("`- Used RAM: ");
+    gRend.puts(to_string(Memory::get_used_ram() / 1024 / 1024));
+    gRend.puts(" MiB (");
+    gRend.puts(to_string(Memory::get_used_ram() / 1024));
+    gRend.puts(" KiB)");
     gRend.crlf(startOffset);
-    gRend.puts("| Used RAM: ");
-    gRend.puts(to_string(gAlloc.get_used_ram() / 1024));
-    gRend.puts(" KiB (");
-    gRend.puts(to_string(gAlloc.get_used_ram() / 1024 / 1024));
-    gRend.puts(" MiB)");
-    gRend.crlf(startOffset);
-    gRend.puts(" \\");
-    gRend.crlf(startOffset);
-    gRend.puts("  Reserved RAM: ");
-    gRend.puts(to_string(gAlloc.get_reserved_ram() / 1024));
-    gRend.puts(" KiB (");
-    gRend.puts(to_string(gAlloc.get_reserved_ram() / 1024 / 1024));
-    gRend.puts(" MiB)");
-    gRend.crlf(startOffset);
+}
+
+void srl_memory_info() {
+    srl->writestr("\r\nMemory Info:\r\n|- Total RAM: ");
+    srl->writestr(to_string(Memory::get_total_ram() / 1024 / 1024));
+    srl->writestr("MiB (");
+    srl->writestr(to_string(Memory::get_total_ram() / 1024));
+    srl->writestr("KiB)\r\n|- Free RAM: ");
+    srl->writestr(to_string(Memory::get_free_ram() / 1024 / 1024));
+    srl->writestr(" MiB (");
+    srl->writestr(to_string(Memory::get_free_ram() / 1024));
+    srl->writestr(" KiB)\r\n`- Used RAM: ");
+    srl->writestr(to_string(Memory::get_used_ram() / 1024 / 1024));
+    srl->writestr(" MiB (");
+    srl->writestr(to_string(Memory::get_used_ram() / 1024));
+    srl->writestr(" KiB)\r\n");
 }
 
 void print_now(u64 xOffset = 0) {
@@ -153,36 +163,6 @@ void print_now(u64 xOffset = 0) {
     gRend.putchar('-');
     gRend.puts(to_string(gRTC.Time.date));
     gRend.crlf(xOffset);
-}
-
-void srl_memory_info() {
-    srl->writestr("\r\n");
-    srl->writestr("Memory Info:");
-    srl->writestr("\r\n");
-    srl->writestr("|\\");
-    srl->writestr("\r\n");
-    srl->writestr("| Free RAM: ");
-    srl->writestr(to_string(gAlloc.get_free_ram() / 1024));
-    srl->writestr(" KiB (");
-    srl->writestr(to_string(gAlloc.get_free_ram() / 1024 / 1024));
-    srl->writestr(" MiB)");
-    srl->writestr("\r\n");
-    srl->writestr("|\\");
-    srl->writestr("\r\n");
-    srl->writestr("| Used RAM: ");
-    srl->writestr(to_string(gAlloc.get_used_ram() / 1024));
-    srl->writestr(" KiB (");
-    srl->writestr(to_string(gAlloc.get_used_ram() / 1024 / 1024));
-    srl->writestr(" MiB)");
-    srl->writestr("\r\n");
-    srl->writestr(" \\");
-    srl->writestr("\r\n");
-    srl->writestr("  Reserved RAM: ");
-    srl->writestr(to_string(gAlloc.get_reserved_ram() / 1024));
-    srl->writestr(" KiB (");
-    srl->writestr(to_string(gAlloc.get_reserved_ram() / 1024 / 1024));
-    srl->writestr(" MiB)");
-    srl->writestr("\r\n");
 }
 
 void test_userland_function() {

@@ -3,10 +3,10 @@
 #include "fat_definitions.h"
 #include "fat_driver.h"
 #include "fat_fs.h"
-#include "heap.h"
+#include "memory/heap.h"
+#include "memory/memory_manager.h"
 #include "inode.h"
 #include "memory.h"
-#include "paging/page_frame_allocator.h"
 #include "paging/page_table_manager.h"
 #include "pci.h"
 #include "spinlock.h"
@@ -40,11 +40,16 @@ namespace AHCI {
         }
 
         switch (port->signature) {
-        case SATA_SIG_ATAPI: { return PortType::SATAPI; }
-        case SATA_SIG_ATA:   { return PortType::SATA;   }
-        case SATA_SIG_SEMB:  { return PortType::SEMB;   }
-        case SATA_SIG_PM:    { return PortType::PM;     }
-        default:             { return PortType::None;   }
+        case SATA_SIG_ATAPI:
+            return PortType::SATAPI;
+        case SATA_SIG_ATA:
+            return PortType::SATA;
+        case SATA_SIG_SEMB:
+            return PortType::SEMB;
+        case SATA_SIG_PM:
+            return PortType::PM;
+        default:
+            return PortType::None;
         }
     }
 
@@ -55,7 +60,7 @@ namespace AHCI {
                 PortType type = get_port_type(&ABAR->ports[i]);
                 if (type == PortType::SATA || type == PortType::SATAPI) {
                     Ports[numPorts] = new Port;
-                    Ports[numPorts]->buffer = (u8*)gAlloc.request_pages(MAX_READ_PAGES);
+                    Ports[numPorts]->buffer = (u8*)Memory::request_pages(MAX_READ_PAGES);
                     Ports[numPorts]->hbaPort = &ABAR->ports[i];
                     Ports[numPorts]->type = type;
                     Ports[numPorts]->number = numPorts;
@@ -68,19 +73,19 @@ namespace AHCI {
     void Port::initialize() {
         stop_commands();
         // Command Base
-        void* base = gAlloc.request_page();
+        void* base = Memory::request_page();
         hbaPort->commandListBase = (u32)(u64)base;
         hbaPort->commandListBaseUpper = (u32)((u64)base >> 32);
         memset(base, 0, 1024);
         // FIS Base
-        void* fisBase = gAlloc.request_page();
+        void* fisBase = Memory::request_page();
         hbaPort->fisBaseAddress = (u32)(u64)fisBase;
         hbaPort->fisBaseAddressUpper = (u32)((u64)fisBase >> 32);
         memset(fisBase, 0, 256);
         HBACommandHeader* cmdHdr = (HBACommandHeader*)((u64)hbaPort->commandListBase + ((u64)hbaPort->commandListBaseUpper << 32));
         for (u64 i = 0; i < 32; ++i) {
             cmdHdr[i].prdtLength = 8;
-            void* cmdTableAddress = gAlloc.request_page();
+            void* cmdTableAddress = Memory::request_page();
             u64 address = (u64)cmdTableAddress + (i << 8);
             cmdHdr[i].commandTableBaseAddress = (u32)address;
             cmdHdr[i].commandTableBaseAddressUpper = (u32)((u64)address >> 32);
@@ -177,7 +182,7 @@ namespace AHCI {
 
     AHCIDriver::AHCIDriver(PCI::PCIDeviceHeader* pciBaseAddress) {
         srl->writestr("[AHCI]: Constructing driver for AHCI 1.0 Controller at 0x");
-        srl->writestr(to_hexstring((u64)pciBaseAddress));
+        srl->writestr(to_hexstring(pciBaseAddress));
         srl->writestr("\r\n");
         
         PCIBaseAddress = pciBaseAddress;
@@ -187,7 +192,7 @@ namespace AHCI {
         gPTM.map_memory(ABAR, ABAR);
 
         srl->writestr("[AHCI]:\r\n  Mapping AHCI Base Memory Register (ABAR) to 0x");
-        srl->writestr(to_hexstring((u64)ABAR));
+        srl->writestr(to_hexstring(ABAR));
         srl->writestr("\r\n");
         srl->writestr("  Probing ABAR for open and active ports.\r\n");
         probe_ports();
@@ -271,7 +276,7 @@ namespace AHCI {
     AHCIDriver::~AHCIDriver() {
         srl->writestr("[AHCI]: Deconstructing AHCI Driver\r\n");
         for(u32 i = 0; i < numPorts; ++i) {
-            gAlloc.free_pages((void*)Ports[i]->buffer, MAX_READ_PAGES);
+            Memory::free_pages((void*)Ports[i]->buffer, MAX_READ_PAGES);
             delete Ports[i];
         }
     }

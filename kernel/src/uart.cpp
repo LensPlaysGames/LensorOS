@@ -1,6 +1,6 @@
 #include "uart.h"
 
-#include "heap.h"
+#include "memory/heap.h"
 
 #ifdef COM1_INPUT_DEBUG
 #include "cstr.h"

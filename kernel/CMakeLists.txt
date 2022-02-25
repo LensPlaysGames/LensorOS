@@ -55,7 +55,6 @@ HEADERS
     src/fat_fs.h
     src/filesystem.h
     src/gdt.h
-    src/heap.h
     src/hpet.h
     src/integers.h
     src/interrupts/idt.h
@@ -69,9 +68,9 @@ HEADERS
     src/linked_list.h
     src/math.h
     src/memory.h
+    src/memory/heap.h
     src/memory/memory_manager.h
     src/mouse.h
-    src/paging/page_frame_allocator.h
     src/paging/page_table_manager.h
     src/paging/paging.h
     src/panic.h
@@ -101,7 +100,6 @@ SOURCES
     src/fat_driver.cpp
     src/filesystem.cpp
     src/gdt.cpp
-    src/heap.cpp
     src/hpet.cpp
     src/interrupts/idt.cpp
     src/interrupts/syscalls.cpp
@@ -111,9 +109,9 @@ SOURCES
     src/keyboard_scancode_translation.cpp
     src/kUtility.cpp
     src/memory.cpp
+    src/memory/heap.cpp
     src/memory/memory_manager.cpp
     src/mouse.cpp
-    src/paging/page_frame_allocator.cpp
     src/paging/page_table_manager.cpp
     src/paging/paging.cpp
     src/panic.cpp

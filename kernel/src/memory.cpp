@@ -3,22 +3,6 @@
 #include "integers.h"
 #include "large_integers.h"
 
-u64 get_memory_size(EFI_MEMORY_DESCRIPTOR* map, u64 mapEntries, u64 mapDescSize) {
-    static u64 s_memory_size_in_bytes = 0;
-    if (s_memory_size_in_bytes > 0)
-        return s_memory_size_in_bytes;
-
-    for (u64 i = 0; i < mapEntries; ++i) {
-        // Get descriptor for each map entry.
-        EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)map + (i * mapDescSize));
-        // Add memory size from descriptor to total memory size.
-        // 4096 = page size in bytes
-        s_memory_size_in_bytes += desc->numPages * 4096;
-    }
-
-    return s_memory_size_in_bytes;
-}
-
 void memset(void* start, u8 value, u64 numBytes) {
     if (numBytes >= 256) {
         u64 qWordValue = 0;

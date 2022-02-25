@@ -10,6 +10,11 @@ public:
     Bitmap(u64 size, u8* bufferAddress)
         : Size(size), Buffer(bufferAddress) {}
 
+    void init(u64 size, u8* bufferAddress) {
+        Size = size;
+        Buffer = bufferAddress;
+    }
+
     u64 length() { return Size; }
     void* base() { return (void*)Buffer; };
 

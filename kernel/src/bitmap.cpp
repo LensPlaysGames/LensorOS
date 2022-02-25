@@ -9,11 +9,13 @@ bool Bitmap::get(u64 index) {
 bool Bitmap::set(u64 index, bool value) {
     if (index >= Size * 8)
         return false;
+
     u64 byteIndex = index / 8;
     u8 bitIndexer = 0b10000000 >> (index % 8);
     Buffer[byteIndex] &= ~bitIndexer;
     if (value)
         Buffer[byteIndex] |= bitIndexer;
+
     return true;
 }
 

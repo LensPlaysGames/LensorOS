@@ -3,7 +3,7 @@
 #include "ahci.h"
 #include "cstr.h"
 #include "fat_definitions.h"
-#include "heap.h"
+#include "memory/heap.h"
 #include "inode.h"
 #include "memory.h"
 #include "smart_pointer.h"
