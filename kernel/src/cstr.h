@@ -20,7 +20,20 @@ char* to_string(s32);
 char* to_string(s16);
 char* to_string(s8);
 char* to_string(double, u8 decimalPlaces = 2);
-char* to_hexstring(u64, bool capital = false);
-char* to_hexstring(void*, bool capital = false);
+char* to_hexstring(u64 value, bool capital = false);
+const char to_hex_not_supported[] = "TYPE_NOT_SUPPORTED";
+template <typename T>
+char* to_hexstring(T value, bool capital = false) {
+    u8 sz = sizeof(T);
+    if (sz == 1)
+        return to_hexstring((u64)value, capital);
+    if (sz == 2)
+        return to_hexstring((u64)value, capital);
+    if (sz == 4)
+        return to_hexstring((u64)value, capital);
+    if (sz == 8)
+        return to_hexstring((u64)value, capital);
+    else return (char*)to_hex_not_supported;
+}
 
 #endif

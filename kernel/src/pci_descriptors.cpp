@@ -1,4 +1,3 @@
-
 #include "cstr.h"
 #include "integers.h"
 
@@ -37,7 +36,7 @@ namespace PCI {
         case 0x1013:
             return "Cirrus Logic";
         default:
-            return to_hexstring(vendorID);
+            return to_hexstring<u16>(vendorID);
         }
     }
 
@@ -71,7 +70,7 @@ namespace PCI {
             case 0xa382:
                 return "400 Series Chipset Family SATA AHCI Controller";
             default:
-                return to_hexstring(deviceID);
+                return to_hexstring<u16>(deviceID);
             }
         case 0x1022:
             // AMD
@@ -99,13 +98,13 @@ namespace PCI {
             case 0x7903:
                 return "FCH SATA Controller [RAID mode]";
             default:
-                return to_hexstring(deviceID);
+                return to_hexstring<u16>(deviceID);
             }
         case 0x10DE:
             // NVIDIA Corporation
             switch (deviceID) {
             default:
-                return to_hexstring(deviceID);
+                return to_hexstring<u16>(deviceID);
             }
         case 0x1013:
             // Cirrus Logic
@@ -135,10 +134,10 @@ namespace PCI {
             case 0x00d0:
                 return "GD 5462";
             default:
-                return to_hexstring(deviceID);
+                return to_hexstring<u16>(deviceID);
             }
         default:
-            return to_hexstring(deviceID);
+            return to_hexstring<u16>(deviceID);
         }
     }
 
@@ -152,7 +151,7 @@ namespace PCI {
             case 0x1:
                 return "VGA-Compatible Unclassified Device";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0x01:
             // Mass Storage Controller
@@ -178,7 +177,7 @@ namespace PCI {
             case 0x80:
                 return "Other";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0x02:
             // Network Controller
@@ -204,7 +203,7 @@ namespace PCI {
             case 0x80:
                 return "Other";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0x03:
             // Display Controller
@@ -218,7 +217,7 @@ namespace PCI {
             case 0x80:
                 return "Other";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0x04:
             // Multimedia Controller
@@ -234,7 +233,7 @@ namespace PCI {
             case 0x80:
                 return "Other";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0x05:
             // Memory Controller
@@ -246,7 +245,7 @@ namespace PCI {
             case 0x80:
                 return "Other";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0x06:
             // Bridge
@@ -276,7 +275,7 @@ namespace PCI {
             case 0x80:
                 return "Other";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0x07:
             // Simple Communication Controller
@@ -296,7 +295,7 @@ namespace PCI {
             case 0x80:
                 return "Other";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0x08:
             // Base System Peripheral
@@ -318,7 +317,7 @@ namespace PCI {
             case 0x80:
                 return "Other";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0x09:
             // Input Device Controller
@@ -336,7 +335,7 @@ namespace PCI {
             case 0x80:
                 return "Other";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0x0a:
             // Docking Station
@@ -346,7 +345,7 @@ namespace PCI {
             case 0x80:
                 return "Other";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0x0b:
             // Processor
@@ -370,7 +369,7 @@ namespace PCI {
             case 0x80:
                 return "Other";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0x0c:
             // Serial Bus Controller
@@ -398,7 +397,7 @@ namespace PCI {
             case 0x80:
                 return "Other";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0x0d:
             // Wireless Controller
@@ -420,7 +419,7 @@ namespace PCI {
             case 0x80:
                 return "Other";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0xe:
             // Intelligent Controller
@@ -437,7 +436,7 @@ namespace PCI {
             case 0x4:
                 return "Satellite Data Controller";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0x10:
             // Encryption Controller
@@ -449,7 +448,7 @@ namespace PCI {
             case 0x80:
                 return "Other";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         case 0x11:
             // Signal Processing Controller
@@ -465,10 +464,10 @@ namespace PCI {
             case 0x80:
                 return "Other";
             default:
-                return to_hexstring(subclass);
+                return to_hexstring<u8>(subclass);
             }
         default:
-            return to_hexstring(subclass);
+            return to_hexstring<u8>(subclass);
         }
     }
 
@@ -497,7 +496,7 @@ namespace PCI {
                 case 0x8f:
                     return "PCI native mode controller, supports both channels switched to ISA compatibility mode, supports bus mastering";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             case 0x5:
                 // ATA Controller
@@ -507,7 +506,7 @@ namespace PCI {
                 case 0x30:
                     return "Chained DMA";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             case 0x6:
                 // Serial ATA Controller
@@ -519,7 +518,7 @@ namespace PCI {
                 case 0x2:
                     return "Serial Storage Bus";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             case 0x7:
                 // Serial Attached SCSI Controller
@@ -529,7 +528,7 @@ namespace PCI {
                 case 0x1:
                     return "Serial Storage Bus";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             case 0x8:
                 // Non-Volatile Memory Controller
@@ -539,10 +538,10 @@ namespace PCI {
                 case 0x2:
                     return "NVM Express";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             default:
-                return to_hexstring(progIF);
+                return to_hexstring<u8>(progIF);
             }
         case 0x03:
             // Display Controller
@@ -554,10 +553,10 @@ namespace PCI {
                 case 0x1:
                     return "8514-Compatible Controller";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             }
-            return to_hexstring(progIF);
+            return to_hexstring<u8>(progIF);
         case 0x06:
             // Bridge
             switch (subclass) {
@@ -569,7 +568,7 @@ namespace PCI {
                 case 0x1:
                     return "Subtractive Decode";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             case 0x8: 
                 // RACEway Bridge
@@ -579,7 +578,7 @@ namespace PCI {
                 case 0x1:
                     return "Endpoint Mode";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             case 0x9: 
                 // PCI-to-PCI Bridge
@@ -589,10 +588,10 @@ namespace PCI {
                 case 0x80:
                     return "Semi-Transparent, Secondary bus towards host CPU";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             default:
-                return to_hexstring(progIF);
+                return to_hexstring<u8>(progIF);
             }
         case 0x07:
             // Simple Communication Controller
@@ -615,7 +614,7 @@ namespace PCI {
                 case 0x6:
                     return "16950-Compatible";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             case 0x1:
                 // Parallel Controller
@@ -631,7 +630,7 @@ namespace PCI {
                 case 0xfe:
                     return "IEEE 1284 Target Device";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             case 0x3:
                 // Modem
@@ -647,10 +646,10 @@ namespace PCI {
                 case 0x4:
                     return "Hayes 16750-Compatible Interface";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             default:
-                return to_hexstring(progIF);
+                return to_hexstring<u8>(progIF);
             }
         case 0x08:
             // Base System Peripheral
@@ -669,7 +668,7 @@ namespace PCI {
                 case 0x20:
                     return "I/O(x) APIC Interrupt Controller";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             case 0x1:
                 // DMA Controller
@@ -681,7 +680,7 @@ namespace PCI {
                 case 0x2:
                     return "EISA-Compatible";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             case 0x2:
                 // Timer
@@ -695,7 +694,7 @@ namespace PCI {
                 case 0x3:
                     return "HPET";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             case 0x3:
                 // RTC Controller
@@ -705,10 +704,10 @@ namespace PCI {
                 case 0x1:
                     return "ISA-Compatible";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             default:
-                return to_hexstring(progIF);
+                return to_hexstring<u8>(progIF);
             }
         case 0x09:
             // Input Device Controller
@@ -716,9 +715,9 @@ namespace PCI {
                 // Gameport Controller
                 if (progIF == 0x0)       { return "Generic";  }
                 else if (progIF == 0x10) { return "Extended"; }
-                else { return to_hexstring(progIF); }
+                else { return to_hexstring<u8>(progIF); }
             }
-            return to_hexstring(progIF);
+            return to_hexstring<u8>(progIF);
         case 0xc:
             // Serial Bus Controller
             switch (subclass) {
@@ -726,7 +725,7 @@ namespace PCI {
                 // FireWire (IEEE 1394) Controller
                 if (progIF == 0x0)       { return "Generic"; }
                 else if (progIF == 0x10) { return "OHCI";    }
-                else { return to_hexstring(progIF); }
+                else { return to_hexstring<u8>(progIF); }
             case 0x3:
                 // USB Controller
                 switch (progIF) {
@@ -743,19 +742,19 @@ namespace PCI {
                 case 0xfe:
                     return "USB Device";
                 default:
-                    return to_hexstring(progIF);
+                    return to_hexstring<u8>(progIF);
                 }
             case 0x7:
                 // IPMI Interface
                 if      (progIF == 0x0) { return "SMIC";                      }
                 else if (progIF == 0x1) { return "Keyboard Controller Style"; }
                 else if (progIF == 0x2) { return "Block Transfer";            }
-                else                    { return to_hexstring(progIF);        }
+                else                    { return to_hexstring<u8>(progIF);    }
             default:
-                return to_hexstring(progIF);
+                return to_hexstring<u8>(progIF);
             }
         default:
-            return to_hexstring(progIF);
+            return to_hexstring<u8>(progIF);
         }
     }
 }
