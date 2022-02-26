@@ -3,13 +3,15 @@
 
 #include "../integers.h"
 
+// TODO: Store physical address (or make it easy to
+//   convert between physical/virtual addresses).
 struct HeapSegmentHeader {
     // Doubly linked list
-    HeapSegmentHeader* last;
-    HeapSegmentHeader* next;
+    HeapSegmentHeader* last { nullptr };
+    HeapSegmentHeader* next { nullptr };
     // Data fields
-    u64 length;
-    bool free;
+    u64 length { 0 };
+    bool free { false };
     // Fragmentation Prevention
     void combine_forward();
     void combine_backward();
@@ -27,21 +29,17 @@ void expand_heap(u64 numBytes);
 void* malloc(u64 numBytes);
 void free(void* address);
 
-inline void* operator new      (u64 numBytes)  { return malloc(numBytes); }
-inline void* operator new[]    (u64 numBytes)  { return malloc(numBytes); }
-inline void  operator delete   (void* address) { return free(address);    }
-inline void  operator delete[] (void* address) { return free(address);    }
+void* operator new (u64 numBytes);
+void* operator new[] (u64 numBytes);
+void operator delete (void* address) noexcept;
+void operator delete[] (void* address) noexcept;
 
 /// According to www.cplusplus.com on the C++14 standard, delete calls
 ///   with an extra `unsigned long` parameter just calls delete.
-inline void operator delete (void* address, u64 unused) {
-  (void)unused;
-  return free(address);
-}
-inline void operator delete[] (void* address, u64 unused) {
-  (void)unused;
-  return free(address);
-}
+void operator delete (void* address, u64 unused);
+void operator delete[] (void* address, u64 unused);
+
+void heap_print_debug();
 
 extern void* sHeapStart;
 extern void* sHeapEnd;

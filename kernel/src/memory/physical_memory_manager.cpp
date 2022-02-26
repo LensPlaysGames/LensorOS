@@ -1,4 +1,4 @@
-#include "memory_manager.h"
+#include "physical_memory_manager.h"
 
 #include "../bitmap.h"
 #include "common.h"
@@ -151,11 +151,11 @@ namespace Memory {
     void print_debug() {
         srl->writestr("Memory Manager Debug Dump:");
         srl->writestr("\r\n  Total Memory: ");
-        srl->writestr(to_string(TotalPages * PAGE_SIZE));
-        srl->writestr("\r\n  Free Memory: ");
-        srl->writestr(to_string(TotalFreePages * PAGE_SIZE));
-        srl->writestr("\r\n  Used Memory: ");
-        srl->writestr(to_string(TotalUsedPages * PAGE_SIZE));
-        srl->writestr("\r\n");
+        srl->writestr(to_string(TotalPages * PAGE_SIZE / 1024 / 1024));
+        srl->writestr("MiB\r\n  Free Memory: ");
+        srl->writestr(to_string(TotalFreePages * PAGE_SIZE / 1024 / 1024));
+        srl->writestr("MiB\r\n  Used Memory: ");
+        srl->writestr(to_string(TotalUsedPages * PAGE_SIZE / 1024 / 1024));
+        srl->writestr("MiB\r\n");
     }
 }

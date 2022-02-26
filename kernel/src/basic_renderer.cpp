@@ -1,7 +1,7 @@
 #include "basic_renderer.h"
 
 #include "cstr.h"
-#include "memory/memory_manager.h"
+#include "memory/physical_memory_manager.h"
 #include "paging/page_table_manager.h"
 #include "uart.h"
 

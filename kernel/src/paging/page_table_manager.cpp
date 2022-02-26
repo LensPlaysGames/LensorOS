@@ -1,7 +1,7 @@
 #include "page_table_manager.h"
 
 #include "../memory.h"
-#include "../memory/memory_manager.h"
+#include "../memory/physical_memory_manager.h"
 #include "paging.h"
 
 PageTableManager gPTM {nullptr};

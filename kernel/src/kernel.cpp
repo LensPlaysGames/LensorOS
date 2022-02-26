@@ -5,7 +5,7 @@
 #include "hpet.h"
 #include "interrupts/interrupts.h"
 #include "keyboard.h"
-#include "memory/memory_manager.h"
+#include "memory/physical_memory_manager.h"
 #include "pit.h"
 #include "rtc.h"
 #include "tss.h"

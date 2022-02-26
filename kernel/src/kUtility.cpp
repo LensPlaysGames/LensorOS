@@ -18,7 +18,7 @@
 #include "io.h"
 #include "keyboard.h"
 #include "memory.h"
-#include "memory/memory_manager.h"
+#include "memory/physical_memory_manager.h"
 #include "mouse.h"
 #include "paging/paging.h"
 #include "paging/page_table_manager.h"
@@ -366,6 +366,8 @@ void kernel_init(BootInfo* bInfo) {
     (void)gHPET.initialize();
     // Prepare PS2 mouse.
     init_ps2_mouse();
+    // Print the state of the heap just before beginning multi-threading setup.
+    heap_print_debug();
     // Setup task state segment for eventual switch to user-land.
     TSS::initialize();
     // Use kernel process switching.

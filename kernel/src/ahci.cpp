@@ -4,7 +4,7 @@
 #include "fat_driver.h"
 #include "fat_fs.h"
 #include "memory/heap.h"
-#include "memory/memory_manager.h"
+#include "memory/physical_memory_manager.h"
 #include "inode.h"
 #include "memory.h"
 #include "paging/page_table_manager.h"

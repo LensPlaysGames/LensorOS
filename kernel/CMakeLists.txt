@@ -69,7 +69,7 @@ HEADERS
     src/math.h
     src/memory.h
     src/memory/heap.h
-    src/memory/memory_manager.h
+    src/memory/physical_memory_manager.h
     src/mouse.h
     src/paging/page_table_manager.h
     src/paging/paging.h
@@ -110,7 +110,7 @@ SOURCES
     src/kUtility.cpp
     src/memory.cpp
     src/memory/heap.cpp
-    src/memory/memory_manager.cpp
+    src/memory/physical_memory_manager.cpp
     src/mouse.cpp
     src/paging/page_table_manager.cpp
     src/paging/paging.cpp

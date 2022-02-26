@@ -1,5 +1,5 @@
-#ifndef LENSOR_OS_MEMORY_MANAGER_H
-#define LENSOR_OS_MEMORY_MANAGER_H
+#ifndef LENSOR_OS_PHYSICAL_MEMORY_MANAGER_H
+#define LENSOR_OS_PHYSICAL_MEMORY_MANAGER_H
 
 #include "../bitmap.h"
 #include "../efi_memory.h"
@@ -37,4 +37,4 @@ namespace Memory {
     void print_debug();
 }
 
-#endif /* LENSOR_OS_MEMORY_MANAGER_H */
+#endif /* LENSOR_OS_PHYSICAL_MEMORY_MANAGER_H */
