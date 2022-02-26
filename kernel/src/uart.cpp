@@ -1,10 +1,7 @@
 #include "uart.h"
 
-#include "heap.h"
-
-#ifdef COM1_INPUT_DEBUG
 #include "cstr.h"
-#endif
+#include "memory/heap.h"
 
 // Global serial driver.
 UARTDriver* srl = nullptr;
@@ -166,4 +163,8 @@ void UARTDriver::writestr(char* str, u64 numChars) {
         str++;
         numChars--;    
     }
+}
+
+void UARTDriver::writestr(u64 number) {
+    writestr(to_string(number));
 }

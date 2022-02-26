@@ -1,7 +1,7 @@
 #include "basic_renderer.h"
 
 #include "cstr.h"
-#include "paging/page_frame_allocator.h"
+#include "memory/physical_memory_manager.h"
 #include "paging/page_table_manager.h"
 #include "uart.h"
 
@@ -20,7 +20,7 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
     u64 fbSize = render->BufferSize + 0x1000;
     u64 fbPages = fbSize / 0x1000 + 1;
     // Allocate physical pages for Render framebuffer.
-    gAlloc.lock_pages(render->BaseAddress, fbPages);
+    Memory::lock_pages(render->BaseAddress, fbPages);
     // Map active framebuffer physical address to virtual addresses 1:1.
     for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
         gPTM.map_memory((void*)t, (void*)t);
@@ -37,7 +37,7 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
     // Copy render framebuffer data to target.
     target = *render;
     // Find physical pages for target framebuffer and allocate them.
-    target.BaseAddress = gAlloc.request_pages(fbPages);
+    target.BaseAddress = Memory::request_pages(fbPages);
     fbBase = (u64)target.BaseAddress;
     for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
         gPTM.map_memory((void*)t, (void*)t);

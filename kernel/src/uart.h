@@ -145,6 +145,8 @@ public:
     /// Write a C-style null-terminated byte-string to the serial output COM1.
     void writestr(const char* str);
     void writestr(char* str, u64 numChars);
+    /// Convert the given number to a string, then write that to the serial output.
+    void writestr(u64 number);
 };
 
 extern UARTDriver* srl;

@@ -1,22 +1,41 @@
 #include "bitmap.h"
 
-bool Bitmap::Get(u64 index) {
+#include "integers.h"
+#include "memory.h"
+
+Bitmap::Bitmap(u64 size, u8* bufferAddress)
+    : Size(size), Buffer(bufferAddress)
+{
+    memset(Buffer, 0, Size);
+}
+
+void Bitmap::init(u64 size, u8* bufferAddress) {
+    Size = size;
+    Buffer = bufferAddress;
+    // Initialize the buffer to all zeros (ensure known state).
+    memset(Buffer, 0, Size);
+}
+
+bool Bitmap::get(u64 index) {
     if (index < Size * 8 && (Buffer[index / 8] & (0b10000000 >> (index % 8))) > 0)
         return true;
+
     return false;
 }
 
-bool Bitmap::Set(u64 index, bool value) {
+bool Bitmap::set(u64 index, bool value) {
     if (index >= Size * 8)
         return false;
+
     u64 byteIndex = index / 8;
     u8 bitIndexer = 0b10000000 >> (index % 8);
     Buffer[byteIndex] &= ~bitIndexer;
     if (value)
         Buffer[byteIndex] |= bitIndexer;
+
     return true;
 }
 
 bool Bitmap::operator[](u64 index) {
-    return Get(index);
+    return get(index);
 }

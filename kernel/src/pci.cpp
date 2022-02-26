@@ -3,7 +3,7 @@
 #include "ahci.h"
 #include "acpi.h"
 #include "cstr.h"
-#include "heap.h"
+#include "memory/heap.h"
 #include "paging/page_table_manager.h"
 #include "uart.h"
 

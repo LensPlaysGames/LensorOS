@@ -1,8 +1,8 @@
 #include "page_table_manager.h"
 
 #include "../memory.h"
+#include "../memory/physical_memory_manager.h"
 #include "paging.h"
-#include "page_frame_allocator.h"
 
 PageTableManager gPTM {nullptr};
 
@@ -18,7 +18,7 @@ void PageTableManager::map_memory(void* virtualMemory, void* physicalMemory) {
     PDE = PML4->entries[indexer.PageDirectoryPointerIndex];
     PageTable* PDP;
     if (!PDE.get_flag(PT_Flag::Present)) {
-        PDP = (PageTable*)gAlloc.request_page();
+        PDP = (PageTable*)Memory::request_page();
         memset(PDP, 0, 0x1000);
         PDE.set_address((u64)PDP >> 12);
         PDE.set_flag(PT_Flag::Present, true);
@@ -31,7 +31,7 @@ void PageTableManager::map_memory(void* virtualMemory, void* physicalMemory) {
     PDE = PDP->entries[indexer.PageDirectoryIndex];
     PageTable* PD;
     if (!PDE.get_flag(PT_Flag::Present)) {
-        PD = (PageTable*)gAlloc.request_page();
+        PD = (PageTable*)Memory::request_page();
         memset(PD, 0, 0x1000);
         PDE.set_address((u64)PD >> 12);
         PDE.set_flag(PT_Flag::Present, true);
@@ -44,7 +44,7 @@ void PageTableManager::map_memory(void* virtualMemory, void* physicalMemory) {
     PDE = PD->entries[indexer.PageTableIndex];
     PageTable* PT;
     if (!PDE.get_flag(PT_Flag::Present)) {
-        PT = (PageTable*)gAlloc.request_page();
+        PT = (PageTable*)Memory::request_page();
         memset(PT, 0, 0x1000);
         PDE.set_address((u64)PT >> 12);
         PDE.set_flag(PT_Flag::Present, true);

@@ -1,8 +1,4 @@
 # LensorOS
-At first, development followed tutorials that can be found at [Poncho's GitHub](https://github.com/Absurdponcho). \
-Those tutorials were abandoned just after setting up a very basic AHCI driver, so I've taken the wheels from there.
-
-A large thanks to the huge portions of inspiration, knowledge, and help that came from the OSDev [wiki](https://wiki.osdev.org/Expanded_Main_Page) and [forums](https://forum.osdev.org/).
 
 ---
 
@@ -11,6 +7,7 @@ A large thanks to the huge portions of inspiration, knowledge, and help that cam
 - [Booting into LensorOS using QEMU](#qemu-boot)
 - [Building LensorOS](#build)
   - [A bug regarding CMake's ASM_NASM Makefile generation](#cmake-bug)
+- [Acknowledgements](#ack)
   
 ---
 
@@ -212,3 +209,13 @@ Code format is currently defined as follows:
 ... header contents ...
 #endif /* LENSOR_OS_NAME_OF_FILE_H */
 ```
+
+### Acknowledgements <a name="ack"></a>
+At first, development followed tutorials that can be found at [Poncho's GitHub](https://github.com/Absurdponcho). \
+Those tutorials were abandoned just after setting up a very basic AHCI driver, so I've taken the wheels from there.
+
+A large thanks to the huge portions of inspiration, knowledge, and help that came from the OSDev [wiki](https://wiki.osdev.org/Expanded_Main_Page) and [forums](https://forum.osdev.org/) (sorry, Terry).
+
+A huge amount of entertainment and inspiration has come from [SerenityOS](https://github.com/SerenityOS/serenity), an operating system being built by the OS development hobby-ist community.
+
+The compeletely-from-scratch [ToaruOS](https://github.com/klange/toaruos) has also been an amazing source of knowledge, inspiration, and information.

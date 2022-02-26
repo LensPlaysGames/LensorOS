@@ -10,7 +10,7 @@
 #include "fat_definitions.h"
 #include "fat_driver.h"
 #include "gdt.h"
-#include "heap.h"
+#include "memory/heap.h"
 #include "hpet.h"
 #include "interrupts/idt.h"
 #include "interrupts/interrupts.h"
@@ -18,9 +18,9 @@
 #include "io.h"
 #include "keyboard.h"
 #include "memory.h"
+#include "memory/physical_memory_manager.h"
 #include "mouse.h"
 #include "paging/paging.h"
-#include "paging/page_frame_allocator.h"
 #include "paging/page_table_manager.h"
 #include "pci.h"
 #include "pit.h"
@@ -32,24 +32,22 @@
 #include "uart.h"
 
 void prepare_memory(BootInfo* bInfo) {
-    // Setup global page frame allocator.
-    // Page = 4kb of virtual memory.
-    // Frame = 4kb of physical memory.
-    gAlloc = PageFrameAllocator();
+    /* What this function does:
+     * |- Prepare physical memory manager (Memory namespace).
+     * |- Lock kernel memory so it doesn't get over-written within physical memory manager.
+     * `- Create, initialize, and load a page map level four (x86 virtual memory structure).
+     */
     // Setup memory state from EFI memory map.
-    gAlloc.read_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    Memory::init_efi(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     // _KernelStart and _KernelEnd defined in linker script "../kernel.ld"
     u64 kernelPagesNeeded = (((u64)&KERNEL_END - (u64)&KERNEL_START) / 4096) + 1;
-    // TODO: Map kernel explicitly to virtual physical memory.
-    gAlloc.lock_pages(&KERNEL_START, kernelPagesNeeded);
-    // PAGE MAP LEVEL FOUR (see paging.h).
-    PageTable* PML4 = (PageTable*)gAlloc.request_page();
-    // PAGE TABLE MANAGER
+    Memory::lock_pages(&KERNEL_START, kernelPagesNeeded);
+    // PAGE MAP LEVEL FOUR (see `kernel/src/paging/paging.h`).
+    PageTable* PML4 = (PageTable*)Memory::request_page();
     gPTM = PageTableManager(PML4);
     // Map all physical RAM addresses to virtual addresses 1:1, store them in the PML4.
-    // This means that virtual addresses will be equal to physical addresses.
-    u64 memSize = get_memory_size(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize);
-    for (u64 t = 0; t < memSize; t+=0x1000)
+    // This means that virtual addresses will be equal to physical memory addresses.
+    for (u64 t = 0; t < Memory::get_total_ram(); t+=0x1000)
         gPTM.map_memory((void*)t, (void*)t);
 
     /* x86: Control Register 3 = Address of the page directory in physical form.
@@ -63,13 +61,16 @@ void prepare_memory(BootInfo* bInfo) {
      *   A single TLB entry may be invalidated using the `INVLPG <addr>` instruction.
      */
     asm ("mov %0, %%cr3" : : "r" (PML4));
+
+    // Setup dynamic memory allocation (`new`, `delete`).
+    init_heap((void*)0x700000000000, 1);
 }
 
 void prepare_interrupts() {
     // REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
     remap_pic();
     // CREATE INTERRUPT DESCRIPTOR TABLE.
-    gIDT = IDTR(0x0fff, (u64)gAlloc.request_page());
+    gIDT = IDTR(0x0fff, (u64)Memory::request_page());
     // POPULATE TABLE.
     // NOTE: IRQ0 uses this handler by default, but scheduler over-rides this!
     gIDT.install_handler((u64)system_timer_handler,             PIC_IRQ0);
@@ -131,9 +132,11 @@ u8 fxsave_region[512] __attribute__((aligned(16)));
 void kernel_init(BootInfo* bInfo) {
     /* 
      *   - Prepare physical/virtual memory
-     *   - Load Global Descriptor Table
-     *   - Load Interrupt Descriptor Table
-     *   - Prepare the heap
+     *     - `Memory` namespace init (physical memory manager)
+     *     - PageTableManager creation (x86 virtual memory manager)
+     *     - Prepare the heap (`new`, `delete`)
+     *   - Load Global Descriptor Table (CPU Privilege levels, hardware task switching)
+     *   - Load Interrupt Descriptor Table (Install handlers for hardware IRQs + software exceptions)
      *   - Setup output to the user (serial driver, graphical renderers).
      *     - UARTDriver         -- serial output
      *     - BasicRenderer      -- drawing graphics
@@ -149,61 +152,53 @@ void kernel_init(BootInfo* bInfo) {
      *   - Prepare devices
      *     - High Precision Event Timer (HPET)
      *     - PS2 Mouse
+     *   - Print information about the system after boot initialization to serial out
      *   - Setup scheduler (TSS descriptor, task switching)
      */
     // Disable interrupts (with no IDT, not much was happening anyway).
     asm ("cli");
     // Parse memory map passed by bootloader.
+    // Setup dynamic memory allocation.
     prepare_memory(bInfo);
     // Prepare Global Descriptor Table Descriptor.
     GDTDescriptor GDTD = GDTDescriptor(sizeof(GDT) - 1, (u64)&gGDT);
     LoadGDT(&GDTD);
     // Prepare Interrupt Descriptor Table.
     prepare_interrupts();
-    // Setup dynamic memory allocation.
-    init_heap((void*)0x700000000000, 1);
     // Setup random number generators.
     gRandomLCG = LCG();
     gRandomLFSR = LFSR();
     // Setup serial input/output.
     srl = new UARTDriver;
-    print_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
-    print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     srl->writestr("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
     srl->writestr("[kUtil]: Mapped physical memory from 0x");
-    srl->writestr(to_hexstring(0ULL));
+    srl->writestr(to_hexstring<u64>(0ULL));
     srl->writestr(" thru ");
-    srl->writestr(to_hexstring((u64)get_memory_size(bInfo->map, bInfo->mapSize / bInfo->mapDescSize, bInfo->mapDescSize)));
-    srl->writestr("\r\n");
-    srl->writestr("[kUtil]:\r\n  Kernel loaded from 0x");
-    srl->writestr(to_hexstring((u64)&KERNEL_START));
+    srl->writestr(to_hexstring<u64>(Memory::get_total_ram()));
+    srl->writestr("\r\n[kUtil]:\r\n  Kernel loaded from 0x");
+    srl->writestr(to_hexstring<void*>(&KERNEL_START));
     srl->writestr(" to 0x");
-    srl->writestr(to_hexstring((u64)&KERNEL_END));
-    srl->writestr("\r\n");
-    srl->writestr("    .text:   0x");
-    srl->writestr(to_hexstring((u64)&TEXT_START));
+    srl->writestr(to_hexstring<void*>(&KERNEL_END));
+    srl->writestr("\r\n    .text:   0x");
+    srl->writestr(to_hexstring<void*>(&TEXT_START));
     srl->writestr(" thru 0x");
-    srl->writestr(to_hexstring((u64)&TEXT_END));
-    srl->writestr("\r\n");
-    srl->writestr("    .data:   0x");
-    srl->writestr(to_hexstring((u64)&DATA_START));
+    srl->writestr(to_hexstring<void*>(&TEXT_END));
+    srl->writestr("\r\n    .data:   0x");
+    srl->writestr(to_hexstring<void*>(&DATA_START));
     srl->writestr(" thru 0x");
-    srl->writestr(to_hexstring((u64)&DATA_END));
-    srl->writestr("\r\n");
-    srl->writestr("    .rodata: 0x");
-    srl->writestr(to_hexstring((u64)&READ_ONLY_DATA_START));
+    srl->writestr(to_hexstring<void*>(&DATA_END));
+    srl->writestr("\r\n    .rodata: 0x");
+    srl->writestr(to_hexstring<void*>(&READ_ONLY_DATA_START));
     srl->writestr(" thru 0x");
-    srl->writestr(to_hexstring((u64)&READ_ONLY_DATA_END));
-    srl->writestr("\r\n");
-    srl->writestr("    .bss:    0x");
-    srl->writestr(to_hexstring((u64)&BLOCK_STARTING_SYMBOLS_END));
+    srl->writestr(to_hexstring<void*>(&READ_ONLY_DATA_END));
+    srl->writestr("\r\n    .bss:    0x");
+    srl->writestr(to_hexstring<void*>(&BLOCK_STARTING_SYMBOLS_START));
     srl->writestr(" thru 0x");
-    srl->writestr(to_hexstring((u64)&BLOCK_STARTING_SYMBOLS_END));
-    srl->writestr("\r\n\r\n");
-    srl->writestr("[kUtil]: Heap mapped to 0x");
-    srl->writestr(to_hexstring((u64)sHeapStart));
+    srl->writestr(to_hexstring<void*>(&BLOCK_STARTING_SYMBOLS_END));
+    srl->writestr("\r\n\r\n[kUtil]: Heap mapped to 0x");
+    srl->writestr(to_hexstring<void*>(sHeapStart));
     srl->writestr(" thru 0x");
-    srl->writestr(to_hexstring((u64)sHeapEnd));
+    srl->writestr(to_hexstring<void*>(sHeapEnd));
     srl->writestr("\r\n");
     // Create basic framebuffer renderer.
     srl->writestr("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
@@ -372,6 +367,11 @@ void kernel_init(BootInfo* bInfo) {
     (void)gHPET.initialize();
     // Prepare PS2 mouse.
     init_ps2_mouse();
+    // Print the state of the heap just before beginning multi-threading setup.
+    heap_print_debug();
+    //print_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    //print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    Memory::print_debug();
     // Setup task state segment for eventual switch to user-land.
     TSS::initialize();
     // Use kernel process switching.
