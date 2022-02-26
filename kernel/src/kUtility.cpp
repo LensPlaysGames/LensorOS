@@ -62,6 +62,9 @@ void prepare_memory(BootInfo* bInfo) {
      *   A single TLB entry may be invalidated using the `INVLPG <addr>` instruction.
      */
     asm ("mov %0, %%cr3" : : "r" (PML4));
+
+    // Setup dynamic memory allocation (`new`, `delete`).
+    init_heap((void*)0x700000000000, 1);
 }
 
 void prepare_interrupts() {
@@ -153,14 +156,13 @@ void kernel_init(BootInfo* bInfo) {
     // Disable interrupts (with no IDT, not much was happening anyway).
     asm ("cli");
     // Parse memory map passed by bootloader.
+    // Setup dynamic memory allocation.
     prepare_memory(bInfo);
     // Prepare Global Descriptor Table Descriptor.
     GDTDescriptor GDTD = GDTDescriptor(sizeof(GDT) - 1, (u64)&gGDT);
     LoadGDT(&GDTD);
     // Prepare Interrupt Descriptor Table.
     prepare_interrupts();
-    // Setup dynamic memory allocation.
-    init_heap((void*)0x700000000000, 1);
     // Setup random number generators.
     gRandomLCG = LCG();
     gRandomLFSR = LFSR();
