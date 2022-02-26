@@ -11,15 +11,19 @@ void* sHeapEnd;
 HeapSegmentHeader* sLastHeader;
 
 void HeapSegmentHeader::combine_forward() {
+    // Can't combine nothing :^).
     if (next == nullptr)
         return;
+    // Don't combine a header that is in use.
     if (next->free == false)
         return;
+    // Update last header address if it is being changed.
     if (next == sLastHeader)
         sLastHeader = this;
     // Set next next segment last to this segment.
     if (next->next != nullptr)
         next->next->last = this;
+    
     length = length + next->length + sizeof(HeapSegmentHeader);
     next = next->next;
 }
@@ -40,12 +44,6 @@ HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
     u64 splitSegmentLength = length - splitLength - sizeof(HeapSegmentHeader);
     if (splitSegmentLength < 8)
         return nullptr;
-
-    if (srl) {
-        srl->writestr("[HEAP]: Split segment length: ");
-        srl->writestr(splitSegmentLength);
-        srl->writestr("\r\n");
-    }
 
     /// Position of header that is newly created within the middle of `this` header.
     HeapSegmentHeader* splitHeader = (HeapSegmentHeader*)((u64)this
@@ -72,7 +70,6 @@ HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
 void init_heap(void* startAddress, u64 numInitialPages) {
     for (u64 i = 0; i < numInitialPages; ++i) {
         // Map virtual heap position to physical memory address returned by page frame allocator.
-        //void* old = gAlloc.request_page();
         gPTM.map_memory((void*)((u64)startAddress + (i * PAGE_SIZE)), Memory::request_page());
     }
     // Start of heap.
@@ -108,12 +105,6 @@ void expand_heap(u64 numBytes) {
     extension->length = numBytes - sizeof(HeapSegmentHeader);
     // After expanding, combine with the previous segment (decrease fragmentation).
     extension->combine_backward();
-
-    srl->writestr("[HEAP]: Expanded by ");
-    srl->writestr(numPages);
-    srl->writestr(" pages (");
-    srl->writestr(numPages * PAGE_SIZE);
-    srl->writestr("KiB)\r\n");
 }
 
 
@@ -126,7 +117,7 @@ void* malloc(u64 numBytes) {
         numBytes -= (numBytes % 8);
         numBytes += 8;
     }
-
+    // Start looking for a free segment at the start of the heap.
     HeapSegmentHeader* current = (HeapSegmentHeader*)sHeapStart;
     while (true) {
         if (current->free) {
@@ -182,8 +173,8 @@ void heap_print_debug() {
         srl->writestr(it->length);
         srl->writestr("\r\n");
         ++i;
-        ++it;
-    } while (it->next);
+        it = it->next;
+    } while (it);
 }
 
 void* operator new(u64 numBytes) { return malloc(numBytes); }
