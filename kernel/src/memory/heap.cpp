@@ -155,7 +155,7 @@ void free(void* address) {
 void heap_print_debug() {
     srl->writestr("[HEAP]: Debug information dump:\r\n  Size: ");
     srl->writestr(((u64)sHeapEnd - (u64)sHeapStart) / 1024);
-    srl->writestr("KiB\r\n    Start: 0x");
+    srl->writestr("KiB\r\n  Start: 0x");
     srl->writestr(to_hexstring(sHeapStart));
     srl->writestr("\r\n  End: 0x");
     srl->writestr(to_hexstring(sHeapEnd));

@@ -122,18 +122,25 @@ namespace Memory {
                 asm ("hlt");
         }
         
-        // Number of bytes needed = (Pages / Bits per byte) + 1
+        // Number of bytes needed = (Number of Pages / Bits per Byte) + 1
         u64 bitmapSize = (TotalPages / 8) + 1;
         PageMap.init(bitmapSize, (u8*)((u64)largestFreeMemorySegment));
         TotalFreePages = TotalPages;
-        lock_pages(0, TotalPages);
+        lock_pages(0, TotalPages + 1);
+        // Without this assignment to zero, more free memory
+        //   would be reported than actually is free.
+        TotalFreePages = 0;
+        // With all pages in the bitmap locked, free only the EFI conventional memory segments.
         for (u64 i = 0; i < entries; ++i) {
             EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)map + (i * entrySize));
             if (desc->type == 7)
                 free_pages(desc->physicalAddress, desc->numPages);
         }
+        // The page map itself takes up space within the largest free memory segment.
+        // As every memory segment was just set back to free in
+        //   the bitmap, it's important to re-lock the page bitmap
+        //   so it doesn't get trampled on when allocating more memory.
         lock_pages(PageMap.base(), (PageMap.length() / 4096) + 1);
-        
     }
 
     u64 get_total_ram() {

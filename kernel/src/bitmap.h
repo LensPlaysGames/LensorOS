@@ -7,14 +7,9 @@ class Bitmap {
 public:
     Bitmap() {}
 
-    Bitmap(u64 size, u8* bufferAddress)
-        : Size(size), Buffer(bufferAddress) {}
+    Bitmap(u64 size, u8* bufferAddress);
 
-    void init(u64 size, u8* bufferAddress) {
-        Size = size;
-        Buffer = bufferAddress;
-    }
-
+    void init(u64 size, u8* bufferAddress);
     u64 length() { return Size; }
     void* base() { return (void*)Buffer; };
 

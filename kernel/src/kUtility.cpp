@@ -42,12 +42,11 @@ void prepare_memory(BootInfo* bInfo) {
     // _KernelStart and _KernelEnd defined in linker script "../kernel.ld"
     u64 kernelPagesNeeded = (((u64)&KERNEL_END - (u64)&KERNEL_START) / 4096) + 1;
     Memory::lock_pages(&KERNEL_START, kernelPagesNeeded);
-    // PAGE MAP LEVEL FOUR (see paging.h).
+    // PAGE MAP LEVEL FOUR (see `kernel/src/paging/paging.h`).
     PageTable* PML4 = (PageTable*)Memory::request_page();
-    // PAGE TABLE MANAGER
     gPTM = PageTableManager(PML4);
     // Map all physical RAM addresses to virtual addresses 1:1, store them in the PML4.
-    // This means that virtual addresses will be equal to physical addresses.
+    // This means that virtual addresses will be equal to physical memory addresses.
     for (u64 t = 0; t < Memory::get_total_ram(); t+=0x1000)
         gPTM.map_memory((void*)t, (void*)t);
 
