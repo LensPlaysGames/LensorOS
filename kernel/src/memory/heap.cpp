@@ -153,17 +153,17 @@ void free(void* address) {
 }
 
 void heap_print_debug() {
-    srl->writestr("Heap information dump:\r\n");
-    srl->writestr("  Start: 0x");
+    srl->writestr("[HEAP]: Debug information dump:\r\n  Size: ");
+    srl->writestr(((u64)sHeapEnd - (u64)sHeapStart) / 1024);
+    srl->writestr("KiB\r\n    Start: 0x");
     srl->writestr(to_hexstring(sHeapStart));
     srl->writestr("\r\n  End: 0x");
     srl->writestr(to_hexstring(sHeapEnd));
-    srl->writestr("\r\n");
-    srl->writestr("  Regions: \r\n");
+    srl->writestr("\r\n  Regions:");
     u64 i = 0;
     HeapSegmentHeader* it = (HeapSegmentHeader*)sHeapStart;
     do {
-        srl->writestr("    Region ");
+        srl->writestr("\r\n    Region ");
         srl->writestr(i);
         srl->writestr(":\r\n      Free: ");
         srl->writestr(to_string(it->free));
@@ -171,15 +171,15 @@ void heap_print_debug() {
         srl->writestr(to_hexstring<HeapSegmentHeader*>(it));
         srl->writestr("\r\n      Length: ");
         srl->writestr(it->length);
-        srl->writestr("\r\n");
         ++i;
         it = it->next;
     } while (it);
+    srl->writestr("\r\n\r\n");
 }
 
-void* operator new(u64 numBytes) { return malloc(numBytes); }
+void* operator new   (u64 numBytes) { return malloc(numBytes); }
 void* operator new[] (u64 numBytes) { return malloc(numBytes); }
-void  operator delete (void* address) noexcept { return free(address); }
+void  operator delete   (void* address) noexcept { return free(address); }
 void  operator delete[] (void* address) noexcept { return free(address); }
 
 void operator delete (void* address, u64 unused) {

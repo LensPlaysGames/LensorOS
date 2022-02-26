@@ -133,9 +133,11 @@ u8 fxsave_region[512] __attribute__((aligned(16)));
 void kernel_init(BootInfo* bInfo) {
     /* 
      *   - Prepare physical/virtual memory
-     *   - Load Global Descriptor Table
-     *   - Load Interrupt Descriptor Table
-     *   - Prepare the heap
+     *     - `Memory` namespace init (physical memory manager)
+     *     - PageTableManager creation (x86 virtual memory manager)
+     *     - Prepare the heap (`new`, `delete`)
+     *   - Load Global Descriptor Table (CPU Privilege levels, hardware task switching)
+     *   - Load Interrupt Descriptor Table (Install handlers for hardware IRQs + software exceptions)
      *   - Setup output to the user (serial driver, graphical renderers).
      *     - UARTDriver         -- serial output
      *     - BasicRenderer      -- drawing graphics
@@ -151,6 +153,7 @@ void kernel_init(BootInfo* bInfo) {
      *   - Prepare devices
      *     - High Precision Event Timer (HPET)
      *     - PS2 Mouse
+     *   - Print information about the system after boot initialization to serial out
      *   - Setup scheduler (TSS descriptor, task switching)
      */
     // Disable interrupts (with no IDT, not much was happening anyway).
@@ -168,10 +171,7 @@ void kernel_init(BootInfo* bInfo) {
     gRandomLFSR = LFSR();
     // Setup serial input/output.
     srl = new UARTDriver;
-    //print_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
-    //print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     srl->writestr("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
-    Memory::print_debug();
     srl->writestr("[kUtil]: Mapped physical memory from 0x");
     srl->writestr(to_hexstring<u64>(0ULL));
     srl->writestr(" thru ");
@@ -370,6 +370,9 @@ void kernel_init(BootInfo* bInfo) {
     init_ps2_mouse();
     // Print the state of the heap just before beginning multi-threading setup.
     heap_print_debug();
+    //print_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    //print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    Memory::print_debug();
     // Setup task state segment for eventual switch to user-land.
     TSS::initialize();
     // Use kernel process switching.
