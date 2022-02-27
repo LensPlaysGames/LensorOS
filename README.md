@@ -7,6 +7,7 @@
 - [Booting into LensorOS using QEMU](#qemu-boot)
 - [Building LensorOS](#build)
   - [A bug regarding CMake's ASM_NASM Makefile generation](#cmake-bug)
+- [Contribution Guidelines](#contrib)
 - [Acknowledgements](#ack)
   
 ---
@@ -194,7 +195,7 @@ lensor-radii@Garry:~/LensorOS/kernel/out$
 As you can see, the file `build.make` has been changed by the `cmake .` command, altering it to actually use the flags I pass in `kernel/CMakeLists.txt` with the `target_compile_options()` CMake function. \
 I don't know why the re-build is necessary, and it takes very little time, but if you know anything on why this occurs I would greatly appreciate you letting me know.
 
-### Contributions
+### Contribution Guidelines <a name="contrib"></a>
 If you see something you would like to work on, do it! Pull requests will be reviewed and merged.
 
 Code format is currently defined as follows:
