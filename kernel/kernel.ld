@@ -10,6 +10,7 @@ SECTIONS
     {
         TEXT_START = .;
         *(.text)
+        *(.gnu.linkonce.t*)
         TEXT_END = .;
         . = ALIGN(0x1000);
     }
@@ -18,6 +19,7 @@ SECTIONS
     {
         DATA_START = .;
         *(.data)
+        *(.gnu.linkonce.d*)
         DATA_END = .;
         . = ALIGN(0x1000);
     }
@@ -25,7 +27,17 @@ SECTIONS
     .rodata : AT(ADDR(.rodata) - KERNEL_VIRTUAL)
     {
         READ_ONLY_DATA_START = .;
+
+        start_ctors = .;
+        *(SORT(.ctors*))
+        end_ctors = .;
+
+        start_dtors = .;
+        *(SORT(.dtors*))
+        end_dtors = .;
+
         *(.rodata)
+        *(.gnu.linkonce.r*)
         READ_ONLY_DATA_END = .;
         . = ALIGN(0x1000);
     }
@@ -35,6 +47,7 @@ SECTIONS
         BLOCK_STARTING_SYMBOLS_START = .;
         *(COMMON)
         *(.bss)
+        *(.gnu.linkonce.b*)
         BLOCK_STARTING_SYMBOLS_END = .;
         . = ALIGN(0x1000);
     }
