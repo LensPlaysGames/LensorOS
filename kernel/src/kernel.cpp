@@ -211,6 +211,12 @@ extern "C" void _start(BootInfo* bInfo) {
     //(void)dereferenced;
     //UART::out("Null de-referenced!\r\n");
 
+    gPIT.play_sound(262, 0.1); // C4
+    gPIT.play_sound(294, 0.2); // D4
+    gPIT.play_sound(330, 0.2); // E4
+    gPIT.play_sound(440, 0.2); // A4
+    gPIT.play_sound(392, 0.1); // G4
+
     // Start keyboard input at draw position, not origin.
     Keyboard::gText.set_cursor_from_pixel_position(gRend.DrawPos);
     u32 debugInfoX = gRend.Target->PixelWidth - 300;

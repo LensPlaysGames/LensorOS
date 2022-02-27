@@ -1,7 +1,9 @@
 #include "pit.h"
 
+#include "cstr.h"
 #include "integers.h"
 #include "io.h"
+#include "uart.h"
 
 PIT gPIT;
 
@@ -28,11 +30,16 @@ void PIT::stop_speaker() {
 
 void PIT::play_sound(u64 frequency, double duration) {
     configure_channel(Channel::Two, Access::HighAndLow, Mode::SquareWaveGenerator, frequency);
+
     u64 ticksToWait = duration * PIT_FREQUENCY;
-    u64 startTick = Ticks;
+
+    u64 tickToWaitTo = Ticks + ticksToWait;
     start_speaker();
-    while (Ticks - startTick < ticksToWait)
-        ;
+    // FIXME: Playing a sound shouldn't block the entire system :^)
+    //   I should probably create a separate process that runs sound.
+    while (Ticks < tickToWaitTo)
+        asm volatile ("nop");
+    
     stop_speaker();
 }
 
