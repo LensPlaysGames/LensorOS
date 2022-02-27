@@ -1,6 +1,8 @@
 #ifndef LENSOR_OS_SMART_POINTER_H
 #define LENSOR_OS_SMART_POINTER_H
 
+#include "integers.h"
+
 template <typename T>
 class SmartPtr {
 public:
@@ -69,4 +71,4 @@ private:
     u64 size;
 };
 
-#endif /* if not defined LENSOR_OS_SMART_POINTER_H */
+#endif /* LENSOR_OS_SMART_POINTER_H */

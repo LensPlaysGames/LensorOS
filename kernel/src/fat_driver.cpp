@@ -97,7 +97,7 @@ FATType FATDriver::get_type(BootRecord* BR) const {
 bool FATDriver::is_device_fat_formatted(AHCI::Port* port) {
     bool result = true;
     // Allocate memory for a FAT boot record.
-    SmartPtr<BootRecord> br = SmartPtr(new BootRecord);
+    SmartPtr<BootRecord> br = SmartPtr<BootRecord>(new BootRecord);
     if (port->read(0, 1, br.get(), sizeof(BootRecord))) {
         /* Validate boot sector is of FAT format.
          * Thanks to Gigasoft of osdev forums for this list
@@ -132,21 +132,22 @@ void FATDriver::read_directory
  , BootRecord* BR
  , FATType type
  , u32 directoryClusterIndex
- , u32 indentLevel
+ , u32 indentLevel // For debug purposes only! (recursive indent)
  )
 {
     static const char* indent = "  ";
     u32 clusterIndex = directoryClusterIndex;
     bool lfnBufferFull { false };
     SmartPtr<u16[]> lfnBuffer(new u16[13], 13);
+    // TODO: Cache FAT in filesystem so it doesn't need to be allocated for every directory that's read.
     SmartPtr<u8[]> FAT(new u8[BR->BPB.NumBytesPerSector], BR->BPB.NumBytesPerSector);
-    ClusterEntry* current { nullptr };
     u32 clusterNumber { 0 };
     u32 FAToffset     { 0 };
     u32 FATsector     { 0 };
     u32 lastFATsector { 0 };
     u32 entryOffset   { 0 };
     u32 tableValue    { 0 };
+    ClusterEntry* current { nullptr };
     bool moreClusters { true };
     do /* while moreClusters is true */ {
         // Read cluster into AHCI buffer.
