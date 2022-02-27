@@ -3,6 +3,9 @@
 
 #include "../integers.h"
 
+#define HEAP_VIRTUAL_BASE 0x700000000000
+#define HEAP_INITIAL_PAGES 1
+
 // TODO: Store physical address (or make it easy to
 //   convert between physical/virtual addresses).
 struct HeapSegmentHeader {
@@ -20,7 +23,7 @@ struct HeapSegmentHeader {
 } __attribute__((packed));
 
 // INITIALIZATION
-void init_heap(void* startAddress, u64 numInitialPages);
+void init_heap();
 
 // Enlarge the heap by a given number of bytes, aligned to next-highest page-aligned value.
 void expand_heap(u64 numBytes);

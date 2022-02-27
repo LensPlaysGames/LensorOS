@@ -67,23 +67,29 @@ HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
     return splitHeader;
 }
 
-void init_heap(void* startAddress, u64 numInitialPages) {
-    for (u64 i = 0; i < numInitialPages; ++i) {
+void init_heap() {
+    u64 numBytes = HEAP_INITIAL_PAGES * PAGE_SIZE;
+    for (u64 i = 0; i < HEAP_INITIAL_PAGES; ++i) {
         // Map virtual heap position to physical memory address returned by page frame allocator.
-        Memory::map((void*)((u64)startAddress + (i * PAGE_SIZE)), Memory::request_page());
+        Memory::map((void*)((u64)HEAP_VIRTUAL_BASE + (i * PAGE_SIZE)), Memory::request_page());
     }
-    // Start of heap.
-    sHeapStart = startAddress;
-    // End of heap.
-    u64 numBytes = numInitialPages * PAGE_SIZE;
+    sHeapStart = (void*)HEAP_VIRTUAL_BASE;
     sHeapEnd = (void*)((u64)sHeapStart + numBytes);
-    HeapSegmentHeader* firstSegment = (HeapSegmentHeader*)startAddress;
+    HeapSegmentHeader* firstSegment = (HeapSegmentHeader*)HEAP_VIRTUAL_BASE;
     // Actual length of free memory has to take into account header.
     firstSegment->length = numBytes - sizeof(HeapSegmentHeader);
     firstSegment->next = nullptr;
     firstSegment->last = nullptr;
     firstSegment->free = true;
     sLastHeader = firstSegment;
+
+    UART::out("[Heap]: \033[32mInitialized\033[0m\r\n  Virtual Address: 0x");
+    UART::out(to_hexstring<void*>(sHeapStart));
+    UART::out(" thru 0x");
+    UART::out(to_hexstring<void*>(sHeapEnd));
+    UART::out("\r\n  Size: ");
+    UART::out(numBytes);
+    UART::out("\r\n");
 }
 
 void expand_heap(u64 numBytes) {
@@ -153,7 +159,7 @@ void free(void* address) {
 }
 
 void heap_print_debug() {
-    UART::out("[HEAP]: Debug information dump:\r\n  Size: ");
+    UART::out("[Heap]: Debug information dump:\r\n  Size: ");
     UART::out(((u64)sHeapEnd - (u64)sHeapStart) / 1024);
     UART::out("KiB\r\n  Start: 0x");
     UART::out(to_hexstring(sHeapStart));

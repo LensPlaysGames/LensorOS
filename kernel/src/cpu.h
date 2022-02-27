@@ -83,6 +83,12 @@ private:
  */
 class CPUDescription {
 public:
+    // NOTE: This is not null-terminated! Do not print this directly!
+    // VendorID has a size of twelve bytes, so ensure to not read outside that.
+    char* get_vendor_id() {
+        return VendorID;
+    }
+
     void set_vendor_id(char id[12]) {
         memcpy(&id[0], &VendorID[0], 12 * sizeof(char));
     }
@@ -93,7 +99,7 @@ public:
     void set_physical_core_bits(u8 bits) { PhysicalCoreBits = bits; }
 
     void print_debug() {
-        UART::out("CPU Description Dump:\r\n");
+        UART::out("[CPU]: Description Dump:\r\n");
         UART::out("  Capabilites:\r\n");
         UART::out("    CPUID: ");
         UART::out(to_string(CPUIDCapable));

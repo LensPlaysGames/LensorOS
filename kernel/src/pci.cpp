@@ -58,9 +58,9 @@ namespace PCI {
             Memory::unmap((void*)device_address);
             return;
         }
-        UART::out("  Mapped '");
+        UART::out("  Discovered '");
         UART::out(get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID));
-        UART::out("' to ");
+        UART::out("' at ");
         UART::out(to_hexstring(device_address));
         UART::out("\r\n");
         for (u64 function = 0; function < 8; ++function)
@@ -86,7 +86,7 @@ namespace PCI {
     }
     
     void enumerate_pci(ACPI::MCFGHeader* mcfg) {
-        UART::out("[PCI]: Begin MCFG bus enumeration\r\n");
+        UART::out("[PCI]: Discovering devices...\r\n");
         int entries = ((mcfg->Length) - sizeof(ACPI::MCFGHeader)) / sizeof(ACPI::DeviceConfig);
         for (int t = 0; t < entries; ++t) {
             ACPI::DeviceConfig* devCon = (ACPI::DeviceConfig*)((u64)mcfg + sizeof(ACPI::MCFGHeader)

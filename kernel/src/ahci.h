@@ -211,7 +211,7 @@ namespace AHCI {
         /// Address of PCI device header (expected SATA Controller, AHCI 1.0).
         PCI::PCIDeviceHeader* PCIBaseAddress;
         /// AHCI Base Memory Register
-        HBAMemory* ABAR;        
+        HBAMemory* ABAR;
     };
 
     /// Store list of pointers to drivers that are created for later use.

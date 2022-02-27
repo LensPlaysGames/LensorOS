@@ -121,6 +121,7 @@ void kernel_init(BootInfo* bInfo) {
      */
     // Disable interrupts (with no IDT, not much was happening anyway).
     asm ("cli");
+
     // Setup serial communications chip.
     UART::initialize();
     UART::out("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
@@ -128,40 +129,10 @@ void kernel_init(BootInfo* bInfo) {
     // Setup dynamic memory allocation.
     // Setup memory state from EFI memory map.
     Memory::init_physical_efi(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
-    UART::out("[kUtil]: Mapped physical memory from 0x");
-    UART::out(to_hexstring<u64>(0ULL));
-    UART::out(" thru ");
-    UART::out(to_hexstring<u64>(Memory::get_total_ram()));
-    UART::out("\r\n[kUtil]:\r\n  Kernel loaded from 0x");
-    UART::out(to_hexstring<void*>(&KERNEL_START));
-    UART::out(" to 0x");
-    UART::out(to_hexstring<void*>(&KERNEL_END));
-    UART::out("\r\n    .text:   0x");
-    UART::out(to_hexstring<void*>(&TEXT_START));
-    UART::out(" thru 0x");
-    UART::out(to_hexstring<void*>(&TEXT_END));
-    UART::out("\r\n    .data:   0x");
-    UART::out(to_hexstring<void*>(&DATA_START));
-    UART::out(" thru 0x");
-    UART::out(to_hexstring<void*>(&DATA_END));
-    UART::out("\r\n    .rodata: 0x");
-    UART::out(to_hexstring<void*>(&READ_ONLY_DATA_START));
-    UART::out(" thru 0x");
-    UART::out(to_hexstring<void*>(&READ_ONLY_DATA_END));
-    UART::out("\r\n    .bss:    0x");
-    UART::out(to_hexstring<void*>(&BLOCK_STARTING_SYMBOLS_START));
-    UART::out(" thru 0x");
-    UART::out(to_hexstring<void*>(&BLOCK_STARTING_SYMBOLS_END));
-    
     // Setup virtual to physical memory mapping.
     Memory::init_virtual();
     // Setup dynamic memory allocation (`new`, `delete`).
-    init_heap((void*)0x700000000000, 1);
-    UART::out("\r\n\r\n[kUtil]: Heap mapped to 0x");
-    UART::out(to_hexstring<void*>(sHeapStart));
-    UART::out(" thru 0x");
-    UART::out(to_hexstring<void*>(sHeapEnd));
-    UART::out("\r\n");
+    init_heap();
 
     // Prepare Global Descriptor Table Descriptor.
     GDTDescriptor GDTD = GDTDescriptor(sizeof(GDT) - 1, (u64)&gGDT);
@@ -176,26 +147,27 @@ void kernel_init(BootInfo* bInfo) {
     // Create basic framebuffer renderer.
     UART::out("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
     gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
-    UART::out("    \033[32msetup successful\033[0m\r\n");
+    UART::out("  \033[32mSetup Successful\033[0m\r\n");
     draw_boot_gfx();
     // Create basic text renderer for the keyboard.
     Keyboard::gText = Keyboard::BasicTextRenderer();
 
     // Initialize the Programmable Interval Timer.
     gPIT = PIT();
-    UART::out("[kUtil]: Programmable Interval Timer initialized.\r\n");
+    UART::out("[kUtil]: \033[32mProgrammable Interval Timer Initialized\033[0m\r\n");
     UART::out("  Channel 0, H/L Bit Access\r\n");
     UART::out("  Rate Generator, BCD Disabled\r\n");
-    UART::out("  Periodic interrupts at ");
+    UART::out("  Periodic interrupts at \033[33m");
     UART::out(to_string(PIT_FREQUENCY));
-    UART::out("hz.\r\n");
+    UART::out("hz\033[0m.\r\n");
     // Initialize the Real Time Clock.
     gRTC = RTC();
     gRTC.set_periodic_int_enabled(true);
-    UART::out("[kUtil]: Real Time Clock initialized.\r\n");
-    UART::out("  Periodic interrupts enabled at ");
+    UART::out("[kUtil]: \033[32mReal Time Clock Initialized\033[0m\r\n");
+    UART::out("  Periodic interrupts enabled at \033[33m");
     UART::out(to_string((double)RTC_PERIODIC_HERTZ));
-    UART::out("hz\r\n");
+    UART::out("hz\033[0m\r\n");
+    
     // Print real time to serial output.
     UART::out("[kUtil]: \033[1;33mNow is ");
     UART::out(to_string(gRTC.Time.hour));
@@ -210,17 +182,19 @@ void kernel_init(BootInfo* bInfo) {
     UART::outc('-');
     UART::out(to_string(gRTC.Time.date));
     UART::out("\033[0m\r\n");
+
+    // Store feature set of CPU (capabilities).
     SystemCPU = new CPUDescription();
     // Check for CPUID availability ('ID' bit in rflags register modifiable)
     bool supportCPUID = static_cast<bool>(cpuid_support());
     if (supportCPUID) {
-        UART::out("[kUtil]: CPUID is supported\r\n");
         SystemCPU->set_cpuid_capable();
+        UART::out("[kUtil]: \033[32mCPUID is supported\033[0m\r\n");
         char* cpuVendorID = cpuid_string(0);
-        UART::out("  CPU Vendor ID: ");
-        UART::out(cpuVendorID);
-        UART::out("\r\n");
         SystemCPU->set_vendor_id(cpuVendorID);
+        UART::out("  CPU Vendor ID: ");
+        UART::out((u8*)SystemCPU->get_vendor_id(), 12);
+        UART::out("\r\n");
         /* Current functionality of giant `if` statemnt:
          * |- Setup FXSAVE/FXRSTOR
          * |  |- Setup FPU
@@ -329,6 +303,7 @@ void kernel_init(BootInfo* bInfo) {
     CPU cpu = CPU(SystemCPU);
     SystemCPU->add_cpu(cpu);
     SystemCPU->print_debug();
+    
     // Prepare filesystem drivers.
     gFATDriver = FATDriver();
     UART::out("[kUtil]: \033[32mFilesystem drivers prepared successfully\033[0m\r\n");
@@ -337,19 +312,23 @@ void kernel_init(BootInfo* bInfo) {
     UART::out("[kUtil]: \033[32mACPI initialized\033[0m\r\n");
     // Enumerate PCI (find hardware devices).
     prepare_pci();
+    
     // Initialize High Precision Event Timer.
     (void)gHPET.initialize();
     // Prepare PS2 mouse.
     init_ps2_mouse();
+    
     // Print the state of the heap just before beginning multi-threading setup.
     heap_print_debug();
     //print_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     //print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     Memory::print_debug();
+    
     // Setup task state segment for eventual switch to user-land.
     TSS::initialize();
     // Use kernel process switching.
     Scheduler::initialize(Memory::get_active_page_map());
+    
     // Enable IRQ interrupts that will be used.
     disable_all_interrupts();
     enable_interrupt(IRQ_SYSTEM_TIMER);
@@ -358,6 +337,7 @@ void kernel_init(BootInfo* bInfo) {
     enable_interrupt(IRQ_UART_COM1);
     enable_interrupt(IRQ_REAL_TIMER);
     enable_interrupt(IRQ_PS2_MOUSE);
+
     // Allow interrupts to trigger.
     UART::out("[kUtil]: Interrupt masks sent, enabling interrupts.\r\n");
     asm ("sti");

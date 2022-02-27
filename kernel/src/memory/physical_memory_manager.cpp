@@ -14,6 +14,17 @@ namespace Memory {
     u64 TotalFreePages { 0 };
     u64 TotalUsedPages { 0 };
 
+
+    u64 get_total_ram() {
+        return TotalPages * PAGE_SIZE;
+    }
+    u64 get_free_ram() {
+        return TotalFreePages * PAGE_SIZE;
+    }
+    u64 get_used_ram() {
+        return TotalUsedPages * PAGE_SIZE;
+    }
+
     void lock_page(void* address) {
         u64 index = (u64)address / PAGE_SIZE;
         // Page already locked.
@@ -58,6 +69,7 @@ namespace Memory {
             }
         }
         // TODO: Page swap from/to file on disk.
+        UART::out("\033[31mYou ran out of memory :^)\033[0m\r\n");
         return nullptr;
     }
     
@@ -80,11 +92,12 @@ namespace Memory {
             while (PageMap[index] == false) {
                 run++;
                 index++;
-                // TODO: No memory matching criteria, should
-                //   probably do a page swap from disk or something.
-                if (index > PageMap.length())
+                if (index > PageMap.length()) {
+                    // TODO: No memory matching criteria, should
+                    //   probably do a page swap from disk or something.
+                    UART::out("\033[31mYou ran out of memory :^)\033[0m\r\n");
                     return nullptr;
-
+                }
                 if (run >= numberOfPages) {
                     void* out = (void*)(i * 4096);
                     lock_pages(out, numberOfPages);
@@ -102,6 +115,32 @@ namespace Memory {
         // _KernelStart and _KernelEnd defined in linker script "../kernel.ld"
         u64 kernelPagesNeeded = (((u64)&KERNEL_END - (u64)&KERNEL_START) / 4096) + 1;
         Memory::lock_pages(&KERNEL_START, kernelPagesNeeded);
+
+        UART::out("\033[32mPhysical Memory Initialized\033[0m\r\n  Mapped from 0x");
+        UART::out(to_hexstring<u64>(0ULL));
+        UART::out(" thru 0x");
+        UART::out(to_hexstring<u64>(get_total_ram()));
+        UART::out("\r\n  Kernel mapped from 0x");
+        UART::out(to_hexstring<void*>(&KERNEL_START));
+        UART::out(" to 0x");
+        UART::out(to_hexstring<void*>(&KERNEL_END));
+        UART::out("\r\n    .text:   0x");
+        UART::out(to_hexstring<void*>(&TEXT_START));
+        UART::out(" thru 0x");
+        UART::out(to_hexstring<void*>(&TEXT_END));
+        UART::out("\r\n    .data:   0x");
+        UART::out(to_hexstring<void*>(&DATA_START));
+        UART::out(" thru 0x");
+        UART::out(to_hexstring<void*>(&DATA_END));
+        UART::out("\r\n    .rodata: 0x");
+        UART::out(to_hexstring<void*>(&READ_ONLY_DATA_START));
+        UART::out(" thru 0x");
+        UART::out(to_hexstring<void*>(&READ_ONLY_DATA_END));
+        UART::out("\r\n    .bss:    0x");
+        UART::out(to_hexstring<void*>(&BLOCK_STARTING_SYMBOLS_START));
+        UART::out(" thru 0x");
+        UART::out(to_hexstring<void*>(&BLOCK_STARTING_SYMBOLS_END));
+        UART::out("\r\n");
     }
 
     void init_physical_efi(EFI_MEMORY_DESCRIPTOR* map, u64 size, u64 entrySize) {
@@ -150,18 +189,6 @@ namespace Memory {
 
         // Do the stuff that all physical memory initialization functions need to do.
         init_physical_common();
-    }
-
-    u64 get_total_ram() {
-        return TotalPages * PAGE_SIZE;
-    }
-
-    u64 get_free_ram() {
-        return TotalFreePages * PAGE_SIZE;
-    }
-
-    u64 get_used_ram() {
-        return TotalUsedPages * PAGE_SIZE;
     }
 
     void print_debug() {
