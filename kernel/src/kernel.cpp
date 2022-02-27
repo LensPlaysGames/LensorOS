@@ -31,8 +31,11 @@
  * |  |    them, so maybe wait() takes in an amount of time to wait before un-waiting.
  * |  `- Approach from Brendan's multi-tasking guide: 
  * |  
- * |- Reconstruct memory managers from the ground up (VMM, PMM).
- * |  `- Start with what the kernel recieves: EFI Memory Map (and go from there!)
+ * |- It would be really stupid but also really fun to play a `boot.midi` on startup.
+ * |  | I should probably just wait for Userland libraries for this feature :^)
+ * |  `- Resources:
+ * |     |- https://www.personal.kent.edu/~sbirch/Music_Production/MP-II/MIDI/midi_file_format.htm
+ * |     `- https://www.cs.cmu.edu/~music/cmsip/readings/Standard-MIDI-file-format-updated.pdf
  * |
  * |- Userland: How does the desktop happen?
  * |  |- I presume that the memory for the framebuffer must be mapped in a userland process.
@@ -211,11 +214,18 @@ extern "C" void _start(BootInfo* bInfo) {
     //(void)dereferenced;
     //UART::out("Null de-referenced!\r\n");
 
-    gPIT.play_sound(262, 0.1); // C4
-    gPIT.play_sound(294, 0.2); // D4
-    gPIT.play_sound(330, 0.2); // E4
-    gPIT.play_sound(440, 0.2); // A4
-    gPIT.play_sound(392, 0.1); // G4
+    // I'm lovin' it :^) (Plays Maccy's theme).
+#define MACCYS_BPM ((double)125.0)
+#define MACCYS_STEP_LENGTH_SECONDS ((60 / MACCYS_BPM) / 4)
+    gPIT.prepare_wait_seconds(MACCYS_STEP_LENGTH_SECONDS);
+    gPIT.play_sound(262, MACCYS_STEP_LENGTH_SECONDS); // C4
+    gPIT.play_sound(294, MACCYS_STEP_LENGTH_SECONDS); // D4
+    gPIT.wait();                                      // Rest
+    gPIT.play_sound(330, MACCYS_STEP_LENGTH_SECONDS); // E4
+    gPIT.wait();                                      // Rest
+    gPIT.play_sound(440, MACCYS_STEP_LENGTH_SECONDS); // A4
+    gPIT.wait();                                      // Rest
+    gPIT.play_sound(392, MACCYS_STEP_LENGTH_SECONDS); // G4
 
     // Start keyboard input at draw position, not origin.
     Keyboard::gText.set_cursor_from_pixel_position(gRend.DrawPos);
