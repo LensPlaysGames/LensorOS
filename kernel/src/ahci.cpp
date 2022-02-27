@@ -5,9 +5,9 @@
 #include "fat_fs.h"
 #include "memory/heap.h"
 #include "memory/physical_memory_manager.h"
+#include "memory/virtual_memory_manager.h"
 #include "inode.h"
 #include "memory.h"
-#include "paging/page_table_manager.h"
 #include "pci.h"
 #include "spinlock.h"
 
@@ -189,7 +189,7 @@ namespace AHCI {
         
         ABAR = (HBAMemory*)(u64)(((PCI::PCIHeader0*)PCIBaseAddress)->BAR5);
         // Map ABAR into memory.
-        gPTM.map_memory(ABAR, ABAR);
+        Memory::map(ABAR, ABAR);
 
         srl->writestr("[AHCI]:\r\n  Mapping AHCI Base Memory Register (ABAR) to 0x");
         srl->writestr(to_hexstring(ABAR));

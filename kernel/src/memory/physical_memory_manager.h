@@ -32,9 +32,21 @@ namespace Memory {
     /* Read and parse an array of EFI_MEMORY_DESCRIPTORs into
      *   a singly linked list of free regions that may be used.
      */
-    void init_efi(EFI_MEMORY_DESCRIPTOR* map, u64 size, u64 entrySize);
+    void init_physical_efi(EFI_MEMORY_DESCRIPTOR* map, u64 size, u64 entrySize);
 
     void print_debug();
 }
+
+// Defined in `kernel.ld` linker script.
+extern u64 KERNEL_START;
+extern u64 KERNEL_END;
+extern u64 TEXT_START;
+extern u64 TEXT_END;
+extern u64 DATA_START;
+extern u64 DATA_END;
+extern u64 READ_ONLY_DATA_START;
+extern u64 READ_ONLY_DATA_END;
+extern u64 BLOCK_STARTING_SYMBOLS_START;
+extern u64 BLOCK_STARTING_SYMBOLS_END;
 
 #endif /* LENSOR_OS_PHYSICAL_MEMORY_MANAGER_H */

@@ -10,8 +10,9 @@ extern u64* timer_ticks;
 /// Interrupt handler function found in `scheduler.asm`
 extern "C" void irq0_handler();
 
-class PageTable;
-
+namespace Memory {
+    class PageTable;
+}
 
 /* THE KERNEL PROCESS SCHEDULER
  * | Hijack the System Timer Interrupt to switch processes, if needed.
@@ -46,7 +47,7 @@ struct CPUState {
 
 struct KernelProcess {
     CPUState CPU;
-    PageTable* CR3;
+    Memory::PageTable* CR3;
     KernelProcess* Next;
 };
 
@@ -60,7 +61,7 @@ class Scheduler {
      * `- load_elf() that will read an elf executable and add it to process list.
      */
 public:
-    static void initialize(PageTable*);
+    static void initialize(Memory::PageTable*);
     /* Switch to the next available task.
      * | Called by IRQ0 Handler (System Timer Interrupt).
      * |- Copy registers saved from IRQ0 to current process.

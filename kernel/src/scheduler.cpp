@@ -3,6 +3,8 @@
 #include "cstr.h"
 #include "interrupts/idt.h"
 #include "memory.h"
+#include "memory/paging.h"
+#include "memory/virtual_memory_manager.h"
 #include "pit.h"
 #include "uart.h"
 
@@ -17,23 +19,23 @@ KernelProcess* Scheduler::CurrentProcess { nullptr };
 
 void Scheduler::add_kernel_process(KernelProcess* process) {
     KernelProcess* last = ProcessQueue;
-    while (CurrentProcess->Next != nullptr) {
+    while (CurrentProcess->Next != nullptr)
         last = CurrentProcess->Next;
-    }
+
     last->Next = process;
 }
 
-/// Called from System Timer Interrupt (IRQ0)
+// Called from `irq0_handler` in `scheduler.asm`
 void Scheduler::switch_process(CPUState* cpu) {
     memcpy(&cpu, &CurrentProcess->CPU, sizeof(CPUState));
     if (CurrentProcess->Next == nullptr)
         CurrentProcess = ProcessQueue;
     else CurrentProcess = CurrentProcess->Next;
     memcpy(&CurrentProcess->CPU, &cpu, sizeof(CPUState));
-    asm volatile ("mov %0, %%cr3" : : "r" (CurrentProcess->CR3));
+    Memory::flush_page_map(CurrentProcess->CR3);
 }
 
-void Scheduler::initialize(PageTable* bootPageMap) {
+void Scheduler::initialize(Memory::PageTable* bootPageMap) {
     ProcessQueue = &StartupProcess;
     CurrentProcess = &StartupProcess;
     // IRQ handler in assembly needs to increment PIT ticks counter.

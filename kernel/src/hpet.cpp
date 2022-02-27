@@ -4,7 +4,7 @@
 #include "integers.h"
 #include "io.h"
 #include "memory.h"
-#include "paging/page_table_manager.h"
+#include "memory/virtual_memory_manager.h"
 #include "uart.h"
 
 HPET gHPET;
@@ -42,7 +42,7 @@ bool HPET::initialize() {
     }
 
     if (Header->Address.AddressSpaceID == 0) {
-        gPTM.map_memory((void*)Header->Address.Address, (void*)Header->Address.Address);
+        Memory::map((void*)Header->Address.Address, (void*)Header->Address.Address);
     }
     else {
         hpet_init_failed("Invalid Address Space ID");

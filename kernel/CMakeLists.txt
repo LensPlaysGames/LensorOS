@@ -69,10 +69,9 @@ HEADERS
     src/math.h
     src/memory.h
     src/memory/heap.h
-    src/memory/physical_memory_manager.h
+    src/memory/paging.h
+    src/memory/virtual_memory_manager.h
     src/mouse.h
-    src/paging/page_table_manager.h
-    src/paging/paging.h
     src/panic.h
     src/pci.h
     src/pit.h
@@ -111,9 +110,8 @@ SOURCES
     src/memory.cpp
     src/memory/heap.cpp
     src/memory/physical_memory_manager.cpp
+    src/memory/virtual_memory_manager.cpp
     src/mouse.cpp
-    src/paging/page_table_manager.cpp
-    src/paging/paging.cpp
     src/panic.cpp
     src/pci.cpp
     src/pci_descriptors.cpp

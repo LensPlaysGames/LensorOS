@@ -4,17 +4,17 @@
 #include "acpi.h"
 #include "cstr.h"
 #include "memory/heap.h"
-#include "paging/page_table_manager.h"
+#include "memory/virtual_memory_manager.h"
 #include "uart.h"
 
 namespace PCI {
     void enumerate_function(u64 device_address, u64 function_number) {
         u64 offset = function_number << 12;
         u64 function_address = device_address + offset;
-        gPTM.map_memory((void*)function_address, (void*)function_address);
+        Memory::map((void*)function_address, (void*)function_address);
         PCIDeviceHeader* pciDevHdr = (PCIDeviceHeader*)function_address;
         if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
-            gPTM.unmap_memory((void*)function_address);
+            Memory::unmap((void*)function_address);
             return;
         }
 
@@ -52,10 +52,10 @@ namespace PCI {
     void enumerate_device(u64 bus_address, u64 device_number) {
         u64 offset = device_number << 15;
         u64 device_address = bus_address + offset;
-        gPTM.map_memory((void*)device_address, (void*)device_address);
+        Memory::map((void*)device_address, (void*)device_address);
         PCIDeviceHeader* pciDevHdr = (PCIDeviceHeader*)device_address;
         if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
-            gPTM.unmap_memory((void*)device_address);
+            Memory::unmap((void*)device_address);
             return;
         }
         srl->writestr("  Mapped '");
@@ -70,10 +70,10 @@ namespace PCI {
     void enumerate_bus(u64 base_address, u64 bus_number) {
         u64 offset = bus_number << 20;
         u64 bus_address = base_address + offset;
-        gPTM.map_memory((void*)bus_address, (void*)bus_address);
+        Memory::map((void*)bus_address, (void*)bus_address);
         PCIDeviceHeader* pciDevHdr = (PCIDeviceHeader*)bus_address;
         if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
-            gPTM.unmap_memory((void*)bus_address);
+            Memory::unmap((void*)bus_address);
             return;
         }
 

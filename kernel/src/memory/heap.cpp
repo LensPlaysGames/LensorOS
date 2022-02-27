@@ -3,7 +3,7 @@
 #include "../cstr.h"
 #include "common.h"
 #include "physical_memory_manager.h"
-#include "../paging/page_table_manager.h"
+#include "virtual_memory_manager.h"
 #include "../uart.h"
 
 void* sHeapStart;
@@ -70,7 +70,7 @@ HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
 void init_heap(void* startAddress, u64 numInitialPages) {
     for (u64 i = 0; i < numInitialPages; ++i) {
         // Map virtual heap position to physical memory address returned by page frame allocator.
-        gPTM.map_memory((void*)((u64)startAddress + (i * PAGE_SIZE)), Memory::request_page());
+        Memory::map((void*)((u64)startAddress + (i * PAGE_SIZE)), Memory::request_page());
     }
     // Start of heap.
     sHeapStart = startAddress;
@@ -94,7 +94,7 @@ void expand_heap(u64 numBytes) {
     HeapSegmentHeader* extension = (HeapSegmentHeader*)sHeapEnd;
     // Allocate and map a page in memory for new header.
     for (u64 i = 0; i < numPages; ++i) {
-        gPTM.map_memory(sHeapEnd, Memory::request_page());
+        Memory::map(sHeapEnd, Memory::request_page());
         sHeapEnd = (void*)((u64)sHeapEnd + PAGE_SIZE);
     }
     extension->free = true;

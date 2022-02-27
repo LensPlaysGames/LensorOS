@@ -19,9 +19,8 @@
 #include "keyboard.h"
 #include "memory.h"
 #include "memory/physical_memory_manager.h"
+#include "memory/virtual_memory_manager.h"
 #include "mouse.h"
-#include "paging/paging.h"
-#include "paging/page_table_manager.h"
 #include "pci.h"
 #include "pit.h"
 #include "random_lcg.h"
@@ -30,41 +29,6 @@
 #include "scheduler.h"
 #include "tss.h"
 #include "uart.h"
-
-void prepare_memory(BootInfo* bInfo) {
-    /* What this function does:
-     * |- Prepare physical memory manager (Memory namespace).
-     * |- Lock kernel memory so it doesn't get over-written within physical memory manager.
-     * `- Create, initialize, and load a page map level four (x86 virtual memory structure).
-     */
-    // Setup memory state from EFI memory map.
-    Memory::init_efi(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
-    // _KernelStart and _KernelEnd defined in linker script "../kernel.ld"
-    u64 kernelPagesNeeded = (((u64)&KERNEL_END - (u64)&KERNEL_START) / 4096) + 1;
-    Memory::lock_pages(&KERNEL_START, kernelPagesNeeded);
-    // PAGE MAP LEVEL FOUR (see `kernel/src/paging/paging.h`).
-    PageTable* PML4 = (PageTable*)Memory::request_page();
-    gPTM = PageTableManager(PML4);
-    // Map all physical RAM addresses to virtual addresses 1:1, store them in the PML4.
-    // This means that virtual addresses will be equal to physical memory addresses.
-    for (u64 t = 0; t < Memory::get_total_ram(); t+=0x1000)
-        gPTM.map_memory((void*)t, (void*)t);
-
-    /* x86: Control Register 3 = Address of the page directory in physical form.
-     *   A page directory is a multi-level page map; a four-level map is standard
-     *     on x86_64 CPUs, so that's what I use.
-     *   Modern CPUs have the ability to use a five-level map, but for now there
-     *     is no absolutely no need; it would be easy to add this ability in the future.
-     *
-     *   The Transition Lookaside Buffer (Virtual Address -> Physical Address HashMap)
-     *     is hardware based in x86; by writing to CR3, it is flushed (reset to empty).
-     *   A single TLB entry may be invalidated using the `INVLPG <addr>` instruction.
-     */
-    asm ("mov %0, %%cr3" : : "r" (PML4));
-
-    // Setup dynamic memory allocation (`new`, `delete`).
-    init_heap((void*)0x700000000000, 1);
-}
 
 void prepare_interrupts() {
     // REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
@@ -132,8 +96,8 @@ u8 fxsave_region[512] __attribute__((aligned(16)));
 void kernel_init(BootInfo* bInfo) {
     /* 
      *   - Prepare physical/virtual memory
-     *     - `Memory` namespace init (physical memory manager)
-     *     - PageTableManager creation (x86 virtual memory manager)
+     *     - Initialize Physical Memory Manager
+     *     - Initialize Virtual Memory Manager
      *     - Prepare the heap (`new`, `delete`)
      *   - Load Global Descriptor Table (CPU Privilege levels, hardware task switching)
      *   - Load Interrupt Descriptor Table (Install handlers for hardware IRQs + software exceptions)
@@ -159,7 +123,12 @@ void kernel_init(BootInfo* bInfo) {
     asm ("cli");
     // Parse memory map passed by bootloader.
     // Setup dynamic memory allocation.
-    prepare_memory(bInfo);
+    // Setup memory state from EFI memory map.
+    Memory::init_physical_efi(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    // Setup virtual to physical memory mapping.
+    Memory::init_virtual();
+    // Setup dynamic memory allocation (`new`, `delete`).
+    init_heap((void*)0x700000000000, 1);
     // Prepare Global Descriptor Table Descriptor.
     GDTDescriptor GDTD = GDTDescriptor(sizeof(GDT) - 1, (u64)&gGDT);
     LoadGDT(&GDTD);
@@ -375,7 +344,7 @@ void kernel_init(BootInfo* bInfo) {
     // Setup task state segment for eventual switch to user-land.
     TSS::initialize();
     // Use kernel process switching.
-    Scheduler::initialize(gPTM.PML4);
+    Scheduler::initialize(Memory::get_active_page_map());
     // Enable IRQ interrupts that will be used.
     disable_all_interrupts();
     enable_interrupt(IRQ_SYSTEM_TIMER);

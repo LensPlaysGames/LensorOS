@@ -98,7 +98,13 @@ namespace Memory {
         return nullptr;
     }
 
-    void init_efi(EFI_MEMORY_DESCRIPTOR* map, u64 size, u64 entrySize) {
+    void init_physical_common() {
+        // _KernelStart and _KernelEnd defined in linker script "../kernel.ld"
+        u64 kernelPagesNeeded = (((u64)&KERNEL_END - (u64)&KERNEL_START) / 4096) + 1;
+        Memory::lock_pages(&KERNEL_START, kernelPagesNeeded);
+    }
+
+    void init_physical_efi(EFI_MEMORY_DESCRIPTOR* map, u64 size, u64 entrySize) {
         // Calculate number of entries within memoryMap array.
         u64 entries = size / entrySize;
         // Find largest free and usable contiguous region of memory.
@@ -141,6 +147,9 @@ namespace Memory {
         //   the bitmap, it's important to re-lock the page bitmap
         //   so it doesn't get trampled on when allocating more memory.
         lock_pages(PageMap.base(), (PageMap.length() / 4096) + 1);
+
+        // Do the stuff that all physical memory initialization functions need to do.
+        init_physical_common();
     }
 
     u64 get_total_ram() {

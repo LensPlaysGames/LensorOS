@@ -2,7 +2,7 @@
 
 #include "cstr.h"
 #include "memory/physical_memory_manager.h"
-#include "paging/page_table_manager.h"
+#include "memory/virtual_memory_manager.h"
 #include "uart.h"
 
 // Define global renderer for use anywhere within the kernel.
@@ -23,7 +23,7 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
     Memory::lock_pages(render->BaseAddress, fbPages);
     // Map active framebuffer physical address to virtual addresses 1:1.
     for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
-        gPTM.map_memory((void*)t, (void*)t);
+        Memory::map((void*)t, (void*)t);
 
     srl->writestr("  Active GOP framebuffer mapped to 0x");
     srl->writestr(to_hexstring(fbBase));
@@ -40,7 +40,7 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
     target.BaseAddress = Memory::request_pages(fbPages);
     fbBase = (u64)target.BaseAddress;
     for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
-        gPTM.map_memory((void*)t, (void*)t);
+        Memory::map((void*)t, (void*)t);
 
     srl->writestr("  Deferred GOP framebuffer mapped to 0x");
     srl->writestr(to_hexstring(fbBase));
