@@ -112,10 +112,14 @@ namespace Memory {
     }
 
     void init_physical_common() {
-        // _KernelStart and _KernelEnd defined in linker script "../kernel.ld"
         u64 kernelPagesNeeded = (((u64)&KERNEL_END - (u64)&KERNEL_START) / 4096) + 1;
         Memory::lock_pages(&KERNEL_START, kernelPagesNeeded);
-
+        // TODO: Re-use memory in-between sections; it's currently wasted.
+        // Calculate space that is lost due to page alignment.
+        u64 deadSpace { 0 };
+        deadSpace += (u64)&DATA_START - (u64)&TEXT_END;
+        deadSpace += (u64)&READ_ONLY_DATA_START - (u64)&DATA_END;
+        deadSpace += (u64)&BLOCK_STARTING_SYMBOLS_START - (u64)&READ_ONLY_DATA_END;
         UART::out("\033[32mPhysical Memory Initialized\033[0m\r\n  Mapped from 0x");
         UART::out(to_hexstring<u64>(0ULL));
         UART::out(" thru 0x");
@@ -124,23 +128,36 @@ namespace Memory {
         UART::out(to_hexstring<void*>(&KERNEL_START));
         UART::out(" to 0x");
         UART::out(to_hexstring<void*>(&KERNEL_END));
-        UART::out("\r\n    .text:   0x");
+        UART::out(" (");
+        UART::out((u64)&KERNEL_END - (u64)&KERNEL_START);
+        UART::out(" bytes)\r\n    .text:   0x");
         UART::out(to_hexstring<void*>(&TEXT_START));
         UART::out(" thru 0x");
         UART::out(to_hexstring<void*>(&TEXT_END));
-        UART::out("\r\n    .data:   0x");
+        UART::out(" (");
+        UART::out((u64)&TEXT_END - (u64)&TEXT_START);
+        UART::out(" bytes)\r\n    .data:   0x");
         UART::out(to_hexstring<void*>(&DATA_START));
         UART::out(" thru 0x");
         UART::out(to_hexstring<void*>(&DATA_END));
-        UART::out("\r\n    .rodata: 0x");
+        UART::out(" (");
+        UART::out((u64)&DATA_END - (u64)&DATA_START);
+        UART::out(" bytes)\r\n    .rodata: 0x");
         UART::out(to_hexstring<void*>(&READ_ONLY_DATA_START));
         UART::out(" thru 0x");
         UART::out(to_hexstring<void*>(&READ_ONLY_DATA_END));
-        UART::out("\r\n    .bss:    0x");
+        UART::out(" (");
+        UART::out((u64)&READ_ONLY_DATA_END - (u64)&READ_ONLY_DATA_START);
+        UART::out(" bytes)\r\n    .bss:    0x");
         UART::out(to_hexstring<void*>(&BLOCK_STARTING_SYMBOLS_START));
         UART::out(" thru 0x");
         UART::out(to_hexstring<void*>(&BLOCK_STARTING_SYMBOLS_END));
-        UART::out("\r\n");
+        UART::out(" (");
+        UART::out((u64)&BLOCK_STARTING_SYMBOLS_END - (u64)&BLOCK_STARTING_SYMBOLS_START);
+        UART::out(" bytes)\r\n");
+        UART::out("    Lost to Page Alignment: ");
+        UART::out(deadSpace);
+        UART::out(" bytes\r\n");
     }
 
     void init_physical_efi(EFI_MEMORY_DESCRIPTOR* map, u64 size, u64 entrySize) {

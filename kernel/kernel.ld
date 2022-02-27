@@ -12,18 +12,18 @@ SECTIONS
         *(.text)
         *(.gnu.linkonce.t*)
         TEXT_END = .;
-        . = ALIGN(0x1000);
     }
 
+    . = ALIGN(0x1000);
     .data : AT(ADDR(.data) - KERNEL_VIRTUAL)
     {
         DATA_START = .;
         *(.data)
         *(.gnu.linkonce.d*)
         DATA_END = .;
-        . = ALIGN(0x1000);
     }
 
+    . = ALIGN(0x1000);
     .rodata : AT(ADDR(.rodata) - KERNEL_VIRTUAL)
     {
         READ_ONLY_DATA_START = .;
@@ -39,9 +39,9 @@ SECTIONS
         *(.rodata)
         *(.gnu.linkonce.r*)
         READ_ONLY_DATA_END = .;
-        . = ALIGN(0x1000);
     }
 
+    . = ALIGN(0x1000);
     .bss : AT(ADDR(.bss) - KERNEL_VIRTUAL)
     {
         BLOCK_STARTING_SYMBOLS_START = .;
@@ -49,7 +49,6 @@ SECTIONS
         *(.bss)
         *(.gnu.linkonce.b*)
         BLOCK_STARTING_SYMBOLS_END = .;
-        . = ALIGN(0x1000);
     }
     KERNEL_END = .;
 
