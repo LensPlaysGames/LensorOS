@@ -18,23 +18,23 @@ namespace PCI {
             return;
         }
 
-        //srl->writestr("  Mapped function at 0x");
-        //srl->writestr(to_hexstring(function_address));
-        //srl->writestr("\r\n");
+        //UART::out("  Mapped function at 0x");
+        //UART::out(to_hexstring(function_address));
+        //UART::out("\r\n");
 
         // TODO: Cache human readable information with device in device tree.
         // PRINT HUMAN READABLE INFORMATION
-        //srl->writestr("  ");
-        //srl->writestr(get_vendor_name(pciDevHdr->VendorID));
-        //srl->writestr(" / ");
-        //srl->writestr(get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID));
-        //srl->writestr(" / ");
-        //srl->writestr(DeviceClasses[pciDevHdr->Class]);
-        //srl->writestr(" / ");
-        //srl->writestr(get_subclass_name(pciDevHdr->Class, pciDevHdr->Subclass));
-        //srl->writestr(" / ");
-        //srl->writestr(get_prog_if_name(pciDevHdr->Class, pciDevHdr->Subclass, pciDevHdr->ProgIF));
-        //srl->writestr("\r\n");
+        //UART::out("  ");
+        //UART::out(get_vendor_name(pciDevHdr->VendorID));
+        //UART::out(" / ");
+        //UART::out(get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID));
+        //UART::out(" / ");
+        //UART::out(DeviceClasses[pciDevHdr->Class]);
+        //UART::out(" / ");
+        //UART::out(get_subclass_name(pciDevHdr->Class, pciDevHdr->Subclass));
+        //UART::out(" / ");
+        //UART::out(get_prog_if_name(pciDevHdr->Class, pciDevHdr->Subclass, pciDevHdr->ProgIF));
+        //UART::out("\r\n");
         
         if (pciDevHdr->Class == 0x01) {
             // Mass Storage Controller
@@ -58,11 +58,11 @@ namespace PCI {
             Memory::unmap((void*)device_address);
             return;
         }
-        srl->writestr("  Mapped '");
-        srl->writestr(get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID));
-        srl->writestr("' to ");
-        srl->writestr(to_hexstring(device_address));
-        srl->writestr("\r\n");
+        UART::out("  Mapped '");
+        UART::out(get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID));
+        UART::out("' to ");
+        UART::out(to_hexstring(device_address));
+        UART::out("\r\n");
         for (u64 function = 0; function < 8; ++function)
             enumerate_function(device_address, function);
     }
@@ -77,16 +77,16 @@ namespace PCI {
             return;
         }
 
-        //srl->writestr("  Mapped bus at 0x");
-        //srl->writestr(to_hexstring(bus_address));
-        //srl->writestr("\r\n");
+        //UART::out("  Mapped bus at 0x");
+        //UART::out(to_hexstring(bus_address));
+        //UART::out("\r\n");
 
         for (u64 device = 0; device < 32; ++device)
             enumerate_device(bus_address, device);
     }
     
     void enumerate_pci(ACPI::MCFGHeader* mcfg) {
-        srl->writestr("[PCI]: Begin MCFG bus enumeration\r\n");
+        UART::out("[PCI]: Begin MCFG bus enumeration\r\n");
         int entries = ((mcfg->Length) - sizeof(ACPI::MCFGHeader)) / sizeof(ACPI::DeviceConfig);
         for (int t = 0; t < entries; ++t) {
             ACPI::DeviceConfig* devCon = (ACPI::DeviceConfig*)((u64)mcfg + sizeof(ACPI::MCFGHeader)

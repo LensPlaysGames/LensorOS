@@ -153,28 +153,28 @@ void free(void* address) {
 }
 
 void heap_print_debug() {
-    srl->writestr("[HEAP]: Debug information dump:\r\n  Size: ");
-    srl->writestr(((u64)sHeapEnd - (u64)sHeapStart) / 1024);
-    srl->writestr("KiB\r\n  Start: 0x");
-    srl->writestr(to_hexstring(sHeapStart));
-    srl->writestr("\r\n  End: 0x");
-    srl->writestr(to_hexstring(sHeapEnd));
-    srl->writestr("\r\n  Regions:");
+    UART::out("[HEAP]: Debug information dump:\r\n  Size: ");
+    UART::out(((u64)sHeapEnd - (u64)sHeapStart) / 1024);
+    UART::out("KiB\r\n  Start: 0x");
+    UART::out(to_hexstring(sHeapStart));
+    UART::out("\r\n  End: 0x");
+    UART::out(to_hexstring(sHeapEnd));
+    UART::out("\r\n  Regions:");
     u64 i = 0;
     HeapSegmentHeader* it = (HeapSegmentHeader*)sHeapStart;
     do {
-        srl->writestr("\r\n    Region ");
-        srl->writestr(i);
-        srl->writestr(":\r\n      Free: ");
-        srl->writestr(to_string(it->free));
-        srl->writestr("\r\n      Address: 0x");
-        srl->writestr(to_hexstring<HeapSegmentHeader*>(it));
-        srl->writestr("\r\n      Length: ");
-        srl->writestr(it->length);
+        UART::out("\r\n    Region ");
+        UART::out(i);
+        UART::out(":\r\n      Free: ");
+        UART::out(to_string(it->free));
+        UART::out("\r\n      Address: 0x");
+        UART::out(to_hexstring<HeapSegmentHeader*>(it));
+        UART::out("\r\n      Length: ");
+        UART::out(it->length);
         ++i;
         it = it->next;
     } while (it);
-    srl->writestr("\r\n\r\n");
+    UART::out("\r\n\r\n");
 }
 
 void* operator new   (u64 numBytes) { return malloc(numBytes); }

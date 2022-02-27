@@ -6,12 +6,10 @@
 #include "uart.h"
 
 void panic(const char* panicMessage) {
-    if (srl) {
-        srl->writestr("\r\n\033[1;37;41mLensorOS PANIC\033[0m\r\n");
-        srl->writestr("  ");
-        srl->writestr(panicMessage);
-        srl->writestr("\r\n");
-    }
+    UART::out("\r\n\033[1;37;41mLensorOS PANIC\033[0m\r\n");
+    UART::out("  ");
+    UART::out(panicMessage);
+    UART::out("\r\n");
     gRend.BackgroundColor = 0xffff0000;
     gRend.DrawPos = {PanicStartX, PanicStartY};
     gRend.puts("LensorOS PANIC MODE");
@@ -25,14 +23,12 @@ void panic(const char* panicMessage) {
 
 void panic(InterruptFrame* frame, const char* panicMessage) {
     panic(panicMessage);
-    if (srl) {
-        srl->writestr("  Instruction Address: 0x");
-        srl->writestr(to_hexstring(frame->ip));
-        srl->writestr("\r\n");
-        srl->writestr("  Stack Pointer: 0x");
-        srl->writestr(to_hexstring(frame->sp));
-        srl->writestr("\r\n");
-    }
+    UART::out("  Instruction Address: 0x");
+    UART::out(to_hexstring(frame->ip));
+    UART::out("\r\n");
+    UART::out("  Stack Pointer: 0x");
+    UART::out(to_hexstring(frame->sp));
+    UART::out("\r\n");
     gRend.puts("Instruction Address: 0x", 0x00000000);
     gRend.puts(to_hexstring(frame->ip), 0x00000000);
     gRend.crlf(PanicStartX);

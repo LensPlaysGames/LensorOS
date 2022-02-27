@@ -64,17 +64,17 @@ private:
 
     /* Print CPU data in format of CPU <NUMA domain>:<NUMA chip>:<Physical core>:<Logical core> */
     void print_debug() {
-        srl->writestr("  CPU ");
-        srl->writestr(to_string(NUMADomain));
-        srl->writeb(':');
-        srl->writestr(to_string(NUMAChip));
-        srl->writeb(':');
-        srl->writestr(to_string(Core));
-        srl->writeb(':');
-        srl->writestr(to_string(LogicalCore));
-        srl->writestr("\r\n    CPU Description Address: 0x");
-        srl->writestr(to_hexstring<CPUDescription*>(Description));
-        srl->writestr("\r\n");
+        UART::out("  CPU ");
+        UART::out(to_string(NUMADomain));
+        UART::outc(':');
+        UART::out(to_string(NUMAChip));
+        UART::outc(':');
+        UART::out(to_string(Core));
+        UART::outc(':');
+        UART::out(to_string(LogicalCore));
+        UART::out("\r\n    CPU Description Address: 0x");
+        UART::out(to_hexstring<CPUDescription*>(Description));
+        UART::out("\r\n");
     }
 };
 
@@ -93,32 +93,32 @@ public:
     void set_physical_core_bits(u8 bits) { PhysicalCoreBits = bits; }
 
     void print_debug() {
-        srl->writestr("CPU Description Dump:\r\n");
-        srl->writestr("  Capabilites:\r\n");
-        srl->writestr("    CPUID: ");
-        srl->writestr(to_string(CPUIDCapable));
-        srl->writestr("\r\n    FXSR: ");
-        srl->writestr(to_string(FXSRCapable));
-        srl->writestr("\r\n    FPU: ");
-        srl->writestr(to_string(FPUCapable));
-        srl->writestr("\r\n    SSE: ");
-        srl->writestr(to_string(SSECapable));
-        srl->writestr("\r\n    XSAVE: ");
-        srl->writestr(to_string(XSAVECapable));
-        srl->writestr("\r\n    AVX: ");
-        srl->writestr(to_string(AVXCapable));
-        srl->writestr("\r\n  Enabled: ");
-        srl->writestr("\r\n    FXSR: ");
-        srl->writestr(to_string(FXSREnabled));
-        srl->writestr("\r\n    FPU: ");
-        srl->writestr(to_string(FPUEnabled));
-        srl->writestr("\r\n    SSE: ");
-        srl->writestr(to_string(SSEEnabled));
-        srl->writestr("\r\n    XSAVE: ");
-        srl->writestr(to_string(XSAVEEnabled));
-        srl->writestr("\r\n    AVX: ");
-        srl->writestr(to_string(AVXEnabled));
-        srl->writestr("\r\n");
+        UART::out("CPU Description Dump:\r\n");
+        UART::out("  Capabilites:\r\n");
+        UART::out("    CPUID: ");
+        UART::out(to_string(CPUIDCapable));
+        UART::out("\r\n    FXSR: ");
+        UART::out(to_string(FXSRCapable));
+        UART::out("\r\n    FPU: ");
+        UART::out(to_string(FPUCapable));
+        UART::out("\r\n    SSE: ");
+        UART::out(to_string(SSECapable));
+        UART::out("\r\n    XSAVE: ");
+        UART::out(to_string(XSAVECapable));
+        UART::out("\r\n    AVX: ");
+        UART::out(to_string(AVXCapable));
+        UART::out("\r\n  Enabled: ");
+        UART::out("\r\n    FXSR: ");
+        UART::out(to_string(FXSREnabled));
+        UART::out("\r\n    FPU: ");
+        UART::out(to_string(FPUEnabled));
+        UART::out("\r\n    SSE: ");
+        UART::out(to_string(SSEEnabled));
+        UART::out("\r\n    XSAVE: ");
+        UART::out(to_string(XSAVEEnabled));
+        UART::out("\r\n    AVX: ");
+        UART::out(to_string(AVXEnabled));
+        UART::out("\r\n");
         CPUs.for_each([](auto* it){
             it->value().print_debug();
         });

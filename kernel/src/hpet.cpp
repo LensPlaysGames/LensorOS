@@ -23,9 +23,9 @@ u32 HPET::readl(u16 offset) {
 }
 
 void hpet_init_failed(const char* msg) {
-    srl->writestr("[HPET]: \033[31mFailed to initialize:\033[0m ");
-    srl->writestr(msg);
-    srl->writestr("\r\n");
+    UART::out("[HPET]: \033[31mFailed to initialize:\033[0m ");
+    UART::out(msg);
+    UART::out("\r\n");
 }
 
 bool HPET::initialize() {
@@ -86,9 +86,9 @@ bool HPET::initialize() {
     if (NumberOfComparators < HPET_MIN_COMPARATORS
         || NumberOfComparators > HPET_MAX_COMPARATORS)
     {
-        srl->writestr("  Number of Comparators: ");
-        srl->writestr(to_string(NumberOfComparators));
-        srl->writestr("\r\n");
+        UART::out("  Number of Comparators: ");
+        UART::out(to_string(NumberOfComparators));
+        UART::out("\r\n");
         hpet_init_failed("Number of comparators is invalid.");
         return false;
     }
@@ -166,47 +166,47 @@ void HPET::reset_counter() {
 }
 
 void HPET::print_state() {
-    srl->writestr("[HPET]: \033[32mInitialized\033[0m\r\n");
-    srl->writestr("  Revision ID: 0x");
-    srl->writestr(to_hexstring(Header->RevisionID));
-    srl->writestr("\r\n");
-    srl->writestr("  ID: 0x");
-    srl->writestr(to_hexstring(Header->ID));
-    srl->writestr("\r\n");
-    srl->writestr("  PCI Vendor ID: 0x");
-    srl->writestr(to_hexstring(Header->PCIvendorID));
-    srl->writestr("\r\n");
-    srl->writestr("  Main Counter Enabled: ");
-    srl->writestr(to_string(readl(HPET_REG_GENERAL_CONFIGURATION) & 1));
-    srl->writestr("\r\n");
-    srl->writestr("  Supports 64-bit Main Counter: ");
-    srl->writestr(to_string(LargeCounterSupport));
-    srl->writestr("\r\n");
-    srl->writestr("  Supports Legacy Interrupt Mapping: ");
-    srl->writestr(to_string(LegacyInterruptSupport));
-    srl->writestr("\r\n");
-    srl->writestr("  Base Address: 0x");
-    srl->writestr(to_hexstring(Header->Address.Address));
-    srl->writestr("\r\n");
-    srl->writestr("  Address Space ID: ");
-    srl->writestr(to_string(Header->Address.AddressSpaceID));
-    srl->writestr("\r\n");
-    srl->writestr("  Sequence Number: ");
-    srl->writestr(to_string(Header->Number));
-    srl->writestr("\r\n");
-    srl->writestr("  Minimum Tick: ");
-    srl->writestr(to_string(Header->MinimumTick));
-    srl->writestr("\r\n");
-    srl->writestr("  Period: ");
-    srl->writestr(to_string(Period));
-    srl->writestr("\r\n");
-    srl->writestr("  Frequency: ");
-    srl->writestr(to_string(Frequency));
-    srl->writestr("\r\n");
-    srl->writestr("  Number of Comparators: ");
-    srl->writestr(to_string(NumberOfComparators));
-    srl->writestr("\r\n");
-    srl->writestr("  Page Protection: ");
-    srl->writestr(to_string(Header->PageProtection));
-    srl->writestr("\r\n");
+    UART::out("[HPET]: \033[32mInitialized\033[0m\r\n");
+    UART::out("  Revision ID: 0x");
+    UART::out(to_hexstring(Header->RevisionID));
+    UART::out("\r\n");
+    UART::out("  ID: 0x");
+    UART::out(to_hexstring(Header->ID));
+    UART::out("\r\n");
+    UART::out("  PCI Vendor ID: 0x");
+    UART::out(to_hexstring(Header->PCIvendorID));
+    UART::out("\r\n");
+    UART::out("  Main Counter Enabled: ");
+    UART::out(to_string(readl(HPET_REG_GENERAL_CONFIGURATION) & 1));
+    UART::out("\r\n");
+    UART::out("  Supports 64-bit Main Counter: ");
+    UART::out(to_string(LargeCounterSupport));
+    UART::out("\r\n");
+    UART::out("  Supports Legacy Interrupt Mapping: ");
+    UART::out(to_string(LegacyInterruptSupport));
+    UART::out("\r\n");
+    UART::out("  Base Address: 0x");
+    UART::out(to_hexstring(Header->Address.Address));
+    UART::out("\r\n");
+    UART::out("  Address Space ID: ");
+    UART::out(to_string(Header->Address.AddressSpaceID));
+    UART::out("\r\n");
+    UART::out("  Sequence Number: ");
+    UART::out(to_string(Header->Number));
+    UART::out("\r\n");
+    UART::out("  Minimum Tick: ");
+    UART::out(to_string(Header->MinimumTick));
+    UART::out("\r\n");
+    UART::out("  Period: ");
+    UART::out(to_string(Period));
+    UART::out("\r\n");
+    UART::out("  Frequency: ");
+    UART::out(to_string(Frequency));
+    UART::out("\r\n");
+    UART::out("  Number of Comparators: ");
+    UART::out(to_string(NumberOfComparators));
+    UART::out("\r\n");
+    UART::out("  Page Protection: ");
+    UART::out(to_string(Header->PageProtection));
+    UART::out("\r\n");
 }

@@ -165,13 +165,13 @@ namespace Memory {
     }
 
     void print_debug() {
-        srl->writestr("Memory Manager Debug Dump:");
-        srl->writestr("\r\n  Total Memory: ");
-        srl->writestr(to_string(TotalPages * PAGE_SIZE / 1024 / 1024));
-        srl->writestr("MiB\r\n  Free Memory: ");
-        srl->writestr(to_string(TotalFreePages * PAGE_SIZE / 1024 / 1024));
-        srl->writestr("MiB\r\n  Used Memory: ");
-        srl->writestr(to_string(TotalUsedPages * PAGE_SIZE / 1024 / 1024));
-        srl->writestr("MiB\r\n");
+        UART::out("Memory Manager Debug Dump:");
+        UART::out("\r\n  Total Memory: ");
+        UART::out(to_string(TotalPages * PAGE_SIZE / 1024 / 1024));
+        UART::out("MiB\r\n  Free Memory: ");
+        UART::out(to_string(TotalFreePages * PAGE_SIZE / 1024 / 1024));
+        UART::out("MiB\r\n  Used Memory: ");
+        UART::out(to_string(TotalUsedPages * PAGE_SIZE / 1024 / 1024));
+        UART::out("MiB\r\n");
     }
 }

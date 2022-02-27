@@ -15,7 +15,8 @@
  * |- x86 Multi-threading Steps
  * |  |- Resources
  * |  |  |- https://wiki.osdev.org/Multiprocessing
- * |  |  `- https://wiki.osdev.org/Detecting_CPU_Topology_(80x86)
+ * |  |  |- https://wiki.osdev.org/Detecting_CPU_Topology_(80x86)
+ * |  |  `- https://wiki.osdev.org/APIC
  * |  |- Parse ACPI MADT Table, construct `CPUs` list of `CPUDescription SystemCPU`
  * |  |  `- Store APICID for each CPU.
  * |  |- Parse ACPI SRAT Table
@@ -23,6 +24,12 @@
  * |  |- Sort list of CPUs in order of NUMADomain (sorted within each domain by APIC ID)
  * |  |- Determine number of bits in APIC ID that are used to identify which logical CPU.
  * |  `- Determine number of bits in APIC ID that are used to identify which physical CPU.
+ * |
+ * |- Task blocking; how can a task that is only waiting not waste my time?
+ * |  |- My first (naive) thought: Task could call wait() or something that
+ * |  |    would add it to a list of waiting tasks. Something would have to un-wait
+ * |  |    them, so maybe wait() takes in an amount of time to wait before un-waiting.
+ * |  `- Approach from Brendan's multi-tasking guide: 
  * |  
  * |- Reconstruct memory managers from the ground up (VMM, PMM).
  * |  `- Start with what the kernel recieves: EFI Memory Map (and go from there!)
@@ -65,9 +72,6 @@
  * |        `- I've implemented this! See `fat_driver.cpp` for it in use.
  * |
  * |- Create Container Class(es) -> Vector, HashMap, etc.
- * |
- * |- Support APIC (LAPIC & I/O APIC)
- * |  `- https://wiki.osdev.org/APIC
  * |
  * |- Write a bootloader in C (no longer rely on GNU-EFI bootloader).
  * |  `- I realize this is an insanely large project, but so is making an OS, I guess.
@@ -134,19 +138,19 @@ void print_memory_info() {
 }
 
 void srl_memory_info() {
-    srl->writestr("\r\nMemory Info:\r\n|- Total RAM: ");
-    srl->writestr(to_string(Memory::get_total_ram() / 1024 / 1024));
-    srl->writestr("MiB (");
-    srl->writestr(to_string(Memory::get_total_ram() / 1024));
-    srl->writestr("KiB)\r\n|- Free RAM: ");
-    srl->writestr(to_string(Memory::get_free_ram() / 1024 / 1024));
-    srl->writestr(" MiB (");
-    srl->writestr(to_string(Memory::get_free_ram() / 1024));
-    srl->writestr(" KiB)\r\n`- Used RAM: ");
-    srl->writestr(to_string(Memory::get_used_ram() / 1024 / 1024));
-    srl->writestr(" MiB (");
-    srl->writestr(to_string(Memory::get_used_ram() / 1024));
-    srl->writestr(" KiB)\r\n");
+    UART::out("\r\nMemory Info:\r\n|- Total RAM: ");
+    UART::out(to_string(Memory::get_total_ram() / 1024 / 1024));
+    UART::out("MiB (");
+    UART::out(to_string(Memory::get_total_ram() / 1024));
+    UART::out("KiB)\r\n|- Free RAM: ");
+    UART::out(to_string(Memory::get_free_ram() / 1024 / 1024));
+    UART::out(" MiB (");
+    UART::out(to_string(Memory::get_free_ram() / 1024));
+    UART::out(" KiB)\r\n`- Used RAM: ");
+    UART::out(to_string(Memory::get_used_ram() / 1024 / 1024));
+    UART::out(" MiB (");
+    UART::out(to_string(Memory::get_used_ram() / 1024));
+    UART::out(" KiB)\r\n");
 }
 
 void print_now(u64 xOffset = 0) {
@@ -178,15 +182,15 @@ void* userland_function;
 extern "C" void _start(BootInfo* bInfo) {
     // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
     kernel_init(bInfo);
-    srl->writestr("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
+    UART::out("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
     // Clear + swap screen (ensure known state: blank).
     gRend.clear(0x00000000);
     gRend.swap();
     /// GPLv3 LICENSE REQUIREMENT (interactive terminal must print copyright notice).
     const char* GPLv3 = "<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>";
     // TO SERIAL
-    srl->writestr(GPLv3);
-    srl->writestr("\r\n\r\n");
+    UART::out(GPLv3);
+    UART::out("\r\n\r\n");
     // TO SCREEN
     gRend.BackgroundColor = 0xffffffff;
     gRend.puts(GPLv3, 0x00000000);
@@ -198,6 +202,14 @@ extern "C" void _start(BootInfo* bInfo) {
     // USERLAND SWITCH TESTING
     //userland_function = (void*)test_userland_function;
     //jump_to_userland_function();
+
+    // FIXME FIXME FIXME
+    // NULL DE-REFERENCE TESTING
+    //UART::out("Going to null de-reference\r\n");
+    //u8* badPtr = nullptr;
+    //u8 dereferenced = *badPtr;
+    //(void)dereferenced;
+    //UART::out("Null de-referenced!\r\n");
 
     // Start keyboard input at draw position, not origin.
     Keyboard::gText.set_cursor_from_pixel_position(gRend.DrawPos);

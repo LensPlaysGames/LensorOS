@@ -27,18 +27,18 @@ namespace Memory {
         u64 mapEntries = mapSize / mapDescSize;
         for (u64 i = 0; i < mapEntries; ++i) {
             EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)map + (i * mapDescSize));
-            srl->writestr("\033[36m[MEMORY REGION]: ");
+            UART::out("\033[36m[MEMORY REGION]: ");
             if (desc->type < 14)
-                srl->writestr(EFI_MEMORY_TYPE_STRINGS[desc->type]);
-            else srl->writestr("\033[0mINVALID TYPE\033[36m");
-            srl->writestr("\r\n  Physical Address: 0x");
-            srl->writestr(to_hexstring<void*>(desc->physicalAddress));
-            srl->writestr("\r\n  Size: ");
+                UART::out(EFI_MEMORY_TYPE_STRINGS[desc->type]);
+            else UART::out("\033[0mINVALID TYPE\033[36m");
+            UART::out("\r\n  Physical Address: 0x");
+            UART::out(to_hexstring<void*>(desc->physicalAddress));
+            UART::out("\r\n  Size: ");
             u64 sizeKiB = desc->numPages * PAGE_SIZE / 1024;
-            srl->writestr(to_string(sizeKiB / 1024));
-            srl->writestr("MiB (");
-            srl->writestr(to_string(sizeKiB));
-            srl->writestr("KiB)\033[0m\r\n");
+            UART::out(to_string(sizeKiB / 1024));
+            UART::out("MiB (");
+            UART::out(to_string(sizeKiB));
+            UART::out("KiB)\033[0m\r\n");
         }
     }
 
@@ -53,14 +53,14 @@ namespace Memory {
                 typePageSums[desc->type] += desc->numPages;
         }
         for (u8 i = 0; i < 14; ++i) {
-            srl->writestr("\033[36m[MEMORY REGION]: ");
-            srl->writestr(EFI_MEMORY_TYPE_STRINGS[i]);
-            srl->writestr("\r\n  Total Size: ");
+            UART::out("\033[36m[MEMORY REGION]: ");
+            UART::out(EFI_MEMORY_TYPE_STRINGS[i]);
+            UART::out("\r\n  Total Size: ");
             u64 sizeKiB = typePageSums[i] * PAGE_SIZE / 1024;
-            srl->writestr(to_string(sizeKiB / 1024));
-            srl->writestr("MiB (");
-            srl->writestr(to_string(sizeKiB));
-            srl->writestr("KiB)\033[0m\r\n");
+            UART::out(to_string(sizeKiB / 1024));
+            UART::out("MiB (");
+            UART::out(to_string(sizeKiB));
+            UART::out("KiB)\033[0m\r\n");
         }
     }
 }

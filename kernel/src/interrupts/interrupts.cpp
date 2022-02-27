@@ -17,7 +17,8 @@ void enable_interrupt(u8 irq) {
     u16 port = PIC2_DATA;
     if (irq < 8)
         port = PIC1_DATA;
-    else irq -= 8;
+    else
+        irq -= 8;
     u8 value = in8(port) & ~IRQ_BIT(irq);
     out8(port, value);
 }
@@ -64,20 +65,23 @@ void cause_general_protection() {
 
 // HARDWARE INTERRUPT HANDLERS (IRQs)
 /// IRQ0: SYSTEM TIMER
-__attribute__((interrupt)) void system_timer_handler(InterruptFrame* frame) {
+__attribute__((interrupt))
+void system_timer_handler(InterruptFrame* frame) {
     gPIT.tick();
     end_of_interrupt(0);
 }
 
 /// IRQ1: PS/2 KEYBOARD
-__attribute__((interrupt)) void keyboard_handler(InterruptFrame* frame) {
+__attribute__((interrupt))
+void keyboard_handler(InterruptFrame* frame) {
     Keyboard::gText.handle_scancode(in8(0x60));
     end_of_interrupt(1);
 }
 
 /// IRQ4: COM1/COM3 Serial Communications Recieved
-__attribute__((interrupt)) void uart_com1_handler(InterruptFrame* frame) {
-    u8 data = srl->readb();
+__attribute__((interrupt))
+void uart_com1_handler(InterruptFrame* frame) {
+    u8 data = UART::read();
     end_of_interrupt(4);
     Keyboard::gText.handle_character(data);
 }
@@ -91,7 +95,8 @@ __attribute__((interrupt)) void uart_com1_handler(InterruptFrame* frame) {
 ///          5: Alarm interrupt
 ///          6: Periodic Interrupt
 ///          7: Interrupt Request (IRQ)
-__attribute__((interrupt)) void rtc_handler(InterruptFrame* frame) {
+__attribute__((interrupt))
+void rtc_handler(InterruptFrame* frame) {
     u8 statusC = gRTC.read_register(0x0C);
     if (statusC & 0b01000000)
         gRTC.Ticks += 1;
@@ -99,7 +104,8 @@ __attribute__((interrupt)) void rtc_handler(InterruptFrame* frame) {
 }
 
 /// IRQ12: PS/2 MOUSE
-__attribute__((interrupt)) void mouse_handler(InterruptFrame* frame) {
+__attribute__((interrupt))
+void mouse_handler(InterruptFrame* frame) {
     u8 data = in8(0x60);
     handle_ps2_mouse_interrupt(data);
     // End interrupt
@@ -108,14 +114,16 @@ __attribute__((interrupt)) void mouse_handler(InterruptFrame* frame) {
 
 // FAULT INTERRUPT HANDLERS
 
-__attribute__((interrupt)) void divide_by_zero_handler(InterruptFrame* frame) {
+__attribute__((interrupt))
+void divide_by_zero_handler(InterruptFrame* frame) {
     panic(frame, "Divide by zero detected!");
     while (true) {
         asm ("hlt");
     }
 }
 
-__attribute__((interrupt)) void page_fault_handler(InterruptFrame* frame, u64 err) {
+__attribute__((interrupt))
+void page_fault_handler(InterruptFrame* frame, u64 err) {
     // POP ERROR CODE FROM STACK
     u64 address;
     asm volatile ("mov %%cr2, %0" : "=r" (address));
@@ -132,9 +140,9 @@ __attribute__((interrupt)) void page_fault_handler(InterruptFrame* frame, u64 er
     else if (((err & 0b100000) >> 5) == 1)
         panic(frame, "Page fault detected (Shadow stack access)");
     else panic(frame, "Page fault detected");
-    srl->writestr("  Faulty Address: 0x");
-    srl->writestr(to_hexstring(address));
-    srl->writestr("\r\n");
+    UART::out("  Faulty Address: 0x");
+    UART::out(to_hexstring(address));
+    UART::out("\r\n");
     gRend.puts("Faulty Address: 0x", 0x00000000);
     gRend.puts(to_hexstring(address), 0x00000000);
     gRend.swap();
@@ -143,34 +151,36 @@ __attribute__((interrupt)) void page_fault_handler(InterruptFrame* frame, u64 er
     }
 }
 
-__attribute__((interrupt)) void double_fault_handler(InterruptFrame* frame, u64 err) {
+__attribute__((interrupt))
+void double_fault_handler(InterruptFrame* frame, u64 err) {
     panic(frame, "Double fault detected!");
     while (true) {
         asm ("hlt");
     }
 }
 
-__attribute__((interrupt)) void stack_segment_fault_handler(InterruptFrame* frame, u64 err) {
+__attribute__((interrupt))
+void stack_segment_fault_handler(InterruptFrame* frame, u64 err) {
     if (err == 0)
         panic(frame, "Stack segment fault detected (0)");
     else panic(frame, "Stack segment fault detected (selector)!");
-    srl->writestr("  Error Code: 0x");
-    srl->writestr(to_hexstring(err));
-    srl->writestr("\r\n");
+    UART::out("  Error Code: 0x");
+    UART::out(to_hexstring(err));
+    UART::out("\r\n");
     if (err & 0b1)
-        srl->writestr("  External\r\n");
+        UART::out("  External\r\n");
     
     u8 table = (err & 0b110) >> 1;
     if (table == 0b00)
-        srl->writestr("  GDT");
+        UART::out("  GDT");
     else if (table == 0b01 || table == 0b11)
-        srl->writestr("  IDT");
+        UART::out("  IDT");
     else if (table == 0b01)
-        srl->writestr("  LDT");
+        UART::out("  LDT");
     
-    srl->writestr(" Selector Index: ");
-    srl->writestr(to_hexstring(((err & 0b1111111111111000) >> 3)));
-    srl->writestr("\r\n");
+    UART::out(" Selector Index: ");
+    UART::out(to_hexstring(((err & 0b1111111111111000) >> 3)));
+    UART::out("\r\n");
 
     gRend.puts("Err: 0x", 0x00000000);
     gRend.puts(to_hexstring(err), 0x00000000);
@@ -178,28 +188,29 @@ __attribute__((interrupt)) void stack_segment_fault_handler(InterruptFrame* fram
     gRend.swap();
 }
 
-__attribute__((interrupt)) void general_protection_fault_handler(InterruptFrame* frame, u64 err) {
+__attribute__((interrupt))
+void general_protection_fault_handler(InterruptFrame* frame, u64 err) {
     if (err == 0)
         panic(frame, "General protection fault detected (0)!");
     else panic(frame, "General protection fault detected (selector)!");
 
-    srl->writestr("  Error Code: 0x");
-    srl->writestr(to_hexstring(err));
-    srl->writestr("\r\n");
+    UART::out("  Error Code: 0x");
+    UART::out(to_hexstring(err));
+    UART::out("\r\n");
     if (err & 0b1)
-        srl->writestr("  External\r\n");
+        UART::out("  External\r\n");
     
     u8 table = (err & 0b110) >> 1;
     if (table == 0b00)
-        srl->writestr("  GDT");
+        UART::out("  GDT");
     else if (table == 0b01 || table == 0b11)
-        srl->writestr("  IDT");
+        UART::out("  IDT");
     else if (table == 0b01)
-        srl->writestr("  LDT");
+        UART::out("  LDT");
     
-    srl->writestr(" Selector Index: ");
-    srl->writestr(to_hexstring(((err & 0b1111111111111000) >> 3)));
-    srl->writestr("\r\n");
+    UART::out(" Selector Index: ");
+    UART::out(to_hexstring(((err & 0b1111111111111000) >> 3)));
+    UART::out("\r\n");
     gRend.puts("Err: 0x", 0x00000000);
     gRend.puts(to_hexstring(err), 0x00000000);
     gRend.crlf();

@@ -155,8 +155,8 @@ void FATDriver::read_directory
         u64 firstSectorOfCluster = get_first_sector_in_cluster(BR, clusterIndex);
         if (port->read(firstSectorOfCluster, BR->BPB.NumSectorsPerCluster, clusterContents.get(), clusterSizeInBytes) == false) {
             for (u32 i = 0; i < indentLevel + 1; ++i)
-                srl->writestr(indent);
-            srl->writestr("\033[31mCluster read failed.\033[0m\r\n");
+                UART::out(indent);
+            UART::out("\033[31mCluster read failed.\033[0m\r\n");
             return;
         }
         current = (ClusterEntry*)clusterContents.get();
@@ -187,64 +187,64 @@ void FATDriver::read_directory
             bool is_dir = current->Attributes & FAT_ATTR_DIRECTORY;
             bool is_file = false;
             for (u32 i = 0; i < indentLevel + 1; ++i)
-                srl->writestr(indent);
+                UART::out(indent);
             if (current->Attributes & FAT_ATTR_READ_ONLY)
-                srl->writestr("Read-only ");
+                UART::out("Read-only ");
             if (current->Attributes & FAT_ATTR_HIDDEN)
-                srl->writestr("Hidden ");
+                UART::out("Hidden ");
             if (current->Attributes & FAT_ATTR_SYSTEM)
-                srl->writestr("System ");
+                UART::out("System ");
 
             if (is_dir)
-                srl->writestr("Directory");             
+                UART::out("Directory");             
             else if (current->Attributes & FAT_ATTR_VOLUME_ID)
-                srl->writestr("Volume Label");
+                UART::out("Volume Label");
             else if (current->Attributes & FAT_ATTR_ARCHIVE) {
                 is_file = true;
-                srl->writestr("Archive");
+                UART::out("Archive");
             }
             else {
                 is_file = true;
-                srl->writestr("File");
+                UART::out("File");
             }
             
             // Write file name to serial output.
             if (lfnBufferFull) {
                 // Apply long file name to current entry.
-                srl->writestr(" with long name: ");
-                srl->writestr((char*)&lfnBuffer[0], 26);
+                UART::out(" with long name: ");
+                UART::out((u8*)&lfnBuffer[0], 26);
                 lfnBufferFull = false;
             }
             else {
-                srl->writestr(": ");
-                srl->writestr((char*)&current->FileName[0], 11);
+                UART::out(": ");
+                UART::out(&current->FileName[0], 11);
             }
-            srl->writestr("\r\n");
+            UART::out("\r\n");
 
             if (is_file) {
                 // Print file size.
                 for (u32 i = 0; i < indentLevel + 3; ++i)
-                    srl->writestr(indent);
-                srl->writestr("File Size: ");
-                srl->writestr(to_string(current->FileSizeInBytes / 1024 / 1024));
-                srl->writestr(" MiB (");
-                srl->writestr(to_string(current->FileSizeInBytes / 1024));
-                srl->writestr(" KiB)\r\n");
+                    UART::out(indent);
+                UART::out("File Size: ");
+                UART::out(to_string(current->FileSizeInBytes / 1024 / 1024));
+                UART::out(" MiB (");
+                UART::out(to_string(current->FileSizeInBytes / 1024));
+                UART::out(" KiB)\r\n");
                 // Print first 8 bytes of file.
                 for (u32 i = 0; i < indentLevel + 3; ++i)
-                    srl->writestr(indent);
+                    UART::out(indent);
 
                 const u8 tmp_buffer_size = 8;
-                srl->writestr("First ");
-                srl->writestr(to_string(tmp_buffer_size));
-                srl->writestr(" Bytes: \033[30;47m");
+                UART::out("First ");
+                UART::out(to_string(tmp_buffer_size));
+                UART::out(" Bytes: \033[30;47m");
                 SmartPtr<u8[]> buffer(new u8[tmp_buffer_size], tmp_buffer_size);
                 u64 firstSectorOfCluster = get_first_sector_in_cluster(BR, current->get_cluster_number());
                 if (port->read(firstSectorOfCluster, BR->BPB.NumSectorsPerCluster, buffer.get(), tmp_buffer_size)) {
-                    srl->writestr((char*)&buffer[0], tmp_buffer_size);
-                    srl->writestr("\033[0m\r\n");
+                    UART::out(&buffer[0], tmp_buffer_size);
+                    UART::out("\033[0m\r\n");
                 }
-                else srl->writestr("\033[31mRead failed.\033[0m\r\n");
+                else UART::out("\033[31mRead failed.\033[0m\r\n");
             }
             else if (is_dir && (strcmp((char*)&current->FileName[0], ".          ", 11)
                                 || strcmp((char*)&current->FileName[0], "..         ", 11)) == false)
@@ -340,7 +340,7 @@ void FATDriver::read_directory
 }
 
 void FATDriver::read_root_directory(AHCI::Port* port, BootRecord* BR, FATType type) {
-    srl->writestr("[FATDriver]:\r\n");
+    UART::out("[FATDriver]:\r\n");
     u32 clusterIndex = get_root_directory_cluster(BR, type);
     read_directory(port, BR, type, clusterIndex);
 }

@@ -9,8 +9,8 @@
 namespace ACPI {
     void initialize(RSDP2* rootSystemDescriptorPointer) {
         if (rootSystemDescriptorPointer == nullptr) {
-            srl->writestr("[ACPI]: \033[31mERROR\033[0m -> Root System Descriptor Pointer is null. ");
-            srl->writestr("(most likely error in bootloader/during boot process)\r\n");
+            UART::out("[ACPI]: \033[31mERROR\033[0m -> Root System Descriptor Pointer is null. ");
+            UART::out("(most likely error in bootloader/during boot process)\r\n");
             return;
         }
         // eXtended System Descriptor Table
@@ -38,11 +38,11 @@ namespace ACPI {
             // Find matching signature.
             if (strcmp((char*)sdt->Signature, signature, 4)) {
                 if (int rc = checksum(sdt, sdt->Length)) {
-                    srl->writestr("[ACPI]: ERROR -> Invalid checksum on '");
-                    srl->writestr((char*)sdt->Signature, 4);
-                    srl->writestr("' table: ");
-                    srl->writestr(to_string(rc));
-                    srl->writestr("\r\n");
+                    UART::out("[ACPI]: ERROR -> Invalid checksum on '");
+                    UART::out(sdt->Signature, 4);
+                    UART::out("' table: ");
+                    UART::out(to_string(rc));
+                    UART::out("\r\n");
                     return nullptr;
                 }
                 return sdt;

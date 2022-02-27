@@ -6,14 +6,14 @@
 LFSR gRandomLFSR;
 
 void LFSR::print_shift_register() {
-    srl->writestr("[LFSR]: Shift Register Contents: 0b");
+    UART::out("[LFSR]: Shift Register Contents: 0b");
     for (u8 i = 128 / 8 - 1; i < 128 / 8; --i) {
         for (u8 j = 8 - 1; j < 8; --j) {
             u8 bitIndex = (i * 8 + j);
-            srl->writestr(to_string(get_bit_value(bitIndex)));
+            UART::out(to_string(get_bit_value(bitIndex)));
         }
     }
-    srl->writestr("\r\n");
+    UART::out("\r\n");
 }
 
 void LFSR::next() {

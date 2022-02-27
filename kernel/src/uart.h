@@ -121,34 +121,30 @@
  *        was last written to it when read from.
  */
 
-enum class UARTChip {
-    NONE = 0,
-    _8250,
-    _16450,
-    _16550,
-    _16550A,
-    _16750,
-};
-
-const char* get_uart_chip_name(UARTChip chip);
-
 // TODO: Add capability for selecting communication channel (COM1, COM2, etc).
-class UARTDriver {
-public:
-    UARTDriver();
+namespace UART {
+    void initialize();
     
-    UARTChip chip { UARTChip::NONE };
-    
-    u8 readb();
-    void writeb(u8 data);
+    enum class Chip;
+    const char* get_uart_chip_name(Chip);
 
-    /// Write a C-style null-terminated byte-string to the serial output COM1.
-    void writestr(const char* str);
-    void writestr(char* str, u64 numChars);
-    /// Convert the given number to a string, then write that to the serial output.
-    void writestr(u64 number);
-};
+    // Called from the UART interrupt handler when data is received.
+    u8 read();
 
-extern UARTDriver* srl;
+    // Write a singular byte verbatim to serial output.
+    void out(u8);
+    inline void outc(char c) {
+        out((u8)c);
+    }
+
+    // Write a c-style null-terminated string to serial output.
+    void out(const char* string);
+    // Write a number of bytes from a given buffer to serial output.
+    void out(u8* buffer, u64 numberOfBytes);
+    // Write the given number as a string to serial output.
+    void out(u64);
+    void out(u32);
+    void out(u16);
+}
 
 #endif

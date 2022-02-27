@@ -25,11 +25,11 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
     for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
         Memory::map((void*)t, (void*)t);
 
-    srl->writestr("  Active GOP framebuffer mapped to 0x");
-    srl->writestr(to_hexstring(fbBase));
-    srl->writestr(" thru ");
-    srl->writestr(to_hexstring(fbBase + fbSize));
-    srl->writestr("\r\n");
+    UART::out("  Active GOP framebuffer mapped to 0x");
+    UART::out(to_hexstring(fbBase));
+    UART::out(" thru ");
+    UART::out(to_hexstring(fbBase + fbSize));
+    UART::out("\r\n");
     
     // Create a new framebuffer. This memory is what will be drawn to.
     // When the screen should be updated, this new framebuffer is copied into the active one.
@@ -42,11 +42,11 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
     for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
         Memory::map((void*)t, (void*)t);
 
-    srl->writestr("  Deferred GOP framebuffer mapped to 0x");
-    srl->writestr(to_hexstring(fbBase));
-    srl->writestr(" thru ");
-    srl->writestr(to_hexstring(fbBase + fbSize));
-    srl->writestr("\r\n");
+    UART::out("  Deferred GOP framebuffer mapped to 0x");
+    UART::out(to_hexstring(fbBase));
+    UART::out(" thru ");
+    UART::out(to_hexstring(fbBase + fbSize));
+    UART::out("\r\n");
 
     Target = &target;
 
