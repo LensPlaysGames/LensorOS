@@ -213,7 +213,7 @@ Code format is currently defined as follows:
 - When declaring arguments for a function in a header file, only put a name if it is not intrinsically clear.
 - For acronyms, use your best judgement, but never allow any capital letters in file or function names.
 - When declaring a pointer or a reference, put the `*` or `&` next to the type name, not the variable identifier.
-- Use fixed-width integer types unless absolutely necessary (don't use `int`, `char`, use `u32`, `u8`).
+- Use fixed-width integer types unless absolutely necessary (don't use `int`, `char`, use `s32`, `u8`).
 - Use type aliases for all fixed-width integer types (`u8`, `s8`, `u64`, `s16`, etc).
 
 ### Acknowledgements <a name="ack"></a>
