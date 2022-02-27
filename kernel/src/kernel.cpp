@@ -215,8 +215,8 @@ extern "C" void _start(BootInfo* bInfo) {
     //UART::out("Null de-referenced!\r\n");
 
     // I'm lovin' it :^) (Plays Maccy's theme).
-#define MACCYS_BPM ((double)125.0)
-#define MACCYS_STEP_LENGTH_SECONDS ((60 / MACCYS_BPM) / 4)
+    constexpr double MACCYS_BPM = 125;
+    constexpr double MACCYS_STEP_LENGTH_SECONDS = (60 / MACCYS_BPM) / 4;
     gPIT.prepare_wait_seconds(MACCYS_STEP_LENGTH_SECONDS);
     gPIT.play_sound(262, MACCYS_STEP_LENGTH_SECONDS); // C4
     gPIT.play_sound(294, MACCYS_STEP_LENGTH_SECONDS); // D4
