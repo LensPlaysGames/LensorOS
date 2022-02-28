@@ -73,7 +73,7 @@ dos2unix run.sh
 dos2unix rundbg.sh
 ```
 
-From there, `bash mkimg.sh` will generate a `.iso` disk image file that can be used as a boot drive by a virtual machine that supports OVMF like [QEMU](https://www.qemu.org/).
+From there, `bash mkimg.sh` will generate a `.img` disk image file that can be used as a boot drive by a virtual machine that supports OVMF like [QEMU](https://www.qemu.org/).
 
 `bash run.sh` will boot up QEMU into LensorOS. \
 QEMU does need to be installed, so make sure you first run (`sudo apt install qemu-system-x86`).
