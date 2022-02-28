@@ -278,7 +278,7 @@ void kernel_init(BootInfo* bInfo) {
             // Enable XSAVE feature set
             // `- Set CR4.OSXSAVE bit (bit 18  -- OS provides )
             asm volatile ("mov %cr4, %rax\n"
-                          "or 0b1000000000000000000, %rax\n"
+                          "or $0b1000000000000000000, %rax\n"
                           "mov %rax, %cr4\n");
             UART::out("  \033[32mXSAVE Enabled\033[0m\r\n");
             SystemCPU->set_xsave_enabled();

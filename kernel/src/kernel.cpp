@@ -54,6 +54,7 @@
  * |          look for libc and standard includes relative to LensorOS's root directory.
  * |
  * |- HPET: Final step to get interrupts working (init comparators).
+ * |- Sound: Implement support for hardware sound cards (SoundBlaster16, Intel HDA, etc).
  * |
  * |- Further modify cross compiler to make an OS specific toolchain.
  * |  `- This would allow for customizing default include,
