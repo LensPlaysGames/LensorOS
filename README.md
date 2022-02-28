@@ -7,7 +7,6 @@
 - [Booting into LensorOS using QEMU](#qemu-boot)
 - [Building LensorOS](#build)
   - [A bug regarding CMake's ASM_NASM Makefile generation](#cmake-bug)
-- [Contribution Guidelines](#contrib)
 - [Acknowledgements](#ack)
   
 ---
