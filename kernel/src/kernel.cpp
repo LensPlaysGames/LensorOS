@@ -77,8 +77,9 @@
  * |
  * |- Create Container Class(es) -> Vector, HashMap, etc.
  * |
- * |- Write a bootloader in C (no longer rely on GNU-EFI bootloader).
- * |  `- I realize this is an insanely large project, but so is making an OS, I guess.
+ * |- Write a bootloader (no longer rely on GNU-EFI bootloader).
+ * |  | This includes utilizing UEFI calls to get things done.
+ * |  `- Resource: https://github.com/krinkinmu/efi/tree/master/efi
  * |
  * |- Make read-only section (of kernel) read only memory.
  * |
