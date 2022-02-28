@@ -195,27 +195,6 @@ lensor-radii@Garry:~/LensorOS/kernel/out$
 As you can see, the file `build.make` has been changed by the `cmake .` command, altering it to actually use the flags I pass in `kernel/CMakeLists.txt` with the `target_compile_options()` CMake function. \
 I don't know why the re-build is necessary, and it takes very little time, but if you know anything on why this occurs I would greatly appreciate you letting me know.
 
-### Contribution Guidelines <a name="contrib"></a>
-If you see something you would like to work on, do it! Pull requests will be reviewed and merged.
-
-Code format is currently defined as follows:
-- snake_case file and function names.
-- camelCase local variables and parameters.
-- PascalCase classes, structs, members.
-- SCREAMING_SNAKE_CASE all preprocessor directives.
-- Header include guard also uses SCREAMING_SNAKE_CASE:
-```cpp
-#ifndef LENSOR_OS_NAME_OF_FILE_H
-#define LENSOR_OS_NAME_OF_FILE_H
-... header contents ...
-#endif /* LENSOR_OS_NAME_OF_FILE_H */
-```
-- When declaring arguments for a function in a header file, only put a name if it is not intrinsically clear.
-- For acronyms, use your best judgement, but never allow any capital letters in file or function names.
-- When declaring a pointer or a reference, put the `*` or `&` next to the type name, not the variable identifier.
-- Use fixed-width integer types unless absolutely necessary (don't use `int`, `char`, use `s32`, `u8`).
-- Use type aliases for all fixed-width integer types (`u8`, `s8`, `u64`, `s16`, etc).
-
 ### Acknowledgements <a name="ack"></a>
 At first, development followed tutorials that can be found at [Poncho's GitHub](https://github.com/Absurdponcho). \
 Those tutorials were abandoned just after setting up a very basic AHCI driver, so I've taken the wheels from there.
