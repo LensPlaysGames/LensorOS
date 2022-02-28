@@ -58,7 +58,7 @@ To change the font, replace `dfltfont.psf` in the `kernel/res` folder with any P
 For a few fonts that are compatible, check out [this repository](https://github.com/ercanersoy/PSF-Fonts)
 
 NOTE: If using VirtualBox, you will need to use the following QEMU tool to create a bootable virtual disk (`.vdi`):
-`qemu-img convert -f raw -O vdi LensorOS/kernel/bin/LensorOS.img path/to/LensorOS.vdi`
+`qemu-img convert -f raw -O vdi LensorOS/kernel/bin/LensorOS.img path/to/LensorOS.vdi`, but be warned: there be dragons.
 
 #### On Linux
 
