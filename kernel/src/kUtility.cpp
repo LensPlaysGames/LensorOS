@@ -315,7 +315,7 @@ void kernel_init(BootInfo* bInfo) {
     ACPI::initialize(bInfo->rsdp);
     UART::out("[kUtil]: \033[32mACPI initialized\033[0m\r\n");
     // Enumerate PCI (find hardware devices).
-    ////prepare_pci();
+    prepare_pci();
     
     // Initialize High Precision Event Timer.
     (void)gHPET.initialize();
