@@ -148,12 +148,12 @@ void kernel_init(BootInfo* bInfo) {
     ////gRandomLFSR = LFSR();
 
     ////// Create basic framebuffer renderer.
-    ////UART::out("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
-    ////gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
-    ////UART::out("  \033[32mSetup Successful\033[0m\r\n");
-    ////draw_boot_gfx();
+    UART::out("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
+    gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
+    UART::out("  \033[32mSetup Successful\033[0m\r\n");
+    draw_boot_gfx();
     ////// Create basic text renderer for the keyboard.
-    ////Keyboard::gText = Keyboard::BasicTextRenderer();
+    Keyboard::gText = Keyboard::BasicTextRenderer();
 
     ////// Initialize the Programmable Interval Timer.
     ////gPIT = PIT();
@@ -336,7 +336,7 @@ void kernel_init(BootInfo* bInfo) {
     // Enable IRQ interrupts that will be used.
     disable_all_interrupts();
     ////enable_interrupt(IRQ_SYSTEM_TIMER);
-    ////enable_interrupt(IRQ_PS2_KEYBOARD);
+    enable_interrupt(IRQ_PS2_KEYBOARD);
     ////enable_interrupt(IRQ_CASCADED_PIC);
     ////enable_interrupt(IRQ_UART_COM1);
     ////enable_interrupt(IRQ_REAL_TIMER);
