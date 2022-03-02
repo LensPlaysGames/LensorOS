@@ -118,90 +118,93 @@
  * |
  * `- Add GPLv3 license header to top of every source file (exactly as seen in LICENSE).
  */
-void print_memory_info() {
-    u32 startOffset = gRend.DrawPos.x;
-    gRend.puts("Memory Info:");
-    gRend.crlf(startOffset);
-    gRend.puts("|- Total RAM: ");
-    gRend.puts(to_string(Memory::get_total_ram() / 1024 / 1024));
-    gRend.puts(" MiB (");
-    gRend.puts(to_string(Memory::get_total_ram() / 1024));
-    gRend.puts(" KiB)");
-    gRend.crlf(startOffset);
-    gRend.puts("|- Free RAM: ");
-    gRend.puts(to_string(Memory::get_free_ram() / 1024 / 1024));
-    gRend.puts(" MiB (");
-    gRend.puts(to_string(Memory::get_free_ram() / 1024));
-    gRend.puts(" KiB)");
-    gRend.crlf(startOffset);
-    gRend.puts("`- Used RAM: ");
-    gRend.puts(to_string(Memory::get_used_ram() / 1024 / 1024));
-    gRend.puts(" MiB (");
-    gRend.puts(to_string(Memory::get_used_ram() / 1024));
-    gRend.puts(" KiB)");
-    gRend.crlf(startOffset);
-}
+//void print_memory_info() {
+//    u32 startOffset = gRend.DrawPos.x;
+//    gRend.puts("Memory Info:");
+//    gRend.crlf(startOffset);
+//    gRend.puts("|- Total RAM: ");
+//    gRend.puts(to_string(Memory::get_total_ram() / 1024 / 1024));
+//    gRend.puts(" MiB (");
+//    gRend.puts(to_string(Memory::get_total_ram() / 1024));
+//    gRend.puts(" KiB)");
+//    gRend.crlf(startOffset);
+//    gRend.puts("|- Free RAM: ");
+//    gRend.puts(to_string(Memory::get_free_ram() / 1024 / 1024));
+//    gRend.puts(" MiB (");
+//    gRend.puts(to_string(Memory::get_free_ram() / 1024));
+//    gRend.puts(" KiB)");
+//    gRend.crlf(startOffset);
+//    gRend.puts("`- Used RAM: ");
+//    gRend.puts(to_string(Memory::get_used_ram() / 1024 / 1024));
+//    gRend.puts(" MiB (");
+//    gRend.puts(to_string(Memory::get_used_ram() / 1024));
+//    gRend.puts(" KiB)");
+//    gRend.crlf(startOffset);
+//}
 
-void srl_memory_info() {
-    UART::out("\r\nMemory Info:\r\n|- Total RAM: ");
-    UART::out(to_string(Memory::get_total_ram() / 1024 / 1024));
-    UART::out("MiB (");
-    UART::out(to_string(Memory::get_total_ram() / 1024));
-    UART::out("KiB)\r\n|- Free RAM: ");
-    UART::out(to_string(Memory::get_free_ram() / 1024 / 1024));
-    UART::out(" MiB (");
-    UART::out(to_string(Memory::get_free_ram() / 1024));
-    UART::out(" KiB)\r\n`- Used RAM: ");
-    UART::out(to_string(Memory::get_used_ram() / 1024 / 1024));
-    UART::out(" MiB (");
-    UART::out(to_string(Memory::get_used_ram() / 1024));
-    UART::out(" KiB)\r\n");
-}
+//void srl_memory_info() {
+//    UART::out("\r\nMemory Info:\r\n|- Total RAM: ");
+//    UART::out(to_string(Memory::get_total_ram() / 1024 / 1024));
+//    UART::out("MiB (");
+//    UART::out(to_string(Memory::get_total_ram() / 1024));
+//    UART::out("KiB)\r\n|- Free RAM: ");
+//    UART::out(to_string(Memory::get_free_ram() / 1024 / 1024));
+//    UART::out(" MiB (");
+//    UART::out(to_string(Memory::get_free_ram() / 1024));
+//    UART::out(" KiB)\r\n`- Used RAM: ");
+//    UART::out(to_string(Memory::get_used_ram() / 1024 / 1024));
+//    UART::out(" MiB (");
+//    UART::out(to_string(Memory::get_used_ram() / 1024));
+//    UART::out(" KiB)\r\n");
+//}
 
-void print_now(u64 xOffset = 0) {
-    gRend.puts("Now is ");
-    gRend.puts(to_string(gRTC.Time.hour));
-    gRend.putchar(':');
-    gRend.puts(to_string(gRTC.Time.minute));
-    gRend.putchar(':');
-    gRend.puts(to_string(gRTC.Time.second));
-    gRend.puts(" on ");
-    gRend.puts(to_string(gRTC.Time.year));
-    gRend.putchar('-');
-    gRend.puts(to_string(gRTC.Time.month));
-    gRend.putchar('-');
-    gRend.puts(to_string(gRTC.Time.date));
-    gRend.crlf(xOffset);
-}
+//void print_now(u64 xOffset = 0) {
+//    gRend.puts("Now is ");
+//    gRend.puts(to_string(gRTC.Time.hour));
+//    gRend.putchar(':');
+//    gRend.puts(to_string(gRTC.Time.minute));
+//    gRend.putchar(':');
+//    gRend.puts(to_string(gRTC.Time.second));
+//    gRend.puts(" on ");
+//    gRend.puts(to_string(gRTC.Time.year));
+//    gRend.putchar('-');
+//    gRend.puts(to_string(gRTC.Time.month));
+//    gRend.putchar('-');
+//    gRend.puts(to_string(gRTC.Time.date));
+//    gRend.crlf(xOffset);
+//}
 
-void test_userland_function() {
-    for (;;) {
-        asm volatile ("mov $0, %rax\r\n\t"
-                      "int $0x80\r\n\t");
-    }
-}
+//void test_userland_function() {
+//    for (;;) {
+//        asm volatile ("mov $0, %rax\r\n\t"
+//                      "int $0x80\r\n\t");
+//    }
+//}
 
 // 'userland_function' USED IN 'userswitch.asm' AS EXTERNAL SYMBOL.
 void* userland_function;
 
 extern "C" void _start(BootInfo* bInfo) {
+
+                   (void)         bInfo; 
+
     // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
-    kernel_init(bInfo);
-    UART::out("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
-    // Clear + swap screen (ensure known state: blank).
-    gRend.clear(0x00000000);
-    gRend.swap();
-    /// GPLv3 LICENSE REQUIREMENT (interactive terminal must print copyright notice).
-    const char* GPLv3 = "<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>";
-    // TO SERIAL
-    UART::out(GPLv3);
-    UART::out("\r\n\r\n");
-    // TO SCREEN
-    gRend.BackgroundColor = 0xffffffff;
-    gRend.puts(GPLv3, 0x00000000);
-    gRend.BackgroundColor = 0x00000000;
-    gRend.crlf();
-    gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize});
+    //kernel_init(bInfo);
+    //UART::out("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
+    //// Clear + swap screen (ensure known state: blank).
+    //gRend.clear(0x00000000);
+    //gRend.swap();
+    ///// GPLv3 LICENSE REQUIREMENT (interactive terminal must print copyright notice).
+    //const char* GPLv3 = "<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>";
+    //// TO SERIAL
+    //UART::out(GPLv3);
+    //UART::out("\r\n\r\n");
+    //// TO SCREEN
+    //gRend.BackgroundColor = 0xffffffff;
+    //gRend.puts(GPLv3, 0x00000000);
+    //gRend.BackgroundColor = 0x00000000;
+    //gRend.crlf();
+    //gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize});
     /// END GPLv3 LICENSE REQUIREMENT.
 
     // USERLAND SWITCH TESTING
@@ -217,45 +220,45 @@ extern "C" void _start(BootInfo* bInfo) {
     //UART::out("Null de-referenced!\r\n");
 
     // I'm lovin' it :^) (Plays Maccy's theme).
-    constexpr double MACCYS_BPM = 125;
-    constexpr double MACCYS_STEP_LENGTH_SECONDS = (60 / MACCYS_BPM) / 4;
-    gPIT.prepare_wait_seconds(MACCYS_STEP_LENGTH_SECONDS);
-    gPIT.play_sound(262, MACCYS_STEP_LENGTH_SECONDS); // C4
-    gPIT.play_sound(294, MACCYS_STEP_LENGTH_SECONDS); // D4
-    gPIT.wait();                                      // Rest
-    gPIT.play_sound(330, MACCYS_STEP_LENGTH_SECONDS); // E4
-    gPIT.wait();                                      // Rest
-    gPIT.play_sound(440, MACCYS_STEP_LENGTH_SECONDS); // A4
-    gPIT.wait();                                      // Rest
-    gPIT.play_sound(392, MACCYS_STEP_LENGTH_SECONDS); // G4
+    //constexpr double MACCYS_BPM = 125;
+    //constexpr double MACCYS_STEP_LENGTH_SECONDS = (60 / MACCYS_BPM) / 4;
+    //gPIT.prepare_wait_seconds(MACCYS_STEP_LENGTH_SECONDS);
+    //gPIT.play_sound(262, MACCYS_STEP_LENGTH_SECONDS); // C4
+    //gPIT.play_sound(294, MACCYS_STEP_LENGTH_SECONDS); // D4
+    //gPIT.wait();                                      // Rest
+    //gPIT.play_sound(330, MACCYS_STEP_LENGTH_SECONDS); // E4
+    //gPIT.wait();                                      // Rest
+    //gPIT.play_sound(440, MACCYS_STEP_LENGTH_SECONDS); // A4
+    //gPIT.wait();                                      // Rest
+    //gPIT.play_sound(392, MACCYS_STEP_LENGTH_SECONDS); // G4
 
     // Start keyboard input at draw position, not origin.
-    Keyboard::gText.set_cursor_from_pixel_position(gRend.DrawPos);
-    u32 debugInfoX = gRend.Target->PixelWidth - 300;
-    while (true) {
-        gRend.DrawPos = {debugInfoX, 0};
-        // PRINT REAL TIME
-        gRTC.update_data();
-        print_now(debugInfoX);
-        gRend.crlf(debugInfoX);
-        // PRINT PIT ELAPSED TIME.
-        gRend.puts("PIT Elapsed: ");
-        gRend.puts(to_string(gPIT.seconds_since_boot()));
-        gRend.crlf(debugInfoX);
-        // PRINT RTC ELAPSED TIME.
-        gRend.puts("RTC Elapsed: ");
-        gRend.puts(to_string(gRTC.seconds_since_boot()));
-        gRend.crlf(debugInfoX);
-        // PRINT HPET ELAPSED TICKS.
-        gRend.puts("HPET Elapsed: ");
-        gRend.puts(to_string(gHPET.get_seconds()));
-        gRend.crlf(debugInfoX);
-        // PRINT MEMORY INFO.
-        gRend.crlf(debugInfoX);
-        print_memory_info();
-        // UPDATE TOP RIGHT CORNER OF SCREEN.
-        gRend.swap({debugInfoX, 0}, {80000, 400});
-    }
+    //Keyboard::gText.set_cursor_from_pixel_position(gRend.DrawPos);
+    //u32 debugInfoX = gRend.Target->PixelWidth - 300;
+    //while (true) {
+    //    gRend.DrawPos = {debugInfoX, 0};
+    //    // PRINT REAL TIME
+    //    gRTC.update_data();
+    //    print_now(debugInfoX);
+    //    gRend.crlf(debugInfoX);
+    //    // PRINT PIT ELAPSED TIME.
+    //    gRend.puts("PIT Elapsed: ");
+    //    gRend.puts(to_string(gPIT.seconds_since_boot()));
+    //    gRend.crlf(debugInfoX);
+    //    // PRINT RTC ELAPSED TIME.
+    //    gRend.puts("RTC Elapsed: ");
+    //    gRend.puts(to_string(gRTC.seconds_since_boot()));
+    //    gRend.crlf(debugInfoX);
+    //    // PRINT HPET ELAPSED TICKS.
+    //    gRend.puts("HPET Elapsed: ");
+    //    gRend.puts(to_string(gHPET.get_seconds()));
+    //    gRend.crlf(debugInfoX);
+    //    // PRINT MEMORY INFO.
+    //    gRend.crlf(debugInfoX);
+    //    print_memory_info();
+    //    // UPDATE TOP RIGHT CORNER OF SCREEN.
+    //    gRend.swap({debugInfoX, 0}, {80000, 400});
+    //}
 
     // HALT LOOP (KERNEL INACTIVE).
     while (true) {
