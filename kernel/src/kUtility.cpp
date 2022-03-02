@@ -156,13 +156,13 @@ void kernel_init(BootInfo* bInfo) {
     Keyboard::gText = Keyboard::BasicTextRenderer();
 
     ////// Initialize the Programmable Interval Timer.
-    ////gPIT = PIT();
-    ////UART::out("[kUtil]: \033[32mProgrammable Interval Timer Initialized\033[0m\r\n");
-    ////UART::out("  Channel 0, H/L Bit Access\r\n");
-    ////UART::out("  Rate Generator, BCD Disabled\r\n");
-    ////UART::out("  Periodic interrupts at \033[33m");
-    ////UART::out(to_string(PIT_FREQUENCY));
-    ////UART::out("hz\033[0m.\r\n");
+    gPIT = PIT();
+    UART::out("[kUtil]: \033[32mProgrammable Interval Timer Initialized\033[0m\r\n");
+    UART::out("  Channel 0, H/L Bit Access\r\n");
+    UART::out("  Rate Generator, BCD Disabled\r\n");
+    UART::out("  Periodic interrupts at \033[33m");
+    UART::out(to_string(PIT_FREQUENCY));
+    UART::out("hz\033[0m.\r\n");
     ////// Initialize the Real Time Clock.
     gRTC = RTC();
     gRTC.set_periodic_int_enabled(true);
@@ -335,7 +335,7 @@ void kernel_init(BootInfo* bInfo) {
     
     // Enable IRQ interrupts that will be used.
     disable_all_interrupts();
-    ////enable_interrupt(IRQ_SYSTEM_TIMER);
+    enable_interrupt(IRQ_SYSTEM_TIMER);
     enable_interrupt(IRQ_PS2_KEYBOARD);
     ////enable_interrupt(IRQ_CASCADED_PIC);
     ////enable_interrupt(IRQ_UART_COM1);

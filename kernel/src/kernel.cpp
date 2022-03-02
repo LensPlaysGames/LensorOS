@@ -239,9 +239,9 @@ extern "C" void _start(BootInfo* bInfo) {
         print_now(debugInfoX);
         gRend.crlf(debugInfoX);
         // PRINT PIT ELAPSED TIME.
-        //    gRend.puts("PIT Elapsed: ");
-        //    gRend.puts(to_string(gPIT.seconds_since_boot()));
-        //    gRend.crlf(debugInfoX);
+        gRend.puts("PIT Elapsed: ");
+        gRend.puts(to_string(gPIT.seconds_since_boot()));
+        gRend.crlf(debugInfoX);
         // PRINT RTC ELAPSED TIME.
         gRend.puts("RTC Elapsed: ");
         gRend.puts(to_string(gRTC.seconds_since_boot()));
