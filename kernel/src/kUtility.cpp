@@ -328,17 +328,18 @@ void kernel_init(BootInfo* bInfo) {
     //print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     Memory::print_debug();
     
+    // The scheduler causes VBOX to hang forever for some reason.
     // Setup task state segment for eventual switch to user-land.
-    ////TSS::initialize();
+    TSS::initialize();
     // Use kernel process switching.
-    ////Scheduler::initialize(Memory::get_active_page_map());
+    Scheduler::initialize();
     
     // Enable IRQ interrupts that will be used.
     disable_all_interrupts();
     enable_interrupt(IRQ_SYSTEM_TIMER);
     enable_interrupt(IRQ_PS2_KEYBOARD);
-    ////enable_interrupt(IRQ_CASCADED_PIC);
-    ////enable_interrupt(IRQ_UART_COM1);
+    enable_interrupt(IRQ_CASCADED_PIC);
+    enable_interrupt(IRQ_UART_COM1);
     enable_interrupt(IRQ_REAL_TIMER);
     enable_interrupt(IRQ_PS2_MOUSE);
 
