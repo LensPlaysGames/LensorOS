@@ -1,4 +1,6 @@
 #include "idt.h"
+
+#include "../integers.h"
 #include "../memory.h"
 
 IDTR gIDT;
