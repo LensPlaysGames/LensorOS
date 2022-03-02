@@ -126,8 +126,8 @@ void kernel_init(BootInfo* bInfo) {
     asm ("cli");
 
     // Setup serial communications chip.
-    ////UART::initialize();
-    ////UART::out("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
+    UART::initialize();
+    UART::out("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
     // Parse memory map passed by bootloader.
     // Setup dynamic memory allocation.
     // Setup memory state from EFI memory map.
