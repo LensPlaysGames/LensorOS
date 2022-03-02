@@ -112,7 +112,7 @@ void mouse_handler(InterruptFrame* frame) {
     end_of_interrupt(12);
 }
 
-// FAULT INTERRUPT HANDLERS
+/// FAULT INTERRUPT HANDLERS
 
 __attribute__((interrupt))
 void divide_by_zero_handler(InterruptFrame* frame) {
