@@ -320,7 +320,7 @@ void kernel_init(BootInfo* bInfo) {
     // Initialize High Precision Event Timer.
     (void)gHPET.initialize();
     // Prepare PS2 mouse.
-    ////init_ps2_mouse();
+    init_ps2_mouse();
     
     // Print the state of the heap just before beginning multi-threading setup.
     heap_print_debug();
@@ -339,8 +339,8 @@ void kernel_init(BootInfo* bInfo) {
     enable_interrupt(IRQ_PS2_KEYBOARD);
     ////enable_interrupt(IRQ_CASCADED_PIC);
     ////enable_interrupt(IRQ_UART_COM1);
-    ////enable_interrupt(IRQ_REAL_TIMER);
-    ////enable_interrupt(IRQ_PS2_MOUSE);
+    enable_interrupt(IRQ_REAL_TIMER);
+    enable_interrupt(IRQ_PS2_MOUSE);
 
     // Allow interrupts to trigger.
     UART::out("[kUtil]: Interrupt masks sent, enabling interrupts.\r\n");
