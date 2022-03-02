@@ -172,19 +172,19 @@ void kernel_init(BootInfo* bInfo) {
     UART::out("hz\033[0m\r\n");
     
     // Print real time to serial output.
-    ////UART::out("[kUtil]: \033[1;33mNow is ");
-    ////UART::out(to_string(gRTC.Time.hour));
-    ////UART::outc(':');
-    ////UART::out(to_string(gRTC.Time.minute));
-    ////UART::outc(':');
-    ////UART::out(to_string(gRTC.Time.second));
-    ////UART::out(" on ");
-    ////UART::out(to_string(gRTC.Time.year));
-    ////UART::outc('-');
-    ////UART::out(to_string(gRTC.Time.month));
-    ////UART::outc('-');
-    ////UART::out(to_string(gRTC.Time.date));
-    ////UART::out("\033[0m\r\n");
+    UART::out("[kUtil]: \033[1;33mNow is ");
+    UART::out(to_string(gRTC.Time.hour));
+    UART::outc(':');
+    UART::out(to_string(gRTC.Time.minute));
+    UART::outc(':');
+    UART::out(to_string(gRTC.Time.second));
+    UART::out(" on ");
+    UART::out(to_string(gRTC.Time.year));
+    UART::outc('-');
+    UART::out(to_string(gRTC.Time.month));
+    UART::outc('-');
+    UART::out(to_string(gRTC.Time.date));
+    UART::out("\033[0m\r\n");
 
     // Store feature set of CPU (capabilities).
     ////SystemCPU = new CPUDescription();
@@ -318,15 +318,15 @@ void kernel_init(BootInfo* bInfo) {
     ////prepare_pci();
     
     // Initialize High Precision Event Timer.
-    ////(void)gHPET.initialize();
+    (void)gHPET.initialize();
     // Prepare PS2 mouse.
     ////init_ps2_mouse();
     
     // Print the state of the heap just before beginning multi-threading setup.
-    ////heap_print_debug();
+    heap_print_debug();
     //print_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     //print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
-    ////Memory::print_debug();
+    Memory::print_debug();
     
     // Setup task state segment for eventual switch to user-land.
     ////TSS::initialize();
@@ -334,7 +334,7 @@ void kernel_init(BootInfo* bInfo) {
     ////Scheduler::initialize(Memory::get_active_page_map());
     
     // Enable IRQ interrupts that will be used.
-    ////disable_all_interrupts();
+    disable_all_interrupts();
     ////enable_interrupt(IRQ_SYSTEM_TIMER);
     ////enable_interrupt(IRQ_PS2_KEYBOARD);
     ////enable_interrupt(IRQ_CASCADED_PIC);
@@ -343,7 +343,7 @@ void kernel_init(BootInfo* bInfo) {
     ////enable_interrupt(IRQ_PS2_MOUSE);
 
     // Allow interrupts to trigger.
-    ////UART::out("[kUtil]: Interrupt masks sent, enabling interrupts.\r\n");
+    UART::out("[kUtil]: Interrupt masks sent, enabling interrupts.\r\n");
     asm ("sti");
-    ////UART::out("    \033[32mInterrupts enabled.\033[0m\r\n");
+    UART::out("    \033[32mInterrupts enabled.\033[0m\r\n");
 }
