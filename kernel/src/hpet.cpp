@@ -54,15 +54,24 @@ bool HPET::initialize() {
      */
     LargeCounterSupport = static_cast<bool>(readl(HPET_REG_GENERAL_CAPABILITIES_AND_ID) & (1 << 13));
 
+    UART::out("[HPET]: After first read\r\n");
+
     /* If bit 15 of general cap. & ID register is set, HPET is 
      *   capable of legacy replacement interrupt mapping (IRQ0, IRQ8).
      */
     LegacyInterruptSupport = static_cast<bool>(readl(HPET_REG_GENERAL_CAPABILITIES_AND_ID) & (1 << 15));
 
+    UART::out("[HPET]: After second read\r\n");
+
     // Disable legacy replacement interrupt routing.
     u32 config = readl(HPET_REG_GENERAL_CONFIGURATION);
     config &= ~2;
+
+    UART::out("[HPET]: After config read\r\n");
+
     writel(HPET_REG_GENERAL_CONFIGURATION, config);
+
+    UART::out("[HPET]: Wrote config\r\n");
 
     // Calculate Frequency (f = 10^15 / Period)
     Period = readl(HPET_MAIN_COUNTER_PERIOD);
