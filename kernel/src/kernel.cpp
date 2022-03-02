@@ -187,21 +187,21 @@ void* userland_function;
 extern "C" void _start(BootInfo* bInfo) {
     // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
     kernel_init(bInfo);
-    //UART::out("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
+    UART::out("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
     //// Clear + swap screen (ensure known state: blank).
-    //gRend.clear(0x00000000);
-    //gRend.swap();
+    gRend.clear(0x00000000);
+    gRend.swap();
     ///// GPLv3 LICENSE REQUIREMENT (interactive terminal must print copyright notice).
-    //const char* GPLv3 = "<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>";
+    const char* GPLv3 = "<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>";
     //// TO SERIAL
-    //UART::out(GPLv3);
-    //UART::out("\r\n\r\n");
+    UART::out(GPLv3);
+    UART::out("\r\n\r\n");
     //// TO SCREEN
-    //gRend.BackgroundColor = 0xffffffff;
-    //gRend.puts(GPLv3, 0x00000000);
-    //gRend.BackgroundColor = 0x00000000;
-    //gRend.crlf();
-    //gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize});
+    gRend.BackgroundColor = 0xffffffff;
+    gRend.puts(GPLv3, 0x00000000);
+    gRend.BackgroundColor = 0x00000000;
+    gRend.crlf();
+    gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize});
     /// END GPLv3 LICENSE REQUIREMENT.
 
     // USERLAND SWITCH TESTING
@@ -217,17 +217,17 @@ extern "C" void _start(BootInfo* bInfo) {
     //UART::out("Null de-referenced!\r\n");
 
     // I'm lovin' it :^) (Plays Maccy's theme).
-    //constexpr double MACCYS_BPM = 125;
-    //constexpr double MACCYS_STEP_LENGTH_SECONDS = (60 / MACCYS_BPM) / 4;
-    //gPIT.prepare_wait_seconds(MACCYS_STEP_LENGTH_SECONDS);
-    //gPIT.play_sound(262, MACCYS_STEP_LENGTH_SECONDS); // C4
-    //gPIT.play_sound(294, MACCYS_STEP_LENGTH_SECONDS); // D4
-    //gPIT.wait();                                      // Rest
-    //gPIT.play_sound(330, MACCYS_STEP_LENGTH_SECONDS); // E4
-    //gPIT.wait();                                      // Rest
-    //gPIT.play_sound(440, MACCYS_STEP_LENGTH_SECONDS); // A4
-    //gPIT.wait();                                      // Rest
-    //gPIT.play_sound(392, MACCYS_STEP_LENGTH_SECONDS); // G4
+    constexpr double MACCYS_BPM = 125;
+    constexpr double MACCYS_STEP_LENGTH_SECONDS = (60 / MACCYS_BPM) / 4;
+    gPIT.prepare_wait_seconds(MACCYS_STEP_LENGTH_SECONDS);
+    gPIT.play_sound(262, MACCYS_STEP_LENGTH_SECONDS); // C4
+    gPIT.play_sound(294, MACCYS_STEP_LENGTH_SECONDS); // D4
+    gPIT.wait();                                      // Rest
+    gPIT.play_sound(330, MACCYS_STEP_LENGTH_SECONDS); // E4
+    gPIT.wait();                                      // Rest
+    gPIT.play_sound(440, MACCYS_STEP_LENGTH_SECONDS); // A4
+    gPIT.wait();                                      // Rest
+    gPIT.play_sound(392, MACCYS_STEP_LENGTH_SECONDS); // G4
 
     // Start keyboard input at draw position, not origin.
     Keyboard::gText.set_cursor_from_pixel_position(gRend.DrawPos);
