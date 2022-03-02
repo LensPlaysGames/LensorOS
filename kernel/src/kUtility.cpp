@@ -144,8 +144,8 @@ void kernel_init(BootInfo* bInfo) {
     prepare_interrupts();
 
     // Setup random number generators.
-    ////gRandomLCG = LCG();
-    ////gRandomLFSR = LFSR();
+    gRandomLCG = LCG();
+    gRandomLFSR = LFSR();
 
     ////// Create basic framebuffer renderer.
     UART::out("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
@@ -309,11 +309,11 @@ void kernel_init(BootInfo* bInfo) {
     ////SystemCPU->print_debug();
     
     // Prepare filesystem drivers.
-    ////gFATDriver = FATDriver();
-    ////UART::out("[kUtil]: \033[32mFilesystem drivers prepared successfully\033[0m\r\n");
+    gFATDriver = FATDriver();
+    UART::out("[kUtil]: \033[32mFilesystem drivers prepared successfully\033[0m\r\n");
     // Initialize Advanced Configuration and Power Management Interface.
-    ////ACPI::initialize(bInfo->rsdp);
-    ////UART::out("[kUtil]: \033[32mACPI initialized\033[0m\r\n");
+    ACPI::initialize(bInfo->rsdp);
+    UART::out("[kUtil]: \033[32mACPI initialized\033[0m\r\n");
     // Enumerate PCI (find hardware devices).
     ////prepare_pci();
     
