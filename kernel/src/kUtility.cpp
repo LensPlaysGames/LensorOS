@@ -141,7 +141,7 @@ void kernel_init(BootInfo* bInfo) {
     GDTDescriptor GDTD = GDTDescriptor(sizeof(GDT) - 1, (u64)&gGDT);
     LoadGDT(&GDTD);
     // Prepare Interrupt Descriptor Table.
-    ////prepare_interrupts();
+    prepare_interrupts();
 
     // Setup random number generators.
     ////gRandomLCG = LCG();
