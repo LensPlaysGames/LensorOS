@@ -5,7 +5,7 @@
 #include "io.h"
 
 #define PIT_MAX_FREQ 1193180
-#ifdef QEMU
+#if defined QEMU || defined VBOX
 #define PIT_DIVISOR 59659
 #else
 #define PIT_DIVISOR 1193
