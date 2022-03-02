@@ -61,7 +61,7 @@ class Scheduler {
      * `- load_elf() that will read an elf executable and add it to process list.
      */
 public:
-    static void initialize(Memory::PageTable*);
+    static void initialize();
     /* Switch to the next available task.
      * | Called by IRQ0 Handler (System Timer Interrupt).
      * |- Copy registers saved from IRQ0 to current process.

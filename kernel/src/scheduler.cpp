@@ -35,7 +35,7 @@ void Scheduler::switch_process(CPUState* cpu) {
     Memory::flush_page_map(CurrentProcess->CR3);
 }
 
-void Scheduler::initialize(Memory::PageTable* bootPageMap) {
+void Scheduler::initialize() {
     ProcessQueue = &StartupProcess;
     CurrentProcess = &StartupProcess;
     // IRQ handler in assembly needs to increment PIT ticks counter.
@@ -43,7 +43,7 @@ void Scheduler::initialize(Memory::PageTable* bootPageMap) {
     // IRQ handler in assembly needs to call a function to switch process.
     scheduler_switch_func = (void*)switch_process;
     // Setup start process as current executing code.
-    StartupProcess.CR3 = bootPageMap;
+    StartupProcess.CR3 = Memory::get_active_page_map();
     StartupProcess.Next = nullptr;
     // Install IRQ0 handler found in `scheduler.asm` (over-write default system timer handler).
     gIDT.install_handler((u64)irq0_handler, PIC_IRQ0);

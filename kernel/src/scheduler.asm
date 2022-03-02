@@ -49,8 +49,8 @@ irq0_handler:
     mov rdi, rsp
     call [scheduler_switch_func]
 ;;; END INTERRUPT
-    mov ax, 0x20
-    out 0x20, ax
+    mov ax, 0x20                ; 0x20 = PIC_EOI
+    out 0x20, ax                ; 0x20 = PIC1_COMMAND port
 ;;; RESTORE CPU STATE FROM STACK
     add rsp, 8                  ; Eat `rsp` off of stack.
     pop rbx
