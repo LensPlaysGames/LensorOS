@@ -12,7 +12,7 @@ qemu-system-x86_64 ^
  -vga cirrus ^
  -soundhw pcspk ^
  -rtc base=localtime,clock=host,driftfix=none ^
- -net none
+ -net none ^
  -drive format=raw,file=%BuildDirectory%/LensorOS.img ^
  -drive if=pflash,format=raw,unit=0,file=%OVMFbin%/OVMF_CODE-pure-efi.fd,readonly=on ^
  -drive if=pflash,format=raw,unit=1,file=%OVMFbin%/OVMF_VARS_LensorOS.fd
