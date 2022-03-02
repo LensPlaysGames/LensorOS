@@ -29,6 +29,14 @@ void hpet_init_failed(const char* msg) {
 }
 
 bool HPET::initialize() {
+#ifdef VBOX
+    // I can not get the HPET to work in VBOX for the life of me.
+    // It causes a strange crash that shutsdown the virtualbox VM.
+    // Luckily, I know exactly what causes it, but (unluckily) not how to fix it.
+    // The first call to `writel` and therefore `volatile_write` crashes.
+    hpet_init_failed("LensorOS HPET implementation is buggy on VirtualBox");
+    return false;
+#else
     // This shouldn't be called by multiple threads ever, but it doesn't hurt :^).
     SpinlockLocker locker(Lock);
     Header = (ACPI::HPETHeader*)ACPI::find_table("HPET");
@@ -54,24 +62,15 @@ bool HPET::initialize() {
      */
     LargeCounterSupport = static_cast<bool>(readl(HPET_REG_GENERAL_CAPABILITIES_AND_ID) & (1 << 13));
 
-    UART::out("[HPET]: After first read\r\n");
-
     /* If bit 15 of general cap. & ID register is set, HPET is 
      *   capable of legacy replacement interrupt mapping (IRQ0, IRQ8).
      */
     LegacyInterruptSupport = static_cast<bool>(readl(HPET_REG_GENERAL_CAPABILITIES_AND_ID) & (1 << 15));
 
-    UART::out("[HPET]: After second read\r\n");
-
     // Disable legacy replacement interrupt routing.
     u32 config = readl(HPET_REG_GENERAL_CONFIGURATION);
-    config &= ~2;
-
-    UART::out("[HPET]: After config read\r\n");
-
+    config &= (u32)~2;
     writel(HPET_REG_GENERAL_CONFIGURATION, config);
-
-    UART::out("[HPET]: Wrote config\r\n");
 
     // Calculate Frequency (f = 10^15 / Period)
     Period = readl(HPET_MAIN_COUNTER_PERIOD);
@@ -116,6 +115,7 @@ bool HPET::initialize() {
 
     print_state();
     return Initialized;
+#endif /* defined VBOX */
 }
 
 void HPET::start_main_counter() {

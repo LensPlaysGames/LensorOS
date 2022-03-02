@@ -234,26 +234,26 @@ extern "C" void _start(BootInfo* bInfo) {
     u32 debugInfoX = gRend.Target->PixelWidth - 300;
     while (true) {
         gRend.DrawPos = {debugInfoX, 0};
-    // PRINT REAL TIME
+        // PRINT REAL TIME
         gRTC.update_data();
         print_now(debugInfoX);
         gRend.crlf(debugInfoX);
-    // PRINT PIT ELAPSED TIME.
-    //    gRend.puts("PIT Elapsed: ");
-    //    gRend.puts(to_string(gPIT.seconds_since_boot()));
-    //    gRend.crlf(debugInfoX);
-    // PRINT RTC ELAPSED TIME.
-    gRend.puts("RTC Elapsed: ");
-    gRend.puts(to_string(gRTC.seconds_since_boot()));
-    gRend.crlf(debugInfoX);
-    // PRINT HPET ELAPSED TICKS.
-    //    gRend.puts("HPET Elapsed: ");
-    //    gRend.puts(to_string(gHPET.get_seconds()));
-    //    gRend.crlf(debugInfoX);
-    // PRINT MEMORY INFO.
+        // PRINT PIT ELAPSED TIME.
+        //    gRend.puts("PIT Elapsed: ");
+        //    gRend.puts(to_string(gPIT.seconds_since_boot()));
+        //    gRend.crlf(debugInfoX);
+        // PRINT RTC ELAPSED TIME.
+        gRend.puts("RTC Elapsed: ");
+        gRend.puts(to_string(gRTC.seconds_since_boot()));
+        gRend.crlf(debugInfoX);
+        // PRINT HPET ELAPSED TICKS.
+        gRend.puts("HPET Elapsed: ");
+        gRend.puts(to_string(gHPET.get_seconds()));
+        gRend.crlf(debugInfoX);
+        // PRINT MEMORY INFO.
         gRend.crlf(debugInfoX);
         print_memory_info();
-    //    // UPDATE TOP RIGHT CORNER OF SCREEN.
+        // UPDATE TOP RIGHT CORNER OF SCREEN.
         gRend.swap({debugInfoX, 0}, {80000, 400});
     }
 
