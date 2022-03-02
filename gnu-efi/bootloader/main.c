@@ -128,7 +128,7 @@ Framebuffer* InitializeGOP() {
  
     status = uefi_call_wrapper(BS->LocateProtocol, 3, &gopGuid, NULL, (void**)&gop);
     if(EFI_ERROR(status)) {
-        Print(L"ERROR: Unable to locate GOP\n");
+        Print(L"ERROR: Unable to locate Graphics Output Protocol\n");
         return NULL;
     }
     Print(L"GOP located successfully\n");
