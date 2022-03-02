@@ -96,13 +96,13 @@ struct RTCData {
     }
 };
 
-
-#ifdef QEMU
+#if defined QEMU || defined VBOX
 #define RTC_PERIODIC_RATE 10
 #else
 #define RTC_PERIODIC_RATE 6
-#endif
+#endif /* QEMU || VBOX */
 #define RTC_PERIODIC_HERTZ (32768 >> (RTC_PERIODIC_RATE - 1))
+
 class RTC {
 public:
     RTCData Time;
