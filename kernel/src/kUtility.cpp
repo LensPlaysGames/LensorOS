@@ -131,7 +131,7 @@ void kernel_init(BootInfo* bInfo) {
     // Parse memory map passed by bootloader.
     // Setup dynamic memory allocation.
     // Setup memory state from EFI memory map.
-    ////Memory::init_physical_efi(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    Memory::init_physical_efi(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     // Setup virtual to physical memory mapping.
     ////Memory::init_virtual();
     // Setup dynamic memory allocation (`new`, `delete`).
