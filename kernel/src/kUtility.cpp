@@ -133,9 +133,9 @@ void kernel_init(BootInfo* bInfo) {
     // Setup memory state from EFI memory map.
     Memory::init_physical_efi(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     // Setup virtual to physical memory mapping.
-    ////Memory::init_virtual();
+    Memory::init_virtual();
     // Setup dynamic memory allocation (`new`, `delete`).
-    ////init_heap();
+    init_heap();
 
     // Prepare Global Descriptor Table Descriptor.
     GDTDescriptor GDTD = GDTDescriptor(sizeof(GDT) - 1, (u64)&gGDT);
