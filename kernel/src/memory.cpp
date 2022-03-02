@@ -40,6 +40,8 @@ void memcpy(void* src, void* dest, u64 numBytes) {
 }
 
 void volatile_read(const volatile void* ptr, volatile void* out, u64 length) {
+    if (ptr == nullptr || out == nullptr || length == 0)
+        return;
     // FIXME: Are memory barries necessary for the memcpy call?
     if (length == 1)
         *(u8*)out = *(volatile u8*)ptr;
@@ -53,6 +55,8 @@ void volatile_read(const volatile void* ptr, volatile void* out, u64 length) {
 }
 
 void volatile_write(void* data, volatile void* ptr, u64 length) {
+    if (data == nullptr || ptr == nullptr || length == 0)
+        return;
     // FIXME: Are memory barriers necessary for the memcpy call?
     if (length == 1)
         *(volatile u8*)ptr = *(u8*)data;
