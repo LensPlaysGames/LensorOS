@@ -73,14 +73,14 @@ Status Register `D`:
 #define CENTURY_REGISTER 0x00
 
 struct RTCData {
-    u8  second  {0};
-    u8  minute  {0};
-    u8  hour    {0};
-    u8  weekday {0};
-    u8  date    {0};
-    u8  month   {0};
-    u32 year    {0};
-    u8  century {0};
+    u8  second  { 0 };
+    u8  minute  { 0 };
+    u8  hour    { 0 };
+    u8  weekday { 0 };
+    u8  date    { 0 };
+    u8  month   { 0 };
+    u32 year    { 0 };
+    u8  century { 0 };
 
     RTCData() {}
 
@@ -106,7 +106,7 @@ struct RTCData {
 class RTC {
 public:
     RTCData Time;
-    u64 Ticks {0};
+    u64 Ticks { 0 };
 
     RTC() {
         update_data();
