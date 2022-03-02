@@ -174,12 +174,12 @@ void print_now(u64 xOffset = 0) {
     gRend.crlf(xOffset);
 }
 
-//void test_userland_function() {
-//    for (;;) {
-//        asm volatile ("mov $0, %rax\r\n\t"
-//                      "int $0x80\r\n\t");
-//    }
-//}
+void test_userland_function() {
+    for (;;) {
+        asm volatile ("mov $0, %rax\r\n\t"
+                      "int $0x80\r\n\t");
+    }
+}
 
 // 'userland_function' USED IN 'userswitch.asm' AS EXTERNAL SYMBOL.
 void* userland_function;
@@ -205,7 +205,7 @@ extern "C" void _start(BootInfo* bInfo) {
     /// END GPLv3 LICENSE REQUIREMENT.
 
     // USERLAND SWITCH TESTING
-    //userland_function = (void*)test_userland_function;
+    userland_function = (void*)test_userland_function;
     //jump_to_userland_function();
 
     // FIXME FIXME FIXME
@@ -219,7 +219,6 @@ extern "C" void _start(BootInfo* bInfo) {
     // I'm lovin' it :^) (Plays Maccy's theme).
     constexpr double MACCYS_BPM = 125;
     constexpr double MACCYS_STEP_LENGTH_SECONDS = (60 / MACCYS_BPM) / 4;
-    gPIT.prepare_wait_seconds(MACCYS_STEP_LENGTH_SECONDS);
     gPIT.play_sound(262, MACCYS_STEP_LENGTH_SECONDS); // C4
     gPIT.play_sound(294, MACCYS_STEP_LENGTH_SECONDS); // D4
     gPIT.wait();                                      // Rest
