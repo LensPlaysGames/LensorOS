@@ -94,6 +94,9 @@ CPUDescription* SystemCPU { nullptr };
 u8 fxsave_region[512] __attribute__((aligned(16)));
 
 void kernel_init(BootInfo* bInfo) {
+
+    (void)bInfo;
+    
     /* 
      *   - Prepare physical/virtual memory
      *     - Initialize Physical Memory Manager
@@ -123,78 +126,78 @@ void kernel_init(BootInfo* bInfo) {
     asm ("cli");
 
     // Setup serial communications chip.
-    UART::initialize();
-    UART::out("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
+    ////UART::initialize();
+    ////UART::out("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
     // Parse memory map passed by bootloader.
     // Setup dynamic memory allocation.
     // Setup memory state from EFI memory map.
-    Memory::init_physical_efi(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    ////Memory::init_physical_efi(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     // Setup virtual to physical memory mapping.
-    Memory::init_virtual();
+    ////Memory::init_virtual();
     // Setup dynamic memory allocation (`new`, `delete`).
-    init_heap();
+    ////init_heap();
 
     // Prepare Global Descriptor Table Descriptor.
     GDTDescriptor GDTD = GDTDescriptor(sizeof(GDT) - 1, (u64)&gGDT);
     LoadGDT(&GDTD);
     // Prepare Interrupt Descriptor Table.
-    prepare_interrupts();
+    ////prepare_interrupts();
 
     // Setup random number generators.
-    gRandomLCG = LCG();
-    gRandomLFSR = LFSR();
+    ////gRandomLCG = LCG();
+    ////gRandomLFSR = LFSR();
 
-    // Create basic framebuffer renderer.
-    UART::out("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
-    gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
-    UART::out("  \033[32mSetup Successful\033[0m\r\n");
-    draw_boot_gfx();
-    // Create basic text renderer for the keyboard.
-    Keyboard::gText = Keyboard::BasicTextRenderer();
+    ////// Create basic framebuffer renderer.
+    ////UART::out("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
+    ////gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
+    ////UART::out("  \033[32mSetup Successful\033[0m\r\n");
+    ////draw_boot_gfx();
+    ////// Create basic text renderer for the keyboard.
+    ////Keyboard::gText = Keyboard::BasicTextRenderer();
 
-    // Initialize the Programmable Interval Timer.
-    gPIT = PIT();
-    UART::out("[kUtil]: \033[32mProgrammable Interval Timer Initialized\033[0m\r\n");
-    UART::out("  Channel 0, H/L Bit Access\r\n");
-    UART::out("  Rate Generator, BCD Disabled\r\n");
-    UART::out("  Periodic interrupts at \033[33m");
-    UART::out(to_string(PIT_FREQUENCY));
-    UART::out("hz\033[0m.\r\n");
-    // Initialize the Real Time Clock.
-    gRTC = RTC();
-    gRTC.set_periodic_int_enabled(true);
-    UART::out("[kUtil]: \033[32mReal Time Clock Initialized\033[0m\r\n");
-    UART::out("  Periodic interrupts enabled at \033[33m");
-    UART::out(to_string((double)RTC_PERIODIC_HERTZ));
-    UART::out("hz\033[0m\r\n");
+    ////// Initialize the Programmable Interval Timer.
+    ////gPIT = PIT();
+    ////UART::out("[kUtil]: \033[32mProgrammable Interval Timer Initialized\033[0m\r\n");
+    ////UART::out("  Channel 0, H/L Bit Access\r\n");
+    ////UART::out("  Rate Generator, BCD Disabled\r\n");
+    ////UART::out("  Periodic interrupts at \033[33m");
+    ////UART::out(to_string(PIT_FREQUENCY));
+    ////UART::out("hz\033[0m.\r\n");
+    ////// Initialize the Real Time Clock.
+    ////gRTC = RTC();
+    ////gRTC.set_periodic_int_enabled(true);
+    ////UART::out("[kUtil]: \033[32mReal Time Clock Initialized\033[0m\r\n");
+    ////UART::out("  Periodic interrupts enabled at \033[33m");
+    ////UART::out(to_string((double)RTC_PERIODIC_HERTZ));
+    ////UART::out("hz\033[0m\r\n");
     
     // Print real time to serial output.
-    UART::out("[kUtil]: \033[1;33mNow is ");
-    UART::out(to_string(gRTC.Time.hour));
-    UART::outc(':');
-    UART::out(to_string(gRTC.Time.minute));
-    UART::outc(':');
-    UART::out(to_string(gRTC.Time.second));
-    UART::out(" on ");
-    UART::out(to_string(gRTC.Time.year));
-    UART::outc('-');
-    UART::out(to_string(gRTC.Time.month));
-    UART::outc('-');
-    UART::out(to_string(gRTC.Time.date));
-    UART::out("\033[0m\r\n");
+    ////UART::out("[kUtil]: \033[1;33mNow is ");
+    ////UART::out(to_string(gRTC.Time.hour));
+    ////UART::outc(':');
+    ////UART::out(to_string(gRTC.Time.minute));
+    ////UART::outc(':');
+    ////UART::out(to_string(gRTC.Time.second));
+    ////UART::out(" on ");
+    ////UART::out(to_string(gRTC.Time.year));
+    ////UART::outc('-');
+    ////UART::out(to_string(gRTC.Time.month));
+    ////UART::outc('-');
+    ////UART::out(to_string(gRTC.Time.date));
+    ////UART::out("\033[0m\r\n");
 
     // Store feature set of CPU (capabilities).
-    SystemCPU = new CPUDescription();
+    ////SystemCPU = new CPUDescription();
     // Check for CPUID availability ('ID' bit in rflags register modifiable)
-    bool supportCPUID = static_cast<bool>(cpuid_support());
-    if (supportCPUID) {
-        SystemCPU->set_cpuid_capable();
-        UART::out("[kUtil]: \033[32mCPUID is supported\033[0m\r\n");
-        char* cpuVendorID = cpuid_string(0);
-        SystemCPU->set_vendor_id(cpuVendorID);
-        UART::out("  CPU Vendor ID: ");
-        UART::out((u8*)SystemCPU->get_vendor_id(), 12);
-        UART::out("\r\n");
+    ////bool supportCPUID = static_cast<bool>(cpuid_support());
+    ////if (supportCPUID) {
+        ////SystemCPU->set_cpuid_capable();
+        ////UART::out("[kUtil]: \033[32mCPUID is supported\033[0m\r\n");
+        ////char* cpuVendorID = cpuid_string(0);
+        ////SystemCPU->set_vendor_id(cpuVendorID);
+        ////UART::out("  CPU Vendor ID: ");
+        ////UART::out((u8*)SystemCPU->get_vendor_id(), 12);
+        ////UART::out("\r\n");
         /* Current functionality of giant `if` statemnt:
          * |- Setup FXSAVE/FXRSTOR
          * |  |- Setup FPU
@@ -208,138 +211,139 @@ void kernel_init(BootInfo* bInfo) {
          *   https://wiki.osdev.org/Detecting_CPU_Topology_(80x86)#Using_CPUID
          */
 
-        CPUIDRegisters regs;
-        cpuid(1, regs);
+    //     CPUIDRegisters regs;
+    //     cpuid(1, regs);
 
-        // Enable FXSAVE/FXRSTOR instructions if CPU supports it.
-        // If it is not supported, don't bother trying to support FPU, SSE, etc
-        //   as there would be no mechanism to save/load the registers on context switch.
-        // TODO: Get logical/physical core bits from CPUID
-        // |- 0x0000000b -- Intel
-        // |- 0x80000008 -- AMD
-        // `- Otherwise: bits are zero, assume single core.
-        // TODO: Rewrite task switching code to save/load all supported registers in CPUState.
-        if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FXSR)) {
-            SystemCPU->set_fxsr_capable();
-            asm volatile ("fxsave %0" :: "m"(fxsave_region));
-            UART::out("  \033[32mFXSAVE/FXRSTOR Enabled\033[0m\r\n");
-            SystemCPU->set_fxsr_enabled();
-            // If FXSAVE/FXRSTOR is supported, setup FPU.
-            if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FPU)) {
-                SystemCPU->set_fpu_capable();
-                // FPU supported, ensure it is enabled.
-                /* FPU Relevant Control Register Bits
-                 * |- CR0.EM (bit 02) -- If set, FPU and vector operations will cause a #UD.
-                 * `- CR0.TS (bit 03) -- Task switched. If set, all FPU and vector ops will cause a #NM.
-                 */
-                asm volatile ("mov %%cr0, %%rdx\n"
-                              "mov $0b1100, %%ax\n"
-                              "not %%ax\n"
-                              "and %%ax, %%dx\n"
-                              "mov %%rdx, %%cr0\n"
-                              "fninit\n"
-                              ::: "rax", "rdx");
-                UART::out("  \033[32mFPU Enabled\033[0m\r\n");
-                SystemCPU->set_fpu_enabled();
-            }
-            else {
-                // FPU not supported, ensure it is disabled.
-                asm volatile ("mov %%cr0, %%rdx\n"
-                              "or $0b1100, %%dx\n"
-                              "mov %%rdx, %%cr0\n"
-                              ::: "rdx");
-                UART::out("  \033[31mFPU Not Supported\033[0m\r\n");
-            }
-            // If FXSAVE/FXRSTOR and FPU are supported and present, setup SSE.
-            if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)) {
-                SystemCPU->set_sse_capable();
-                /* Enable SSE
-                 * |- Clear CR0.EM bit   (bit 2  -- coprocessor emulation) 
-                 * |- Set CR0.MP bit     (bit 1  -- coprocessor monitoring)
-                 * |- Set CR4.OSFXSR bit (bit 9  -- OS provides FXSAVE/FXRSTOR functionality)
-                 * `- Set CR4.OSXMMEXCPT (bit 10 -- OS provides #XM exception handler)
-                 */
-                asm volatile ("mov %%cr0, %%rax\n"
-                              "and $0b1111111111110011, %%ax\n"
-                              "or $0b10, %%ax\n"
-                              "mov %%rax, %%cr0\n"
-                              "mov %%cr4, %%rax\n"
-                              "or $0b11000000000, %%rax\n"
-                              "mov %%rax, %%cr4\n"
-                              ::: "rax");
-                UART::out("  \033[32mSSE Enabled\033[0m\r\n");
-                SystemCPU->set_sse_enabled();
-            }
-            else UART::out("  \033[31mSSE Not Supported\033[0m\r\n");
-        }
-        // Enable XSAVE feature set if CPU supports it.
-        if (regs.C & static_cast<u32>(CPUID_FEATURE::ECX_XSAVE)) {
-            SystemCPU->set_xsave_capable();
-            // Enable XSAVE feature set
-            // `- Set CR4.OSXSAVE bit (bit 18  -- OS provides )
-            asm volatile ("mov %cr4, %rax\n"
-                          "or $0b1000000000000000000, %rax\n"
-                          "mov %rax, %cr4\n");
-            UART::out("  \033[32mXSAVE Enabled\033[0m\r\n");
-            SystemCPU->set_xsave_enabled();
-            // If SSE, AND XSAVE are supported, setup AVX feature set.
-            if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)
-                && regs.C & static_cast<u32>(CPUID_FEATURE::ECX_AVX))
-            {
-                SystemCPU->set_avx_capable();
-                asm volatile ("xor %%rcx, %%rcx\n"
-                              "xgetbv\n"
-                              "or $0b111, %%eax\n"
-                              "xsetbv\n"
-                              ::: "rax", "rbx", "rdx");
-                UART::out("  \033[32mAVX Enabled\033[0m\r\n");
-                SystemCPU->set_avx_enabled();
-            }
-            else UART::out("  \033[31mAVX Not Supported\033[0m\r\n");
-        }
-        else UART::out("  \033[31mXSAVE Not Supported\033[0m\r\n");
-    }
+    //     // Enable FXSAVE/FXRSTOR instructions if CPU supports it.
+    //     // If it is not supported, don't bother trying to support FPU, SSE, etc
+    //     //   as there would be no mechanism to save/load the registers on context switch.
+    //     // TODO: Get logical/physical core bits from CPUID
+    //     // |- 0x0000000b -- Intel
+    //     // |- 0x80000008 -- AMD
+    //     // `- Otherwise: bits are zero, assume single core.
+    //     // TODO: Rewrite task switching code to save/load all supported registers in CPUState.
+    //     if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FXSR)) {
+    //         SystemCPU->set_fxsr_capable();
+    //         asm volatile ("fxsave %0" :: "m"(fxsave_region));
+    //         UART::out("  \033[32mFXSAVE/FXRSTOR Enabled\033[0m\r\n");
+    //         SystemCPU->set_fxsr_enabled();
+    //         // If FXSAVE/FXRSTOR is supported, setup FPU.
+    //         if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FPU)) {
+    //             SystemCPU->set_fpu_capable();
+    //             // FPU supported, ensure it is enabled.
+    //             /* FPU Relevant Control Register Bits
+    //              * |- CR0.EM (bit 02) -- If set, FPU and vector operations will cause a #UD.
+    //              * `- CR0.TS (bit 03) -- Task switched. If set, all FPU and vector ops will cause a #NM.
+    //              */
+    //             asm volatile ("mov %%cr0, %%rdx\n"
+    //                           "mov $0b1100, %%ax\n"
+    //                           "not %%ax\n"
+    //                           "and %%ax, %%dx\n"
+    //                           "mov %%rdx, %%cr0\n"
+    //                           "fninit\n"
+    //                           ::: "rax", "rdx");
+    //             UART::out("  \033[32mFPU Enabled\033[0m\r\n");
+    //             SystemCPU->set_fpu_enabled();
+    //         }
+    //         else {
+    //             // FPU not supported, ensure it is disabled.
+    //             asm volatile ("mov %%cr0, %%rdx\n"
+    //                           "or $0b1100, %%dx\n"
+    //                           "mov %%rdx, %%cr0\n"
+    //                           ::: "rdx");
+    //             UART::out("  \033[31mFPU Not Supported\033[0m\r\n");
+    //         }
+    //         // If FXSAVE/FXRSTOR and FPU are supported and present, setup SSE.
+    //         if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)) {
+    //             SystemCPU->set_sse_capable();
+    //             /* Enable SSE
+    //              * |- Clear CR0.EM bit   (bit 2  -- coprocessor emulation) 
+    //              * |- Set CR0.MP bit     (bit 1  -- coprocessor monitoring)
+    //              * |- Set CR4.OSFXSR bit (bit 9  -- OS provides FXSAVE/FXRSTOR functionality)
+    //              * `- Set CR4.OSXMMEXCPT (bit 10 -- OS provides #XM exception handler)
+    //              */
+    //             asm volatile ("mov %%cr0, %%rax\n"
+    //                           "and $0b1111111111110011, %%ax\n"
+    //                           "or $0b10, %%ax\n"
+    //                           "mov %%rax, %%cr0\n"
+    //                           "mov %%cr4, %%rax\n"
+    //                           "or $0b11000000000, %%rax\n"
+    //                           "mov %%rax, %%cr4\n"
+    //                           ::: "rax");
+    //             UART::out("  \033[32mSSE Enabled\033[0m\r\n");
+    //             SystemCPU->set_sse_enabled();
+    //         }
+    //         else UART::out("  \033[31mSSE Not Supported\033[0m\r\n");
+    //     }
+    //     // Enable XSAVE feature set if CPU supports it.
+    //     if (regs.C & static_cast<u32>(CPUID_FEATURE::ECX_XSAVE)) {
+    //         SystemCPU->set_xsave_capable();
+    //         // Enable XSAVE feature set
+    //         // `- Set CR4.OSXSAVE bit (bit 18  -- OS provides )
+    //         asm volatile ("mov %cr4, %rax\n"
+    //                       "or $0b1000000000000000000, %rax\n"
+    //                       "mov %rax, %cr4\n");
+    //         UART::out("  \033[32mXSAVE Enabled\033[0m\r\n");
+    //         SystemCPU->set_xsave_enabled();
+    //         // If SSE, AND XSAVE are supported, setup AVX feature set.
+    //         if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)
+    //             && regs.C & static_cast<u32>(CPUID_FEATURE::ECX_AVX))
+    //         {
+    //             SystemCPU->set_avx_capable();
+    //             asm volatile ("xor %%rcx, %%rcx\n"
+    //                           "xgetbv\n"
+    //                           "or $0b111, %%eax\n"
+    //                           "xsetbv\n"
+    //                           ::: "rax", "rbx", "rdx");
+    //             UART::out("  \033[32mAVX Enabled\033[0m\r\n");
+    //             SystemCPU->set_avx_enabled();
+    //         }
+    //         else UART::out("  \033[31mAVX Not Supported\033[0m\r\n");
+    //     }
+    //     else UART::out("  \033[31mXSAVE Not Supported\033[0m\r\n");
+    // }
+    
     // TODO: Parse CPUs from ACPI MADT table. For now only support single core.
-    CPU cpu = CPU(SystemCPU);
-    SystemCPU->add_cpu(cpu);
-    SystemCPU->print_debug();
+    ////CPU cpu = CPU(SystemCPU);
+    ////SystemCPU->add_cpu(cpu);
+    ////SystemCPU->print_debug();
     
     // Prepare filesystem drivers.
-    gFATDriver = FATDriver();
-    UART::out("[kUtil]: \033[32mFilesystem drivers prepared successfully\033[0m\r\n");
+    ////gFATDriver = FATDriver();
+    ////UART::out("[kUtil]: \033[32mFilesystem drivers prepared successfully\033[0m\r\n");
     // Initialize Advanced Configuration and Power Management Interface.
-    ACPI::initialize(bInfo->rsdp);
-    UART::out("[kUtil]: \033[32mACPI initialized\033[0m\r\n");
+    ////ACPI::initialize(bInfo->rsdp);
+    ////UART::out("[kUtil]: \033[32mACPI initialized\033[0m\r\n");
     // Enumerate PCI (find hardware devices).
-    prepare_pci();
+    ////prepare_pci();
     
     // Initialize High Precision Event Timer.
-    (void)gHPET.initialize();
+    ////(void)gHPET.initialize();
     // Prepare PS2 mouse.
-    init_ps2_mouse();
+    ////init_ps2_mouse();
     
     // Print the state of the heap just before beginning multi-threading setup.
-    heap_print_debug();
+    ////heap_print_debug();
     //print_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     //print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
-    Memory::print_debug();
+    ////Memory::print_debug();
     
     // Setup task state segment for eventual switch to user-land.
-    TSS::initialize();
+    ////TSS::initialize();
     // Use kernel process switching.
-    Scheduler::initialize(Memory::get_active_page_map());
+    ////Scheduler::initialize(Memory::get_active_page_map());
     
     // Enable IRQ interrupts that will be used.
-    disable_all_interrupts();
-    enable_interrupt(IRQ_SYSTEM_TIMER);
-    enable_interrupt(IRQ_PS2_KEYBOARD);
-    enable_interrupt(IRQ_CASCADED_PIC);
-    enable_interrupt(IRQ_UART_COM1);
-    enable_interrupt(IRQ_REAL_TIMER);
-    enable_interrupt(IRQ_PS2_MOUSE);
+    ////disable_all_interrupts();
+    ////enable_interrupt(IRQ_SYSTEM_TIMER);
+    ////enable_interrupt(IRQ_PS2_KEYBOARD);
+    ////enable_interrupt(IRQ_CASCADED_PIC);
+    ////enable_interrupt(IRQ_UART_COM1);
+    ////enable_interrupt(IRQ_REAL_TIMER);
+    ////enable_interrupt(IRQ_PS2_MOUSE);
 
     // Allow interrupts to trigger.
-    UART::out("[kUtil]: Interrupt masks sent, enabling interrupts.\r\n");
+    ////UART::out("[kUtil]: Interrupt masks sent, enabling interrupts.\r\n");
     asm ("sti");
-    UART::out("    \033[32mInterrupts enabled.\033[0m\r\n");
+    ////UART::out("    \033[32mInterrupts enabled.\033[0m\r\n");
 }

@@ -185,11 +185,8 @@
 void* userland_function;
 
 extern "C" void _start(BootInfo* bInfo) {
-
-                   (void)         bInfo; 
-
     // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
-    //kernel_init(bInfo);
+    kernel_init(bInfo);
     //UART::out("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
     //// Clear + swap screen (ensure known state: blank).
     //gRend.clear(0x00000000);
