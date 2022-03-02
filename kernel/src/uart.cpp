@@ -63,14 +63,17 @@ namespace UART {
                 chip = Chip::_16450;
             else chip = Chip::_8250;
         }
-        // Loop-back test.
-        //out8(MODEM_CONTROL_PORT(COM1), 0b00011111);
-        //u8 test_byte = 0xae;
-        //out8(COM1, test_byte);
-        //if (in8(COM1) != test_byte) {
-        //    Initialized = false;
-        //    return;
-        //}
+
+#ifndef VBOX
+        // Complete a loop-back test to verify all is well.
+        out8(MODEM_CONTROL_PORT(COM1), 0b00011111);
+        u8 test_byte = 0xae;
+        out8(COM1, test_byte);
+        if (in8(COM1) != test_byte) {
+           Initialized = false;
+           return;
+        }
+#endif
 
         // Disable loop-back, set 'Data Terminal Ready' and 'Request to Send'.
         out8(MODEM_CONTROL_PORT(COM1), 0b00001111);
