@@ -164,12 +164,12 @@ void kernel_init(BootInfo* bInfo) {
     ////UART::out(to_string(PIT_FREQUENCY));
     ////UART::out("hz\033[0m.\r\n");
     ////// Initialize the Real Time Clock.
-    ////gRTC = RTC();
-    ////gRTC.set_periodic_int_enabled(true);
-    ////UART::out("[kUtil]: \033[32mReal Time Clock Initialized\033[0m\r\n");
-    ////UART::out("  Periodic interrupts enabled at \033[33m");
-    ////UART::out(to_string((double)RTC_PERIODIC_HERTZ));
-    ////UART::out("hz\033[0m\r\n");
+    gRTC = RTC();
+    gRTC.set_periodic_int_enabled(true);
+    UART::out("[kUtil]: \033[32mReal Time Clock Initialized\033[0m\r\n");
+    UART::out("  Periodic interrupts enabled at \033[33m");
+    UART::out(to_string((double)RTC_PERIODIC_HERTZ));
+    UART::out("hz\033[0m\r\n");
     
     // Print real time to serial output.
     ////UART::out("[kUtil]: \033[1;33mNow is ");
