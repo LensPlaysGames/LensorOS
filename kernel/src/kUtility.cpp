@@ -211,8 +211,8 @@ void kernel_init(BootInfo* bInfo) {
          *   https://wiki.osdev.org/Detecting_CPU_Topology_(80x86)#Using_CPUID
          */
 
-        ////CPUIDRegisters regs;
-        ////cpuid(1, regs);
+        CPUIDRegisters regs;
+        cpuid(1, regs);
 
     // Enable FXSAVE/FXRSTOR instructions if CPU supports it.
     // If it is not supported, don't bother trying to support FPU, SSE, etc
@@ -222,14 +222,14 @@ void kernel_init(BootInfo* bInfo) {
     // |- 0x80000008 -- AMD
     // `- Otherwise: bits are zero, assume single core.
     // TODO: Rewrite task switching code to save/load all supported registers in CPUState.
-    //     if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FXSR)) {
-    //         SystemCPU->set_fxsr_capable();
-    //         asm volatile ("fxsave %0" :: "m"(fxsave_region));
-    //         UART::out("  \033[32mFXSAVE/FXRSTOR Enabled\033[0m\r\n");
-    //         SystemCPU->set_fxsr_enabled();
-    //         // If FXSAVE/FXRSTOR is supported, setup FPU.
-    //         if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FPU)) {
-    //             SystemCPU->set_fpu_capable();
+    if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FXSR)) {
+        SystemCPU->set_fxsr_capable();
+        asm volatile ("fxsave %0" :: "m"(fxsave_region));
+        UART::out("  \033[32mFXSAVE/FXRSTOR Enabled\033[0m\r\n");
+        SystemCPU->set_fxsr_enabled();
+        // If FXSAVE/FXRSTOR is supported, setup FPU.
+    //    if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FPU)) {
+    //        SystemCPU->set_fpu_capable();
     //             // FPU supported, ensure it is enabled.
     //             /* FPU Relevant Control Register Bits
     //              * |- CR0.EM (bit 02) -- If set, FPU and vector operations will cause a #UD.
@@ -244,15 +244,15 @@ void kernel_init(BootInfo* bInfo) {
     //                           ::: "rax", "rdx");
     //             UART::out("  \033[32mFPU Enabled\033[0m\r\n");
     //             SystemCPU->set_fpu_enabled();
-    //         }
-    //         else {
-    //             // FPU not supported, ensure it is disabled.
-    //             asm volatile ("mov %%cr0, %%rdx\n"
-    //                           "or $0b1100, %%dx\n"
-    //                           "mov %%rdx, %%cr0\n"
-    //                           ::: "rdx");
-    //             UART::out("  \033[31mFPU Not Supported\033[0m\r\n");
-    //         }
+    //    }
+    //    else {
+    //        // FPU not supported, ensure it is disabled.
+    //        asm volatile ("mov %%cr0, %%rdx\n"
+    //                      "or $0b1100, %%dx\n"
+    //                      "mov %%rdx, %%cr0\n"
+    //                      ::: "rdx");
+    //        UART::out("  \033[31mFPU Not Supported\033[0m\r\n");
+    //    }
     //         // If FXSAVE/FXRSTOR and FPU are supported and present, setup SSE.
     //         if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)) {
     //             SystemCPU->set_sse_capable();
@@ -274,7 +274,7 @@ void kernel_init(BootInfo* bInfo) {
     //             SystemCPU->set_sse_enabled();
     //         }
     //         else UART::out("  \033[31mSSE Not Supported\033[0m\r\n");
-    //     }
+    }
     //     // Enable XSAVE feature set if CPU supports it.
     //     if (regs.C & static_cast<u32>(CPUID_FEATURE::ECX_XSAVE)) {
     //         SystemCPU->set_xsave_capable();
