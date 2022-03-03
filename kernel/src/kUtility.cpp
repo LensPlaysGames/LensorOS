@@ -187,12 +187,12 @@ void kernel_init(BootInfo* bInfo) {
     UART::out("\033[0m\r\n");
 
     // Store feature set of CPU (capabilities).
-    ////SystemCPU = new CPUDescription();
+    SystemCPU = new CPUDescription();
     // Check for CPUID availability ('ID' bit in rflags register modifiable)
-    ////bool supportCPUID = static_cast<bool>(cpuid_support());
-    ////if (supportCPUID) {
-        ////SystemCPU->set_cpuid_capable();
-        ////UART::out("[kUtil]: \033[32mCPUID is supported\033[0m\r\n");
+    bool supportCPUID = static_cast<bool>(cpuid_support());
+    if (supportCPUID) {
+        SystemCPU->set_cpuid_capable();
+        UART::out("[kUtil]: \033[32mCPUID is supported\033[0m\r\n");
         ////char* cpuVendorID = cpuid_string(0);
         ////SystemCPU->set_vendor_id(cpuVendorID);
         ////UART::out("  CPU Vendor ID: ");
@@ -301,12 +301,12 @@ void kernel_init(BootInfo* bInfo) {
     //         else UART::out("  \033[31mAVX Not Supported\033[0m\r\n");
     //     }
     //     else UART::out("  \033[31mXSAVE Not Supported\033[0m\r\n");
-    // }
+    }
     
     // TODO: Parse CPUs from ACPI MADT table. For now only support single core.
-    ////CPU cpu = CPU(SystemCPU);
-    ////SystemCPU->add_cpu(cpu);
-    ////SystemCPU->print_debug();
+    CPU cpu = CPU(SystemCPU);
+    SystemCPU->add_cpu(cpu);
+    SystemCPU->print_debug();
     
     // Prepare filesystem drivers.
     gFATDriver = FATDriver();
