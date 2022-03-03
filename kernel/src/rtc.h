@@ -73,14 +73,14 @@ Status Register `D`:
 #define CENTURY_REGISTER 0x00
 
 struct RTCData {
-    u8  second  {0};
-    u8  minute  {0};
-    u8  hour    {0};
-    u8  weekday {0};
-    u8  date    {0};
-    u8  month   {0};
-    u32 year    {0};
-    u8  century {0};
+    u8  second  { 0 };
+    u8  minute  { 0 };
+    u8  hour    { 0 };
+    u8  weekday { 0 };
+    u8  date    { 0 };
+    u8  month   { 0 };
+    u32 year    { 0 };
+    u8  century { 0 };
 
     RTCData() {}
 
@@ -96,17 +96,17 @@ struct RTCData {
     }
 };
 
-
-#ifdef QEMU
+#if defined QEMU || defined VBOX
 #define RTC_PERIODIC_RATE 10
 #else
 #define RTC_PERIODIC_RATE 6
-#endif
+#endif /* QEMU || VBOX */
 #define RTC_PERIODIC_HERTZ (32768 >> (RTC_PERIODIC_RATE - 1))
+
 class RTC {
 public:
     RTCData Time;
-    u64 Ticks {0};
+    u64 Ticks { 0 };
 
     RTC() {
         update_data();

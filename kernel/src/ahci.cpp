@@ -181,27 +181,28 @@ namespace AHCI {
     }
 
     AHCIDriver::AHCIDriver(PCI::PCIDeviceHeader* pciBaseAddress) {
-        UART::out("[AHCI]: Constructing driver for AHCI 1.0 Controller at 0x");
+        UART::out("\r\n[AHCI]: Constructing driver for AHCI 1.0 Controller at 0x");
         UART::out(to_hexstring(pciBaseAddress));
         UART::out("\r\n");
         
         PCIBaseAddress = pciBaseAddress;
-        
+        // ABAR = AHCI Base Address Register.
         ABAR = (HBAMemory*)(u64)(((PCI::PCIHeader0*)PCIBaseAddress)->BAR5);
         // Map ABAR into memory.
         Memory::map(ABAR, ABAR);
 
         UART::out("[AHCI]:\r\n  Mapping AHCI Base Memory Register (ABAR) to 0x");
         UART::out(to_hexstring(ABAR));
-        UART::out("\r\n");
-        UART::out("  Probing ABAR for open and active ports.\r\n");
+        UART::out("\r\n  Probing ABAR for open and active ports.\r\n");
+
         probe_ports();
+
         UART::out("  Found ");
-        UART::out(to_string(numPorts));
+        UART::out(numPorts);
         UART::out(" open and active ports\r\n");
         UART::out("    Port read/write buffer size: ");
         UART::out(to_string(MAX_READ_PAGES * 4));
-        UART::out("kib\r\n");
+        UART::out("kib\r\n\r\n");
 
         for (u8 i = 0; i < numPorts; ++i) {
             Ports[i]->initialize();
@@ -261,7 +262,7 @@ namespace AHCI {
                     }
                     UART::out("  Total Size: ");
                     UART::out(to_string(fs->get_total_size() / 1024 / 1024));
-                    UART::out(" mib\r\n");
+                    UART::out(" mib\r\n\r\n");
                 }
                 else {
                     UART::out("[AHCI]: \033[31mDevice at port ");
@@ -270,7 +271,7 @@ namespace AHCI {
                 }
             }
         }
-        UART::out("[AHCI]: \033[32mDriver constructed.\033[0m\r\n");
+        UART::out("[AHCI]: \033[32mDriver constructed.\033[0m\r\n\r\n");
     }
     
     AHCIDriver::~AHCIDriver() {

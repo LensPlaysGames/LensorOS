@@ -5,7 +5,7 @@
 #include "io.h"
 
 #define PIT_MAX_FREQ 1193180
-#ifdef QEMU
+#if defined QEMU || defined VBOX
 #define PIT_DIVISOR 59659
 #else
 #define PIT_DIVISOR 1193
@@ -97,7 +97,7 @@ public:
 
 private:
     /// Incremented by IRQ0 interrupt handler.
-    u64 Ticks { 0 };
+    volatile u64 Ticks { 0 };
     /* `wait()` stops spinning as soon `Ticks` reaches
      *   offset from `Ticks` at beginning of spinning.
      */
@@ -113,5 +113,8 @@ private:
 };
 
 extern PIT gPIT;
+
+// This work-around/hack is due to needing a function pointer 
+void pit_tick();
 
 #endif /* LENSOR_OS_PIT_H */

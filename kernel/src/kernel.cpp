@@ -53,8 +53,9 @@
  * |     `- This will allow me to write userland programs that will know where to
  * |          look for libc and standard includes relative to LensorOS's root directory.
  * |
+ * |- Use LinkedList to store AHCI Ports instead of pointer mumbo-jumbo that is currently going on.
  * |- HPET: Final step to get interrupts working (init comparators).
- * |- Sound: Implement support for hardware sound cards (SoundBlaster16, Intel HDA, etc).
+ * |- Sound: Implement support for hardware sound cards (AC97, SoundBlaster16, Intel HDA, etc).
  * |
  * |- Further modify cross compiler to make an OS specific toolchain.
  * |  `- This would allow for customizing default include,
@@ -188,15 +189,15 @@ extern "C" void _start(BootInfo* bInfo) {
     // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
     kernel_init(bInfo);
     UART::out("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
-    // Clear + swap screen (ensure known state: blank).
+    //// Clear + swap screen (ensure known state: blank).
     gRend.clear(0x00000000);
     gRend.swap();
-    /// GPLv3 LICENSE REQUIREMENT (interactive terminal must print copyright notice).
+    ///// GPLv3 LICENSE REQUIREMENT (interactive terminal must print copyright notice).
     const char* GPLv3 = "<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>";
-    // TO SERIAL
+    //// TO SERIAL
     UART::out(GPLv3);
     UART::out("\r\n\r\n");
-    // TO SCREEN
+    //// TO SCREEN
     gRend.BackgroundColor = 0xffffffff;
     gRend.puts(GPLv3, 0x00000000);
     gRend.BackgroundColor = 0x00000000;
@@ -205,7 +206,7 @@ extern "C" void _start(BootInfo* bInfo) {
     /// END GPLv3 LICENSE REQUIREMENT.
 
     // USERLAND SWITCH TESTING
-    //userland_function = (void*)test_userland_function;
+    userland_function = (void*)test_userland_function;
     //jump_to_userland_function();
 
     // FIXME FIXME FIXME
@@ -219,7 +220,6 @@ extern "C" void _start(BootInfo* bInfo) {
     // I'm lovin' it :^) (Plays Maccy's theme).
     constexpr double MACCYS_BPM = 125;
     constexpr double MACCYS_STEP_LENGTH_SECONDS = (60 / MACCYS_BPM) / 4;
-    gPIT.prepare_wait_seconds(MACCYS_STEP_LENGTH_SECONDS);
     gPIT.play_sound(262, MACCYS_STEP_LENGTH_SECONDS); // C4
     gPIT.play_sound(294, MACCYS_STEP_LENGTH_SECONDS); // D4
     gPIT.wait();                                      // Rest

@@ -5,6 +5,7 @@
 ### Table of Contents
 - [Booting into LensorOS on hardware](#hardware-boot)
 - [Booting into LensorOS using QEMU](#qemu-boot)
+- [Booting into LensorOS using VirtualBox](#vbox-boot)
 - [Building LensorOS](#build)
   - [A bug regarding CMake's ASM_NASM Makefile generation](#cmake-bug)
 - [Acknowledgements](#ack)
@@ -12,17 +13,17 @@
 ---
 
 ### Booting into LensorOS on hardware <a name="hardware-boot"></a>
-###### DISCLAIMER: LensorOS IS IN NO WAY GUARANTEED TO BE 'SAFE'; RUN AT YOUR OWN RISK! (see LICENSE)
+###### DISCLAIMER: LensorOS IS IN NO WAY GUARANTEED TO BE 'SAFE'; RUN AT YOUR OWN RISK! (see [LICENSE](LICENSE))
 
 (pre-compiled binaries coming soon, for now see [the build section](#build))
 
 Ensure you have a USB storage device that is working. Remove all data from the USB. This can be done by formatting, or simply deleting/moving everything off of it.
 
-Next, create a folder called `efi`, then inside that a folder called `boot`. \
-Move `main.efi` from `/gnu-efi/x86_64/bootloader/` directory into the `boot` folder on the USB. \
-Rename `main.efi` in the usb's `boot` folder to `bootx64.efi`.
+Next, create a folder called `EFI`, then inside that a folder called `BOOT`. \
+Move `main.efi` from `/gnu-efi/x86_64/bootloader/` directory into the `BOOT` folder on the USB. \
+Rename `main.efi` in the usb's `BOOT` folder to `bootx64.efi`, as per the UEFI specification.
 
-Finally, navigate back to the root directory of the USB (where the `efi` folder resides). \
+Finally, navigate back to the root directory of the USB (where the `EFI` folder resides). \
 Create a folder. `LensorOS`, then move the following resources into the directory: \
 - `kernel.elf` from `/kernel/bin/`
 - Any `.psf` version 1 font renamed to `dfltfont.psf`
@@ -51,53 +52,107 @@ USB
 ---
 
 ### Booting into LensorOS using QEMU <a name="qemu-boot"></a>
+[Get QEMU](https://www.qemu.org/download)
+
+Before beginning, ensure you have the LensorOS bootloader and kernel binaries. \
 (pre-compiled binaries coming soon, for now see [the build section](#build))
 
 To change the font, replace `dfltfont.psf` in the `kernel/res` folder with any PSF1 font (not PSF2). \
 For a few fonts that are compatible, check out [this repository](https://github.com/ercanersoy/PSF-Fonts)
 
-NOTE: If using VirtualBox, you will need to use the following QEMU tool to create a bootable virtual disk (`.vdi`):
-`qemu-img convert -f raw -O vdi LensorOS/kernel/bin/LensorOS.img path/to/LensorOS.vdi`, but be warned: there be dragons.
+NOTE: On Windows, use a linux terminal to run the image generation commands (WSL, Cygwin, etc).
 
-#### On Linux
-
-First, `cd` to the `kernel` directory of the repository.
-
-The first time after cloning, the line endings will not be in the correct format. \
-This is a choice by git, that all files will be saved with CRLF line endings, and unix bash doesn't play nice with that. \
-To get around that, there are a multitude of tools to convert, but by far the most common is `dos2unix`:
+Ensure the following dependencies are installed on your system:
 ```bash
-dos2unix mkimg.sh
-dos2unix run.sh
-dos2unix rundbg.sh
+sudo apt install mtools
+```
+GNU mtools is a set of tools for manipulating MS-DOS style files and filesystems. This is necessary as the UEFI specification requires FAT32 to be used as it's boot device's filesystem.
+
+To build a disk image that will boot into LensorOS, run the following included helper script:
+```bash
+bash /Path/to/LensorOS/kernel/mkimg.sh
 ```
 
-From there, `bash mkimg.sh` will generate a `.img` disk image file that can be used as a boot drive by a virtual machine that supports OVMF like [QEMU](https://www.qemu.org/).
+Upon completion, this will have generated a disk image file `LensorOS.img` that follows the UEFI standards, meaning any UEFI-supporting machine could boot from this image, given it is a valid boot device.
 
-`bash run.sh` will boot up QEMU into LensorOS. \
-QEMU does need to be installed, so make sure you first run (`sudo apt install qemu-system-x86`).
+- [Continue on Linux](#qemu-boot-linux)
+- [Continue on Windows](#qemu-boot-windows)
 
+#### On Linux <a name="qemu-boot-linux"></a>
+To run QEMU with the correct command line options automatically, use the following helper script to launch QEMU booting into LensorOS:
+```bash
+bash /Path/to/LensorOS/kernel/run.sh
+```
+For debugging with gdb, run `bash rundbg.sh` instead. This will launch QEMU but wait to start cpu execution until `gdb` has connected on port `1234` of `localhost`. \
 See [a note about debugging](#gdb-debug-note-1).
 
-For debugging with gdb, run `bash rundbg.sh` instead. This will launch QEMU but wait to start cpu execution until `gdb` has connected on port `1234` of `localhost`.
-
-#### On Windows
-
-In a linux terminal (WSL, Cygwin, etc), run `bash /path/to/LensorOS/kernel/mkimg.sh` to generate a disk image file that will be used by QEMU as a boot drive.
-
+#### On Windows <a name="qemu-boot-windows"></a>
 To launch QEMU from the generated disk image, A `run.bat` file is included. \
-By simply double clicking this, QEMU will run, booting into a UEFI environment that will load the LensorOS bootloader. The batch file requires the directory that the QEMU executable resides in be added to the system's PATH variable. [See this stackoverflow thread for help](https://stackoverflow.com/questions/9546324/adding-a-directory-to-the-path-environment-variable-in-windows). \
-If editing the PATH variable isn't working, the batch script could always be edited to use the exact path to the QEMU executable on your local machine.
+The batch file requires the directory that the QEMU executable resides in be added to the system's PATH variable. [See this stackoverflow thread for help](https://stackoverflow.com/questions/9546324/adding-a-directory-to-the-path-environment-variable-in-windows). \
+If editing the PATH variable isn't working, the batch script could always be edited to use the exact path to the QEMU executable on your local machine. \
 
-If you're terminal output looks rather mangled (ie. left-pointing arrows, open square-brackets, etc), it is likely the terminal you are using doesn't support ANSI color codes. \
-This is how it is when I use Windows Explorer to launch the `run` batch script, and makes debugging using the serial output rather difficult. \
-To get around this, I use the (rather life-changing) [Windows Terminal](https://github.com/Microsoft/Terminal). It should be the default terminal, and should have been for five years now, but I'm glad it is available and open source none-the-less. \
-This new terminal allows both WSL and PowerShell to be open in the same terminal, but separate tabs. By running `& '\\wsl$\your-linux-distro\path\to\LensorOS\kernel\run.bat'` from within a PowerShell in the new Windows Terminal, you will experience glorious full-color, formatted serial output. If you are having none of this, and would prefer to have a very monotone serial output that is also not mangled with ANSI color codes, define `LENSOR_OS_UART_HIDE_COLOR_CODES` and all color codes will be hidden from serial output.
+By simply double clicking this batch file, QEMU will open and boot into LensorOS. 
 
-There is also a `rundbg.bat` that will launch QEMU with the appropriate flags to wait for `gdb` to connect on port `1234` of `localhost`.
+All serial output will be re-directed to stdin/stdout, which is likely a `cmd.exe` window that opened along with QEMU. The problem with `cmd.exe` is that it leaves the output looking rather mangled (ie. left-pointing arrows, open square-brackets, etc). This is due to the terminal not supporting ANSI color codes.
 
-<a name="gdb-debug-note-1"></a>NOTE: When debugging with gdb, the kernel must be built with debug symbols ("-g" compile flag). To achieve this, run cmake with the following definition: \
+To get around this, I use the (rather life-changing) [Windows Terminal](https://github.com/Microsoft/Terminal). It should be the default terminal, and should have been for five years now, but I'm glad it is available and open source none-the-less.
+
+This new terminal allows both WSL and PowerShell to be open in the same terminal, but separate tabs. By the `run.bat` file from within a PowerShell in the new Windows Terminal, you will experience glorious full-color, formatted serial output.
+
+If you are having none of this, and would prefer to have a very monotone serial output that is also not mangled with ANSI color codes, define `LENSOR_OS_UART_HIDE_COLOR_CODES` during compilation and all color codes will be hidden from serial output by the kernel itself.
+
+There is also a `rundbg.bat` that will launch QEMU with the appropriate flags to wait for `gdb` to connect on port `1234` of `localhost`. \
+<a name="gdb-debug-note-1"></a>NOTE: When debugging with gdb, the kernel must be built with debug symbols ("-g" compile flag). To achieve this, run cmake with the following command line argument: \
 `-DCMAKE_BUILD_TYPE=Debug`
+
+---
+
+### Booting into LensorOS using VirtualBox <a name="vbox-boot"></a>
+[Get VirtualBox](https://www.virtualbox.org/wiki/Downloads)
+
+VirtualBox is kind of picky in the file formats it will accept as drives and such. \
+Because of this fact, we must prepare an `.iso` file with an ISO filesystem to boot into VirtualBox.
+
+Before beginning, ensure you have the LensorOS bootloader and kernel binaries built. \
+(pre-compiled binaries coming soon, for now see [the build section](#build))
+
+To change the font, replace `dfltfont.psf` in the `kernel/res` folder with any PSF1 font (not PSF2). \
+For a few fonts that are compatible, check out [this repository](https://github.com/ercanersoy/PSF-Fonts)
+
+NOTE: On Windows, complete the following shell commands from within WSL, or the Windows Subsystem for Linux.
+
+Install the tool necessary to create `.iso` files and ISO-9660 filesystems, as well as a tool to create and format MS-DOS style filesystems:
+```bash
+sudo apt install mtools xorriso
+```
+Next, simply run the `mkiso.sh` script with Bash:
+```bash
+bash /Path/to/LensorOS/kernel/mkiso.sh
+```
+
+If all goes well, this will first generate a FAT32 EFI-compatible boot disk image, then create a bootable ISO-9660 CD-ROM disk image. \
+To actually use this boot cd in a VM in VirtualBox, it requires some setup:
+1. Open VirtualBox.
+2. Click the `New` button.
+3. Give the VM a name and a file path you are comfortable with.
+4. Select Type of `Other` and Version of `Other/Unknown (64-bit)`.
+5. Leave the memory size how it is; 64MB is plenty at this time.
+6. Select the `Do not add a virtual hard disk` option.
+7. Click the `Create` button to create the new virtual machine.
+8. With the new VM selected within the list on the left, click the `Settings` button.
+9. Navigate to `System` within the list on the left.
+    1. Change Chipset to `ICH9`.
+    2. Enable Extended Feature `Enable EFI (special OSes only)`.
+    3. Navigate to the `Processor` tab, and check the `Enable Nested VT-x/AMD-V` checkbox.
+10. Navigate to `Storage` within the list on the left.
+    1. Right click the storage controller (default IDE), and select `Optical Drive`.
+    2. Click the `Add` button in the new `Optical Disk Selector` window that pops up.
+    3. Browse to `Path/To/LensorOS/kernel/bin/` and select `LensorOS.iso`.
+    4. Ensure `LensorOS.iso` is selected within the list, and click the `Choose` button.
+11. Navigate to `Network` within the list on the left.
+    1. Disable all network adapters.
+
+After all of this has been done, you are ready to click `Start` on the VirtualBox VM; the bootloader should run automatically.
 
 ---
 
@@ -146,7 +201,7 @@ Once the toolchain is up and running (added to `$PATH` and everything), continue
 NOTE: It is possible to use your host compiler to build the kernel. It is not recommended, and likely won't work, but who am I to stop you. Simply remove/comment out the `set(CMAKE_C_COMPILER` and `set(CMAKE_CXX_COMPILER` lines within [CMakeLists.txt](kernel/CMakeLists.txt). This will instruct CMake to use your host machine's default compiler (again, **not** recommended).
 
 First, `cd` to the `kernel` directory of the repository. \
-To prepare a build system that will build the kernel with GNU `make`, run the following:
+To prepare a build system that will build the kernel with `GNU make`, run the following:
 ```bash
 cmake -S . -B out
 cd out
@@ -159,8 +214,8 @@ Alternatively, generate any build system of your choice that is supported by CMa
 
 This final build step will generate `kernel.elf` within the `/kernel/bin` directory, ready to be used in a boot usb or formatted into an image.
 
-If building for real hardware, ensure to remove `-DQEMU` from [CMakeLists.txt](kernel/CMakeLists.txt). \
-This allows for the hardware timers to be used to their full potential (asking QEMU for 1000hz interrupts from multiple devices overloads the emulator and guest time falls behind drastically; to counter-act this, very slow frequency periodic interrupts are setup as to allow the emulator to process them accordingly, allowing for accurate time-keeping even in QEMU).
+If building for real hardware, ensure to remove all virtual machine definitions (ie. `QEMU`, `VBOX`) from [CMakeLists.txt](kernel/CMakeLists.txt). \
+This allows for the hardware timers to be used to their full potential (asking QEMU for 1000hz interrupts from multiple devices overloads the emulator and guest time falls behind drastically; to counter-act this, very slow frequency periodic interrupts are setup as to allow the emulator to process them accordingly, allowing for accurate time-keeping in QEMU).
 
 If you are familiar with CMake, this sequence might look *slightly* strange to you (namely the second `cmake` command). \
 See the [CMake bug](#cmake-bug) section for more details on why it is needed, and maybe you have an even better fix.

@@ -6,6 +6,7 @@
 #include "uart.h"
 
 PIT gPIT;
+void pit_tick() { gPIT.tick(); }
 
 PIT::PIT() {
     configure_channel(Channel::Zero, Access::HighAndLow, Mode::RateGenerator, PIT_FREQUENCY);
@@ -23,7 +24,7 @@ void PIT::prepare_wait_seconds(double duration) {
 void PIT::wait() {
     u64 tickToWaitTo = Ticks + TicksToWait;
     while (Ticks < tickToWaitTo)
-        asm volatile ("nop");
+        asm volatile ("hlt");
 }
 
 void PIT::start_speaker() {

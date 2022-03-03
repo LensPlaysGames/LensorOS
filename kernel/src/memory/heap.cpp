@@ -89,7 +89,7 @@ void init_heap() {
     UART::out(to_hexstring<void*>(sHeapEnd));
     UART::out("\r\n  Size: ");
     UART::out(numBytes);
-    UART::out("\r\n");
+    UART::out("\r\n\r\n");
 }
 
 void expand_heap(u64 numBytes) {

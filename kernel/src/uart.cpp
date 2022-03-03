@@ -63,18 +63,25 @@ namespace UART {
                 chip = Chip::_16450;
             else chip = Chip::_8250;
         }
-        // Loop-back test.
+
+#ifndef VBOX
+        // Complete a loop-back test to verify all is well.
         out8(MODEM_CONTROL_PORT(COM1), 0b00011111);
         u8 test_byte = 0xae;
         out8(COM1, test_byte);
         if (in8(COM1) != test_byte) {
-            Initialized = false;
-            return;
+           Initialized = false;
+           return;
         }
+#endif
 
         // Disable loop-back, set 'Data Terminal Ready' and 'Request to Send'.
         out8(MODEM_CONTROL_PORT(COM1), 0b00001111);
 
+        // Enable IRQs for data available interrupts.
+        out8(INTERRUPT_PORT(COM1), INTERRUPT_PORT_DATA_AVAILABLE);
+        Initialized = true;
+        
         // First serial messages output from the OS.
         out("\r\n\r\nWelcome to \033[5;1;33mLensorOS\033[0m\r\n\r\n");
         out("[UART]: Initialized driver\r\n  Detected '");
@@ -82,13 +89,9 @@ namespace UART {
         out("' chip\r\n");
 
 #ifdef COM1_INPUT_DEBUG
-        writestr("[UART]: Data recieved over COM1 will be looped back in the following format:\r\n");
-        writestr("  \"[UART]: COM1 INPUT -> <hexadecimal> <integer> <raw byte>\"");
+        out("[UART]: Data recieved over COM1 will be looped back in the following format:\r\n");
+        out("  \"[UART]: COM1 INPUT -> <hexadecimal> <integer> <raw byte>\"");
 #endif
-
-        // Enable IRQs for data available interrupts.
-        out8(INTERRUPT_PORT(COM1), INTERRUPT_PORT_DATA_AVAILABLE);
-        Initialized = true;
     }
 
     u8 read() {

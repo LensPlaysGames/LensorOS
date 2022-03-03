@@ -129,7 +129,12 @@ SOURCES
 add_executable(Kernel ${SOURCES} ${HEADERS})
 set_target_properties(Kernel PROPERTIES OUTPUT_NAME kernel.elf)
 
-target_compile_definitions(Kernel PUBLIC QEMU)
+# VIRTUAL MACHINE CONFIGURATION
+# Uncomment the line that corresponds to the virtual machine
+#   of your choosing, ensuring only one is defined at one time.
+#target_compile_definitions(Kernel PUBLIC QEMU)
+target_compile_definitions(Kernel PUBLIC VBOX)
+
 target_compile_options(
 Kernel PUBLIC
     -O4

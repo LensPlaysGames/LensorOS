@@ -124,10 +124,11 @@ public:
         UART::out(to_string(XSAVEEnabled));
         UART::out("\r\n    AVX: ");
         UART::out(to_string(AVXEnabled));
-        UART::out("\r\n");
+        UART::out("\r\n\r\n");
         CPUs.for_each([](auto* it){
             it->value().print_debug();
         });
+        UART::out("\r\n");
     }
 
     // Feature flag setters

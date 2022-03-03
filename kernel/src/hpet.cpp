@@ -29,6 +29,14 @@ void hpet_init_failed(const char* msg) {
 }
 
 bool HPET::initialize() {
+#ifdef VBOX
+    // I can not get the HPET to work in VBOX for the life of me.
+    // It causes a strange crash that shutsdown the virtualbox VM.
+    // Luckily, I know exactly what causes it, but (unluckily) not how to fix it.
+    // The first call to `writel` and therefore `volatile_write` crashes.
+    hpet_init_failed("LensorOS HPET implementation is buggy on VirtualBox");
+    return false;
+#else
     // This shouldn't be called by multiple threads ever, but it doesn't hurt :^).
     SpinlockLocker locker(Lock);
     Header = (ACPI::HPETHeader*)ACPI::find_table("HPET");
@@ -61,7 +69,7 @@ bool HPET::initialize() {
 
     // Disable legacy replacement interrupt routing.
     u32 config = readl(HPET_REG_GENERAL_CONFIGURATION);
-    config &= ~2;
+    config &= (u32)~2;
     writel(HPET_REG_GENERAL_CONFIGURATION, config);
 
     // Calculate Frequency (f = 10^15 / Period)
@@ -106,10 +114,14 @@ bool HPET::initialize() {
     Initialized = true;
 
     print_state();
-    return true;
+    return Initialized;
+#endif /* defined VBOX */
 }
 
 void HPET::start_main_counter() {
+    if (Initialized == false)
+        return;
+
     SpinlockLocker locker(Lock);
     u32 config = readl(HPET_REG_GENERAL_CONFIGURATION);
     config |= 1;
@@ -118,6 +130,9 @@ void HPET::start_main_counter() {
 
 
 void HPET::stop_main_counter() {
+    if (Initialized == false)
+        return;
+
     SpinlockLocker locker(Lock);
     u32 config = readl(HPET_REG_GENERAL_CONFIGURATION);
     config &= ~1;
@@ -125,6 +140,9 @@ void HPET::stop_main_counter() {
 }
 
 u64 HPET::get() {
+    if (Initialized == false)
+        return 0;
+
     stop_main_counter();
     SpinlockLocker locker(Lock);
     u64 result { 0 };
@@ -147,10 +165,16 @@ u64 HPET::get() {
 }
 
 double HPET::get_seconds() {
+    if (Initialized == false)
+        return 0;
+
     return static_cast<double>(get()) / Frequency;
 }
 
 void HPET::set_main_counter(u64 value) {
+    if (Initialized == false)
+        return;
+
     stop_main_counter();
     // FIXME: Another thread could lock in-between `stop_main_counter()`
     //   unlocking and this spinlock locker constructor locking it.
@@ -162,10 +186,16 @@ void HPET::set_main_counter(u64 value) {
 }
 
 void HPET::reset_counter() {
+    if (Initialized == false)
+        return;
+
     set_main_counter(0);
 }
 
 void HPET::print_state() {
+    if (Initialized == false)
+        return;
+
     UART::out("[HPET]: \033[32mInitialized\033[0m\r\n");
     UART::out("  Revision ID: 0x");
     UART::out(to_hexstring(Header->RevisionID));

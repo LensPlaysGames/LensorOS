@@ -157,7 +157,7 @@ namespace Memory {
         UART::out(" bytes)\r\n");
         UART::out("    Lost to Page Alignment: ");
         UART::out(deadSpace);
-        UART::out(" bytes\r\n");
+        UART::out(" bytes\r\n\r\n");
     }
 
     void init_physical_efi(EFI_MEMORY_DESCRIPTOR* map, u64 size, u64 entrySize) {
@@ -209,13 +209,12 @@ namespace Memory {
     }
 
     void print_debug() {
-        UART::out("Memory Manager Debug Dump:");
-        UART::out("\r\n  Total Memory: ");
+        UART::out("Memory Manager Debug Dump:\r\n  Total Memory: ");
         UART::out(to_string(TotalPages * PAGE_SIZE / 1024 / 1024));
         UART::out("MiB\r\n  Free Memory: ");
         UART::out(to_string(TotalFreePages * PAGE_SIZE / 1024 / 1024));
         UART::out("MiB\r\n  Used Memory: ");
         UART::out(to_string(TotalUsedPages * PAGE_SIZE / 1024 / 1024));
-        UART::out("MiB\r\n");
+        UART::out("MiB\r\n\r\n");
     }
 }

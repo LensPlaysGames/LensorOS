@@ -3,8 +3,8 @@
     ;; External symbols provided in `scheduler.h` && `scheduler.cpp`
     ;; A pointer to task switching handler function.
     extern scheduler_switch_func
-    ;; Total amount of times IRQ0 has been called since boot.
-    extern timer_ticks
+    ;; Function that increments timer ticks by one.
+    extern timer_tick
 
 do_swapgs:
     cmp QWORD [rsp + 0x08], 0x08
@@ -13,7 +13,10 @@ do_swapgs:
 skip_swap:
     ret
 
+    GLOBAL irq0_handler
 irq0_handler:
+    push rbp
+    mov rbp, rsp
 ;;; SAVE CPU STATE ON STACK
     ;; Already on the stack thanks to interrupt:
     ;; |- Old GDT Segment Selector
@@ -42,15 +45,13 @@ irq0_handler:
     push rbx
     push rsp
 ;;; INCREMENT SYSTEM TIMER TICKS
-    mov rax, [timer_ticks]
-    add QWORD [rax], 1
-    mov [timer_ticks], rax
+    call [timer_tick]
 ;;; CALL C++ FUNCTION; ARGUMENT IN `rdi`
     mov rdi, rsp
     call [scheduler_switch_func]
 ;;; END INTERRUPT
-    mov ax, 0x20
-    out 0x20, ax
+    mov al, 0x20                ; 0x20 = PIC_EOI
+    out 0x20, al                ; 0x20 = PIC1_COMMAND port
 ;;; RESTORE CPU STATE FROM STACK
     add rsp, 8                  ; Eat `rsp` off of stack.
     pop rbx
@@ -71,6 +72,5 @@ irq0_handler:
     pop gs
     pop rax
     call do_swapgs
+    pop rbp
     iretq
-
-GLOBAL irq0_handler
