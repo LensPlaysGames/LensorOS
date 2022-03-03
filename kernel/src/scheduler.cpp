@@ -37,7 +37,6 @@ void Scheduler::switch_process(CPUState* cpu) {
 
 void Scheduler::initialize() {
     ProcessQueue = &StartupProcess;
-
     CurrentProcess = &StartupProcess;
     // IRQ handler in assembly needs to increment PIT ticks counter.
     timer_tick = &pit_tick;
@@ -47,7 +46,5 @@ void Scheduler::initialize() {
     StartupProcess.CR3 = Memory::get_active_page_map();
     StartupProcess.Next = nullptr;
     // Install IRQ0 handler found in `scheduler.asm` (over-write default system timer handler).
-
-    // FIXME: SOMETHING IN THIS HANDLER DOESN'T WORK ON VIRTUAL BOX :^<
-    gIDT.install_handler((u64)&irq0_handler, PIC_IRQ0);
+    gIDT.install_handler((u64)irq0_handler, PIC_IRQ0);
 }

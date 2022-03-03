@@ -24,7 +24,7 @@ void PIT::prepare_wait_seconds(double duration) {
 void PIT::wait() {
     u64 tickToWaitTo = Ticks + TicksToWait;
     while (Ticks < tickToWaitTo)
-        asm volatile ("nop");
+        asm volatile ("hlt");
 }
 
 void PIT::start_speaker() {

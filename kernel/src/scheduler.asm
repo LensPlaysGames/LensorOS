@@ -13,6 +13,7 @@ do_swapgs:
 skip_swap:
     ret
 
+    GLOBAL irq0_handler
 irq0_handler:
     push rbp
     mov rbp, rsp
@@ -49,8 +50,8 @@ irq0_handler:
     mov rdi, rsp
     call [scheduler_switch_func]
 ;;; END INTERRUPT
-    mov ax, 0x20                ; 0x20 = PIC_EOI
-    out 0x20, ax                ; 0x20 = PIC1_COMMAND port
+    mov al, 0x20                ; 0x20 = PIC_EOI
+    out 0x20, al                ; 0x20 = PIC1_COMMAND port
 ;;; RESTORE CPU STATE FROM STACK
     add rsp, 8                  ; Eat `rsp` off of stack.
     pop rbx
@@ -73,5 +74,3 @@ irq0_handler:
     call do_swapgs
     pop rbp
     iretq
-
-GLOBAL irq0_handler
