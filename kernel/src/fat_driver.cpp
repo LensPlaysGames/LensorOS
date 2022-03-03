@@ -157,6 +157,7 @@ void FATDriver::read_directory
         if (port->read(firstSectorOfCluster, BR->BPB.NumSectorsPerCluster, clusterContents.get(), clusterSizeInBytes) == false) {
             for (u32 i = 0; i < indentLevel + 1; ++i)
                 UART::out(indent);
+
             UART::out("\033[31mCluster read failed.\033[0m\r\n");
             return;
         }
@@ -189,6 +190,7 @@ void FATDriver::read_directory
             bool is_file = false;
             for (u32 i = 0; i < indentLevel + 1; ++i)
                 UART::out(indent);
+
             if (current->Attributes & FAT_ATTR_READ_ONLY)
                 UART::out("Read-only ");
             if (current->Attributes & FAT_ATTR_HIDDEN)
@@ -226,6 +228,7 @@ void FATDriver::read_directory
                 // Print file size.
                 for (u32 i = 0; i < indentLevel + 3; ++i)
                     UART::out(indent);
+
                 UART::out("File Size: ");
                 UART::out(to_string(current->FileSizeInBytes / 1024 / 1024));
                 UART::out(" MiB (");
@@ -344,4 +347,5 @@ void FATDriver::read_root_directory(AHCI::Port* port, BootRecord* BR, FATType ty
     UART::out("[FATDriver]:\r\n");
     u32 clusterIndex = get_root_directory_cluster(BR, type);
     read_directory(port, BR, type, clusterIndex);
+    UART::out("\r\n");
 }
