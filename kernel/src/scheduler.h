@@ -4,15 +4,16 @@
 #include "integers.h"
 #include "interrupts/interrupts.h"
 
-extern void* scheduler_switch_task;
-extern u64* timer_ticks;
-
-/// Interrupt handler function found in `scheduler.asm`
-extern "C" void irq0_handler();
-
 namespace Memory {
     class PageTable;
 }
+
+struct CPUState;
+/// External symbols for 'scheduler.asm', defined in `scheduler.cpp`
+extern void(*scheduler_switch_task)(CPUState*);
+extern void(*timer_tick)();
+/// Interrupt handler function found in `scheduler.asm`
+extern "C" void irq0_handler();
 
 /* THE KERNEL PROCESS SCHEDULER
  * | Hijack the System Timer Interrupt to switch processes, if needed.

@@ -6,6 +6,7 @@
 #include "uart.h"
 
 PIT gPIT;
+void pit_tick() { gPIT.tick(); }
 
 PIT::PIT() {
     configure_channel(Channel::Zero, Access::HighAndLow, Mode::RateGenerator, PIT_FREQUENCY);
