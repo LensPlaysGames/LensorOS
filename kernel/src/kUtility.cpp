@@ -193,11 +193,11 @@ void kernel_init(BootInfo* bInfo) {
     if (supportCPUID) {
         SystemCPU->set_cpuid_capable();
         UART::out("[kUtil]: \033[32mCPUID is supported\033[0m\r\n");
-        ////char* cpuVendorID = cpuid_string(0);
-        ////SystemCPU->set_vendor_id(cpuVendorID);
-        ////UART::out("  CPU Vendor ID: ");
-        ////UART::out((u8*)SystemCPU->get_vendor_id(), 12);
-        ////UART::out("\r\n");
+        char* cpuVendorID = cpuid_string(0);
+        SystemCPU->set_vendor_id(cpuVendorID);
+        UART::out("  CPU Vendor ID: ");
+        UART::out((u8*)SystemCPU->get_vendor_id(), 12);
+        UART::out("\r\n");
         /* Current functionality of giant `if` statemnt:
          * |- Setup FXSAVE/FXRSTOR
          * |  |- Setup FPU
@@ -211,17 +211,17 @@ void kernel_init(BootInfo* bInfo) {
          *   https://wiki.osdev.org/Detecting_CPU_Topology_(80x86)#Using_CPUID
          */
 
-    //     CPUIDRegisters regs;
-    //     cpuid(1, regs);
+        ////CPUIDRegisters regs;
+        ////cpuid(1, regs);
 
-    //     // Enable FXSAVE/FXRSTOR instructions if CPU supports it.
-    //     // If it is not supported, don't bother trying to support FPU, SSE, etc
-    //     //   as there would be no mechanism to save/load the registers on context switch.
-    //     // TODO: Get logical/physical core bits from CPUID
-    //     // |- 0x0000000b -- Intel
-    //     // |- 0x80000008 -- AMD
-    //     // `- Otherwise: bits are zero, assume single core.
-    //     // TODO: Rewrite task switching code to save/load all supported registers in CPUState.
+    // Enable FXSAVE/FXRSTOR instructions if CPU supports it.
+    // If it is not supported, don't bother trying to support FPU, SSE, etc
+    //   as there would be no mechanism to save/load the registers on context switch.
+    // TODO: Get logical/physical core bits from CPUID
+    // |- 0x0000000b -- Intel
+    // |- 0x80000008 -- AMD
+    // `- Otherwise: bits are zero, assume single core.
+    // TODO: Rewrite task switching code to save/load all supported registers in CPUState.
     //     if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FXSR)) {
     //         SystemCPU->set_fxsr_capable();
     //         asm volatile ("fxsave %0" :: "m"(fxsave_region));
