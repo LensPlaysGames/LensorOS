@@ -52,16 +52,6 @@ void prepare_interrupts() {
     gIDT.flush();
 }
 
-void prepare_pci() {
-    // Memory-mapped ConFiguration Table
-    ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table("MCFG");
-    if (mcfg) {
-        UART::out("[kUtil]: Found Memory-mapped Configuration Space\r\n");
-        PCI::enumerate_pci(mcfg);
-        UART::out("[kUtil]: \033[32mPCI Prepared\033[0m\r\n");
-    }
-}
-
 void draw_boot_gfx() {
     gRend.puts("<<>><<<!===--- You are now booting into LensorOS ---===!>>><<>>");
     // DRAW A FACE :)
@@ -94,9 +84,6 @@ CPUDescription* SystemCPU { nullptr };
 u8 fxsave_region[512] __attribute__((aligned(16)));
 
 void kernel_init(BootInfo* bInfo) {
-
-    (void)bInfo;
-    
     /* 
      *   - Prepare physical/virtual memory
      *     - Initialize Physical Memory Manager
@@ -314,8 +301,14 @@ void kernel_init(BootInfo* bInfo) {
     // Initialize Advanced Configuration and Power Management Interface.
     ACPI::initialize(bInfo->rsdp);
     UART::out("[kUtil]: \033[32mACPI initialized\033[0m\r\n");
-    // Enumerate PCI (find hardware devices).
-    prepare_pci();
+
+    // Find Memory-mapped ConFiguration Table in order to find PCI devices.
+    ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table("MCFG");
+    if (mcfg) {
+        UART::out("[kUtil]: Found Memory-mapped Configuration Space\r\n");
+        PCI::enumerate_pci(mcfg);
+        UART::out("[kUtil]: \033[32mPCI Prepared\033[0m\r\n");
+    }
     
     // Initialize High Precision Event Timer.
     (void)gHPET.initialize();
