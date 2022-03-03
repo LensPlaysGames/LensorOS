@@ -36,18 +36,18 @@ By default this newly created configuration will not be used, so we must also ed
 Find the following lines:
 ```
 x86_64-*-elf*)
-	tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h newlib-stdint.h i386/i386elf.h i386/x86-64.h"
-	;;
+    tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h newlib-stdint.h i386/i386elf.h i386/x86-64.h"
+    ;;
 ```
 And replace them with:
 ```
 x86_64-*-elf*)
-	tmake_file="${tmake_file} i386/t-x86_64-elf" # Add multilib configuration with no red zone
-	tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h newlib-stdint.h i386/i386elf.h i386/x86-64.h"
-	;;
+    tmake_file="${tmake_file} i386/t-x86_64-elf" # Add multilib configuration with no red zone
+    tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h newlib-stdint.h i386/i386elf.h i386/x86-64.h"
+    ;;
 ```
 
-With that, in the coming steps, GCC will build `libgcc` without a red zone (which is required for x86_64).
+With that, in the coming steps, GCC will build `libgcc` without a red zone. This allows the `-mno-red-zone` flag to work correctly.
 
 #### 3.) Setup environment variables
 These variables are used a few times within the next steps, so saving them here prevents simple typos from getting in the way.
@@ -72,9 +72,9 @@ Next, from within that newly created directory, run the configure script supplie
 ```
 
 Flags:
-- `--with-sysroot` tells binutils to enable sysroot support.
+- `--with-sysroot` tells binutils to enable sysroot support (eventually we will add `=/lib` or some other path that points to the OS-supplied libraries).
 - `--disable-nls` disabled binutils' native language support. This cuts down on build size and time.
-- `--disable-werror` allows compilation to continue in the event of a warning.
+- `--disable-werror` allows compilation to continue in the event of a warning (I usually don't get any, but a warning is no reason to stop a 5+ minute compilation).
 
 #### 5.) Build Binutils
 Within the `$HOME/cross/src/build-binutils/` directory, after configuration, run the following:
