@@ -13,17 +13,17 @@
 ---
 
 ### Booting into LensorOS on hardware <a name="hardware-boot"></a>
-###### DISCLAIMER: LensorOS IS IN NO WAY GUARANTEED TO BE 'SAFE'; RUN AT YOUR OWN RISK! (see LICENSE)
+###### DISCLAIMER: LensorOS IS IN NO WAY GUARANTEED TO BE 'SAFE'; RUN AT YOUR OWN RISK! (see [LICENSE](LICENSE))
 
 (pre-compiled binaries coming soon, for now see [the build section](#build))
 
 Ensure you have a USB storage device that is working. Remove all data from the USB. This can be done by formatting, or simply deleting/moving everything off of it.
 
-Next, create a folder called `efi`, then inside that a folder called `boot`. \
-Move `main.efi` from `/gnu-efi/x86_64/bootloader/` directory into the `boot` folder on the USB. \
-Rename `main.efi` in the usb's `boot` folder to `bootx64.efi`.
+Next, create a folder called `EFI`, then inside that a folder called `BOOT`. \
+Move `main.efi` from `/gnu-efi/x86_64/bootloader/` directory into the `BOOT` folder on the USB. \
+Rename `main.efi` in the usb's `BOOT` folder to `bootx64.efi`, as per the UEFI specification.
 
-Finally, navigate back to the root directory of the USB (where the `efi` folder resides). \
+Finally, navigate back to the root directory of the USB (where the `EFI` folder resides). \
 Create a folder. `LensorOS`, then move the following resources into the directory: \
 - `kernel.elf` from `/kernel/bin/`
 - Any `.psf` version 1 font renamed to `dfltfont.psf`
