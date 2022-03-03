@@ -214,93 +214,93 @@ void kernel_init(BootInfo* bInfo) {
         CPUIDRegisters regs;
         cpuid(1, regs);
 
-    // Enable FXSAVE/FXRSTOR instructions if CPU supports it.
-    // If it is not supported, don't bother trying to support FPU, SSE, etc
-    //   as there would be no mechanism to save/load the registers on context switch.
-    // TODO: Get logical/physical core bits from CPUID
-    // |- 0x0000000b -- Intel
-    // |- 0x80000008 -- AMD
-    // `- Otherwise: bits are zero, assume single core.
-    // TODO: Rewrite task switching code to save/load all supported registers in CPUState.
-    if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FXSR)) {
-        SystemCPU->set_fxsr_capable();
-        asm volatile ("fxsave %0" :: "m"(fxsave_region));
-        UART::out("  \033[32mFXSAVE/FXRSTOR Enabled\033[0m\r\n");
-        SystemCPU->set_fxsr_enabled();
-        // If FXSAVE/FXRSTOR is supported, setup FPU.
-        if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FPU)) {
-            SystemCPU->set_fpu_capable();
-            // FPU supported, ensure it is enabled.
-            /* FPU Relevant Control Register Bits
-             * |- CR0.EM (bit 02) -- If set, FPU and vector operations will cause a #UD.
-             * `- CR0.TS (bit 03) -- Task switched. If set, all FPU and vector ops will cause a #NM.
-             */
-            asm volatile ("mov %%cr0, %%rdx\n"
-                          "mov $0b1100, %%ax\n"
-                          "not %%ax\n"
-                          "and %%ax, %%dx\n"
-                          "mov %%rdx, %%cr0\n"
-                          "fninit\n"
-                          ::: "rax", "rdx");
-            UART::out("  \033[32mFPU Enabled\033[0m\r\n");
-            SystemCPU->set_fpu_enabled();
+        // Enable FXSAVE/FXRSTOR instructions if CPU supports it.
+        // If it is not supported, don't bother trying to support FPU, SSE, etc
+        //   as there would be no mechanism to save/load the registers on context switch.
+        // TODO: Get logical/physical core bits from CPUID
+        // |- 0x0000000b -- Intel
+        // |- 0x80000008 -- AMD
+        // `- Otherwise: bits are zero, assume single core.
+        // TODO: Rewrite task switching code to save/load all supported registers in CPUState.
+        if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FXSR)) {
+            SystemCPU->set_fxsr_capable();
+            asm volatile ("fxsave %0" :: "m"(fxsave_region));
+            UART::out("  \033[32mFXSAVE/FXRSTOR Enabled\033[0m\r\n");
+            SystemCPU->set_fxsr_enabled();
+            // If FXSAVE/FXRSTOR is supported, setup FPU.
+            if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FPU)) {
+                SystemCPU->set_fpu_capable();
+                // FPU supported, ensure it is enabled.
+                /* FPU Relevant Control Register Bits
+                 * |- CR0.EM (bit 02) -- If set, FPU and vector operations will cause a #UD.
+                 * `- CR0.TS (bit 03) -- Task switched. If set, all FPU and vector ops will cause a #NM.
+                 */
+                asm volatile ("mov %%cr0, %%rdx\n"
+                              "mov $0b1100, %%ax\n"
+                              "not %%ax\n"
+                              "and %%ax, %%dx\n"
+                              "mov %%rdx, %%cr0\n"
+                              "fninit\n"
+                              ::: "rax", "rdx");
+                UART::out("  \033[32mFPU Enabled\033[0m\r\n");
+                SystemCPU->set_fpu_enabled();
+            }
+            else {
+                // FPU not supported, ensure it is disabled.
+                asm volatile ("mov %%cr0, %%rdx\n"
+                              "or $0b1100, %%dx\n"
+                              "mov %%rdx, %%cr0\n"
+                              ::: "rdx");
+                UART::out("  \033[31mFPU Not Supported\033[0m\r\n");
+            }
+            // If FXSAVE/FXRSTOR are supported and present, setup SSE.
+            if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)) {
+                SystemCPU->set_sse_capable();
+                /* Enable SSE
+                 * |- Clear CR0.EM bit   (bit 2  -- coprocessor emulation) 
+                 * |- Set CR0.MP bit     (bit 1  -- coprocessor monitoring)
+                 * |- Set CR4.OSFXSR bit (bit 9  -- OS provides FXSAVE/FXRSTOR functionality)
+                 * `- Set CR4.OSXMMEXCPT (bit 10 -- OS provides #XM exception handler)
+                 */
+                asm volatile ("mov %%cr0, %%rax\n"
+                              "and $0b1111111111110011, %%ax\n"
+                              "or $0b10, %%ax\n"
+                              "mov %%rax, %%cr0\n"
+                              "mov %%cr4, %%rax\n"
+                              "or $0b11000000000, %%rax\n"
+                              "mov %%rax, %%cr4\n"
+                              ::: "rax");
+                UART::out("  \033[32mSSE Enabled\033[0m\r\n");
+                SystemCPU->set_sse_enabled();
+            }
+            else UART::out("  \033[31mSSE Not Supported\033[0m\r\n");
         }
-        else {
-            // FPU not supported, ensure it is disabled.
-            asm volatile ("mov %%cr0, %%rdx\n"
-                          "or $0b1100, %%dx\n"
-                          "mov %%rdx, %%cr0\n"
-                          ::: "rdx");
-            UART::out("  \033[31mFPU Not Supported\033[0m\r\n");
+        // Enable XSAVE feature set if CPU supports it.
+        if (regs.C & static_cast<u32>(CPUID_FEATURE::ECX_XSAVE)) {
+            SystemCPU->set_xsave_capable();
+            // Enable XSAVE feature set
+            // `- Set CR4.OSXSAVE bit (bit 18  -- OS provides )
+            asm volatile ("mov %cr4, %rax\n"
+                          "or $0b1000000000000000000, %rax\n"
+                          "mov %rax, %cr4\n");
+            UART::out("  \033[32mXSAVE Enabled\033[0m\r\n");
+            SystemCPU->set_xsave_enabled();
+            // If SSE, AND XSAVE are supported, setup AVX feature set.
+            if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)
+                && regs.C & static_cast<u32>(CPUID_FEATURE::ECX_AVX))
+            {
+                SystemCPU->set_avx_capable();
+                asm volatile ("xor %%rcx, %%rcx\n"
+                              "xgetbv\n"
+                              "or $0b111, %%eax\n"
+                              "xsetbv\n"
+                              ::: "rax", "rcx", "rdx");
+                UART::out("  \033[32mAVX Enabled\033[0m\r\n");
+                SystemCPU->set_avx_enabled();
+            }
+            else UART::out("  \033[31mAVX Not Supported\033[0m\r\n");
         }
-        // If FXSAVE/FXRSTOR and FPU are supported and present, setup SSE.
-    ////if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)) {
-    ////    SystemCPU->set_sse_capable();
-    ////    /* Enable SSE
-    ////     * |- Clear CR0.EM bit   (bit 2  -- coprocessor emulation) 
-    ////     * |- Set CR0.MP bit     (bit 1  -- coprocessor monitoring)
-    ////     * |- Set CR4.OSFXSR bit (bit 9  -- OS provides FXSAVE/FXRSTOR functionality)
-    ////     * `- Set CR4.OSXMMEXCPT (bit 10 -- OS provides #XM exception handler)
-    ////     */
-    ////    asm volatile ("mov %%cr0, %%rax\n"
-    ////                  "and $0b1111111111110011, %%ax\n"
-    ////                  "or $0b10, %%ax\n"
-    ////                  "mov %%rax, %%cr0\n"
-    ////                  "mov %%cr4, %%rax\n"
-    ////                  "or $0b11000000000, %%rax\n"
-    ////                  "mov %%rax, %%cr4\n"
-    ////                  ::: "rax");
-    ////    UART::out("  \033[32mSSE Enabled\033[0m\r\n");
-    ////    SystemCPU->set_sse_enabled();
-    ////}
-    ////else UART::out("  \033[31mSSE Not Supported\033[0m\r\n");
-    }
-    //     // Enable XSAVE feature set if CPU supports it.
-    //     if (regs.C & static_cast<u32>(CPUID_FEATURE::ECX_XSAVE)) {
-    //         SystemCPU->set_xsave_capable();
-    //         // Enable XSAVE feature set
-    //         // `- Set CR4.OSXSAVE bit (bit 18  -- OS provides )
-    //         asm volatile ("mov %cr4, %rax\n"
-    //                       "or $0b1000000000000000000, %rax\n"
-    //                       "mov %rax, %cr4\n");
-    //         UART::out("  \033[32mXSAVE Enabled\033[0m\r\n");
-    //         SystemCPU->set_xsave_enabled();
-    //         // If SSE, AND XSAVE are supported, setup AVX feature set.
-    //         if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)
-    //             && regs.C & static_cast<u32>(CPUID_FEATURE::ECX_AVX))
-    //         {
-    //             SystemCPU->set_avx_capable();
-    //             asm volatile ("xor %%rcx, %%rcx\n"
-    //                           "xgetbv\n"
-    //                           "or $0b111, %%eax\n"
-    //                           "xsetbv\n"
-    //                           ::: "rax", "rbx", "rdx");
-    //             UART::out("  \033[32mAVX Enabled\033[0m\r\n");
-    //             SystemCPU->set_avx_enabled();
-    //         }
-    //         else UART::out("  \033[31mAVX Not Supported\033[0m\r\n");
-    //     }
-    //     else UART::out("  \033[31mXSAVE Not Supported\033[0m\r\n");
+        else UART::out("  \033[31mXSAVE Not Supported\033[0m\r\n");
     }
     
     // TODO: Parse CPUs from ACPI MADT table. For now only support single core.
