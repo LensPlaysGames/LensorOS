@@ -6,10 +6,10 @@ set(CMAKE_C_COMPILER   x86_64-lensoros-elf-gcc)
 set(CMAKE_CXX_COMPILER x86_64-lensoros-elf-g++)
 
 # Export compilation database in JSON format.
+# This gives language servers like `clangd` all the info they need.
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
 # Output files to `kernel/bin` directory.
-# This gives language servers like `clangd` all the info they need.
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 
 add_library(
