@@ -4,8 +4,9 @@ This file outlines the dependencies, usage, and functionality of the scripts wit
 ### Table of Contents:
 - [mkimg.sh](#mkimg-sh)
 - [mkiso.sh](#mkiso-sh)
-- [startup.nsh](#startup-nsh)
 - [visualize_includes.sh](#visualize-includes-sh)
+- [startup.nsh](#startup-nsh)
+- [kernel.ld](#kernel-ld)
 
 ---
 
@@ -54,11 +55,6 @@ Dependencies:
 
 ---
 
-### `startup.nsh` <a name="startup-nsh"></a>
-This is a file used by `mkimg.sh` to ensure the bootloader is ran when the computer boots from the generated image.
-
----
-
 ### `visualize_includes.sh` <a name="visualize-includes-sh"></a>
 Generate visual representations (PNG images) of the include dependencies present within the LensorOS kernel. This script may take some time to complete (>1min). It works by downloading a Perl script `cinclude2dot.pl`, and running that to generate the dependency data in a format Graphviz understands: `.dot`. With this `.dot` file, it then generates PNG images using two different visual filters in Graphviz: one for a directed graph and one for an undirected graph. All of the generated files may be found in the `/kernel/include_visualization` directory.
 
@@ -78,3 +74,13 @@ Dependencies:
 - [Perl](https://www.perl.org/)
   - Default on most systems (Windows, GNU/Linux)
 - [Dot/SFDP](https://www.graphviz.org/download/)
+
+---
+
+### `startup.nsh` <a name="startup-nsh"></a>
+This is a file used by `mkimg.sh` to ensure the bootloader is ran when the computer boots from the generated image.
+
+---
+
+### `kernel.ld` <a name="kernel-ld"></a>
+This linker script is used by the LensorOS toolchain when compiling the LensorOS kernel.
