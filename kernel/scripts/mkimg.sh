@@ -1,8 +1,9 @@
 #!/bin/bash
 OSName="LensorOS"
 ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-BuildDirectory="$ScriptDirectory/bin"
-BootloaderEFI="$ScriptDirectory/../gnu-efi/x86_64/bootloader/main.efi"
+KernelDirectory="$ScriptDirectory/.."
+BuildDirectory="$KernelDirectory/bin"
+BootloaderEFI="$KernelDirectory/../gnu-efi/x86_64/bootloader/main.efi"
 
 run(){
     set -x
