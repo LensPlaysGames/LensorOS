@@ -149,7 +149,7 @@ Kernel PUBLIC
 )
 target_link_options(
 Kernel PUBLIC
-    -T ${CMAKE_SOURCE_DIR}/kernel.ld
+    -T ${CMAKE_SOURCE_DIR}/scripts/kernel.ld
     -static
     -Bsymbolic
     -nostdlib
