@@ -20,11 +20,11 @@ namespace Keyboard {
 
     class BasicTextRenderer {
     public:
-        uVector2 SizeInCharacters;
-        uVector2 DrawPosition;
-        uVector2 CachedDrawPosition;
-        uVector2 CursorPosition;
-        uVector2 LastCursorPosition;
+        Vector2<u64> SizeInCharacters;
+        Vector2<u64> DrawPosition;
+        Vector2<u64> CachedDrawPosition;
+        Vector2<u64> CursorPosition;
+        Vector2<u64> LastCursorPosition;
         KeyboardState State;
         bool GotE0 { false };
 
@@ -62,13 +62,14 @@ namespace Keyboard {
             else CursorPosition.x += amt;
         }
 
-        void set_cursor_from_pixel_position(uVector2 pos) {
+        void set_cursor_from_pixel_position(Vector2<u64> pos) {
             CursorPosition.x = pos.x / 8;
             CursorPosition.y = pos.y / gRend.Font->PSF1_Header->CharacterSize;
         }
 
         void update_draw_position() {
-            DrawPosition = uVector2(CursorPosition.x * 8, CursorPosition.y * gRend.Font->PSF1_Header->CharacterSize);
+            DrawPosition.x = CursorPosition.x * 8;
+            DrawPosition.y = CursorPosition.y * gRend.Font->PSF1_Header->CharacterSize;
         }
 
         void handle_scancode(u8 code) {

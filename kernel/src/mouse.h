@@ -23,7 +23,7 @@ void draw_mouse_cursor();
 //   3 = 0 + scroll data (4th byte)
 //   4 = 3 + 4th button, 5th button
 extern u8 gMouseID;
-extern uVector2 gMousePosition;
-extern uVector2 gOldMousePosition;
+extern Vector2<u64> gMousePosition;
+extern Vector2<u64> gOldMousePosition;
 
 #endif

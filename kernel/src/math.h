@@ -1,37 +1,45 @@
 #ifndef LENSOR_OS_MATH_H
 #define LENSOR_OS_MATH_H
 
-/// Vector with a fixed width of two unsigned 64-bit integer numbers.
-struct uVector2 {
+#include "integers.h"
+
+template<typename T>
+struct Vector2 {
+    T x;
+    T y;
+};
+
+template<>
+struct Vector2<u64> {
     u64 x;
     u64 y;
 
-    uVector2() {
+    Vector2() {
         x = 0;
         y = 0;
     }
 
-    uVector2(u64 _x, u64 _y) {
+    Vector2(u64 _x, u64 _y) {
         x = _x;
         y = _y;
     }
 
-    friend inline bool operator == (const uVector2& lhs, const uVector2& rhs) {
+    friend inline bool operator == (const Vector2& lhs, const Vector2& rhs) {
         return (lhs.x == rhs.x && lhs.y == rhs.y);
     }
-    friend inline bool operator != (const uVector2& lhs, const uVector2& rhs) {
+    friend inline bool operator != (const Vector2& lhs, const Vector2& rhs) {
         return !(lhs == rhs);
     }
-    friend inline uVector2 operator + (const uVector2& lhs, const uVector2& rhs) {
+    friend inline Vector2 operator + (const Vector2& lhs, const Vector2& rhs) {
         return {lhs.x + rhs.x, lhs.y + rhs.y};
     }
-    friend inline uVector2 operator - (const uVector2& lhs, const uVector2& rhs) {
+    friend inline Vector2 operator - (const Vector2& lhs, const Vector2& rhs) {
         return {lhs.x - rhs.x, lhs.y - rhs.y};
     }
-    friend inline uVector2 operator * (const uVector2& lhs, const uVector2& rhs) {
+    friend inline Vector2 operator * (const Vector2& lhs, const Vector2& rhs) {
         return {lhs.x * rhs.x, lhs.y * rhs.y};
     }
-    friend inline uVector2 operator / (const uVector2& lhs, const uVector2& rhs) {
+    friend inline Vector2 operator / (const Vector2& lhs, const Vector2& rhs) {
         return {lhs.x / rhs.x, lhs.y / rhs.y};
     }
 };

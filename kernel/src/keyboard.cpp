@@ -1,7 +1,9 @@
 #include "keyboard.h"
 
 #include "basic_renderer.h"
+#include "integers.h"
 #include "keyboard_scancode_translation.h"
+#include "math.h"
 
 namespace Keyboard {
     BasicTextRenderer gText;
@@ -15,8 +17,8 @@ namespace Keyboard {
         CachedDrawPosition = gRend.DrawPos;
 
         // Calculate rectangle that needs to be updated (in characters).
-        uVector2 RefreshPosition = LastCursorPosition + uVector2(0, 1);
-        uVector2 RefreshSize { 1, 1 };
+        Vector2<u64> RefreshPosition = Vector2<u64>(0, 1) + LastCursorPosition;
+        Vector2<u64> RefreshSize = Vector2<u64>(1, 1);
         if (CursorPosition.x > RefreshPosition.x)
             RefreshSize.x += CursorPosition.x - RefreshPosition.x;
         else if (CursorPosition.x < RefreshPosition.x) {
@@ -30,13 +32,13 @@ namespace Keyboard {
             RefreshPosition.y = CursorPosition.y;
         }
         // Convert characters to pixels.
-        RefreshPosition = RefreshPosition * uVector2(8, gRend.Font->PSF1_Header->CharacterSize);
-        RefreshSize = RefreshSize * uVector2(8, gRend.Font->PSF1_Header->CharacterSize);
+        RefreshPosition = RefreshPosition * Vector2<u64>(8, gRend.Font->PSF1_Header->CharacterSize);
+        RefreshSize = RefreshSize * Vector2<u64>(8, gRend.Font->PSF1_Header->CharacterSize);
 
         // Skip first iteration in order to accurately read what is under the cursor before it is drawn.
         static bool skip = true;
         if (skip == false) {
-            gRend.DrawPos = uVector2(LastCursorPosition.x * 8, LastCursorPosition.y * gRend.Font->PSF1_Header->CharacterSize);
+            gRend.DrawPos = Vector2<u64>(LastCursorPosition.x * 8, LastCursorPosition.y * gRend.Font->PSF1_Header->CharacterSize);
             gRend.DrawPos.y = gRend.DrawPos.y + gRend.Font->PSF1_Header->CharacterSize;
             gRend.drawpix({KBCursorSizeX, KBCursorSizeY}, &PixelsUnderKBCursor[0]);
         }

@@ -3,13 +3,15 @@
 #include "random_lfsr.h"
 #include "basic_renderer.h"
 #include "cstr.h"
+#include "integers.h"
 #include "io.h"
+#include "math.h"
 #include "uart.h"
 
 // globally accessible mouse information
 u8 gMouseID;
-uVector2 gMousePosition = {0, 0};
-uVector2 gOldMousePosition = {0, 0};
+Vector2<u64> gMousePosition = {0, 0};
+Vector2<u64> gOldMousePosition = {0, 0};
 
 void mouse_wait() {
     u64 timeout = 100000;
@@ -120,10 +122,10 @@ u32 pixels_under_mouse_cursor[MouseCursorSize * MouseCursorSize + 1];
 
 // DRAW MOUSE CURSOR AT gMousePosition
 void DrawMouseCursor() {
-    uVector2 cachedPos = gRend.DrawPos;
+    Vector2<u64> cachedPos = gRend.DrawPos;
 
-    uVector2 refreshPos = gOldMousePosition;
-    uVector2 refreshSize = {MouseCursorSize, MouseCursorSize};
+    Vector2<u64> refreshPos = gOldMousePosition;
+    Vector2<u64> refreshSize = {MouseCursorSize, MouseCursorSize};
 
     if (gMousePosition.x > refreshPos.x) {
         refreshSize.x += gMousePosition.x - refreshPos.x;
@@ -166,10 +168,10 @@ void process_mouse_packet() {
         return;
     // MOUSE BUTTONS
     // Left Mouse Button (LMB)
-    const uVector2 DrawSize {2, 2};
+    const Vector2<u64> DrawSize {2, 2};
     if (mouse_packet[0] & PS2_LEFT_BUTTON) {
         // Draw a rectangle of size `DrawSize` with color of `DrawColor`
-        uVector2 cachedPos = gRend.DrawPos;
+        Vector2<u64> cachedPos = gRend.DrawPos;
         gRend.DrawPos = gMousePosition - DrawSize;
         gRend.drawrect(DrawSize, DrawColor);
         gRend.swap({DrawSize}, {gRend.DrawPos});

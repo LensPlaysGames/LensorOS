@@ -1,6 +1,8 @@
 #include "basic_renderer.h"
 
 #include "cstr.h"
+#include "integers.h"
+#include "math.h"
 #include "memory/physical_memory_manager.h"
 #include "memory/virtual_memory_manager.h"
 #include "uart.h"
@@ -61,7 +63,7 @@ inline void BasicRenderer::clamp_draw_position() {
         DrawPos.y = Target->PixelHeight;
 }
 
-void BasicRenderer::swap(uVector2 position, uVector2 size) {
+void BasicRenderer::swap(Vector2<u64> position, Vector2<u64> size) {
     // Only swap what is within the bounds of the framebuffer.
     if (position.x > Target->PixelWidth
         || position.y > Target->PixelHeight) { return; }
@@ -116,7 +118,7 @@ void BasicRenderer::crlf(u32 offset) {
     };
 }
 
-void BasicRenderer::drawrect(uVector2 size, u32 color) {
+void BasicRenderer::drawrect(Vector2<u64> size, u32 color) {
     clamp_draw_position();
     u32 diffX = Target->PixelWidth - DrawPos.x;
     u32 diffY = Target->PixelHeight - DrawPos.y;
@@ -133,7 +135,7 @@ void BasicRenderer::drawrect(uVector2 size, u32 color) {
 }
 
 /// Read `size` of pixel framebuffer starting at `DrawPos` into `buffer`.
-void BasicRenderer::readpix(uVector2 size, u32* buffer) {
+void BasicRenderer::readpix(Vector2<u64> size, u32* buffer) {
     if (buffer == nullptr)
         return;
     clamp_draw_position();
@@ -154,7 +156,7 @@ void BasicRenderer::readpix(uVector2 size, u32* buffer) {
 }
 
 /// Draw `size` of `pixels` linear buffer starting at `DrawPos`.
-void BasicRenderer::drawpix(uVector2 size, u32* pixels) {
+void BasicRenderer::drawpix(Vector2<u64> size, u32* pixels) {
     if (pixels == nullptr)
         return;
     clamp_draw_position();
@@ -176,7 +178,7 @@ void BasicRenderer::drawpix(uVector2 size, u32* pixels) {
 
 /// Draw `size` of a bitmap `bitmap`, using passed color `color`
 ///   where bitmap is `1` and `BackgroundColor` where it is `0`.
-void BasicRenderer::drawbmp(uVector2 size, u8* bitmap, u32 color) {
+void BasicRenderer::drawbmp(Vector2<u64> size, u8* bitmap, u32 color) {
     if (bitmap == nullptr)
         return;
     clamp_draw_position();
@@ -199,7 +201,7 @@ void BasicRenderer::drawbmp(uVector2 size, u8* bitmap, u32 color) {
 }
 
 /// Draw `size` of a bitmap `bitmap`, using passed color `color` where bitmap is `1`.
-void BasicRenderer::drawbmpover(uVector2 size, u8* bitmap, u32 color) {
+void BasicRenderer::drawbmpover(Vector2<u64> size, u8* bitmap, u32 color) {
     if (bitmap == nullptr)
         return;
     clamp_draw_position();
@@ -246,7 +248,7 @@ void BasicRenderer::putchar(char c, u32 color) {
         crlf();
 }
 
-void BasicRenderer::clear(uVector2 position, uVector2 size) {
+void BasicRenderer::clear(Vector2<u64> position, Vector2<u64> size) {
     // Only clear what is within the bounds of the framebuffer.
     if (position.x > Target->PixelWidth
         || position.y > Target->PixelHeight) { return; }
@@ -269,7 +271,7 @@ void BasicRenderer::clear(uVector2 position, uVector2 size) {
         renderBaseAddress += Render->PixelsPerScanLine;
     }
 }
-void BasicRenderer::clear(uVector2 position, uVector2 size, u32 color) {
+void BasicRenderer::clear(Vector2<u64> position, Vector2<u64> size, u32 color) {
     BackgroundColor = color;
     clear(position, size);
 }

@@ -41,7 +41,7 @@ public:
     Framebuffer* Render          {nullptr};
     Framebuffer* Target          {nullptr};
     PSF1_FONT*   Font            {nullptr};
-    uVector2     DrawPos         {0, 0};
+    Vector2<u64> DrawPos         {0, 0};
     u32 BackgroundColor {0x00000000};
 
     BasicRenderer() {}
@@ -56,9 +56,9 @@ public:
     }
 
     /// UPDATE SIZE of MEMORY CONTENTS OF RENDER FROM TARGET AT POSITION
-    void swap(uVector2 position, uVector2 size);
+    void swap(Vector2<u64> position, Vector2<u64> size);
 
-    void readpix(uVector2 size, u32* buffer);
+    void readpix(Vector2<u64> size, u32* buffer);
     
     /// Change every pixel in the target framebuffer to BackgroundColor.
     void clear() {
@@ -79,8 +79,8 @@ public:
         clear();
     }
 
-    void clear(uVector2 position, uVector2 size);
-    void clear(uVector2 position, uVector2 size, u32 color);
+    void clear(Vector2<u64> position, Vector2<u64> size);
+    void clear(Vector2<u64> position, Vector2<u64> size, u32 color);
 
     // Remove a single character behind DrawPos.
     void clearchar();
@@ -94,14 +94,14 @@ public:
     void crlf(u32 offset);
 
     // Draw `size` of rectangle as `color`.
-    void drawrect(uVector2 size, u32 color = 0xffffffff);
+    void drawrect(Vector2<u64> size, u32 color = 0xffffffff);
     // Draw `size` of `pixels` buffer into target framebuffer.
-    void drawpix(uVector2 size, u32* pixels);
+    void drawpix(Vector2<u64> size, u32* pixels);
     // Draw `size` of `bitmap` as `color`.
-    void drawbmp(uVector2 size, u8* bitmap, u32 color = 0xffffffff);
+    void drawbmp(Vector2<u64> size, u8* bitmap, u32 color = 0xffffffff);
     // Draw `size` of `bitmap` as `color`, but don't clear `0` to background color.
     // This allows the use of bitmaps acting on alpha as well as color.
-    void drawbmpover(uVector2 size, u8* bitmap, u32 color = 0xffffffff);
+    void drawbmpover(Vector2<u64> size, u8* bitmap, u32 color = 0xffffffff);
     // Use PSF1 bitmap font to draw a character to the screen (don't advance).
     void drawchar(char c, u32 color = 0xffffffff);
     void drawcharover(char c, u32 color = 0xffffffff);
