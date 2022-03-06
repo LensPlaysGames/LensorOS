@@ -1,8 +1,8 @@
 #!/bin/bash
 OSName="LensorOS"
 ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-BuildDirectory="$ScriptDirectory/bin"
-OVMFDirectory="$ScriptDirectory/../OVMFbin"
+BuildDirectory="$ScriptDirectory/../bin"
+OVMFDirectory="$ScriptDirectory/../../OVMFbin"
 qemu-system-x86_64 \
     -s -S \
     -d cpu_reset \

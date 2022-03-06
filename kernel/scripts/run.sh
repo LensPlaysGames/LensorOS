@@ -1,7 +1,7 @@
 #!/bin/bash
 ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-BuildDirectory="$ScriptDirectory/bin"
-OVMFDirectory="$ScriptDirectory/../OVMFbin"
+BuildDirectory="$ScriptDirectory/../bin"
+OVMFDirectory="$ScriptDirectory/../../OVMFbin"
 if ! [ -f $OVMFDirectory/OVMF_VARS_LensorOS.fd ] ; then
     cp $OVMFDirectory/OVMF_VARS-pure-efi.fd $OVMFDirectory/OVMF_VARS_LensorOS.fd
 fi

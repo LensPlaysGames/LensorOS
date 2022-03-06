@@ -1,5 +1,5 @@
-set BuildDirectory=%0/../bin
-set OVMFbin=%0/../../OVMFbin
+set BuildDirectory=%0/../../bin
+set OVMFbin=%0/../../../OVMFbin
 set BuildDirectory=%BuildDirectory:"=%
 set OVMFbin=%OVMFbin:"=%
 IF NOT EXIST %OVMFbin%/OVMF_VARS_LensorOS.fd cp %OVMFbin%/OVMF_VARS-pure-efi.fd %OVMFbin%/OVMF_VARS_LensorOS.fd

@@ -2,12 +2,20 @@
 This file outlines the dependencies, usage, and functionality of the scripts within this directory.
 
 ### Table of Contents:
-- [mkimg.sh](#mkimg-sh)
-- [mkiso.sh](#mkiso-sh)
-- [visualize_includes.sh](#visualize-includes-sh)
-- [startup.nsh](#startup-nsh)
-- [kernel.ld](#kernel-ld)
-
+- Generating Boot Media
+  - [mkimg.sh](#mkimg-sh)
+  - [mkiso.sh](#mkiso-sh)
+- Linux-only:
+  - [run.sh](#run-sh)
+  - [rundbg.sh](#rundbg-sh)
+- Windows-only:
+  - [run.bat](#run-bat)
+  - [rundbg.bat](#rundbg-bat)
+- Miscellaneous:
+  - [visualize_includes.sh](#visualize-includes-sh)
+  - [startup.nsh](#startup-nsh)
+  - [kernel.ld](#kernel-ld)
+  
 ---
 
 ### `mkimg.sh` <a name="mkimg-sh"></a>
@@ -52,6 +60,67 @@ Dependencies:
   - On Debian distributions: `sudo apt install xorriso`
   - Pre-built Windows executables can be found [in this repository](https://github.com/PeyTy/xorriso-exe-for-windows)
   - [Source Code](https://www.gnu.org/software/xorriso/xorriso-1.5.4.pl02.tar.gz)
+
+---
+
+### `run.sh` <a name="run-sh"></a>
+Launch QEMU, a virtual machine, with the proper command line flags and options to boot into LensorOS.
+
+NOTE: This script assumes that a `LensorOS.img` has been built with the [mkimg.sh](#mkimg-sh) script.
+
+Invocation:
+```bash
+bash run.sh
+```
+
+Dependencies:
+- [QEMU x86_64](https://www.qemu.org/download/)
+
+---
+
+### `rundbg.sh` <a name="rundbg-sh"></a>
+Do the same as the [run.sh](#run-sh) script, but instruct QEMU to halt CPU execution until the GNU DeBugger (GDB) has been attached.
+
+Invocation:
+```bash
+bash rundbg.sh
+```
+
+Dependencies:
+- [QEMU x86_64](https://www.qemu.org/download/)
+
+---
+
+### `run.bat` <a name="run-bat"></a>
+Launch QEMU, a virtual machine, with the proper command line flags and options to boot into LensorOS.
+
+Mainly included for users of the [Windows Terminal](https://github.com/Microsoft/Terminal), as it understands ANSI terminal color codes in PowerShell. By invoking this script from that terminal's PowerShell (seen below), the terminal output from LensorOS becomes legible, and colorful (as it looks on Linux by default).
+
+If you are not interested in terminal debug output, you may simply double click this batch file to launch QEMU in `cmd.exe`, which does not understand ANSI terminal escape sequences, leaving the terminal output quite mangled (although everything will still work just fine).
+
+NOTE: This script assumes that a `LensorOS.img` has been built with the [mkimg.sh](#mkimg-sh) script.
+
+Invocation (PowerShell):
+```powershell
+& '.\run.bat'
+```
+
+Dependencies:
+- [QEMU x86_64](https://www.qemu.org/download/)
+
+---
+
+### `rundbg.bat` <a name="rundbg-bat"></a>
+Do the same as the [run.bat](#run-bat) script, but instruct QEMU to halt CPU execution until the GNU DeBugger (GDB) has been attached.
+
+Invocation:
+```bash
+bash rundbg.sh
+```
+
+Dependencies:
+- [QEMU x86_64](https://www.qemu.org/download/)
+
 
 ---
 
