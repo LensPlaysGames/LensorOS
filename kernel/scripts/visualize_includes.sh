@@ -24,7 +24,7 @@ if [ -z "$IncludePaths" ] ; then
 fi
 
 # Download the perl script `cinclude2dot.pl` if it is not already present.
-if ! [ -f $ScriptDirectory/cinclude2dot.pl ] ; then
+if ! [ -f $VisualsDirectory/cinclude2dot.pl ] ; then
 	echo "    Downloading perl script"
 	curl https://www.flourish.org/cinclude2dot/cinclude2dot > $VisualsDirectory/cinclude2dot.pl
 fi
