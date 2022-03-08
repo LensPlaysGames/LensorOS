@@ -3,13 +3,12 @@
 ;;; Very useful resource: https://nfil.dev/kernel/rust/coding/rust-kernel-to-userspace-and-back/
 ;;; (Check wayback machine if link is dead, I've archived it)
 
-    extern userland_function    ; Pointer to a function that will execute in user mode.
     extern tss                  ; Pointer to 64-bit TSS Entry structure.
 
     ;; TODO: Page Table Swap (or at least TLB)
 jump_to_userland_function:
     cli
-
+    
     mov rcx, rsp                ; Store kernel stack pointer to return to.
     
     mov rax, rcx
@@ -18,25 +17,25 @@ jump_to_userland_function:
     shr rax, 32                 ; `eax` = high 32 bits of stack pointer.
     mov DWORD [rbx + 8], eax    ; Store high 32 bits of stack pointer in `h_RSP0` field of TSS.
     
-    mov ax, 0x30
-    ltr ax
+    mov ax, 0x30                ; `ax` = GDT offset of TSS Entry.
+    ltr ax                      ; Load GDT offset into task register (TSSR).
 
-    xor rax, rax
-    mov ax, 0x28 | 0b11
+    xor rax, rax                ; Zero out entire 64-bit 'A' register.
+    mov ax, 0x28 | 0b11         ; Store Ring 3 User Data GDT offset in segment registers.
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
     
-    mov rax, rcx
-    push 0x28 | 0b11
-    push rax
-    pushfq
-    pop rax
-    or rax, 0b1000000000
-    push rax
-    push 0x20 | 0b11
-    push QWORD [userland_function]
+    mov rax, rcx                ; Store kernel stack pointer to return to.
+    push 0x28 | 0b11            ; GDT Offset of Ring 3 User Data entry.
+    push rax                    ; Stack pointer to return to.
+    pushfq                      ; Store the CPU Flags register on the stack.
+    pop rax                     ; `rax` = CPU Flags register.
+    or rax, 0b1000000000        ; Re-enable interrupts when after jump.
+    push rax                    ; Set CPU Flags state to this after `iretq` jumps.
+    push 0x20 | 0b11            ; GDT Offset of Ring 3 User Code entry.
+    push rdi                    ; Address to return to
     iretq
 
 GLOBAL jump_to_userland_function

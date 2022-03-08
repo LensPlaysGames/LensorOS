@@ -182,9 +182,6 @@ void test_userland_function() {
     }
 }
 
-// 'userland_function' USED IN 'userswitch.asm' AS EXTERNAL SYMBOL.
-void* userland_function;
-
 extern "C" void _start(BootInfo* bInfo) {
     // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
     kernel_init(bInfo);
@@ -206,8 +203,7 @@ extern "C" void _start(BootInfo* bInfo) {
     /// END GPLv3 LICENSE REQUIREMENT.
 
     // USERLAND SWITCH TESTING
-    userland_function = (void*)test_userland_function;
-    //jump_to_userland_function();
+    jump_to_userland_function((void*)test_userland_function);
 
     // FIXME FIXME FIXME
     // NULL DE-REFERENCE TESTING

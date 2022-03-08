@@ -35,6 +35,6 @@ namespace TSS {
     void initialize();
 }
 
-extern "C" void jump_to_userland_function(void);
+extern "C" void jump_to_userland_function(void* functionAddress);
 
 #endif
