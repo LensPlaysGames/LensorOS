@@ -27,9 +27,9 @@ jump_to_userland_function:
     mov fs, ax
     mov gs, ax
     
-    mov rax, rcx                ; Store kernel stack pointer to return to.
+    mov rax, rcx
     push 0x28 | 0b11            ; GDT Offset of Ring 3 User Data entry.
-    push rax                    ; Stack pointer to return to.
+    push rax
     pushfq                      ; Store the CPU Flags register on the stack.
     pop rax                     ; `rax` = CPU Flags register.
     or rax, 0b1000000000        ; Re-enable interrupts when after jump.
