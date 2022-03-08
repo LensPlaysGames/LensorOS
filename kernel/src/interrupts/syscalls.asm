@@ -63,11 +63,9 @@ system_call_handler_asm:
     pop r15
     pop fs
     pop gs
-    add rsp, 8                  ; Eat `rax` off the stack
+    add rsp, 8                  ; Eat `rax` off the stack.
     call do_swapgs
+invalid_system_call:            ; If system call code is invalid, jump directly to exit.
     iretq                       ; iretq -> interrupt return quad word (64 bit)
-
-invalid_system_call:            ; If system call code is invalid, do nothing
-    iretq
 
 GLOBAL system_call_handler_asm
