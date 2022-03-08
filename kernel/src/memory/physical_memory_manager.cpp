@@ -80,6 +80,9 @@ namespace Memory {
         // One page is easier to allocate than a run of contiguous pages.
         if (numberOfPages == 1)
             return request_page();
+        // Can't allocate something larger than the amount of free memory.
+        if (numberOfPages > TotalFreePages)
+            return nullptr;
         
         for (u64 i = FirstFreePage; i < PageMap.length(); ++i) {
             // Skip locked pages.
@@ -95,7 +98,7 @@ namespace Memory {
                 if (index > PageMap.length()) {
                     // TODO: No memory matching criteria, should
                     //   probably do a page swap from disk or something.
-                    UART::out("\033[31mYou ran out of memory :^)\033[0m\r\n");
+                    UART::out("\033[31mYou ran out of memory :^<\033[0m\r\n");
                     return nullptr;
                 }
                 if (run >= numberOfPages) {
@@ -187,24 +190,23 @@ namespace Memory {
         // Number of bytes needed = (Number of Pages / Bits per Byte) + 1
         u64 bitmapSize = (TotalPages / 8) + 1;
         PageMap.init(bitmapSize, (u8*)((u64)largestFreeMemorySegment));
-        TotalFreePages = TotalPages;
         lock_pages(0, TotalPages + 1);
-        // Without this assignment to zero, more free memory
-        //   would be reported than actually is free.
-        TotalFreePages = 0;
         // With all pages in the bitmap locked, free only the EFI conventional memory segments.
+        // We may be able to be a little more aggressive in what memory we take in the future.
+        TotalFreePages = 0;
         for (u64 i = 0; i < entries; ++i) {
             EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)map + (i * entrySize));
             if (desc->type == 7)
                 free_pages(desc->physicalAddress, desc->numPages);
         }
-        // The page map itself takes up space within the largest free memory segment.
-        // As every memory segment was just set back to free in
-        //   the bitmap, it's important to re-lock the page bitmap
-        //   so it doesn't get trampled on when allocating more memory.
+
+        /* The page map itself takes up space within the largest free memory segment.
+         * As every memory segment was just set back to free in the bitmap, it's
+         *   important to re-lock the page bitmap so it doesn't get trampled on
+         *   when allocating more memory.
+         */
         lock_pages(PageMap.base(), (PageMap.length() / 4096) + 1);
 
-        // Do the stuff that all physical memory initialization functions need to do.
         init_physical_common();
     }
 
