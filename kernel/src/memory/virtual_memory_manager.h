@@ -10,6 +10,8 @@ namespace Memory {
      */
     void init_virtual();
 
+    // TODO: Permissions handling.
+
     /* Map a virtual address to a physical 
      *   address in the given page map level four. 
      */
@@ -34,6 +36,7 @@ namespace Memory {
      *   the virtual to physical mapping the CPU is using currently.
      */
     void flush_page_map(PageTable* pageMapLevelFour);
+
     PageTable* get_active_page_map();
 }
 

@@ -112,8 +112,8 @@ namespace Memory {
         PageTable* initialPageMap = (PageTable*)Memory::request_page();
         /* Map all physical RAM addresses to virtual 
          *   addresses 1:1, store them in the PML4.
-         * This means that virtual addresses will be
-         *   equal to physical memory addresses.
+         * This means that virtual memory addresses will be
+         *   equal to physical memory addresses within the kernel.
          */
         for (u64 t = 0; t < Memory::get_total_ram(); t+=0x1000)
             map(initialPageMap, (void*)t, (void*)t);

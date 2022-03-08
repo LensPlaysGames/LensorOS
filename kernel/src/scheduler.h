@@ -57,7 +57,7 @@ extern KernelProcess StartupProcess;
 
 /// The scheduler handles multi-tasking within the kernel.
 class Scheduler {
-    /* TODO:
+    /* TODO: I don't know if these go here but I do need them somewhere at some point.
      * |- load_binary() that will read a flat binary and add it to process list.
      * `- load_elf() that will read an elf executable and add it to process list.
      */
