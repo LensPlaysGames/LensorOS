@@ -150,7 +150,6 @@ typedef struct {
     void* RSDP;
 } BootInfo;
 
-// ENTRY POINT
 EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     gImageHandle = IH;
     gSystemTable = ST;
@@ -159,13 +158,13 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
 
     Print(L"!==-- LensorOS BOOTLOADER --==!\n");
 
-    // FIND LensorOS DIRECTORY
+    // Attempt to find and load LensorOS directory in the root of the boot filesystem.
     EFI_FILE* bin = LoadFile(NULL, L"LensorOS");
     if (bin == NULL) {
         Print(L"ERROR: Could not load directory: \"/LensorOS/\"\n");
         return 1;
     }
-    // FIND KERNEL WITHIN LensorOS DIRECTORY
+    // Attempt to find and load kernel executable within the LensorOS directory.
     EFI_FILE* kernel = LoadFile(bin, L"kernel.elf");
     if (kernel == NULL) {
         Print(L"ERROR: Could not load kernel from /LensorOS/kernel.elf\n");
@@ -173,27 +172,34 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     }
     Print(L"Kernel has been found\n");
 
-    // LOAD KERNEL ELF64 HEADER INTO MEMORY
-    Elf64_Ehdr elf_header;
-    {
-        UINTN fileInfoSize;
-        EFI_FILE_INFO* fileInfo;
-
-        // Get size of kernel.
-        kernel->GetInfo(kernel, &gEfiFileInfoGuid, &fileInfoSize, NULL);
-        // Allocate memory pool for kernel.
-        gSystemTable->BootServices->AllocatePool(EfiLoaderData,
-                                                 fileInfoSize,
-                                                 (void**)&fileInfo);
-        // Fill memory with information from loaded kernel file.
-        kernel->GetInfo(kernel, &gEfiFileInfoGuid,
-                        &fileInfoSize, (void**)&fileInfo);
-        
-        UINTN size = sizeof(elf_header);
-        kernel->Read(kernel, &size, &elf_header);
+    // Read default font from root directory.
+    PSF1_FONT* dflt_font = LoadPSF1Font(bin, L"dfltfont.psf");
+    if (dflt_font == NULL) {
+        Print(L"ERROR: Failed to load default font\n");
+    }
+    else {
+        Print(L"Default font loaded successfully\n"
+              L"  Mode:           %d\n"
+              L"  Character Size: 8x%d\n",
+              dflt_font->PSF1_Header->Mode,
+              dflt_font->PSF1_Header->CharacterSize);
     }
 
-    // VERIFY KERNEL ELF64 HEADER
+    // Unload LensorOS directory.
+    bin->Close(bin);
+
+    // LOAD KERNEL ELF64 HEADER INTO MEMORY
+    Elf64_Ehdr elf_header;
+    UINTN elf64HeaderSize = sizeof(elf_header);
+    kernel->Read(kernel, &elf64HeaderSize, &elf_header);
+
+    /* Verify Elf64 Header from beginning of loaded kernel file:
+     * |-- Has magic bytes at beginning of file.
+     * |-- Is formatted with least significant byte at the lowest address.
+     * |-- Is an executable.
+     * `-- Was built for an x86_64 machine.
+     * `-- Was built with this elf loader's version of ELF.    
+     */
     if (memcmp(&elf_header.e_ident[EI_MAG0], ELFMAG, SELFMAG) != 0
         || elf_header.e_ident[EI_CLASS] != ELFCLASS64
         || elf_header.e_ident[EI_DATA] != ELFDATA2LSB
@@ -206,15 +212,14 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     }
     Print(L"Kernel format verified successfully\n");
 
-    // LOAD KERNEL INTO MEMORY
+    // Find and load ELF program header from loaded and verified kernel's ELF header.
     Elf64_Phdr* program_hdrs;
-    {
-        kernel->SetPosition(kernel, elf_header.e_phoff);
-        UINTN size = elf_header.e_phnum * elf_header.e_phentsize;
-        gSystemTable->BootServices->AllocatePool(EfiLoaderData, size, (void**)&program_hdrs);
-        kernel->Read(kernel, &size, program_hdrs);
-    }
+    kernel->SetPosition(kernel, elf_header.e_phoff);
+    UINTN programHeaderTableSize = elf_header.e_phnum * elf_header.e_phentsize;
+    gSystemTable->BootServices->AllocatePool(EfiLoaderData, programHeaderTableSize, (void**)&program_hdrs);
+    kernel->Read(kernel, &programHeaderTableSize, program_hdrs);
 
+    // There is usually only ever one program header, but just in case I'll check all that exist.
     for (
         Elf64_Phdr* phdr = program_hdrs;
         (char*)phdr < (char*)program_hdrs + elf_header.e_phnum * elf_header.e_phentsize;
@@ -246,30 +251,15 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
           gop_fb->PixelHeight, 
           gop_fb->PixelsPerScanLine);
 
-    // Read default font from root directory.
-    PSF1_FONT* dflt_font = LoadPSF1Font(bin, L"dfltfont.psf");
-    if (dflt_font == NULL) {
-        Print(L"ERROR: Failed to load default font\n");
-    }
-    else {
-        Print(L"Default font loaded successfully\n"
-              L"  Mode:           %d\n"
-              L"  Character Size: 8x%d\n",
-              dflt_font->PSF1_Header->Mode,
-              dflt_font->PSF1_Header->CharacterSize);
-    }
-
-    // EFI MEMORY MAP
+    // Load EFI Memory map to pass to kernel.
     EFI_MEMORY_DESCRIPTOR* Map = NULL;
     UINTN MapSize, MapKey;
     UINTN DescriptorSize;
     UINT32 DescriptorVersion;
-    {
-        gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
-        gSystemTable->BootServices->AllocatePool(EfiLoaderData, MapSize, (void**)&Map);
-        gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
-        Print(L"EFI memory map successfully parsed\n");
-    }
+    gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
+    gSystemTable->BootServices->AllocatePool(EfiLoaderData, MapSize, (void**)&Map);
+    gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
+    Print(L"EFI memory map successfully parsed\n");
 
     // ACPI 2.0
     EFI_CONFIGURATION_TABLE* ConfigTable = gSystemTable->ConfigurationTable;
