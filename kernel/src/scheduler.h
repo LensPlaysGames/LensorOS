@@ -3,22 +3,19 @@
 
 #include "integers.h"
 #include "interrupts/interrupts.h"
+#include "linked_list.h"
 
 namespace Memory {
     class PageTable;
 }
 
-struct CPUState;
-/// External symbols for 'scheduler.asm', defined in `scheduler.cpp`
-extern void(*scheduler_switch_task)(CPUState*);
-extern void(*timer_tick)();
 /// Interrupt handler function found in `scheduler.asm`
 extern "C" void irq0_handler();
 
 /* THE KERNEL PROCESS SCHEDULER
  * | Hijack the System Timer Interrupt to switch processes, if needed.
  * `- Each Kernel Process needs:
- *    |- To save register states
+ *    |- To save register states (TODO: take advantage of `xsave`, `fxsave`, etc.)
  *    |- To store an address of page table
  *    `- To store an address of the next process, if it exists (singly-linked list).
  */
@@ -46,35 +43,35 @@ struct CPUState {
     InterruptFrame Frame;
 } __attribute__((packed));
 
-struct KernelProcess {
+/* TODO:
+ * |-- File Descriptor Table (Dynamic list of process' open file descriptors).
+ * |-- Some sort of priority level system? Kernel tasks get highest, userspace medium, idle lowest?
+ * `-- As only processes should make syscalls, should syscalls be defined in terms of process?
+ */
+struct Process {
     CPUState CPU;
     Memory::PageTable* CR3;
-    KernelProcess* Next;
 };
 
-// The proess that acts as the beginning thread.
-extern KernelProcess StartupProcess;
+/// External symbols for 'scheduler.asm', defined in `scheduler.cpp`
+extern void* scheduler_switch_process;
+extern void(*timer_tick)();
 
-/// The scheduler handles multi-tasking within the kernel.
-class Scheduler {
-    /* TODO: I don't know if these go here but I do need them somewhere at some point.
-     * |- load_binary() that will read a flat binary and add it to process list.
-     * `- load_elf() that will read an elf executable and add it to process list.
-     */
-public:
-    static void initialize();
+namespace Scheduler {
+    extern SinglyLinkedListNode<Process*>* CurrentProcess;
+
+    bool initialize();
+
     /* Switch to the next available task.
      * | Called by IRQ0 Handler (System Timer Interrupt).
      * |- Copy registers saved from IRQ0 to current process.
      * |- Update current process to next available process.
      * `- Manipulate stack to trick `iretq` into doing what we want.
      */
-    static void switch_process(CPUState*);
-    static void add_kernel_process(KernelProcess*);
+    void switch_process(CPUState*);
 
-private:
-    static KernelProcess* ProcessQueue;
-    static KernelProcess* CurrentProcess;
-};
+    // Add an existing process to the list of processes.
+    void add_process(Process*);
+}
 
 #endif

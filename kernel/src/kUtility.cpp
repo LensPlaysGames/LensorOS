@@ -319,10 +319,8 @@ void kernel_init(BootInfo* bInfo) {
     UART::out(to_string(PIT_FREQUENCY));
     UART::out("hz\033[0m.\r\n\r\n");
 
-    // The scheduler causes VBOX to hang forever for some reason.
-    // Setup task state segment for eventual switch to user-land.
+    // The Task State Segment in x86_64 is used only for switches between privilege levels.
     TSS::initialize();
-    // Use kernel process switching.
     Scheduler::initialize();
     
     // Enable IRQ interrupts that will be used.

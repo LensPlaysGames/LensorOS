@@ -2,49 +2,55 @@
 
 #include "cstr.h"
 #include "interrupts/idt.h"
+#include "linked_list.h"
 #include "memory.h"
 #include "memory/paging.h"
 #include "memory/virtual_memory_manager.h"
 #include "pit.h"
 #include "uart.h"
 
-// External symbols for `scheduler.asm`
-void* scheduler_switch_func;
+/// External symbol definitions for `scheduler.asm`
+void* scheduler_switch_process;
 void(*timer_tick)();
 
-KernelProcess StartupProcess;
+namespace Scheduler {
+    Process StartupProcess;
 
-KernelProcess* Scheduler::ProcessQueue   { nullptr };
-KernelProcess* Scheduler::CurrentProcess { nullptr };
+    SinglyLinkedList<Process*>* ProcessQueue { nullptr };
+    SinglyLinkedListNode<Process*>* CurrentProcess { nullptr };
 
-void Scheduler::add_kernel_process(KernelProcess* process) {
-    KernelProcess* last = ProcessQueue;
-    while (CurrentProcess->Next != nullptr)
-        last = CurrentProcess->Next;
+    void add_process(Process* process) {
+        ProcessQueue->add(process);
+    }
 
-    last->Next = process;
-}
+    bool initialize() {
+        // IRQ handler in assembly increments PIT ticks counter using this function.
+        timer_tick = &pit_tick;
+        // IRQ handler in assembly switches processes using this function.
+        scheduler_switch_process = (void*)switch_process;
+        // Setup currently executing code as the start process.
+        StartupProcess.CR3 = Memory::get_active_page_map();
+        // Create the process queue and add the startup process to it.
+        ProcessQueue = new SinglyLinkedList<Process*>;
+        add_process(&StartupProcess);
+        CurrentProcess = ProcessQueue->head();
+        // Sanity checks.
+        if (ProcessQueue == nullptr || ProcessQueue->head() == nullptr)
+            return false;
 
-// Called from `irq0_handler` in `scheduler.asm`
-void Scheduler::switch_process(CPUState* cpu) {
-    memcpy(&cpu, &CurrentProcess->CPU, sizeof(CPUState));
-    if (CurrentProcess->Next == nullptr)
-        CurrentProcess = ProcessQueue;
-    else CurrentProcess = CurrentProcess->Next;
-    memcpy(&CurrentProcess->CPU, &cpu, sizeof(CPUState));
-    Memory::flush_page_map(CurrentProcess->CR3);
-}
+        // Install IRQ0 handler found in `scheduler.asm` (over-write default system timer handler).
+        gIDT.install_handler((u64)irq0_handler, PIC_IRQ0);
+        return true;
+    }
 
-void Scheduler::initialize() {
-    ProcessQueue = &StartupProcess;
-    CurrentProcess = &StartupProcess;
-    // IRQ handler in assembly needs to increment PIT ticks counter.
-    timer_tick = &pit_tick;
-    // IRQ handler in assembly needs to call a function to switch process.
-    scheduler_switch_func = (void*)switch_process;
-    // Setup start process as current executing code.
-    StartupProcess.CR3 = Memory::get_active_page_map();
-    StartupProcess.Next = nullptr;
-    // Install IRQ0 handler found in `scheduler.asm` (over-write default system timer handler).
-    gIDT.install_handler((u64)irq0_handler, PIC_IRQ0);
+    /// Called from `irq0_handler` in `scheduler.asm`
+    /// A stupid simple round-robin process switcher.
+    void switch_process(CPUState* cpu) {
+        memcpy(&cpu, &CurrentProcess->value()->CPU, sizeof(CPUState));
+        if (CurrentProcess->next() == nullptr)
+            CurrentProcess = ProcessQueue->head();
+        else CurrentProcess = CurrentProcess->next();
+        memcpy(&CurrentProcess->value()->CPU, &cpu, sizeof(CPUState));
+        Memory::flush_page_map(CurrentProcess->value()->CR3);
+    }
 }

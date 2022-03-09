@@ -42,16 +42,12 @@
  *     1 1 =      read-back command (8254 only)
 */
 
-class Scheduler;
-
 /* TODO:
  * |- Lock the PIT when it's being used so
  * |    threads don't stomp on each other.
  * `- Implement Read-Back command support.
  */
 class PIT {
-    friend class Scheduler;
-
     // IO Port of PIT channel
     // Channel One is not guaranteed to be
     //   implemented, especially on modern hardware.

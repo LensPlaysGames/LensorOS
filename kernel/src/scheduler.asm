@@ -1,9 +1,9 @@
     [BITS 64]
 
-    ;; External symbols provided in `scheduler.h` && `scheduler.cpp`
+    ;; External symbols provided in `scheduler.h` and `scheduler.cpp`
     ;; A pointer to task switching handler function.
-    extern scheduler_switch_func
-    ;; Function that increments timer ticks by one.
+    extern scheduler_switch_process
+    ;; A pointer to a function that increments timer ticks by one.
     extern timer_tick
 
 do_swapgs:
@@ -48,7 +48,7 @@ irq0_handler:
     call [timer_tick]
 ;;; CALL C++ FUNCTION; ARGUMENT IN `rdi`
     mov rdi, rsp
-    call [scheduler_switch_func]
+    call [scheduler_switch_process]
 ;;; END INTERRUPT
     mov al, 0x20                ; 0x20 = PIC_EOI
     out 0x20, al                ; 0x20 = PIC1_COMMAND port
