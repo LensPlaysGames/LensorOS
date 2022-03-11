@@ -1,5 +1,5 @@
 # LensorOS Standard C Library
-A homebrew standard c library for the userland of LensorOS.
+A homebrew standard `C` library for the userland of LensorOS.
 
 ### Building the LensorOS Toolchain for Userland
 By building the toolchain for userland, it will be able to compile and link `C` programs that can run within LensorOS.
