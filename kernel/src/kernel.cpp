@@ -22,14 +22,7 @@
  * |  |- Parse ACPI SRAT Table
  * |  |  `- If entry is CPU (not memory), store NUMA domain/chip for CPU (ProximityDomain = NUMADomain).
  * |  |- Sort list of CPUs in order of NUMADomain (sorted within each domain by APIC ID)
- * |  |- Determine number of bits in APIC ID that are used to identify which logical CPU.
- * |  `- Determine number of bits in APIC ID that are used to identify which physical CPU.
- * |
- * |- Task blocking; how can a task that is only waiting not waste my time?
- * |  |- My first (naive) thought: Task could call wait() or something that
- * |  |    would add it to a list of waiting tasks. Something would have to un-wait
- * |  |    them, so maybe wait() takes in an amount of time to wait before un-waiting.
- * |  `- Approach from Brendan's multi-tasking guide: 
+ * |  `- Determine number of bits in APIC ID that are used to identify logical and physical CPU.
  * |  
  * |- It would be really stupid but also really fun to play a `boot.midi` on startup.
  * |  | I should probably just wait for Userland libraries for this feature :^)
@@ -38,14 +31,14 @@
  * |     `- https://www.cs.cmu.edu/~music/cmsip/readings/Standard-MIDI-file-format-updated.pdf
  * |
  * |- Userland: How does the desktop happen?
- * |  |- I presume that the memory for the framebuffer must be mapped in a userland process.
+ * |  |- I presume that the memory for the framebuffer must be available to a userland process.
  * |  |  `- This process must be supplied by the OS, of course.
  * |  |     `- Something like ScreenManager sounds sufficient (Compositor?). 
  * |  |        |- If we 'pass' the framebuffer to this in-house userland program,
  * |  |        |    it would have full read/write control over the screen of the OS.
  * |  |        |- To avoid constantly updating the screen within the kernel,
  * |  |        |  | the WindowManager will accept signals from applications
- * |  |        |  | that signify the window is dirty and need to be re-painted.
+ * |  |        |  | that signify the window is dirty and need to be re-painted (eventually).
  * |  |        |  `- This will call the ScreenManager to update the framebuffer memory.
  * |  |        `- The ScreenManager will also draw OS-wide things (taskbar? clock? etc.)
  * |  `- To actually write userland programs that can be used,

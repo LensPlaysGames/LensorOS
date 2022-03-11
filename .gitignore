@@ -31,12 +31,23 @@
 *.out
 *.app
 
+# Builds
+**/bld/
+**/dbg/
+**/rls/
+**/tst/
+**/lnx/
+**/win/
+
 # Backups
 **/*~
 **/#*#
 **/.#*
 **/*.backup
 **/.swp
+
+# GCC sysroot
+/root/
 
 # Kernel Build Stuff
 /kernel/bin/

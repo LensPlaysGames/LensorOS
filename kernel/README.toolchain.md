@@ -52,7 +52,10 @@ With that, in the coming steps, GCC will build `libgcc` without a red zone. This
 #### 3.) Setup environment variables
 These variables are used a few times within the next steps, so saving them here prevents simple typos from getting in the way.
 
-Define the following variables:
+`PREFIX` is set to the absolute path where the final toolchain build will reside.
+`TARGET` is set to the target triplet of the generated compiler.
+
+Define the variables:
 ```bash
 export PREFIX="$HOME/cross/"
 export TARGET=x86_64-lensoros-elf
