@@ -7,7 +7,9 @@
 extern "C" {
 #endif
   // FIXME: FILEs are not void!!!
-  typedef void FILE;
+  typedef struct {
+    int fd;
+  } FILE;
 
   extern FILE* stdin;
   extern FILE* stdout;
