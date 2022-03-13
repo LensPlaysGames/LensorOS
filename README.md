@@ -60,12 +60,10 @@ Before beginning, ensure you have the LensorOS bootloader and kernel binaries. \
 To change the font, replace `dfltfont.psf` in the `kernel/res` folder with any PSF1 font (not PSF2). \
 For a few fonts that are compatible, check out [this repository](https://github.com/ercanersoy/PSF-Fonts)
 
-NOTE: On Windows, use a linux terminal to run the image generation commands (WSL, Cygwin, etc).
-
 Ensure the following dependencies are installed on your system:
-```bash
-sudo apt install mtools
-```
+- Linux: `sudo apt install mtools`
+- [Windows](https://github.com/LensPlaysGames/mtools/releases)
+
 GNU mtools is a set of tools for manipulating MS-DOS style files and filesystems. This is necessary as the UEFI specification requires FAT32 to be used as it's boot device's filesystem.
 
 To build a disk image that will boot into LensorOS, run the following included helper script:
@@ -192,9 +190,8 @@ See [README.toolchain](kernel/README.toolchain.md) within the `/kernel/` directo
 
 Parts of the kernel are written in assembly intended for the Netwide Assembler. \
 Ensure it is installed on your system before continuing:
-```bash
-sudo apt install nasm
-```
+- Linux: `sudo apt install nasm`
+- [Windows](https://nasm.us/)
 
 Once the toolchain is up and running (added to `$PATH` and everything), continue the following steps.
 
