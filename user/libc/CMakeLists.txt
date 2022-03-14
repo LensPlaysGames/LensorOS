@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 project(LensorOS_libc VERSION 0.0.1 LANGUAGES ASM C CXX)
 
 # TODO:
-# `-- Create target that copies build libraries and system headers to sysroot for cross compilation
+# `-- Create target that copies built libraries and system headers to sysroot for cross compilation
 
 # Use cross compiler.
 set(CMAKE_ASM_COMPILER x86_64-lensoros-elf-gcc)
