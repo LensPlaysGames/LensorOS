@@ -24,11 +24,12 @@ Move `main.efi` from `/gnu-efi/x86_64/bootloader/` directory into the `BOOT` fol
 Rename `main.efi` in the usb's `BOOT` folder to `bootx64.efi`, as per the UEFI specification.
 
 Finally, navigate back to the root directory of the USB (where the `EFI` folder resides). \
-Create a folder. `LensorOS`, then move the following resources into the directory: \
+Create a folder. `LensorOS`, then move the following resources into the directory:
 - `kernel.elf` from `/kernel/bin/`
 - Any `.psf` version 1 font renamed to `dfltfont.psf`
   - A font is included for ease of use and can be found at `kernel/res/dfltfont.psf`.
-  - Many free fonts can be found [here](https://github.com/ercanersoy/PSF-Fonts)
+  - Many free fonts can be found [here](https://github.com/ercanersoy/PSF-Fonts).
+  - [GNU Unifont](http://unifoundry.com/unifont/index.html) provides a PSF1 version.
 
 ```
 Final Directory Structure:
