@@ -13,9 +13,9 @@
 ---
 
 ### Booting into LensorOS on hardware <a name="hardware-boot"></a>
-###### DISCLAIMER: LensorOS IS IN NO WAY GUARANTEED TO BE 'SAFE'; RUN AT YOUR OWN RISK! (see [LICENSE](LICENSE))
+DISCLAIMER: LensorOS IS IN NO WAY GUARANTEED TO BE 'SAFE'; RUN AT YOUR OWN RISK! (see [LICENSE](LICENSE))
 
-(pre-compiled binaries coming soon, for now see [the build section](#build))
+(pre-compiled binaries coming soon, for now [see the build section](#build))
 
 Ensure you have a USB storage device that is working. Remove all data from the USB. This can be done by formatting, or simply deleting/moving everything off of it.
 
@@ -34,20 +34,13 @@ Create a folder. `LensorOS`, then move the following resources into the director
 ```
 Final Directory Structure:
 USB
-|\
-| efi
-|  \
-|   boot
-|    \
-|     bootx64.efi
-|\
-| LensorOS
-| |\
-| | kernel.elf
-|  \
-|   dfltfont.psf
- \
-  startup.nsh
+|-- efi
+|   `-- boot
+|       `-- bootx64.efi
+|-- LensorOS
+|   |-- kernel.elf
+|   `-- dfltfont.psf
+`-- startup.nsh
 ```
 
 ---
