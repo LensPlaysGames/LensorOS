@@ -3,6 +3,7 @@
 #include "fat_definitions.h"
 #include "fat_driver.h"
 #include "fat_fs.h"
+#include "gpt.h"
 #include "memory/heap.h"
 #include "memory/physical_memory_manager.h"
 #include "memory/virtual_memory_manager.h"
@@ -217,8 +218,14 @@ namespace AHCI {
                 UART::out(" initialized successfully.\033[0m\r\n");
                 memset((void*)Ports[i]->Buffer, 0, MAX_READ_BYTES);
                 // Check if storage media at current port has a file-system LensorOS recognizes.
+                // GPT (GUID Partition Table):
+                if (GPT::is_gpt_present(Ports[i])) {
+                    UART::out("[AHCI]: Device at port ");
+                    UART::out(to_string(i));
+                    UART::out(" has a valid GPT present!\r\n");
+                }
                 // FAT (File Allocation Table):
-                if (gFATDriver.is_device_fat_formatted(Ports[i])) {
+                else if (gFATDriver.is_device_fat_formatted(Ports[i])) {
                     FatFS* fs = new FatFS(NumFileSystems, this, i);
                     FileSystems[NumFileSystems] = fs;
                     ++NumFileSystems;
