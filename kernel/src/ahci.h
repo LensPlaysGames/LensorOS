@@ -2,6 +2,7 @@
 #define LENSOR_OS_AHCI_H
 
 #include "integers.h"
+#include "linked_list.h"
 #include "spinlock.h"
 
 namespace PCI {
@@ -172,6 +173,10 @@ namespace AHCI {
         friend class AHCIDriver;
 
     public:
+        Port() {}
+        Port(u8 n, PortType t, u8* buf, HBAPort* hbaAddress)
+            : Number(n), Type(t), Buffer(buf), HBAport(hbaAddress) {}
+
         bool read(u64 sector, u16 numSectors, void* buffer, u64 numBytesToCopy);
 
     private:
@@ -191,31 +196,29 @@ namespace AHCI {
     ///   This driver is instantiated for each SATA controller found on
     ///     the PCI bus, and will parse all the ports that are active and
     ///     valid for later use (ie. parsing partitions, file-systems, etc).
-    // TODO: Store created driver in some sort of device tree
+    // TODO: Store created driver in System
     class AHCIDriver {
     public:
-        Port* Ports[32];
-        u8 numPorts;
-
         AHCIDriver(PCI::PCIDeviceHeader* pciBaseAddress);
         ~AHCIDriver();
 
-        void probe_ports();
+        // A single AHCI may have up to 32 ports to
+        // communicate with separate devices that support AHCI.
+        Port* Ports[32];
+        u8 NumPorts;
 
+        void probe_ports();
         bool read(u64 sector, u64 numSectors, u8 portNumber, void* buffer, u64 numBytes) {
-            if (portNumber >= numPorts)
+            if (portNumber >= NumPorts)
                 return false;
-            
             return Ports[portNumber]->read(sector, numSectors, buffer, numBytes);
         }
         
     private:
         /// Address of PCI device header (expected SATA Controller, AHCI 1.0).
-        PCI::PCIDeviceHeader* PCIBaseAddress;
+        PCI::PCIDeviceHeader* PCIBaseAddress { nullptr };
         /// AHCI Base Memory Register
-        HBAMemory* ABAR;
-        // A single AHCI may have up to 32 ports to
-        // communicate with separate devices that support AHCI.
+        HBAMemory* ABAR { nullptr };
     };
 
     /// Store list of pointers to drivers that are created for later use.

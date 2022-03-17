@@ -59,12 +59,11 @@ namespace AHCI {
             if (ports & (1 << i)) {
                 PortType type = get_port_type(&ABAR->ports[i]);
                 if (type == PortType::SATA || type == PortType::SATAPI) {
-                    Ports[numPorts] = new Port;
-                    Ports[numPorts]->Buffer = (u8*)Memory::request_pages(MAX_READ_PAGES);
-                    Ports[numPorts]->HBAport = &ABAR->ports[i];
-                    Ports[numPorts]->Type = type;
-                    Ports[numPorts]->Number = numPorts;
-                    numPorts++;
+                    Ports[NumPorts] = new Port(NumPorts
+                                               , type
+                                               , (u8*)Memory::request_pages(MAX_READ_PAGES)
+                                               , &ABAR->ports[i]);
+                    NumPorts++;
                 }
             }
         }
@@ -204,19 +203,19 @@ namespace AHCI {
         probe_ports();
 
         UART::out("  Found ");
-        UART::out(numPorts);
+        UART::out(NumPorts);
         UART::out(" open and active ports\r\n");
         UART::out("    Port read/write buffer size: ");
         UART::out(to_string(MAX_READ_PAGES * 4));
         UART::out("kib\r\n\r\n");
 
-        for (u8 i = 0; i < numPorts; ++i) {
+        for (u8 i = 0; i < NumPorts; ++i) {
             Ports[i]->initialize();
             if (Ports[i]->Buffer != nullptr) {
                 UART::out("[AHCI]: \033[32mPort ");
                 UART::out(to_string(i));
                 UART::out(" initialized successfully.\033[0m\r\n");
-                memset((void*)Ports[i]->Buffer, 0, MAX_READ_PAGES * 0x1000);
+                memset((void*)Ports[i]->Buffer, 0, MAX_READ_BYTES);
                 // Check if storage media at current port has a file-system LensorOS recognizes.
                 // FAT (File Allocation Table):
                 if (gFATDriver.is_device_fat_formatted(Ports[i])) {
@@ -282,7 +281,7 @@ namespace AHCI {
     
     AHCIDriver::~AHCIDriver() {
         UART::out("[AHCI]: Deconstructing AHCI Driver\r\n");
-        for(u32 i = 0; i < numPorts; ++i) {
+        for(u32 i = 0; i < NumPorts; ++i) {
             Memory::free_pages((void*)Ports[i]->Buffer, MAX_READ_PAGES);
             delete Ports[i];
         }

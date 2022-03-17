@@ -4,7 +4,9 @@
 /// NUMBER -> STRING FUNCTIONS
 #include "cstr.h"
 /// FILE SYSTEM
+#include "ahci.h"
 #include "filesystem.h"
+#include "fat_driver.h"
 #include "fat_definitions.h"
 /// MEMORY MANIPULATION: `memcpy`
 #include "memory.h"
@@ -36,7 +38,7 @@ public:
         // Get boot record from device.
         if (ahci->Ports[portNumber]->read(0, 1, &BR, sizeof(BootRecord))) {
             // Set type based on boot record information.
-            Type = ((FATDriver*)Driver)->get_type(&BR);
+            Type = Driver->get_type(&BR);
         }
         else {
             // Read from device failed.
