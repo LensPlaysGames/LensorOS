@@ -4,13 +4,16 @@
 #include "fat_driver.h"
 #include "fat_fs.h"
 #include "gpt.h"
+#include "inode.h"
+#include "memory.h"
 #include "memory/heap.h"
 #include "memory/physical_memory_manager.h"
 #include "memory/virtual_memory_manager.h"
-#include "inode.h"
-#include "memory.h"
 #include "pci.h"
+#include "smart_pointer.h"
 #include "spinlock.h"
+
+
 
 namespace AHCI {
 #define HBA_PORT_DEVICE_PRESENT 0x3
@@ -223,6 +226,26 @@ namespace AHCI {
                     UART::out("[AHCI]: Device at port ");
                     UART::out(to_string(i));
                     UART::out(" has a valid GPT present!\r\n");
+                    auto hdr = SmartPtr<GPT::Header>(new GPT::Header);
+                    if (Ports[i]->read(1, 1, hdr.get(), sizeof(GPT::Header))) {
+                        UART::out("  Partition Table Entries: ");
+                        UART::out(to_string(hdr->NumberOfPartitionsTableEntries));
+                        UART::out("\r\n");
+
+                        for (u32 j = 0; j < hdr->NumberOfPartitionsTableEntries; ++j) {
+                            u32 partSector = hdr->PartitionsTableLBA + (hdr->PartitionsTableEntrySize * j);
+                            auto part = SmartPtr<GPT::PartitionEntry>(new GPT::PartitionEntry);
+                            if (Ports[i]->read(partSector, 1, part.get(), sizeof(GPT::PartitionEntry))) {
+                                UART::out("  Partition ");
+                                UART::out(to_string(j));
+                                UART::out(": ");
+                                UART::out(part->Name, 72);
+                                UART::out(":\r\n    Size in Sectors: ");
+                                UART::out(to_string(part->EndLBA - part->StartLBA));
+                                UART::out("\r\n\r\n");
+                            }
+                        }
+                    }
                 }
                 // FAT (File Allocation Table):
                 else if (gFATDriver.is_device_fat_formatted(Ports[i])) {
