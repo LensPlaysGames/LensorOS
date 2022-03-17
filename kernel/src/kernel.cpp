@@ -195,8 +195,9 @@ extern "C" void _start(BootInfo* bInfo) {
     gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize});
     /// END GPLv3 LICENSE REQUIREMENT.
 
+
     // USERLAND SWITCH TESTING
-    jump_to_userland_function((void*)test_userland_function);
+    // jump_to_userland_function((void*)test_userland_function);
 
     // FIXME FIXME FIXME
     // NULL DE-REFERENCE TESTING
@@ -220,6 +221,7 @@ extern "C" void _start(BootInfo* bInfo) {
 
     // Start keyboard input at draw position, not origin.
     Keyboard::gText.set_cursor_from_pixel_position(gRend.DrawPos);
+
     u32 debugInfoX = gRend.Target->PixelWidth - 300;
     while (true) {
         gRend.DrawPos = {debugInfoX, 0};

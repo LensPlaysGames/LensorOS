@@ -29,7 +29,7 @@ template <typename T>
 class SinglyLinkedList {
     typedef T DataType;
     typedef SinglyLinkedListNode<DataType> Node;
-    
+
 public:
     ~SinglyLinkedList() {
         Node* tmp { nullptr };
@@ -47,6 +47,23 @@ public:
         }
         else Head = new Node(value, Head);
         Length += 1;
+    }
+
+    DataType at(u64 index) {
+        Node* it { Head };
+        Node* out { nullptr };
+        while (index-- && it) {
+            out = it;
+            it = it->next();
+        }
+        
+        // FIXME: Bad method of avoiding null dereference (do error propagation instead)
+        // This way of avoiding a null dereference is not the best,
+        // as it assumes that `DataType` has a simple default constructor.
+        if (out == nullptr)
+            return {};
+
+        return out->value();
     }
 
     template <typename Callback>
