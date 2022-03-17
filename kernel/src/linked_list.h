@@ -2,6 +2,7 @@
 #define LENSOR_OS_LINKED_LIST_H
 
 #include "memory/heap.h"
+#include "uart.h"
 
 template <typename T>
 class SinglyLinkedList;
@@ -16,7 +17,8 @@ public:
     SinglyLinkedListNode(DataType value, SinglyLinkedListNode* next = nullptr)
         : Data(value), Next(next) {}
 
-    DataType value()              { return Data; }
+    DataType& value()             { return Data; }
+    const DataType& value() const { return Data; }
     SinglyLinkedListNode* next()  { return Next; }
     
 private:    
@@ -49,20 +51,16 @@ public:
         Length += 1;
     }
 
-    DataType at(u64 index) {
+    DataType& at(u64 index) {
         Node* it { Head };
         Node* out { nullptr };
-        while (index-- && it) {
+        index += 1;
+        while (it && index--) {
             out = it;
             it = it->next();
         }
-        
-        // FIXME: Bad method of avoiding null dereference (do error propagation instead)
-        // This way of avoiding a null dereference is not the best,
-        // as it assumes that `DataType` has a simple default constructor.
-        if (out == nullptr)
-            return {};
-
+        // FIXME: No avoidance of null dereference in
+        //        case of empty list (do error propagation!).
         return out->value();
     }
 
@@ -78,6 +76,14 @@ public:
     u64 length() { return Length; }
     Node* head() { return Head; }
     Node* tail() { return Tail; }
+
+    DataType& operator [] (u64 index) {
+        return at(index);
+    }
+
+    const DataType& operator [] (u64 index) const {
+        return at(index);
+    }
 
 private:
     u64 Length { 0 };
