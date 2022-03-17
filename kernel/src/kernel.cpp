@@ -46,18 +46,18 @@
  * |     `- This will allow me to write userland programs that will know where to
  * |          look for libc and standard includes relative to LensorOS's root directory.
  * |
- * |- Use LinkedList to store AHCI Ports instead of pointer mumbo-jumbo that is currently going on.
  * |- HPET: Final step to get interrupts working (init comparators).
  * |- Sound: Implement support for hardware sound cards (AC97, SoundBlaster16, Intel HDA, etc).
  * |
  * |- Further modify cross compiler to make an OS specific toolchain.
  * |  `- This would allow for customizing default include,
- * |       and default library (aka our own libc/libk; currenty running with no C RunTime).
+ * |     and default library (for example system libraries and headers 
+ * |     could be located at /LensorOS/sys/lib and /LensorOS/sys/include).
+ * |     For now, just use the standard *nix /usr/lib and /usr/include.
  * |
  * |- See Page Table Entry Flag PT_FLAG::Global : Prevent kernel from being flushed from TLB.
  * |
  * |- Abstract functionality from hardware (currently very x86_64 specific).
- * |  |- Memory Allocation (./paging/)
  * |  |- GDT/IDT
  * |  `- Serial Communications (UART)
  * |
@@ -71,9 +71,8 @@
  * |
  * |- Create Container Class(es) -> Vector, HashMap, etc.
  * |
- * |- Write a bootloader (no longer rely on GNU-EFI bootloader).
- * |  | This includes utilizing UEFI calls to get things done.
- * |  `- Resource: https://github.com/krinkinmu/efi/tree/master/efi
+ * |- Migrate to RADII bootloader
+ * |  `- https://github.com/LensPlaysGames/RADII
  * |
  * |- Make read-only section (of kernel) read only memory.
  * |
@@ -91,7 +90,7 @@
  * |
  * |- Abstract `timer` class (namespace?) -> an API for things like `sleep`
  * |- Read more of this: https://pages.cs.wisc.edu/~remzi/OSTEP/
- * |- Save parsed PCI devices for quick lookup (device tree).
+ * |- Save parsed PCI devices for quick lookup (system structure).
  * |- A slab-style memory allocator.
  * |- File System:
  * |  |- Virtual File System that will store intermediate representation
