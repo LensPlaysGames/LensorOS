@@ -60,10 +60,10 @@ namespace AHCI {
                 PortType type = get_port_type(&ABAR->ports[i]);
                 if (type == PortType::SATA || type == PortType::SATAPI) {
                     Ports[numPorts] = new Port;
-                    Ports[numPorts]->buffer = (u8*)Memory::request_pages(MAX_READ_PAGES);
-                    Ports[numPorts]->hbaPort = &ABAR->ports[i];
-                    Ports[numPorts]->type = type;
-                    Ports[numPorts]->number = numPorts;
+                    Ports[numPorts]->Buffer = (u8*)Memory::request_pages(MAX_READ_PAGES);
+                    Ports[numPorts]->HBAport = &ABAR->ports[i];
+                    Ports[numPorts]->Type = type;
+                    Ports[numPorts]->Number = numPorts;
                     numPorts++;
                 }
             }
@@ -74,15 +74,15 @@ namespace AHCI {
         stop_commands();
         // Command Base
         void* base = Memory::request_page();
-        hbaPort->commandListBase = (u32)(u64)base;
-        hbaPort->commandListBaseUpper = (u32)((u64)base >> 32);
+        HBAport->commandListBase = (u32)(u64)base;
+        HBAport->commandListBaseUpper = (u32)((u64)base >> 32);
         memset(base, 0, 1024);
         // FIS Base
         void* fisBase = Memory::request_page();
-        hbaPort->fisBaseAddress = (u32)(u64)fisBase;
-        hbaPort->fisBaseAddressUpper = (u32)((u64)fisBase >> 32);
+        HBAport->fisBaseAddress = (u32)(u64)fisBase;
+        HBAport->fisBaseAddressUpper = (u32)((u64)fisBase >> 32);
         memset(fisBase, 0, 256);
-        HBACommandHeader* cmdHdr = (HBACommandHeader*)((u64)hbaPort->commandListBase + ((u64)hbaPort->commandListBaseUpper << 32));
+        HBACommandHeader* cmdHdr = (HBACommandHeader*)((u64)HBAport->commandListBase + ((u64)HBAport->commandListBaseUpper << 32));
         for (u64 i = 0; i < 32; ++i) {
             cmdHdr[i].prdtLength = 8;
             void* cmdTableAddress = Memory::request_page();
@@ -97,16 +97,16 @@ namespace AHCI {
 
     void Port::start_commands() {
         // Spin until not busy.
-        while (hbaPort->cmdSts & HBA_PxCMD_CR);
-        hbaPort->cmdSts |= HBA_PxCMD_FRE;
-        hbaPort->cmdSts |= HBA_PxCMD_ST;
+        while (HBAport->cmdSts & HBA_PxCMD_CR);
+        HBAport->cmdSts |= HBA_PxCMD_FRE;
+        HBAport->cmdSts |= HBA_PxCMD_ST;
     }
     
     void Port::stop_commands() {
-        hbaPort->cmdSts &= ~HBA_PxCMD_ST;
-        hbaPort->cmdSts &= ~HBA_PxCMD_FRE;
-        while (hbaPort->cmdSts & HBA_PxCMD_FR
-               && hbaPort->cmdSts & HBA_PxCMD_CR);
+        HBAport->cmdSts &= ~HBA_PxCMD_ST;
+        HBAport->cmdSts &= ~HBA_PxCMD_FRE;
+        while (HBAport->cmdSts & HBA_PxCMD_FR
+               && HBAport->cmdSts & HBA_PxCMD_CR);
     }
 
     // Do not use this directly, as buffer contents may be
@@ -115,7 +115,7 @@ namespace AHCI {
         // Ensure hardware port is not busy.
         const u64 maxSpin = 1000000;
         u64 spin = 0;
-        while ((hbaPort->taskFileData & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < maxSpin) {
+        while ((HBAport->taskFileData & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < maxSpin) {
             spin++;
         }
         if (spin == maxSpin)
@@ -124,15 +124,15 @@ namespace AHCI {
         u32 sectorL = (u32)sector;
         u32 sectorH = (u32)(sector >> 32);
         // Disable interrupts during command construction.
-        hbaPort->interruptStatus = (u32)-1;
-        HBACommandHeader* cmdHdr = (HBACommandHeader*)(u64)hbaPort->commandListBase;
+        HBAport->interruptStatus = (u32)-1;
+        HBACommandHeader* cmdHdr = (HBACommandHeader*)(u64)HBAport->commandListBase;
         cmdHdr->commandFISLength = sizeof(FIS_REG_H2D)/sizeof(u32);
         cmdHdr->write = 0;
         cmdHdr->prdtLength = 1;
         HBACommandTable* cmdTable = (HBACommandTable*)(u64)cmdHdr->commandTableBaseAddress;
         memset(cmdTable, 0, sizeof(HBACommandTable) + ((cmdHdr->prdtLength-1) * sizeof(HBA_PRDTEntry)));
-        cmdTable->prdtEntry[0].dataBaseAddress = (u32)((u64)buffer);
-        cmdTable->prdtEntry[0].dataBaseAddressUpper = (u32)((u64)buffer >> 32);
+        cmdTable->prdtEntry[0].dataBaseAddress = (u32)((u64)Buffer);
+        cmdTable->prdtEntry[0].dataBaseAddressUpper = (u32)((u64)Buffer >> 32);
         cmdTable->prdtEntry[0].byteCount = (numSectors << 9) - 1;
         cmdTable->prdtEntry[0].interruptOnCompletion = 1;
         FIS_REG_H2D* cmdFIS = (FIS_REG_H2D*)(&cmdTable->commandFIS);
@@ -153,17 +153,17 @@ namespace AHCI {
         cmdFIS->countLow  = (numSectors)      & 0xff;
         cmdFIS->countHigh = (numSectors >> 8) & 0xff;
         // Issue command.
-        hbaPort->commandIssue = 1;
+        HBAport->commandIssue = 1;
         // Wait until command is completed.
-        while (hbaPort->commandIssue != 0) {
+        while (HBAport->commandIssue != 0) {
             // I don't know why this is needed, but without
             //   this `nop` instruction, this loop never exits.
             asm volatile ("nop");
-            if (hbaPort->interruptStatus & HBA_PxIS_TFES)
+            if (HBAport->interruptStatus & HBA_PxIS_TFES)
                 return false;
         }
         // Check once more after break that read did not fail.
-        if (hbaPort->interruptStatus & HBA_PxIS_TFES)
+        if (HBAport->interruptStatus & HBA_PxIS_TFES)
             return false;
         
         return true;
@@ -173,10 +173,16 @@ namespace AHCI {
     //   then copy from the port's buffer into a given buffer without the possibility of the
     //   port's buffer being over-written by a read() call from a different thread.
     bool Port::read(u64 sector, u16 numSectors, void* dest, u64 numBytesToCopy) {
-        SpinlockLocker locker(lock);
+        // FIXME: Don't reject reads over port buffer max size,
+        //        just do multiple reads and copy as you go.
+        if (numBytesToCopy > MAX_READ_BYTES
+            || dest == nullptr)
+            return false;
+
+        SpinlockLocker locker(Lock);
         bool status = read_low_level(sector, numSectors);
         if (status)
-            memcpy(buffer, dest, numBytesToCopy);
+            memcpy(Buffer, dest, numBytesToCopy);
         return status;
     }
 
@@ -206,11 +212,11 @@ namespace AHCI {
 
         for (u8 i = 0; i < numPorts; ++i) {
             Ports[i]->initialize();
-            if (Ports[i]->buffer != nullptr) {
+            if (Ports[i]->Buffer != nullptr) {
                 UART::out("[AHCI]: \033[32mPort ");
                 UART::out(to_string(i));
                 UART::out(" initialized successfully.\033[0m\r\n");
-                memset((void*)Ports[i]->buffer, 0, MAX_READ_PAGES * 0x1000);
+                memset((void*)Ports[i]->Buffer, 0, MAX_READ_PAGES * 0x1000);
                 // Check if storage media at current port has a file-system LensorOS recognizes.
                 // FAT (File Allocation Table):
                 if (gFATDriver.is_device_fat_formatted(Ports[i])) {
@@ -277,7 +283,7 @@ namespace AHCI {
     AHCIDriver::~AHCIDriver() {
         UART::out("[AHCI]: Deconstructing AHCI Driver\r\n");
         for(u32 i = 0; i < numPorts; ++i) {
-            Memory::free_pages((void*)Ports[i]->buffer, MAX_READ_PAGES);
+            Memory::free_pages((void*)Ports[i]->Buffer, MAX_READ_PAGES);
             delete Ports[i];
         }
     }

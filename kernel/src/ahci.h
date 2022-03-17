@@ -30,7 +30,8 @@ namespace AHCI {
 /// 128mib = 134217700 bytes = 32768 pages = 0x8000
 /// 1mib = 1048576 bytes = 256 pages = 0x100
 #define MAX_READ_PAGES 0x100
-    
+#define MAX_READ_BYTES (MAX_READ_PAGES * 0x1000)
+
 #define ATA_DEV_BUSY 0x80
 #define ATA_DEV_DRQ  0x08
 #define ATA_CMD_READ_DMA_EX 0x25
@@ -171,14 +172,15 @@ namespace AHCI {
         friend class AHCIDriver;
 
     public:
-        Spinlock lock;
-        HBAPort* hbaPort;
-        PortType type;
-        u8* buffer;
-        u8  number;
-
         bool read(u64 sector, u16 numSectors, void* buffer, u64 numBytesToCopy);
+
     private:
+        Spinlock Lock;
+        u8 Number;
+        PortType Type;
+        u8* Buffer { nullptr };
+        HBAPort* HBAport { nullptr };
+
         void initialize();
         void start_commands();
         void stop_commands();
@@ -188,7 +190,7 @@ namespace AHCI {
     /// Advance Host Controller Interface Driver
     ///   This driver is instantiated for each SATA controller found on
     ///     the PCI bus, and will parse all the ports that are active and
-    ///     valid for later use.
+    ///     valid for later use (ie. parsing partitions, file-systems, etc).
     // TODO: Store created driver in some sort of device tree
     class AHCIDriver {
     public:
@@ -212,10 +214,13 @@ namespace AHCI {
         PCI::PCIDeviceHeader* PCIBaseAddress;
         /// AHCI Base Memory Register
         HBAMemory* ABAR;
+        // A single AHCI may have up to 32 ports to
+        // communicate with separate devices that support AHCI.
     };
 
     /// Store list of pointers to drivers that are created for later use.
-    // Honestly I'm not sure if this is needed, but I'm keeping it here until I can prove that I don't.
+    // Honestly I'm not sure if this is needed, but I'm
+    // keeping it here until I can prove that I don't.
     extern AHCIDriver** Drivers;
     extern u16 NumDrivers;
 }
