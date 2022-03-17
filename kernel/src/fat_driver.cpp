@@ -95,7 +95,6 @@ FATType FATDriver::get_type(BootRecord* BR) const {
 /// Try to parse a FAT boot record from the first boot sector of the SATA device.
 /// This is used by the AHCI driver to determine if this file system is suitable for a given device.
 bool FATDriver::is_device_fat_formatted(AHCI::Port* port) {
-    bool result = true;
     // Allocate memory for a FAT boot record.
     SmartPtr<BootRecord> br = SmartPtr<BootRecord>(new BootRecord);
     if (port->read(0, 1, br.get(), sizeof(BootRecord))) {
@@ -118,10 +117,10 @@ bool FATDriver::is_device_fat_formatted(AHCI::Port* port) {
                         || br->BPB.NumFATsPresent <= 0
                         || get_total_sectors(br.get()) == 0);
         if (invalid)
-            result = false;
+            return false;
     }
-    else result = false;
-    return result;
+    else return false;
+    return true;
 }
 
 // FIXME: This is spaghetti code, I need to re-do this.

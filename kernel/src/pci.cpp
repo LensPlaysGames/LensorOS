@@ -36,17 +36,15 @@ namespace PCI {
         //UART::out(get_prog_if_name(pciDevHdr->Class, pciDevHdr->Subclass, pciDevHdr->ProgIF));
         //UART::out("\r\n");
         
-        if (pciDevHdr->Class == 0x01) {
-            // Mass Storage Controller
-            if (pciDevHdr->Subclass == 0x06) {
-                // Serial ATA
+        // Class 0x01 = Mass Storage Controller
+        if (pciDevHdr->Class == 0x01)
+            // Class 0x06 = Serial ATA
+            if (pciDevHdr->Subclass == 0x06)
+                // ProgIF 0x01 = AHCI 1.0 Device
                 if (pciDevHdr->ProgIF == 0x01) {
-                    // AHCI 1.0 Device
                     AHCI::Drivers[AHCI::NumDrivers] = new AHCI::AHCIDriver(pciDevHdr);
                     ++AHCI::NumDrivers;
                 }
-            }
-        }
     }
     
     void enumerate_device(u64 bus_address, u64 device_number) {
