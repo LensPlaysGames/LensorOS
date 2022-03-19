@@ -3,23 +3,16 @@
 #include "integers.h"
 #include "large_integers.h"
 
-void memset(void* start, u8 value, u64 numBytes) {
-    if (numBytes >= 256) {
-        u64 qWordValue = 0;
-        qWordValue |= (u64)value << 0;
-        qWordValue |= (u64)value << 8;
-        qWordValue |= (u64)value << 16;
-        qWordValue |= (u64)value << 24;
-        qWordValue |= (u64)value << 32;
-        qWordValue |= (u64)value << 40;
-        qWordValue |= (u64)value << 48;
-        qWordValue |= (u64)value << 56;
-        u64 i = 0;
-        for (; i <= numBytes - 8; i += 8)
-            *(u64*)((u64)start + i) = qWordValue;
+int memcmp(void* aPtr, void* bPtr, u64 numBytes) {
+    u8* a = (u8*)aPtr;
+    u8* b = (u8*)bPtr;
+    while (numBytes--) {
+        if (*a != *b)
+            return 1;
+        a++;
+        b++;
     }
-    for (u64 i = 0; i < numBytes; ++i)
-        *(u8*)((u64)start + i) = value;
+    return 0;
 }
 
 // The signed comparison does limit `numBytes` to ~9 billion.
@@ -37,6 +30,25 @@ void memcpy(void* src, void* dest, u64 numBytes) {
         *(u64*)((u64)dest + i) = *(u64*)((u64)src + i);
     for (; i < (s64)numBytes; ++i)
         *(u8*)((u64)dest + i) = *(u8*)((u64)src + i);
+}
+
+void memset(void* start, u8 value, u64 numBytes) {
+    if (numBytes >= 256) {
+        u64 qWordValue = 0;
+        qWordValue |= (u64)value << 0;
+        qWordValue |= (u64)value << 8;
+        qWordValue |= (u64)value << 16;
+        qWordValue |= (u64)value << 24;
+        qWordValue |= (u64)value << 32;
+        qWordValue |= (u64)value << 40;
+        qWordValue |= (u64)value << 48;
+        qWordValue |= (u64)value << 56;
+        u64 i = 0;
+        for (; i <= numBytes - 8; i += 8)
+            *(u64*)((u64)start + i) = qWordValue;
+    }
+    for (u64 i = 0; i < numBytes; ++i)
+        *(u8*)((u64)start + i) = value;
 }
 
 void volatile_read(const volatile void* ptr, volatile void* out, u64 length) {
