@@ -232,10 +232,13 @@ namespace AHCI {
                     UART::out("    Partition Table Entries: ");
                     UART::out(to_string(hdr->NumberOfPartitionsTableEntries));
                     UART::out("\r\n");
+                    auto sector = SmartPtr<u8[]>(new u8[512], 512);
                     for (u32 j = 0; j < hdr->NumberOfPartitionsTableEntries; ++j) {
-                        u32 partSector = hdr->PartitionsTableLBA + (hdr->PartitionsTableEntrySize * j);
-                        auto part = SmartPtr<GPT::PartitionEntry>(new GPT::PartitionEntry);
-                        if (Ports[i]->read(partSector, 1, part.get(), sizeof(GPT::PartitionEntry))) {
+                        u64 byteOffset = hdr->PartitionsTableEntrySize * j;
+                        u32 partSector = hdr->PartitionsTableLBA + (byteOffset / 512);
+                        byteOffset %= 512;
+                        if (Ports[i]->read(partSector, 1, sector.get(), 512)) {
+                            auto* part = (GPT::PartitionEntry*)((u64)sector.get() + byteOffset);
                             UART::out("      Partition ");
                             UART::out(to_string(j));
                             UART::out(": ");
