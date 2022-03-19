@@ -56,6 +56,7 @@ HEADERS
     src/filesystem.h
     src/gdt.h
     src/gpt.h
+    src/guid.h
     src/hpet.h
     src/integers.h
     src/interrupts/idt.h
