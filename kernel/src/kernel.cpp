@@ -35,22 +35,6 @@ void print_memory_info() {
     gRend.crlf(startOffset);
 }
 
-void srl_memory_info() {
-    UART::out("\r\nMemory Info:\r\n|- Total RAM: ");
-    UART::out(to_string(Memory::get_total_ram() / 1024 / 1024));
-    UART::out("MiB (");
-    UART::out(to_string(Memory::get_total_ram() / 1024));
-    UART::out("KiB)\r\n|- Free RAM: ");
-    UART::out(to_string(Memory::get_free_ram() / 1024 / 1024));
-    UART::out(" MiB (");
-    UART::out(to_string(Memory::get_free_ram() / 1024));
-    UART::out(" KiB)\r\n`- Used RAM: ");
-    UART::out(to_string(Memory::get_used_ram() / 1024 / 1024));
-    UART::out(" MiB (");
-    UART::out(to_string(Memory::get_used_ram() / 1024));
-    UART::out(" KiB)\r\n");
-}
-
 void print_now(u64 xOffset = 0) {
     gRend.puts("Now is ");
     gRend.puts(to_string(gRTC.Time.hour));
@@ -65,6 +49,22 @@ void print_now(u64 xOffset = 0) {
     gRend.putchar('-');
     gRend.puts(to_string(gRTC.Time.date));
     gRend.crlf(xOffset);
+}
+
+void srl_memory_info() {
+    UART::out("\r\nMemory Info:\r\n|- Total RAM: ");
+    UART::out(to_string(Memory::get_total_ram() / 1024 / 1024));
+    UART::out("MiB (");
+    UART::out(to_string(Memory::get_total_ram() / 1024));
+    UART::out("KiB)\r\n|- Free RAM: ");
+    UART::out(to_string(Memory::get_free_ram() / 1024 / 1024));
+    UART::out(" MiB (");
+    UART::out(to_string(Memory::get_free_ram() / 1024));
+    UART::out(" KiB)\r\n`- Used RAM: ");
+    UART::out(to_string(Memory::get_used_ram() / 1024 / 1024));
+    UART::out(" MiB (");
+    UART::out(to_string(Memory::get_used_ram() / 1024));
+    UART::out(" KiB)\r\n");
 }
 
 void test_userland_function() {
