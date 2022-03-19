@@ -17,7 +17,7 @@ const char* to_string(bool b) {
     return b ? t : f;
 }
 
-char uint_to_str_buf[20];
+char uint_to_str_buf[LENSOR_OS_TO_STRING_BUF_SZ];
 char* to_string(u64 value) {
     // Get necessary string length.
     u8 length = 0;
@@ -46,7 +46,7 @@ char* to_string(u32 value) { return to_string((u64)value); }
 char* to_string(u16 value) { return to_string((u64)value); }
 char* to_string(u8  value) { return to_string((u64)value); }
 
-char int_to_str_buf[20];
+char int_to_str_buf[LENSOR_OS_TO_STRING_BUF_SZ];
 char* to_string(s64 value) {
     // Add negation symbol before negative values.
     u8 isNegative = 0;
@@ -82,7 +82,7 @@ char* to_string(s32 value) { return to_string((s64)value); }
 char* to_string(s16 value) { return to_string((s64)value); }
 char* to_string(s8  value) { return to_string((s64)value); }
 
-char dbl_to_str_buf[40];
+char dbl_to_str_buf[LENSOR_OS_TO_STRING_BUF_SZ_DBL];
 char* to_string(double value, u8 decimalPlaces) {
     // Max decimal places = 20
     if (decimalPlaces > 20) { decimalPlaces = 20; }
@@ -110,13 +110,12 @@ char* to_string(double value, u8 decimalPlaces) {
     return dbl_to_str_buf;
 }
 
-
 // Shout-out to User:Pancakes on the osdev wiki!
 // https://wiki.osdev.org/User:Pancakes
 const u8 size = 15;
 const char* hexmap = "0123456789abcdef";
 const char* hexmap_capital = "0123456789ABCDEF";
-char hex_to_string_buf[20];
+char hex_to_string_buf[LENSOR_OS_TO_STRING_BUF_SZ];
 char* to_hexstring(u64 value, bool capital) {
     s8 n = (s8)size;
     u8 i {0};
