@@ -11,6 +11,9 @@ bool strcmp(const char* a, const char* b, u64 length);
 
 const char* to_string(bool);
 
+constexpr u64 LENSOR_OS_TO_STRING_BUF_SZ = 20;
+constexpr u64 LENSOR_OS_TO_STRING_BUF_SZ_DBL = 40;
+
 char* to_string(u64);
 char* to_string(u32);
 char* to_string(u16);

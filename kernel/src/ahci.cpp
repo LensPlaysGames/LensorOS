@@ -3,13 +3,17 @@
 #include "fat_definitions.h"
 #include "fat_driver.h"
 #include "fat_fs.h"
+#include "gpt.h"
+#include "inode.h"
+#include "memory.h"
 #include "memory/heap.h"
 #include "memory/physical_memory_manager.h"
 #include "memory/virtual_memory_manager.h"
-#include "inode.h"
-#include "memory.h"
 #include "pci.h"
+#include "smart_pointer.h"
 #include "spinlock.h"
+
+
 
 namespace AHCI {
 #define HBA_PORT_DEVICE_PRESENT 0x3
@@ -210,71 +214,112 @@ namespace AHCI {
         UART::out("kib\r\n\r\n");
 
         for (u8 i = 0; i < NumPorts; ++i) {
+            UART::out("[AHCI]: Port ");
+            UART::out(to_string(i));
+            UART::out("\r\n");
             Ports[i]->initialize();
-            if (Ports[i]->Buffer != nullptr) {
-                UART::out("[AHCI]: \033[32mPort ");
-                UART::out(to_string(i));
-                UART::out(" initialized successfully.\033[0m\r\n");
-                memset((void*)Ports[i]->Buffer, 0, MAX_READ_BYTES);
-                // Check if storage media at current port has a file-system LensorOS recognizes.
-                // FAT (File Allocation Table):
-                if (gFATDriver.is_device_fat_formatted(Ports[i])) {
-                    FatFS* fs = new FatFS(NumFileSystems, this, i);
-                    FileSystems[NumFileSystems] = fs;
-                    ++NumFileSystems;
-
-                    // FIXME: Dummy inode creation.
-                    Inode inode = Inode(*FileSystems[NumFileSystems], 0);
-                    fs->read(&inode);
-
-                    UART::out("[AHCI]: Device at port ");
-                    UART::out(to_string(i));
-                    switch (fs->Type) {
-                    case FATType::INVALID: 
-                        UART::out(" has \033[31mINVALID\033[0m FAT format.");
-                        break;
-                    case FATType::FAT32:   
-                        UART::out(" is FAT32 formatted.");
-                        break;
-                    case FATType::FAT16:   
-                        UART::out(" is FAT16 formatted.");
-                        break;
-                    case FATType::FAT12:   
-                        UART::out(" is FAT12 formatted.");
-                        break;
-                    case FATType::ExFAT:   
-                        UART::out(" is ExFAT formatted.");
-                        break;
-                    }
+            if (Ports[i]->Buffer == nullptr){
+                UART::out("  \033[32mInitialization failed!\033[0m\r\n");
+                continue;
+            }
+            memset((void*)Ports[i]->Buffer, 0, MAX_READ_BYTES);
+            // Check if storage media at current port has a file-system LensorOS recognizes.
+            // GPT (GUID Partition Table):
+            if (GPT::is_gpt_present(Ports[i])) {
+                UART::out("  Found Valid GPT:\r\n");
+                auto hdr = SmartPtr<GPT::Header>(new GPT::Header);
+                if (Ports[i]->read(1, 1, hdr.get(), sizeof(GPT::Header))) {
+                    UART::out("    Partition Table Entries: ");
+                    UART::out(to_string(hdr->NumberOfPartitionsTableEntries));
                     UART::out("\r\n");
-
-                    // Write label and type of FAT device.
-                    switch (fs->Type) {
-                    case FATType::FAT12:
-                    case FATType::FAT16:
-                        UART::out("  Label: ");
-                        UART::out(&((BootRecordExtension16*)&fs->BR.Extended)->VolumeLabel[0], 11);
-                        UART::out("\r\n");
-                        break;
-                    case FATType::FAT32:
-                    case FATType::ExFAT:
-                        UART::out("  Label: ");
-                        UART::out(&((BootRecordExtension32*)&fs->BR.Extended)->VolumeLabel[0], 11);
-                        UART::out("\r\n");
-                        break;
-                    default:
-                        break;
+                    auto sector = SmartPtr<u8[]>(new u8[512], 512);
+                    for (u32 j = 0; j < hdr->NumberOfPartitionsTableEntries; ++j) {
+                        u64 byteOffset = hdr->PartitionsTableEntrySize * j;
+                        u32 partSector = hdr->PartitionsTableLBA + (byteOffset / 512);
+                        byteOffset %= 512;
+                        if (Ports[i]->read(partSector, 1, sector.get(), 512)) {
+                            auto* part = (GPT::PartitionEntry*)((u64)sector.get() + byteOffset);
+                            UART::out("      Partition ");
+                            UART::out(to_string(j));
+                            UART::out(": ");
+                            UART::out(part->Name, 72);
+                            UART::out(":\r\n        Type GUID: ");
+                            print_guid(part->TypeGUID);
+                            if (part->TypeGUID == GPT::PartitionType$EFISystem) {
+                                UART::out("\r\n        Found EFI System partition (boot file system).");
+                                // possible TODO: Mount boot filesystem as FAT32?
+                            }
+                            else {
+                                for (GUID a : GPT::ReservedPartitionGUIDs) {
+                                    if (a == part->TypeGUID) {
+                                        UART::out("\r\n          This GUID matches a known partition type GUID, and will be preserved and ignored.");
+                                        break;
+                                    }
+                                }
+                            }
+                            UART::out("\r\n        Unique GUID: ");
+                            print_guid(part->UniqueGUID);
+                            UART::out("\r\n        Size in Sectors: ");
+                            UART::out(to_string(part->EndLBA - part->StartLBA));
+                            UART::out("\r\n        Attributes: ");
+                            UART::out(to_string(part->Attributes));
+                            UART::out("\r\n");
+                        }
                     }
-                    UART::out("  Total Size: ");
-                    UART::out(to_string(fs->get_total_size() / 1024 / 1024));
-                    UART::out(" mib\r\n\r\n");
-                }
-                else {
-                    UART::out("[AHCI]: \033[31mDevice at port ");
-                    UART::out(to_string(i));
-                    UART::out(" has an unrecognizable format.\033[0m\r\n");
                 }
             }
+            // FAT (File Allocation Table):
+            else if (gFATDriver.is_device_fat_formatted(Ports[i])) {
+                FatFS* fs = new FatFS(NumFileSystems, this, i);
+                FileSystems[NumFileSystems] = fs;
+                ++NumFileSystems;
+
+                // FIXME: Dummy inode creation.
+                Inode inode = Inode(*FileSystems[NumFileSystems], 0);
+                fs->read(&inode);
+
+                switch (fs->Type) {
+                case FATType::INVALID: 
+                    UART::out("  \033[31mINVALID\033[0m FAT format.");
+                    break;
+                case FATType::FAT32:   
+                    UART::out("  FAT32 formatted");
+                    break;
+                case FATType::FAT16:   
+                    UART::out("  FAT16 formatted");
+                    break;
+                case FATType::FAT12:   
+                    UART::out("  FAT12 formatted");
+                    break;
+                case FATType::ExFAT:   
+                    UART::out("  ExFAT formatted");
+                    break;
+                }
+                UART::out("\r\n");
+
+                // Write label and type of FAT device.
+                switch (fs->Type) {
+                case FATType::FAT12:
+                case FATType::FAT16:
+                    UART::out("  Label: ");
+                    UART::out(&((BootRecordExtension16*)&fs->BR.Extended)->VolumeLabel[0], 11);
+                    UART::out("\r\n");
+                    break;
+                case FATType::FAT32:
+                case FATType::ExFAT:
+                    UART::out("  Label: ");
+                    UART::out(&((BootRecordExtension32*)&fs->BR.Extended)->VolumeLabel[0], 11);
+                    UART::out("\r\n");
+                    break;
+                default:
+                    break;
+                }
+                UART::out("  Total Size: ");
+                UART::out(to_string(fs->get_total_size() / 1024 / 1024));
+                UART::out(" mib\r\n");
+            }
+            else UART::out("  \033[31mUnrecognizable format.\033[0m\r\n");
+            UART::out("\r\n");
         }
         UART::out("[AHCI]: \033[32mDriver constructed.\033[0m\r\n\r\n");
     }

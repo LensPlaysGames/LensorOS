@@ -55,6 +55,8 @@ HEADERS
     src/fat_fs.h
     src/filesystem.h
     src/gdt.h
+    src/gpt.h
+    src/guid.h
     src/hpet.h
     src/integers.h
     src/interrupts/idt.h
@@ -99,6 +101,7 @@ SOURCES
     src/fat_driver.cpp
     src/filesystem.cpp
     src/gdt.cpp
+    src/gpt.cpp
     src/hpet.cpp
     src/interrupts/idt.cpp
     src/interrupts/syscalls.cpp

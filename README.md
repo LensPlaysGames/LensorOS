@@ -70,6 +70,8 @@ Upon completion, this will have generated a disk image file `LensorOS.img` that 
 - [Continue on Linux](#qemu-boot-linux)
 - [Continue on Windows](#qemu-boot-windows)
 
+Alternatively, Create a disk image file that is GPT formatted (aka supports partitions) by utilizing the `mkgpt.sh` script that is included. [See the scripts README](kernel/scripts/README.scripts.md) for more information.
+
 #### On Linux <a name="qemu-boot-linux"></a>
 To run QEMU with the correct command line options automatically, use the following helper script to launch QEMU booting into LensorOS:
 ```bash
@@ -103,14 +105,30 @@ There is also a `rundbg.bat` that will launch QEMU with the appropriate flags to
 [Get VirtualBox](https://www.virtualbox.org/wiki/Downloads)
 
 VirtualBox is kind of picky in the file formats it will accept as drives and such. \
-Because of this fact, we must prepare an `.iso` file with an ISO filesystem to boot into VirtualBox.
+Because of this fact, VirtualBox can not use the `.img` file raw like QEMU, and must prepare either a `.bin` GPT formatted disk image with an EFI System partition or `.iso` file with an ISO filesystem.
 
 Before beginning, ensure you have the LensorOS bootloader and kernel binaries built. \
 (pre-compiled binaries coming soon, for now see [the build section](#build))
 
 To change the font, replace `dfltfont.psf` in the `kernel/res` folder with any PSF1 font (not PSF2). \
-For a few fonts that are compatible, check out [this repository](https://github.com/ercanersoy/PSF-Fonts)
+For a few fonts that are compatible, check out [this repository](https://github.com/ercanersoy/PSF-Fonts), or even [GNU Unifont](http://unifoundry.com/unifont/index.html).
 
+There are two possible pathways that LensorOS bootable media can be generated.
+- [GPT](#vbox-boot-gpt)
+- [Live CD](#vbox-boot-live-cd)
+
+#### GPT <a name="vbox-boot-gpt"></a>
+Utilize the `mkgpt.sh` script that is included in the `kernel/scripts/` directory. [See the scripts README](kernel/scripts/README.scripts.md) for more information on this script.
+
+If all has went well, there will be a `LensorOS.img` and a `LensorOS.bin` in the `/kernel/bin/` directory of the repository. While this binary `.bin` file is a perfectly valid image of a real GPT formatted disk, VirtualBox continues to be picky and only accept their proprietary formats. When VirtualBox is installed, it also installs a lot of command line tools, one of which called `VBoxManage`. This tool has a subcommand `convertfromraw` that we will utilize to create a `.vdi` virtual disk image from our `.bin` actual binary disk image.
+
+```bash
+VBoxManage convertfromraw /Path/to/LensorOS/kernel/bin/LensorOS.bin /Path/to/LensorOS/kernel/bin/LensorOS.vdi --format VDI
+```
+
+Continue to the [VirtualBox VM Configuration](#vbox-boot-vm-config), and replace any mention of `Optical Drive` with `Hard Disk`, and any mention of `LensorOS.iso` with `LensorOS.vdi`.
+
+#### Live CD <a name="vbox-boot-live-cd"></a>
 NOTE: On Windows, complete the following shell commands from within WSL, or the Windows Subsystem for Linux.
 
 Install the tool necessary to create `.iso` files and ISO-9660 filesystems, as well as a tool to create and format MS-DOS style filesystems:
@@ -122,10 +140,12 @@ Next, simply run the `mkiso.sh` script with Bash:
 bash /Path/to/LensorOS/kernel/mkiso.sh
 ```
 
-If all goes well, this will first generate a FAT32 EFI-compatible boot disk image, then create a bootable ISO-9660 CD-ROM disk image. \
-To actually use this boot cd in a VM in VirtualBox, it requires some setup:
+If all goes well, this will first generate a FAT32 EFI-compatible boot disk image, then create a bootable ISO-9660 CD-ROM disk image.
+
+#### Virtual Machine Configuration <a name="vbox-boot-vm-config"></a>
+To actually use the generated bootable media in a VM in VirtualBox, it requires some setup:
 1. Open VirtualBox.
-2. Click the `New` button.
+2. Click the `New` button to create a new virtual machine (VM).
 3. Give the VM a name and a file path you are comfortable with.
 4. Select Type of `Other` and Version of `Other/Unknown (64-bit)`.
 5. Leave the memory size how it is; 64MB is plenty at this time.
@@ -140,7 +160,7 @@ To actually use this boot cd in a VM in VirtualBox, it requires some setup:
     1. Right click the storage controller (default IDE), and select `Optical Drive`.
     2. Click the `Add` button in the new `Optical Disk Selector` window that pops up.
     3. Browse to `Path/To/LensorOS/kernel/bin/` and select `LensorOS.iso`.
-    4. Ensure `LensorOS.iso` is selected within the list, and click the `Choose` button.
+    4. Ensure the image just added is selected within the list, and click the `Choose` button.
 11. Navigate to `Network` within the list on the left.
     1. Disable all network adapters.
 

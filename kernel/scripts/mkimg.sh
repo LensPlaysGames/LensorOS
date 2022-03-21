@@ -1,5 +1,4 @@
 #!/bin/bash
-OSName="LensorOS"
 ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 KernelDirectory="$ScriptDirectory/.."
 BuildDirectory="$KernelDirectory/bin"
@@ -12,15 +11,15 @@ run(){
 }
 
 run mkdir -p $BuildDirectory
-run dd if=/dev/zero of=$BuildDirectory/$OSName.img count=93750
-run mformat -i $BuildDirectory/$OSName.img -F -v "EFI System" ::
+run dd if=/dev/zero of=$BuildDirectory/LensorOS.img count=93750
+run mformat -i $BuildDirectory/LensorOS.img -F -v "EFI System" ::
 echo "    Created FAT32 bootable disk image."
-run mmd -i $BuildDirectory/$OSName.img ::/EFI
-run mmd -i $BuildDirectory/$OSName.img ::/EFI/BOOT
-run mmd -i $BuildDirectory/$OSName.img ::/LensorOS
+run mmd -i $BuildDirectory/LensorOS.img ::/EFI
+run mmd -i $BuildDirectory/LensorOS.img ::/EFI/BOOT
+run mmd -i $BuildDirectory/LensorOS.img ::/LensorOS
 echo "    Directories initialized."
-run mcopy -i $BuildDirectory/$OSName.img $BootloaderEFI ::/EFI/BOOT
-run mcopy -i $BuildDirectory/$OSName.img $ScriptDirectory/startup.nsh ::
-run mcopy -i $BuildDirectory/$OSName.img $BuildDirectory/kernel.elf ::/LensorOS
-run mcopy -i $BuildDirectory/$OSName.img $BuildDirectory/dfltfont.psf ::/LensorOS
+run mcopy -i $BuildDirectory/LensorOS.img $BootloaderEFI ::/EFI/BOOT
+run mcopy -i $BuildDirectory/LensorOS.img $ScriptDirectory/startup.nsh ::
+run mcopy -i $BuildDirectory/LensorOS.img $BuildDirectory/kernel.elf ::/LensorOS
+run mcopy -i $BuildDirectory/LensorOS.img $BuildDirectory/dfltfont.psf ::/LensorOS
 echo "    Resources copied."
