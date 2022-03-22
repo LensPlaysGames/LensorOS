@@ -1,10 +1,12 @@
-#include "kUtility.h"
+#include "kernel.h"
 
 #include "basic_renderer.h"
+#include "boot.h"
 #include "cstr.h"
 #include "hpet.h"
 #include "interrupts/interrupts.h"
 #include "keyboard.h"
+#include "kstage1.h"
 #include "memory/physical_memory_manager.h"
 #include "pit.h"
 #include "rtc.h"
@@ -74,9 +76,9 @@ void test_userland_function() {
     }
 }
 
-extern "C" void _start(BootInfo* bInfo) {
+extern "C" void kmain(BootInfo* bInfo) {
     // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
-    kernel_init(bInfo);
+    kstage1(bInfo);
     UART::out("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
     //// Clear + swap screen (ensure known state: blank).
     gRend.clear(0x00000000);
