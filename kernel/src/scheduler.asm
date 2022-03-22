@@ -1,5 +1,5 @@
     [BITS 64]
-
+    
     ;; External symbols provided in `scheduler.h` and `scheduler.cpp`
     ;; A pointer to task switching handler function.
     extern scheduler_switch_process
@@ -45,10 +45,10 @@ irq0_handler:
     push rbx
     push rsp
 ;;; INCREMENT SYSTEM TIMER TICKS
-    call [timer_tick]
+    call [rel timer_tick]
 ;;; CALL C++ FUNCTION; ARGUMENT IN `rdi`
     mov rdi, rsp
-    call [scheduler_switch_process]
+    call [rel scheduler_switch_process]
 ;;; END INTERRUPT
     mov al, 0x20                ; 0x20 = PIC_EOI
     out 0x20, al                ; 0x20 = PIC1_COMMAND port
