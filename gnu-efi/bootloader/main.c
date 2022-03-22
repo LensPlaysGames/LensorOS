@@ -73,7 +73,7 @@ typedef struct {
 #define PSF1_MAGIC1 0x04
 
 typedef struct {
-    // Magic bytes to indicate PSF1 font type   
+    // Magic bytes to indicate PSF1 font type
     unsigned char Magic[2];
     unsigned char Mode;
     unsigned char CharacterSize;
@@ -240,7 +240,7 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     // Initialize Unified Extensible Firmware Interface Graphics Output Protocol.
     // Let's call that the 'GOP' from now on.
     Framebuffer* gop_fb = InitializeGOP();
-    Print(L"  Base: 0x%08X\n"
+    Print(L"  Base: 0x%08x\n"
           L"  Size: 0x%x\n"
           L"  Pixel Width: %d\n"
           L"  Pixel Height: %d\n"
@@ -299,12 +299,17 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
 
     // Exit boot services: free system resources dedicated to UEFI boot services,
     //   as well as prevent UEFI from shutting down automatically after 5 minutes.
-    Print(L"Exiting boot services\nJumping to kernel start\n");
+    Print(L"Exiting boot services\n");
     gSystemTable->BootServices->ExitBootServices(gImageHandle, MapKey);
 
     // Define kernel entry point.
-    void (*KernelStart)(BootInfo*) = ((__attribute__((sysv_abi)) void (*)(BootInfo*)) elf_header.e_entry);
+#define KERNEL_VIRTUAL 0xffffff8000000000
+    void (*KernelStart)(BootInfo*) = ((__attribute__((sysv_abi)) void (*)(BootInfo*)) elf_header.e_entry - KERNEL_VIRTUAL);
     KernelStart(&info);
-    
+
+    // Once boot services have been exited, must never return!
+    while (1)
+        __asm__ ("hlt");
+
     return EFI_SUCCESS;
 }
