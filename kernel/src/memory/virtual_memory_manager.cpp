@@ -117,6 +117,10 @@ namespace Memory {
         for (u64 t = 0; t < Memory::get_total_ram(); t+=0x1000)
             map(initialPageMap, (void*)t, (void*)t);
 
+        u64 kernelPagesNeeded = (((u64)&KERNEL_END - (u64)&KERNEL_START) / 4096) + 1;
+        for (u64 t = 0; t < kernelPagesNeeded; t+=0x1000)
+            map(initialPageMap, (void*)(t + (u64)&KERNEL_VIRTUAL), (void*)t);
+
         flush_page_map(initialPageMap);
     }
 }
