@@ -74,33 +74,34 @@ _start:
     mov rax, V2P(prekernel_pml4)
     mov cr3, rax
     ;# At this point, higher half is mapped (no more manual address conversion)!
+	;# This can be confirmed by using the `info mem` QEMU monitor command after booting.
+
+    ;# FIXME: This causes a triple fault (as everything in
+    ;#        this file seems to do the first time 'round).
+    mov rax, higher_half_init
+    jmp rax
+
+higher_half_init:
+    ;# Move stack pointer to higher half
+    mov rax, 0xffffff8000000000
+    add rsp, rax
+	mov rbp, rsp
+    ;# Remove identity mapping
+    mov rax, 0
+    mov [rel prekernel_pml4], rax
 
     mov rax, hlt_forever
 hlt_forever:
     hlt
     jmp [rax]
 
-    ;# FIXME: This causes a triple fault (as everything in
-    ;#        this file seems to do the first time 'round).
-    mov rax, higher_half_init
-    jmp [rax]
-
-higher_half_init:
-    ;# Move stack pointer to higher half
-    mov rax, 0xffffff8000000000
-    add rsp, rax
-
-    ;# Remove identity mapping
-    mov rax, 0
-    mov [rel prekernel_pml4], rax
-
     ;# Force page tables to update
     mov rax, cr3
     mov cr3, rax
 
-    push rdi
     ;# Jump to kmain()
-    mov rax, [rel kmain]
+    push rdi
+    mov rax, kmain
     call rax
 
     mov rax, hlt_forever2
