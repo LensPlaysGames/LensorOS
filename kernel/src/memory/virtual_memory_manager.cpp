@@ -97,16 +97,14 @@ namespace Memory {
     }
 
     PageTable* get_active_page_map() {
-        if (ActivePageMap)
-            return ActivePageMap;
-
-        PageTable* ret { 0 };
-        asm volatile ("mov %%cr3, %%rax\n\t"
-                      "mov %%rax, %0"
-                      : "=m"(ret)
-                      : // No inputs
-                      : "rax");
-        return ret;
+        if (!ActivePageMap) {
+            asm volatile ("mov %%cr3, %%rax\n\t"
+                          "mov %%rax, %0"
+                          : "=m"(ActivePageMap)
+                          : // No inputs
+                          : "rax");
+        }
+        return ActivePageMap;
     }
 
     void init_virtual() {
