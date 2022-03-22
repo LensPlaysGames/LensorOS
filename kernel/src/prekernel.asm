@@ -86,14 +86,10 @@ higher_half_init:
     mov rax, 0xffffff8000000000
     add rsp, rax
 	mov rbp, rsp
+
     ;# Remove identity mapping
     mov rax, 0
     mov [rel prekernel_pml4], rax
-
-    mov rax, hlt_forever
-hlt_forever:
-    hlt
-    jmp [rax]
 
     ;# Force page tables to update
     mov rax, cr3
@@ -104,7 +100,7 @@ hlt_forever:
     mov rax, kmain
     call rax
 
-    mov rax, hlt_forever2
-hlt_forever2:
+    mov rax, hlt_forever
+hlt_forever:
     hlt
     jmp [rax]
