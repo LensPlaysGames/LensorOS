@@ -2,6 +2,7 @@
 
 #include "../integers.h"
 #include "../memory.h"
+#include "../link_definitions.h"
 #include "paging.h"
 #include "physical_memory_manager.h"
 

@@ -4,6 +4,7 @@
 #include "common.h"
 #include "../cstr.h"
 #include "../efi_memory.h"
+#include "../link_definitions.h"
 #include "region.h"
 #include "../uart.h"
 
@@ -13,7 +14,6 @@ namespace Memory {
     u64 TotalPages { 0 };
     u64 TotalFreePages { 0 };
     u64 TotalUsedPages { 0 };
-
 
     u64 get_total_ram() {
         return TotalPages * PAGE_SIZE;
