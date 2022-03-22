@@ -3,7 +3,7 @@
 
     [BITS 64]
     
-    extern syscalls             ; Table of system call functions defined in "syscalls.h"
+    extern syscalls             ; Table of system call functions declared in "syscalls.h"
     extern num_syscalls         ; Number of system call functions defined within syscalls table.
 
 do_swapgs:
@@ -21,7 +21,7 @@ skip_swap:
 system_call_handler_asm:
 ;;; Do nothing if system call code is invalid:
 ;;; Syscall code invalid if greater than or equal to total number of syscalls.
-    cmp rax, [num_syscalls]
+    cmp rax, [rel num_syscalls]
     jae invalid_system_call
 ;;; Save CPU state to be restored after system call.
     call do_swapgs
@@ -44,8 +44,12 @@ system_call_handler_asm:
     push rbx
     push rsp
 ;;; Execute the system call.
-    call [syscalls + rax * 8]   ; 8 = sizeof(pointer) in 64 bit.
-;;; Restore CPU state, as system call is no longer executing.
+    mov rsi, syscalls           ; Store address of syscalls function table.
+    mov rbx, 8                  ; 8 = sizeof(pointer) in 64 bit.
+    mul rbx                     ; Get addressoffset into syscalls table.
+    add rsi, rbx                ; Add offset to base address.
+    call [rel rsi]              ; Call function at syscalls table base address + syscall number offset.
+;;; Restore CPU state, then return from interrupt.
     add rsp, 8                  ; Eat `rsp` off the stack.
     pop rbx
     pop rcx
