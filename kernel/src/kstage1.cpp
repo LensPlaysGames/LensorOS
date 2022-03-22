@@ -1,7 +1,8 @@
-#include "kUtility.h"
+#include "kstage1.h"
 
 #include "acpi.h"
 #include "basic_renderer.h"
+#include "boot.h"
 #include "bitmap.h"
 #include "cpu.h"
 #include "cpuid.h"
@@ -83,7 +84,7 @@ CPUDescription* SystemCPU { nullptr };
 //   512-byte region of memory before use.
 u8 fxsave_region[512] __attribute__((aligned(16)));
 
-void kernel_init(BootInfo* bInfo) {
+void kstage1(BootInfo* bInfo) {
     /* This function is kind of monstrous, so the functionality is outlined here.
      *   - Prepare UART serial communications driver
      *   - Prepare physical/virtual memory
@@ -124,13 +125,7 @@ void kernel_init(BootInfo* bInfo) {
     // Setup dynamic memory allocation (`new`, `delete`).
     init_heap();
 
-    /* Tell x86_64 CPU where the GDT is located by creating a GDT descriptor.
-     * The global descriptor table contains information about
-     *   memory segments (like privilege level of executing code,
-     *   or privilege level needed to access data).
-     */
-    GDTDescriptor GDTD = GDTDescriptor(sizeof(GDT) - 1, (u64)&gGDT);
-    LoadGDT(&GDTD);
+    
     // Prepare Interrupt Descriptor Table.
     prepare_interrupts();
 
