@@ -20,10 +20,11 @@ Interrupts
 target_compile_options(
 Interrupts PRIVATE
     -O4
-    -mno-red-zone
-    -mgeneral-regs-only
     -ffreestanding
     -fno-exceptions
+    -mcmodel=large
+    -mgeneral-regs-only
+    -mno-red-zone
     -c
 )
 
@@ -32,6 +33,7 @@ Assembly
     src/cpuid.asm
     src/gdt.asm
     src/interrupts/syscalls.asm
+    src/prekernel.asm
     src/scheduler.asm
     src/userswitch.asm
 )
@@ -46,6 +48,7 @@ HEADERS
     src/ahci.h
     src/basic_renderer.h
     src/bitmap.h
+    src/boot.h
     src/cpu.h
     src/cpuid.h
     src/cstr.h
@@ -65,8 +68,9 @@ HEADERS
     src/io.h
     src/keyboard.h
     src/keyboard_scancode_translation.h
-    src/kUtility.h
+    src/kstage1.h
     src/large_integers.h
+    src/link_definitions.h
     src/linked_list.h
     src/math.h
     src/memory.h
@@ -109,7 +113,7 @@ SOURCES
     src/kernel.cpp
     src/keyboard.cpp
     src/keyboard_scancode_translation.cpp
-    src/kUtility.cpp
+    src/kstage1.cpp
     src/memory.cpp
     src/memory/heap.cpp
     src/memory/physical_memory_manager.cpp
@@ -140,12 +144,13 @@ target_compile_definitions(Kernel PUBLIC VBOX)
 
 target_compile_options(
 Kernel PUBLIC
-    -O4
     -ffreestanding
+    -fno-exceptions
     -fno-rtti
     -fshort-wchar
+    -mcmodel=large
     -mno-red-zone
-    -fno-exceptions
+    -O4
     -Wall
     -Wextra
     -Werror
@@ -156,7 +161,7 @@ Kernel PUBLIC
     -static
     -Bsymbolic
     -nostdlib
-)                           
+)
 
 target_link_libraries(Kernel PUBLIC Interrupts)
 target_link_libraries(Kernel PUBLIC Assembly)
