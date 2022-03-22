@@ -2,8 +2,7 @@ OUTPUT_FORMAT(elf64-x86-64)
 ENTRY(_start)
 SECTIONS
 {
-    /* FIXME: Map kernel to something that isn't zero! */
-    KERNEL_VIRTUAL = 0x0;
+    KERNEL_VIRTUAL = 0xffffff8000000000;
     . = KERNEL_VIRTUAL;
     KERNEL_START = .;
     .text : AT(ADDR(.text) - KERNEL_VIRTUAL)
