@@ -62,12 +62,15 @@ _start:
     mov rsp, V2P(prekernel_stack_top)
     mov rbp, rsp
 
-    ;# TODO FIXME: This is the issue, as of right now.
     ;# Copy boot info structure...
-    ;# This doesn't actually work as there is pointers within the
-    ;# BootInfo structure that would need their objects copied as well...
-    ;#
-    ;# Problem Objects:
+    ;# This doesn't actually work as there is pointers within (see below).
+    mov rcx, 48
+    mov rsi, rdi
+    mov rdi, V2P(boot_info)
+    cld
+    rep movsb
+    
+    ;# TODO FIXME: This is the issue, as of right now.
     ;# BootInfo
     ;# |-- Framebuffer* <- Just a pointer! Would need to copy data from this.
     ;# |-- PSF1_Font*   <- See above -^
@@ -80,12 +83,21 @@ _start:
     ;# the higher half for the kernel while also preserving the
     ;# data the bootloader loaded in the lower memory...
 
-    mov rcx, 48
-    mov rsi, rdi
-    mov rdi, V2P(boot_info)
+    ;# Preliminary idea: allocate space for stuffs on stack, move pointer in BootInfo structure to there.
+
+    ;# Copy Framebuffer structure to stack, update pointer in boot info
+    ;# 28 bytes of data (although padding causes it to be 32 bytes total)
+    sub rsp, 28
+    mov rcx, 28
+    mov rsi, QWORD [V2P(boot_info)]
+    mov rdx, rsp
+    mov rdi, rsp
     cld
     rep movsb
-    
+    mov rax, 0xffffff8000000000
+    add rdx, rax
+    mov QWORD [V2P(boot_info)], rdx
+
     ;# Ensure CR4.PAE is set, enabling Page Address Extension.
     mov rax, cr4
     or rax, 1 << 5
@@ -105,7 +117,7 @@ _start:
     mov cr3, rax
     ;# At this point, higher half is mapped (no more manual address conversion)!
     ;# This may be confirmed using the `info mem` QEMU monitor command after booting.
-
+    
     mov rax, higher_half_init
     jmp rax
 
@@ -114,6 +126,14 @@ higher_half_init:
     mov rax, 0xffffff8000000000
     add rsp, rax
     mov rbp, rsp
+
+    ;# Remove identity mapping
+    mov rax, 0
+    mov [rel prekernel_pml4], rax
+
+    ;# Force page tables to update
+    mov rax, cr3
+    mov cr3, rax
 
     ;# Jump to kmain()
     mov rdi, boot_info
