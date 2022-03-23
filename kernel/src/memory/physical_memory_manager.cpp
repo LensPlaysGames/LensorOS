@@ -7,6 +7,7 @@
 #include "../link_definitions.h"
 #include "region.h"
 #include "../uart.h"
+#include "virtual_memory_manager.h"
 
 namespace Memory {
     Bitmap PageMap;
@@ -61,9 +62,17 @@ namespace Memory {
 
     u64 FirstFreePage { 0 };
     void* request_page() {
-        for(; FirstFreePage < TotalPages; ++FirstFreePage) {
-            if (PageMap[FirstFreePage] == false) {
+        UART::out("Physical page requested\r\n");
+        for(; FirstFreePage < TotalPages; FirstFreePage++) {
+            UART::out("Checking page ");
+            UART::out(FirstFreePage);
+            UART::out("\r\n  ");
+            UART::out(to_string(PageMap.get(FirstFreePage)));
+            if (PageMap.get(FirstFreePage) == false) {
                 void* addr = (void*)(FirstFreePage * PAGE_SIZE);
+                UART::out("  Got page ");
+                UART::out(FirstFreePage);
+                UART::out("\r\n");
                 lock_page(addr);
                 FirstFreePage += 1; // Eat current page.
                 return addr;
@@ -163,6 +172,14 @@ namespace Memory {
         UART::out(deadSpace);
         UART::out(" bytes\r\n\r\n");
     }
+    
+    // A mebibyte is just enough to address four gibibytes. I feel like that's
+    // a good enough amount for an initial bitmap, which, once the largest 
+    // memory segment is mapped, can be over-written by an appropriately sized
+    // memory bitmap for the total amount of pages given by the EFI memory map.
+    // In the future, I should really construct ranges from the 
+    // physical/virtual addresses within the memory map entries.
+    u8 FourGiBPageBitmap[1048580];
 
     void init_physical_efi(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
         // Calculate number of entries within memoryMap array.
@@ -172,7 +189,7 @@ namespace Memory {
         u64 largestFreeMemorySegmentPageCount { 0 };
         for (u64 i = 0; i < entries; ++i) {
             EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
-            if (desc->type == 7) {
+            if (desc->type == 7 && (u64)desc->physicalAddress + desc->numPages < 0x100000 * 8) {
                 if (desc->numPages > largestFreeMemorySegmentPageCount) {
                     largestFreeMemorySegment = desc->physicalAddress;
                     largestFreeMemorySegmentPageCount = desc->numPages;
@@ -190,9 +207,36 @@ namespace Memory {
 
         UART::out("The largest free memory segment has been found, but it is not yet mapped into virtual address space.\r\n");
         // TODO: Something about it.
+        
+        // Here's my something 'bout it.
+        // A small amount of physical memory can represent
+        // a much larger portion of virtual memory.
+        // As seen in the `bitmapSize` calculation, the bytes needed is 
+        // basically an eighth of the total pages. Each page is 4096 bytes
+        // in this implementation, so that's a lot of bang for the buck, so to speak.
+        // 4GB virtual is equal to 1 mebibyte of bitmap buffer necessary.
+        PageMap.init(1048576 * 8, (u8*)&FourGiBPageBitmap[0]);
+        lock_pages(0, 1048576 * 8);
+        for (u64 i = 0; i < entries; ++i) {
+            EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
+            if (((u64)desc->physicalAddress + desc->numPages) >= 0x100000 * 8)
+                continue;
+
+            if (desc->type == 7)
+                free_pages(desc->physicalAddress, desc->numPages);
+        }
+        lock_pages(0, (u64)&KERNEL_END - (u64)&KERNEL_START);
 
         // Number of bytes needed = (Number of Pages / Bits per Byte) + 1
         u64 bitmapSize = (TotalPages / 8) + 1;
+        
+        PageTable* activePML4 = get_active_page_map();
+        for (u64 t = 0; t < bitmapSize && t < 1048576 * 8; t += 0x1000)
+            map(activePML4, (void*)t, (void*)t);
+
+        while (true)
+            asm ("hlt");
+
         PageMap.init(bitmapSize, (u8*)((u64)largestFreeMemorySegment));
         lock_pages(0, TotalPages + 1);
         // With all pages in the bitmap locked, free only the EFI conventional memory segments.
