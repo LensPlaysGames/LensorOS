@@ -4,9 +4,9 @@ A homebrew standard `C` library for the userland of LensorOS.
 ### Building the LensorOS Toolchain for Userland
 By building the toolchain for userland, it will be able to compile and link `C` programs that can run within LensorOS.
 
-The LensorOS toolchain can be built without any standard `C` library (as outlined in README.toolchain.md), however this prevents the building of userland programs, or programs that can run within LensorOS (the kernel may still be built without any `C` library). 
+The LensorOS toolchain can be built without any standard `C` library, however this prevents the building of userland programs, a.k.a. programs that can run within LensorOS (the kernel may still be built without any `C` library). 
 
-Building the toolchain that supports a freestanding environment (with no `C` library) is necessary before beginning the toolchain build for userland (see [README.toolchain.md](/kernel/README.toolchain.md)).
+Building the toolchain that supports a freestanding environment (with no `C` library) is necessary before beginning the toolchain build for userland (see [README.toolchain.md](/toolchain/README.toolchain.md)).
 
 #### Ensure a Sysroot Directory Exists
 For this tutorial, the sysroot directory is located within the LensorOS repository, and named `root`. Technically this directory could be anywhere permissions allow, but keeping it in the LensorOS directory helps stay organized.
@@ -58,7 +58,7 @@ Once the object files have been generated, copy them into the system libraries d
 #### Build the LensorOS Toolchain with Sysroot Specified
 With the headers and bootstrap objects in place, it's time to actually compile the userland toolchain.
 
-Follow all the instructions found in the [toolchain README](/kernel/README.toolchain.md), with a (few) minor change(s).
+Follow all the instructions found in the [toolchain README](/toolchain/README.toolchain.md), with a (few) minor change(s).
 
 When configuring (ie. running the configure script for binutils, GCC), use the following flag(s):
 ```bash
