@@ -115,6 +115,15 @@ void kstage1(BootInfo* bInfo) {
     //   operations (like setting up interrupts :^).
     asm ("cli");
 
+    /* Tell x86_64 CPU where the GDT is located by populating and loading a GDT descriptor.
+     * The global descriptor table contains information about
+     *   memory segments (like privilege level of executing code,
+     *   or privilege level needed to access data).
+     */
+    gGDTD.Size = sizeof(GDT) - 1;
+    gGDTD.Offset = (u64)&gGDT;
+    LoadGDT(&gGDTD);
+
     // Setup serial communications chip to allow for debug messages as soon as possible.
     UART::initialize();
     UART::out("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
@@ -125,7 +134,6 @@ void kstage1(BootInfo* bInfo) {
     // Setup dynamic memory allocation (`new`, `delete`).
     init_heap();
 
-    
     // Prepare Interrupt Descriptor Table.
     prepare_interrupts();
 
