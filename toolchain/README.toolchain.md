@@ -6,7 +6,7 @@ This special version allows for a host machine that is not running LensorOS to b
 ## Building the LensorOS toolchain
 GCC relies on GNU's Binutils, so we must build that as well.
 
-Building the compiler does take quite some time (15-90min, or more), as well as a few GB of hard drive space. \
+Building the compiler does take quite some time (15-90min, or more), as well as a 5+GB of hard drive space. \
 The good part is this only needs to be done once.
 
 A script is included that will do all of the following steps automatically; run it with bash:
