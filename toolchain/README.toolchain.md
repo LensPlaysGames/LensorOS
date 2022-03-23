@@ -1,13 +1,13 @@
 # The LensorOS toolchain
 LensorOS is compiled with a special version of the GNU Compiler Collection (GCC).
 
-This special version allows for a host machine that is not running LensorOS to build programs for LensorOS. This means you can use a different OS (environment) to develop in, rather than having to develop LensorOS from within LensorOS (which complicates things).
+This special version allows for a host machine that is not running LensorOS to build programs that may run on LensorOS. This means a different OS (environment) can be used to to develop in, rather than having to develop LensorOS from within LensorOS (which complicates things).
 
 ## Building the LensorOS toolchain
-GCC relies on GNU's Binutils, so we must build that as well.
+If you are on Windows, you are really going to have a hard time (not to say it isn't possible). However, everything can 100% be done through the Windows Subsystem for Linux, and that's what I recommend.
 
-Building the compiler does take quite some time (15-90min, or more), as well as a 5+GB of hard drive space. \
-The good part is this only needs to be done once.
+Building the compiler does take quite some time (15-90min, or more), as well as ~5GB of hard drive space. You have been warned. \
+The good part is this only needs to be done once (in a blue moon).
 
 In a linux terminal, first install the dependencies:
 ```bash
@@ -18,8 +18,10 @@ A script is included that will do all of the following download, configure, and 
 ```bash
 bash toolchain.sh
 ```
+Once complete, you'll find the `toolchain/cross/` directory of the repo has been filled with binaries, libraries, and documentation on a LensorOS cross compiler. This compiler runs on an `x86_64-linux-gnu` machine, and generates freestanding executables for the `x86_64-lensoros-elf` target.
 
-NOTE: Anytime you see a `make` command being issued, you can speed it up if you have multiple cores on your CPU using the `-j` option. For example, on a 4-core CPU, running `make target -j4` would run recipes in parallel on all cores of the CPU at the same time, significantly decreasing build times.
+To generate hosted programs for LensorOS (userland/user-space), the LensorOS `C` library must be built and integrated into the toolchain. \
+[For further instructions on compiling userland executables for LensorOS, see the libc README](/user/libc/README.md).
 
 #### 1.) Obtain the source code of the following GNU packages
 [GNU Compiler Collection](https://www.gnu.org/software/gcc/) **Version 11.2.0** \
@@ -90,6 +92,8 @@ Flags:
 - `--disable-werror` allows compilation to continue in the event of a warning (I usually don't get any, but a warning is no reason to stop a 5+ minute compilation).
 
 #### 5.) Build Binutils
+NOTE: Anytime you see a `make` command being issued, you can speed it up if you have multiple cores on your CPU using the `-j` option. For example, on a 4-core CPU, running `make target -j4` would run recipes in parallel on all cores of the CPU at the same time, significantly decreasing build times.
+
 Within the `$HOME/cross/src/build-binutils/` directory, after configuration, run the following:
 ```bash
 make
