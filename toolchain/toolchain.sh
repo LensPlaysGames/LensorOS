@@ -33,14 +33,14 @@ $ScriptDirectory/binutils-2.38/configure \
     --disable-nls \
     --disable-werror
 # Build binutils.
-make
-make install
+make -j
+make install -j
 # Configure GCC.
 cd $ScriptDirectory/gcc-build
 $ScriptDirectory/gcc-11.2.0/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
 # Build GCC.
-make all-gcc
-make all-target-libgcc
-make install-gcc
-make install-target-libgcc
+make all-gcc -j
+make all-target-libgcc -j
+make install-gcc -j
+make install-target-libgcc -j
 
