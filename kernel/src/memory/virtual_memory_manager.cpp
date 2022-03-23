@@ -107,14 +107,14 @@ namespace Memory {
         return ActivePageMap;
     }
 
-    void init_virtual() {
-        PageTable* initialPageMap = (PageTable*)Memory::request_page();
+    void init_virtual(PageTable* initialPageMap) {
         /* Map all physical RAM addresses to virtual 
          *   addresses 1:1, store them in the PML4.
          * This means that virtual memory addresses will be
          *   equal to physical memory addresses within the kernel.
          */
-        for (u64 t = 0; t < Memory::get_total_ram(); t+=0x1000)
+
+        for (u64 t = 0; t < get_total_ram(); t+=0x1000)
             map(initialPageMap, (void*)t, (void*)t);
 
         u64 kernelPagesNeeded = (((u64)&KERNEL_END - (u64)&KERNEL_START) / 4096) + 1;
@@ -122,5 +122,9 @@ namespace Memory {
             map(initialPageMap, (void*)(t + (u64)&KERNEL_VIRTUAL), (void*)t);
 
         flush_page_map(initialPageMap);
+    }
+
+    void init_virtual() {
+        init_virtual((PageTable*)Memory::request_page());
     }
 }

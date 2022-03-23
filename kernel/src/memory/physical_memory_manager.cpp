@@ -65,11 +65,12 @@ namespace Memory {
             if (PageMap[FirstFreePage] == false) {
                 void* addr = (void*)(FirstFreePage * PAGE_SIZE);
                 lock_page(addr);
+                FirstFreePage += 1; // Eat current page.
                 return addr;
             }
         }
         // TODO: Page swap from/to file on disk.
-        UART::out("\033[31mYou ran out of memory :^)\033[0m\r\n");
+        UART::out("\033[31mYou ran out of memory :^<\033[0m\r\n");
         return nullptr;
     }
     
@@ -116,7 +117,7 @@ namespace Memory {
 
     void init_physical_common() {
         u64 kernelPagesNeeded = (((u64)&KERNEL_END - (u64)&KERNEL_START) / 4096) + 1;
-        Memory::lock_pages(&KERNEL_START, kernelPagesNeeded);
+        Memory::lock_pages((void*)((u64)&KERNEL_START - (u64)&KERNEL_VIRTUAL), kernelPagesNeeded);
         // TODO: Re-use memory in-between sections; it's currently wasted.
         // Calculate space that is lost due to page alignment.
         u64 deadSpace { 0 };
@@ -163,14 +164,14 @@ namespace Memory {
         UART::out(" bytes\r\n\r\n");
     }
 
-    void init_physical_efi(EFI_MEMORY_DESCRIPTOR* map, u64 size, u64 entrySize) {
+    void init_physical_efi(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
         // Calculate number of entries within memoryMap array.
         u64 entries = size / entrySize;
         // Find largest free and usable contiguous region of memory.
         void* largestFreeMemorySegment { nullptr };
         u64 largestFreeMemorySegmentPageCount { 0 };
         for (u64 i = 0; i < entries; ++i) {
-            EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)map + (i * entrySize));
+            EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
             if (desc->type == 7) {
                 if (desc->numPages > largestFreeMemorySegmentPageCount) {
                     largestFreeMemorySegment = desc->physicalAddress;
@@ -186,7 +187,10 @@ namespace Memory {
             while (true)
                 asm ("hlt");
         }
-        
+
+        UART::out("The largest free memory segment has been found, but it is not yet mapped into virtual address space.\r\n");
+        // TODO: Something about it.
+
         // Number of bytes needed = (Number of Pages / Bits per Byte) + 1
         u64 bitmapSize = (TotalPages / 8) + 1;
         PageMap.init(bitmapSize, (u8*)((u64)largestFreeMemorySegment));
@@ -195,7 +199,7 @@ namespace Memory {
         // We may be able to be a little more aggressive in what memory we take in the future.
         TotalFreePages = 0;
         for (u64 i = 0; i < entries; ++i) {
-            EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)map + (i * entrySize));
+            EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
             if (desc->type == 7)
                 free_pages(desc->physicalAddress, desc->numPages);
         }

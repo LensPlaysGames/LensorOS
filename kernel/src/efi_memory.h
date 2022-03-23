@@ -5,11 +5,12 @@
 
 // TODO: Move this struct into Memory namespace.
 struct EFI_MEMORY_DESCRIPTOR {
-  u32 type;
-  void* physicalAddress;
-  void* virtualAddress;
-  u64 numPages;
-  u64 attributes;
+    u32 type;
+    u32 pad;
+    void* physicalAddress;
+    void* virtualAddress;
+    u64 numPages;
+    u64 attributes;
 };
 
 namespace Memory {

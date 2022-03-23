@@ -3,7 +3,7 @@
 
 #include "../integers.h"
 
-#define HEAP_VIRTUAL_BASE 0x700000000000
+#define HEAP_VIRTUAL_BASE 0xffffff8777777777
 #define HEAP_INITIAL_PAGES 1
 
 // TODO: Store physical address (or make it easy to

@@ -4,10 +4,10 @@
 namespace Memory {
     class PageTable;
 
-    /* Create a page map level four using the physical memory 
-     *   manager, map the entire RAM address space, and 
+    /* Map the entire physical address space, virtual kernel space, and
      *   finally flush the map to use it as the active mapping.
      */
+    void init_virtual(PageTable*);
     void init_virtual();
 
     // TODO: Permissions handling.
