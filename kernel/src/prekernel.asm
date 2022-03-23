@@ -1,16 +1,22 @@
 extern kmain
 
+;# Virtual to physical and Physical to virtual address conversion.
+;# These are needed because the kernel is loaded physically lower than it is linked.
 %define V2P(a) ((a)-0xffffff8000000000)
 %define P2V(a) ((a)+0xffffff8000000000)
 
-;# Set up a known good stack
+;# Allocate known good stack
 SECTION .bss
 align 4096
 prekernel_stack_bottom:
     resb 4096
 prekernel_stack_top:
 
+boot_info:
+    resb 48
+
 SECTION .data
+;# Setup a page table level four where higher half is mapped.
 align 4096
 GLOBAL prekernel_pml4
 %define PAGE_SIZE           4096
@@ -56,6 +62,30 @@ _start:
     mov rsp, V2P(prekernel_stack_top)
     mov rbp, rsp
 
+    ;# TODO FIXME: This is the issue, as of right now.
+    ;# Copy boot info structure...
+    ;# This doesn't actually work as there is pointers within the
+    ;# BootInfo structure that would need their objects copied as well...
+    ;#
+    ;# Problem Objects:
+    ;# BootInfo
+    ;# |-- Framebuffer* <- Just a pointer! Would need to copy data from this.
+    ;# |-- PSF1_Font*   <- See above -^
+    ;# |   `-- PSF1_Header <- Also would need copied.
+    ;# |-- EFI_MEMORY_DESCRIPTOR* <- An entire array of memory descriptors to copy, or something.
+    ;# `-- RSDP2 Header <- Pointer, data needs copied.
+    ;#
+    ;# Obviously, it would be great if copying wasn't necessary,
+    ;# but I'm having a hard time figuring out exactly how to map
+    ;# the higher half for the kernel while also preserving the
+    ;# data the bootloader loaded in the lower memory...
+
+    mov rcx, 48
+    mov rsi, rdi
+    mov rdi, V2P(boot_info)
+    cld
+    rep movsb
+    
     ;# Ensure CR4.PAE is set, enabling Page Address Extension.
     mov rax, cr4
     or rax, 1 << 5
@@ -74,10 +104,8 @@ _start:
     mov rax, V2P(prekernel_pml4)
     mov cr3, rax
     ;# At this point, higher half is mapped (no more manual address conversion)!
-	;# This can be confirmed by using the `info mem` QEMU monitor command after booting.
+    ;# This may be confirmed using the `info mem` QEMU monitor command after booting.
 
-    ;# FIXME: This causes a triple fault (as everything in
-    ;#        this file seems to do the first time 'round).
     mov rax, higher_half_init
     jmp rax
 
@@ -85,18 +113,10 @@ higher_half_init:
     ;# Move stack pointer to higher half
     mov rax, 0xffffff8000000000
     add rsp, rax
-	mov rbp, rsp
-
-    ;# Remove identity mapping
-    mov rax, 0
-    mov [rel prekernel_pml4], rax
-
-    ;# Force page tables to update
-    mov rax, cr3
-    mov cr3, rax
+    mov rbp, rsp
 
     ;# Jump to kmain()
-    push rdi
+    mov rdi, boot_info
     mov rax, kmain
     call rax
 
