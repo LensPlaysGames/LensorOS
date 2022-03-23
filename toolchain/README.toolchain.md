@@ -27,15 +27,30 @@ To generate hosted programs for LensorOS (userland/user-space), the LensorOS `C`
 [GNU Compiler Collection](https://www.gnu.org/software/gcc/) **Version 11.2.0** \
 [Binutils](https://www.gnu.org/software/binutils/) **Version 2.38**
 
-I recommend downloading the source code to a directory at `$HOME/cross/src/`, or something similar.
+I recommend downloading the source code archives into this toolchain directory. \
+Choose a mirror that is closest to you and gives reasonable download speeds.
+```bash
+curl https://mirrors.kernel.org/gnu/binutils/binutils-2.38.tar.xz --output binutils-2.38.tar.xz
+curl https://mirrors.kernel.org/gnu/gcc/gcc-11.2.0/gcc-11.2.0.tar.xz --output gcc-11.2.0.tar.xz
+```
 
-NOTE: It is **not** recommended to over-ride your system's compiler collection and/or binutils with the cross-compiler, otherwise your host compiler may break. Stay away from system directories that do not derive from `$HOME`.
+The download will be compressed; extract the archives to get the source code:
+```bash
+tar -xf binutils-2.38.tar.xz -C .
+tar -xf gcc-11.2.0.tar.xz -C .
+```
 
-#### 2.) Manually configuring GCC source code to build `libgcc` with no red zone
-Ideally, this whole process will be automated. \
-For now, this step is very much required.
+NOTE: It is possible to over-ride your system's compiler collection and/or binutils with the cross-compiler, breaking your system's default host compiler. Stay away from any directories that do not derive from `$HOME`!
 
-Create an extensionless file named `t-x86_64-elf` within the GCC source code at `/gcc/config/i386/`, and save the following within that file:
+#### 2.) Configuring GCC to build `libgcc` with no red zone
+A patch file for GCC is included in the unified diff format. Simply invoke `patch` like so from the toolchain directory (assuming `gcc-11.2.0` is a subdirectory with GCC source code extracted inside of it, as shown above).
+```bash
+patch -s -u -p0 < gcc-11.2.0.patch
+```
+
+Alternatively, here's how to create the files manually.
+
+Create an extensionless file named `t-x86_64-elf` within the GCC source code at `gcc-11.2.0/gcc/config/i386/`, and save the following within that file:
 ```
 MULTILIB_OPTIONS += mno-red-zone
 MULTILIB_DIRNAMES += no-red-zone
@@ -67,34 +82,38 @@ These variables are used a few times within the next steps, so saving them here 
 `PREFIX` is set to the absolute path where the final toolchain build will reside.
 `TARGET` is set to the target triplet of the generated compiler.
 
-Define the variables:
+First, create a directory where the final output executables and libraries will be installed. It is recommended to put this in the current toolchain directory.
 ```bash
-export PREFIX="$HOME/cross/"
+mkdir -p cross
+```
+
+Now, define the variables:
+```bash
+export PREFIX="Path/to/LensorOS/toolchain/cross/"
 export TARGET=x86_64-lensoros-elf
 ```
 
 #### 4.) Configure Binutils
-Within the `$HOME/cross/src/` directory, create a new directory named `build-binutils`, or similar.
+Create a new subdirectory within `toolchain` named `build-binutils`, or similar.
 ```bash
-cd $HOME/cross/src/
 mkdir build-binutils
 cd build-binutils
 ```
 
-Next, from within that newly created directory, run the configure script supplied with the Binutils source code.
+Next, from within that newly created directory, run the configure script supplied by the Binutils source code.
 ```bash
 ../binutils-2.38/configure --target=$TARGET --prefix="$PREFIX" --with-sysroot --disable-nls --disable-werror
 ```
 
 Flags:
-- `--with-sysroot` tells binutils to enable sysroot support (eventually we will add `=/lib` or some other path that points to the OS-supplied libraries).
+- `--with-sysroot` tells binutils to enable sysroot support (eventually we will add `=Absolute/Path/to/LensorOS/sysroot` or some other path that points to the OS-supplied libraries).
 - `--disable-nls` disabled binutils' native language support. This cuts down on build size and time.
 - `--disable-werror` allows compilation to continue in the event of a warning (I usually don't get any, but a warning is no reason to stop a 5+ minute compilation).
 
 #### 5.) Build Binutils
 NOTE: Anytime you see a `make` command being issued, you can speed it up if you have multiple cores on your CPU using the `-j` option. For example, on a 4-core CPU, running `make target -j4` would run recipes in parallel on all cores of the CPU at the same time, significantly decreasing build times.
 
-Within the `$HOME/cross/src/build-binutils/` directory, after configuration, run the following:
+Within the `toolchain/build-binutils/` directory, and after configuration, run the following:
 ```bash
 make
 make install
@@ -106,13 +125,13 @@ You should now have a working version of GNU's Binutils installed at `$PREFIX`.
 First, GCC has some pre-requisites that must be downloaded. \
 Luckily, the source code comes with an easy-to-use binary that will download them for us.
 ```bash
-cd $HOME/cross/src/gcc-11.2.0
+cd gcc-11.2.0
 ./contrib/download_prerequisites
 ```
 
 Next, GCC must be configured, much like Binutils.
 ```bash
-cd $HOME/cross/src/
+cd Path/to/LensorOS/toolchain
 mkdir build-gcc
 cd build-gcc
 ../gcc-11.2.0/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
@@ -126,8 +145,9 @@ Flags:
 - `--without-headers` specifies that GCC shouldn't rely on any external C library (standard or runtime) being present on the target.
 
 #### 7.) Build the GNU Compiler Collection
-###### Warning: This step takes a long time.
-Within the `$HOME/cross/src/build-gcc/` directory, following the previous preparation step, run the following:
+Warning: This step takes a long time. Utilize the `-j` option if you have more than a single core CPU.
+
+Within the `toolchain/build-gcc/` directory, following the previous preparation step, run the following:
 ```bash
 make all-gcc
 make all-target-libgcc
@@ -138,7 +158,7 @@ make install-target-libgcc
 First, we build the new version of GCC (`all-gcc` target). \
 Next, we build `libgcc` for our target. `libgcc` is a very stripped standard C library that the GCC compiler itself uses. We supply this on our target so that things like fixed width integers, booleans, etc can be used within LensorOS source code.
 
-Finally, we install both the new GCC for our host and `libgcc` for our target. With this complete, you should have a working cross compiler that will generate ELF executables for LensorOS (ie. the kernel :^)
+Finally, we install both the new GCC for our host and `libgcc` for our target. With this complete, you should have a working cross compiler that will generate ELF executables for LensorOS.
 
 If you run into any issues, please let me know/make an issue on GitHub. I'll do my best to help you out.
 
@@ -150,13 +170,16 @@ If using WSL, ensure you are adding to it's `$PATH`, **not** your host machine.
 
 #### Temporary
 ```bash
-export PATH="$HOME/cross/gcc-11.2.0/bin:$PATH"
+export PATH="Path/to/LensorOS/toolchain/cross/bin:$PATH"
 ```
+
 #### Permanent
 For exact instructions, see your shell's configuration options.
 
 On most Unix-like systems that are using `BASH`, it's as simple as adding the line in the `temporary` section above to the bottom of your `$HOME/.bashrc` configuration file. \
 To use the newly made config file, read it with the `.` command like so: \
-`. $HOME/.bashrc`
+```bash
+. $HOME/.bashrc
+```
 
-Once the `$PATH` variable is successfully configured, simply run `x86_64-lensoros-elf-gcc` from a shell to use the cross compiler.
+Once the `$PATH` variable is successfully configured, running `x86_64-lensoros-elf-gcc` from a shell will use the LensorOS `C` cross compiler.
