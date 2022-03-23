@@ -7,9 +7,9 @@ extern kmain
 
 ;# Allocate known good stack
 SECTION .bss
-align 4096
+align 0x1000
 prekernel_stack_bottom:
-    resb 4096
+    resb 0x4000
 prekernel_stack_top:
 
 boot_info:
@@ -98,6 +98,72 @@ _start:
     add rdx, rax
     mov QWORD [V2P(boot_info)], rdx
 
+    ;# Copy PSF1_Font structure to stack, update pointer in BootInfo
+    sub rsp, 16
+    mov rcx, 16
+    mov rsi, QWORD [V2P(boot_info) + 8]
+    mov rdx, rsp
+    mov rdi, rsp
+    cld
+    rep movsb
+    mov rbx, rdx                ; RBX = bottom address of font structure
+    mov rax, 0xffffff8000000000
+    add rdx, rax
+    mov QWORD [V2P(boot_info + 8)], rdx
+
+    ;# Copy PSF1 Font Header to stack, update pointer in copied font structure on stack.
+    sub rsp, 4
+    mov rcx, 4
+    mov rsi, QWORD [rbx]
+    mov rdx, rsp
+    mov rdi, rsp
+    cld
+    rep movsb
+    mov rdi, rdx                ; RDI = bottom address of font header
+    mov rax, 0xffffff8000000000
+    add rdx, rax
+    mov QWORD [rbx], rdx
+
+    ;# Load PSF1 font glyph buffer
+    ;# Need to compare against font header mode field to know if 256 or 512 glyphs
+    ;# RBX + 2 = address of top of mode byte within font header
+    mov rcx, 256
+    xor rax, rax
+    mov al, BYTE [rdi + 2]
+    cmp al, 1
+    jnz two_fifty_six_glyphs
+    add rcx, 256
+two_fifty_six_glyphs:
+    ;# RCX = glyph count
+    ;# glyph buffer size = glyph count * character size
+    ;# RBX + 3 = address of top of character size byte within font header
+    xor rax, rax
+    mov al, BYTE [rdi + 3]      ; RAX = character size
+    mul rcx                     ; RAX = total glyph buffer size
+    sub rsp, rax
+    mov rcx, rax
+    mov rsi, QWORD [rbx + 8]
+    mov rdx, rsp
+    mov rdi, rsp
+    cld
+    rep movsb
+    mov rax, 0xffffff8000000000
+    add rdx, rax
+    mov QWORD [rbx + 8], rdx
+
+    ;# Copy EFI Memory Map to prekernel stack, update pointer in boot info.
+    ;# Map size in 8 bytes is at boot_info + 24
+    mov rcx, QWORD [V2P(boot_info) + 24] ; RCX = total map size in bytes
+    sub rsp, rcx
+    mov rsi, QWORD [V2P(boot_info) + 16]
+    mov rdx, rsp
+    mov rdi, rsp
+    cld
+    rep movsb
+    mov rax, 0xffffff8000000000
+    add rdx, rax
+    mov QWORD [V2P(boot_info) + 16], rdx
+
     ;# Ensure CR4.PAE is set, enabling Page Address Extension.
     mov rax, cr4
     or rax, 1 << 5
@@ -127,13 +193,13 @@ higher_half_init:
     add rsp, rax
     mov rbp, rsp
 
-    ;# Remove identity mapping
-    mov rax, 0
-    mov [rel prekernel_pml4], rax
-
-    ;# Force page tables to update
-    mov rax, cr3
-    mov cr3, rax
+;    ;# Remove identity mapping
+;    mov rax, 0
+;    mov [rel prekernel_pml4], rax
+;
+;    ;# Force page tables to update
+;    mov rax, cr3
+;    mov cr3, rax
 
     ;# Jump to kmain()
     mov rdi, boot_info
