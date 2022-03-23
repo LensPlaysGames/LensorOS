@@ -19,7 +19,7 @@ Interrupts
 )
 target_compile_options(
 Interrupts PRIVATE
-    -O4
+    -O3
     -ffreestanding
     -fno-exceptions
     -mcmodel=large
@@ -150,7 +150,7 @@ Kernel PUBLIC
     -fshort-wchar
     -mcmodel=large
     -mno-red-zone
-    -O4
+    -O3
     -Wall
     -Wextra
     -Werror
