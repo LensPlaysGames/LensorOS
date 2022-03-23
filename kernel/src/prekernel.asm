@@ -62,31 +62,19 @@ _start:
     mov rsp, V2P(prekernel_stack_top)
     mov rbp, rsp
 
-    ;# Copy boot info structure...
-    ;# This doesn't actually work as there is pointers within (see below).
+    ;# Copy boot info structure.
     mov rcx, 48
     mov rsi, rdi
     mov rdi, V2P(boot_info)
     cld
     rep movsb
     
-    ;# TODO FIXME: This is the issue, as of right now.
-    ;# BootInfo
-    ;# |-- Framebuffer* <- Just a pointer! Would need to copy data from this.
-    ;# |-- PSF1_Font*   <- See above -^
-    ;# |   `-- PSF1_Header <- Also would need copied.
-    ;# |-- EFI_MEMORY_DESCRIPTOR* <- An entire array of memory descriptors to copy, or something.
-    ;# `-- RSDP2 Header <- Pointer, data needs copied.
-    ;#
-    ;# Obviously, it would be great if copying wasn't necessary,
-    ;# but I'm having a hard time figuring out exactly how to map
-    ;# the higher half for the kernel while also preserving the
-    ;# data the bootloader loaded in the lower memory...
-
-    ;# Preliminary idea: allocate space for stuffs on stack, move pointer in BootInfo structure to there.
+    ;# TODO:
+    ;# `-- BootInfo
+    ;#     `-- RSDP2 Header <- Pointer, data needs copied.
 
     ;# Copy Framebuffer structure to stack, update pointer in boot info
-    ;# 28 bytes of data (although padding causes it to be 32 bytes total)
+    ;# 28 bytes of data (although padding causes it to be 32 bytes total).
     sub rsp, 28
     mov rcx, 28
     mov rsi, QWORD [V2P(boot_info)]
@@ -98,7 +86,7 @@ _start:
     add rdx, rax
     mov QWORD [V2P(boot_info)], rdx
 
-    ;# Copy PSF1_Font structure to stack, update pointer in BootInfo
+    ;# Copy PSF1_Font structure to stack, update pointer in BootInfo.
     sub rsp, 16
     mov rcx, 16
     mov rsi, QWORD [V2P(boot_info) + 8]
@@ -124,8 +112,8 @@ _start:
     add rdx, rax
     mov QWORD [rbx], rdx
 
-    ;# Load PSF1 font glyph buffer
-    ;# Need to compare against font header mode field to know if 256 or 512 glyphs
+    ;# Load PSF1 font glyph buffer.
+    ;# Need to compare against font header mode field to know if 256 or 512 glyphs.
     ;# RBX + 2 = address of top of mode byte within font header
     mov rcx, 256
     xor rax, rax
@@ -178,12 +166,10 @@ two_fifty_six_glyphs:
 %assign i i+1
 %endrep
 
-    ;# Load prekernel Page Map Level Four (PML4)
+    ;# Load prekernel Page Map Level Four (PML4).
     mov rax, V2P(prekernel_pml4)
     mov cr3, rax
     ;# At this point, higher half is mapped (no more manual address conversion)!
-    ;# This may be confirmed using the `info mem` QEMU monitor command after booting.
-    
     mov rax, higher_half_init
     jmp rax
 
