@@ -9,12 +9,17 @@ GCC relies on GNU's Binutils, so we must build that as well.
 Building the compiler does take quite some time (15-90min, or more), as well as a 5+GB of hard drive space. \
 The good part is this only needs to be done once.
 
-A script is included that will do all of the following steps automatically; run it with bash:
+In a linux terminal, first install the dependencies:
+```bash
+sudo apt install build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo
+```
+
+A script is included that will do all of the following download, configure, and build steps automatically; run it with bash:
 ```bash
 bash toolchain.sh
 ```
 
-NOTE: Anytime you see a `make` command being issued, you can speed it up if you have multiple cores on your CPU using the `-j` option. For example, on a 4-core CPU, running `make target -j4` would run in parallel on all cores of the CPU at the same time, significantly decreasing build times.
+NOTE: Anytime you see a `make` command being issued, you can speed it up if you have multiple cores on your CPU using the `-j` option. For example, on a 4-core CPU, running `make target -j4` would run recipes in parallel on all cores of the CPU at the same time, significantly decreasing build times.
 
 #### 1.) Obtain the source code of the following GNU packages
 [GNU Compiler Collection](https://www.gnu.org/software/gcc/) **Version 11.2.0** \
