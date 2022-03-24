@@ -4,6 +4,9 @@
 #include "large_integers.h"
 
 int memcmp(void* aPtr, void* bPtr, u64 numBytes) {
+    if (aPtr == bPtr)
+        return 0;
+
     u8* a = (u8*)aPtr;
     u8* b = (u8*)bPtr;
     while (numBytes--) {
@@ -19,6 +22,9 @@ int memcmp(void* aPtr, void* bPtr, u64 numBytes) {
 // I think I'm okay with that, as nobody will be moving 8192 pebibytes
 //   around in memory any time soon. If you are, rewrite this, nerd :^)
 void memcpy(void* src, void* dest, u64 numBytes) {
+    if (src == dest)
+        return;
+
     s64 i = 0;
     for (; i <= (s64)numBytes - 2048; i += 2048)
         *(u16384*)((u64)dest + i) = *(u16384*)((u64)src + i);
