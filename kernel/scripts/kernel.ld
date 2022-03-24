@@ -9,7 +9,7 @@ SECTIONS
     .text : AT(ADDR(.text) - KERNEL_VIRTUAL)
     {
         TEXT_START = .;
-        *(.text)
+        *(.text*)
         *(.gnu.linkonce.t*)
         TEXT_END = .;
     }
@@ -18,7 +18,7 @@ SECTIONS
     .data : AT(ADDR(.data) - KERNEL_VIRTUAL)
     {
         DATA_START = .;
-        *(.data)
+        *(.data*)
         *(.gnu.linkonce.d*)
         DATA_END = .;
     }
@@ -28,15 +28,7 @@ SECTIONS
     {
         READ_ONLY_DATA_START = .;
 
-        start_ctors = .;
-        *(SORT(.ctors*))
-        end_ctors = .;
-
-        start_dtors = .;
-        *(SORT(.dtors*))
-        end_dtors = .;
-
-        *(.rodata)
+        *(.rodata*)
         *(.gnu.linkonce.r*)
         READ_ONLY_DATA_END = .;
     }
@@ -46,7 +38,7 @@ SECTIONS
     {
         BLOCK_STARTING_SYMBOLS_START = .;
         *(COMMON)
-        *(.bss)
+        *(.bss*)
         *(.gnu.linkonce.b*)
         BLOCK_STARTING_SYMBOLS_END = .;
     }
