@@ -127,9 +127,10 @@ void kstage1(BootInfo* bInfo) {
     // Setup serial communications chip to allow for debug messages as soon as possible.
     UART::initialize();
     UART::out("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
+
     // Setup physical memory allocator from EFI memory map.
-    Memory::init_physical_efi(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
-    // Setup virtual to physical memory mapping.
+    Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    // Setup virtual memory (map entire address space as well as kernel).
     Memory::init_virtual();
     // Setup dynamic memory allocation (`new`, `delete`).
     init_heap();
