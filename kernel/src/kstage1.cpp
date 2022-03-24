@@ -131,7 +131,7 @@ void kstage1(BootInfo* bInfo) {
     // Setup physical memory allocator from EFI memory map.
     Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     // Setup virtual memory (map entire address space as well as kernel).
-    Memory::init_virtual();
+    Memory::init_virtual(Memory::get_active_page_map());
     // Setup dynamic memory allocation (`new`, `delete`).
     init_heap();
 

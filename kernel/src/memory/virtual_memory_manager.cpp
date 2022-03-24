@@ -1,6 +1,7 @@
 #include "virtual_memory_manager.h"
 
 #include "../integers.h"
+#include "common.h"
 #include "../memory.h"
 #include "../link_definitions.h"
 #include "paging.h"
@@ -19,8 +20,8 @@ namespace Memory {
         PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
         PageTable* PDP;
         if (!PDE.get_flag(PageTableFlag::Present)) {
-            PDP = (PageTable*)Memory::request_page();
-            memset(PDP, 0, 0x1000);
+            PDP = (PageTable*)request_page();
+            memset(PDP, 0, PAGE_SIZE);
             PDE.set_address((u64)PDP >> 12);
             PDE.set_flag(PageTableFlag::Present, true);
             PDE.set_flag(PageTableFlag::ReadWrite, true);
@@ -32,8 +33,8 @@ namespace Memory {
         PDE = PDP->entries[indexer.page_directory()];
         PageTable* PD;
         if (!PDE.get_flag(PageTableFlag::Present)) {
-            PD = (PageTable*)Memory::request_page();
-            memset(PD, 0, 0x1000);
+            PD = (PageTable*)request_page();
+            memset(PD, 0, PAGE_SIZE);
             PDE.set_address((u64)PD >> 12);
             PDE.set_flag(PageTableFlag::Present, true);
             PDE.set_flag(PageTableFlag::ReadWrite, true);
@@ -45,8 +46,8 @@ namespace Memory {
         PDE = PD->entries[indexer.page_table()];
         PageTable* PT;
         if (!PDE.get_flag(PageTableFlag::Present)) {
-            PT = (PageTable*)Memory::request_page();
-            memset(PT, 0, 0x1000);
+            PT = (PageTable*)request_page();
+            memset(PT, 0, PAGE_SIZE);
             PDE.set_address((u64)PT >> 12);
             PDE.set_flag(PageTableFlag::Present, true);
             PDE.set_flag(PageTableFlag::ReadWrite, true);
@@ -107,21 +108,21 @@ namespace Memory {
         return ActivePageMap;
     }
 
-    void init_virtual(PageTable* initialPageMap) {
+    void init_virtual(PageTable* pageMap) {
         /* Map all physical RAM addresses to virtual 
          *   addresses 1:1, store them in the PML4.
          * This means that virtual memory addresses will be
          *   equal to physical memory addresses within the kernel.
          */
 
-        for (u64 t = 0; t < get_total_ram(); t+=0x1000)
-            map(initialPageMap, (void*)t, (void*)t);
+        for (u64 t = 0; t < get_total_ram(); t+=PAGE_SIZE)
+            map(pageMap, (void*)t, (void*)t);
 
-        u64 kernelPagesNeeded = (((u64)&KERNEL_END - (u64)&KERNEL_START) / 4096) + 1;
-        for (u64 t = 0; t < kernelPagesNeeded; t+=0x1000)
-            map(initialPageMap, (void*)(t + (u64)&KERNEL_VIRTUAL), (void*)t);
+        u64 kernelPagesNeeded = (((u64)&KERNEL_END - (u64)&KERNEL_START) / PAGE_SIZE) + 1;
+        for (u64 t = (u64)&KERNEL_VIRTUAL - (u64)&KERNEL_START; t < kernelPagesNeeded; t+=PAGE_SIZE)
+            map(pageMap, (void*)(t + (u64)&KERNEL_VIRTUAL), (void*)t);
 
-        flush_page_map(initialPageMap);
+        flush_page_map(pageMap);
     }
 
     void init_virtual() {

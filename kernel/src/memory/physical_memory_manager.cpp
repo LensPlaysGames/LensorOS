@@ -115,10 +115,6 @@ namespace Memory {
         return nullptr;
     }
 
-    void init_physical_common() {
-
-    }
-
     constexpr u64 InitialPageBitmapMaxAddress = GB(8);
     constexpr u64 InitialPageBitmapPageCount = InitialPageBitmapMaxAddress / PAGE_SIZE;
     constexpr u64 InitialPageBitmapSize = InitialPageBitmapPageCount / 8;
@@ -127,13 +123,16 @@ namespace Memory {
     void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
         // Calculate number of entries within memoryMap array.
         u64 entries = size / entrySize;
-        // Find largest free and usable contiguous region of memory.
+        // Find largest free and usable contiguous region of memory
+        // within space addressable by initial page bitmap.
         void* largestFreeMemorySegment { nullptr };
         u64 largestFreeMemorySegmentPageCount { 0 };
         for (u64 i = 0; i < entries; ++i) {
             EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
             if (desc->type == 7) {
-                if (desc->numPages > largestFreeMemorySegmentPageCount) {
+                if (desc->numPages > largestFreeMemorySegmentPageCount
+                    && (u64)desc->physicalAddress + desc->numPages < InitialPageBitmapMaxAddress)
+                {
                     largestFreeMemorySegment = desc->physicalAddress;
                     largestFreeMemorySegmentPageCount = desc->numPages;
                 }
@@ -195,7 +194,7 @@ namespace Memory {
          *   important to re-lock the page bitmap so it doesn't get trampled on
          *   when allocating more memory.
          */
-        lock_pages(PageMap.base(), (PageMap.length() / 4096) + 1);
+        lock_pages(PageMap.base(), (PageMap.length() / PAGE_SIZE) + 1);
 
         // TODO: Re-use memory in-between sections; it's currently wasted.
         // Calculate space that is lost due to page alignment.
