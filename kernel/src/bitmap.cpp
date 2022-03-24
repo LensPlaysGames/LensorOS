@@ -17,17 +17,19 @@ void Bitmap::init(u64 size, u8* bufferAddress) {
 }
 
 bool Bitmap::get(u64 index) {
-    if (index < Size * 8 && (Buffer[index / 8] & (0b10000000 >> (index % 8))) > 0)
-        return true;
+    u64 byteIndex = index / 8;
+    if (byteIndex >= Size)
+        return false;
 
-    return false;
+    u8 bitIndexer = 0b10000000 >> (index % 8);
+    return (Buffer[byteIndex] & bitIndexer) > 0;
 }
 
 bool Bitmap::set(u64 index, bool value) {
-    if (index >= Size * 8)
+    u64 byteIndex = index / 8;
+    if (byteIndex >= Size)
         return false;
 
-    u64 byteIndex = index / 8;
     u8 bitIndexer = 0b10000000 >> (index % 8);
     Buffer[byteIndex] &= ~bitIndexer;
     if (value)
