@@ -37,10 +37,6 @@ Assembly
     src/scheduler.asm
     src/userswitch.asm
 )
-target_compile_options(
-Assembly PRIVATE
-    $<$<CONFIG:Debug>:-g>
-)
 
 set(
 HEADERS
@@ -172,3 +168,12 @@ add_custom_command(TARGET EnsureBinDirectory POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/res
         ${CMAKE_SOURCE_DIR}/bin)
+
+# Copy `compile_commands.json` to project root directory for language servers
+#   like `clangd` or `ccls` to detect it automatically even in out-of-source builds.
+add_custom_target(
+  CopyCompileCommands ALL
+    COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_BINARY_DIR}/compile_commands.json
+        ${CMAKE_SOURCE_DIR}/../compile_commands.json
+)
