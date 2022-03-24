@@ -15,6 +15,7 @@ namespace Memory {
     u64 TotalPages { 0 };
     u64 TotalFreePages { 0 };
     u64 TotalUsedPages { 0 };
+    u64 MaxFreePagesInARow { 0 };
 
     u64 get_total_ram() {
         return TotalPages * PAGE_SIZE;
@@ -70,7 +71,7 @@ namespace Memory {
             }
         }
         // TODO: Page swap from/to file on disk.
-        UART::out("\033[31mYou ran out of memory :^<\033[0m\r\n");
+        UART::out("\033[31mRan out of memory in request_page() :^<\033[0m\r\n");
         return nullptr;
     }
     
@@ -82,9 +83,23 @@ namespace Memory {
         if (numberOfPages == 1)
             return request_page();
         // Can't allocate something larger than the amount of free memory.
-        if (numberOfPages > TotalFreePages)
+        if (numberOfPages > TotalFreePages) {
+            UART::out("request_pages(): ERROR:: Number of pages requested is larger than amount of pages available.");
             return nullptr;
+        }
+        if (numberOfPages > MaxFreePagesInARow) {
+            UART::out("request_pages(): ERROR:: Number of pages requested is larger than any contiguous run of pages available.");
+            return nullptr;
+        }
         
+        UART::out("request_pages():\r\n  # of Pages: ");
+        UART::out(numberOfPages);
+        UART::out("\r\n  Free Pages: ");
+        UART::out(TotalFreePages);
+        UART::out("\r\n  Max Run of Free Pages: ");
+        UART::out(MaxFreePagesInARow);
+        UART::out("\r\n\r\n");
+
         for (u64 i = FirstFreePage; i < PageMap.length(); ++i) {
             // Skip locked pages.
             if (PageMap[i] == true)
@@ -93,13 +108,18 @@ namespace Memory {
             // If page is free, check if entire `numberOfPages` run is free.
             u64 index = i;
             u64 run = 0;
+
             while (PageMap[index] == false) {
                 run++;
                 index++;
-                if (index > PageMap.length()) {
+
+                if (index >= PageMap.length()) {
                     // TODO: No memory matching criteria, should
                     //   probably do a page swap from disk or something.
-                    UART::out("\033[31mYou ran out of memory :^<\033[0m\r\n");
+                    UART::out("\033[31mYou ran out of memory in request_pages():^<\033[0m\r\n");
+                    UART::out("  Attempted to allocate ");
+                    UART::out(numberOfPages);
+                    UART::out("  pages\r\n\r\n");
                     return nullptr;
                 }
                 if (run >= numberOfPages) {
@@ -183,10 +203,12 @@ namespace Memory {
         TotalFreePages = 0;
         for (u64 i = 0; i < entries; ++i) {
             EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
-            if (desc->type == 7)
+            if (desc->type == 7) {
                 free_pages(desc->physicalAddress, desc->numPages);
+                if (desc->numPages > MaxFreePagesInARow)
+                    MaxFreePagesInARow = desc->numPages;
+            }
         }
-
         lock_pages((void*)((u64)&KERNEL_START - (u64)&KERNEL_VIRTUAL), kernelPageCount);
 
         /* The page map itself takes up space within the largest free memory segment.
