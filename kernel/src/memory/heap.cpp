@@ -6,9 +6,9 @@
 #include "virtual_memory_manager.h"
 #include "../uart.h"
 
-void* sHeapStart;
-void* sHeapEnd;
-HeapSegmentHeader* sLastHeader;
+void* sHeapStart { nullptr };
+void* sHeapEnd { nullptr };
+HeapSegmentHeader* sLastHeader { nullptr };
 
 void HeapSegmentHeader::combine_forward() {
     // Can't combine nothing :^).
