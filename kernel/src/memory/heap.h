@@ -22,13 +22,11 @@ struct HeapSegmentHeader {
     HeapSegmentHeader* split(u64 splitLength);
 } __attribute__((packed));
 
-// INITIALIZATION
 void init_heap();
 
 // Enlarge the heap by a given number of bytes, aligned to next-highest page-aligned value.
 void expand_heap(u64 numBytes);
 
-// PUBLIC API
 void* malloc(u64 numBytes);
 void free(void* address);
 

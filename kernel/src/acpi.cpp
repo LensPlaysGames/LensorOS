@@ -10,7 +10,7 @@ namespace ACPI {
     void initialize(RSDP2* rootSystemDescriptorPointer) {
         if (rootSystemDescriptorPointer == nullptr) {
             UART::out("[ACPI]: \033[31mERROR\033[0m -> Root System Descriptor Pointer is null. ");
-            UART::out("(most likely error in bootloader/during boot process)\r\n");
+            UART::out("(error in bootloader or during boot process)\r\n");
             return;
         }
         // eXtended System Descriptor Table
