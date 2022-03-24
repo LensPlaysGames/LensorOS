@@ -304,8 +304,8 @@ void kstage1(BootInfo* bInfo) {
     gFATDriver = FATDriver();
     UART::out("[kUtil]: \033[32mFilesystem drivers prepared successfully\033[0m\r\n");
     // Initialize Advanced Configuration and Power Management Interface.
-    //ACPI::initialize(bInfo->rsdp);
-    //UART::out("[kUtil]: \033[32mACPI initialized\033[0m\r\n");
+    ACPI::initialize(bInfo->rsdp);
+    UART::out("[kUtil]: \033[32mACPI initialized\033[0m\r\n");
 
     // Find Memory-mapped ConFiguration Table in order to find PCI devices.
     ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table("MCFG");
