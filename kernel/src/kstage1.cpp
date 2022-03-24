@@ -168,7 +168,11 @@ void kstage1(BootInfo* bInfo) {
 
     // Setup random number generators.
     gRandomLCG = LCG();
-    gRandomLCG.seed(gRTC.Ticks);
+    u64 someNumber = gRTC.Time.century + gRTC.Time.year
+        + gRTC.Time.month + gRTC.Time.date
+        + gRTC.Time.weekday + gRTC.Time.hour
+        + gRTC.Time.minute + gRTC.Time.second;
+    gRandomLCG.seed(someNumber);
     gRandomLFSR = LFSR();
     gRandomLFSR.seed(gRandomLCG.get(), gRandomLCG.get());
 
