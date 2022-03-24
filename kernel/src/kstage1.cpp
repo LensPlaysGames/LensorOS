@@ -86,12 +86,12 @@ u8 fxsave_region[512] __attribute__((aligned(16)));
 
 void kstage1(BootInfo* bInfo) {
     /* This function is kind of monstrous, so the functionality is outlined here.
+     *   - Load Global Descriptor Table (CPU Privilege levels, hardware task switching)
      *   - Prepare UART serial communications driver
      *   - Prepare physical/virtual memory
-     *     - Initialize Physical Memory Manager
-     *     - Initialize Virtual Memory Manager
-     *     - Prepare the heap (`new`, `delete`)
-     *   - Load Global Descriptor Table (CPU Privilege levels, hardware task switching)
+     *     - Initialize Physical Memory Manager (chicken/egg happens here)
+     *     - Initialize Virtual Memory Manager (ensure all RAM is mapped, as well as kernel)
+     *     - Prepare the heap (`new` and `delete`)
      *   - Load Interrupt Descriptor Table (Install handlers for hardware IRQs + software exceptions)
      *   - Prepare Real Time Clock (RTC)
      *   - Setup graphical renderers
@@ -158,10 +158,6 @@ void kstage1(BootInfo* bInfo) {
     UART::out(to_string(gRTC.Time.date));
     UART::out("\033[0m\r\n\r\n");
 
-    // Setup random number generators.
-    gRandomLCG = LCG();
-    gRandomLFSR = LFSR();
-
     // Create basic framebuffer renderer.
     UART::out("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
     gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
@@ -169,6 +165,12 @@ void kstage1(BootInfo* bInfo) {
     draw_boot_gfx();
     // Create basic text renderer for the keyboard.
     Keyboard::gText = Keyboard::BasicTextRenderer();
+
+    // Setup random number generators.
+    gRandomLCG = LCG();
+    gRandomLCG.seed(gRTC.Ticks);
+    gRandomLFSR = LFSR();
+    gRandomLFSR.seed(gRandomLCG.get(), gRandomLCG.get());
 
     // Store feature set of CPU (capabilities).
     // TODO: Don't store the global system CPU descriptor on the stack, there only ever needs to be one.

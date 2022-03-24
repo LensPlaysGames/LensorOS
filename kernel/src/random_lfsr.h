@@ -2,6 +2,9 @@
 #define LENSOR_OS_RANDOM_LINEAR_FEEDBACK_SHIFT_REGISTER_H
 
 #include "integers.h"
+#include "large_integers.h"
+
+extern u128 DefaultInitialLFSRState;
 
 /// Linear Feedback Shift Register Pseudo-Random Number Generator
 class LFSR {
@@ -13,24 +16,27 @@ class LFSR {
     void next();
 public:
     LFSR() {
-        // TODO: Use current time as seed for initial state.
-        // Initialize state.
-        ShiftRegister[15] = 0b10000000;
-        ShiftRegister[14] = 0b00000000;
-        ShiftRegister[13] = 0b00000000;
-        ShiftRegister[12] = 0b00000000;
-        ShiftRegister[11] = 0b00000000;
-        ShiftRegister[10] = 0b00000000;
-        ShiftRegister[9]  = 0b00000000;
-        ShiftRegister[8]  = 0b00000000;
-        ShiftRegister[7]  = 0b00000000;
-        ShiftRegister[6]  = 0b00000000;
-        ShiftRegister[5]  = 0b00000000;
-        ShiftRegister[4]  = 0b00000000;
-        ShiftRegister[3]  = 0b00000000;
-        ShiftRegister[2]  = 0b00000000;
-        ShiftRegister[1]  = 0b00000000;
-        ShiftRegister[0]  = 0b00000001;
+        // Initialize state to default.
+        seed(DefaultInitialLFSRState.a, DefaultInitialLFSRState.b);
+    }
+
+    inline void seed(u64 high, u64 low) {
+        ShiftRegister[15] = (u8)(high << 56);
+        ShiftRegister[14] = (u8)(high << 48);
+        ShiftRegister[13] = (u8)(high << 40);
+        ShiftRegister[12] = (u8)(high << 32);
+        ShiftRegister[11] = (u8)(high << 24);
+        ShiftRegister[10] = (u8)(high << 16);
+        ShiftRegister[9] = (u8)(high << 8);
+        ShiftRegister[8] = (u8)(high << 0);
+        ShiftRegister[7] = (u8)(low << 56);
+        ShiftRegister[6] = (u8)(low << 48);
+        ShiftRegister[5] = (u8)(low << 40);
+        ShiftRegister[4] = (u8)(low << 32);
+        ShiftRegister[3] = (u8)(low << 24);
+        ShiftRegister[2] = (u8)(low << 16);
+        ShiftRegister[1] = (u8)(low << 8);
+        ShiftRegister[0] = (u8)(low << 0);
     }
 
     /// Get a random number.

@@ -3,6 +3,13 @@
 
 #include "integers.h"
 
+/// 16 BYTES
+struct uint128_t {
+    u64 a;
+    u64 b;
+} __attribute__((packed));
+using u128 = uint128_t;
+
 /// 32 BYTES
 struct uint256_t {
     u64 a;

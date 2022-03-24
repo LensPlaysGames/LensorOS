@@ -5,6 +5,8 @@
 
 LFSR gRandomLFSR;
 
+u128 DefaultInitialLFSRState = {(u64)1 << 63, (u64)1};
+
 void LFSR::print_shift_register() {
     UART::out("[LFSR]: Shift Register Contents: 0b");
     for (u8 i = 128 / 8 - 1; i < 128 / 8; --i) {
