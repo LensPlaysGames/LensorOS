@@ -178,10 +178,9 @@ namespace Memory {
                 free_pages(desc->physicalAddress, desc->numPages);
         }
         // Lock the kernel (in case it was just freed).
-        void* kernelAddress = (void*)((u64)&KERNEL_VIRTUAL - (u64)&KERNEL_START);
         u64 kernelByteCount = (u64)&KERNEL_END - (u64)&KERNEL_START;
         u64 kernelPageCount = kernelByteCount / PAGE_SIZE;
-        lock_pages(kernelAddress, kernelPageCount);
+        lock_pages(&KERNEL_PHYSICAL, kernelPageCount);
         
         // Use the initial pre-allocated page map as a place to
         // allocate new virtual memory map entries.

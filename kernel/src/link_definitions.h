@@ -4,6 +4,7 @@
 #define V2P(addr) ((u64)(addr) & ~KERNEL_VIRTUAL)
 #define P2V(addr) ((u64)(addr) |  KERNEL_VIRTUAL)
 
+extern u64 KERNEL_PHYSICAL;
 extern u64 KERNEL_VIRTUAL;
 extern u64 KERNEL_START;
 extern u64 KERNEL_END;
