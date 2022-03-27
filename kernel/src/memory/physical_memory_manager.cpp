@@ -84,21 +84,21 @@ namespace Memory {
             return request_page();
         // Can't allocate something larger than the amount of free memory.
         if (numberOfPages > TotalFreePages) {
-            UART::out("request_pages(): ERROR:: Number of pages requested is larger than amount of pages available.");
+            UART::out("request_pages(): \033[31mERROR\033[0m:: Number of pages requested is larger than amount of pages available.");
             return nullptr;
         }
         if (numberOfPages > MaxFreePagesInARow) {
-            UART::out("request_pages(): ERROR:: Number of pages requested is larger than any contiguous run of pages available.");
+            UART::out("request_pages(): \033[31mERROR\033[0m:: Number of pages requested is larger than any contiguous run of pages available.");
             return nullptr;
         }
         
-        UART::out("request_pages():\r\n  # of Pages: ");
-        UART::out(numberOfPages);
-        UART::out("\r\n  Free Pages: ");
-        UART::out(TotalFreePages);
-        UART::out("\r\n  Max Run of Free Pages: ");
-        UART::out(MaxFreePagesInARow);
-        UART::out("\r\n\r\n");
+        // UART::out("request_pages():\r\n  # of Pages: ");
+        // UART::out(numberOfPages);
+        // UART::out("\r\n  Free Pages: ");
+        // UART::out(TotalFreePages);
+        // UART::out("\r\n  Max Run of Free Pages: ");
+        // UART::out(MaxFreePagesInARow);
+        // UART::out("\r\n\r\n");
 
         for (u64 i = FirstFreePage; i < PageMap.length(); ++i) {
             // Skip locked pages.
