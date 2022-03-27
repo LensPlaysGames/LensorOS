@@ -16,12 +16,24 @@ else if (otherCondition) {
     something_entirely_different();
 }
 ```
-- If a block (in-between curly braces) only includes one line, the curly braces may be excluded, and the line indented. If any code follows this type of block, there must one line of free space following.
+- If an `if`/`else` block only includes one line, the curly braces may be excluded, and the line indented.
+  - If any code on the same indent level as the `if`/`else` keyword follows this type of block, there must one line of free space following.
 ```cpp
 if (condition)
     // ... do one thing ...
     
-// ... continue to do things...
+// ... continue to do things ...
+```
+- Given multiple one-line `if`/`else` blocks in a row, the one line of free space following the inner blocks may be left out.
+- If an `else` block contains one line, it should be on the same line as the `else` keyword.
+```cpp
+if (condition)
+    // ... do one thing ...
+else if (condition)
+    // ... do another thing ...
+else // ... do other thing ...
+
+// .... continue to do things ...
 ```
 - Always initialize primitive types. This makes it harder to forget initialization within each constructor.
 ```cpp
@@ -43,7 +55,7 @@ private:
     u64 Ticks { 0 };
 };
 ```
-- SCREAMING_SNAKE_CASE all preprocessor directives and `constexpr`.
+- SCREAMING_SNAKE_CASE all preprocessor directives.
 - Use `define` header include guard in SCREAMING_SNAKE_CASE:
 ```cpp
 #ifndef LENSOR_OS_NAME_OF_FILE_H
