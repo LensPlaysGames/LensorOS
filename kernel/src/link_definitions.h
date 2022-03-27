@@ -1,8 +1,7 @@
 #ifndef LENSOR_OS_LINK_DEFINITIONS_H
 #define LENSOR_OS_LINK_DEFINITIONS_H
 
-#define V2P(addr) ((u64)(addr) & ~KERNEL_VIRTUAL)
-#define P2V(addr) ((u64)(addr) |  KERNEL_VIRTUAL)
+#include "integers.h"
 
 extern u64 KERNEL_PHYSICAL;
 extern u64 KERNEL_VIRTUAL;
@@ -16,5 +15,8 @@ extern u64 READ_ONLY_DATA_START;
 extern u64 READ_ONLY_DATA_END;
 extern u64 BLOCK_STARTING_SYMBOLS_START;
 extern u64 BLOCK_STARTING_SYMBOLS_END;
+
+#define V2P(addr) ((u64)(addr) - (u64)&KERNEL_VIRTUAL)
+#define P2V(addr) ((u64)(addr) + (u64)&KERNEL_VIRTUAL)
 
 #endif /* LENSOR_OS_LINK_DEFINITIONS_H */
