@@ -1,9 +1,23 @@
-extern kmain
+    extern kmain
 
 ;# Virtual to physical and Physical to virtual address conversion.
 ;# These are needed because the kernel is loaded physically lower than it is linked.
 %define V2P(a) ((a)-0xffffff8000000000)
 %define P2V(a) ((a)+0xffffff8000000000)
+
+;# Paging
+%define PAGE_SIZE               0x1000
+%define ENTRIES_PER_PAGE_TABLE  512
+%define PAGE_PRESENT            1
+%define PAGE_READ_WRITE         1<<1
+%define PAGE_USER_SUPER         1<<2
+%define PAGE_WRITE_THROUGH      1<<3
+%define PAGE_CACHE_DISABLED     1<<4
+%define PAGE_ACCESSED           1<<5
+%define PAGE_DIRTY              1<<6
+%define PAGE_LARGER_PAGES       1<<7
+%define PAGE_GLOBAL             1<<8
+%define PAGE_NX                 1<<63
 
 ;# Allocate known good stack
 SECTION .bss
@@ -16,29 +30,16 @@ boot_info:
     resb 48
 
 SECTION .data
-;# Setup a page table level four where higher half is mapped.
-align 4096
+align 0x1000
 GLOBAL prekernel_pml4
-%define PAGE_SIZE           4096
-%define PAGE_PRESENT        1
-%define PAGE_READ_WRITE     1<<1
-%define PAGE_USER_SUPER     1<<2
-%define PAGE_WRITE_THROUGH  1<<3
-%define PAGE_CACHE_DISABLED 1<<4
-%define PAGE_ACCESSED       1<<5
-%define PAGE_DIRTY          1<<6
-%define PAGE_LARGER_PAGES   1<<7
-%define PAGE_GLOBAL         1<<8
-%define PAGE_NX             1<<63
-%define ENTRIES_PER_PAGE_TABLE 512
 prekernel_pml4:
-dq V2P(prekernel_pml3) + (PAGE_PRESENT | PAGE_READ_WRITE)
+    dq V2P(prekernel_pml3) + (PAGE_PRESENT | PAGE_READ_WRITE)
 %rep ENTRIES_PER_PAGE_TABLE - 2
     dq 0
 %endrep
-dq V2P(prekernel_pml3) + (PAGE_PRESENT | PAGE_READ_WRITE | PAGE_GLOBAL)
+    dq V2P(prekernel_pml3) + (PAGE_PRESENT | PAGE_READ_WRITE | PAGE_GLOBAL)
 prekernel_pml3:
-dq V2P(prekernel_pml2) + (PAGE_PRESENT | PAGE_READ_WRITE | PAGE_GLOBAL)
+    dq V2P(prekernel_pml2) + (PAGE_PRESENT | PAGE_READ_WRITE)
 %rep ENTRIES_PER_PAGE_TABLE - 1
     dq 0
 %endrep
@@ -68,10 +69,6 @@ _start:
     mov rdi, V2P(boot_info)
     cld
     rep movsb
-    
-    ;# TODO:
-    ;# `-- BootInfo
-    ;#     `-- RSDP2 Header <- Pointer, data needs copied.
 
     ;# Copy Framebuffer structure to stack, update pointer in boot info
     ;# 28 bytes of data (although padding causes it to be 32 bytes total).
