@@ -18,7 +18,9 @@
 #include "interrupts/syscalls.h"
 #include "io.h"
 #include "keyboard.h"
+#include "link_definitions.h"
 #include "memory.h"
+#include "memory/common.h"
 #include "memory/physical_memory_manager.h"
 #include "memory/virtual_memory_manager.h"
 #include "mouse.h"
@@ -115,6 +117,10 @@ void kstage1(BootInfo* bInfo) {
     //   operations (like setting up interrupts :^).
     asm ("cli");
 
+    // Setup serial communications chip to allow for debug messages as soon as possible.
+    UART::initialize();
+    UART::out("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
+
     /* Tell x86_64 CPU where the GDT is located by populating and loading a GDT descriptor.
      * The global descriptor table contains information about
      *   memory segments (like privilege level of executing code,
@@ -122,11 +128,11 @@ void kstage1(BootInfo* bInfo) {
      */
     gGDTD.Size = sizeof(GDT) - 1;
     gGDTD.Offset = (u64)&gGDT;
-    LoadGDT(&gGDTD);
+    LoadGDT((GDTDescriptor*)&gGDTD);
 
-    // Setup serial communications chip to allow for debug messages as soon as possible.
-    UART::initialize();
-    UART::out("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
+    // gGDTD.Offset = V2P((u64)&gGDT);
+    // LoadGDT((GDTDescriptor*)V2P(&gGDTD));
+
 
     // Setup physical memory allocator from EFI memory map.
     Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
@@ -134,6 +140,10 @@ void kstage1(BootInfo* bInfo) {
     Memory::init_virtual(Memory::get_active_page_map());
     // Setup dynamic memory allocation (`new`, `delete`).
     init_heap();
+
+    //u64 GDTAddress = V2P((u64)&gGDT);
+    //for (u64 t = GDTAddress; t < GDTAddress + gGDTD.Size; t+=PAGE_SIZE)
+    //    Memory::map((void*)GDTAddress, (void*)GDTAddress);
 
     // Prepare Interrupt Descriptor Table.
     prepare_interrupts();
