@@ -149,11 +149,6 @@ two_fifty_six_glyphs:
     add rdx, rax
     mov QWORD [V2P(boot_info) + 16], rdx
 
-    ;# Ensure CR4.PAE is set, enabling Page Address Extension.
-    mov rax, cr4
-    or rax, 1 << 5
-    mov cr4, rax
-
     ;# Prepare prekernel Page Map Level One
     mov rax, V2P(prekernel_pml1)
 %assign i 0
