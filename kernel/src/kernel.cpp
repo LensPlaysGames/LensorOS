@@ -149,7 +149,6 @@ extern "C" void kmain(BootInfo* bInfo) {
     }
 
     // HALT LOOP (KERNEL INACTIVE).
-    while (true) {
+    while (true)
         asm ("hlt");
-    }
 }
