@@ -3,9 +3,13 @@
 
 #include "../integers.h"
 
-#define KB(x) ((u64)(x) << 10)
-#define MB(x) ((u64)(x) << 20)
-#define GB(x) ((u64)(x) << 30)
+#define KiB(x) ((u64)(x) << 10)
+#define MiB(x) ((u64)(x) << 20)
+#define GiB(x) ((u64)(x) << 30)
+
+#define TO_KiB(x) ((u64)(x) >> 10)
+#define TO_MiB(x) ((u64)(x) >> 20)
+#define TO_GiB(x) ((u64)(x) >> 30)
 
 constexpr u64 PAGE_SIZE = 4096;
 

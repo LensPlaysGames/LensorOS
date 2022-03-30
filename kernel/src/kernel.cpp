@@ -7,6 +7,7 @@
 #include "interrupts/interrupts.h"
 #include "keyboard.h"
 #include "kstage1.h"
+#include "memory/common.h"
 #include "memory/physical_memory_manager.h"
 #include "pit.h"
 #include "rtc.h"
@@ -18,21 +19,21 @@ void print_memory_info() {
     gRend.puts("Memory Info:");
     gRend.crlf(startOffset);
     gRend.puts("|- Total RAM: ");
-    gRend.puts(to_string(Memory::get_total_ram() / 1024 / 1024));
+    gRend.puts(to_string(TO_MiB(Memory::get_total_ram())));
     gRend.puts(" MiB (");
-    gRend.puts(to_string(Memory::get_total_ram() / 1024));
+    gRend.puts(to_string(TO_KiB(Memory::get_total_ram())));
     gRend.puts(" KiB)");
     gRend.crlf(startOffset);
     gRend.puts("|- Free RAM: ");
-    gRend.puts(to_string(Memory::get_free_ram() / 1024 / 1024));
+    gRend.puts(to_string(TO_MiB(Memory::get_free_ram())));
     gRend.puts(" MiB (");
-    gRend.puts(to_string(Memory::get_free_ram() / 1024));
+    gRend.puts(to_string(TO_KiB(Memory::get_free_ram())));
     gRend.puts(" KiB)");
     gRend.crlf(startOffset);
     gRend.puts("`- Used RAM: ");
-    gRend.puts(to_string(Memory::get_used_ram() / 1024 / 1024));
+    gRend.puts(to_string(TO_MiB(Memory::get_used_ram())));
     gRend.puts(" MiB (");
-    gRend.puts(to_string(Memory::get_used_ram() / 1024));
+    gRend.puts(to_string(TO_KiB(Memory::get_used_ram())));
     gRend.puts(" KiB)");
     gRend.crlf(startOffset);
 }
@@ -55,17 +56,17 @@ void print_now(u64 xOffset = 0) {
 
 void srl_memory_info() {
     UART::out("\r\nMemory Info:\r\n|- Total RAM: ");
-    UART::out(to_string(Memory::get_total_ram() / 1024 / 1024));
+    UART::out(TO_MiB(Memory::get_total_ram()));
     UART::out("MiB (");
-    UART::out(to_string(Memory::get_total_ram() / 1024));
+    UART::out(TO_KiB(Memory::get_total_ram()));
     UART::out("KiB)\r\n|- Free RAM: ");
-    UART::out(to_string(Memory::get_free_ram() / 1024 / 1024));
+    UART::out(TO_MiB(Memory::get_free_ram()));
     UART::out(" MiB (");
-    UART::out(to_string(Memory::get_free_ram() / 1024));
+    UART::out(TO_KiB(Memory::get_free_ram()));
     UART::out(" KiB)\r\n`- Used RAM: ");
-    UART::out(to_string(Memory::get_used_ram() / 1024 / 1024));
+    UART::out(TO_MiB(Memory::get_used_ram()));
     UART::out(" MiB (");
-    UART::out(to_string(Memory::get_used_ram() / 1024));
+    UART::out(TO_KiB(Memory::get_used_ram()));
     UART::out(" KiB)\r\n");
 }
 
