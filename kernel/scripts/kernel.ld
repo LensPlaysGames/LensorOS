@@ -46,6 +46,8 @@ SECTIONS
 
     /DISCARD/ :
     {
+        *(.ctors)
+        *(.dtors)
         *(.comment)
         *(.eh_frame)
         *(.note.gnu.build-id)
