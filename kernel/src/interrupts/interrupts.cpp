@@ -257,11 +257,11 @@ __attribute__((interrupt)) void simd_exception_handler(InterruptFrame* frame) {
 
 void remap_pic() {
     // SAVE INTERRUPT MASKS.
-    u8 masterMasks;
-    u8 slaveMasks;
-    masterMasks = in8(PIC1_DATA);
+    u8 parentMasks;
+    u8 childMasks;
+    parentMasks = in8(PIC1_DATA);
     io_wait();
-    slaveMasks = in8(PIC2_DATA);
+    childMasks = in8(PIC2_DATA);
     io_wait();
     // INITIALIZE BOTH CHIPS IN CASCADE MODE.
     out8(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
@@ -288,8 +288,8 @@ void remap_pic() {
     out8(PIC2_DATA, ICW4_8086);
     io_wait();
     // LOAD INTERRUPT MASKS.
-    out8(PIC1_DATA, masterMasks);
+    out8(PIC1_DATA, parentMasks);
     io_wait();
-    out8(PIC2_DATA, slaveMasks);
+    out8(PIC2_DATA, childMasks);
     io_wait();
 }
