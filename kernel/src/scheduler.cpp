@@ -34,7 +34,7 @@ namespace Scheduler {
         ProcessQueue = new SinglyLinkedList<Process*>;
         add_process(&StartupProcess);
         CurrentProcess = ProcessQueue->head();
-        // Sanity checks.
+        // Confidence checks.
         if (ProcessQueue == nullptr || ProcessQueue->head() == nullptr)
             return false;
 

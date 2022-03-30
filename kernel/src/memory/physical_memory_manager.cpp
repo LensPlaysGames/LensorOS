@@ -219,6 +219,7 @@ namespace Memory {
         lock_pages(&KERNEL_PHYSICAL, kernelPageCount);
 
         /* TODO:
+         * |-- Not everything should be user-accessible!
          * `-- `.text` + `.rodata` should be read only.
          */
 

@@ -100,7 +100,7 @@ bool FATDriver::is_device_fat_formatted(AHCI::Port* port) {
     if (port->read(0, 1, br.get(), sizeof(BootRecord))) {
         /* Validate boot sector is of FAT format.
          * Thanks to Gigasoft of osdev forums for this list
-         * TODO: Use more of these sanity checks before assuming it is valid FAT filesystem.
+         * TODO: Use more of these confidence checks before assuming it is valid FAT filesystem.
          * What makes a FAT filesystem valid ([x] means it's something this driver checks.):
          * [x] Word at byte offset 510 equates to 0xaa55
          * [ ] Sector size is power of two between 512-4096 (inclusive)
