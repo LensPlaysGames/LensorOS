@@ -208,7 +208,7 @@ namespace Memory {
                     MaxFreePagesInARow = desc->numPages;
             }
         }
-        lock_pages((void*)((u64)&KERNEL_START - (u64)&KERNEL_VIRTUAL), kernelPageCount);
+        lock_pages(&KERNEL_PHYSICAL, kernelPageCount);
 
         /* The page map itself takes up space within the largest free memory segment.
          * As every memory segment was just set back to free in the bitmap, it's
