@@ -118,8 +118,9 @@ namespace Memory {
         for (u64 t = 0; t < get_total_ram(); t+=PAGE_SIZE)
             map(pageMap, (void*)t, (void*)t);
 
+        u64 kPhysicalStart = (u64)&KERNEL_PHYSICAL;
         u64 kernelPagesNeeded = (((u64)&KERNEL_END - (u64)&KERNEL_START) / PAGE_SIZE) + 1;
-        for (u64 t = (u64)&KERNEL_VIRTUAL - (u64)&KERNEL_START; t < kernelPagesNeeded; t+=PAGE_SIZE)
+        for (u64 t = kPhysicalStart; t < kPhysicalStart + (kernelPagesNeeded * PAGE_SIZE); t+=PAGE_SIZE)
             map(pageMap, (void*)(t + (u64)&KERNEL_VIRTUAL), (void*)t);
 
         flush_page_map(pageMap);
