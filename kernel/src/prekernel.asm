@@ -23,7 +23,7 @@
 SECTION .bss
 align 0x1000
 prekernel_stack_bottom:
-    resb 0x4000
+    resb 0x16000
 prekernel_stack_top:
 
 boot_info:
