@@ -22,7 +22,7 @@ Interrupts PRIVATE
     -O3
     -ffreestanding
     -fno-exceptions
-    -mcmodel=large
+    -mcmodel=kernel
     -mgeneral-regs-only
     -mno-red-zone
     -c
@@ -144,7 +144,7 @@ Kernel PUBLIC
     -fno-exceptions
     -fno-rtti
     -fshort-wchar
-    -mcmodel=large
+    -mcmodel=kernel
     -mno-red-zone
     -O3
     -Wall

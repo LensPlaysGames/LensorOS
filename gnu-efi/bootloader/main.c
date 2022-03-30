@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define KERNEL_VIRTUAL  0xffffffff80000000
+
 EFI_HANDLE        gImageHandle;
 EFI_SYSTEM_TABLE* gSystemTable;
 
@@ -233,7 +235,7 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
             kernel->SetPosition(kernel, phdr->p_offset);
             UINTN size = phdr->p_filesz;
             kernel->Read(kernel, &size, (void*)segment);
-            Print(L"LOADED: Kernel Program at %x (%d bytes loaded, %d bytes allocated)\n", phdr->p_paddr, size, phdr->p_memsz);
+            Print(L"LOADED: Kernel Program at %x (%d bytes loaded, %d bytes allocated)\n", segment, size, phdr->p_memsz);
         }
     }
     Print(L"Kernel loaded successfully\n");
@@ -304,7 +306,6 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     gSystemTable->BootServices->ExitBootServices(gImageHandle, MapKey);
 
     // Define kernel entry point.
-#define KERNEL_VIRTUAL 0xffffff8000000000
     void (*KernelStart)(BootInfo*) = ((__attribute__((sysv_abi)) void (*)(BootInfo*)) elf_header.e_entry - KERNEL_VIRTUAL);
     KernelStart(&info);
 

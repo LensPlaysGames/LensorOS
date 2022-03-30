@@ -182,8 +182,8 @@ namespace Memory {
         u64 kernelPageCount = kernelByteCount / PAGE_SIZE;
         lock_pages(&KERNEL_PHYSICAL, kernelPageCount);
         
-        // Use the initial pre-allocated page map as a place to
-        // allocate new virtual memory map entries.
+        // Use the initial pre-allocated page bitmap as a guide
+        // for where to place allocate new virtual memory map entries.
         // Map up to the entire amount of physical memory
         // present or the max amount addressable given the
         // size limitation of the pre-allocated bitmap.
@@ -208,8 +208,6 @@ namespace Memory {
                     MaxFreePagesInARow = desc->numPages;
             }
         }
-        lock_pages(&KERNEL_PHYSICAL, kernelPageCount);
-
         /* The page map itself takes up space within the largest free memory segment.
          * As every memory segment was just set back to free in the bitmap, it's
          *   important to re-lock the page bitmap so it doesn't get trampled on
@@ -217,7 +215,13 @@ namespace Memory {
          */
         lock_pages(PageMap.base(), (PageMap.length() / PAGE_SIZE) + 1);
 
-        // TODO: Re-use memory in-between sections; it's currently wasted.
+        // Lock the kernel in the new page bitmap (in case it already isn't).
+        lock_pages(&KERNEL_PHYSICAL, kernelPageCount);
+
+        /* TODO:
+         * `-- `.text` + `.rodata` should be read only.
+         */
+
         // Calculate space that is lost due to page alignment.
         u64 deadSpace { 0 };
         deadSpace += (u64)&DATA_START - (u64)&TEXT_END;

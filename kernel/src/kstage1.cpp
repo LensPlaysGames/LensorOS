@@ -33,11 +33,13 @@
 #include "tss.h"
 #include "uart.h"
 
+u8 idtr_storage[0x1000];
+
 void prepare_interrupts() {
     // REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
     remap_pic();
     // CREATE INTERRUPT DESCRIPTOR TABLE.
-    gIDT = IDTR(0x0fff, (u64)Memory::request_page());
+    gIDT = IDTR(0x0fff, (u64)&idtr_storage[0]);
     // POPULATE TABLE.
     // NOTE: IRQ0 uses this handler by default, but scheduler over-rides this!
     gIDT.install_handler((u64)system_timer_handler,             PIC_IRQ0);
@@ -117,36 +119,28 @@ void kstage1(BootInfo* bInfo) {
     //   operations (like setting up interrupts :^).
     asm ("cli");
 
-    // Setup serial communications chip to allow for debug messages as soon as possible.
-    UART::initialize();
-    UART::out("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
-
     /* Tell x86_64 CPU where the GDT is located by populating and loading a GDT descriptor.
      * The global descriptor table contains information about
      *   memory segments (like privilege level of executing code,
      *   or privilege level needed to access data).
      */
     gGDTD.Size = sizeof(GDT) - 1;
-    gGDTD.Offset = (u64)&gGDT;
-    LoadGDT((GDTDescriptor*)&gGDTD);
+    gGDTD.Offset = V2P((u64)&gGDT);
+    LoadGDT((GDTDescriptor*)V2P(&gGDTD));
 
-    // gGDTD.Offset = V2P((u64)&gGDT);
-    // LoadGDT((GDTDescriptor*)V2P(&gGDTD));
+    // Prepare Interrupt Descriptor Table.
+    prepare_interrupts();
 
+    // Setup serial communications chip to allow for debug messages as soon as possible.
+    UART::initialize();
+    UART::out("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
 
     // Setup physical memory allocator from EFI memory map.
     Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     // Setup virtual memory (map entire address space as well as kernel).
-    Memory::init_virtual(Memory::get_active_page_map());
+    Memory::init_virtual();
     // Setup dynamic memory allocation (`new`, `delete`).
     init_heap();
-
-    //u64 GDTAddress = V2P((u64)&gGDT);
-    //for (u64 t = GDTAddress; t < GDTAddress + gGDTD.Size; t+=PAGE_SIZE)
-    //    Memory::map((void*)GDTAddress, (void*)GDTAddress);
-
-    // Prepare Interrupt Descriptor Table.
-    prepare_interrupts();
 
     // Initialize the Real Time Clock.
     gRTC = RTC();
