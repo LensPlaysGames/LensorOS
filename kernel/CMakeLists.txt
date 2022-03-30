@@ -19,11 +19,12 @@ Interrupts
 )
 target_compile_options(
 Interrupts PRIVATE
-    -O4
-    -mno-red-zone
-    -mgeneral-regs-only
+    -O3
     -ffreestanding
     -fno-exceptions
+    -mcmodel=kernel
+    -mgeneral-regs-only
+    -mno-red-zone
     -c
 )
 
@@ -32,12 +33,9 @@ Assembly
     src/cpuid.asm
     src/gdt.asm
     src/interrupts/syscalls.asm
+    src/prekernel.asm
     src/scheduler.asm
     src/userswitch.asm
-)
-target_compile_options(
-Assembly PRIVATE
-    $<$<CONFIG:Debug>:-g>
 )
 
 set(
@@ -46,6 +44,7 @@ HEADERS
     src/ahci.h
     src/basic_renderer.h
     src/bitmap.h
+    src/boot.h
     src/cpu.h
     src/cpuid.h
     src/cstr.h
@@ -65,8 +64,9 @@ HEADERS
     src/io.h
     src/keyboard.h
     src/keyboard_scancode_translation.h
-    src/kUtility.h
+    src/kstage1.h
     src/large_integers.h
+    src/link_definitions.h
     src/linked_list.h
     src/math.h
     src/memory.h
@@ -109,7 +109,7 @@ SOURCES
     src/kernel.cpp
     src/keyboard.cpp
     src/keyboard_scancode_translation.cpp
-    src/kUtility.cpp
+    src/kstage1.cpp
     src/memory.cpp
     src/memory/heap.cpp
     src/memory/physical_memory_manager.cpp
@@ -140,12 +140,13 @@ target_compile_definitions(Kernel PUBLIC VBOX)
 
 target_compile_options(
 Kernel PUBLIC
-    -O4
     -ffreestanding
+    -fno-exceptions
     -fno-rtti
     -fshort-wchar
+    -mcmodel=kernel
     -mno-red-zone
-    -fno-exceptions
+    -O3
     -Wall
     -Wextra
     -Werror
@@ -156,7 +157,7 @@ Kernel PUBLIC
     -static
     -Bsymbolic
     -nostdlib
-)                           
+)
 
 target_link_libraries(Kernel PUBLIC Interrupts)
 target_link_libraries(Kernel PUBLIC Assembly)
@@ -167,3 +168,12 @@ add_custom_command(TARGET EnsureBinDirectory POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/res
         ${CMAKE_SOURCE_DIR}/bin)
+
+# Copy `compile_commands.json` to project root directory for language servers
+#   like `clangd` or `ccls` to detect it automatically even in out-of-source builds.
+add_custom_target(
+  CopyCompileCommands ALL
+    COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_BINARY_DIR}/compile_commands.json
+        ${CMAKE_SOURCE_DIR}/../compile_commands.json
+)

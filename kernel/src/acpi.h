@@ -79,7 +79,7 @@
 #include "integers.h"
 
 namespace ACPI {
-    /* Root System Descriptor Pointer
+    /* Root System Descriptor Pointer 2.0
      *   36 BYTES
      *
      *   https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html?highlight=system%20descript#rsdp-structure

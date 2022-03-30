@@ -2,12 +2,6 @@
 
 LCG gRandomLCG;
 
-void LCG::seed(u64 s) { state = s; }
-
-void LCG::next() {
-    state = 1103515245 * state + 12345;
-}
-
 u64 LCG::get() {
     next();
     return state;

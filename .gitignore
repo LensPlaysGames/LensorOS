@@ -50,6 +50,7 @@
 /root/
 
 # Kernel Build Stuff
+**/compile_commands.json*
 /kernel/bin/
 
 # OVMF

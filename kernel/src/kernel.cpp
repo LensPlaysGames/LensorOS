@@ -1,10 +1,13 @@
-#include "kUtility.h"
+#include "kernel.h"
 
 #include "basic_renderer.h"
+#include "boot.h"
 #include "cstr.h"
 #include "hpet.h"
 #include "interrupts/interrupts.h"
 #include "keyboard.h"
+#include "kstage1.h"
+#include "memory/common.h"
 #include "memory/physical_memory_manager.h"
 #include "pit.h"
 #include "rtc.h"
@@ -16,21 +19,21 @@ void print_memory_info() {
     gRend.puts("Memory Info:");
     gRend.crlf(startOffset);
     gRend.puts("|- Total RAM: ");
-    gRend.puts(to_string(Memory::get_total_ram() / 1024 / 1024));
+    gRend.puts(to_string(TO_MiB(Memory::get_total_ram())));
     gRend.puts(" MiB (");
-    gRend.puts(to_string(Memory::get_total_ram() / 1024));
+    gRend.puts(to_string(TO_KiB(Memory::get_total_ram())));
     gRend.puts(" KiB)");
     gRend.crlf(startOffset);
     gRend.puts("|- Free RAM: ");
-    gRend.puts(to_string(Memory::get_free_ram() / 1024 / 1024));
+    gRend.puts(to_string(TO_MiB(Memory::get_free_ram())));
     gRend.puts(" MiB (");
-    gRend.puts(to_string(Memory::get_free_ram() / 1024));
+    gRend.puts(to_string(TO_KiB(Memory::get_free_ram())));
     gRend.puts(" KiB)");
     gRend.crlf(startOffset);
     gRend.puts("`- Used RAM: ");
-    gRend.puts(to_string(Memory::get_used_ram() / 1024 / 1024));
+    gRend.puts(to_string(TO_MiB(Memory::get_used_ram())));
     gRend.puts(" MiB (");
-    gRend.puts(to_string(Memory::get_used_ram() / 1024));
+    gRend.puts(to_string(TO_KiB(Memory::get_used_ram())));
     gRend.puts(" KiB)");
     gRend.crlf(startOffset);
 }
@@ -53,17 +56,17 @@ void print_now(u64 xOffset = 0) {
 
 void srl_memory_info() {
     UART::out("\r\nMemory Info:\r\n|- Total RAM: ");
-    UART::out(to_string(Memory::get_total_ram() / 1024 / 1024));
+    UART::out(TO_MiB(Memory::get_total_ram()));
     UART::out("MiB (");
-    UART::out(to_string(Memory::get_total_ram() / 1024));
+    UART::out(TO_KiB(Memory::get_total_ram()));
     UART::out("KiB)\r\n|- Free RAM: ");
-    UART::out(to_string(Memory::get_free_ram() / 1024 / 1024));
+    UART::out(TO_MiB(Memory::get_free_ram()));
     UART::out(" MiB (");
-    UART::out(to_string(Memory::get_free_ram() / 1024));
+    UART::out(TO_KiB(Memory::get_free_ram()));
     UART::out(" KiB)\r\n`- Used RAM: ");
-    UART::out(to_string(Memory::get_used_ram() / 1024 / 1024));
+    UART::out(TO_MiB(Memory::get_used_ram()));
     UART::out(" MiB (");
-    UART::out(to_string(Memory::get_used_ram() / 1024));
+    UART::out(TO_KiB(Memory::get_used_ram()));
     UART::out(" KiB)\r\n");
 }
 
@@ -74,9 +77,9 @@ void test_userland_function() {
     }
 }
 
-extern "C" void _start(BootInfo* bInfo) {
+extern "C" void kmain(BootInfo* bInfo) {
     // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
-    kernel_init(bInfo);
+    kstage1(bInfo);
     UART::out("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
     //// Clear + swap screen (ensure known state: blank).
     gRend.clear(0x00000000);
@@ -147,7 +150,6 @@ extern "C" void _start(BootInfo* bInfo) {
     }
 
     // HALT LOOP (KERNEL INACTIVE).
-    while (true) {
+    while (true)
         asm ("hlt");
-    }
 }

@@ -1,12 +1,10 @@
+#ifndef LENSOR_OS_BOOT_H
+#define LENSOR_OS_BOOT_H
+
+#include "acpi.h"
+#include "basic_renderer.h"
+#include "efi_memory.h"
 #include "integers.h"
-
-struct Framebuffer;
-struct PSF1_FONT;
-
-struct EFI_MEMORY_DESCRIPTOR;
-namespace ACPI {
-    struct RSDP2;
-}
 
 struct BootInfo {
     Framebuffer* framebuffer;
@@ -17,4 +15,4 @@ struct BootInfo {
     ACPI::RSDP2* rsdp;
 };
 
-void kernel_init(BootInfo* info);
+#endif /* LENSOR_OS_BOOT_H */

@@ -115,7 +115,7 @@ namespace AHCI {
     // Do not use this directly, as buffer contents may be
     //   changed by another thread before accessing the buffer.
     bool Port::read_low_level(u64 sector, u16 numSectors) {
-        // Ensure hardware port is not busy.
+        // Ensure hardware port is not busy by spinning until it isn't, or giving up.
         const u64 maxSpin = 1000000;
         u64 spin = 0;
         while ((HBAport->taskFileData & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < maxSpin) {

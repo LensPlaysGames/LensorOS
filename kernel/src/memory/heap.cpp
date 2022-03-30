@@ -6,9 +6,9 @@
 #include "virtual_memory_manager.h"
 #include "../uart.h"
 
-void* sHeapStart;
-void* sHeapEnd;
-HeapSegmentHeader* sLastHeader;
+void* sHeapStart { nullptr };
+void* sHeapEnd { nullptr };
+HeapSegmentHeader* sLastHeader { nullptr };
 
 void HeapSegmentHeader::combine_forward() {
     // Can't combine nothing :^).
@@ -160,7 +160,7 @@ void free(void* address) {
 
 void heap_print_debug() {
     UART::out("[Heap]: Debug information dump:\r\n  Size: ");
-    UART::out(((u64)sHeapEnd - (u64)sHeapStart) / 1024);
+    UART::out(TO_KiB((u64)sHeapEnd - (u64)sHeapStart));
     UART::out("KiB\r\n  Start: 0x");
     UART::out(to_hexstring(sHeapStart));
     UART::out("\r\n  End: 0x");

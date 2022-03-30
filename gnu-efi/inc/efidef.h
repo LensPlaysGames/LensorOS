@@ -165,20 +165,33 @@ typedef enum {
     EfiMaxMemoryType
 } EFI_MEMORY_TYPE;
 
-// possible caching types for the memory range
-#define EFI_MEMORY_UC           0x0000000000000001
-#define EFI_MEMORY_WC           0x0000000000000002
-#define EFI_MEMORY_WT           0x0000000000000004
-#define EFI_MEMORY_WB           0x0000000000000008
-#define EFI_MEMORY_UCE          0x0000000000000010  
+// Possible caching attributes for the memory range.
+// UnCacheable
+#define EFI_MEMORY_UC  0x0000000000000001
+// Write Combining
+#define EFI_MEMORY_WC  0x0000000000000002
+// Write through
+#define EFI_MEMORY_WT  0x0000000000000004
+// Write back
+#define EFI_MEMORY_WB  0x0000000000000008
+// Not cacheable, exported, and supports "fetch and add" semaphore.
+#define EFI_MEMORY_UCE 0x0000000000000010 
+// As of UEFI 2.5, for write protected physical memory use
+// "EFI_MEMORY_RO"; this is now a cacheability attribute.
+#define EFI_MEMORY_WP  0x0000000000001000
 
-// physical memory protection on range 
-#define EFI_MEMORY_WP           0x0000000000001000
-#define EFI_MEMORY_RP           0x0000000000002000
-#define EFI_MEMORY_XP           0x0000000000004000
+// Physical memory protection attributes on range.
+// Read protected
+#define EFI_MEMORY_RP  0x0000000000002000
+// Execute protected
+#define EFI_MEMORY_XP  0x0000000000004000
+// Read only
+#define EFI_MEMORY_RO  0x0000000000020000
 
-// range requires a runtime mapping
-#define EFI_MEMORY_RUNTIME      0x8000000000000000
+// Range requires a runtime mapping
+#define EFI_MEMORY_NV          0x0000000000008000
+#define EFI_MEMORY_CPU_CRYPTO  0x0000000000080000
+#define EFI_MEMORY_RUNTIME     0x8000000000000000
 
 #define EFI_MEMORY_DESCRIPTOR_VERSION  1
 typedef struct {

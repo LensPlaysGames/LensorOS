@@ -1,7 +1,9 @@
 #include "virtual_memory_manager.h"
 
 #include "../integers.h"
+#include "common.h"
 #include "../memory.h"
+#include "../link_definitions.h"
 #include "paging.h"
 #include "physical_memory_manager.h"
 
@@ -18,8 +20,8 @@ namespace Memory {
         PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
         PageTable* PDP;
         if (!PDE.get_flag(PageTableFlag::Present)) {
-            PDP = (PageTable*)Memory::request_page();
-            memset(PDP, 0, 0x1000);
+            PDP = (PageTable*)request_page();
+            memset(PDP, 0, PAGE_SIZE);
             PDE.set_address((u64)PDP >> 12);
             PDE.set_flag(PageTableFlag::Present, true);
             PDE.set_flag(PageTableFlag::ReadWrite, true);
@@ -31,8 +33,8 @@ namespace Memory {
         PDE = PDP->entries[indexer.page_directory()];
         PageTable* PD;
         if (!PDE.get_flag(PageTableFlag::Present)) {
-            PD = (PageTable*)Memory::request_page();
-            memset(PD, 0, 0x1000);
+            PD = (PageTable*)request_page();
+            memset(PD, 0, PAGE_SIZE);
             PDE.set_address((u64)PD >> 12);
             PDE.set_flag(PageTableFlag::Present, true);
             PDE.set_flag(PageTableFlag::ReadWrite, true);
@@ -44,8 +46,8 @@ namespace Memory {
         PDE = PD->entries[indexer.page_table()];
         PageTable* PT;
         if (!PDE.get_flag(PageTableFlag::Present)) {
-            PT = (PageTable*)Memory::request_page();
-            memset(PT, 0, 0x1000);
+            PT = (PageTable*)request_page();
+            memset(PT, 0, PAGE_SIZE);
             PDE.set_address((u64)PT >> 12);
             PDE.set_flag(PageTableFlag::Present, true);
             PDE.set_flag(PageTableFlag::ReadWrite, true);
@@ -96,28 +98,35 @@ namespace Memory {
     }
 
     PageTable* get_active_page_map() {
-        if (ActivePageMap)
-            return ActivePageMap;
-
-        PageTable* ret { 0 };
-        asm volatile ("mov %%cr3, %%rax\n\t"
-                      "mov %%rax, %0"
-                      : "=m"(ret)
-                      : // No inputs
-                      : "rax");
-        return ret;
+        if (!ActivePageMap) {
+            asm volatile ("mov %%cr3, %%rax\n\t"
+                          "mov %%rax, %0"
+                          : "=m"(ActivePageMap)
+                          : // No inputs
+                          : "rax");
+        }
+        return ActivePageMap;
     }
 
-    void init_virtual() {
-        PageTable* initialPageMap = (PageTable*)Memory::request_page();
+    void init_virtual(PageTable* pageMap) {
         /* Map all physical RAM addresses to virtual 
          *   addresses 1:1, store them in the PML4.
          * This means that virtual memory addresses will be
          *   equal to physical memory addresses within the kernel.
          */
-        for (u64 t = 0; t < Memory::get_total_ram(); t+=0x1000)
-            map(initialPageMap, (void*)t, (void*)t);
 
-        flush_page_map(initialPageMap);
+        for (u64 t = 0; t < get_total_ram(); t+=PAGE_SIZE)
+            map(pageMap, (void*)t, (void*)t);
+
+        u64 kPhysicalStart = (u64)&KERNEL_PHYSICAL;
+        u64 kernelBytesNeeded = 1 + ((u64)&KERNEL_END - (u64)&KERNEL_START);
+        for (u64 t = kPhysicalStart; t < kPhysicalStart + kernelBytesNeeded + PAGE_SIZE; t+=PAGE_SIZE)
+            map(pageMap, (void*)(t + (u64)&KERNEL_VIRTUAL), (void*)t);
+
+        flush_page_map(pageMap);
+    }
+
+    void init_virtual() {
+        init_virtual((PageTable*)Memory::request_page());
     }
 }

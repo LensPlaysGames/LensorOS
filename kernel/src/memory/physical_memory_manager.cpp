@@ -4,8 +4,10 @@
 #include "common.h"
 #include "../cstr.h"
 #include "../efi_memory.h"
+#include "../link_definitions.h"
 #include "region.h"
 #include "../uart.h"
+#include "virtual_memory_manager.h"
 
 namespace Memory {
     Bitmap PageMap;
@@ -13,7 +15,7 @@ namespace Memory {
     u64 TotalPages { 0 };
     u64 TotalFreePages { 0 };
     u64 TotalUsedPages { 0 };
-
+    u64 MaxFreePagesInARow { 0 };
 
     u64 get_total_ram() {
         return TotalPages * PAGE_SIZE;
@@ -30,7 +32,7 @@ namespace Memory {
         // Page already locked.
         if (PageMap.get(index))
             return;
-        // Page was locked by `set()`.
+
         if (PageMap.set(index, true)) {
             TotalFreePages -= 1;
             TotalUsedPages += 1;
@@ -44,10 +46,9 @@ namespace Memory {
 
     void free_page(void* address) {
         u64 index = (u64)address / PAGE_SIZE;
-        // Page already freed.
         if (PageMap.get(index) == false)
             return;
-        // Page was freed by `set()`.
+
         if (PageMap.set(index, false)) {
             TotalUsedPages -= 1;
             TotalFreePages += 1;
@@ -61,15 +62,16 @@ namespace Memory {
 
     u64 FirstFreePage { 0 };
     void* request_page() {
-        for(; FirstFreePage < TotalPages; ++FirstFreePage) {
-            if (PageMap[FirstFreePage] == false) {
+        for(; FirstFreePage < TotalPages; FirstFreePage++) {
+            if (PageMap.get(FirstFreePage) == false) {
                 void* addr = (void*)(FirstFreePage * PAGE_SIZE);
                 lock_page(addr);
+                FirstFreePage += 1; // Eat current page.
                 return addr;
             }
         }
         // TODO: Page swap from/to file on disk.
-        UART::out("\033[31mYou ran out of memory :^)\033[0m\r\n");
+        UART::out("\033[31mRan out of memory in request_page() :^<\033[0m\r\n");
         return nullptr;
     }
     
@@ -81,9 +83,23 @@ namespace Memory {
         if (numberOfPages == 1)
             return request_page();
         // Can't allocate something larger than the amount of free memory.
-        if (numberOfPages > TotalFreePages)
+        if (numberOfPages > TotalFreePages) {
+            UART::out("request_pages(): \033[31mERROR\033[0m:: Number of pages requested is larger than amount of pages available.");
             return nullptr;
+        }
+        if (numberOfPages > MaxFreePagesInARow) {
+            UART::out("request_pages(): \033[31mERROR\033[0m:: Number of pages requested is larger than any contiguous run of pages available.");
+            return nullptr;
+        }
         
+        // UART::out("request_pages():\r\n  # of Pages: ");
+        // UART::out(numberOfPages);
+        // UART::out("\r\n  Free Pages: ");
+        // UART::out(TotalFreePages);
+        // UART::out("\r\n  Max Run of Free Pages: ");
+        // UART::out(MaxFreePagesInARow);
+        // UART::out("\r\n\r\n");
+
         for (u64 i = FirstFreePage; i < PageMap.length(); ++i) {
             // Skip locked pages.
             if (PageMap[i] == true)
@@ -92,17 +108,22 @@ namespace Memory {
             // If page is free, check if entire `numberOfPages` run is free.
             u64 index = i;
             u64 run = 0;
+
             while (PageMap[index] == false) {
                 run++;
                 index++;
-                if (index > PageMap.length()) {
+
+                if (index >= PageMap.length()) {
                     // TODO: No memory matching criteria, should
                     //   probably do a page swap from disk or something.
-                    UART::out("\033[31mYou ran out of memory :^<\033[0m\r\n");
+                    UART::out("\033[31mYou ran out of memory in request_pages():^<\033[0m\r\n");
+                    UART::out("  Attempted to allocate ");
+                    UART::out(numberOfPages);
+                    UART::out("  pages\r\n\r\n");
                     return nullptr;
                 }
                 if (run >= numberOfPages) {
-                    void* out = (void*)(i * 4096);
+                    void* out = (void*)(i * PAGE_SIZE);
                     lock_pages(out, numberOfPages);
                     return out;
                 }
@@ -114,10 +135,93 @@ namespace Memory {
         return nullptr;
     }
 
-    void init_physical_common() {
-        u64 kernelPagesNeeded = (((u64)&KERNEL_END - (u64)&KERNEL_START) / 4096) + 1;
-        Memory::lock_pages(&KERNEL_START, kernelPagesNeeded);
-        // TODO: Re-use memory in-between sections; it's currently wasted.
+    constexpr u64 InitialPageBitmapMaxAddress = GiB(2);
+    constexpr u64 InitialPageBitmapPageCount = InitialPageBitmapMaxAddress / PAGE_SIZE;
+    constexpr u64 InitialPageBitmapSize = InitialPageBitmapPageCount / 8;
+    u8 InitialPageBitmap[InitialPageBitmapSize];
+
+    void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
+        // Calculate number of entries within memoryMap array.
+        u64 entries = size / entrySize;
+        // Find largest free and usable contiguous region of memory
+        // within space addressable by initial page bitmap.
+        void* largestFreeMemorySegment { nullptr };
+        u64 largestFreeMemorySegmentPageCount { 0 };
+        for (u64 i = 0; i < entries; ++i) {
+            EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
+            if (desc->type == 7) {
+                if (desc->numPages > largestFreeMemorySegmentPageCount
+                    && (u64)desc->physicalAddress + desc->numPages < InitialPageBitmapMaxAddress)
+                {
+                    largestFreeMemorySegment = desc->physicalAddress;
+                    largestFreeMemorySegmentPageCount = desc->numPages;
+                }
+            }
+            TotalPages += desc->numPages;
+        }
+
+        if (largestFreeMemorySegment == nullptr
+            || largestFreeMemorySegmentPageCount == 0)
+        {
+            while (true)
+                asm ("hlt");
+        }
+
+        // Use pre-allocated memory region for initial physical page bitmap.
+        PageMap.init(InitialPageBitmapSize, (u8*)&InitialPageBitmap[0]);
+        // Lock all pages in initial bitmap.
+        lock_pages(0, InitialPageBitmapPageCount);
+        // Unlock free pages in bitmap.
+        for (u64 i = 0; i < entries; ++i) {
+            EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
+            if (desc->type == 7)
+                free_pages(desc->physicalAddress, desc->numPages);
+        }
+        // Lock the kernel (in case it was just freed).
+        u64 kernelByteCount = (u64)&KERNEL_END - (u64)&KERNEL_START;
+        u64 kernelPageCount = kernelByteCount / PAGE_SIZE;
+        lock_pages(&KERNEL_PHYSICAL, kernelPageCount);
+        
+        // Use the initial pre-allocated page bitmap as a guide
+        // for where to place allocate new virtual memory map entries.
+        // Map up to the entire amount of physical memory
+        // present or the max amount addressable given the
+        // size limitation of the pre-allocated bitmap.
+        PageTable* activePML4 = get_active_page_map();
+        for (u64 t = 0; t < TotalPages * PAGE_SIZE && t < InitialPageBitmapMaxAddress; t += 0x1000)
+            map(activePML4, (void*)t, (void*)t);
+
+        // Calculate total number of bytes needed for a physical page
+        // bitmap that covers hardware's actual amount of memory present.
+        u64 bitmapSize = (TotalPages / 8) + 1;
+        PageMap.init(bitmapSize, (u8*)((u64)largestFreeMemorySegment));
+        TotalUsedPages = 0;
+        lock_pages(0, TotalPages + 1);
+        // With all pages in the bitmap locked, free only the EFI conventional memory segments.
+        // We may be able to be a little more aggressive in what memory we take in the future.
+        TotalFreePages = 0;
+        for (u64 i = 0; i < entries; ++i) {
+            EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
+            if (desc->type == 7) {
+                free_pages(desc->physicalAddress, desc->numPages);
+                if (desc->numPages > MaxFreePagesInARow)
+                    MaxFreePagesInARow = desc->numPages;
+            }
+        }
+        /* The page map itself takes up space within the largest free memory segment.
+         * As every memory segment was just set back to free in the bitmap, it's
+         *   important to re-lock the page bitmap so it doesn't get trampled on
+         *   when allocating more memory.
+         */
+        lock_pages(PageMap.base(), (PageMap.length() / PAGE_SIZE) + 1);
+
+        // Lock the kernel in the new page bitmap (in case it already isn't).
+        lock_pages(&KERNEL_PHYSICAL, kernelPageCount);
+
+        /* TODO:
+         * `-- `.text` + `.rodata` should be read only.
+         */
+
         // Calculate space that is lost due to page alignment.
         u64 deadSpace { 0 };
         deadSpace += (u64)&DATA_START - (u64)&TEXT_END;
@@ -161,53 +265,6 @@ namespace Memory {
         UART::out("    Lost to Page Alignment: ");
         UART::out(deadSpace);
         UART::out(" bytes\r\n\r\n");
-    }
-
-    void init_physical_efi(EFI_MEMORY_DESCRIPTOR* map, u64 size, u64 entrySize) {
-        // Calculate number of entries within memoryMap array.
-        u64 entries = size / entrySize;
-        // Find largest free and usable contiguous region of memory.
-        void* largestFreeMemorySegment { nullptr };
-        u64 largestFreeMemorySegmentPageCount { 0 };
-        for (u64 i = 0; i < entries; ++i) {
-            EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)map + (i * entrySize));
-            if (desc->type == 7) {
-                if (desc->numPages > largestFreeMemorySegmentPageCount) {
-                    largestFreeMemorySegment = desc->physicalAddress;
-                    largestFreeMemorySegmentPageCount = desc->numPages;
-                }
-            }
-            TotalPages += desc->numPages;
-        }
-
-        if (largestFreeMemorySegment == nullptr
-            || largestFreeMemorySegmentPageCount == 0)
-        {
-            while (true)
-                asm ("hlt");
-        }
-        
-        // Number of bytes needed = (Number of Pages / Bits per Byte) + 1
-        u64 bitmapSize = (TotalPages / 8) + 1;
-        PageMap.init(bitmapSize, (u8*)((u64)largestFreeMemorySegment));
-        lock_pages(0, TotalPages + 1);
-        // With all pages in the bitmap locked, free only the EFI conventional memory segments.
-        // We may be able to be a little more aggressive in what memory we take in the future.
-        TotalFreePages = 0;
-        for (u64 i = 0; i < entries; ++i) {
-            EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)map + (i * entrySize));
-            if (desc->type == 7)
-                free_pages(desc->physicalAddress, desc->numPages);
-        }
-
-        /* The page map itself takes up space within the largest free memory segment.
-         * As every memory segment was just set back to free in the bitmap, it's
-         *   important to re-lock the page bitmap so it doesn't get trampled on
-         *   when allocating more memory.
-         */
-        lock_pages(PageMap.base(), (PageMap.length() / 4096) + 1);
-
-        init_physical_common();
     }
 
     void print_debug() {

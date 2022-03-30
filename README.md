@@ -200,7 +200,7 @@ Following that, simply using the `bootloader` target will be sufficient to updat
 
 #### 3.) Build the kernel
 Before compiling the kernel, you must build the toolchain that LensorOS uses. \
-See [README.toolchain](kernel/README.toolchain.md) within the `/kernel/` directory of the repository for explicit build instructions.
+[See the toolchain README](toolchain/README.toolchain.md) for explicit build instructions.
 
 Parts of the kernel are written in assembly intended for the Netwide Assembler. \
 Ensure it is installed on your system before continuing:
@@ -209,7 +209,7 @@ Ensure it is installed on your system before continuing:
 
 Once the toolchain is up and running (added to `$PATH` and everything), continue the following steps.
 
-NOTE: It is possible to use your host compiler to build the kernel. It is not recommended, and likely won't work, but who am I to stop you. Simply remove/comment out the `set(CMAKE_C_COMPILER` and `set(CMAKE_CXX_COMPILER` lines within [CMakeLists.txt](kernel/CMakeLists.txt). This will instruct CMake to use your host machine's default compiler (again, **not** recommended).
+NOTE: It is possible to use your host compiler to build the kernel. It is not recommended, and likely won't work, but who am I to stop you. Simply remove/comment out the `set(CMAKE_C_COMPILER` and `set(CMAKE_CXX_COMPILER` lines [within CMakeLists.txt](kernel/CMakeLists.txt). This will instruct CMake to use your host machine's default compiler (again, **not** recommended).
 
 First, `cd` to the `kernel` directory of the repository. \
 To prepare a build system that will build the kernel with `GNU make`, run the following:

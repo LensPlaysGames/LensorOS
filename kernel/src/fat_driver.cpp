@@ -96,7 +96,7 @@ FATType FATDriver::get_type(BootRecord* BR) const {
 /// This is used by the AHCI driver to determine if this file system is suitable for a given device.
 bool FATDriver::is_device_fat_formatted(AHCI::Port* port) {
     // Allocate memory for a FAT boot record.
-    SmartPtr<BootRecord> br = SmartPtr<BootRecord>(new BootRecord);
+    auto br = SmartPtr<BootRecord>(new BootRecord);
     if (port->read(0, 1, br.get(), sizeof(BootRecord))) {
         /* Validate boot sector is of FAT format.
          * Thanks to Gigasoft of osdev forums for this list

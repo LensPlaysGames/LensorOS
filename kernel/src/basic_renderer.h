@@ -33,7 +33,7 @@ struct Framebuffer {
     }
 };
 
-const u32 BytesPerPixel = 4;
+constexpr u32 BytesPerPixel = 4;
 
 class BasicRenderer {
 public:

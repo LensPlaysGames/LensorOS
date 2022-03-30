@@ -2,14 +2,15 @@ OUTPUT_FORMAT(elf64-x86-64)
 ENTRY(_start)
 SECTIONS
 {
-    /* FIXME: Map kernel to something that isn't zero! */
-    KERNEL_VIRTUAL = 0x0;
-    . = KERNEL_VIRTUAL;
+    /* TODO: MOVE KERNEL TO 1MB PHYSICALLY */
+    KERNEL_PHYSICAL = 0x0;
+    KERNEL_VIRTUAL = 0xffffffff80000000;
+    . = KERNEL_VIRTUAL + KERNEL_PHYSICAL;
     KERNEL_START = .;
     .text : AT(ADDR(.text) - KERNEL_VIRTUAL)
     {
         TEXT_START = .;
-        *(.text)
+        *(.text*)
         *(.gnu.linkonce.t*)
         TEXT_END = .;
     }
@@ -18,7 +19,7 @@ SECTIONS
     .data : AT(ADDR(.data) - KERNEL_VIRTUAL)
     {
         DATA_START = .;
-        *(.data)
+        *(.data*)
         *(.gnu.linkonce.d*)
         DATA_END = .;
     }
@@ -28,15 +29,7 @@ SECTIONS
     {
         READ_ONLY_DATA_START = .;
 
-        start_ctors = .;
-        *(SORT(.ctors*))
-        end_ctors = .;
-
-        start_dtors = .;
-        *(SORT(.dtors*))
-        end_dtors = .;
-
-        *(.rodata)
+        *(.rodata*)
         *(.gnu.linkonce.r*)
         READ_ONLY_DATA_END = .;
     }
@@ -46,7 +39,7 @@ SECTIONS
     {
         BLOCK_STARTING_SYMBOLS_START = .;
         *(COMMON)
-        *(.bss)
+        *(.bss*)
         *(.gnu.linkonce.b*)
         BLOCK_STARTING_SYMBOLS_END = .;
     }
@@ -54,6 +47,8 @@ SECTIONS
 
     /DISCARD/ :
     {
+        *(.ctors)
+        *(.dtors)
         *(.comment)
         *(.eh_frame)
         *(.note.gnu.build-id)

@@ -6,8 +6,14 @@
 class LCG {
     u64 state {0};
 public:
-    inline void seed(u64);
-    inline void next();
+    inline void seed(u64 s) {
+        state = s;
+    }
+
+    inline void next() {
+        state = 1103515245 * state + 12345;
+    }
+
     /// Get a random 64-bit number.
     u64 get();
     /// Get a random number between zero and given `max` (inclusive/exclusive).

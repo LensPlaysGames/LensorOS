@@ -40,18 +40,24 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
     target = *render;
     // Find physical pages for target framebuffer and allocate them.
     target.BaseAddress = Memory::request_pages(fbPages);
-    fbBase = (u64)target.BaseAddress;
-    for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
-        Memory::map((void*)t, (void*)t);
+    // If memory allocation fails, pretend there is two buffers
+    // but they both point to the same spot.
+    if (target.BaseAddress == nullptr) {
+        Target = Render;
+    }
+    else {
+        fbBase = (u64)target.BaseAddress;
+        for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
+            Memory::map((void*)t, (void*)t);
 
-    UART::out("  Deferred GOP framebuffer mapped to 0x");
-    UART::out(to_hexstring(fbBase));
-    UART::out(" thru ");
-    UART::out(to_hexstring(fbBase + fbSize));
-    UART::out("\r\n");
+        UART::out("  Deferred GOP framebuffer mapped to 0x");
+        UART::out(to_hexstring(fbBase));
+        UART::out(" thru ");
+        UART::out(to_hexstring(fbBase + fbSize));
+        UART::out("\r\n");
 
-    Target = &target;
-
+        Target = &target;
+    }
     clear();
     swap();
 }

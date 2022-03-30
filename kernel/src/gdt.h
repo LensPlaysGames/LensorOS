@@ -64,7 +64,11 @@ struct GDTEntry {
 struct TSS_GDTEntry : public GDTEntry {
     /// Base 63:32
     u32 Base3;
-    u32 Reserved;
+    u32 Reserved { 0 };
+
+    TSS_GDTEntry(GDTEntry entry, u32 b3)
+        : GDTEntry(entry)
+      , Base3(b3) {}
 } __attribute__((packed));
 
 /// Global Descriptor Table
@@ -88,6 +92,7 @@ struct GDT {
 }__attribute__((packed)) __attribute__((aligned(0x1000)));
 
 extern GDT gGDT;
+extern GDTDescriptor gGDTD;
 
 extern "C" void LoadGDT(GDTDescriptor* gdtDescriptor);
 

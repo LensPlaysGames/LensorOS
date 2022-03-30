@@ -1,7 +1,8 @@
-#include "kUtility.h"
+#include "kstage1.h"
 
 #include "acpi.h"
 #include "basic_renderer.h"
+#include "boot.h"
 #include "bitmap.h"
 #include "cpu.h"
 #include "cpuid.h"
@@ -17,7 +18,9 @@
 #include "interrupts/syscalls.h"
 #include "io.h"
 #include "keyboard.h"
+#include "link_definitions.h"
 #include "memory.h"
+#include "memory/common.h"
 #include "memory/physical_memory_manager.h"
 #include "memory/virtual_memory_manager.h"
 #include "mouse.h"
@@ -30,11 +33,13 @@
 #include "tss.h"
 #include "uart.h"
 
+u8 idtr_storage[0x1000];
+
 void prepare_interrupts() {
     // REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
     remap_pic();
     // CREATE INTERRUPT DESCRIPTOR TABLE.
-    gIDT = IDTR(0x0fff, (u64)Memory::request_page());
+    gIDT = IDTR(0x0fff, (u64)&idtr_storage[0]);
     // POPULATE TABLE.
     // NOTE: IRQ0 uses this handler by default, but scheduler over-rides this!
     gIDT.install_handler((u64)system_timer_handler,             PIC_IRQ0);
@@ -83,14 +88,14 @@ CPUDescription* SystemCPU { nullptr };
 //   512-byte region of memory before use.
 u8 fxsave_region[512] __attribute__((aligned(16)));
 
-void kernel_init(BootInfo* bInfo) {
+void kstage1(BootInfo* bInfo) {
     /* This function is kind of monstrous, so the functionality is outlined here.
+     *   - Load Global Descriptor Table (CPU Privilege levels, hardware task switching)
      *   - Prepare UART serial communications driver
      *   - Prepare physical/virtual memory
-     *     - Initialize Physical Memory Manager
-     *     - Initialize Virtual Memory Manager
-     *     - Prepare the heap (`new`, `delete`)
-     *   - Load Global Descriptor Table (CPU Privilege levels, hardware task switching)
+     *     - Initialize Physical Memory Manager (chicken/egg happens here)
+     *     - Initialize Virtual Memory Manager (ensure all RAM is mapped, as well as kernel)
+     *     - Prepare the heap (`new` and `delete`)
      *   - Load Interrupt Descriptor Table (Install handlers for hardware IRQs + software exceptions)
      *   - Prepare Real Time Clock (RTC)
      *   - Setup graphical renderers
@@ -114,25 +119,28 @@ void kernel_init(BootInfo* bInfo) {
     //   operations (like setting up interrupts :^).
     asm ("cli");
 
-    // Setup serial communications chip to allow for debug messages as soon as possible.
-    UART::initialize();
-    UART::out("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
-    // Setup physical memory allocator from EFI memory map.
-    Memory::init_physical_efi(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
-    // Setup virtual to physical memory mapping.
-    Memory::init_virtual();
-    // Setup dynamic memory allocation (`new`, `delete`).
-    init_heap();
-
-    /* Tell x86_64 CPU where the GDT is located by creating a GDT descriptor.
+    /* Tell x86_64 CPU where the GDT is located by populating and loading a GDT descriptor.
      * The global descriptor table contains information about
      *   memory segments (like privilege level of executing code,
      *   or privilege level needed to access data).
      */
-    GDTDescriptor GDTD = GDTDescriptor(sizeof(GDT) - 1, (u64)&gGDT);
-    LoadGDT(&GDTD);
+    gGDTD.Size = sizeof(GDT) - 1;
+    gGDTD.Offset = V2P((u64)&gGDT);
+    LoadGDT((GDTDescriptor*)V2P(&gGDTD));
+
     // Prepare Interrupt Descriptor Table.
     prepare_interrupts();
+
+    // Setup serial communications chip to allow for debug messages as soon as possible.
+    UART::initialize();
+    UART::out("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
+
+    // Setup physical memory allocator from EFI memory map.
+    Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    // Setup virtual memory (map entire address space as well as kernel).
+    Memory::init_virtual();
+    // Setup dynamic memory allocation (`new`, `delete`).
+    init_heap();
 
     // Initialize the Real Time Clock.
     gRTC = RTC();
@@ -154,10 +162,6 @@ void kernel_init(BootInfo* bInfo) {
     UART::out(to_string(gRTC.Time.date));
     UART::out("\033[0m\r\n\r\n");
 
-    // Setup random number generators.
-    gRandomLCG = LCG();
-    gRandomLFSR = LFSR();
-
     // Create basic framebuffer renderer.
     UART::out("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
     gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
@@ -165,6 +169,16 @@ void kernel_init(BootInfo* bInfo) {
     draw_boot_gfx();
     // Create basic text renderer for the keyboard.
     Keyboard::gText = Keyboard::BasicTextRenderer();
+
+    // Setup random number generators.
+    gRandomLCG = LCG();
+    u64 someNumber = gRTC.Time.century + gRTC.Time.year
+        + gRTC.Time.month + gRTC.Time.date
+        + gRTC.Time.weekday + gRTC.Time.hour
+        + gRTC.Time.minute + gRTC.Time.second;
+    gRandomLCG.seed(someNumber);
+    gRandomLFSR = LFSR();
+    gRandomLFSR.seed(gRandomLCG.get(), gRandomLCG.get());
 
     // Store feature set of CPU (capabilities).
     // TODO: Don't store the global system CPU descriptor on the stack, there only ever needs to be one.
