@@ -4,8 +4,11 @@ If you see something you would like to work on, do it! Pull requests will be rev
 ---
 
 ### C++ Style Guide:
+These are some rough guidelines to help any submitted code be consistent with the rest of the codebase. It is completely okay to make a PR with code that doesn't strictly follow these guidelines, but it does increase the time that it will take to get the PR accepted and merged.
+
+- Tabs are evil!
 - 4-space indenting ("Stroustrup" style).
-- Curly braces on same line.
+- Curly braces on same line unless condition(s) take up multiple lines.
 ```cpp
 if (condition) {
     do_thing();
@@ -15,16 +18,22 @@ else if (otherCondition) {
     do_other_thing();
     something_entirely_different();
 }
+else if (tertiaryThing & (1 << 5) > 0
+         && tertiaryThing & (1 << 63) > 0)
+{
+    do_tertiary_thing();
+    its_up_to_your_imagination_at_this_point();
+}
 ```
-- If an `if`/`else` block only includes one line, the curly braces may be excluded, and the line indented.
-  - If any code on the same indent level as the `if`/`else` keyword follows this type of block, there must one line of free space following.
+- If an `if`/`else if`/`else` block only includes one line, the curly braces may be excluded, and the line indented.
+  - If any code on the same indent level as the `if`/`else if`/`else` keyword(s) follows this type of block, there must one line of free space following.
 ```cpp
 if (condition)
     // ... do one thing ...
-    
+
 // ... continue to do things ...
 ```
-- Given multiple one-line `if`/`else` blocks in a row, the one line of free space following the inner blocks may be left out.
+- Given multiple one-line `if`/`else if`/`else` blocks in a row, the one line of free space following the inner blocks may be left out.
 - If an `else` block contains one line, it should be on the same line as the `else` keyword.
 ```cpp
 if (condition)
@@ -47,20 +56,24 @@ bool isPositive { false };
 class PIT {
 public:
     PIT();
-    
+
     void tick() { Ticks += 1; }
-    u64 get() { return Ticks; }
-    
+    u64 ticks() { return Ticks; }
+
 private:
     u64 Ticks { 0 };
 };
 ```
 - SCREAMING_SNAKE_CASE all preprocessor directives.
-- Use `define` header include guard in SCREAMING_SNAKE_CASE:
+- Use `define` header include guard:
+  - in SCREAMING_SNAKE_CASE,
+  - with a blank line between it and the contents of the header file.
 ```cpp
 #ifndef LENSOR_OS_NAME_OF_FILE_H
 #define LENSOR_OS_NAME_OF_FILE_H
+
 ... header contents ...
+
 #endif /* LENSOR_OS_NAME_OF_FILE_H */
 ```
 - When declaring arguments for a function in a header file, only put a name if it is not intrinsically clear.
