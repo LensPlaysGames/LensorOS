@@ -47,8 +47,12 @@ namespace Scheduler {
     /// A stupid simple round-robin process switcher.
     void switch_process(CPUState* cpu) {
         memcpy(&cpu, &CurrentProcess->value()->CPU, sizeof(CPUState));
-        if (CurrentProcess->next() == nullptr)
+        if (CurrentProcess->next() == nullptr) {
+            if(CurrentProcess == ProcessQueue->head())
+                return;
+
             CurrentProcess = ProcessQueue->head();
+        }
         else CurrentProcess = CurrentProcess->next();
         memcpy(&CurrentProcess->value()->CPU, &cpu, sizeof(CPUState));
         Memory::flush_page_map(CurrentProcess->value()->CR3);
