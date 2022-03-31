@@ -20,10 +20,10 @@ curl https://mirrors.kernel.org/gnu/gcc/gcc-11.2.0/gcc-11.2.0.tar.xz \
 # Extract archives into source directories.
 echo -e "\n\n -> Extracting GNU Binutils\n\n"
 mkdir -p "binutils-2.38"
-tar -xf binutils-2.38.tar.xz -v -C .
+tar -xf binutils-2.38.tar.xz -C .
 echo -e "\n\n -> Extracting GNU Compiler Collection\n\n"
 mkdir -p "gcc-11.2.0"
-tar -xf gcc-11.2.0.tar.xz -v -C .
+tar -xf gcc-11.2.0.tar.xz -C .
 # Patch Binutils.
 echo -e "\n\n -> Patching GNU Binutils\n\n"
 patch -s -u -p0 < $ScriptDirectory/binutils-2.38-lensor.patch
