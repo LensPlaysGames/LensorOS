@@ -1,4 +1,4 @@
-diff -ruN untouched/binutils-2.38/bfd/config.bfd binutils-2.38/bfd/config.bfd
+diff -x '*.*~' -ruN untouched/binutils-2.38/bfd/config.bfd binutils-2.38/bfd/config.bfd
 --- untouched/binutils-2.38/bfd/config.bfd	2022-01-22 04:14:07.000000000 -0800
 +++ binutils-2.38/bfd/config.bfd	2022-03-31 10:14:30.586398500 -0700
 @@ -241,6 +241,11 @@
@@ -13,7 +13,7 @@ diff -ruN untouched/binutils-2.38/bfd/config.bfd binutils-2.38/bfd/config.bfd
    aarch64-*-darwin*)
      targ_defvec=aarch64_mach_o_vec
      targ_selvecs="arm_mach_o_vec mach_o_le_vec mach_o_be_vec mach_o_fat_vec"
-diff -ruN untouched/binutils-2.38/config.sub binutils-2.38/config.sub
+diff -x '*.*~' -ruN untouched/binutils-2.38/config.sub binutils-2.38/config.sub
 --- untouched/binutils-2.38/config.sub	2022-01-22 04:14:07.000000000 -0800
 +++ binutils-2.38/config.sub	2022-03-31 10:43:45.842576700 -0700
 @@ -1724,7 +1724,7 @@
@@ -25,7 +25,7 @@ diff -ruN untouched/binutils-2.38/config.sub binutils-2.38/config.sub
  	     | hpux* | unos* | osf* | luna* | dgux* | auroraux* | solaris* \
  	     | sym* |  plan9* | psp* | sim* | xray* | os68k* | v88r* \
  	     | hiux* | abug | nacl* | netware* | windows* \
-diff -ruN untouched/binutils-2.38/gas/configure.tgt binutils-2.38/gas/configure.tgt
+diff -x '*.*~' -ruN untouched/binutils-2.38/gas/configure.tgt binutils-2.38/gas/configure.tgt
 --- untouched/binutils-2.38/gas/configure.tgt	2022-01-22 04:14:08.000000000 -0800
 +++ binutils-2.38/gas/configure.tgt	2022-03-31 10:14:30.600275400 -0700
 @@ -263,6 +263,7 @@
@@ -36,7 +36,7 @@ diff -ruN untouched/binutils-2.38/gas/configure.tgt binutils-2.38/gas/configure.
  
    ia16-*-elf*)				fmt=elf ;;
  
-diff -ruN untouched/binutils-2.38/ld/Makefile.am binutils-2.38/ld/Makefile.am
+diff -x '*.*~' -ruN untouched/binutils-2.38/ld/Makefile.am binutils-2.38/ld/Makefile.am
 --- untouched/binutils-2.38/ld/Makefile.am	2022-01-22 04:14:09.000000000 -0800
 +++ binutils-2.38/ld/Makefile.am	2022-03-31 10:14:30.630723500 -0700
 @@ -463,6 +463,7 @@
@@ -47,7 +47,7 @@ diff -ruN untouched/binutils-2.38/ld/Makefile.am binutils-2.38/ld/Makefile.am
  	eelf_x86_64_sol2.c \
  	ehppa64linux.c \
  	ei386pep.c \
-diff -ruN untouched/binutils-2.38/ld/Makefile.in binutils-2.38/ld/Makefile.in
+diff -x '*.*~' -ruN untouched/binutils-2.38/ld/Makefile.in binutils-2.38/ld/Makefile.in
 --- untouched/binutils-2.38/ld/Makefile.in	2022-02-09 03:49:03.000000000 -0800
 +++ binutils-2.38/ld/Makefile.in	2022-03-31 10:14:30.637861800 -0700
 @@ -953,6 +953,7 @@
@@ -58,7 +58,7 @@ diff -ruN untouched/binutils-2.38/ld/Makefile.in binutils-2.38/ld/Makefile.in
  	eelf_x86_64_sol2.c \
  	ehppa64linux.c \
  	ei386pep.c \
-diff -ruN untouched/binutils-2.38/ld/configure.tgt binutils-2.38/ld/configure.tgt
+diff -x '*.*~' -ruN untouched/binutils-2.38/ld/configure.tgt binutils-2.38/ld/configure.tgt
 --- untouched/binutils-2.38/ld/configure.tgt	2022-01-22 06:19:36.000000000 -0800
 +++ binutils-2.38/ld/configure.tgt	2022-03-31 10:38:34.540814300 -0700
 @@ -956,6 +956,11 @@
@@ -73,7 +73,7 @@ diff -ruN untouched/binutils-2.38/ld/configure.tgt binutils-2.38/ld/configure.tg
  x86_64-*-linux-gnux32)	targ_emul=elf32_x86_64
  			targ_extra_emuls="elf_x86_64 elf_i386 elf_iamcu elf_l1om elf_k1om"
  			targ_extra_libpath="elf_i386 elf_iamcu elf_x86_64 elf_l1om elf_k1om"
-diff -ruN untouched/binutils-2.38/ld/emulparams/elf_x86_64_lensor.sh binutils-2.38/ld/emulparams/elf_x86_64_lensor.sh
+diff -x '*.*~' -ruN untouched/binutils-2.38/ld/emulparams/elf_x86_64_lensor.sh binutils-2.38/ld/emulparams/elf_x86_64_lensor.sh
 --- untouched/binutils-2.38/ld/emulparams/elf_x86_64_lensor.sh	1969-12-31 16:00:00.000000000 -0800
 +++ binutils-2.38/ld/emulparams/elf_x86_64_lensor.sh	2022-03-31 10:14:30.649027900 -0700
 @@ -0,0 +1 @@
