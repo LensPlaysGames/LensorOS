@@ -4,10 +4,10 @@
 # |-- GNU Tar (xz-utils)
 # `-- GNU Diff/Patch
 # Set variables.
+ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 TARGET="x86_64-lensoros-elf"
 PREFIX="$ScriptDirectory/cross"
 SYSROOT="$ScriptDirectory/../root"
-ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Ensure known working directory.
 cd $ScriptDirectory
 # Download source archives.
