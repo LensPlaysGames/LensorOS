@@ -269,3 +269,6 @@ A large thanks to the huge portions of inspiration, knowledge, and help that cam
 A huge amount of entertainment and inspiration has come from [SerenityOS](https://github.com/SerenityOS/serenity), an operating system being built by the OS development hobby-ist community.
 
 The compeletely-from-scratch [ToaruOS](https://github.com/klange/toaruos) has also been an amazing source of knowledge, inspiration, and information.
+
+#### Birthday
+My birthday is January 14th! I am still a *wittle baby*.
