@@ -5,7 +5,7 @@
 # `-- GNU Diff/Patch
 # Set variables.
 ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-TARGET="x86_64-lensoros-elf"
+TARGET="x86_64-lensor"
 PREFIX="$ScriptDirectory/cross"
 SYSROOT="$ScriptDirectory/../root"
 # Ensure known working directory.
