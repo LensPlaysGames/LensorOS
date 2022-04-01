@@ -31,15 +31,17 @@ patch -s -u -p0 < $ScriptDirectory/binutils-2.38-lensor.patch
 echo -e "\n\n -> Patching GNU Compiler Collection\n\n"
 patch -s -u -p0 < $ScriptDirectory/gcc-11.2.0-lensor.patch
 # Bootstrap sysroot.
-if [[ ! -d "$SYSROOT" ]] ; then
+if [ ! -d "$SYSROOT" ] ; then
     mkdir -p "$SYSROOT"
 	# Copy base filesystem with pre-built libc
 	#     binaries into newly-created sysroot.
 	# This solves the issue of having to build a
 	#     bootstrap version of the compiler first.
-	cp -r ../base "$SYSROOT"
-	# Use libc install script to install system headers.
-	source ../user/libc/install.sh "$SYSROOT"
+	cp -r ../base/* "$SYSROOT/"
+	# Copy header files from libc to sysroot.
+	cd ../user/libc/
+	find ./ -name '*.h' -exec cp --parents '{}' -t $SYSROOT/usr/include ';'
+	cd $ScriptDirectory
 fi
 # Create output build directory.
 mkdir -p cross
