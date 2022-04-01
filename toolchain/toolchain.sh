@@ -61,8 +61,9 @@ make -j
 make install -j
 # Configure GCC.
 echo -e "\n\n -> Configuring GNU Compiler Collection\n\n"
+cd $ScriptDirectory
 mkdir -p gcc-build
-cd $ScriptDirectory/gcc-build
+cd gcc-build
 $ScriptDirectory/gcc-11.2.0/configure \
 	--target=$TARGET \
 	--prefix="$PREFIX" \
