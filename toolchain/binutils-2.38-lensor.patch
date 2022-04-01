@@ -60,19 +60,29 @@ diff -x '*.*~' -ruN untouched/binutils-2.38/ld/Makefile.in binutils-2.38/ld/Make
  	ei386pep.c \
 diff -x '*.*~' -ruN untouched/binutils-2.38/ld/configure.tgt binutils-2.38/ld/configure.tgt
 --- untouched/binutils-2.38/ld/configure.tgt	2022-01-22 06:19:36.000000000 -0800
-+++ binutils-2.38/ld/configure.tgt	2022-03-31 10:38:34.540814300 -0700
-@@ -956,6 +956,11 @@
++++ binutils-2.38/ld/configure.tgt	2022-04-01 09:55:33.618633900 -0700
+@@ -956,6 +956,10 @@
  x86_64-*-haiku*)	targ_emul=elf_x86_64_haiku
  			targ_extra_emuls="elf_x86_64 elf_i386_haiku"
  			;;
 +x86_64-*-lensor*)
-+			NATIVE_LIB_DIRS='/lib /usr/lib'
 +			targ_emul=elf_x86_64_lensor
 +			targ_extra_emuls="elf_x86_64"
 +			;;
  x86_64-*-linux-gnux32)	targ_emul=elf32_x86_64
  			targ_extra_emuls="elf_x86_64 elf_i386 elf_iamcu elf_l1om elf_k1om"
  			targ_extra_libpath="elf_i386 elf_iamcu elf_x86_64 elf_l1om elf_k1om"
+@@ -1094,6 +1098,10 @@
+   NATIVE_LIB_DIRS='/usr/lib /usr/lib/w32api'
+   ;;
+ 
++*-*-lensor*)
++  NATIVE_LIB_DIRS='/lib /usr/lib'
++  ;;
++
+ *-*-linux*)
+   ;;
+ 
 diff -x '*.*~' -ruN untouched/binutils-2.38/ld/emulparams/elf_x86_64_lensor.sh binutils-2.38/ld/emulparams/elf_x86_64_lensor.sh
 --- untouched/binutils-2.38/ld/emulparams/elf_x86_64_lensor.sh	1969-12-31 16:00:00.000000000 -0800
 +++ binutils-2.38/ld/emulparams/elf_x86_64_lensor.sh	2022-03-31 10:14:30.649027900 -0700

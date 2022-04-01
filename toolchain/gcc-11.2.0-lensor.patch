@@ -79,8 +79,8 @@ diff -x '*.*~' -ruN untouched/gcc-11.2.0/gcc/config/lensor.h gcc-11.2.0/gcc/conf
 +  } while(0);
 diff -x '*.*~' -ruN untouched/gcc-11.2.0/gcc/config.gcc gcc-11.2.0/gcc/config.gcc
 --- untouched/gcc-11.2.0/gcc/config.gcc	2021-07-27 23:55:07.000283400 -0700
-+++ gcc-11.2.0/gcc/config.gcc	2022-03-31 11:29:49.336576800 -0700
-@@ -686,6 +686,12 @@
++++ gcc-11.2.0/gcc/config.gcc	2022-04-01 09:59:26.710574200 -0700
+@@ -686,6 +686,13 @@
  
  # Common parts for widely ported systems.
  case ${target} in
@@ -89,11 +89,12 @@ diff -x '*.*~' -ruN untouched/gcc-11.2.0/gcc/config.gcc gcc-11.2.0/gcc/config.gc
 +  gnu_ld=yes
 +  default_use_cxa_atexit=yes
 +  uss_gcc_stdint=wrap
++  native_system_header_dir=/inc
 +  ;;
  *-*-darwin*)
    tmake_file="t-darwin "
    tm_file="${tm_file} darwin.h"
-@@ -1084,6 +1090,11 @@
+@@ -1084,6 +1091,11 @@
  esac
  
  case ${target} in
