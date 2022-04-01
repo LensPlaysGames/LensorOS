@@ -26,10 +26,12 @@ bash toolchain.sh
 ```
 Once complete, you'll find the `/toolchain/cross/` directory of the repo has
   been filled with binaries, libraries, and documentation on a LensorOS cross compiler.
-With the toolchain built, everything within this `toolchain` directory,
-  except the `cross` directory and it's contents, may be deleted.
+With the toolchain built, everything within the `/toolchain/` directory,
+  except the `/cross/` directory and it's contents, may be deleted.
+
+The `/root/` directory will have also been created, and populated with the bare essentials of the LensorOS root filesystem (namely pre-built `libc` binaries, and some system headers).
   
-In order for CMake to use the new toolchain, the `/toolchain/cross/bin` directory
+In order for CMake to use the new toolchain, the `/toolchain/cross/bin/` directory
   of the repo must be added to your system's `PATH` environment variable; [see the Using section](#using-the-toolchain).
   
 The generated binaries run on any `x86_64-linux-gnu` machine;
