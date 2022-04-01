@@ -7,24 +7,36 @@ This means a different OS (environment) can be used to to develop in,
   rather than having to develop LensorOS from within LensorOS (which complicates things).
 
 ## Building the LensorOS toolchain
-If you are on Windows, you are really going to have a hard time (not to say it isn't possible). However, everything can 100% be done through the Windows Subsystem for Linux, and that's what I recommend.
+If you are on Windows, you are really going to have a hard time if you do not use WSL (not to say it isn't possible).
+Everything can 100% be done through the Windows Subsystem for Linux; that's what I recommend.
 
-Building the compiler does take quite some time (15-90min, or more), as well as ~5GB of hard drive space. You have been warned. \
-The good part is this only needs to be done once (in a blue moon).
+Building the compiler does take quite some time (15-90min, or more),
+  depending on both your internet speed and how powerful your computer is.
 
-In a linux terminal, first install the dependencies:
+The toolchain takes up ~5GB of hard drive space. You have been warned.
+
+In a linux terminal, first install the necessary dependencies:
 ```bash
 sudo apt install build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo
 ```
 
-A script is included that will do all of the following download, configure, and build steps automatically; run it with bash:
+Next, simply run the included `toolchain.sh` script with bash to download, patch, configure, build, and install the toolchain.
 ```bash
 bash toolchain.sh
 ```
-Once complete, you'll find the `toolchain/cross/` directory of the repo has been filled with binaries, libraries, and documentation on a LensorOS cross compiler. 
-This compiler runs on an `x86_64-linux-gnu` machine, and generates executables for the `x86_64-lensor` target.
+Once complete, you'll find the `/toolchain/cross/` directory of the repo has
+  been filled with binaries, libraries, and documentation on a LensorOS cross compiler.
+With the toolchain built, everything within this `toolchain` directory,
+  except the `cross` directory and it's contents, may be deleted.
+  
+In order for CMake to use the new toolchain, the `/toolchain/cross/bin` directory
+  of the repo must be added to your system's `PATH` environment variable; [see the Using section](#using-the-toolchain).
+  
+The generated binaries run on any `x86_64-linux-gnu` machine;
+  the cross compiler(s) generate ELF64 executables for `x86_64-lensor` machines.
 
-By default, pre-built `libc` binaries are provided to bootstrap the compiler, allowing us to skip a re-build. To *optionally* generate these binaries yourself, [see the libc README](/user/libc/README.md).
+By default, pre-built `libc` binaries are provided to bootstrap the compiler, allowing us to skip a re-build.
+To *optionally* generate these binaries yourself, [see the libc README](/user/libc/README.md).
 
 #### 1.) Obtain the source code of the following GNU packages
 NOTE: The following steps are a manual version of what is accomplished automatically using the `toolchain.sh` script.
@@ -45,7 +57,9 @@ tar -xf binutils-2.38.tar.xz -C .
 tar -xf gcc-11.2.0.tar.xz -C .
 ```
 
-NOTE: It is possible to over-ride your system's compiler collection and/or binutils with the cross-compiler, breaking your system's default host compiler. Stay away from any directories that do not derive from `$HOME`!
+NOTE: It is possible to over-ride your system's compiler collection 
+  and/or binutils with the cross-compiler, breaking your system's default 
+  host compiler. Stay away from any directories that do not derive from `$HOME`!
 
 #### 2.) Patching Binutils and GCC
 A patch file for Binutils and another for GCC 
@@ -68,10 +82,16 @@ Create the `root` directory, then copy the `base` directory into it:
 ```bash
 cd /Path/to/LensorOS/
 mkdir -p root
-cp base/ root/
+cp -r base/* root/
 ```
 
 The base directory contains pre-built binaries that allow us to skip an initial build of the compiler and jump right to the final build, saving a *lot* of time.
+
+Next, copy all of the `libc` system headers into the sysroot include directory:
+```bash
+cd /Path/to/LensorOS/user/libc/
+find ./ -name '*.h' -exec cp --parents '{}' -t /Path/to/LensorOS/root/inc ';'
+```
 
 #### 3.) Setup environment variables
 These variables are used a few times within the next steps, so saving them here prevents simple typos from getting in the way.
@@ -90,18 +110,18 @@ export TARGET=x86_64-lensor
 #### 4.) Configure Binutils
 Create a new subdirectory within `toolchain` named `build-binutils`, or similar.
 ```bash
+cd /Path/to/LensorOS/toolchain/
 mkdir build-binutils
-cd build-binutils
 ```
 
 At the same time, create a subdirectory for the final install of both Binutils and GCC to be located:
 ```bash
-cd /Path/to/LensorOS/toolchain/
 mkdir -p cross
 ```
 
 Next, from within the Binutils build directory, run the configure script supplied by the Binutils source code with the following command line flags and options:
 ```bash
+cd build-binutils
 ../binutils-2.38/configure \
     --target=$TARGET \
 	--prefix="$PREFIX" \
@@ -127,14 +147,7 @@ make install
 You should now have a working version of GNU's Binutils installed at `$PREFIX`.
 
 #### 6.) Prepare the GNU Compiler Collection
-First, GCC has some pre-requisites that must be downloaded. \
-Luckily, the source code comes with an easy-to-use binary that will download them for us.
-```bash
-cd gcc-11.2.0
-./contrib/download_prerequisites
-```
-
-Next, GCC must be configured, much like Binutils.
+GCC must be configured, much like Binutils.
 ```bash
 cd Path/to/LensorOS/toolchain
 mkdir -p build-gcc
@@ -173,11 +186,11 @@ Finally, we install both the new GCC for our host and `libgcc` for our target. W
 
 If you run into any issues, please let me know/make an issue on GitHub. I'll do my best to help you out.
 
-## Using the LensorOS toolchain
-To build the kernel, it is required that the cross-compiler executable directory be added to your build system's `PATH` variable.
+## Using the LensorOS toolchain <a name="using-the-toolchain"></a>
+In order for CMake and other build system tools to invoke the correct compiler, it is required that the `x86_64-lensor` cross-compiler binary executable directory be added to your build system's `PATH` variable.
 
 NOTE: Your build system refers to the system that the build tools reside on. \
-If using WSL, ensure you are adding to it's `$PATH`, **not** your host machine. 
+If using WSL, ensure you are adding to it's `$PATH`, **not** your host machine.
 
 #### Temporary
 ```bash
