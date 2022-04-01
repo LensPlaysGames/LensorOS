@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.14)
 project(LensorOS VERSION 0.0.1 LANGUAGES ASM_NASM C CXX)
 
 # Use cross compiler.
-set(CMAKE_C_COMPILER   x86_64-lensoros-elf-gcc)
-set(CMAKE_CXX_COMPILER x86_64-lensoros-elf-g++)
+set(CMAKE_C_COMPILER   x86_64-lensor-gcc)
+set(CMAKE_CXX_COMPILER x86_64-lensor-g++)
 
 # Export compilation database in JSON format.
 # This gives language servers like `clangd` all the info they need.
