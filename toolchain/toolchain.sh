@@ -40,7 +40,7 @@ if [ ! -d "$SYSROOT" ] ; then
 	cp -r ../base/* "$SYSROOT/"
 	# Copy header files from libc to sysroot.
 	cd ../user/libc/
-	find ./ -name '*.h' -exec cp --parents '{}' -t $SYSROOT/usr/include ';'
+	find ./ -name '*.h' -exec cp --parents '{}' -t $SYSROOT/inc ';'
 	cd $ScriptDirectory
 fi
 # Create output build directory.
