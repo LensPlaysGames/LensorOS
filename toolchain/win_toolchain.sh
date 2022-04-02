@@ -12,7 +12,13 @@
 ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 TARGET="x86_64-lensor"
 PREFIX="$ScriptDirectory/wincross"
-SYSROOT="$ScriptDirectory/../root"
+BUILD_SYSROOT="$ScriptDirectory/../root"
+SYSROOT="C:/LensorOS/root"
+if [[ "$SYSROOT" == "C:/LensorOS/root" ]]; then
+    echo -e "\n\n -> Using default system root: $SYSROOT\n\n"
+else
+    echo -e "\n\n -> Using custom system root: $SYSROOT\n\n"
+fi
 # Ensure known working directory.
 cd $ScriptDirectory
 # Download, extract, and patch source archives if they haven't been already.
@@ -40,17 +46,17 @@ if [ ! -d "gcc-11.2.0" ]; then
     echo -e "\n\n -> Patching GNU Compiler Collection\n\n"
     patch -s -u -p0 < $ScriptDirectory/gcc-11.2.0-lensor.patch
 fi
-if [ ! -d "$SYSROOT" ] ; then
-    echo -e "\n\n -> Bootstrapping system root at $SYSROOT\n\n"
-    mkdir -p "$SYSROOT"
+if [ ! -d "$BUILD_SYSROOT" ] ; then
+    echo -e "\n\n -> Bootstrapping build-system system root at $BUILD_SYSROOT\n\n"
+    mkdir -p "$BUILD_SYSROOT"
     # Copy base filesystem with pre-built libc
     #     binaries into newly-created sysroot.
     # This solves the issue of having to build a
     #     bootstrap version of the compiler first.
-    cp -r ../base/* "$SYSROOT/"
+    cp -r ../base/* "$BUILD_SYSROOT/"
     # Copy header files from libc to sysroot.
     cd ../user/libc/
-    find ./ -name '*.h' -exec cp --parents '{}' -t $SYSROOT/inc ';'
+    find ./ -name '*.h' -exec cp --parents '{}' -t $BUILD_SYSROOT/inc ';'
     cd $ScriptDirectory
 fi
 # Create output build directory.
