@@ -15,24 +15,21 @@ PREFIX="$ScriptDirectory/wincross"
 SYSROOT="$ScriptDirectory/../root"
 # Ensure known working directory.
 cd $ScriptDirectory
-# Download and extract source archives if they haven't been already.
+# Download, extract, and patch source archives if they haven't been already.
 if [ ! -d "binutils-2.38" ]; then
     echo -e "\n\n -> Downloading GNU Binutils Source Archive\n\n"
     curl https://mirrors.kernel.org/gnu/binutils/binutils-2.38.tar.xz \
          --output binutils-2.38.tar.xz
+    echo -e "\n\n -> Extracting GNU Binutils\n\n"
+    mkdir -p "binutils-2.38"
+    tar -xf binutils-2.38.tar.xz -C .
+    echo -e "\n\n -> Patching GNU Binutils\n\n"
+    patch -s -u -p0 < $ScriptDirectory/binutils-2.38-lensor.patch
 fi
 if [ ! -d "gcc-11.2.0" ]; then
     echo -e "\n\n -> Downloading GNU Compiler Collection Source Archive\n\n"
     curl https://mirrors.kernel.org/gnu/gcc/gcc-11.2.0/gcc-11.2.0.tar.xz \
          --output gcc-11.2.0.tar.xz
-fi
-# Extract archives into source directories.
-if [ ! -d "binutils-2.38" ]; then
-    echo -e "\n\n -> Extracting GNU Binutils\n\n"
-    mkdir -p "binutils-2.38"
-    tar -xf binutils-2.38.tar.xz -C .
-fi
-if [ ! -d "gcc-11.2.0" ]; then
     echo -e "\n\n -> Extracting GNU Compiler Collection\n\n"
     mkdir -p "gcc-11.2.0"
     tar -xf gcc-11.2.0.tar.xz -C .
@@ -40,13 +37,9 @@ if [ ! -d "gcc-11.2.0" ]; then
     cd gcc-11.2.0
     ./contrib/download_prerequisites
     cd $ScriptDirectory
+    echo -e "\n\n -> Patching GNU Compiler Collection\n\n"
+    patch -s -u -p0 < $ScriptDirectory/gcc-11.2.0-lensor.patch
 fi
-# Patch source code.
-echo -e "\n\n -> Patching GNU Binutils\n\n"
-patch -s -u -p0 < $ScriptDirectory/binutils-2.38-lensor.patch
-echo -e "\n\n -> Patching GNU Compiler Collection\n\n"
-patch -s -u -p0 < $ScriptDirectory/gcc-11.2.0-lensor.patch
-# Bootstrap sysroot.
 if [ ! -d "$SYSROOT" ] ; then
     echo -e "\n\n -> Bootstrapping system root at $SYSROOT\n\n"
     mkdir -p "$SYSROOT"
