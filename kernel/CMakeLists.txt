@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
-set(LensorOS_VERSION   "0.0.1")
-set(LensorOS_LANGUAGES "ASM_NASM CXX")
+set(LensorOS_VERSION 0.0.1)
+set(LensorOS_LANGUAGES ASM_NASM CXX)
 
 # MACHINE can be one of PC, QEMU, VBOX.
 set(MACHINE VBOX)
