@@ -1,16 +1,19 @@
 cmake_minimum_required(VERSION 3.14)
+set(LensorOS_VERSION   "0.0.1")
+set(LensorOS_LANGUAGES "ASM_NASM CXX")
 
 # MACHINE can be one of PC, QEMU, VBOX.
 set(MACHINE VBOX)
 # ARCH can be x86_64 only, for now.
 set(ARCH x86_64)
 
-# Use the LensorOS Toolchain.
-set(CMAKE_C_COMPILER   x86_64-lensor-gcc)
-set(CMAKE_CXX_COMPILER x86_64-lensor-g++)
+# Until a LensorOS config is added to the CMake source code,
+# then subsequently released, `Generic` is used to avoid errors.
 set(CMAKE_SYSTEM_NAME Generic)
-set(CMAKE_SYSTEM_VERSION 0.0.1)
-set(CMAKE_C_COMPILER_WORKS 1)
+set(CMAKE_SYSTEM_VERSION ${LensorOS_VERSION})
+
+# Use the LensorOS GNU Toolchain for C++.
+set(CMAKE_CXX_COMPILER x86_64-lensor-g++)
 set(CMAKE_CXX_COMPILER_WORKS 1)
 
 # Use `ccache` if it is installed in system's PATH.
@@ -18,12 +21,15 @@ find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
 endif()
+
 # Export compilation database in JSON format.
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
+
 # Output executable files to `/bin` directory.
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 
-project(LensorOS VERSION 0.0.1 LANGUAGES ASM_NASM C CXX)
+
+project(LensorOS VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGES})
 
 # Interrupts must be compiled with general registers only.
 add_library(
