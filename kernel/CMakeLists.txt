@@ -13,7 +13,7 @@ set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_VERSION ${LensorOS_VERSION})
 
 # Use the LensorOS GNU Toolchain for C++.
-set(CMAKE_CXX_COMPILER x86_64-lensor-g++)
+set(CMAKE_CXX_COMPILER ${ARCH}-lensor-g++)
 set(CMAKE_CXX_COMPILER_WORKS 1)
 
 # Use `ccache` if it is installed in system's PATH.
@@ -57,6 +57,7 @@ add_library(
   src/scheduler.asm
   src/userswitch.asm
   )
+string(APPEND CMAKE_ASM_NASM_COMPILE_OBJECT " -f elf64")
 
 set(
   KERNEL_HEADERS
@@ -172,6 +173,21 @@ target_link_options(
   -Bsymbolic
   -nostdlib
   )
+
+# When using a Canadian Cross LensorOS Toolchain, the sysroot
+# is often different than what it is during the build.
+# This may be able to be fixed with `--with-build-sysroot`
+# during configuration, but documentation is scarce.
+if(CMAKE_HOST_WIN32)
+  target_compile_options(
+	Interrupts PRIVATE
+	-I${CMAKE_SOURCE_DIR}\\..\\root\\inc
+	)
+  target_compile_options(
+	Kernel PUBLIC
+	-I${CMAKE_SOURCE_DIR}\\..\\root\\inc
+	)
+endif()
 
 target_link_libraries(Kernel PUBLIC Interrupts)
 target_link_libraries(Kernel PUBLIC Assembly)
