@@ -42,14 +42,10 @@ if [ ! -d "gcc-11.2.0" ]; then
     cd $ScriptDirectory
 fi
 # Patch source code.
-if [ ! -d "binutils-2.38" ]; then
-    echo -e "\n\n -> Patching GNU Binutils\n\n"
-    patch -s -u -p0 < $ScriptDirectory/binutils-2.38-lensor.patch
-fi
-if [ ! -d "gcc-11.2.0" ]; then
-    echo -e "\n\n -> Patching GNU Compiler Collection\n\n"
-    patch -s -u -p0 < $ScriptDirectory/gcc-11.2.0-lensor.patch
-fi
+echo -e "\n\n -> Patching GNU Binutils\n\n"
+patch -s -u -p0 < $ScriptDirectory/binutils-2.38-lensor.patch
+echo -e "\n\n -> Patching GNU Compiler Collection\n\n"
+patch -s -u -p0 < $ScriptDirectory/gcc-11.2.0-lensor.patch
 # Bootstrap sysroot.
 if [ ! -d "$SYSROOT" ] ; then
     echo -e "\n\n -> Bootstrapping system root at $SYSROOT\n\n"
