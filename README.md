@@ -183,7 +183,7 @@ Keep in mind the bootloader can't be built natively on Windows (yet), so skip st
 
 Alternatively, one could use a virtual machine that emulates a linux distro (ie. `VirtualBox` running `Linux Mint`, or something), and develop from there.
 
-There's also `Cygwin` for a Unix-like environment on native Windows, but I am not knowledgable on this topic.
+There's also [Cygwin](https://www.cygwin.com/) for a Unix-like environment on native Windows, but I am not knowledgable on this topic.
 
 ### Linux <a name="build-linux"></a>
 If you are on Windows 10+, you are able to use WSL to complete the following Linux steps as-is.
