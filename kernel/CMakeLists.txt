@@ -176,16 +176,14 @@ target_link_options(
 
 # When using a Canadian Cross LensorOS Toolchain, the sysroot
 # is often different than what it is during the build.
-# This may be able to be fixed with `--with-build-sysroot`
-# during configuration, but documentation is scarce.
 if(CMAKE_HOST_WIN32)
   target_compile_options(
 	Interrupts PRIVATE
-	-I${CMAKE_SOURCE_DIR}\\..\\root\\inc
+	--sysroot=${CMAKE_SOURCE_DIR}\\..\\root
 	)
   target_compile_options(
 	Kernel PUBLIC
-	-I${CMAKE_SOURCE_DIR}\\..\\root\\inc
+	--sysroot=${CMAKE_SOURCE_DIR}\\..\\root
 	)
 endif()
 
