@@ -1,0 +1,90 @@
+diff -x '*.*~' -ruN untouched/binutils-2.38/bfd/config.bfd binutils-2.38/bfd/config.bfd
+--- untouched/binutils-2.38/bfd/config.bfd	2022-01-22 04:14:07.000000000 -0800
++++ binutils-2.38/bfd/config.bfd	2022-03-31 10:14:30.586398500 -0700
+@@ -241,6 +241,11 @@
+ case "${targ}" in
+ # START OF targmatch.h
+ #ifdef BFD64
++  x86_64-*-lensor*)
++    targ_defvec=x86_64_elf64_vec
++    targ_selvecs=
++    want64=true
++    ;;
+   aarch64-*-darwin*)
+     targ_defvec=aarch64_mach_o_vec
+     targ_selvecs="arm_mach_o_vec mach_o_le_vec mach_o_be_vec mach_o_fat_vec"
+diff -x '*.*~' -ruN untouched/binutils-2.38/config.sub binutils-2.38/config.sub
+--- untouched/binutils-2.38/config.sub	2022-01-22 04:14:07.000000000 -0800
++++ binutils-2.38/config.sub	2022-03-31 10:43:45.842576700 -0700
+@@ -1724,7 +1724,7 @@
+ 	# The portable systems comes first.
+ 	# Each alternative MUST end in a * to match a version number.
+ 	gnu* | android* | bsd* | mach* | minix* | genix* | ultrix* | irix* \
+-	     | *vms* | esix* | aix* | cnk* | sunos | sunos[34]* \
++	     | *vms* | esix* | aix* | cnk* | lensor* | sunos | sunos[34]* \
+ 	     | hpux* | unos* | osf* | luna* | dgux* | auroraux* | solaris* \
+ 	     | sym* |  plan9* | psp* | sim* | xray* | os68k* | v88r* \
+ 	     | hiux* | abug | nacl* | netware* | windows* \
+diff -x '*.*~' -ruN untouched/binutils-2.38/gas/configure.tgt binutils-2.38/gas/configure.tgt
+--- untouched/binutils-2.38/gas/configure.tgt	2022-01-22 04:14:08.000000000 -0800
++++ binutils-2.38/gas/configure.tgt	2022-03-31 10:14:30.600275400 -0700
+@@ -263,6 +263,7 @@
+   i386-*-*nt*)				fmt=coff em=pe ;;
+   i386-*-rdos*)				fmt=elf ;;
+   i386-*-darwin*)			fmt=macho ;;
++  i386-*-lensor*)			fmt=elf em=gnu ;;
+ 
+   ia16-*-elf*)				fmt=elf ;;
+ 
+diff -x '*.*~' -ruN untouched/binutils-2.38/ld/Makefile.am binutils-2.38/ld/Makefile.am
+--- untouched/binutils-2.38/ld/Makefile.am	2022-01-22 04:14:09.000000000 -0800
++++ binutils-2.38/ld/Makefile.am	2022-03-31 10:14:30.630723500 -0700
+@@ -463,6 +463,7 @@
+ 	eelf_x86_64_cloudabi.c \
+ 	eelf_x86_64_fbsd.c \
+ 	eelf_x86_64_haiku.c \
++	eelf_x86_64_lensor.c \
+ 	eelf_x86_64_sol2.c \
+ 	ehppa64linux.c \
+ 	ei386pep.c \
+diff -x '*.*~' -ruN untouched/binutils-2.38/ld/Makefile.in binutils-2.38/ld/Makefile.in
+--- untouched/binutils-2.38/ld/Makefile.in	2022-02-09 03:49:03.000000000 -0800
++++ binutils-2.38/ld/Makefile.in	2022-03-31 10:14:30.637861800 -0700
+@@ -953,6 +953,7 @@
+ 	eelf_x86_64_cloudabi.c \
+ 	eelf_x86_64_fbsd.c \
+ 	eelf_x86_64_haiku.c \
++	eelf_x86_64_lensor.c \
+ 	eelf_x86_64_sol2.c \
+ 	ehppa64linux.c \
+ 	ei386pep.c \
+diff -x '*.*~' -ruN untouched/binutils-2.38/ld/configure.tgt binutils-2.38/ld/configure.tgt
+--- untouched/binutils-2.38/ld/configure.tgt	2022-01-22 06:19:36.000000000 -0800
++++ binutils-2.38/ld/configure.tgt	2022-04-01 09:55:33.618633900 -0700
+@@ -956,6 +956,10 @@
+ x86_64-*-haiku*)	targ_emul=elf_x86_64_haiku
+ 			targ_extra_emuls="elf_x86_64 elf_i386_haiku"
+ 			;;
++x86_64-*-lensor*)
++			targ_emul=elf_x86_64_lensor
++			targ_extra_emuls="elf_x86_64"
++			;;
+ x86_64-*-linux-gnux32)	targ_emul=elf32_x86_64
+ 			targ_extra_emuls="elf_x86_64 elf_i386 elf_iamcu elf_l1om elf_k1om"
+ 			targ_extra_libpath="elf_i386 elf_iamcu elf_x86_64 elf_l1om elf_k1om"
+@@ -1094,6 +1098,10 @@
+   NATIVE_LIB_DIRS='/usr/lib /usr/lib/w32api'
+   ;;
+ 
++*-*-lensor*)
++  NATIVE_LIB_DIRS='/lib /usr/lib'
++  ;;
++
+ *-*-linux*)
+   ;;
+ 
+diff -x '*.*~' -ruN untouched/binutils-2.38/ld/emulparams/elf_x86_64_lensor.sh binutils-2.38/ld/emulparams/elf_x86_64_lensor.sh
+--- untouched/binutils-2.38/ld/emulparams/elf_x86_64_lensor.sh	1969-12-31 16:00:00.000000000 -0800
++++ binutils-2.38/ld/emulparams/elf_x86_64_lensor.sh	2022-03-31 10:14:30.649027900 -0700
+@@ -0,0 +1 @@
++. ${srcdir}/emulparams/elf_x86_64.sh
