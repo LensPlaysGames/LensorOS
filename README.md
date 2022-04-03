@@ -120,7 +120,10 @@ There are two possible pathways that LensorOS bootable media can be generated.
 #### GPT <a name="vbox-boot-gpt"></a>
 Utilize the `mkgpt.sh` script that is included in the `kernel/scripts/` directory. [See the scripts README](kernel/scripts/README.scripts.md) for more information on this script.
 
-If all has went well, there will be a `LensorOS.img` and a `LensorOS.bin` in the `/kernel/bin/` directory of the repository. While this binary `.bin` file is a perfectly valid image of a real GPT formatted disk, VirtualBox continues to be picky and only accept their proprietary formats. When VirtualBox is installed, it also installs a lot of command line tools, one of which called `VBoxManage`. This tool has a subcommand `convertfromraw` that we will utilize to create a `.vdi` virtual disk image from our `.bin` actual binary disk image.
+If all has went well, there will be a `LensorOS.img` and a `LensorOS.bin` in the `/kernel/bin/` directory of the repository. 
+While this binary `.bin` file is a perfectly valid image of a real GPT formatted disk, VirtualBox does not accept it as valid. 
+When VirtualBox is installed, it also installs a lot of command line tools, one of which is called `VBoxManage`. 
+This tool has a subcommand `convertfromraw` that we will utilize to create a `.vdi` virtual disk image from our `.bin` binary disk image.
 
 ```bash
 VBoxManage convertfromraw /Path/to/LensorOS/kernel/bin/LensorOS.bin /Path/to/LensorOS/kernel/bin/LensorOS.vdi --format VDI
