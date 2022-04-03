@@ -1,8 +1,12 @@
 #!/bin/bash
-# Dependencies:
-# |-- Curl
-# |-- GNU Tar (xz-utils)
-# `-- GNU Diff/Patch
+
+#     Dependencies:
+#     |-- Curl
+#     |-- GNU Diff/Patch
+#     |-- GNU Make
+#     |-- GNU Tar (xz-utils)
+#     `-- x86_64-linux-gnu compiler
+
 # Set variables.
 ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 TARGET="x86_64-lensor"

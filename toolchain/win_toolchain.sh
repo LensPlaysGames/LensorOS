@@ -5,8 +5,11 @@
 
 #     Dependencies:
 #     |-- Curl
+#     |-- GNU Diff/Patch
+#     |-- GNU Make
 #     |-- GNU Tar (xz-utils)
-#     `-- GNU Diff/Patch
+#     |-- x86_64-linux-gnu compiler
+#     `-- x86_64-w64-mingw32 cross compiler
 
 # Set variables.
 ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
