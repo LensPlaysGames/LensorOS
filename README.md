@@ -1,4 +1,5 @@
 # LensorOS
+A 64-bit operating system with everything built from scratch!
 
 ---
 
@@ -7,12 +8,11 @@
 - [Booting into LensorOS using QEMU](#qemu-boot)
 - [Booting into LensorOS using VirtualBox](#vbox-boot)
 - [Building LensorOS](#build)
-  - [A bug regarding CMake's ASM_NASM Makefile generation](#cmake-bug)
 - [Acknowledgements](#ack)
-  
+
 ---
 
-### Booting into LensorOS on hardware <a name="hardware-boot"></a>
+## Booting into LensorOS on hardware <a name="hardware-boot"></a>
 DISCLAIMER: LensorOS IS IN NO WAY GUARANTEED TO BE 'SAFE'; RUN AT YOUR OWN RISK! (see [LICENSE](LICENSE))
 
 (pre-compiled binaries coming soon, for now [see the build section](#build))
@@ -45,7 +45,7 @@ USB
 
 ---
 
-### Booting into LensorOS using QEMU <a name="qemu-boot"></a>
+## Booting into LensorOS using QEMU <a name="qemu-boot"></a>
 [Get QEMU](https://www.qemu.org/download)
 
 Before beginning, ensure you have the LensorOS bootloader and kernel binaries. \
@@ -85,7 +85,7 @@ To launch QEMU from the generated disk image, A `run.bat` file is included. \
 The batch file requires the directory that the QEMU executable resides in be added to the system's PATH variable. [See this stackoverflow thread for help](https://stackoverflow.com/questions/9546324/adding-a-directory-to-the-path-environment-variable-in-windows). \
 If editing the PATH variable isn't working, the batch script could always be edited to use the exact path to the QEMU executable on your local machine. \
 
-By simply double clicking this batch file, QEMU will open and boot into LensorOS. 
+By simply double clicking this batch file, QEMU will open and boot into LensorOS.
 
 All serial output will be re-directed to stdin/stdout, which is likely a `cmd.exe` window that opened along with QEMU. The problem with `cmd.exe` is that it leaves the output looking rather mangled (ie. left-pointing arrows, open square-brackets, etc). This is due to the terminal not supporting ANSI color codes.
 
@@ -101,7 +101,7 @@ There is also a `rundbg.bat` that will launch QEMU with the appropriate flags to
 
 ---
 
-### Booting into LensorOS using VirtualBox <a name="vbox-boot"></a>
+## Booting into LensorOS using VirtualBox <a name="vbox-boot"></a>
 [Get VirtualBox](https://www.virtualbox.org/wiki/Downloads)
 
 VirtualBox is kind of picky in the file formats it will accept as drives and such. \
@@ -120,9 +120,9 @@ There are two possible pathways that LensorOS bootable media can be generated.
 #### GPT <a name="vbox-boot-gpt"></a>
 Utilize the `mkgpt.sh` script that is included in the `kernel/scripts/` directory. [See the scripts README](kernel/scripts/README.scripts.md) for more information on this script.
 
-If all has went well, there will be a `LensorOS.img` and a `LensorOS.bin` in the `/kernel/bin/` directory of the repository. 
-While this binary `.bin` file is a perfectly valid image of a real GPT formatted disk, VirtualBox does not accept it as valid. 
-When VirtualBox is installed, it also installs a lot of command line tools, one of which is called `VBoxManage`. 
+If all has went well, there will be a `LensorOS.img` and a `LensorOS.bin` in the `/kernel/bin/` directory of the repository.
+While this binary `.bin` file is a perfectly valid image of a real GPT formatted disk, VirtualBox does not accept it as valid.
+When VirtualBox is installed, it also installs a lot of command line tools, one of which is called `VBoxManage`.
 This tool has a subcommand `convertfromraw` that we will utilize to create a `.vdi` virtual disk image from our `.bin` binary disk image.
 
 ```bash
@@ -171,97 +171,81 @@ After all of this has been done, you are ready to click `Start` on the VirtualBo
 
 ---
 
-### Building LensorOS <a name="build"></a>
-On Windows, some way of accessing a linux command-line environment is necessary. \
-Personally, I use `WSL` with the `Ubuntu 20.04` distro. \
-Alternatively, one could use a virtual machine that emulates a linux distro (ie. `VirtualBox` running `Linux Mint`, or something), and develop from there. \
-There's also things like `Cygwin`, if you want to stay on Windows 100% of the time.
+## Building LensorOS <a name="build"></a>
+There are three steps to building LensorOS:
+1. [the Toolchain](toolchain/README.md)
+1. the Bootloader
+2. the Kernel
 
-#### 1.) Obtain the source code
-To begin, clone this repository to your local machine (or fork it then clone it, it's up to you if you'd like to make your own version, or contribute to this one through pull requests).
+On Windows, use the Windows Subsystem for Linux (WSL) to emulate Linux exactly, no drawbacks. \
+If you don't want to use WSL, you'll need pre-built binaries of a [Canadian Cross](https://wiki.osdev.org/Canadian_Cross) LensorOS Toolchain, the bootloader, and [GNU mtools](https://github.com/LensPlaysGames/mtools/releases); ask and we will help you on your journey :^). \
+Keep in mind the bootloader can't be built natively on Windows (yet), so skip step #2 if not using WSL.
 
-Example clone command:
+Alternatively, one could use a virtual machine that emulates a linux distro (ie. `VirtualBox` running `Linux Mint`, or something), and develop from there.
+
+There's also `Cygwin` for a Unix-like environment on native Windows, but I am not knowledgable on this topic.
+
+### Linux <a name="build-linux"></a>
+If you are on Windows 10+, you are able to use WSL to complete the following Linux steps as-is.
+
+Get dependencies:
+```bash
+sudo apt install build-essential cmake git make nasm
+```
+
+Obtain the source code:
 ```bash
 git clone https://github.com/LensPlaysGames/LensorOS
 ```
+NOTE: If on Windows using WSL, I recommend cloning onto your Windows
+  machine partition (i.e. a path starting with `/mnt/c/` or something).
+If you use the WSL partition to store LensorOS, many tools can not access the fake
+  network path that is used (ie. `\\wsl$\`), and it over-all just causes a head-ache.
 
-Open a Linux terminal, then `cd` to the root directory of the repository.
+#### 1. Build The LensorOS Toolchain
+[Follow the instructions in the toolchain README](toolchain/README.md)
 
-NOTE: If on Windows using WSL, I recommend cloning onto your Windows machine partition. If you use the WSL partition to store LensorOS, many tools can not access the fake network path that is used (ie. `\\wsl$\`), and it over-all just causes a head-ache.
-
-#### 2.) Build the bootloader
-Ensure that you have previously ran `sudo apt install build-essential mtools` to get the necessary compilation pre-requisites.
-
-First, `cd` to the `gnu-efi` directory, and run the following:
+#### 2. Build the bootloader
+The bootloader source code resides in the `gnu-efi` directory, for now.
 ```bash
+cd /Path/to/LensorOS/gnu-efi/
 make
 make bootloader
 ```
+This will generate `main.efi` in the `/gnu-efi/x86_64/bootloader/` directory within the repository.
+This is the UEFI compatible executable file.
 
-NOTE: One only needs to run `make` for the bootloader once. \
-Following that, simply using the `bootloader` target will be sufficient to update the bootloader.
+NOTE: One only needs to run `make` for the bootloader once; it generates `libgnuefi.a`, which the bootloader itself links with. Following that, simply using the `bootloader` target will be sufficient to update the bootloader; even that only needs to be done if the bootloader code was changed.
 
-#### 3.) Build the kernel
-Before compiling the kernel, you must build the toolchain that LensorOS uses. \
-[See the toolchain README](toolchain/README.toolchain.md) for explicit build instructions.
-
-Parts of the kernel are written in assembly intended for the Netwide Assembler. \
-Ensure it is installed on your system before continuing:
-- Linux: `sudo apt install nasm`
-- [Windows](https://nasm.us/)
-
-Once the toolchain is up and running (added to `$PATH` and everything), continue the following steps.
-
-NOTE: It is possible to use your host compiler to build the kernel. It is not recommended, and likely won't work, but who am I to stop you. Simply remove/comment out the `set(CMAKE_C_COMPILER` and `set(CMAKE_CXX_COMPILER` lines [within CMakeLists.txt](kernel/CMakeLists.txt). This will instruct CMake to use your host machine's default compiler (again, **not** recommended).
-
-First, `cd` to the `kernel` directory of the repository. \
+#### 3. Build the kernel
+The LensorOS Kernel uses CMake to generate the build system; beware, as not all the build systems CMake can generate honor the request to use the LensorOS Toolchain (*ahem* Visual Studio *ahem*).
 To prepare a build system that will build the kernel with `GNU make`, run the following:
 ```bash
-cmake -S . -B out
-cd out
-cmake .
+cd /Path/to/LensorOS/kernel/
+cmake -S . -B rls -DCMAKE_BUILD_TYPE=Release
 ```
 
-At this point everything should be set up to build the kernel. \
-To do that, invoke the build system that was generated by CMake (default `make`). \
-Alternatively, generate any build system of your choice that is supported by CMake (I recommend Ninja, it's fast).
+The above command should generate an out of source build system
+  in the `rls` subdirectory that is the default for your host. \
+To build the kernel, invoke the build system that was
+  generated by CMake; by default it's GNU's `make`. \
+Alternatively, generate any build system of your choice that
+  is supported by CMake (I recommend Ninja, it's fast).
+No matter the build system you choose, invoke it using the following command:
+```bash
+cmake --build /Path/to/LensorOS/kernel/rls
+```
+NOTE: It's not necessary to provide an absolute path, but it
+  means the command can be run from any working directory.
 
-This final build step will generate `kernel.elf` within the `/kernel/bin` directory, ready to be used in a boot usb or formatted into an image.
+This final build step will generate `kernel.elf` within the `/kernel/bin` directory,
+  ready to be used in a boot usb or formatted into an image. \
+See the sections starting with "Booting into LensorOS" above.
 
-If building for real hardware, ensure to remove all virtual machine definitions (ie. `QEMU`, `VBOX`) from [CMakeLists.txt](kernel/CMakeLists.txt). \
+If building the kernel for real hardware, ensure to set the `MACHINE` [kernel CMakeLists.txt](kernel/CMakeLists.txt) variable to `PC`, and not any of the virtual machines (ie. `QEMU`, `VBOX`).
 This allows for the hardware timers to be used to their full potential (asking QEMU for 1000hz interrupts from multiple devices overloads the emulator and guest time falls behind drastically; to counter-act this, very slow frequency periodic interrupts are setup as to allow the emulator to process them accordingly, allowing for accurate time-keeping in QEMU).
 
-If you are familiar with CMake, this sequence might look *slightly* strange to you (namely the second `cmake` command). \
-See the [CMake bug](#cmake-bug) section for more details on why it is needed, and maybe you have an even better fix.
-
-#### A bug regarding CMake's ASM_NASM Makefile generation <a name="cmake-bug"></a>
-
-It may very well be that the bug is within the user error domain. If that is the case, I'll be thoroughly embarassed yet glad to fix my mistake.
-
-The reason for re-building the CMake-generated build system directly after doing it for the first time is to fix a bug that appears to be within the ASM_NASM CMake Makefile generation. \
-This bug causes any objects built with NASM to be 32-bit (no bueno for our 64-bit project). \
-I've found that, for some reason, re-building the system right away like this fixes the issue.
-If you would like to look into this, pay attention to `CMakeFiles/Assembly.dir/build.make`; how it appears before the `cmake .` command, and how it appears after. \
-One way this can be achieved is using the common linux command: `diff`. \
-It simply displays any differences between two given files, displaying nothing if they are the same.
-
-My `diff` output on the before and after (I saved a copy of the generated `build.make` as `build_.make`):
-```
-lensor-radii@Garry:~/LensorOS/kernel/out$ diff CMakeFiles/Assembly.dir/build.make CMakeFiles/Assembly.dir/build_.make
-lensor-radii@Garry:~/LensorOS/kernel/out$ cmake .
--- Configuring done
--- Generating done
--- Build files have been written to: /home/lensor-radii/LensorOS/kernel/out
-lensor-radii@Garry:~/LensorOS/kernel/out$ diff CMakeFiles/Assembly.dir/build.make CMakeFiles/Assembly.dir/build_.make
-63c63
-<       /usr/bin/nasm $(ASM_NASM_INCLUDES) $(ASM_NASM_FLAGS) -f elf64 -o CMakeFiles/Assembly.dir/src/gdt.asm.o /home/lensor-radii/LensorOS/kernel/src/gdt.asm
 ---
->       /usr/bin/nasm $(ASM_NASM_INCLUDES) $(ASM_NASM_FLAGS) -f elf -o CMakeFiles/Assembly.dir/src/gdt.asm.o /home/lensor-radii/LensorOS/kernel/src/gdt.asm
-lensor-radii@Garry:~/LensorOS/kernel/out$
-```
-
-As you can see, the file `build.make` has been changed by the `cmake .` command, altering it to actually use the flags I pass in `kernel/CMakeLists.txt` with the `target_compile_options()` CMake function. \
-I don't know why the re-build is necessary, and it takes very little time, but if you know anything on why this occurs I would greatly appreciate you letting me know.
 
 ### Acknowledgements <a name="ack"></a>
 At first, development followed tutorials that can be found at [Poncho's GitHub](https://github.com/Absurdponcho). \
@@ -269,9 +253,9 @@ Those tutorials were abandoned just after setting up a very basic AHCI driver, s
 
 A large thanks to the huge portions of inspiration, knowledge, and help that came from the OSDev [wiki](https://wiki.osdev.org/Expanded_Main_Page) and [forums](https://forum.osdev.org/) (sorry, Terry).
 
-A huge amount of entertainment and inspiration has come from [SerenityOS](https://github.com/SerenityOS/serenity), an operating system being built by the OS development hobby-ist community.
+A huge amount of entertainment and inspiration has come from [SerenityOS](https://github.com/SerenityOS/serenity), an operating system being built by the OS development hobbyist community.
 
 The compeletely-from-scratch [ToaruOS](https://github.com/klange/toaruos) has also been an amazing source of knowledge, inspiration, and information.
 
-#### Birthday
+#### LensorOS Birthday
 My birthday is January 14th! I am still a *wittle baby*.
