@@ -12,12 +12,7 @@
 ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 TARGET="x86_64-lensor"
 PREFIX="$ScriptDirectory/wincross"
-BUILD_SYSROOT="$ScriptDirectory/../root"
-SYSROOT="C:/LensorOS/root"
-echo -e "\n\n"
-echo " -> Build-system system root: $BUILD_SYSROOT"
-echo " -> System root: $SYSROOT"
-echo -e "\n\n"
+SYSROOT="$ScriptDirectory/../root"
 # Ensure known working directory.
 cd $ScriptDirectory
 # Download, extract, and patch source archives if they haven't been already.
@@ -45,17 +40,17 @@ if [ ! -d "gcc-11.2.0" ]; then
     echo -e "\n\n -> Patching GNU Compiler Collection\n\n"
     patch -s -u -p0 < $ScriptDirectory/gcc-11.2.0-lensor.patch
 fi
-if [ ! -d "$BUILD_SYSROOT" ] ; then
-    echo -e "\n\n -> Bootstrapping build-system system root at $BUILD_SYSROOT\n\n"
-    mkdir -p "$BUILD_SYSROOT"
+if [ ! -d "$SYSROOT" ] ; then
+    echo -e "\n\n -> Bootstrapping build-system system root at $SYSROOT\n\n"
+    mkdir -p "$SYSROOT"
     # Copy base filesystem with pre-built libc
     #     binaries into newly-created sysroot.
     # This solves the issue of having to build a
     #     bootstrap version of the compiler first.
-    cp -r ../base/* "$BUILD_SYSROOT/"
+    cp -r ../base/* "$SYSROOT/"
     # Copy header files from libc to sysroot.
     cd ../user/libc/
-    find ./ -name '*.h' -exec cp --parents '{}' -t $BUILD_SYSROOT/inc ';'
+    find ./ -name '*.h' -exec cp --parents '{}' -t $SYSROOT/inc ';'
 fi
 # Create output build directory.
 cd $ScriptDirectory
@@ -71,7 +66,6 @@ if [ ! -d "binutils-winbuild" ] ; then
         --host x86_64-w64-mingw32               \
         --target=$TARGET                        \
         --prefix="$PREFIX"                      \
-        --with-build-sysroot="$BUILD_SYSROOT"   \
         --with-sysroot="$SYSROOT"               \
         --disable-nls                           \
         --disable-werror
@@ -94,7 +88,6 @@ if [ ! -d "gcc-winbuild" ] ; then
         --prefix="$PREFIX"                      \
         --disable-nls                           \
         --enable-languages=c,c++                \
-        --with-build-sysroot="$BUILD_SYSROOT"   \
         --with-sysroot="$SYSROOT"
     # Build GCC.
     echo -e "\n\n -> Building GNU Compiler Collection\n\n"
