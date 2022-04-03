@@ -14,11 +14,10 @@ TARGET="x86_64-lensor"
 PREFIX="$ScriptDirectory/wincross"
 BUILD_SYSROOT="$ScriptDirectory/../root"
 SYSROOT="C:/LensorOS/root"
-if [[ "$SYSROOT" == "C:/LensorOS/root" ]]; then
-    echo -e "\n\n -> Using default system root: $SYSROOT\n\n"
-else
-    echo -e "\n\n -> Using custom system root: $SYSROOT\n\n"
-fi
+echo -e "\n\n"
+echo " -> Build-system system root: $BUILD_SYSROOT"
+echo " -> System root: $SYSROOT"
+echo -e "\n\n"
 # Ensure known working directory.
 cd $ScriptDirectory
 # Download, extract, and patch source archives if they haven't been already.
@@ -57,42 +56,52 @@ if [ ! -d "$BUILD_SYSROOT" ] ; then
     # Copy header files from libc to sysroot.
     cd ../user/libc/
     find ./ -name '*.h' -exec cp --parents '{}' -t $BUILD_SYSROOT/inc ';'
-    cd $ScriptDirectory
 fi
 # Create output build directory.
-mkdir -p wincross
-# Configure binutils.
-echo -e "\n\n -> Configuring GNU Binutils\n\n"
-mkdir -p binutils-winbuild
-cd binutils-winbuild
-$ScriptDirectory/binutils-2.38/configure \
-    --build x86_64-linux-gnu             \
-    --host x86_64-w64-mingw32            \
-    --target=$TARGET                     \
-    --prefix="$PREFIX"                   \
-    --with-sysroot="$SYSROOT"            \
-    --disable-nls                        \
-    --disable-werror
-# Build binutils.
-echo -e "\n\n -> Building & Installing GNU Binutils\n\n"
-make -j
-make install -j
-# Configure GCC.
-echo -e "\n\n -> Configuring GNU Compiler Collection\n\n"
 cd $ScriptDirectory
-mkdir -p gcc-winbuild
-cd gcc-winbuild
-$ScriptDirectory/gcc-11.2.0/configure \
-    --build x86_64-linux-gnu          \
-    --host x86_64-w64-mingw32         \
-    --target=$TARGET                  \
-    --prefix="$PREFIX"                \
-    --disable-nls                     \
-    --enable-languages=c,c++          \
-    --with-sysroot="$SYSROOT"
-# Build GCC.
-echo -e "\n\n -> Building & Installing GNU Compiler Collection\n\n"
-make all-gcc -j
-make all-target-libgcc -j
-make install-gcc -j
-make install-target-libgcc -j
+mkdir -p wincross
+if [ ! -d "binutils-winbuild" ] ; then
+    # Configure binutils.
+    echo -e "\n\n -> Configuring GNU Binutils\n\n"
+    cd $ScriptDirectory
+    mkdir -p binutils-winbuild
+    cd binutils-winbuild
+    $ScriptDirectory/binutils-2.38/configure    \
+        --build x86_64-linux-gnu                \
+        --host x86_64-w64-mingw32               \
+        --target=$TARGET                        \
+        --prefix="$PREFIX"                      \
+        --with-build-sysroot="$BUILD_SYSROOT"   \
+        --with-sysroot="$SYSROOT"               \
+        --disable-nls                           \
+        --disable-werror
+    # Build binutils.
+    echo -e "\n\n -> Building GNU Binutils\n\n"
+    make -j
+    echo -e "\n\n -> Installing GNU Binutils\n\n"
+    make install -j
+fi
+if [ ! -d "gcc-winbuild" ] ; then
+    # Configure GCC.
+    echo -e "\n\n -> Configuring GNU Compiler Collection\n\n"
+    cd $ScriptDirectory
+    mkdir -p gcc-winbuild
+    cd gcc-winbuild
+    $ScriptDirectory/gcc-11.2.0/configure       \
+        --build x86_64-linux-gnu                \
+        --host x86_64-w64-mingw32               \
+        --target=$TARGET                        \
+        --prefix="$PREFIX"                      \
+        --disable-nls                           \
+        --enable-languages=c,c++                \
+        --with-build-sysroot="$BUILD_SYSROOT"   \
+        --with-sysroot="$SYSROOT"
+    # Build GCC.
+    echo -e "\n\n -> Building GNU Compiler Collection\n\n"
+    make all-gcc -j
+    make all-target-libgcc -j
+    echo -e "\n\n -> Installing GNU Compiler Collection\n\n"
+    make install-gcc -j
+    make install-target-libgcc -j
+fi
+
