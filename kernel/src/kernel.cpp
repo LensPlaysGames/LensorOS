@@ -16,41 +16,45 @@
 
 void print_memory_info() {
     u32 startOffset = gRend.DrawPos.x;
+    u64 totalRAM = Memory::get_total_ram();
+    u64 freeRAM = Memory::get_free_ram();
+    u64 usedRAM = Memory::get_used_ram();
     gRend.puts("Memory Info:");
     gRend.crlf(startOffset);
     gRend.puts("|- Total RAM: ");
-    gRend.puts(to_string(TO_MiB(Memory::get_total_ram())));
+    gRend.puts(to_string(TO_MiB(totalRAM)));
     gRend.puts(" MiB (");
-    gRend.puts(to_string(TO_KiB(Memory::get_total_ram())));
+    gRend.puts(to_string(TO_KiB(totalRAM)));
     gRend.puts(" KiB)");
     gRend.crlf(startOffset);
     gRend.puts("|- Free RAM: ");
-    gRend.puts(to_string(TO_MiB(Memory::get_free_ram())));
+    gRend.puts(to_string(TO_MiB(freeRAM)));
     gRend.puts(" MiB (");
-    gRend.puts(to_string(TO_KiB(Memory::get_free_ram())));
+    gRend.puts(to_string(TO_KiB(freeRAM)));
     gRend.puts(" KiB)");
     gRend.crlf(startOffset);
     gRend.puts("`- Used RAM: ");
-    gRend.puts(to_string(TO_MiB(Memory::get_used_ram())));
+    gRend.puts(to_string(TO_MiB(usedRAM)));
     gRend.puts(" MiB (");
-    gRend.puts(to_string(TO_KiB(Memory::get_used_ram())));
+    gRend.puts(to_string(TO_KiB(usedRAM)));
     gRend.puts(" KiB)");
     gRend.crlf(startOffset);
 }
 
 void print_now(u64 xOffset = 0) {
+    RTCData& tm = gRTC.Time;
     gRend.puts("Now is ");
-    gRend.puts(to_string(gRTC.Time.hour));
+    gRend.puts(to_string(tm.hour));
     gRend.putchar(':');
-    gRend.puts(to_string(gRTC.Time.minute));
+    gRend.puts(to_string(tm.minute));
     gRend.putchar(':');
-    gRend.puts(to_string(gRTC.Time.second));
+    gRend.puts(to_string(tm.second));
     gRend.puts(" on ");
-    gRend.puts(to_string(gRTC.Time.year));
+    gRend.puts(to_string(tm.year));
     gRend.putchar('-');
-    gRend.puts(to_string(gRTC.Time.month));
+    gRend.puts(to_string(tm.month));
     gRend.putchar('-');
-    gRend.puts(to_string(gRTC.Time.date));
+    gRend.puts(to_string(tm.date));
     gRend.crlf(xOffset);
 }
 

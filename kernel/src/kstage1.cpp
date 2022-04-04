@@ -171,17 +171,20 @@ void kstage1(BootInfo* bInfo) {
     Keyboard::gText = Keyboard::BasicTextRenderer();
 
     // Setup random number generators.
+    RTCData& tm = gRTC.Time;
+    u64 someNumber =
+        tm.century + tm.year
+        + tm.month   + tm.date
+        + tm.weekday + tm.hour
+        + tm.minute  + tm.second;
     gRandomLCG = LCG();
-    u64 someNumber = gRTC.Time.century + gRTC.Time.year
-        + gRTC.Time.month + gRTC.Time.date
-        + gRTC.Time.weekday + gRTC.Time.hour
-        + gRTC.Time.minute + gRTC.Time.second;
     gRandomLCG.seed(someNumber);
     gRandomLFSR = LFSR();
     gRandomLFSR.seed(gRandomLCG.get(), gRandomLCG.get());
 
     // Store feature set of CPU (capabilities).
-    // TODO: Don't store the global system CPU descriptor on the stack, there only ever needs to be one.
+    // TODO: Don't store the global system CPU descriptor on
+    //       the heap, there only ever needs to be one.
     SystemCPU = new CPUDescription();
     // Check for CPUID availability ('ID' bit in rflags register modifiable)
     bool supportCPUID = static_cast<bool>(cpuid_support());
@@ -299,7 +302,8 @@ void kstage1(BootInfo* bInfo) {
         UART::out("\r\n");
     }
     
-    // TODO: Parse CPUs from ACPI MADT table. For now only support single core.
+    // TODO: Parse CPUs from ACPI MADT table.
+    //       For now we only support single core.
     CPU cpu = CPU(SystemCPU);
     SystemCPU->add_cpu(cpu);
     SystemCPU->print_debug();
@@ -333,7 +337,8 @@ void kstage1(BootInfo* bInfo) {
     UART::out(to_string(PIT_FREQUENCY));
     UART::out("hz\033[0m.\r\n\r\n");
 
-    // The Task State Segment in x86_64 is used only for switches between privilege levels.
+    // The Task State Segment in x86_64 is used only
+    // for switches between privilege levels.
     TSS::initialize();
     Scheduler::initialize();
     

@@ -62,7 +62,9 @@ private:
     // Different for each CPU; found within ACPI MADT table.
     u16 APICID      { 0 };
 
-    /* Print CPU data in format of CPU <NUMA domain>:<NUMA chip>:<Physical core>:<Logical core> */
+    /* Print CPU data in format of:
+     * CPU <NUMA domain>:<NUMA chip>:<Physical core>:<Logical core> 
+     */
     void print_debug() {
         UART::out("  CPU ");
         UART::out(to_string(NUMADomain));
