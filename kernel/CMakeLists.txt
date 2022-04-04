@@ -178,13 +178,13 @@ target_link_options(
 # is often different than what it is during the build.
 if(CMAKE_HOST_WIN32)
   target_compile_options(
-	Interrupts PRIVATE
-	--sysroot=${CMAKE_SOURCE_DIR}\\..\\root
-	)
+    Interrupts PRIVATE
+    --sysroot=${CMAKE_SOURCE_DIR}\\..\\root
+    )
   target_compile_options(
-	Kernel PUBLIC
-	--sysroot=${CMAKE_SOURCE_DIR}\\..\\root
-	)
+    Kernel PUBLIC
+    --sysroot=${CMAKE_SOURCE_DIR}\\..\\root
+    )
 endif()
 
 target_link_libraries(Kernel PUBLIC Interrupts)
