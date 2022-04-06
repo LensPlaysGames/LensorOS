@@ -224,7 +224,7 @@ namespace AHCI {
             memset((void*)Ports[i]->Buffer, 0, MAX_READ_BYTES);
             // Check if storage media at current port has a file-system LensorOS recognizes.
             // GPT (GUID Partition Table):
-            if (GPT::is_gpt_present(Ports[i])) {
+            if (0/*deprecated*/) {
                 UART::out("  Found Valid GPT:\r\n");
                 auto hdr = SmartPtr<GPT::Header>(new GPT::Header);
                 if (Ports[i]->read(1, 1, hdr.get(), sizeof(GPT::Header))) {

@@ -11,6 +11,7 @@
 #include "fat_definitions.h"
 #include "fat_driver.h"
 #include "gdt.h"
+#include "gpt.h"
 #include "memory/heap.h"
 #include "hpet.h"
 #include "interrupts/idt.h"
@@ -358,25 +359,76 @@ void kstage1(BootInfo* bInfo) {
         }
     });
 
-    SYSTEM->devices().for_each([](auto* it){
-        SystemDevice& d = it->value();
-        if (d.major() == SYSDEV_MAJOR_STORAGE && d.minor() == SYSDEV_MINOR_AHCI_PORT) {
-            auto* portCon = (AHCI::PortController*)(&d)->data1();
-
-            SmartPtr<u8> buffer = SmartPtr<u8>(new u8[512]);
-            portCon->read(512, 512, buffer.get());
-            UART::out("Dumping bytes from port ");
-            UART::out(portCon->port_number());
-            UART::out("\r\n\033[30;47m\r\n");
-            UART::out(buffer.get(), 8);
-            UART::out("\033[0m\r\n\r\n");
-        }
-    });
-
     /* Find partitions
      * A storage device may be partitioned (i.e. GUID Partition Table).
      * These partitions are to be detected and new system devices created.
      */
+    SYSTEM->devices().for_each([](auto* it){
+        SystemDevice& d = it->value();
+        if (d.major() == SYSDEV_MAJOR_STORAGE && d.minor() == SYSDEV_MINOR_AHCI_PORT) {
+            auto* portCon = (AHCI::PortController*)(&d)->data1();
+            if(GPT::is_gpt_present((StorageDeviceDriver*)portCon)) {
+                UART::out("[kUtil]: GPT is present on port ");
+                UART::out(portCon->port_number());
+                UART::out("!\r\n");
+                auto gptHeader = SmartPtr<GPT::Header>(new GPT::Header);
+                auto sector = SmartPtr<u8[]>(new u8[512], 512);
+                portCon->read(512, sizeof(GPT::Header), (u8*)gptHeader.get());
+                for (u32 i = 0; i < gptHeader->NumberOfPartitionsTableEntries; ++i) {
+                    u64 byteOffset = gptHeader->PartitionsTableEntrySize * i;
+                    u32 partSector = gptHeader->PartitionsTableLBA + (byteOffset / 512);
+                    byteOffset %= 512;
+                    portCon->read(partSector * 512, 512, sector.get());
+                    auto* part = (GPT::PartitionEntry*)((u64)sector.get() + byteOffset);
+                    UART::out("      Partition ");
+                    UART::out(i);
+                    UART::out(": ");
+                    UART::out(part->Name, 72);
+                    UART::out(":\r\n        Type GUID: ");
+                    print_guid(part->TypeGUID);
+                    UART::out("\r\n        Unique GUID: ");
+                    print_guid(part->UniqueGUID);
+                    UART::out("\r\n        Sector Offset: ");
+                    UART::out(part->StartLBA);
+                    UART::out("\r\n        Size in Sectors: ");
+                    UART::out(part->EndLBA - part->StartLBA);
+                    UART::out("\r\n        Attributes: ");
+                    UART::out(part->Attributes);
+                    UART::out("\r\n");
+                    auto* partDriver = new GPTPartitionDriver((StorageDeviceDriver*)portCon
+                                                              , part->TypeGUID, part->UniqueGUID
+                                                              , part->StartLBA, 512);
+                    SYSTEM->add_device(SystemDevice(SYSDEV_MAJOR_STORAGE
+                                                    , SYSDEV_MINOR_GPT_PARTITION
+                                                    , partDriver, nullptr
+                                                    , nullptr, &it->value()));
+                }
+            }
+        }
+    });
+
+    
+    SYSTEM->devices().for_each([](auto* it) {
+        SmartPtr<u8> buffer = SmartPtr<u8>(new u8[512]);
+        SystemDevice& dev = it->value();
+        if (dev.major() == SYSDEV_MAJOR_STORAGE
+            && dev.minor() == SYSDEV_MINOR_GPT_PARTITION)
+        {
+            auto* driver = (GPTPartitionDriver*)(dev.data1());
+            if (driver) {
+                UART::out("Partition:\r\n  Type GUID: ");
+                print_guid(driver->type_guid());
+                UART::out("  Unique GUID: ");
+                print_guid(driver->unique_guid());
+                UART::out("\r\n");
+                driver->read(0, 512, buffer.get());
+                UART::out("Dumping 64 bytes from beginning of partition: ");
+                UART::out("\033[30;47m");
+                UART::out(buffer.get(), 64);
+                UART::out("\033[0m\r\n");
+            }
+        }
+    });
 
     // Initialize High Precision Event Timer.
     (void)gHPET.initialize();
