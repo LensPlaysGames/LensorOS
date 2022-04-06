@@ -50,8 +50,6 @@ HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
 
     /// Position of header that is newly created within the middle of `this` header.
     HeapSegmentHeader* splitHeader = (HeapSegmentHeader*)((u64)this + sizeof(HeapSegmentHeader) + splitLength);
-
-    //HeapSegmentHeader* splitHeader = (HeapSegmentHeader*)((u64)this + splitSegmentLength);
     if (next) {
         // Set next segment's last segment to the new segment.
         next->last = splitHeader;
@@ -193,6 +191,8 @@ void free(void* address) {
 }
 
 void heap_print_debug() {
+    // TODO: Interesting information, like average allocation
+    //       size, number of malloc vs free calls, etc.
     UART::out("[Heap]: Debug information dump:\r\n  Size: ");
     UART::out(TO_KiB((u64)sHeapEnd - (u64)sHeapStart));
     UART::out("KiB\r\n  Start: 0x");
