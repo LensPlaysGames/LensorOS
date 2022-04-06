@@ -3,7 +3,7 @@
 
 #include "../integers.h"
 
-#define HEAP_VIRTUAL_BASE 0xfffffffff7770000
+#define HEAP_VIRTUAL_BASE 0xffffffffff000000
 #define HEAP_INITIAL_PAGES 1
 
 // TODO: Store physical address (or make it easy to
@@ -27,7 +27,7 @@ void init_heap();
 // Enlarge the heap by a given number of bytes, aligned to next-highest page-aligned value.
 void expand_heap(u64 numBytes);
 
-void* malloc(u64 numBytes);
+__attribute__((malloc, alloc_size(1))) void* malloc(u64 numBytes);
 void free(void* address);
 
 void* operator new (u64 numBytes);

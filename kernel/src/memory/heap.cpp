@@ -6,6 +6,9 @@
 #include "virtual_memory_manager.h"
 #include "../uart.h"
 
+// Uncomment the following directive for extra debug information output.
+//#define DEBUG_HEAP
+
 void* sHeapStart { nullptr };
 void* sHeapEnd { nullptr };
 HeapSegmentHeader* sLastHeader { nullptr };
@@ -45,26 +48,49 @@ HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
     if (splitSegmentLength < 8)
         return nullptr;
 
+    /*                                     length                  
+     *                        this      | s. len|
+     *    | SEGMENT | SEGMENT |     SEGMENT     | SEGMENT |
+     *                        |s. s. len|       sLastHeader
+     *
+     *    | SEGMENT | SEGMENT | SEGMENT | SEG.  | SEGMENT |
+     */
+
+
+    /*                        this        length
+     *                                |s. s. len|
+     *    | SEGMENT | SEGMENT |     SEGMENT     | SEGMENT |
+     *                        |s. len |         sLastHeader
+     *
+     *    | SEGMENT | SEGMENT | SEG.  | SEGMENT | SEGMENT |
+     *
+     * New header at this + split length.
+     * this is now the split header (with payload of split length size).
+     */
+
     /// Position of header that is newly created within the middle of `this` header.
-    HeapSegmentHeader* splitHeader = (HeapSegmentHeader*)((u64)this
-                                                          + sizeof(HeapSegmentHeader)
-                                                          + splitLength);
-    if (next != nullptr) {
+    HeapSegmentHeader* splitHeader = (HeapSegmentHeader*)((u64)this + sizeof(HeapSegmentHeader) + splitLength);
+
+    //HeapSegmentHeader* splitHeader = (HeapSegmentHeader*)((u64)this + splitSegmentLength);
+    if (next) {
         // Set next segment's last segment to the new segment.
         next->last = splitHeader;
         // Set new segment's next segment.
-        splitHeader->next = next;
+        splitHeader->next = next;       
+    }
+    else {
+        splitHeader->next = nullptr;
+        sLastHeader = splitHeader;
     }
     // Set current segment next to newly inserted segment.
     next = splitHeader;
     // Set new segment's last segment to this segment.
     splitHeader->last = this;
+    // Set new length of segments.
     length = splitLength;
     splitHeader->length = splitSegmentLength;
     splitHeader->free = free;
-    if (sLastHeader == this)
-        sLastHeader = splitHeader;
-    return splitHeader;
+    return this;
 }
 
 void init_heap() {
@@ -90,9 +116,15 @@ void init_heap() {
     UART::out("\r\n  Size: ");
     UART::out(numBytes);
     UART::out("\r\n\r\n");
+    heap_print_debug();
 }
 
 void expand_heap(u64 numBytes) {
+#ifdef DEBUG_HEAP
+    UART::out("[Heap]: Expanding by ");
+    UART::out(numBytes);
+    UART::out(" bytes\r\n");
+#endif /* DEBUG_HEAP */
     u64 numPages = (numBytes / PAGE_SIZE) + 1;
     // Round byte count to page-aligned boundary.
     numBytes = numPages * PAGE_SIZE;
@@ -123,18 +155,31 @@ void* malloc(u64 numBytes) {
         numBytes -= (numBytes % 8);
         numBytes += 8;
     }
+#ifdef DEBUG_HEAP
+    UART::out("[Heap]: malloc() -- numBytes=");
+    UART::out(numBytes);
+    UART::out("\r\n");
+#endif /* DEBUG_HEAP */
     // Start looking for a free segment at the start of the heap.
     HeapSegmentHeader* current = (HeapSegmentHeader*)sHeapStart;
     while (true) {
         if (current->free) {
             if (current->length > numBytes) {
-                if (current->split(numBytes)) {
-                    current->free = false;
-                    return (void*)((u64)current + sizeof(HeapSegmentHeader));
+                if (HeapSegmentHeader* split = current->split(numBytes)) {
+                    split->free = false;
+#ifdef DEBUG_HEAP
+                    UART::out("  Made split.\r\n");
+                    heap_print_debug();
+#endif /* DEBUG_HEAP */
+                    return (void*)((u64)split + sizeof(HeapSegmentHeader));
                 }
             }
             else if (current->length == numBytes) {
                 current->free = false;
+#ifdef DEBUG_HEAP
+                UART::out("  Found exact match.\r\n");
+                heap_print_debug();
+#endif /* DEBUG_HEAP */
                 return (void*)((u64)current + sizeof(HeapSegmentHeader));
             }
         }
@@ -153,9 +198,18 @@ void* malloc(u64 numBytes) {
 
 void free(void* address) {
     HeapSegmentHeader* segment = (HeapSegmentHeader*)((u64)address - sizeof(HeapSegmentHeader));
+#ifdef DEBUG_HEAP
+    u64 len = segment->length;
+#endif /* DEBUG_HEAP */
     segment->free = true;
     segment->combine_forward();
     segment->combine_backward();
+#ifdef DEBUG_HEAP
+    UART::out("[Heap]: free() -- numBytes=");
+    UART::out(len);
+    UART::out("\r\n");
+    heap_print_debug();
+#endif /* DEBUG_HEAP */
 }
 
 void heap_print_debug() {
