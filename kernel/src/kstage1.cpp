@@ -30,6 +30,7 @@
 #include "random_lfsr.h"
 #include "rtc.h"
 #include "scheduler.h"
+#include "smart_pointer.h"
 #include "system.h"
 #include "tss.h"
 #include "uart.h"
@@ -331,6 +332,46 @@ void kstage1(BootInfo* bInfo) {
      * In order for StorageDeviceDriver to keep consistent parameters to read/write,
      * a new system device is created for each with the StorageMediaDriver address at Data1.
      */
+    SYSTEM->devices().for_each([](auto* it){
+        SystemDevice& dev = it->value();
+        if (dev.major() == SYSDEV_MAJOR_STORAGE
+            && dev.minor() == SYSDEV_MINOR_AHCI_CONTROLLER)
+        {
+            UART::out("[SYSTEM]: Probing AHCI Controller\r\n");
+            AHCI::HBAMemory* ABAR = (AHCI::HBAMemory*)(u64)(((PCI::PCIHeader0*)dev.data2())->BAR5);
+            // potential TODO: Should ABAR be unmapped?
+            Memory::map(ABAR, ABAR);
+            u32 ports = ABAR->portsImplemented;
+            for (u64 i = 0; i < 32; ++i) {
+                if (ports & (1 << i)) {
+                    AHCI::HBAPort* port = &ABAR->ports[i];
+                    AHCI::PortType type = get_port_type(port);
+                    if (type == AHCI::PortType::SATA || type == AHCI::PortType::SATAPI) {
+                        auto* PortController = new AHCI::PortController(type, i, port);
+                        SYSTEM->add_device(SystemDevice(SYSDEV_MAJOR_STORAGE
+                                                        , SYSDEV_MINOR_AHCI_PORT
+                                                        , PortController, &dev
+                                                        , nullptr, nullptr));
+                    }
+                }
+            }           
+        }
+    });
+
+    SYSTEM->devices().for_each([](auto* it){
+        SystemDevice& d = it->value();
+        if (d.major() == SYSDEV_MAJOR_STORAGE && d.minor() == SYSDEV_MINOR_AHCI_PORT) {
+            auto* portCon = (AHCI::PortController*)(&d)->data1();
+
+            SmartPtr<u8> buffer = SmartPtr<u8>(new u8[512]);
+            portCon->read(512, 512, buffer.get());
+            UART::out("Dumping bytes from port ");
+            UART::out(portCon->port_number());
+            UART::out("\r\n\033[30;47m\r\n");
+            UART::out(buffer.get(), 8);
+            UART::out("\033[0m\r\n\r\n");
+        }
+    });
 
     /* Find partitions
      * A storage device may be partitioned (i.e. GUID Partition Table).
