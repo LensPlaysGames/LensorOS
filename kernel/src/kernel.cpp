@@ -58,22 +58,6 @@ void print_now(u64 xOffset = 0) {
     gRend.crlf(xOffset);
 }
 
-void srl_memory_info() {
-    UART::out("\r\nMemory Info:\r\n|- Total RAM: ");
-    UART::out(TO_MiB(Memory::get_total_ram()));
-    UART::out("MiB (");
-    UART::out(TO_KiB(Memory::get_total_ram()));
-    UART::out("KiB)\r\n|- Free RAM: ");
-    UART::out(TO_MiB(Memory::get_free_ram()));
-    UART::out(" MiB (");
-    UART::out(TO_KiB(Memory::get_free_ram()));
-    UART::out(" KiB)\r\n`- Used RAM: ");
-    UART::out(TO_MiB(Memory::get_used_ram()));
-    UART::out(" MiB (");
-    UART::out(TO_KiB(Memory::get_used_ram()));
-    UART::out(" KiB)\r\n");
-}
-
 void test_userland_function() {
     for (;;) {
         asm volatile ("mov $0, %rax\r\n\t"

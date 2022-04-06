@@ -30,6 +30,7 @@
 #include "random_lfsr.h"
 #include "rtc.h"
 #include "scheduler.h"
+#include "system.h"
 #include "tss.h"
 #include "uart.h"
 
@@ -142,6 +143,8 @@ void kstage1(BootInfo* bInfo) {
     // Setup dynamic memory allocation (`new`, `delete`).
     init_heap();
 
+    SYSTEM = new System();
+
     // Initialize the Real Time Clock.
     gRTC = RTC();
     gRTC.set_periodic_int_enabled(true);
@@ -183,9 +186,7 @@ void kstage1(BootInfo* bInfo) {
     gRandomLFSR.seed(gRandomLCG.get(), gRandomLCG.get());
 
     // Store feature set of CPU (capabilities).
-    // TODO: Don't store the global system CPU descriptor on
-    //       the heap, there only ever needs to be one.
-    SystemCPU = new CPUDescription();
+    CPUDescription* SystemCPU = &SYSTEM->cpu();
     // Check for CPUID availability ('ID' bit in rflags register modifiable)
     bool supportCPUID = static_cast<bool>(cpuid_support());
     if (supportCPUID) {
@@ -355,6 +356,8 @@ void kstage1(BootInfo* bInfo) {
     //print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     heap_print_debug();
     Memory::print_debug();
+
+    SYSTEM->print();
 
     // Allow interrupts to trigger.
     UART::out("[kUtil]: Enabling interrupts\r\n");

@@ -106,6 +106,7 @@ set(
   src/scheduler.h
   src/smart_pointer.h
   src/spinlock.h
+  src/system.h
   src/tss.h
   src/uart.h
   )
