@@ -48,26 +48,6 @@ HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
     if (splitSegmentLength < 8)
         return nullptr;
 
-    /*                                     length                  
-     *                        this      | s. len|
-     *    | SEGMENT | SEGMENT |     SEGMENT     | SEGMENT |
-     *                        |s. s. len|       sLastHeader
-     *
-     *    | SEGMENT | SEGMENT | SEGMENT | SEG.  | SEGMENT |
-     */
-
-
-    /*                        this        length
-     *                                |s. s. len|
-     *    | SEGMENT | SEGMENT |     SEGMENT     | SEGMENT |
-     *                        |s. len |         sLastHeader
-     *
-     *    | SEGMENT | SEGMENT | SEG.  | SEGMENT | SEGMENT |
-     *
-     * New header at this + split length.
-     * this is now the split header (with payload of split length size).
-     */
-
     /// Position of header that is newly created within the middle of `this` header.
     HeapSegmentHeader* splitHeader = (HeapSegmentHeader*)((u64)this + sizeof(HeapSegmentHeader) + splitLength);
 
