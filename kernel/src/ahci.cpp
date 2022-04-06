@@ -257,10 +257,12 @@ namespace AHCI {
                             }
                             UART::out("\r\n        Unique GUID: ");
                             print_guid(part->UniqueGUID);
+                            UART::out("\r\n        Sector Offset: ");
+                            UART::out(part->StartLBA);
                             UART::out("\r\n        Size in Sectors: ");
-                            UART::out(to_string(part->EndLBA - part->StartLBA));
+                            UART::out(part->EndLBA - part->StartLBA);
                             UART::out("\r\n        Attributes: ");
-                            UART::out(to_string(part->Attributes));
+                            UART::out(part->Attributes);
                             UART::out("\r\n");
                         }
                     }
