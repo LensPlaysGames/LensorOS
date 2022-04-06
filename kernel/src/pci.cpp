@@ -5,6 +5,7 @@
 #include "cstr.h"
 #include "memory/heap.h"
 #include "memory/virtual_memory_manager.h"
+#include "system.h"
 #include "uart.h"
 
 namespace PCI {
@@ -43,6 +44,10 @@ namespace PCI {
                 // ProgIF 0x01 = AHCI 1.0 Device
                 if (pciDevHdr->ProgIF == 0x01) {
                     AHCI::Drivers[AHCI::NumDrivers] = new AHCI::AHCIDriver(pciDevHdr);
+                    SYSTEM->add_device(SystemDevice(SYSDEV_AHCI_MAJOR, SYSDEV_AHCI_MINOR
+                                                    , AHCI::Drivers[AHCI::NumDrivers]
+                                                    , pciDevHdr
+                                                    , nullptr, nullptr));
                     ++AHCI::NumDrivers;
                 }
     }

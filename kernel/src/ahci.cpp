@@ -12,8 +12,7 @@
 #include "pci.h"
 #include "smart_pointer.h"
 #include "spinlock.h"
-
-
+#include "system.h"
 
 namespace AHCI {
 #define HBA_PORT_DEVICE_PRESENT 0x3
@@ -247,7 +246,6 @@ namespace AHCI {
                             print_guid(part->TypeGUID);
                             if (part->TypeGUID == GPT::PartitionType$EFISystem) {
                                 UART::out("\r\n        Found EFI System partition (boot file system).");
-                                // possible TODO: Mount boot filesystem as FAT32?
                             }
                             else {
                                 for (GUID a : GPT::ReservedPartitionGUIDs) {
@@ -273,6 +271,7 @@ namespace AHCI {
                 FatFS* fs = new FatFS(NumFileSystems, this, i);
                 FileSystems[NumFileSystems] = fs;
                 ++NumFileSystems;
+                SYSTEM->add_fs(Filesystem(FilesystemType::FAT, nullptr, nullptr));
 
                 // FIXME: Dummy inode creation.
                 Inode inode = Inode(*FileSystems[NumFileSystems], 0);

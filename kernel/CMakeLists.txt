@@ -147,6 +147,7 @@ set(
   src/rtc.cpp
   src/scheduler.cpp
   src/spinlock.cpp
+  src/system.cpp
   src/tss.cpp
   src/uart.cpp
   )

@@ -74,8 +74,6 @@ private:
         UART::out(to_string(Core));
         UART::outc(':');
         UART::out(to_string(LogicalCore));
-        UART::out("\r\n    CPU Description Address: 0x");
-        UART::out(to_hexstring<CPUDescription*>(Description));
         UART::out("\r\n");
     }
 };
@@ -135,16 +133,16 @@ public:
 
     // Feature flag setters
     void set_cpuid_capable() { CPUIDCapable = true; }
-    void set_fxsr_capable() { FXSRCapable = true; };
-    void set_fxsr_enabled() { FXSREnabled = true; };
-    void set_fpu_capable() { FPUCapable = true; };
-    void set_fpu_enabled() { FPUEnabled = true; };
-    void set_sse_capable() { SSECapable = true; };
-    void set_sse_enabled() { SSEEnabled = true; };
+    void set_fxsr_capable()  { FXSRCapable = true;  }
+    void set_fxsr_enabled()  { FXSREnabled = true;  }
+    void set_fpu_capable()   { FPUCapable = true;   }
+    void set_fpu_enabled()   { FPUEnabled = true;   }
+    void set_sse_capable()   { SSECapable = true;   }
+    void set_sse_enabled()   { SSEEnabled = true;   }
     void set_xsave_capable() { XSAVECapable = true; }
     void set_xsave_enabled() { XSAVEEnabled = true; }
-    void set_avx_capable() { AVXCapable = true; };
-    void set_avx_enabled() { AVXEnabled = true; };
+    void set_avx_capable()   { AVXCapable = true;   }
+    void set_avx_enabled()   { AVXEnabled = true;   }
     // Feature flag getters
     bool cpuid_capable() { return CPUIDCapable; }
     bool fxsr_capable()  { return FXSRCapable;  }
