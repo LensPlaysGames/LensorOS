@@ -32,8 +32,13 @@ void HeapSegmentHeader::combine_forward() {
 }
 
 void HeapSegmentHeader::combine_backward() {
-    if (last != nullptr && last->free)
-        last->combine_forward();
+    if (last == nullptr)
+        return;
+    
+    if (last->free == false)
+        return;
+
+    last->combine_forward();
 }
 
 HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
