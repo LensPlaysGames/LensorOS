@@ -3,8 +3,10 @@
 
 #include "cpu.h"
 #include "file.h"
+#include "guid.h"
 #include "integers.h"
 #include "linked_list.h"
+#include "memory/physical_memory_manager.h"
 #include "pure_virtuals.h"
 
 /* TODO:
@@ -25,14 +27,21 @@
 
 /* System Device Number:
  * |-- 0: Reserved
- * `-- 1: Storage Device
- *     `-- 0: AHCI Controller
- *         |-- Data1: Storage Device Driver Pointer
- *         `-- Data1: PCI Device Header Address
+ * `-- 1: Storage Device -- StorageDeviceDriver at Data1
+ *     |-- 0: AHCI Controller
+ *     |   `-- Data2: PCI Device Header Address
+ *     |-- 1: AHCI Port
+ *     |   `-- Data2: AHCI Controller System Device Ptr
+ *     `-- 10: GPT Partition
+ *         |-- Data1: StorageDeviceDriver Ptr???
+ *         |-- Data2: Partition Data (Sector offset, total size)
+ *         `-- Data4: System Device Ptr (To storage device this part. resides on)
  */
 
-constexpr u64 SYSDEV_AHCI_MAJOR = 1;
-constexpr u64 SYSDEV_AHCI_MINOR = 0;
+constexpr u64 SYSDEV_MAJOR_STORAGE = 1;
+constexpr u64 SYSDEV_MINOR_AHCI_CONTROLLER = 0;
+constexpr u64 SYSDEV_MINOR_AHCI_PORT = 1;
+constexpr u64 SYSDEV_MINOR_GPT_PARTITION = 10;
 
 /// A system device refers to a hardware device that has been detected
 /// during boot, and is saved for later use in the system structure.
@@ -80,13 +89,12 @@ private:
 
 class StorageDeviceDriver {
 public:
-    virtual void read(u64 sectorOffset, u64 sectorCount, void* buffer) = 0;
-    virtual void write(u64 sectorOffset, u64 sectorCount, void* buffer) = 0;
+    virtual void read(u64 byteOffset, u64 byteCount, u8* buffer) = 0;
+    virtual void write(u64 byteOffset, u64 byteCount, u8* buffer) = 0;
 };
 
 class FilesystemDriver {
 public:
-    // TODO: What if file at path doesn't exist?
     virtual void read(StorageDeviceDriver* driver
                       , const char* path
                       , void* buffer, u64 numBytes) = 0;
@@ -122,10 +130,18 @@ public:
     FilesystemDriver* filesystem_driver() { return FSDriver; }
     StorageDeviceDriver* storage_device_driver() { return DevDriver; }
 
+    void read(const char* path, void* buffer, u64 numBytes) {
+        FSDriver->read(DevDriver, path, buffer, numBytes);
+    };
+
+    void write(const char* path, void* buffer, u64 numBytes) {
+        FSDriver->write(DevDriver, path, buffer, numBytes);
+    };
+
 private:
-    FilesystemType Type;
-    FilesystemDriver* FSDriver;
-    StorageDeviceDriver* DevDriver;
+    FilesystemType Type; // This doesn't do much right now.
+    FilesystemDriver* FSDriver { nullptr };
+    StorageDeviceDriver* DevDriver { nullptr };
 };
 
 class System {
@@ -146,6 +162,7 @@ public:
 
     CPUDescription& cpu() { return CPU; }
 
+    SinglyLinkedList<SystemDevice>& devices() { return Devices; }
     SystemDevice* device(u64 major, u64 minor) {
         Devices.for_each([major, minor](auto* it) {
             SystemDevice& dev = it->value();
