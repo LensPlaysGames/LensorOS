@@ -33,7 +33,6 @@
  *     |-- 1: AHCI Port
  *     |   `-- Data2: AHCI Controller System Device Ptr
  *     `-- 10: GPT Partition
- *         |-- Data1: StorageDeviceDriver Ptr???
  *         |-- Data2: Partition Data (Sector offset, total size)
  *         `-- Data4: System Device Ptr (To storage device this part. resides on)
  */
@@ -91,6 +90,34 @@ class StorageDeviceDriver {
 public:
     virtual void read(u64 byteOffset, u64 byteCount, u8* buffer) = 0;
     virtual void write(u64 byteOffset, u64 byteCount, u8* buffer) = 0;
+};
+
+class GPTPartitionDriver final : public StorageDeviceDriver {
+public:
+    GPTPartitionDriver(StorageDeviceDriver* driver
+                       , GUID type, GUID unique
+                       , u64 startSector, u64 sectorSize)
+        : Driver(driver)
+        , Type(type), Unique(unique)
+        , Offset(startSector * sectorSize) {}
+
+    virtual void read(u64 byteOffset, u64 byteCount, u8* buffer) override {
+        Driver->read(byteOffset + Offset, byteCount, buffer);
+    };
+
+    virtual void write(u64 byteOffset, u64 byteCount, u8* buffer) override {
+        Driver->read(byteOffset + Offset, byteCount, buffer);
+    };
+
+    GUID type_guid() { return Type; }
+    GUID unique_guid() { return Unique; }
+
+private:
+    StorageDeviceDriver* Driver { nullptr };
+    GUID Type;
+    GUID Unique;
+    /// Number of bytes to offset within storage device for start of partition.
+    u64 Offset { 0 };
 };
 
 namespace AHCI {
@@ -213,8 +240,8 @@ namespace AHCI {
             // FIXME: Don't reject reads over port buffer max size,
             //        just do multiple reads and copy as you go.
             if (byteCount > MAX_READ_BYTES) {
-                UART::out("  \033[31mERROR\033[0m: `read()`  byteCount can not be" 
-                          "larger than maximum readable bytes.\r\n");
+                UART::out("  \033[31mERROR\033[0m: `read()`  byteCount can"
+                          " not be larger than maximum readable bytes.\r\n");
                 return;
             }
 
