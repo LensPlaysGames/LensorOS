@@ -9,7 +9,6 @@
 #include "cstr.h"
 #include "efi_memory.h"
 #include "fat_definitions.h"
-#include "fat_driver.h"
 #include "gdt.h"
 #include "gpt.h"
 #include "memory/heap.h"
@@ -105,8 +104,6 @@ void kstage1(BootInfo* bInfo) {
      *     - BasicRenderer      -- drawing pixels to linear framebuffer
      *     - BasicTextRenderer  -- draw keyboard input on screen, keep track of text cursor, etc
      *   - Determine and cache information about CPU(s)
-     *   - Prepare device drivers
-     *     - FATDriver  -- Filesystem driver
      *   - Initialize ACPI (find System Descriptor Table (XSDT))
      *   - Prepare PCI devices (enumerate PCI bus and initialize recognized devices)
      *   - Prepare non-PCI devices
@@ -311,9 +308,6 @@ void kstage1(BootInfo* bInfo) {
     SystemCPU->add_cpu(cpu);
     SystemCPU->print_debug();
     
-    // Prepare filesystem drivers.
-    gFATDriver = FATDriver();
-    UART::out("[kUtil]: \033[32mFilesystem drivers prepared successfully\033[0m\r\n");
     // Initialize Advanced Configuration and Power Management Interface.
     ACPI::initialize(bInfo->rsdp);
     UART::out("[kUtil]: \033[32mACPI initialized\033[0m\r\n");
