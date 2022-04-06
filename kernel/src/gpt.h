@@ -4,6 +4,7 @@
 #include "ahci.h"
 #include "guid.h"
 #include "integers.h"
+#include "system.h"
 #include "gpt_partition_type_guids.h"
 
 namespace GPT {
@@ -117,7 +118,7 @@ namespace GPT {
         u64 StartLBA;
         u64 EndLBA;
         u64 Attributes;
-        // FIXME: Should be 36 UTF-16 code points, not 72 raw bytes.
+        // FIXME: Should be 36 UTF-16 code points.
         u8 Name[72];
 
         inline u64 size_in_sectors() { return EndLBA - StartLBA; }
@@ -127,7 +128,7 @@ namespace GPT {
         inline bool should_ignore() { return Attributes & (1 << PartitionAttributesBits::Ignore); }
     } __attribute__((packed));;
 
-    bool is_gpt_present(AHCI::Port*);
+    bool is_gpt_present(StorageDeviceDriver* driver);
 }
 
 #endif /* LENSOR_OS_GPT_H */
