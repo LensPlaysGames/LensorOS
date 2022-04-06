@@ -407,7 +407,6 @@ void kstage1(BootInfo* bInfo) {
         }
     });
 
-    
     SYSTEM->devices().for_each([](auto* it) {
         SmartPtr<u8> buffer = SmartPtr<u8>(new u8[512]);
         SystemDevice& dev = it->value();

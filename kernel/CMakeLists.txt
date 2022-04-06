@@ -70,10 +70,8 @@ set(
   src/cpuid.h
   src/cstr.h
   src/efi_memory.h
-  src/fat_driver.h
   src/fat_definitions.h
-  src/fat_fs.h
-  src/filesystem.h
+  src/file.h
   src/gdt.h
   src/gpt.h
   src/guid.h
@@ -120,8 +118,6 @@ set(
   src/cpuid.cpp
   src/cstr.cpp
   src/efi_memory.cpp
-  src/fat_driver.cpp
-  src/filesystem.cpp
   src/gdt.cpp
   src/gpt.cpp
   src/hpet.cpp
