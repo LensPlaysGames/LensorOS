@@ -192,6 +192,8 @@ namespace AHCI {
         bool read_low_level(u64 sector, u16 numSectors);
     };
 
+    PortType get_port_type(HBAPort* port);
+
     /// Advance Host Controller Interface Driver
     ///   This driver is instantiated for each SATA controller found on
     ///     the PCI bus, and will parse all the ports that are active and
