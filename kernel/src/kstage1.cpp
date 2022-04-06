@@ -317,6 +317,7 @@ void kstage1(BootInfo* bInfo) {
     UART::out("[kUtil]: \033[32mACPI initialized\033[0m\r\n");
 
     // Find Memory-mapped ConFiguration Table in order to find PCI devices.
+    // Storage devices like AHCIs will be detected here.
     ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table("MCFG");
     if (mcfg) {
         UART::out("[kUtil]: Found Memory-mapped Configuration Space\r\n");
@@ -324,6 +325,18 @@ void kstage1(BootInfo* bInfo) {
         UART::out("[kUtil]: \033[32mPCI Prepared\033[0m\r\n");
     }
     
+    /* Probe storage devices
+     * Most storage devices handle multiple storage media hardware devices;
+     * for example, AHCI has multiple ports, each one referring to its own device.
+     * In order for StorageDeviceDriver to keep consistent parameters to read/write,
+     * a new system device is created for each with the StorageMediaDriver address at Data1.
+     */
+
+    /* Find partitions
+     * A storage device may be partitioned (i.e. GUID Partition Table).
+     * These partitions are to be detected and new system devices created.
+     */
+
     // Initialize High Precision Event Timer.
     (void)gHPET.initialize();
     // Prepare PS2 mouse.
