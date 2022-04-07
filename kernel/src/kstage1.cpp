@@ -92,37 +92,53 @@ u8 fxsave_region[512] __attribute__((aligned(16)));
 
 void kstage1(BootInfo* bInfo) {
     /* This function is kind of monstrous, so the functionality is outlined here.
-     *   - Load Global Descriptor Table (CPU Privilege levels, hardware task switching)
-     *   - Prepare UART serial communications driver
-     *   - Prepare physical/virtual memory
-     *     - Initialize Physical Memory Manager (chicken/egg happens here)
-     *     - Initialize Virtual Memory Manager (ensure all RAM is mapped, as well as kernel)
-     *     - Prepare the heap (`new` and `delete`)
-     *   - Load Interrupt Descriptor Table (Install handlers for hardware IRQs + software exceptions)
-     *   - Prepare Real Time Clock (RTC)
-     *   - Setup graphical renderers
-     *     - BasicRenderer      -- drawing pixels to linear framebuffer
-     *     - BasicTextRenderer  -- draw keyboard input on screen, keep track of text cursor, etc
-     *   - Determine and cache information about CPU(s)
-     *   - Initialize ACPI (find System Descriptor Table (XSDT))
-     *   - Prepare PCI devices (enumerate PCI bus and initialize recognized devices)
-     *   - Prepare non-PCI devices
-     *     - High Precision Event Timer (HPET)
-     *     - PS2 Mouse
-     *   - Prepare Programmable Interval Timer (PIT)
-     *   - Setup scheduler (TSS descriptor, task switching)
-     *   - Clear (IRQ) interrupt masks in PIC for used interrupts
-     *   - Print information about the system after boot initialization to serial out
+     *     - Disable interrupts (if they weren't already)
+     *     - Ensure BootInfo pointer is valid (non-null)
+     * x86 - Load Global Descriptor Table (CPU Privilege levels, hardware task switching)
+     * x86 - Load Interrupt Descriptor Table (Install handlers for hardware IRQs + software exceptions)
+     *     - Prepare UART serial communications driver
+     *     - Prepare physical/virtual memory
+     *       - Initialize Physical Memory Manager (chicken/egg happens here)
+     *       - Initialize Virtual Memory Manager (ensure all RAM is mapped, as well as kernel)
+     *       - Prepare the heap (`new` and `delete`)
+     *     - Prepare Real Time Clock (RTC)
+     *     - Setup graphical renderers
+     *       - BasicRenderer      -- drawing pixels to linear framebuffer
+     *       - BasicTextRenderer  -- draw keyboard input on screen, keep track of text cursor, etc
+     *     - Determine and cache information about CPU(s)
+     *     - Initialize ACPI (find System Descriptor Table (XSDT))
+     *     - Prepare PCI devices (enumerate PCI bus and initialize recognized devices)
+     *     - Prepare non-PCI devices
+     *       - High Precision Event Timer (HPET)
+     *       - PS2 Mouse
+     *     - Prepare Programmable Interval Timer (PIT)
+     *     - Setup scheduler (TSS descriptor, task switching)
+     *     - Clear (IRQ) interrupt masks in PIC for used interrupts
+     *     - Print information about the system after boot initialization to serial out
+     *     - Enable interrupts
+     *
+     * x86 = The step is inherently x86-only (not implementation based).
+     *
+     * TODO:
+     * `-- A lot of hardware is just assumed to be there;
+     *     figure out how to better probe for their existence,
+     *     and gracefully handle the case that they aren't there.
      */
 
     // Disable interrupts while doing sensitive
     //   operations (like setting up interrupts :^).
     asm ("cli");
 
-    /* Tell x86_64 CPU where the GDT is located by populating and loading a GDT descriptor.
+    // Don't even attempt to boot unless boot info exists.
+    if (bInfo == nullptr)
+        while (true)
+            asm ("hlt");
+
+    /* Tell x86_64 CPU where the GDT is located by
+     * populating and loading a GDT descriptor.
      * The global descriptor table contains information about
-     *   memory segments (like privilege level of executing code,
-     *   or privilege level needed to access data).
+     * memory segments (like privilege level of executing code,
+     * or privilege level needed to access data).
      */
     gGDTD.Size = sizeof(GDT) - 1;
     gGDTD.Offset = V2P((u64)&gGDT);
@@ -150,7 +166,9 @@ void kstage1(BootInfo* bInfo) {
     UART::out("[kUtil]: \033[32mReal Time Clock Initialized\033[0m\r\n");
     UART::out("  Periodic interrupts enabled at \033[33m");
     UART::out(to_string((double)RTC_PERIODIC_HERTZ));
-    UART::out("hz\033[0m\r\n  \033[1;33mNow is ");
+    UART::out("hz\033[0m\r\n"
+              "\033[1;33m"
+              "Now is ");
     UART::out(to_string(gRTC.Time.hour));
     UART::outc(':');
     UART::out(to_string(gRTC.Time.minute));
@@ -309,6 +327,10 @@ void kstage1(BootInfo* bInfo) {
     SystemCPU->print_debug();
     
     // Initialize Advanced Configuration and Power Management Interface.
+    UART::out("[kstage1]: Initializing ACPI\r\n"
+              "  RSDP: 0x");
+    UART::out(to_hexstring(bInfo->rsdp));
+    UART::out("\r\n");
     ACPI::initialize(bInfo->rsdp);
     UART::out("[kUtil]: \033[32mACPI initialized\033[0m\r\n");
 
@@ -316,7 +338,10 @@ void kstage1(BootInfo* bInfo) {
     // Storage devices like AHCIs will be detected here.
     ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table("MCFG");
     if (mcfg) {
-        UART::out("[kUtil]: Found Memory-mapped Configuration Space\r\n");
+        UART::out("[kUtil]: Found Memory-mapped Configuration Space\r\n"
+                  "  Address: 0x");
+        UART::out(to_hexstring(mcfg));
+        UART::out("\r\n");
         PCI::enumerate_pci(mcfg);
         UART::out("[kUtil]: \033[32mPCI Prepared\033[0m\r\n");
     }
@@ -334,7 +359,7 @@ void kstage1(BootInfo* bInfo) {
         {
             UART::out("[SYSTEM]: Probing AHCI Controller\r\n");
             AHCI::HBAMemory* ABAR = (AHCI::HBAMemory*)(u64)(((PCI::PCIHeader0*)dev.data2())->BAR5);
-            // potential TODO: Should ABAR be unmapped?
+            // TODO: Better MMIO!! It should be separate from regular virtual mappings, I think.
             Memory::map(ABAR, ABAR);
             u32 ports = ABAR->portsImplemented;
             for (u64 i = 0; i < 32; ++i) {
@@ -401,6 +426,8 @@ void kstage1(BootInfo* bInfo) {
         }
     });
 
+    // Test reading first 512 bytes from each partition,
+    // then print the first 64 bytes to serial out.
     SYSTEM->devices().for_each([](auto* it) {
         SmartPtr<u8> buffer = SmartPtr<u8>(new u8[512]);
         SystemDevice& dev = it->value();
@@ -451,8 +478,8 @@ void kstage1(BootInfo* bInfo) {
     enable_interrupt(IRQ_REAL_TIMER);
     enable_interrupt(IRQ_PS2_MOUSE);
 
-    //print_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
-    //print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    //Memory::print_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    //Memory::print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     heap_print_debug();
     Memory::print_debug();
 
