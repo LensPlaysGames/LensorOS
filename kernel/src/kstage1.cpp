@@ -55,7 +55,8 @@ void prepare_interrupts() {
     gIDT.install_handler((u64)general_protection_fault_handler, 0x0d);
     gIDT.install_handler((u64)page_fault_handler,               0x0e);
     gIDT.install_handler((u64)simd_exception_handler,           0x13);
-    gIDT.install_handler((u64)system_call_handler_asm,          0x80, IDT_TA_UserInterruptGate);
+    gIDT.install_handler((u64)system_call_handler_asm,          0x80
+                         , IDT_TA_UserInterruptGate);
     gIDT.flush();
 }
 
@@ -214,7 +215,27 @@ void kstage1(BootInfo* bInfo) {
         UART::out("  CPU Vendor ID: ");
         UART::out((u8*)SystemCPU->get_vendor_id(), 12);
         UART::out("\r\n");
-        /* Current functionality of giant `if` statemnt:
+
+        CPUIDRegisters regs;
+        cpuid(1, regs);
+
+        /* TODO:
+         * |-- Get logical/physical core bits from CPUID
+         * |   |- 0x0000000b -- Intel
+         * |   |- 0x80000008 -- AMD
+         * |   `- Otherwise: bits are zero, assume single core.
+         * `-- Rewrite task switching code to save/load
+         *     all supported registers in CPUState.
+         *
+         * FIXME: My CPUID definition and implementation needs a lot of work.
+         *        A system that doesn't use nested if statements would be great.
+         *
+         * Enable FXSAVE/FXRSTOR instructions if CPU supports it.
+         * If it is not supported, don't bother trying to support
+         * FPU, SSE, etc. as there would be no mechanism to
+         * save/load the registers on context switch.
+         *
+         * Current functionality of giant `if` statemnt:
          * |- Setup FXSAVE/FXRSTOR
          * |  |- Setup FPU
          * |  `- Setup SSE
@@ -226,18 +247,6 @@ void kstage1(BootInfo* bInfo) {
          * To peek further down the rabbit hole, check out the following link:
          *   https://wiki.osdev.org/Detecting_CPU_Topology_(80x86)#Using_CPUID
          */
-
-        CPUIDRegisters regs;
-        cpuid(1, regs);
-
-        // Enable FXSAVE/FXRSTOR instructions if CPU supports it.
-        // If it is not supported, don't bother trying to support FPU, SSE, etc
-        //   as there would be no mechanism to save/load the registers on context switch.
-        // TODO: Get logical/physical core bits from CPUID
-        // |- 0x0000000b -- Intel
-        // |- 0x80000008 -- AMD
-        // `- Otherwise: bits are zero, assume single core.
-        // TODO: Rewrite task switching code to save/load all supported registers in CPUState.
         if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FXSR)) {
             SystemCPU->set_fxsr_capable();
             asm volatile ("fxsave %0" :: "m"(fxsave_region));
@@ -246,8 +255,8 @@ void kstage1(BootInfo* bInfo) {
             // If FXSAVE/FXRSTOR is supported, setup FPU.
             if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FPU)) {
                 SystemCPU->set_fpu_capable();
-                // FPU supported, ensure it is enabled.
-                /* FPU Relevant Control Register Bits
+                /* FPU supported, ensure it is enabled.
+                 * FPU Relevant Control Register Bits
                  * |- CR0.EM (bit 02) -- If set, FPU and vector operations will cause a #UD.
                  * `- CR0.TS (bit 03) -- Task switched. If set, all FPU and vector ops will cause a #NM.
                  */
@@ -273,7 +282,7 @@ void kstage1(BootInfo* bInfo) {
             if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)) {
                 SystemCPU->set_sse_capable();
                 /* Enable SSE
-                 * |- Clear CR0.EM bit   (bit 2  -- coprocessor emulation) 
+                 * |- Clear CR0.EM bit   (bit 2  -- coprocessor emulation)
                  * |- Set CR0.MP bit     (bit 1  -- coprocessor monitoring)
                  * |- Set CR4.OSFXSR bit (bit 9  -- OS provides FXSAVE/FXRSTOR functionality)
                  * `- Set CR4.OSXMMEXCPT (bit 10 -- OS provides #XM exception handler)
@@ -319,13 +328,13 @@ void kstage1(BootInfo* bInfo) {
         else UART::out("  \033[31mXSAVE Not Supported\033[0m\r\n");
         UART::out("\r\n");
     }
-    
+
     // TODO: Parse CPUs from ACPI MADT table.
     //       For now we only support single core.
     CPU cpu = CPU(SystemCPU);
     SystemCPU->add_cpu(cpu);
     SystemCPU->print_debug();
-    
+
     // Initialize Advanced Configuration and Power Management Interface.
     UART::out("[kstage1]: Initializing ACPI\r\n"
               "  RSDP: 0x");
@@ -345,7 +354,7 @@ void kstage1(BootInfo* bInfo) {
         PCI::enumerate_pci(mcfg);
         UART::out("[kUtil]: \033[32mPCI Prepared\033[0m\r\n");
     }
-    
+
     /* Probe storage devices
      * Most storage devices handle multiple storage media hardware devices;
      * for example, AHCI has multiple ports, each one referring to its own device.
@@ -374,7 +383,7 @@ void kstage1(BootInfo* bInfo) {
                                                         , nullptr, nullptr));
                     }
                 }
-            }           
+            }
         }
     });
 
@@ -454,7 +463,7 @@ void kstage1(BootInfo* bInfo) {
     (void)gHPET.initialize();
     // Prepare PS2 mouse.
     init_ps2_mouse();
-    
+
     // Initialize the Programmable Interval Timer.
     gPIT = PIT();
     UART::out("[kUtil]: \033[32mProgrammable Interval Timer Initialized\033[0m\r\n");
@@ -468,7 +477,7 @@ void kstage1(BootInfo* bInfo) {
     // for switches between privilege levels.
     TSS::initialize();
     Scheduler::initialize();
-    
+
     // Enable IRQ interrupts that will be used.
     disable_all_interrupts();
     enable_interrupt(IRQ_SYSTEM_TIMER);
