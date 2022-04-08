@@ -439,8 +439,9 @@ void kstage1(BootInfo* bInfo) {
      * For every storage device we know how to read/write from,
      * check if a recognized filesystem resides on it.
      */
-    SYSTEM->devices().for_each([](auto* it) {
-        SmartPtr<u8> buffer = SmartPtr<u8>(new u8[512]);
+    // Prepare filesystem drivers.
+    auto* FAT = new FileAllocationTableDriver;
+    SYSTEM->devices().for_each([FAT](auto* it) {
         SystemDevice& dev = it->value();
         if (dev.major() == SYSDEV_MAJOR_STORAGE
             && dev.minor() == SYSDEV_MINOR_GPT_PARTITION)
@@ -452,11 +453,10 @@ void kstage1(BootInfo* bInfo) {
                 UART::out("  Unique GUID: ");
                 print_guid(driver->unique_guid());
                 UART::out("\r\n");
-                driver->read(0, 512, buffer.get());
-                UART::out("Dumping 64 bytes from beginning of partition: ");
-                UART::out("\033[30;47m");
-                UART::out(buffer.get(), 64);
-                UART::out("\033[0m\r\n");
+                if (FAT->test(driver)) {
+                    UART::out("  Found valid File Allocation Table filesystem\r\n");
+                    SYSTEM->add_fs(Filesystem(FilesystemType::FAT, FAT, driver));
+                }
             }
         }
     });
