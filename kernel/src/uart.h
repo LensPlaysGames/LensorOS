@@ -1,8 +1,8 @@
 #ifndef LENSOR_OS_UART_H
 #define LENSOR_OS_UART_H
 
-#include "io.h"
-#include "integers.h"
+#include <io.h>
+#include <integers.h>
 
 #define BAUD_FREQ 115200
 #define BAUD_RATE 9600

@@ -1,9 +1,9 @@
-#include "keyboard.h"
+#include <keyboard.h>
 
-#include "basic_renderer.h"
-#include "integers.h"
-#include "keyboard_scancode_translation.h"
-#include "math.h"
+#include <basic_renderer.h>
+#include <integers.h>
+#include <keyboard_scancode_translation.h>
+#include <math.h>
 
 namespace Keyboard {
     BasicTextRenderer gText;

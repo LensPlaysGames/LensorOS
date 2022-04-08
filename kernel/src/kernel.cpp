@@ -1,18 +1,18 @@
-#include "kernel.h"
+#include <kernel.h>
 
-#include "basic_renderer.h"
-#include "boot.h"
-#include "cstr.h"
-#include "hpet.h"
-#include "interrupts/interrupts.h"
-#include "keyboard.h"
-#include "kstage1.h"
-#include "memory/common.h"
-#include "memory/physical_memory_manager.h"
-#include "pit.h"
-#include "rtc.h"
-#include "tss.h"
-#include "uart.h"
+#include <basic_renderer.h>
+#include <boot.h>
+#include <cstr.h>
+#include <hpet.h>
+#include <interrupts/interrupts.h>
+#include <keyboard.h>
+#include <kstage1.h>
+#include <memory/common.h>
+#include <memory/physical_memory_manager.h>
+#include <pit.h>
+#include <rtc.h>
+#include <tss.h>
+#include <uart.h>
 
 void print_memory_info() {
     u32 startOffset = gRend.DrawPos.x;

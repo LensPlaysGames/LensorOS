@@ -1,7 +1,7 @@
-#include "tss.h"
+#include <tss.h>
 
-#include "memory.h"
-#include "gdt.h"
+#include <memory.h>
+#include <gdt.h>
 
 TSSEntry tssEntry;
 // USED IN `userswitch.asm` `jump_to_userland_function` AS EXTERNAL SYMBOL.

@@ -1,9 +1,9 @@
-#include "syscalls.h"
+#include <interrupts/syscalls.h>
 
-#include "../basic_renderer.h"
-#include "../cstr.h"
-#include "../file.h"
-#include "../uart.h"
+#include <basic_renderer.h>
+#include <cstr.h>
+#include <file.h>
+#include <uart.h>
 
 /// Get a FileDescriptor that may be used in subsequent
 /// syscalls (`read`, `write`, etc) from a file path.

@@ -1,4 +1,4 @@
-#include "spinlock.h"
+#include <spinlock.h>
 
 bool SpinlockLocker::compare_and_swap_lock() {
     /* Inline Assembly:

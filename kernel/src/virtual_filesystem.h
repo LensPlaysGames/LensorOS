@@ -1,11 +1,11 @@
 #ifndef LENSOR_OS_VIRTUAL_FILESYSTEM_H
 #define LENSOR_OS_VIRTUAL_FILESYSTEM_H
 
-#include "cstr.h"
-#include "file.h"
-#include "linked_list.h"
-#include "system.h"
-#include "uart.h"
+#include <cstr.h>
+#include <file.h>
+#include <linked_list.h>
+#include <system.h>
+#include <uart.h>
 
 // WHAT GOES HERE?
 // A path? That wouldn't really be all that efficient,

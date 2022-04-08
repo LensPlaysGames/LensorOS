@@ -1,7 +1,7 @@
-#include "uart.h"
+#include <uart.h>
 
-#include "cstr.h"
-#include "io.h"
+#include <cstr.h>
+#include <io.h>
 
 namespace UART {
     bool Initialized { false };

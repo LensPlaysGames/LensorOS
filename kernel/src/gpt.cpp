@@ -1,8 +1,8 @@
-#include "gpt.h"
+#include <gpt.h>
 
-#include "ahci.h"
-#include "smart_pointer.h"
-#include "uart.h"
+#include <ahci.h>
+#include <smart_pointer.h>
+#include <uart.h>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_GPT

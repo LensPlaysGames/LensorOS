@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_MATH_H
 #define LENSOR_OS_MATH_H
 
-#include "integers.h"
+#include <integers.h>
 
 template<typename T>
 struct Vector2 {

@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_IDT_H
 #define LENSOR_OS_IDT_H
 
-#include "../integers.h"
+#include <integers.h>
 
 /// IA-32e System Descriptor Types
 #define SYSTEM_DESCRIPTOR_TYPE_LDT              0b0010

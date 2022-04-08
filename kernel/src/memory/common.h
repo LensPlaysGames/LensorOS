@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_MEMORY_COMMON_H
 #define LENSOR_OS_MEMORY_COMMON_H
 
-#include "../integers.h"
+#include <integers.h>
 
 #define KiB(x) ((u64)(x) << 10)
 #define MiB(x) ((u64)(x) << 20)

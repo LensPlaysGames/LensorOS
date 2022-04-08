@@ -1,10 +1,10 @@
-#include "heap.h"
+#include <memory/heap.h>
 
-#include "../cstr.h"
-#include "common.h"
-#include "physical_memory_manager.h"
-#include "virtual_memory_manager.h"
-#include "../uart.h"
+#include <cstr.h>
+#include <memory/common.h>
+#include <memory/physical_memory_manager.h>
+#include <memory/virtual_memory_manager.h>
+#include <uart.h>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_HEAP

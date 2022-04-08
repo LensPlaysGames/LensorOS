@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_GPT_PARTITION_TYPE_GUIDS_H
 #define LENSOR_OS_GPT_PARTITION_TYPE_GUIDS_H
 
-#include "guid.h"
+#include <guid.h>
 
 namespace GPT {
     /* GPT GUIDs

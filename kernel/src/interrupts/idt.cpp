@@ -1,7 +1,7 @@
-#include "idt.h"
+#include <interrupts/idt.h>
 
-#include "../integers.h"
-#include "../memory.h"
+#include <integers.h>
+#include <memory.h>
 
 IDTR gIDT;
 

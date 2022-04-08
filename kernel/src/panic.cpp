@@ -1,9 +1,9 @@
-#include "panic.h"
+#include <panic.h>
 
-#include "basic_renderer.h"
-#include "cstr.h"
-#include "interrupts/interrupts.h"
-#include "uart.h"
+#include <basic_renderer.h>
+#include <cstr.h>
+#include <interrupts/interrupts.h>
+#include <uart.h>
 
 void panic(const char* panicMessage) {
     UART::out("\r\n\033[1;37;41mLensorOS PANIC\033[0m\r\n");

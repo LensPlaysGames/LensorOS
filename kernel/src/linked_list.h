@@ -1,8 +1,8 @@
 #ifndef LENSOR_OS_LINKED_LIST_H
 #define LENSOR_OS_LINKED_LIST_H
 
-#include "memory/heap.h"
-#include "uart.h"
+#include <memory/heap.h>
+#include <uart.h>
 
 template <typename T>
 class SinglyLinkedList;

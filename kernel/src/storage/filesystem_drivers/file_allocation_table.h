@@ -1,11 +1,11 @@
 #ifndef LENSOR_OS_FILE_ALLOCATION_TABLE_DRIVER_H
 #define LENSOR_OS_FILE_ALLOCATION_TABLE_DRIVER_H
 
-#include "../filesystem_driver.h"
+#include <storage/filesystem_driver.h>
 
-#include "../../fat_definitions.h"
-#include "../../integers.h"
-#include "../../smart_pointer.h"
+#include <fat_definitions.h>
+#include <integers.h>
+#include <smart_pointer.h>
 
 class FileAllocationTableDriver final : public FilesystemDriver {
 public:

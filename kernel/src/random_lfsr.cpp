@@ -1,7 +1,7 @@
-#include "random_lfsr.h"
+#include <random_lfsr.h>
 
-#include "cstr.h"
-#include "uart.h"
+#include <cstr.h>
+#include <uart.h>
 
 LFSR gRandomLFSR;
 

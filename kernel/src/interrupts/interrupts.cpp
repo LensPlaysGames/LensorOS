@@ -1,14 +1,14 @@
-#include "interrupts.h"
+#include <interrupts/interrupts.h>
 
-#include "../basic_renderer.h"
-#include "../cstr.h"
-#include "../io.h"
-#include "../keyboard.h"
-#include "../mouse.h"
-#include "../panic.h"
-#include "../pit.h"
-#include "../rtc.h"
-#include "../uart.h"
+#include <basic_renderer.h>
+#include <cstr.h>
+#include <io.h>
+#include <keyboard.h>
+#include <mouse.h>
+#include <panic.h>
+#include <pit.h>
+#include <rtc.h>
+#include <uart.h>
 
 void enable_interrupt(u8 irq) {
     if (irq > 15)

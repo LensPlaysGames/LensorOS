@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_KB_SCANCODE_TRANSLATION_H
 #define LENSOR_OS_KB_SCANCODE_TRANSLATION_H
 
-#include "integers.h"
+#include <integers.h>
 
 namespace Keyboard {
     namespace QWERTY {

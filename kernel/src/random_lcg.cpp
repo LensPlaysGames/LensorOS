@@ -1,4 +1,6 @@
-#include "random_lcg.h"
+#include <random_lcg.h>
+
+#include <integers.h>
 
 LCG gRandomLCG;
 

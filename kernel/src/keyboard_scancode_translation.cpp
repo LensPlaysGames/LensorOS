@@ -1,4 +1,4 @@
-#include "keyboard_scancode_translation.h"
+#include <keyboard_scancode_translation.h>
 
 namespace Keyboard {
     namespace QWERTY {

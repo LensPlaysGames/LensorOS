@@ -1,9 +1,9 @@
 #ifndef LENSOR_OS_PHYSICAL_MEMORY_MANAGER_H
 #define LENSOR_OS_PHYSICAL_MEMORY_MANAGER_H
 
-#include "../bitmap.h"
-#include "../efi_memory.h"
-#include "../linked_list.h"
+#include <bitmap.h>
+#include <efi_memory.h>
+#include <linked_list.h>
 
 namespace Memory {
     void init_physical(EFI_MEMORY_DESCRIPTOR* map, u64 size, u64 entrySize);

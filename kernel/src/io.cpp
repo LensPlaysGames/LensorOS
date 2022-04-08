@@ -1,6 +1,6 @@
-#include "io.h"
+#include <io.h>
 
-#include "integers.h"
+#include <integers.h>
 
 void out8(u16 port, u8 value) {
     asm volatile ("outb %0, %1" : : "a"(value), "Nd"(port));

@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_GDT_H
 #define LENSOR_OS_GDT_H
 
-#include "integers.h"
+#include <integers.h>
 
 struct GDTDescriptor {
     u16 Size;

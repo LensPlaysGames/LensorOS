@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_HEAP_H
 #define LENSOR_OS_HEAP_H
 
-#include "../integers.h"
+#include <integers.h>
 
 #define HEAP_VIRTUAL_BASE 0xffffffffff000000
 #define HEAP_INITIAL_PAGES 1

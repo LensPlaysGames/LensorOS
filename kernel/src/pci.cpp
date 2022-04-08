@@ -1,12 +1,12 @@
-#include "pci.h"
+#include <pci.h>
 
-#include "ahci.h"
-#include "acpi.h"
-#include "cstr.h"
-#include "memory/heap.h"
-#include "memory/virtual_memory_manager.h"
-#include "system.h"
-#include "uart.h"
+#include <ahci.h>
+#include <acpi.h>
+#include <cstr.h>
+#include <memory/heap.h>
+#include <memory/virtual_memory_manager.h>
+#include <system.h>
+#include <uart.h>
 
 namespace PCI {
     void enumerate_function(u64 device_address, u64 function_number) {

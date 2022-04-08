@@ -1,9 +1,9 @@
 #ifndef LENSOR_OS_KEYBOARD_H
 #define LENSOR_OS_KEYBOARD_H
 
-#include "integers.h"
-#include "math.h"
-#include "basic_renderer.h"
+#include <integers.h>
+#include <math.h>
+#include <basic_renderer.h>
 
 namespace Keyboard {
     const u8 KBCursorSizeX = 8;

@@ -1,6 +1,8 @@
 #ifndef LENSOR_OS_INTERRUPTS_H
 #define LENSOR_OS_INTERRUPTS_H
 
+#include <integers.h>
+
 /* x86: Interrupt Request Vector Offsets 
  *   Programmable Interrupt Chip (some say Peripheral interrupt chip, who knows)
  *   Vector Capacity = 256
@@ -71,8 +73,6 @@
 #define ICW1_INIT     0x10
 #define ICW1_ICW4     0x01
 #define ICW4_8086     0x01
-
-#include "../integers.h"
 
 struct InterruptFrame {
     // Instruction Pointer

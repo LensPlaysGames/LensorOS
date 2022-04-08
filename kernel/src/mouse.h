@@ -9,8 +9,8 @@
 #define PS2_X_OVERFLOW    0b01000000
 #define PS2_Y_OVERFLOW    0b10000000
 
-#include "integers.h"
-#include "math.h"
+#include <integers.h>
+#include <math.h>
 
 void init_ps2_mouse();
 void handle_ps2_mouse_interrupt(u8 data);

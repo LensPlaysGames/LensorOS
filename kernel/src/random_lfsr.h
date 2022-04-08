@@ -1,8 +1,8 @@
 #ifndef LENSOR_OS_RANDOM_LINEAR_FEEDBACK_SHIFT_REGISTER_H
 #define LENSOR_OS_RANDOM_LINEAR_FEEDBACK_SHIFT_REGISTER_H
 
-#include "integers.h"
-#include "large_integers.h"
+#include <integers.h>
+#include <large_integers.h>
 
 extern u128 DefaultInitialLFSRState;
 

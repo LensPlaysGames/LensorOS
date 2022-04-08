@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_SMART_POINTER_H
 #define LENSOR_OS_SMART_POINTER_H
 
-#include "integers.h"
+#include <integers.h>
 
 template <typename T>
 class SmartPtr {

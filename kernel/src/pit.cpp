@@ -1,9 +1,9 @@
-#include "pit.h"
+#include <pit.h>
 
-#include "cstr.h"
-#include "integers.h"
-#include "io.h"
-#include "uart.h"
+#include <cstr.h>
+#include <integers.h>
+#include <io.h>
+#include <uart.h>
 
 PIT gPIT;
 void pit_tick() { gPIT.tick(); }

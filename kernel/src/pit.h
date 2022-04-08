@@ -1,8 +1,8 @@
 #ifndef LENSOR_OS_PIT_H
 #define LENSOR_OS_PIT_H
 
-#include "integers.h"
-#include "io.h"
+#include <integers.h>
+#include <io.h>
 
 #define PIT_MAX_FREQ 1193180
 #if defined QEMU || defined VBOX

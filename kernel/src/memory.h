@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_MEMORY_H
 #define LENSOR_OS_MEMORY_H
 
-#include "integers.h"
+#include <integers.h>
 
 // Yes, I know these are "backwards" parameters, it's just how
 // I started and I don't want to go back and change everything.

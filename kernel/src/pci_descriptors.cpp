@@ -1,5 +1,5 @@
-#include "cstr.h"
-#include "integers.h"
+#include <cstr.h>
+#include <integers.h>
 
 namespace PCI {
     const char* DeviceClasses[] {

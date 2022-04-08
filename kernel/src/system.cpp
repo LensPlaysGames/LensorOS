@@ -1,3 +1,3 @@
-#include "system.h"
+#include <system.h>
 
 System* SYSTEM { nullptr };

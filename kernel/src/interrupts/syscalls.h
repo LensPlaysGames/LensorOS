@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_SYSCALLS_H
 #define LENSOR_OS_SYSCALLS_H
 
-#include "../integers.h"
+#include <integers.h>
 
 #define LENSOR_OS_NUM_SYSCALLS 2
 

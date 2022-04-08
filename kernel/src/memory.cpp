@@ -1,7 +1,8 @@
-#include "memory.h"
-#include "efi_memory.h"
-#include "integers.h"
-#include "large_integers.h"
+#include <memory.h>
+
+#include <efi_memory.h>
+#include <integers.h>
+#include <large_integers.h>
 
 int memcmp(void* aPtr, void* bPtr, u64 numBytes) {
     if (aPtr == bPtr)

@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_IO_H
 #define LENSOR_OS_IO_H
 
-#include "integers.h"
+#include <integers.h>
 
 void out8  (u16 port, u8 value);
 u8   in8   (u16 port);

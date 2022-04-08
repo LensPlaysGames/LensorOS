@@ -1,13 +1,13 @@
-#include "scheduler.h"
+#include <scheduler.h>
 
-#include "cstr.h"
-#include "interrupts/idt.h"
-#include "linked_list.h"
-#include "memory.h"
-#include "memory/paging.h"
-#include "memory/virtual_memory_manager.h"
-#include "pit.h"
-#include "uart.h"
+#include <cstr.h>
+#include <interrupts/idt.h>
+#include <linked_list.h>
+#include <memory.h>
+#include <memory/paging.h>
+#include <memory/virtual_memory_manager.h>
+#include <pit.h>
+#include <uart.h>
 
 /// External symbol definitions for `scheduler.asm`
 void* scheduler_switch_process;

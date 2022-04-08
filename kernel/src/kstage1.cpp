@@ -1,4 +1,4 @@
-#include "kstage1.h"
+#include <kstage1.h>
 
 #include <acpi.h>
 #include <basic_renderer.h>

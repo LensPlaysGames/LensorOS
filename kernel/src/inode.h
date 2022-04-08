@@ -1,8 +1,8 @@
 #ifndef LENSOR_OS_VFS_INODE_H
 #define LENSOR_OS_VFS_INODE_H
 
-#include "pure_virtuals.h"
-#include "integers.h"
+#include <integers.h>
+#include <pure_virtuals.h>
 
 class FileSystem;
 

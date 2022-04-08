@@ -1,11 +1,11 @@
-#include "virtual_memory_manager.h"
+#include <memory/virtual_memory_manager.h>
 
-#include "../integers.h"
-#include "common.h"
-#include "../memory.h"
-#include "../link_definitions.h"
-#include "paging.h"
-#include "physical_memory_manager.h"
+#include <integers.h>
+#include <link_definitions.h>
+#include <memory.h>
+#include <memory/common.h>
+#include <memory/paging.h>
+#include <memory/physical_memory_manager.h>
 
 namespace Memory {
     PageTable* ActivePageMap;

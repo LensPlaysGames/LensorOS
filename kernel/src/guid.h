@@ -1,8 +1,8 @@
 #ifndef LENSOR_OS_GUID_H
 #define LENSOR_OS_GUID_H
 
-#include "integers.h"
-#include "memory.h"
+#include <integers.h>
+#include <memory.h>
 
 struct GUID {
     u32 Data1;

@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_TSS_H
 #define LENSOR_OS_TSS_H
 
-#include "integers.h"
+#include <integers.h>
 
 struct TSSEntry {
     u32 Reserved0;

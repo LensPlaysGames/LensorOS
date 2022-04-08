@@ -1,9 +1,9 @@
 #ifndef LENSOR_OS_SCHEDULER_H
 #define LENSOR_OS_SCHEDULER_H
 
-#include "integers.h"
-#include "interrupts/interrupts.h"
-#include "linked_list.h"
+#include <integers.h>
+#include <interrupts/interrupts.h>
+#include <linked_list.h>
 
 namespace Memory {
     class PageTable;

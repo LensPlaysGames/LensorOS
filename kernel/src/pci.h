@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_PCI_H
 #define LENSOR_OS_PCI_H
 
-#include "integers.h"
+#include <integers.h>
 
 namespace ACPI {
     struct MCFGHeader;

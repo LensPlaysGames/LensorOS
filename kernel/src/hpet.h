@@ -10,9 +10,9 @@
  * `- https://wiki.osdev.org/HPET
  */
 
-#include "acpi.h"
-#include "spinlock.h"
-#include "uart.h"
+#include <acpi.h>
+#include <spinlock.h>
+#include <uart.h>
 
 /* INTEL SD's HPET SPEC Table 1 */
 #define HPET_MIN_COMPARATORS 3

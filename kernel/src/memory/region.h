@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_MEMORY_REGION_H
 #define LENSOR_OS_MEMORY_REGION_H
 
-#include "../integers.h"
+#include <integers.h>
 
 namespace Memory {
     class Region {

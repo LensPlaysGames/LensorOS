@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_LINK_DEFINITIONS_H
 #define LENSOR_OS_LINK_DEFINITIONS_H
 
-#include "integers.h"
+#include <integers.h>
 
 extern u64 KERNEL_PHYSICAL;
 extern u64 KERNEL_VIRTUAL;

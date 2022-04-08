@@ -1,11 +1,11 @@
-#include "hpet.h"
+#include <hpet.h>
 
-#include "cstr.h"
-#include "integers.h"
-#include "io.h"
-#include "memory.h"
-#include "memory/virtual_memory_manager.h"
-#include "uart.h"
+#include <cstr.h>
+#include <integers.h>
+#include <io.h>
+#include <memory.h>
+#include <memory/virtual_memory_manager.h>
+#include <uart.h>
 
 HPET gHPET;
 

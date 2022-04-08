@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_PAGING_H
 #define LENSOR_OS_PAGING_H
 
-#include "../integers.h"
+#include <integers.h>
 
 namespace Memory {
     enum PageTableFlag {

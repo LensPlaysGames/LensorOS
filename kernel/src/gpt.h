@@ -1,11 +1,11 @@
 #ifndef LENSOR_OS_GPT_H
 #define LENSOR_OS_GPT_H
 
-#include "ahci.h"
-#include "guid.h"
-#include "integers.h"
-#include "system.h"
-#include "gpt_partition_type_guids.h"
+#include <ahci.h>
+#include <guid.h>
+#include <integers.h>
+#include <system.h>
+#include <gpt_partition_type_guids.h>
 
 namespace GPT {
     // If a partition's GUID appears in this list, the

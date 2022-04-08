@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_FILESYSTEM_DRIVER_H
 #define LENSOR_OS_FILESYSTEM_DRIVER_H
 
-#include "storage_device_driver.h"
+#include <storage/storage_device_driver.h>
 
 /// An abstraction on top of StorageDeviceDriver that returns metadata
 /// and byte offset of a given file path to the VFS.
