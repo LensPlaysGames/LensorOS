@@ -48,6 +48,7 @@ target_compile_options(
   -c
   )
 
+
 add_library(
   Assembly
   src/cpuid.asm
@@ -58,6 +59,7 @@ add_library(
   src/userswitch.asm
   )
 string(APPEND CMAKE_ASM_NASM_COMPILE_OBJECT " -f elf64")
+
 
 set(
   KERNEL_HEADERS
@@ -150,6 +152,7 @@ set(
   )
 
 add_executable(Kernel ${KERNEL_SOURCES} ${KERNEL_HEADERS})
+target_include_directories(Kernel PUBLIC src/)
 set_target_properties(Kernel PROPERTIES OUTPUT_NAME kernel.elf)
 target_compile_definitions(Kernel PUBLIC ${MACHINE} ${ARCH})
 target_compile_options(
