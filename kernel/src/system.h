@@ -135,23 +135,23 @@ enum class FilesystemType {
     FAT = 1,
 };
 
-static const char* fstype_to_string(FilesystemType t) {
-    switch (t) {
-    case FilesystemType::INVALID:
-        return "Invalid";
-    case FilesystemType::FAT:
-        return "File Allocation Table";
-    default:
-        return "Unknown filesystem type";
-    };
-};
-
 class Filesystem {
 public:
     Filesystem(FilesystemType t
                , FilesystemDriver* fs
                , StorageDeviceDriver* dev)
         : Type(t), FSDriver(fs), DevDriver(dev) {}
+
+    static const char* type2name(FilesystemType t) {
+        switch (t) {
+        case FilesystemType::INVALID:
+            return "Invalid";
+        case FilesystemType::FAT:
+            return "File Allocation Table";
+        default:
+            return "Unkown Filesystem Type";
+        }
+    }
 
     FilesystemType type() { return Type; }
     FilesystemDriver* filesystem_driver() { return FSDriver; }
@@ -221,7 +221,7 @@ public:
         Filesystems.for_each([](auto* it){
             Filesystem& fs = it->value();
             UART::out("Filesystem: ");
-            UART::out(fstype_to_string(fs.type()));
+            UART::out(Filesystem::type2name(fs.type()));
             UART::out("\r\n  Filesystem Driver Address: 0x");
             UART::out(to_hexstring(fs.filesystem_driver()));
             UART::out("\r\n  Storage Device Driver Address: 0x");
