@@ -9,6 +9,8 @@
 #include "linked_list.h"
 #include "memory/physical_memory_manager.h"
 #include "pure_virtuals.h"
+#include "storage/filesystem_driver.h"
+#include "storage/storage_device_driver.h"
 
 /* TODO:
  * |-- What to do about duplicate devices? count? unique id?
@@ -23,7 +25,13 @@
  *     |-- read(Storage Dev. Driver Ptr,Path,Buffer,Count)
  *     `-- write(Storage Dev. Driver Ptr,Path,Buffer,Count)
  *
- *     Filesystem Driver calls Storage Device Driver
+ *     Filesystem Driver calls Storage Device Driver after resolving path.
+ *     ^^^^^ THIS IS WRONG!!!
+ *     Filesystem Driver simply needs to return a file
+ *     (metadata or whatever) along with a byte offset and count.
+ *     Upon an `open` syscall, the VFS creates an OpenFileDescription based
+ *     on the data it gets back from the FS driver (caching path resolution),
+ *     then returns the index into the list of OpenFileDescriptions.
  */
 
 /* System Device Number:
@@ -87,12 +95,6 @@ private:
     void* Data4 { nullptr };
 };
 
-class StorageDeviceDriver {
-public:
-    virtual void read(u64 byteOffset, u64 byteCount, u8* buffer) = 0;
-    virtual void write(u64 byteOffset, u64 byteCount, u8* buffer) = 0;
-};
-
 class GPTPartitionDriver final : public StorageDeviceDriver {
 public:
     GPTPartitionDriver(StorageDeviceDriver* driver
@@ -121,96 +123,16 @@ private:
     u64 Offset { 0 };
 };
 
-class FilesystemDriver {
-public:
-    /// If the storage device contains a valid filesystem, `test()` will
-    /// return `true`; if a valid filesystem isn't found, `false` is returned.
-    virtual bool test(StorageDeviceDriver* driver) = 0;
-    /// Read from the file at `path` a given
-    /// number of bytes `numBytes` into `buffer`.
-    virtual void read(StorageDeviceDriver* driver
-                      , const char* path
-                      , void* buffer, u64 numBytes) = 0;
-    /// Write to the file at `path` a given
-    /// number of bytes `numBytes` from `buffer`.
-    virtual void write(StorageDeviceDriver* driver
-                       , const char* path
-                       , void* buffer, u64 numBytes) = 0;
-};
-
-class FileAllocationTableDriver final : public FilesystemDriver {
-public:
-    bool test (StorageDeviceDriver* driver) final {
-        bool out { false };
-        if (driver) {
-            /* TODO:
-             * `-- Read FAT Boot Record.
-             *     `-- If valid, return `true`.
-             */
-            u8* buffer = new u8[512];
-            if (buffer) {
-                driver->read(0, 512, buffer);
-                auto* br = (BootRecord*)buffer;
-                /* Validate boot sector is of FAT format.
-                 * Thanks to Gigasoft of osdev forums for this list.
-                 * TODO: Use more of these confidence checks before
-                 *       assuming it is valid FAT filesystem.
-                 * What makes a FAT filesystem valid?
-                 * [x] = something this driver checks.
-                 * [x] Word at byte offset 510 equates to 0xaa55
-                 * [x] Sector size is power of two between 512-4096 (inclusive)
-                 * [x] Cluster size is a power of two
-                 * [ ] Media type is 0xf0 or greater or equal to 0xf8
-                 * [ ] FAT size is not zero
-                 * [x] Number of sectors is not zero
-                 * [ ] Number of root directory entries is (zero if fat32) (not zero if fat12/16)
-                 * [ ] Root cluster is valid (FAT32)
-                 * [ ] File system version is zero (FAT32)
-                 * [x] NumFATsPresent greater than zero
-                 */
-                u64 totalSectors = br->BPB.TotalSectors16 == 0
-                    ? br->BPB.TotalSectors32 : br->BPB.TotalSectors16;
-                out = (br->Magic == 0xaa55
-                       && totalSectors != 0
-                       && br->BPB.NumBytesPerSector >= 512
-                       && br->BPB.NumBytesPerSector <= 4096
-                       && (br->BPB.NumBytesPerSector & (br->BPB.NumBytesPerSector - 1)) == 0
-                       && (br->BPB.NumSectorsPerCluster & (br->BPB.NumSectorsPerCluster - 1)) == 0
-                       && br->BPB.NumFATsPresent > 0);
-                delete[] buffer;
-            }
-        }
-        return out;
-    }
-
-    void read(StorageDeviceDriver* driver
-              , const char* path
-              , void* buffer, u64 numBytes) final
-    {
-        (void)driver;
-        (void)path;
-        (void)buffer;
-        (void)numBytes;
-    }
-    void write(StorageDeviceDriver* driver
-               , const char* path
-               , void* buffer, u64 numBytes) final
-    {
-        (void)driver;
-        (void)path;
-        (void)buffer;
-        (void)numBytes;        
-    }
-
-private:
-};
-
 enum class FilesystemType {
     INVALID = 0,
     FAT = 1,
 };
 
 class Filesystem {
+    /* TODO:
+     * `-- The public API is not what is required of this class.
+     *     Needs to better support open, then read/write, then close.
+     */
 public:
     Filesystem(FilesystemType t
                , FilesystemDriver* fs
@@ -239,6 +161,18 @@ public:
     void write(const char* path, void* buffer, u64 numBytes) {
         FSDriver->write(DevDriver, path, buffer, numBytes);
     };
+
+    void print() {
+        UART::out("Filesystem: ");
+        UART::out(type2name(Type));
+        UART::out("\r\n"
+                  "  Filesystem Driver Address: 0x");
+        UART::out(to_hexstring(FSDriver));
+        UART::out("\r\n"
+                  "  Storage Device Driver Address: 0x");
+        UART::out(to_hexstring(DevDriver));
+        UART::out("\r\n");
+    }
 
 private:
     FilesystemType Type; // This doesn't do much right now.
@@ -276,57 +210,55 @@ public:
 
     void print() {
         CPU.print_debug();
-        Devices.for_each([](auto* it){
-            SystemDevice& dev = it->value();
-            UART::out("System Device ");
-            UART::out(dev.major());
-            UART::out(".");
-            UART::out(dev.minor());
-            void* d1 = dev.data1();
-            void* d2 = dev.data2();
-            void* d3 = dev.data3();
-            void* d4 = dev.data4();
-            if (d1) {
-                UART::out(":\r\n"
-                          "  Data1: 0x");
-                UART::out(to_hexstring(d1));
-            }
-            if (d2) {
-                UART::out("\r\n"
-                          "  Data2: 0x");
-                UART::out(to_hexstring(d2));
-            }
-            if (d3) {
-                UART::out("\r\n"
-                          "  Data3: 0x");
-                UART::out(to_hexstring(d3));
-            }
-            if (d4) {
-                UART::out("\r\n"
-                          "  Data4: 0x");
-                UART::out(to_hexstring(d4));
-            }
+        if (Devices.length() > 0) {
+            UART::out("System Devices:\r\n");
+            Devices.for_each([](auto* it){
+                SystemDevice& dev = it->value();
+                UART::out("  ");
+                UART::out(dev.major());
+                UART::out(".");
+                UART::out(dev.minor());
+                void* d1 = dev.data1();
+                void* d2 = dev.data2();
+                void* d3 = dev.data3();
+                void* d4 = dev.data4();
+                if (d1) {
+                    UART::out(":\r\n"
+                              "    Data1: 0x");
+                    UART::out(to_hexstring(d1));
+                }
+                if (d2) {
+                    UART::out("\r\n"
+                              "    Data2: 0x");
+                    UART::out(to_hexstring(d2));
+                }
+                if (d3) {
+                    UART::out("\r\n"
+                              "    Data3: 0x");
+                    UART::out(to_hexstring(d3));
+                }
+                if (d4) {
+                    UART::out("\r\n"
+                              "    Data4: 0x");
+                    UART::out(to_hexstring(d4));
+                }
+                UART::out("\r\n");
+            });
             UART::out("\r\n");
-        });
-        UART::out("\r\n");
-        Filesystems.for_each([](auto* it){
-            Filesystem& fs = it->value();
-            UART::out("Filesystem: ");
-            UART::out(Filesystem::type2name(fs.type()));
-            UART::out("\r\n"
-                      "  Filesystem Driver Address: 0x");
-            UART::out(to_hexstring(fs.filesystem_driver()));
-            UART::out("\r\n"
-                      "  Storage Device Driver Address: 0x");
-            UART::out(to_hexstring(fs.storage_device_driver()));
-            UART::out("\r\n"
-                      "  First 8 bytes: ");
-            u64 buffer { 0 };
-            fs.storage_device_driver()->read(0, 8, (u8*)&buffer);
-            UART::out((u8*)&buffer, 8);
+        }
+        if (Filesystems.length() > 0) {
+            UART::out("Filesystems:\r\n");
+            Filesystems.for_each([](auto* it){
+                Filesystem& fs = it->value();
+                fs.print();
+                UART::out("  First 8 bytes: ");
+                u64 buffer { 0 };
+                fs.storage_device_driver()->read(0, 8, (u8*)&buffer);
+                UART::out((u8*)&buffer, 8);
+                UART::out("\r\n");
+            });
             UART::out("\r\n");
-        });
-        UART::out("\r\n");
+        }
     }
 
 private:
