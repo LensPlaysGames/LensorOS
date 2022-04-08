@@ -2,9 +2,6 @@
 #define LENSOR_OS_AHCI_H
 
 #include "integers.h"
-#include "linked_list.h"
-#include "pci.h"
-#include "spinlock.h"
 #include "system.h"
 
 /// Size of AHCI Port buffer (how much the hardware reads/writes at a time)
@@ -181,103 +178,12 @@ namespace AHCI {
 
     class PortController final : public StorageDeviceDriver {
     public:
-        PortController(PortType type, u64 portNumber, HBAPort* portAddress)
-            : Type(type), PortNumber(portNumber), Port(portAddress)
-        {
-            // Get contiguous physical memory for this AHCI port to read to/write from.
-            Buffer = (u8*)Memory::request_pages(PORT_BUFFER_PAGES);
-
-            stop_commands();
-            // Command Base
-            void* base = Memory::request_page();
-            Port->commandListBase = (u32)(u64)base;
-            Port->commandListBaseUpper = (u32)((u64)base >> 32);
-            memset(base, 0, 1024);
-            // FIS Base
-            void* fisBase = Memory::request_page();
-            Port->fisBaseAddress = (u32)(u64)fisBase;
-            Port->fisBaseAddressUpper = (u32)((u64)fisBase >> 32);
-            memset(fisBase, 0, 256);
-            HBACommandHeader* cmdHdr = (HBACommandHeader*)((u64)Port->commandListBase
-                                                           + ((u64)Port->commandListBaseUpper << 32));
-            for (u64 i = 0; i < 32; ++i) {
-                cmdHdr[i].prdtLength = 8;
-                void* cmdTableAddress = Memory::request_page();
-                u64 address = (u64)cmdTableAddress + (i << 8);
-                cmdHdr[i].commandTableBaseAddress = (u32)address;
-                cmdHdr[i].commandTableBaseAddressUpper = (u32)((u64)address >> 32);
-                memset(cmdTableAddress, 0, 256);
-            }
-            start_commands();
-
-            UART::out("[AHCI]: Port ");
-            UART::out(PortNumber);
-            UART::out(" initialized\r\n");
-        }
-
-        /// Populate `Buffer` with `sectors` amount of data starting at `sector`.
-        bool read_low_level(u64 sector, u64 sectors);
+        PortController(PortType type, u64 portNumber, HBAPort* portAddress);
 
         /// Convert bytes to sectors, then read into and copy from intermediate
         /// `Buffer` to given `buffer` until all data is read and copied.
-        virtual void read(u64 byteOffset, u64 byteCount, u8* buffer) override {
-            UART::out("[AHCI]: Port ");
-            UART::out(PortNumber);
-            UART::out(" -- read()  byteOffset=");
-            UART::out(byteOffset);
-            UART::out(", byteCount=");
-            UART::out(byteCount);
-            UART::out(", buffer=0x");
-            UART::out(to_hexstring(buffer));
-            UART::out("\r\n");
-
-            // TODO: Actual error handling!
-            if (buffer == nullptr) {
-                UART::out("  \033[31mERROR\033[0m: `read()`  buffer can not be nullptr\r\n");
-                return;
-            }
-            // FIXME: Don't reject reads over port buffer max size,
-            //        just do multiple reads and copy as you go.
-            if (byteCount > MAX_READ_BYTES) {
-                UART::out("  \033[31mERROR\033[0m: `read()`  byteCount can"
-                          " not be larger than maximum readable bytes.\r\n");
-                return;
-            }
-
-            u64 sector = byteOffset / BYTES_PER_SECTOR;
-            u64 byteOffsetWithinSector = byteOffset % BYTES_PER_SECTOR;
-            u64 sectors = (byteOffsetWithinSector + byteCount) / BYTES_PER_SECTOR;
-            if (byteOffsetWithinSector + byteCount <= BYTES_PER_SECTOR)
-                sectors = 1;
-
-            UART::out("  Calculated sector data: sector=");
-            UART::out(sector);
-            UART::out(", sectors=");
-            UART::out(sectors);
-            UART::out("\r\n");
-
-            if (sectors * BYTES_PER_SECTOR > PORT_BUFFER_BYTES) {
-                UART::out("  \033[31mERROR\033[0m: `read()`  can not read more bytes than internal buffer size.\r\n");
-                return;
-            }
-
-            if (read_low_level(sector, sectors)) {
-                UART::out("  \033[32mSUCCESS\033[0m: `read_low_level()` SUCCEEDED\r\n");
-                void* bufferAddress = (void*)((u64)&Buffer[0] + byteOffsetWithinSector);
-                memcpy(bufferAddress, buffer, byteCount);
-            }
-            else UART::out("  \033[31mERROR\033[0m: `read_low_level()` FAILED\r\n");
-        }
-
-        virtual void write(u64 byteOffset, u64 byteCount, u8* buffer) override {
-            UART::out("[TODO]: Implement write()  byteOffset=");
-            UART::out(byteOffset);
-            UART::out(", byteCount=");
-            UART::out(byteCount);
-            UART::out(", buffer=0x");
-            UART::out(to_hexstring(buffer));
-            UART::out("\r\n");
-        }
+        void read(u64 byteOffset, u64 byteCount, u8* buffer) final;
+        void write(u64 byteOffset, u64 byteCount, u8* buffer) final;
 
         u64 port_number() { return PortNumber; }
 
@@ -290,19 +196,11 @@ namespace AHCI {
         const u64 PORT_BUFFER_PAGES = 0x100;
         const u64 PORT_BUFFER_BYTES = PORT_BUFFER_PAGES * 0x1000;
 
-        void start_commands() {
-            // Spin until not busy.
-            while (Port->cmdSts & HBA_PxCMD_CR);
-            Port->cmdSts |= HBA_PxCMD_FRE;
-            Port->cmdSts |= HBA_PxCMD_ST;
-        }
-    
-        void stop_commands() {
-            Port->cmdSts &= ~HBA_PxCMD_ST;
-            Port->cmdSts &= ~HBA_PxCMD_FRE;
-            while (Port->cmdSts & HBA_PxCMD_FR
-                   && Port->cmdSts & HBA_PxCMD_CR);
-        }
+        /// Populate `Buffer` with `sectors` amount of data starting at `sector`.
+        bool read_low_level(u64 sector, u64 sectors);
+
+        void start_commands();
+        void stop_commands();
     };
 }
 
