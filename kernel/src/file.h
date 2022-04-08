@@ -36,8 +36,4 @@ private:
     u64 Minor { 0 };
 };
 
-class FileDescription {
-    File file;
-};
-
 #endif /* LENSOR_OS_FILE_H */

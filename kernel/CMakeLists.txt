@@ -107,6 +107,7 @@ set(
   src/system.h
   src/tss.h
   src/uart.h
+  src/virtual_filesystem.h
   )
 
 set(

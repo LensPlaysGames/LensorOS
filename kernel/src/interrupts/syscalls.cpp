@@ -7,7 +7,7 @@
 
 /// Get a FileDescriptor that may be used in subsequent
 /// syscalls (`read`, `write`, etc) from a file path.
-void sys$open(const char* path, int flags) {
+void sys$open(const char* path, int flags, int mode) {
     /* TODO:
      * |-- Resolve file from path using VFS.
      * `-- Create open file description in system-wide table.
@@ -19,6 +19,8 @@ void sys$open(const char* path, int flags) {
     UART::out(path);
     UART::out(", flags=");
     UART::out(to_string(flags));
+    UART::out(", mode=");
+    UART::out(to_string(mode));
     UART::out("\r\n");
 
     // TODO: Figure out how to return FileDescriptor!
