@@ -1,11 +1,11 @@
 #ifndef LENSOR_OS_CPU_H 
 #define LENSOR_OS_CPU_H
 
-#include "cstr.h"
-#include "integers.h"
-#include "linked_list.h"
-#include "memory.h"
-#include "uart.h"
+#include <cstr.h>
+#include <integers.h>
+#include <linked_list.h>
+#include <memory.h>
+#include <uart.h>
 
 /* System
  * |- Central Processing Unit(s)

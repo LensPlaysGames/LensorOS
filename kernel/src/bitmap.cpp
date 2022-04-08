@@ -1,7 +1,7 @@
-#include "bitmap.h"
+#include <bitmap.h>
 
-#include "integers.h"
-#include "memory.h"
+#include <integers.h>
+#include <memory.h>
 
 Bitmap::Bitmap(u64 size, u8* bufferAddress)
     : Size(size), Buffer(bufferAddress)

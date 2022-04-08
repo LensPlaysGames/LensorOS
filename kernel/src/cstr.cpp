@@ -1,4 +1,4 @@
-#include "cstr.h"
+#include <cstr.h>
 
 bool strcmp(const char* a, const char* b, u64 length) {
     for (u64 i = 0; i < length; ++i) {

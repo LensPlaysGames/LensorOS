@@ -1,16 +1,16 @@
 #ifndef LENSOR_OS_SYSTEM_H
 #define LENSOR_OS_SYSTEM_H
 
-#include "cpu.h"
-#include "fat_definitions.h"
-#include "file.h"
-#include "guid.h"
-#include "integers.h"
-#include "linked_list.h"
-#include "memory/physical_memory_manager.h"
-#include "pure_virtuals.h"
-#include "storage/filesystem_driver.h"
-#include "storage/storage_device_driver.h"
+#include <cpu.h>
+#include <fat_definitions.h>
+#include <file.h>
+#include <filesystem.h>
+#include <guid.h>
+#include <integers.h>
+#include <linked_list.h>
+#include <memory/physical_memory_manager.h>
+#include <storage/filesystem_driver.h>
+#include <storage/storage_device_driver.h>
 
 /* TODO:
  * |-- What to do about duplicate devices? count? unique id?

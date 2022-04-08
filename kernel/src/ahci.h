@@ -1,8 +1,8 @@
 #ifndef LENSOR_OS_AHCI_H
 #define LENSOR_OS_AHCI_H
 
-#include "integers.h"
-#include "system.h"
+#include <integers.h>
+#include <system.h>
 
 /// Size of AHCI Port buffer (how much the hardware reads/writes at a time)
 /// 128mib = 134217700 bytes = 32768 pages = 0x8000

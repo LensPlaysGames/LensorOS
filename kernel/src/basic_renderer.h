@@ -1,9 +1,9 @@
 #ifndef LENSOR_OS_BASIC_RENDERER_H
 #define LENSOR_OS_BASIC_RENDERER_H
 
-#include "integers.h"
-#include "math.h"
-#include "memory.h"
+#include <integers.h>
+#include <math.h>
+#include <memory.h>
 
 struct PSF1_HEADER {
     // Magic bytes to indicate PSF1 font type   

@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_BITMAP_H
 #define LENSOR_OS_BITMAP_H
 
-#include "integers.h"
+#include <integers.h>
 
 class Bitmap {
 public:

@@ -3,7 +3,7 @@
 
 /* Many thanks to osdev wiki: https://wiki.osdev.org/CPUID */
 
-#include "integers.h"
+#include <integers.h>
 
 // Defined in `cpuid.asm`
 extern "C" u64 cpuid_support();

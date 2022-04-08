@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_CSTR_H
 #define LENSOR_OS_CSTR_H
 
-#include "integers.h"
+#include <integers.h>
 
 /* String Compare
  *   Returns `true` only if all characters within 

@@ -1,8 +1,8 @@
 #ifndef LENSOR_OS_FILE_H
 #define LENSOR_OS_FILE_H
 
-#include "integers.h"
-#include "pure_virtuals.h"
+#include <integers.h>
+#include <pure_virtuals.h>
 
 // A FileDescriptor is an index into the kernel's
 // system-wide table of OpenFileDescriptions.

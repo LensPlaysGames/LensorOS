@@ -1,8 +1,8 @@
-#include "ahci.h"
+#include <ahci.h>
 
-#include "cstr.h"
-#include "integers.h"
-#include "uart.h"
+#include <cstr.h>
+#include <integers.h>
+#include <uart.h>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_AHCI

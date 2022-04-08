@@ -1,9 +1,9 @@
-#include "efi_memory.h"
+#include <efi_memory.h>
 
-#include "cstr.h"
-#include "memory.h"
-#include "memory/common.h"
-#include "uart.h"
+#include <cstr.h>
+#include <memory.h>
+#include <memory/common.h>
+#include <uart.h>
 
 namespace Memory {
     const char* EFI_MEMORY_TYPE_STRINGS[] {

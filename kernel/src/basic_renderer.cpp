@@ -1,11 +1,11 @@
-#include "basic_renderer.h"
+#include <basic_renderer.h>
 
-#include "cstr.h"
-#include "integers.h"
-#include "math.h"
-#include "memory/physical_memory_manager.h"
-#include "memory/virtual_memory_manager.h"
-#include "uart.h"
+#include <cstr.h>
+#include <integers.h>
+#include <math.h>
+#include <memory/physical_memory_manager.h>
+#include <memory/virtual_memory_manager.h>
+#include <uart.h>
 
 // Define global renderer for use anywhere within the kernel.
 BasicRenderer gRend;

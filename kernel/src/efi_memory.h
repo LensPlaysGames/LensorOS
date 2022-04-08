@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_EFI_MEMORY_OS
 #define LENSOR_OS_EFI_MEMORY_OS
 
-#include "integers.h"
+#include <integers.h>
 
 // TODO: Move this struct into Memory namespace.
 struct EFI_MEMORY_DESCRIPTOR {

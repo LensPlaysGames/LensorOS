@@ -76,7 +76,7 @@
  *   |- "XENV"  -- Xen Project
  */
 
-#include "integers.h"
+#include <integers.h>
 
 namespace ACPI {
     /* Root System Descriptor Pointer 2.0

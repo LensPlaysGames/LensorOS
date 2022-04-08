@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_FAT_DEFINITIONS_H
 #define LENSOR_OS_FAT_DEFINITIONS_H
 
-#include "integers.h"
+#include <integers.h>
 
 #define FAT_DIRECTORY_SIZE_BYTES 32
 

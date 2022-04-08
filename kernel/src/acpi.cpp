@@ -1,8 +1,8 @@
-#include "acpi.h"
+#include <acpi.h>
 
-#include "cstr.h"
-#include "integers.h"
-#include "uart.h"
+#include <cstr.h>
+#include <integers.h>
+#include <uart.h>
 
 /* Helpful resource: https://github.com/freebsd/freebsd-src/blob/main/usr.sbin/acpi/acpidump/acpi.c */
 
