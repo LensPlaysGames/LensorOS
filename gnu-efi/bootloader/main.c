@@ -235,7 +235,6 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
             kernel->SetPosition(kernel, phdr->p_offset);
             UINTN size = phdr->p_filesz;
             kernel->Read(kernel, &size, (void*)segment);
-            Print(L"LOADED: Kernel Program at %x (%d bytes loaded, %d bytes allocated)\n", segment, size, phdr->p_memsz);
             Print(L"LOADED: Kernel Program at 0x%x (%d bytes loaded, %d bytes allocated)\n", segment, size, phdr->p_memsz);
         }
     }
