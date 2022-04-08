@@ -34,6 +34,7 @@
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
 #include <storage/filesystem_drivers/file_allocation_table.h>
+#include <storage/device_drivers/gpt_partition.h>
 #include <system.h>
 #include <tss.h>
 #include <uart.h>
