@@ -341,23 +341,18 @@ void kstage1(BootInfo* bInfo) {
     SystemCPU->print_debug();
 
     // Initialize Advanced Configuration and Power Management Interface.
-    UART::out("[kstage1]: Initializing ACPI\r\n"
-              "  RSDP: 0x");
-    UART::out(to_hexstring(bInfo->rsdp));
-    UART::out("\r\n");
     ACPI::initialize(bInfo->rsdp);
-    UART::out("[kUtil]: \033[32mACPI initialized\033[0m\r\n");
 
     // Find Memory-mapped ConFiguration Table in order to find PCI devices.
     // Storage devices like AHCIs will be detected here.
-    ACPI::MCFGHeader* mcfg = (ACPI::MCFGHeader*)ACPI::find_table("MCFG");
+    auto* mcfg = (ACPI::MCFGHeader*)ACPI::find_table("MCFG");
     if (mcfg) {
-        UART::out("[kUtil]: Found Memory-mapped Configuration Space\r\n"
+        UART::out("[kstage1]: Found Memory-mapped Configuration Space\r\n"
                   "  Address: 0x");
         UART::out(to_hexstring(mcfg));
         UART::out("\r\n");
         PCI::enumerate_pci(mcfg);
-        UART::out("[kUtil]: \033[32mPCI Prepared\033[0m\r\n");
+        UART::out("[kstage1]: \033[32mPCI Prepared\033[0m\r\n");
     }
 
     /* Probe storage devices
