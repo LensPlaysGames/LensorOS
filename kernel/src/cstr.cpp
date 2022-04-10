@@ -1,5 +1,7 @@
 #include <cstr.h>
 
+const char to_hex_not_supported[] = "TYPE_NOT_SUPPORTED";
+
 bool strcmp(const char* a, const char* b, u64 length) {
     for (u64 i = 0; i < length; ++i) {
         if (*a != *b)

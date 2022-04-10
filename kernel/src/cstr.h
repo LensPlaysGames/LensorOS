@@ -24,7 +24,7 @@ char* to_string(s16);
 char* to_string(s8);
 char* to_string(double, u8 decimalPlaces = 2);
 char* to_hexstring(u64 value, bool capital = false);
-const char to_hex_not_supported[] = "TYPE_NOT_SUPPORTED";
+extern const char to_hex_not_supported[];
 template <typename T>
 char* to_hexstring(T value, bool capital = false) {
     u8 sz = sizeof(T);
