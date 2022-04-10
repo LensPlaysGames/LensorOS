@@ -39,13 +39,12 @@
 #include <tss.h>
 #include <uart.h>
 
-u8 idtr_storage[0x1000];
-
+u8 idt_storage[0x1000];
 void prepare_interrupts() {
     // REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
     remap_pic();
     // CREATE INTERRUPT DESCRIPTOR TABLE.
-    gIDT = IDTR(0x0fff, (u64)&idtr_storage[0]);
+    gIDT = IDTR(0x0fff, (u64)&idt_storage[0]);
     // POPULATE TABLE.
     // NOTE: IRQ0 uses this handler by default, but scheduler over-rides this!
     gIDT.install_handler((u64)system_timer_handler,             PIC_IRQ0);
