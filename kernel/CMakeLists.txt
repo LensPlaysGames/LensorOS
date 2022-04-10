@@ -36,7 +36,7 @@ add_library(
   Interrupts
   src/interrupts/interrupts.cpp
   src/interrupts/interrupts.h
-  )
+)
 target_compile_options(
   Interrupts PRIVATE
   -O3
@@ -46,7 +46,7 @@ target_compile_options(
   -mgeneral-regs-only
   -mno-red-zone
   -c
-  )
+)
 target_include_directories( Interrupts PRIVATE src/ )
 
 add_library(
@@ -57,7 +57,7 @@ add_library(
   src/prekernel.asm
   src/scheduler.asm
   src/userswitch.asm
-  )
+)
 string( APPEND CMAKE_ASM_NASM_COMPILE_OBJECT " -f elf64" )
 
 
@@ -98,7 +98,7 @@ set(
   src/system.cpp
   src/tss.cpp
   src/uart.cpp
-  )
+)
 
 add_executable( Kernel ${KERNEL_SOURCES} )
 set_target_properties( Kernel PROPERTIES OUTPUT_NAME kernel.elf )
@@ -115,7 +115,7 @@ target_compile_options(
   -Wall
   -Wextra
   -Werror
-  )
+)
 target_link_options(
   Kernel PUBLIC
   -T ${CMAKE_SOURCE_DIR}/scripts/kernel.ld
@@ -123,7 +123,7 @@ target_link_options(
   -Bsymbolic
   -nostdlib
   -z max-page-size=0x1000
-  )
+)
 target_include_directories( Kernel PUBLIC src/ )
 target_link_libraries( Kernel PUBLIC Interrupts )
 target_link_libraries( Kernel PUBLIC Assembly )
@@ -133,24 +133,14 @@ add_custom_target(
   EnsureBinDirectory ALL
   COMMAND ${CMAKE_COMMAND} -E make_directory
   ${CMAKE_SOURCE_DIR}/bin
-  )
+)
 # Copy contents of the resources directory into the final binary directory.
 add_custom_command(
   TARGET EnsureBinDirectory POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
   ${CMAKE_SOURCE_DIR}/res
   ${CMAKE_SOURCE_DIR}/bin
-  )
-
-# Copy the generated `compile_commands.json` to the project
-# root directory in order for language servers like `clangd`
-# or `ccls` to detect it automatically even in out-of-source builds.
-add_custom_target(
-  CopyCompileCommands ALL
-  COMMAND ${CMAKE_COMMAND} -E copy
-  ${CMAKE_BINARY_DIR}/compile_commands.json
-  ${CMAKE_SOURCE_DIR}/../compile_commands.json
-  )
+)
 
 # When using a Canadian Cross LensorOS Toolchain, the sysroot
 # is often different than what it is during the toolchain build.
@@ -159,9 +149,9 @@ if ( CMAKE_HOST_WIN32 )
   target_compile_options(
     Interrupts PRIVATE
     --sysroot=${CMAKE_SOURCE_DIR}\\..\\root
-    )
+  )
   target_compile_options(
     Kernel PUBLIC
     --sysroot=${CMAKE_SOURCE_DIR}\\..\\root
-    )
+  )
 endif ()
