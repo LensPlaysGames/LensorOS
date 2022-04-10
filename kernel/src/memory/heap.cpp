@@ -91,7 +91,6 @@ void init_heap() {
     firstSegment->last = nullptr;
     firstSegment->free = true;
     sLastHeader = firstSegment;
-
     UART::out("[Heap]: \033[32mInitialized\033[0m\r\n  Virtual Address: 0x");
     UART::out(to_hexstring<void*>(sHeapStart));
     UART::out(" thru 0x");
@@ -182,15 +181,16 @@ void* malloc(u64 numBytes) {
 void free(void* address) {
     HeapSegmentHeader* segment = (HeapSegmentHeader*)((u64)address - sizeof(HeapSegmentHeader));
 #ifdef DEBUG_HEAP
-    u64 len = segment->length;
+    UART::out("[Heap]: free() -- address=0x");
+    UART::out(to_hexstring(address));
+    UART::out(", numBytes=");
+    UART::out(segment->length);
+    UART::out("\r\n");
 #endif /* DEBUG_HEAP */
     segment->free = true;
     segment->combine_forward();
     segment->combine_backward();
 #ifdef DEBUG_HEAP
-    UART::out("[Heap]: free() -- numBytes=");
-    UART::out(len);
-    UART::out("\r\n");
     heap_print_debug();
 #endif /* DEBUG_HEAP */
 }
@@ -198,28 +198,41 @@ void free(void* address) {
 void heap_print_debug() {
     // TODO: Interesting information, like average allocation
     //       size, number of malloc vs free calls, etc.
-    UART::out("[Heap]: Debug information dump:\r\n  Size: ");
+    UART::out("[Heap]: Debug information dump:\r\n"
+              "Size: ");
     UART::out(TO_KiB((u64)sHeapEnd - (u64)sHeapStart));
-    UART::out("KiB\r\n  Start: 0x");
+    UART::out("KiB\r\n"
+              "Start: 0x");
     UART::out(to_hexstring(sHeapStart));
-    UART::out("\r\n  End: 0x");
+    UART::out("\r\n"
+              "End: 0x");
     UART::out(to_hexstring(sHeapEnd));
-    UART::out("\r\n  Regions:");
+    UART::out("\r\n"
+              "Regions:\r\n");
     u64 i = 0;
     HeapSegmentHeader* it = (HeapSegmentHeader*)sHeapStart;
     do {
-        UART::out("\r\n    Region ");
+        UART::out("    Region ");
         UART::out(i);
-        UART::out(":\r\n      Free: ");
+        UART::out(":\r\n"
+                  "      Free: ");
         UART::out(to_string(it->free));
-        UART::out("\r\n      Address: 0x");
-        UART::out(to_hexstring<HeapSegmentHeader*>(it));
-        UART::out("\r\n      Length: ");
+        UART::out("\r\n"
+                  "      Length: ");
         UART::out(it->length);
+        UART::out(" (");
+        UART::out(it->length + sizeof(HeapSegmentHeader));
+        UART::out(")\r\n"
+                  "      Header Address: 0x");
+        UART::out(to_hexstring(it));
+        UART::out("\r\n"
+                  "      Payload Address: 0x");
+        UART::out(to_hexstring((u64)it + sizeof(HeapSegmentHeader)));
+        UART::out("\r\n");
         ++i;
         it = it->next;
     } while (it);
-    UART::out("\r\n\r\n");
+    UART::out("\r\n");
 }
 
 void* operator new   (u64 numBytes) { return malloc(numBytes); }
