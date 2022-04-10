@@ -122,6 +122,7 @@ target_link_options(
   -static
   -Bsymbolic
   -nostdlib
+  -z max-page-size=0x1000
   )
 target_include_directories( Kernel PUBLIC src/ )
 target_link_libraries( Kernel PUBLIC Interrupts )

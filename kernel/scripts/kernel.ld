@@ -3,11 +3,11 @@ ENTRY(_start)
 SECTIONS
 {
     /* TODO: MOVE KERNEL TO 1MB PHYSICALLY */
-    KERNEL_PHYSICAL = 0x0;
+    KERNEL_PHYSICAL = 0x100000;
     KERNEL_VIRTUAL = 0xffffffff80000000;
     . = KERNEL_PHYSICAL + KERNEL_VIRTUAL;
     KERNEL_START = .;
-    .text : AT(ADDR(.text) - KERNEL_VIRTUAL)
+    .text ALIGN (0x1000) : AT(ADDR(.text) - KERNEL_VIRTUAL)
     {
         TEXT_START = .;
         *(.text*)
@@ -15,8 +15,7 @@ SECTIONS
         TEXT_END = .;
     }
 
-    . = ALIGN(0x1000);
-    .data : AT(ADDR(.data) - KERNEL_VIRTUAL)
+    .data ALIGN (0x1000) : AT(ADDR(.data) - KERNEL_VIRTUAL)
     {
         DATA_START = .;
         *(.data*)
@@ -24,18 +23,15 @@ SECTIONS
         DATA_END = .;
     }
 
-    . = ALIGN(0x1000);
-    .rodata : AT(ADDR(.rodata) - KERNEL_VIRTUAL)
+    .rodata ALIGN (0x1000) : AT(ADDR(.rodata) - KERNEL_VIRTUAL)
     {
         READ_ONLY_DATA_START = .;
-
         *(.rodata*)
         *(.gnu.linkonce.r*)
         READ_ONLY_DATA_END = .;
     }
 
-    . = ALIGN(0x1000);
-    .bss : AT(ADDR(.bss) - KERNEL_VIRTUAL)
+    .bss ALIGN (0x1000) : AT(ADDR(.bss) - KERNEL_VIRTUAL)
     {
         BLOCK_STARTING_SYMBOLS_START = .;
         *(COMMON)

@@ -6,10 +6,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define KERNEL_PHYSICAL 0x100000
 #define KERNEL_VIRTUAL  0xffffffff80000000
 
 EFI_HANDLE        gImageHandle;
 EFI_SYSTEM_TABLE* gSystemTable;
+EFI_BOOT_SERVICES* gBootServices;
 
 int memcmp (const void* aptr, const void* bptr, size_t n) {
     const unsigned char* a = aptr;
@@ -37,19 +39,15 @@ EFI_FILE* LoadFile(EFI_FILE* dir, CHAR16* path) {
     EFI_FILE* loadedFile;
     static EFI_LOADED_IMAGE_PROTOCOL* loadedImage;
     if (loadedImage == NULL) {
-        gSystemTable
-            ->BootServices
-            ->HandleProtocol(gImageHandle,
-                             &gEfiLoadedImageProtocolGuid,
-                             (void**)&loadedImage);
+        gBootServices->HandleProtocol(gImageHandle,
+                                      &gEfiLoadedImageProtocolGuid,
+                                      (void**)&loadedImage);
     }
     static EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fileSystem;
     if (fileSystem == NULL) {
-        gSystemTable
-            ->BootServices
-            ->HandleProtocol(loadedImage->DeviceHandle,
-                             &gEfiSimpleFileSystemProtocolGuid,
-                             (void**)&fileSystem);
+        gBootServices->HandleProtocol(loadedImage->DeviceHandle,
+                                      &gEfiSimpleFileSystemProtocolGuid,
+                                      (void**)&fileSystem);
     }
     if (dir == NULL) {
         fileSystem->OpenVolume(fileSystem, &dir);
@@ -91,7 +89,14 @@ PSF1_FONT* LoadPSF1Font(EFI_FILE* dir, CHAR16* path) {
     if (font == NULL) { return NULL; }
 
     PSF1_HEADER* font_hdr;
-    gSystemTable->BootServices->AllocatePool(EfiLoaderData, sizeof(PSF1_HEADER), (void**)&font_hdr);
+    gBootServices->AllocatePool(EfiLoaderData
+                                , sizeof(PSF1_HEADER)
+                                , (VOID**)&font_hdr);
+    if (font_hdr == 0) {
+        Print(L"ERROR: Failed to allocate pool for PSF1 font header.\n");
+        return NULL;
+    }
+
     UINTN size = sizeof(PSF1_HEADER);
     font->Read(font, &size, font_hdr);
 
@@ -103,20 +108,30 @@ PSF1_FONT* LoadPSF1Font(EFI_FILE* dir, CHAR16* path) {
     }
 
     UINTN glyphBufferSize = font_hdr->CharacterSize * 256;
+    // FIXME: This value checked against Mode may be wrong.
     if (font_hdr->Mode == 1) {
         // 512 glyph mode
         glyphBufferSize  = font_hdr->CharacterSize * 512;
     }
 
     // Read glyph buffer from font file after header
-    void* glyphBuffer;
-    // Eat header
+    VOID* glyphBuffer = NULL;
+    gBootServices->AllocatePool(EfiLoaderData
+                                , glyphBufferSize
+                                , &glyphBuffer);
+    if (glyphBuffer == NULL) {
+        Print(L"ERROR: Failed to allocate pool for PSF1 font glyph buffer.\n");
+        return NULL;
+    }
     font->SetPosition(font, sizeof(PSF1_HEADER));
-    gSystemTable->BootServices->AllocatePool(EfiLoaderData, glyphBufferSize, (void**)&glyphBuffer);
     font->Read(font, &glyphBufferSize, glyphBuffer);
 
-    PSF1_FONT* final_font;
-    gSystemTable->BootServices->AllocatePool(EfiLoaderData, sizeof(PSF1_FONT), (void**)&final_font);
+    PSF1_FONT* final_font = NULL;
+    gBootServices->AllocatePool(EfiLoaderData, sizeof(PSF1_FONT), (VOID**)&final_font);
+    if (final_font == NULL) {
+        Print(L"ERROR: Failed to allocate pool for final PSF1 font.\n");
+        return NULL;
+    }
     final_font->PSF1_Header = font_hdr;
     final_font->GlyphBuffer = glyphBuffer;
     return final_font;
@@ -127,7 +142,7 @@ Framebuffer* InitializeGOP() {
     EFI_GUID gopGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
     EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
     EFI_STATUS status;
- 
+
     status = uefi_call_wrapper(BS->LocateProtocol, 3, &gopGuid, NULL, (void**)&gop);
     if(EFI_ERROR(status)) {
         Print(L"ERROR: Unable to locate Graphics Output Protocol\n");
@@ -155,6 +170,7 @@ typedef struct {
 EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     gImageHandle = IH;
     gSystemTable = ST;
+    gBootServices = gSystemTable->BootServices;
     
     InitializeLib(gImageHandle, gSystemTable);
 
@@ -214,28 +230,48 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     }
     Print(L"Kernel format verified successfully\n");
 
-    // Find and load ELF program header from loaded and verified kernel's ELF header.
+    // Load ELF program header table.
     Elf64_Phdr* program_hdrs;
     kernel->SetPosition(kernel, elf_header.e_phoff);
     UINTN programHeaderTableSize = elf_header.e_phnum * elf_header.e_phentsize;
-    gSystemTable->BootServices->AllocatePool(EfiLoaderData, programHeaderTableSize, (void**)&program_hdrs);
+    gBootServices->AllocatePool(EfiLoaderData
+                                , programHeaderTableSize
+                                , (void**)&program_hdrs);
+    if (program_hdrs == 0) {
+        Print(L"ERROR: Failed to allocate memory for kernel program headers table.\n");
+        return 1;
+    }
     kernel->Read(kernel, &programHeaderTableSize, program_hdrs);
-
-    // There is usually only ever one program header, but just in case I'll check all that exist.
+    // Load every program header marked as such.
     for (
         Elf64_Phdr* phdr = program_hdrs;
         (char*)phdr < (char*)program_hdrs + elf_header.e_phnum * elf_header.e_phentsize;
         phdr = (Elf64_Phdr*)((char*)phdr + elf_header.e_phentsize))
     {
         if (phdr->p_type == PT_LOAD) {
-            // Allocate pages for program
-            int pages = (phdr->p_memsz + 0x1000 - 1) / 0x1000;
+            /* TODO: Allocate any pages for kernel, not just a fixed address.
+             *       This would require setting up paging in the 
+             *       bootloader and not the prekernel, though.
+             */
+            unsigned pages = (phdr->p_memsz + 0x1000 - 1) / 0x1000;
             Elf64_Addr segment = phdr->p_paddr;
-            gSystemTable->BootServices->AllocatePages(AllocateAddress, EfiLoaderData, pages, &segment);
+            EFI_MEMORY_TYPE MemoryType = EfiLoaderData;
+            if (phdr->p_flags & PF_X)
+                MemoryType = EfiLoaderCode;
+
+            do {
+                gBootServices->AllocatePages(AllocateAddress
+                                             , MemoryType
+                                             , pages, &segment);
+            }
+            while (segment == 0);
+            gBootServices->SetMem((VOID*)segment, phdr->p_memsz, 0);
             kernel->SetPosition(kernel, phdr->p_offset);
-            UINTN size = phdr->p_filesz;
-            kernel->Read(kernel, &size, (void*)segment);
-            Print(L"LOADED: Kernel Program at 0x%x (%d bytes loaded, %d bytes allocated)\n", segment, size, phdr->p_memsz);
+            UINTN fileSize = phdr->p_filesz;
+            kernel->Read(kernel, &fileSize, (VOID*)segment);
+            Print(L"LOADED: Kernel Program at 0x%x "
+                  "(%d bytes loaded, %d bytes allocated)\n"
+                  , segment, fileSize, phdr->p_memsz);
         }
     }
     Print(L"Kernel loaded successfully\n");
@@ -248,10 +284,10 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
           L"  Pixel Width: %d\n"
           L"  Pixel Height: %d\n"
           L"  Pixels Per Scanline: %d\n",
-          gop_fb->BaseAddress, 
-          gop_fb->BufferSize, 
-          gop_fb->PixelWidth, 
-          gop_fb->PixelHeight, 
+          gop_fb->BaseAddress,
+          gop_fb->BufferSize,
+          gop_fb->PixelWidth,
+          gop_fb->PixelHeight,
           gop_fb->PixelsPerScanLine);
 
     // Load EFI Memory map to pass to kernel.
@@ -259,9 +295,11 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     UINTN MapSize, MapKey;
     UINTN DescriptorSize;
     UINT32 DescriptorVersion;
-    gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
-    gSystemTable->BootServices->AllocatePool(EfiLoaderData, MapSize, (void**)&Map);
-    gSystemTable->BootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
+    gBootServices->GetMemoryMap(&MapSize, Map, &MapKey
+                                , &DescriptorSize, &DescriptorVersion);
+    gBootServices->AllocatePool(EfiLoaderData, MapSize, (void**)&Map);
+    gBootServices->GetMemoryMap(&MapSize, Map, &MapKey
+                                , &DescriptorSize, &DescriptorVersion);
     Print(L"EFI memory map successfully parsed\n");
 
     // ACPI 2.0
@@ -300,10 +338,14 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     info.mapDescSize = DescriptorSize;
     info.RSDP = rsdp;
 
+    Print(L"Kernel entry point: 0x%x\n", elf_header.e_entry);
+    Print(L"Calculated kernel entry point: 0x%x\n"
+          , elf_header.e_entry - KERNEL_VIRTUAL);
+
     // Exit boot services: free system resources dedicated to UEFI boot services,
     //   as well as prevent UEFI from shutting down automatically after 5 minutes.
     Print(L"Exiting boot services\n");
-    gSystemTable->BootServices->ExitBootServices(gImageHandle, MapKey);
+    gBootServices->ExitBootServices(gImageHandle, MapKey);
 
     // Define kernel entry point.
     void (*KernelStart)(BootInfo*) = ((__attribute__((sysv_abi)) void (*)(BootInfo*)) elf_header.e_entry - KERNEL_VIRTUAL);
