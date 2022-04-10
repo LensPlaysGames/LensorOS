@@ -1,5 +1,14 @@
+#include <pci.h>
+
 #include <cstr.h>
 #include <integers.h>
+
+/* TODO:
+ * |-- This entire file needs to be refactored for better optimization
+ * |    with static container lookup vs dynamic resolution.
+ * `- Daily snapshots of up to date PCI IDs here: https://pci-ids.ucw.cz/
+ *    `-- Methinks it possible to automate generation of ID -> string code.
+ */
 
 namespace PCI {
     const char* DeviceClasses[] {
@@ -13,7 +22,7 @@ namespace PCI {
         "Simple Communication Controller",
         "Base System Peripheral",
         "Input Device Controller",
-        "Docking Station", 
+        "Docking Station",
         "Processor",
         "Serial Bus Controller",
         "Wireless Controller",
@@ -27,14 +36,20 @@ namespace PCI {
 
     const char* get_vendor_name(u16 vendorID) {
         switch (vendorID) {
-        case 0x8086:
-            return "Intel Corp";
-        case 0x1022:
-            return "AMD";
-        case 0x10DE:
-            return "NVIDIA Corporation";
         case 0x1013:
             return "Cirrus Logic";
+        case 0x1022:
+            return "AMD";
+        case 0x106b:
+            return "Apple Inc.";
+        case 0x10de:
+            return "NVIDIA Corporation";
+        case 0x1217:
+            return "O2 Micro, Inc.";
+        case 0x8086:
+            return "Intel Corp";
+        case 0x80ee:
+            return "InnoTek Systemberatung GmbH";
         default:
             return to_hexstring<u16>(vendorID);
         }
@@ -42,33 +57,33 @@ namespace PCI {
 
     const char* get_device_name(u16 vendorID, u16 deviceID) {
         switch (vendorID) {
-        case 0x8086:
-            // Intel Corp
+        case 0x1013:
+            // Cirrus Logic
             switch (deviceID) {
-            case 0x2918:
-                return "82801IB (ICH9) LPC Interface Controller";
-            case 0x2922:
-                return "82801IR/IO/IH (ICH9R/DO/DH) 6 port SATA Controller [AHCI mode]";
-            case 0x2930:
-                return "82801I (ICH9 Family) SMBus Controller";
-            case 0x293e:
-                return "82801I (ICH9 Family) HD Audio Controller";
-            case 0x29c0:
-                return "82G33/G31/P35/P31 Express DRAM Controller";
-            case 0xa202:
-                return "Lewisburg SATA Controller [AHCI mode]";
-            case 0xa206:
-                return "Lewisburg SATA Controller [RAID mode]";
-            case 0xa252:
-                return "Lewisburg SSATA Controller [AHCI mode]";
-            case 0xa256:
-                return "Lewisburg SSATA Controller [RAID mode]";
-            case 0xa282:
-                return "200 Series PCH SATA controller [AHCI mode]";
-            case 0xa286:
-                return "200 Series PCH SATA controller [RAID mode]";
-            case 0xa382:
-                return "400 Series Chipset Family SATA AHCI Controller";
+            case 0x0038:
+                return "GD 7548";
+            case 0x0040:
+                return "GD 7555 Flat Panel GUI Accelerator";
+            case 0x004c:
+                return "GD 7556 Video/Graphics LCD/CRT Ctrlr";
+            case 0x00a0:
+                return "GD 5430/40 [Alpine]";
+            case 0x00a2:
+                return "GD 5432 [Alpine]";
+            case 0x00a4:
+                return "GD 5436-4 [Alpine]";
+            case 0x00a8:
+                return "GD 5436-8 [Alpine]";
+            case 0x00ac:
+                return "GD 5436 [Alpine]";
+            case 0x00b0:
+                return "GD 5440";
+            case 0x00b8:
+                return "GD 5446";
+            case 0x00bc:
+                return "GD 5480";
+            case 0x00d0:
+                return "GD 5462";
             default:
                 return to_hexstring<u16>(deviceID);
             }
@@ -100,39 +115,219 @@ namespace PCI {
             default:
                 return to_hexstring<u16>(deviceID);
             }
-        case 0x10DE:
+        case 0x106b:
+            // Apple Inc.
+            switch (deviceID) {
+            case 0x0001:
+                return "Bandit PowerPC host bridge";
+            case 0x0002:  
+                return "Grand Central I/O";
+            case 0x0003:  
+                return "Control Video";
+            case 0x0004:  
+                return "PlanB Video-In";
+            case 0x0007:  
+                return "O'Hare I/O";
+            case 0x000b:  
+                return "Apple Camera";
+            case 0x000c:  
+                return "DOS on Mac";
+            case 0x000e:  
+                return "Hydra Mac I/O";
+            case 0x0010:  
+                return "Heathrow Mac I/O";
+            case 0x0017:  
+                return "Paddington Mac I/O";
+            case 0x0018:  
+                return "UniNorth FireWire";
+            case 0x0019:  
+                return "KeyLargo USB";
+            case 0x001e:  
+                return "UniNorth Internal PCI";
+            case 0x001f:  
+                return "UniNorth PCI";
+            case 0x0020:  
+                return "UniNorth AGP";
+            case 0x0021:  
+                return "UniNorth GMAC (Sun GEM)";
+            case 0x0022:  
+                return "KeyLargo Mac I/O";
+            case 0x0024:  
+                return "UniNorth/Pangea GMAC (Sun GEM)";
+            case 0x0025:  
+                return "KeyLargo/Pangea Mac I/O";
+            case 0x0026:  
+                return "KeyLargo/Pangea USB";
+            case 0x0027:  
+                return "UniNorth/Pangea AGP";
+            case 0x0028:  
+                return "UniNorth/Pangea PCI";
+            case 0x0029:  
+                return "UniNorth/Pangea Internal PCI";
+            case 0x002d:  
+                return "UniNorth 1.5 AGP";
+            case 0x002e:  
+                return "UniNorth 1.5 PCI";
+            case 0x002f:  
+                return "UniNorth 1.5 Internal PCI";
+            case 0x0030:  
+                return "UniNorth/Pangea FireWire";
+            case 0x0031:  
+                return "UniNorth 2 FireWire";
+            case 0x0032:  
+                return "UniNorth 2 GMAC (Sun GEM)";
+            case 0x0033:  
+                return "UniNorth 2 ATA/100";
+            case 0x0034:  
+                return "UniNorth 2 AGP";
+            case 0x0035:  
+                return "UniNorth 2 PCI";
+            case 0x0036:  
+                return "UniNorth 2 Internal PCI";
+            case 0x003b:  
+                return "UniNorth/Intrepid ATA/100";
+            case 0x003e:  
+                return "KeyLargo/Intrepid Mac I/O";
+            case 0x003f:  
+                return "KeyLargo/Intrepid USB";
+            case 0x0040:  
+                return "K2 KeyLargo USB";
+            case 0x0041:  
+                return "K2 KeyLargo Mac/IO";
+            case 0x0042:  
+                return "K2 FireWire";
+            case 0x0043:  
+                return "K2 ATA/100";
+            case 0x0045:  
+                return "K2 HT-PCI Bridge";
+            case 0x0046:  
+                return "K2 HT-PCI Bridge";
+            case 0x0047:  
+                return "K2 HT-PCI Bridge";
+            case 0x0048:  
+                return "K2 HT-PCI Bridge";
+            case 0x0049:  
+                return "K2 HT-PCI Bridge";
+            case 0x004a:  
+                return "CPC945 HT Bridge";
+            case 0x004b:  
+                return "U3 AGP";
+            case 0x004c:  
+                return "K2 GMAC (Sun GEM)";
+            case 0x004f:  
+                return "Shasta Mac I/O";
+            case 0x0050:
+                return "Shasta IDE";
+            case 0x0051:
+                return "Shasta (Sun GEM)";
+            case 0x0052:
+                return "Shasta Firewire";
+            case 0x0053:
+                return "Shasta PCI Bridge";
+            case 0x0054:
+                return "Shasta PCI Bridge";
+            case 0x0055:
+                return "Shasta PCI Bridge";
+            case 0x0056:
+                return "U4 PCIe";
+            case 0x0057:
+                return "U3 HT Bridge";
+            case 0x0058:
+                return "U3L AGP Bridge";
+            case 0x0059:
+                return "U3H AGP Bridge";
+            case 0x005b:
+                return "CPC945 PCIe Bridge";
+            case 0x0066:
+                return "Intrepid2 AGP Bridge";
+            case 0x0067:
+                return "Intrepid2 PCI Bridge";
+            case 0x0068:
+                return "Intrepid2 PCI Bridge";
+            case 0x0069:
+                return "Intrepid2 ATA/100";
+            case 0x006a:
+                return "Intrepid2 Firewire";
+            case 0x006b:
+                return "Intrepid2 GMAC (Sun GEM)";
+            case 0x0074:
+                return "U4 HT Bridge";
+            case 0x1645:
+                return "Broadcom NetXtreme BCM5701 Gigabit Ethernet";
+            case 0x1801:
+                return "T2 Bridge Controller";
+            case 0x1802:
+                return "T2 Secure Enclave Processor";
+            case 0x1803:
+                return "Apple Audio Device";
+            case 0x2001:
+                return "S1X NVMe Controller";
+            case 0x2002:
+                return "S3ELab NVMe Controller";
+            case 0x2003:
+                return "S3X NVMe Controller";
+            case 0x2005:
+                return "ANS2 NVMe Controller";
+            default:
+                return to_hexstring<u16>(deviceID);
+            }
+        case 0x10de:
             // NVIDIA Corporation
             switch (deviceID) {
             default:
                 return to_hexstring<u16>(deviceID);
             }
-        case 0x1013:
-            // Cirrus Logic
+        case 0x1217:
+            // O2 Micro, Inc.
             switch (deviceID) {
-            case 0x0038:
-                return "GD 7548";
-            case 0x0040:
-                return "GD 7555 Flat Panel GUI Accelerator";
-            case 0x004c:
-                return "GD 7556 Video/Graphics LCD/CRT Ctrlr";
-            case 0x00a0:
-                return "GD 5430/40 [Alpine]";
-            case 0x00a2:
-                return "GD 5432 [Alpine]";
-            case 0x00a4:
-                return "GD 5436-4 [Alpine]";
-            case 0x00a8:
-                return "GD 5436-8 [Alpine]";
-            case 0x00ac:
-                return "GD 5436 [Alpine]";
-            case 0x00b0:
-                return "GD 5440";
-            case 0x00b8:
-                return "GD 5446";
-            case 0x00bc:
-                return "GD 5480";
-            case 0x00d0:
-                return "GD 5462";
+            case 0x7113:
+                return "OZ711EC1 SmartCardBus Controller";
+            default:
+                return to_hexstring<u16>(deviceID);
+            }
+        case 0x8086:
+            // Intel Corp
+            switch (deviceID) {
+            case 0x2415:
+                return "82801AA AC'97 Audio Controller";
+            case 0x27b9:
+                return "82801GBM (ICH7-M) LPC Interface Bridge";
+            case 0x2829:
+                return "82801HM/HEM (ICH8M/ICH8M-E) SATA Controller [AHCI mode]";
+            case 0x2918:
+                return "82801IB (ICH9) LPC Interface Controller";
+            case 0x2922:
+                return "82801IR/IO/IH (ICH9R/DO/DH) 6 port SATA Controller [AHCI mode]";
+            case 0x2930:
+                return "82801I (ICH9 Family) SMBus Controller";
+            case 0x293e:
+                return "82801I (ICH9 Family) HD Audio Controller";
+            case 0x29c0:
+                return "82G33/G31/P35/P31 Express DRAM Controller";
+            case 0xa202:
+                return "Lewisburg SATA Controller [AHCI mode]";
+            case 0xa206:
+                return "Lewisburg SATA Controller [RAID mode]";
+            case 0xa252:
+                return "Lewisburg SSATA Controller [AHCI mode]";
+            case 0xa256:
+                return "Lewisburg SSATA Controller [RAID mode]";
+            case 0xa282:
+                return "200 Series PCH SATA controller [AHCI mode]";
+            case 0xa286:
+                return "200 Series PCH SATA controller [RAID mode]";
+            case 0xa382:
+                return "400 Series Chipset Family SATA AHCI Controller";
+            default:
+                return to_hexstring<u16>(deviceID);
+            }
+        case 0x80ee:
+            // InnoTek Systemberatung GmbH
+            switch (deviceID) {
+            case 0xbeef:
+                return "VirtualBox Graphics Adapter";
+            case 0xcafe:
+                return "VirtualBox Guest Service";
             default:
                 return to_hexstring<u16>(deviceID);
             }

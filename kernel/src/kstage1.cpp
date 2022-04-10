@@ -333,6 +333,7 @@ void kstage1(BootInfo* bInfo) {
         else UART::out("  \033[31mXSAVE Not Supported\033[0m\r\n");
         UART::out("\r\n");
     }
+    UART::out("\r\n");
 
     // TODO: Parse CPUs from ACPI MADT table.
     //       For now we only support single core.
@@ -352,21 +353,24 @@ void kstage1(BootInfo* bInfo) {
         UART::out(to_hexstring(mcfg));
         UART::out("\r\n");
         PCI::enumerate_pci(mcfg);
-        UART::out("[kstage1]: \033[32mPCI Prepared\033[0m\r\n");
     }
 
     /* Probe storage devices
-     * Most storage devices handle multiple storage media hardware devices;
-     * for example, AHCI has multiple ports, each one referring to its own device.
-     * In order for StorageDeviceDriver to keep consistent parameters to read/write,
-     * a new system device is created for each with the StorageMediaDriver address at Data1.
+     *
+     * Most storage devices handle multiple
+     * storage media hardware devices; for example,
+     * a single AHCI controller has multiple ports,
+     * each one referring to its own device.
+     *
+     * TODO: Write more efficient container types.
+     * FIXME: Don't use singly linked lists for everything.
      */
     SYSTEM->devices().for_each([](auto* it){
         SystemDevice& dev = it->value();
         if (dev.major() == SYSDEV_MAJOR_STORAGE
             && dev.minor() == SYSDEV_MINOR_AHCI_CONTROLLER)
         {
-            UART::out("[SYSTEM]: Probing AHCI Controller\r\n");
+            UART::out("[kstage1]: Probing AHCI Controller\r\n");
             AHCI::HBAMemory* ABAR = (AHCI::HBAMemory*)(u64)(((PCI::PCIHeader0*)dev.data2())->BAR5);
             // TODO: Better MMIO!! It should be separate from regular virtual mappings, I think.
             Memory::map(ABAR, ABAR);

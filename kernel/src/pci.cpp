@@ -69,7 +69,8 @@ namespace PCI {
 
 #ifdef DEBUG_PCI
         // TODO: Cache human readable information with device in device tree.
-        UART::out("      Function at 0x");
+        UART::out("\r\n"
+                  "      Function at 0x");
         UART::out(to_hexstring(function_address));
         UART::out(": ");
         UART::out(get_vendor_name(pciDevHdr->VendorID));
@@ -81,7 +82,7 @@ namespace PCI {
         UART::out(get_subclass_name(pciDevHdr->Class, pciDevHdr->Subclass));
         UART::out(" / ");
         UART::out(get_prog_if_name(pciDevHdr->Class, pciDevHdr->Subclass, pciDevHdr->ProgIF));
-        UART::out("\r\n");
+        UART::out("\r\n\r\n");
 #endif /* DEBUG_PCI */
 
         // Class 0x01 = Mass Storage Controller
@@ -143,6 +144,7 @@ namespace PCI {
         UART::out("  Found ");
         UART::out(to_string(entries));
         UART::out(" MCFG entries\r\n");
+        u64 systemDeviceLengthBefore = SYSTEM->devices().length();
 #endif /* DEBUG_PCI */
         for (int t = 0; t < entries; ++t) {
             ACPI::DeviceConfig* devCon = (ACPI::DeviceConfig*)((u64)mcfg + sizeof(ACPI::MCFGHeader)
@@ -165,5 +167,12 @@ namespace PCI {
                 enumerate_bus(devCon->BaseAddress, bus);
             }
         }
+#ifdef DEBUG_PCI
+        u64 systemDeviceLengthAfter = SYSTEM->devices().length();
+        UART::out("[PCI]: Found ");
+        UART::out(systemDeviceLengthAfter - systemDeviceLengthBefore);
+        UART::out(" device(s)\r\n");
+#endif /* DEBUG_PCI */
+        UART::out("  \033[32mDone\033[0m\r\n\r\n");
     }
 }
