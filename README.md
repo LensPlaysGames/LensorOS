@@ -240,6 +240,8 @@ There are three steps to building LensorOS:
 
 On Windows, use the Windows Subsystem for Linux
   (WSL) to emulate Linux exactly, no drawbacks. \
+[See this walkthrough](https://docs.microsoft.com/en-us/windows/wsl/filesystems#mixing-linux-and-windows-commands) on how easy it is to interweave and communicate between Linux and Windows processes.
+
 If you don't want to use WSL, you'll need pre-built
   binaries of a [Canadian Cross](https://wiki.osdev.org/Canadian_Cross)
   LensorOS Toolchain, the bootloader, and
