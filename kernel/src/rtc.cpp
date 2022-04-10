@@ -52,14 +52,14 @@ void RTC::update_data() {
         while (is_rtc_updating() != 0);
         get_rtc_data(Time);
     }
-    while ((newTime.second     != Time.second)
-           || (newTime.minute  != Time.minute)
-           || (newTime.hour    != Time.hour)
-           || (newTime.weekday != Time.weekday)
-           || (newTime.date    != Time.date)
-           || (newTime.month   != Time.month)
-           || (newTime.year    != Time.year)
-           || (newTime.century != Time.century));
+    while (newTime.second     != Time.second
+           || newTime.minute  != Time.minute
+           || newTime.hour    != Time.hour
+           || newTime.weekday != Time.weekday
+           || newTime.date    != Time.date
+           || newTime.month   != Time.month
+           || newTime.year    != Time.year
+           || newTime.century != Time.century);
 
     u8 statusB = read_register(0x0b);
 
