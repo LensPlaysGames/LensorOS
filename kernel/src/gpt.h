@@ -124,8 +124,12 @@ namespace GPT {
         inline u64 size_in_sectors() { return EndLBA - StartLBA; }
 
         /* Attributes  */
-        inline bool required_by_platform() { return Attributes & (1 << PartitionAttributesBits::PlatformRequired); }
-        inline bool should_ignore() { return Attributes & (1 << PartitionAttributesBits::Ignore); }
+        inline bool required_by_platform() {
+            return Attributes & (1 << PartitionAttributesBits::PlatformRequired);
+        }
+        inline bool should_ignore() {
+            return Attributes & (1 << PartitionAttributesBits::Ignore);
+        }
     } __attribute__((packed));;
 
     bool is_gpt_present(StorageDeviceDriver* driver);
