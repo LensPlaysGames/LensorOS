@@ -19,7 +19,7 @@ namespace GPT {
         }
 
         SmartPtr<Header> hdr = SmartPtr<Header>(new Header);
-        driver->read(512, 512, (u8*)hdr.get());
+        driver->read(512, sizeof(Header), (u8*)hdr.get());
         // Validate GPT Header
         if (hdr->Revision == 0) {
 #ifdef DEBUG_GPT
