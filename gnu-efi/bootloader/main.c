@@ -309,22 +309,18 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     for (UINTN index = 0; index < gSystemTable->NumberOfTableEntries; index++) {
         if (CompareGuid(&ConfigTable[index].VendorGuid, &ACPI2TableGuid)) {
             if (strcmp((CHAR8*)"RSD PTR ", (CHAR8*)ConfigTable->VendorTable, 8)) {
-                Print(L"Found Root System Descriptor Pointer (RSDP) Table 2.0");
+                Print(L"Found Root System Descriptor Pointer (RSDP) Table 2.0:\n"
+                      L"  Address: 0x%x\n", (void*)ConfigTable->VendorTable);
                 UINTN sum = 0;
-                // Validate checksum
+                // Validate checksum.
                 // RSDP2.0 table = 36 bytes, trailing three are reserved (not included).
                 for (UINT8 i = 0; i < 33; ++i)
                     sum += *((UINT8*)ConfigTable->VendorTable + i);
 
                 UINT8 checksum = (UINT8)sum;
-                if ((UINT8)checksum != 0) {
-                    Print(L", but checksum is invalid (expecting zero)!\n");
-                    Print(L"  Checksum: %d\n", checksum);
-                }
-                else {
-                    Print(L" with valid checksum\n");
-                    rsdp = (void*)ConfigTable->VendorTable;
-                }
+                Print(L"  Checksum: %d\n", checksum);
+                if (checksum == 0)
+                  rsdp = (void*)ConfigTable->VendorTable;
             }
         }
         ConfigTable++;
