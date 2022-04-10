@@ -11,8 +11,8 @@ bool strcmp(const char* a, const char* b, u64 length) {
     return true;
 }
 
-const char* t = "True";
-const char* f = "False";
+const char* t = "\033[32mTrue\033[0m";
+const char* f = "\033[31mFalse\033[0m";
 const char* to_string(bool b) {
     return b ? t : f;
 }

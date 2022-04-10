@@ -99,9 +99,9 @@ public:
     void set_physical_core_bits(u8 bits) { PhysicalCoreBits = bits; }
 
     void print_debug() {
-        UART::out("[CPU]: Description Dump:\r\n");
-        UART::out("  Capabilites:\r\n");
-        UART::out("    CPUID: ");
+        UART::out("[CPU]: Description Dump:\r\n"
+                  "  Capabilites:\r\n"
+                  "    CPUID: ");
         UART::out(to_string(CPUIDCapable));
         UART::out("\r\n    FXSR: ");
         UART::out(to_string(FXSRCapable));

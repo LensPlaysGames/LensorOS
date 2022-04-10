@@ -65,7 +65,7 @@ void prepare_interrupts() {
 }
 
 void draw_boot_gfx() {
-    gRend.puts("<<>><<<!===--- You are now booting into LensorOS ---===!>>><<>>");
+    gRend.puts("<<<!===--- You are now booting into LensorOS ---===!>>>");
     // DRAW A FACE :)
     // left eye
     gRend.DrawPos = {420, 420};
@@ -96,30 +96,32 @@ CPUDescription* SystemCPU { nullptr };
 u8 fxsave_region[512] __attribute__((aligned(16)));
 
 void kstage1(BootInfo* bInfo) {
-    /* This function is kind of monstrous, so the functionality is outlined here.
+    /* This function is monstrous, so the functionality is outlined here.
      *     - Disable interrupts (if they weren't already)
      *     - Ensure BootInfo pointer is valid (non-null)
-     * x86 - Load Global Descriptor Table (CPU Privilege levels, hardware task switching)
-     * x86 - Load Interrupt Descriptor Table (Install handlers for hardware IRQs + software exceptions)
+     * x86 - Load Global Descriptor Table
+     * x86 - Load Interrupt Descriptor Table
      *     - Prepare UART serial communications driver
      *     - Prepare physical/virtual memory
-     *       - Initialize Physical Memory Manager (chicken/egg happens here)
-     *       - Initialize Virtual Memory Manager (ensure all RAM is mapped, as well as kernel)
+     *       - Initialize Physical Memory Manager
+     *       - Initialize Virtual Memory Manager
      *       - Prepare the heap (`new` and `delete`)
      *     - Prepare Real Time Clock (RTC)
-     *     - Setup graphical renderers
+     *     - Setup graphical renderers  -- these will change, and soon
      *       - BasicRenderer      -- drawing pixels to linear framebuffer
-     *       - BasicTextRenderer  -- draw keyboard input on screen, keep track of text cursor, etc
+     *       - BasicTextRenderer  -- draw keyboard input on screen,
+     *                               keep track of text cursor, etc
      *     - Determine and cache information about CPU(s)
-     *     - Initialize ACPI (find System Descriptor Table (XSDT))
-     *     - Prepare PCI devices (enumerate PCI bus and initialize recognized devices)
+     *     - Initialize ACPI
+     *     - Enumerate PCI
      *     - Prepare non-PCI devices
      *       - High Precision Event Timer (HPET)
      *       - PS2 Mouse
      *     - Prepare Programmable Interval Timer (PIT)
-     *     - Setup scheduler (TSS descriptor, task switching)
-     *     - Clear (IRQ) interrupt masks in PIC for used interrupts
-     *     - Print information about the system after boot initialization to serial out
+     * x86 - Setup TSS
+     *     - Setup scheduler
+     * x86 - Clear (IRQ) interrupt masks in PIC for used interrupts
+     *     - Print information about the system to serial output
      *     - Enable interrupts
      *
      * x86 = The step is inherently x86-only (not implementation based).

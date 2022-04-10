@@ -77,11 +77,16 @@ bool mouse_packet_ready = false;
 void handle_ps2_mouse_interrupt(u8 data) {
     // Skip first mouse packet (garbage data).
     static bool skip = true;
-    if (skip) { skip = false; return; }
+    if (skip) {
+        skip = false;
+        return;
+    }
     switch (mouse_cycle) {
     case 0:
         // Ensure always one bit is one.
-        if ((data & 0b00001000) == 0) { break; }
+        if ((data & 0b00001000) == 0)
+            break;
+
         mouse_packet[0] = data;
         mouse_cycle++;
         break;
@@ -142,19 +147,23 @@ void DrawMouseCursor() {
         refreshPos.y = gMousePosition.y;
     }
 
-    // Skip first iteration in order to accurately read what is under the cursor before it is drawn.
+    // Skip first iteration in order to accurately read
+    // what is under the cursor before it is drawn.
     static bool skip = true;
     if (skip == false) {
         gRend.DrawPos = gOldMousePosition;
-        gRend.drawpix({MouseCursorSize, MouseCursorSize}, &pixels_under_mouse_cursor[0]);
+        gRend.drawpix({MouseCursorSize, MouseCursorSize}
+                      , &pixels_under_mouse_cursor[0]);
     }
     else skip = false;
     
     gRend.DrawPos = gMousePosition;
     // READ PIXELS UNDER NEW MOUSE POSITION INTO BUFFER.
-    gRend.readpix({MouseCursorSize, MouseCursorSize}, &pixels_under_mouse_cursor[0]);
+    gRend.readpix({MouseCursorSize, MouseCursorSize}
+                  , &pixels_under_mouse_cursor[0]);
     // DRAW MOUSE CUSOR AT NEW POSITION.
-    gRend.drawbmpover({MouseCursorSize, MouseCursorSize}, &mouse_cursor[0], 0xffffffff);
+    gRend.drawbmpover({MouseCursorSize, MouseCursorSize}
+                      , &mouse_cursor[0], 0xffffffff);
     gOldMousePosition = gMousePosition;
     gRend.swap(refreshPos, refreshSize);
     // RETURN GLOBAL DRAW POSITION.
@@ -181,7 +190,8 @@ void process_mouse_packet() {
     else if (mouse_packet[0] & PS2_RIGHT_BUTTON) {
         // Use pseudo-random number generator
         //   to get a new color to draw with.
-        DrawColor = (u32)gRandomLFSR.get();
+        do { DrawColor = (u32)gRandomLFSR.get(); }
+        while (DrawColor == 0);
     }
     // Middle Mouse Button (MMB)
     else if (mouse_packet[0] & PS2_MIDDLE_BUTTON) {}
