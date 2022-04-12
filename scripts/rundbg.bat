@@ -1,7 +1,9 @@
-set BuildDirectory=%0/../../bin
-set OVMFbin=%0/../../../OVMFbin
-set BuildDirectory=%BuildDirectory:"=%
-set OVMFbin=%OVMFbin:"=%
+SET OVMFbin=%0/../../OVMFbin
+SET BuildDirectory=%0/../../kernel/bin
+SET OVMFbin=%OVMFbin:"=%
+SET BuildDirectory=%BuildDirectory:"=%
+IF NOT EXIST %BuildDirectory%/LensorOS.img echo " -> ERROR: Could not find %BuildDirectory%/LensorOS.img" & EXIT
+IF NOT EXIST %OVMFbin%/OVMF_CODE-pure-efi.fd echo " -> ERROR: Could not find %OVMFbin%/OVMF_CODE-pure-efi.fd" & EXIT
 IF NOT EXIST %OVMFbin%/OVMF_VARS_LensorOS.fd cp %OVMFbin%/OVMF_VARS-pure-efi.fd %OVMFbin%/OVMF_VARS_LensorOS.fd
 qemu-system-x86_64 ^
  -s -S ^
@@ -10,7 +12,6 @@ qemu-system-x86_64 ^
  -cpu qemu64 ^
  -m 100M ^
  -serial stdio ^
- -vga cirrus ^
  -soundhw pcspk ^
  -net none ^
  -rtc base=localtime,clock=host,driftfix=none ^

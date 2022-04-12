@@ -16,6 +16,7 @@ A collection of shell scripts that automate processes surrounding LensorOS.
     - [run.sh](#booting-run-sh)
   - Windows
     - [run.bat](#booting-run-bat)
+    - [rundbg.bat](#booting-rundbg-bat)
 
 ---
 
@@ -149,6 +150,20 @@ Launch QEMU with the proper flags to boot into
 Invocation:
 ```pwsh
 .\run.bat
+```
+
+Dependencies:
+- [QEMU](https://www.qemu.org/download/#windows)
+
+---
+
+### `rundbg.bat` <a name="booting-rundbg-bat"></a>
+Do the same as [run.bat](#booting-run-bat) but instruct QEMU to wait
+  for a connection from the GNU debugger (`gdb`) before starting CPU execution.
+
+Invocation:
+```pwsh
+.\rundbg.bat
 ```
 
 Dependencies:
