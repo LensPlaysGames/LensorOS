@@ -29,24 +29,39 @@ set( CMAKE_CXX_COMPILER ${ARCH}-lensor-g++ )
 
 # If the toolchain isn't in PATH, try to find it manually.
 if( NOT COMMAND "${CMAKE_CXX_COMPILER}" )
+  message( VERBOSE "${CMAKE_CXX_COMPILER} not found in PATH" )
   set( TOOLCHAIN_DIR "${CMAKE_CURRENT_LIST_DIR}/../toolchain" )
   if( CMAKE_HOST_WIN32 )
 	set( TOOLCHAIN_BIN "${TOOLCHAIN_DIR}/wincross/bin" )
-	message( VERBOSE "${CMAKE_CXX_COMPILER} not found in PATH, looking in ${TOOLCHAIN_BIN}" )
+	message(
+	  CHECK_START
+	  "Looking for ${CMAKE_CXX_COMPILER}.exe in ${TOOLCHAIN_BIN}"
+	)
 	if( EXISTS "${TOOLCHAIN_BIN}/${CMAKE_CXX_COMPILER}.exe" )
-	  message( VERBOSE "Found ${CMAKE_CXX_COMPILER}.exe in ${TOOLCHAIN_BIN}" )
+	  message( CHECK_PASS "found" )
 	  set( ENV{PATH} "${TOOLCHAIN_BIN};$ENV{PATH}" )
 	else()
-	  message( FATAL_ERROR "${CMAKE_CXX_COMPILER} not found in PATH or ${TOOLCHAIN_BIN}" )
+	  message( CHECK_FAIL "not found")
+	  message(
+		FATAL_ERROR
+		"${CMAKE_CXX_COMPILER} not found in PATH or ${TOOLCHAIN_BIN}"
+	  )
 	endif()
   else()
 	set( TOOLCHAIN_BIN "${TOOLCHAIN_DIR}/cross/bin" )
-	message( VERBOSE "${CMAKE_CXX_COMPILER} not found in PATH, looking in ${TOOLCHAIN_BIN}" )
+	message(
+	  CHECK_START
+	  "Looking for ${CMAKE_CXX_COMPILER} in ${TOOLCHAIN_BIN}"
+	)
 	if( EXISTS "${TOOLCHAIN_BIN}/${CMAKE_CXX_COMPILER}" )
-	  message( VERBOSE "Found ${CMAKE_CXX_COMPILER} in ${TOOLCHAIN_BIN}" )
+	  message( CHECK_PASS "found" )
 	  set( ENV{PATH} "${TOOLCHAIN_BIN}:$ENV{PATH}" )
 	else()
-	  message( FATAL_ERROR "${CMAKE_CXX_COMPILER} not found in PATH or ${TOOLCHAIN_BIN}" )
+	  message( CHECK_PASS "not found" )
+	  message(
+		FATAL_ERROR
+		"${CMAKE_CXX_COMPILER} not found in PATH or ${TOOLCHAIN_BIN}"
+	  )
 	endif()
   endif()
 endif()
