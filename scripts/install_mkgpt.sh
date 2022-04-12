@@ -1,4 +1,7 @@
 #!/bin/bash
+# Dependencies:
+# |-- autoconf
+# `-- automake
 
 run(){
     set -x
