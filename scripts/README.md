@@ -10,6 +10,7 @@ A collection of shell scripts that automate processes surrounding LensorOS.
   - [install_mkgpt.sh](#bootmediagen-installmkgpt-sh)
   - [mkgpt.sh](#bootmediagen-mkgpt-sh)
   - [mkimg.sh](#bootmediagen-mkimg-sh)
+  - [mkiso.sh](#bootmediagen-mkiso-sh)
 
 ---
 
@@ -96,10 +97,28 @@ bash mkimg.sh
 ```
 
 Dependencies:
-- GNU mtools
-  - [See my fork of mtools on GitHub](https://github.com/LensPlaysGames/mtools/releases) 
+- [GNU mtools](https://www.gnu.org/software/mtools/)
+  - [See Lens' fork of mtools on GitHub](https://github.com/LensPlaysGames/mtools/releases) 
     with pre-built binaries for x86_64 Windows and Linux.
   - On Debian distros: `sudo apt install mtools`
   - [Source Code](http://ftp.gnu.org/gnu/mtools/)
+
+---
+
+### `mkiso.sh` <a name="bootmediagen-mkiso-sh"></a>
+Generate a bootable disk image with an ISO-9660 filesystem.
+  The contents of `LensorOS.img` are loaded onto it in the 
+  "El-Torito" configuration, making the `.iso` bootable.
+
+Invocation:
+```bash
+bash mkiso.sh
+```
+Dependencies:
+- [GNU xorriso](https://www.gnu.org/software/xorriso/)
+  - On Debian distributions: `sudo apt install xorriso`
+  - Pre-built Windows executables can be found
+    [in this repository](https://github.com/PeyTy/xorriso-exe-for-windows)
+  - [Source Code](https://www.gnu.org/software/xorriso/xorriso-1.5.4.pl02.tar.gz)
 
 ---
