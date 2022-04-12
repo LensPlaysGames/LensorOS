@@ -60,7 +60,7 @@ Before beginning, ensure you have the LensorOS bootloader and kernel binaries. \
 [See the build section](#build).
 
 To change the font, replace `dfltfont.psf` in the
-  `kernel/res` folder with anyPSF1 font (not PSF2). \
+  `kernel/res` folder with any PSF1 font (not PSF2). \
 For a few fonts that are compatible, check out
   [this repository](https://github.com/ercanersoy/PSF-Fonts).
 
@@ -362,6 +362,8 @@ A huge amount of entertainment and inspiration has come from
 
 The compeletely-from-scratch [ToaruOS](https://github.com/klange/toaruos)
   has also been an amazing source of knowledge, inspiration, and information.
+
+---
 
 #### LensorOS Birthday
 My birthday is January 14th! I am still a *wittle baby*.
