@@ -1,32 +1,24 @@
 # The LensorOS Toolchain
 LensorOS is compiled with a special version of the GNU Compiler Collection (GCC).
 
-This special version allows for a host machine that is not running 
-  LensorOS to build programs that may run on LensorOS. 
-This means a different OS (environment) can be used to to develop in, 
+This special version allows for a host machine that is not running
+  LensorOS to build programs that may run on LensorOS.
+This means a different OS (environment) can be used to to develop in,
   rather than having to develop LensorOS from within LensorOS (which complicates things).
-
-## Using a Pre-built LensorOS Toolchain
-Although it is not recommended, if you happen to be on an `x86_64` 
-  machine and also on either Linux or Windows, it's likely there are pre-built binaries
-  for your system available for download. Take a look at the 
-  [releases page](https://github.com/LensPlaysGames/LensorOS/releases) 
-  for the latest pre-release that contains the toolchain (as per GPLv3). 
-  Simply download a toolchain archive corresponding to your OS, then 
-  extract it and add the `bin` directory to the `PATH` environment variable.
   
-Do note that using a pre-built toolchain means that the sysroot is not 
-  made by the toolchain script like normal, and will likely cause errors 
-  like `Could not find file <stdint.h>` or similar. The `--sysroot` flag 
-  can be used to point to the proper sysroot, but a proper sysroot must 
-  be created still. For now, see the [Create a Sysroot](#create-sysroot) step. Soon, it will be as 
-  simple as running a script to generate the initial sysroot, but I 
-  haven't gotten around to it yet.
+---
 
-## Building the LensorOS Toolchain
-If you are on Windows, you are really going to have a hard 
+## Table of Contents
+- [Building the Toolchain](#building-the-toolchain)
+- [Using a Pre-built Toolchain](#prebuilt-toolchain)
+- [Using the Toolchain](#using-the-toolchain)
+
+---
+
+## Building the LensorOS Toolchain <a name="building-the-toolchain"></a>
+If you are on Windows, you are really going to have a hard
   time if you do not use WSL (not to say it isn't possible).
-  Everything can 100% be done through the Windows Subsystem 
+  Everything can 100% be done through the Windows Subsystem
   for Linux; that's what I recommend.
 
 Building the compiler does take quite some time (15-90min, or more),
@@ -213,24 +205,30 @@ Finally, we install both the new GCC for our host and `libgcc` for our target. W
 
 If you run into any issues, please let me know/make an issue on GitHub. I'll do my best to help you out.
 
+---
+
+## Using a Pre-built LensorOS Toolchain <a name="prebuilt-toolchain"></a>
+Although it is not recommended, if you happen to be on an `x86_64`
+  machine and also on either Linux or Windows, it's likely there are pre-built binaries
+  for your system available for download. Take a look at the
+  [releases page](https://github.com/LensPlaysGames/LensorOS/releases)
+  for the latest pre-release that contains the toolchain (as per GPLv3).
+  Simply download a toolchain archive corresponding to your OS, then
+  extract it and add the `bin` directory to the `PATH` environment variable.
+  There is no guarantee that these are up to date with the main branch;
+  you have been warned.
+  
+Do note that using a pre-built toolchain means that the sysroot is not
+  made by the toolchain script like normal, and will likely cause errors
+  like `Could not find file <stdint.h>` or similar. The `--sysroot` flag
+  can be used to point to the proper sysroot, but a proper sysroot must
+  be created still. For now, see the [Create a Sysroot](#create-sysroot) step.
+  Soon, it will be as simple as running a script to generate the initial sysroot,
+  but I haven't gotten around to it yet.
+
+---
+
 ## Using the LensorOS toolchain <a name="using-the-toolchain"></a>
-In order for CMake and other build system tools to invoke the correct compiler, it is required that the `x86_64-lensor` cross-compiler binary executable directory be added to your build system's `PATH` variable.
-
-NOTE: Your build system refers to the system that the build tools reside on. \
-If using WSL, ensure you are adding to it's `$PATH`, **not** your host machine.
-
-#### Temporary
-```bash
-export PATH="Path/to/LensorOS/toolchain/cross/bin:$PATH"
-```
-
-#### Permanent
-For exact instructions, see your shell's configuration options.
-
-On most Unix-like systems that are using `BASH`, it's as simple as adding the line in the `temporary` section above to the bottom of your `$HOME/.bashrc` configuration file. \
-To use the newly made config file, read it with the `.` command like so: \
-```bash
-. $HOME/.bashrc
-```
-
-Once the `$PATH` variable is successfully configured, running `x86_64-lensor-gcc` from a shell will use the LensorOS `C` cross compiler.
+There are two ways for CMake to know how to invoke the cross compiler; only one is required:
+1. Ensure the `cross` or `wincross` directory is located in this directory, `/toolchain/`.
+2. Add the `cross/bin` or `wincross/bin` directory to the `PATH` environment variable.

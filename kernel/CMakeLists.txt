@@ -2,19 +2,10 @@ cmake_minimum_required( VERSION 3.14 )
 set( LensorOS_VERSION 0.0.1 )
 set( LensorOS_LANGUAGES ASM_NASM CXX )
 
-# MACHINE can be one of PC, QEMU, VBOX.
-set( MACHINE VBOX )
-# ARCH can be x86_64 only, for now.
-set( ARCH x86_64 )
+include( "${CMAKE_CURRENT_LIST_DIR}/config.cmake" )
 
-# Until a LensorOS config is added to the CMake source code,
-# then subsequently released, `Generic` is used to avoid errors.
-set( CMAKE_SYSTEM_NAME Generic )
-set( CMAKE_SYSTEM_VERSION ${LensorOS_VERSION} )
-
-# Use the LensorOS GNU Toolchain for C++.
-set( CMAKE_CXX_COMPILER ${ARCH}-lensor-g++ )
-set( CMAKE_CXX_COMPILER_WORKS 1 )
+# Use LensorOS GNU-based toolchain by default.
+set( CMAKE_TOOLCHAIN_FILE lensor_gnu_toolchain.cmake )
 
 # Use `ccache` if it is installed in system's PATH.
 find_program( CCACHE_PROGRAM ccache )
