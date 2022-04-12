@@ -6,8 +6,9 @@ A collection of shell scripts that automate processes surrounding LensorOS.
 ### Table of Contents:
 - Kernel
   - [cinclude2dot.sh](#kernel-cinclude2dot-sh)
-- Tools
-  - [install_mkgpt.sh](#tools-installmkgpt-sh)
+- Boot Media Generation
+  - [install_mkgpt.sh](#bootmediagen-installmkgpt-sh)
+  - [mkgpt.sh](#bootmediagen-mkgpt-sh)
 
 ---
 
@@ -40,7 +41,7 @@ Dependencies:
 
 ---
 
-### `install_mkgpt.sh` <a name="tools-installmkgpt-sh"></a>
+### `install_mkgpt.sh` <a name="bootmediagen-installmkgpt-sh"></a>
 `mkgpt` is a command line tool that can generate disk 
   images with a valid GUID Partition Table, or GPT.
   It is utilized to generate bootable media for LensorOS.
@@ -65,5 +66,21 @@ bash install_mkgpt.sh
 Dependencies:
 - [GNU autoconf](https://www.gnu.org/software/autoconf/)
 - [GNU automake](https://www.gnu.org/software/automake/)
+
+---
+
+### `mkgpt.sh` <a name="bootmediagen-mkgpt-sh"></a>
+Make a bootable disk image with a valid GUID Partition Table.
+
+[mkimg.sh](#bootmediagen-mkimg-sh) is run before generating the
+  GPT image to ensure the boot media is as up to date as possible.
+
+Invocation:
+```
+bash mkgpt.sh
+```
+
+Dependencies:
+- [mkgpt](#bootmediagen-install-mkgpt-sh)
 
 ---

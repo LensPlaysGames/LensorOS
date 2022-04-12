@@ -1,6 +1,6 @@
 #!/bin/bash
 ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-KernelDirectory="$ScriptDirectory/.."
+KernelDirectory="$ScriptDirectory/../kernel"
 
 run(){
     set -x
