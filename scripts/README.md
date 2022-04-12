@@ -11,6 +11,9 @@ A collection of shell scripts that automate processes surrounding LensorOS.
   - [mkgpt.sh](#bootmediagen-mkgpt-sh)
   - [mkimg.sh](#bootmediagen-mkimg-sh)
   - [mkiso.sh](#bootmediagen-mkiso-sh)
+- Booting into LensorOS
+  - Windows
+    - [run.bat](#booting-run-bat)
 
 ---
 
@@ -120,5 +123,19 @@ Dependencies:
   - Pre-built Windows executables can be found
     [in this repository](https://github.com/PeyTy/xorriso-exe-for-windows)
   - [Source Code](https://www.gnu.org/software/xorriso/xorriso-1.5.4.pl02.tar.gz)
+
+---
+
+### `run.bat` <a name="booting-run-bat"></a>
+Launch QEMU with the proper flags to boot into
+  LensorOS from the raw FAT32 image, `LensorOS.img`.
+
+Invocation:
+```pwsh
+.\run.bat
+```
+
+Dependencies:
+- [QEMU](https://www.qemu.org/download/#windows)
 
 ---
