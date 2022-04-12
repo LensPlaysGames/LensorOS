@@ -1,4 +1,4 @@
-# The LensorOS toolchain
+# The LensorOS Toolchain
 LensorOS is compiled with a special version of the GNU Compiler Collection (GCC).
 
 This special version allows for a host machine that is not running 
@@ -6,9 +6,28 @@ This special version allows for a host machine that is not running
 This means a different OS (environment) can be used to to develop in, 
   rather than having to develop LensorOS from within LensorOS (which complicates things).
 
-## Building the LensorOS toolchain
-If you are on Windows, you are really going to have a hard time if you do not use WSL (not to say it isn't possible).
-Everything can 100% be done through the Windows Subsystem for Linux; that's what I recommend.
+## Using a Pre-built LensorOS Toolchain
+Although it is not recommended, if you happen to be on an `x86_64` 
+  machine and also on either Linux or Windows, it's likely there are pre-built binaries
+  for your system available for download. Take a look at the 
+  [releases page](https://github.com/LensPlaysGames/LensorOS/releases) 
+  for the latest pre-release that contains the toolchain (as per GPLv3). 
+  Simply download a toolchain archive corresponding to your OS, then 
+  extract it and add the `bin` directory to the `PATH` environment variable.
+  
+Do note that using a pre-built toolchain means that the sysroot is not 
+  made by the toolchain script like normal, and will likely cause errors 
+  like `Could not find file <stdint.h>` or similar. The `--sysroot` flag 
+  can be used to point to the proper sysroot, but a proper sysroot must 
+  be created still. For now, see the [Create a Sysroot](#create-sysroot) step. Soon, it will be as 
+  simple as running a script to generate the initial sysroot, but I 
+  haven't gotten around to it yet.
+
+## Building the LensorOS Toolchain
+If you are on Windows, you are really going to have a hard 
+  time if you do not use WSL (not to say it isn't possible).
+  Everything can 100% be done through the Windows Subsystem 
+  for Linux; that's what I recommend.
 
 Building the compiler does take quite some time (15-90min, or more),
   depending on both your internet speed and how powerful your computer is.
@@ -20,25 +39,31 @@ In a linux terminal, first install the necessary dependencies:
 sudo apt install build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo
 ```
 
-Next, simply run the included `toolchain.sh` script with bash to download, patch, configure, build, and install the toolchain.
+Next, simply run the included `toolchain.sh` script with bash to 
+  download, patch, configure, build, and install the toolchain.
 ```bash
 bash toolchain.sh
 ```
 Once complete, you'll find the `/toolchain/cross/` directory of the repo has
   been filled with binaries, libraries, and documentation on a LensorOS cross compiler.
-With the toolchain built, everything within the `/toolchain/` directory,
+  With the toolchain built, everything within the `/toolchain/` directory,
   except the `/cross/` directory and it's contents, may be deleted.
 
-The `/root/` directory will have also been created, and populated with the bare essentials of the LensorOS root filesystem (namely pre-built `libc` binaries, and some system headers).
+The `/root/` directory will have also been created, and populated 
+  with the bare essentials of the LensorOS root filesystem 
+  (namely pre-built `libc` binaries, and some system headers).
   
 In order for CMake to use the new toolchain, the `/toolchain/cross/bin/` directory
-  of the repo must be added to your system's `PATH` environment variable; [see the Using section](#using-the-toolchain).
+  of the repo must be added to your system's `PATH` environment variable; 
+  [see the Using section](#using-the-toolchain).
   
 The generated binaries run on any `x86_64-linux-gnu` machine;
   the cross compiler(s) generate ELF64 executables for `x86_64-lensor` machines.
 
-By default, pre-built `libc` binaries are provided to bootstrap the compiler, allowing us to skip a re-build.
-To *optionally* generate these binaries yourself, [see the libc README](/user/libc/README.md).
+By default, pre-built `libc` binaries are provided to 
+  bootstrap the compiler, allowing us to skip a re-build.
+  To *optionally* generate these binaries yourself, 
+  [see the libc README](/user/libc/README.md).
 
 #### 1.) Obtain the source code of the following GNU packages
 NOTE: The following steps are a manual version of what is accomplished automatically using the `toolchain.sh` script.
@@ -63,7 +88,7 @@ NOTE: It is possible to over-ride your system's compiler collection
   and/or binutils with the cross-compiler, breaking your system's default 
   host compiler. Stay away from any directories that do not derive from `$HOME`!
 
-#### 2.) Patching Binutils and GCC
+#### 2.) Patch Binutils and GCC
 A patch file for Binutils and another for GCC 
   is included in the unified `diff` format. 
 Simply invoke `patch` like so from the toolchain directory 
@@ -74,7 +99,7 @@ patch -s -u -p0 < binutils-2.38-lensor.patch
 patch -s -u -p0 < gcc-11.2.0-lensor.patch
 ```
 
-#### 3.) Creating a Sysroot
+#### 3.) Create a Sysroot <a name="create-sysroot"></a>
 A sysroot, or system root, is a folder that the cross compiler 
   uses as the root filesystem of the target machine. 
 Basically, it's an exact copy of the filesystem 
@@ -95,7 +120,7 @@ cd /Path/to/LensorOS/user/libc/
 find ./ -name '*.h' -exec cp --parents '{}' -t /Path/to/LensorOS/root/inc ';'
 ```
 
-#### 3.) Setup environment variables
+#### 4.) Setup environment variables
 These variables are used a few times within the next steps, so saving them here prevents simple typos from getting in the way.
 
 `SYSROOT` is set to the absolute path of the `root` directory created in the previous step.
@@ -109,7 +134,7 @@ export PREFIX="/Path/to/LensorOS/toolchain/cross"
 export TARGET=x86_64-lensor
 ```
 
-#### 4.) Configure Binutils
+#### 5.) Configure Binutils
 Create a new subdirectory within `toolchain` named `build-binutils`, or similar.
 ```bash
 cd /Path/to/LensorOS/toolchain/
@@ -137,7 +162,7 @@ Flags:
 - `--disable-nls` disables Binutils' native language support. This cuts down on build size and time.
 - `--disable-werror` allows compilation to continue in the event of a warning (I usually don't get any, but a warning is no reason to stop a 5-30+ minute compilation).
 
-#### 5.) Build Binutils
+#### 6.) Build Binutils
 NOTE: Anytime you see a `make` command being issued, you can speed it up if you have multiple cores on your CPU using the `-j` option. For example, running `make target -j` would run recipes in parallel on all cores of the CPU at the same time, significantly decreasing build times.
 
 Within the `toolchain/build-binutils/` directory, run the following:
@@ -148,7 +173,7 @@ make install
 
 You should now have a working version of GNU's Binutils installed at `$PREFIX`.
 
-#### 6.) Prepare the GNU Compiler Collection
+#### 7.) Configure the GNU Compiler Collection
 GCC must be configured, much like Binutils.
 ```bash
 cd Path/to/LensorOS/toolchain
@@ -169,7 +194,7 @@ Flags:
 - `--enable-languages` disables all other languages except for what is stated here (reduces size and build times).
 - `--with-sysroot` specifies that GCC can find system headers and libraries at the path specified by the `SYSROOT` variable.
 
-#### 7.) Build the GNU Compiler Collection
+#### 8.) Build the GNU Compiler Collection
 Warning: This step takes a long time. Utilize the `-j` option if you have more than a single core CPU.
 
 Within the `toolchain/build-gcc/` directory, run the following:
