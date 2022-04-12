@@ -53,6 +53,7 @@
 **/compile_commands.json*
 /kernel/bin/
 
+# clangd
 .cache/
 
 # OVMF
