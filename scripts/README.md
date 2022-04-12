@@ -9,6 +9,7 @@ A collection of shell scripts that automate processes surrounding LensorOS.
 - Boot Media Generation
   - [install_mkgpt.sh](#bootmediagen-installmkgpt-sh)
   - [mkgpt.sh](#bootmediagen-mkgpt-sh)
+  - [mkimg.sh](#bootmediagen-mkimg-sh)
 
 ---
 
@@ -70,10 +71,11 @@ Dependencies:
 ---
 
 ### `mkgpt.sh` <a name="bootmediagen-mkgpt-sh"></a>
-Make a bootable disk image with a valid GUID Partition Table.
+Generate a bootable disk image with a valid GUID Partition Table.
+  An `EFI System` partition is added with the contents of `LensorOS.img`.
 
-[mkimg.sh](#bootmediagen-mkimg-sh) is run before generating the
-  GPT image to ensure the boot media is as up to date as possible.
+[mkimg.sh](#bootmediagen-mkimg-sh) is run before generating the `EFI System`
+  partition to ensure the boot media is as up to date as possible.
 
 Invocation:
 ```
@@ -82,5 +84,22 @@ bash mkgpt.sh
 
 Dependencies:
 - [mkgpt](#bootmediagen-install-mkgpt-sh)
+
+---
+
+### `mkimg.sh` <a name="bootmediagen-mkimg-sh"></a>
+Generate a bootable disk image that is UEFI compatible (FAT32 formatted).
+
+Invocation:
+```bash
+bash mkimg.sh
+```
+
+Dependencies:
+- GNU mtools
+  - [See my fork of mtools on GitHub](https://github.com/LensPlaysGames/mtools/releases) 
+    with pre-built binaries for x86_64 Windows and Linux.
+  - On Debian distros: `sudo apt install mtools`
+  - [Source Code](http://ftp.gnu.org/gnu/mtools/)
 
 ---
