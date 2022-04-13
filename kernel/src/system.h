@@ -28,11 +28,15 @@
  *         `-- Data4: System Device Ptr (To storage device this part. resides on)
  */
 
-constexpr u64 SYSDEV_MAJOR_STORAGE          = 1;
+/* STORAGE DEVICE MAJOR NUMBERS */
+constexpr u64 SYSDEV_MAJOR_STORAGE = 1;
+/* STORAGE DEVICE FLAGS */
+constexpr u64 SYSDEV_FLAG_STORAGE_SEARCH = 0;
+/* STORAGE DEVICE MINOR NUMBERS */
+constexpr u64 SYSDEV_MINOR_AHCI_CONTROLLER = 0;
+constexpr u64 SYSDEV_MINOR_AHCI_PORT       = 1;
+constexpr u64 SYSDEV_MINOR_GPT_PARTITION   = 10;
 
-constexpr u64 SYSDEV_MINOR_AHCI_CONTROLLER  = 0;
-constexpr u64 SYSDEV_MINOR_AHCI_PORT        = 1;
-constexpr u64 SYSDEV_MINOR_GPT_PARTITION    = 10;
 
 /// A system device refers to a hardware device that has been detected
 /// during boot, and is saved for later use in the system structure.
@@ -67,12 +71,14 @@ public:
         Flags = 0;
     };
 
-    void set_flag(u64 flag) {
-        Flags |= (1 << flag);
+    void set_flag(u64 bitNumber, bool state) {
+        Flags &= ~(1 << bitNumber);
+        if (state)
+            Flags |= (1 << bitNumber);
     }
 
-    u64 flag(u64 flag) {
-        return Flags & (1 << flag);
+    bool flag(u64 bitNumber) {
+        return (Flags & (1 << bitNumber)) > 0;
     }
 
     u64 flags() { return Flags; }
@@ -125,18 +131,21 @@ public:
         CPU.print_debug();
         if (Devices.length() > 0) {
             UART::out("System Devices:\r\n");
-            Devices.for_each([](auto* it){
+            Devices.for_each([](auto* it) {
                 SystemDevice& dev = it->value();
                 UART::out("  ");
                 UART::out(dev.major());
                 UART::out(".");
                 UART::out(dev.minor());
+                UART::out(":\r\n"
+                          "    Flags: ");
+                UART::out(dev.flags());
                 void* d1 = dev.data1();
                 void* d2 = dev.data2();
                 void* d3 = dev.data3();
                 void* d4 = dev.data4();
                 if (d1) {
-                    UART::out(":\r\n"
+                    UART::out("\r\n"
                               "    Data1: 0x");
                     UART::out(to_hexstring(d1));
                 }

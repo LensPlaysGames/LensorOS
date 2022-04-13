@@ -10,6 +10,7 @@
 namespace GPT {
     // If a partition's GUID appears in this list, the
     // partition will be left untouched by LensorOS.
+    constexpr GUID NullGUID = {0,0,0,{0,0,0,0,0,0,0,0}};
     constexpr GUID ReservedPartitionGUIDs[] = {
         /* Universal */
         PartitionType$MBR,
@@ -78,6 +79,9 @@ namespace GPT {
         PartitionType$Solaris_Reserved3,
         PartitionType$Solaris_Reserved4,
         PartitionType$Solaris_Reserved5,
+
+        /* End of List */
+        NullGUID
     };
 
     struct Header {

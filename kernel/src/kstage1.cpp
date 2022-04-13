@@ -1,3 +1,4 @@
+#include "guid.h"
 #include <kstage1.h>
 
 #include <acpi.h>
@@ -368,7 +369,8 @@ void kstage1(BootInfo* bInfo) {
     SYSTEM->devices().for_each([](auto* it){
         SystemDevice& dev = it->value();
         if (dev.major() == SYSDEV_MAJOR_STORAGE
-            && dev.minor() == SYSDEV_MINOR_AHCI_CONTROLLER)
+            && dev.minor() == SYSDEV_MINOR_AHCI_CONTROLLER
+            && dev.flag(SYSDEV_FLAG_STORAGE_SEARCH))
         {
             UART::out("[kstage1]: Probing AHCI Controller\r\n");
             AHCI::HBAMemory* ABAR = (AHCI::HBAMemory*)(u64)(((PCI::PCIHeader0*)dev.data2())->BAR5);
@@ -381,10 +383,12 @@ void kstage1(BootInfo* bInfo) {
                     AHCI::PortType type = get_port_type(port);
                     if (type == AHCI::PortType::SATA || type == AHCI::PortType::SATAPI) {
                         auto* PortController = new AHCI::PortController(type, i, port);
-                        SYSTEM->add_device(SystemDevice(SYSDEV_MAJOR_STORAGE
-                                                        , SYSDEV_MINOR_AHCI_PORT
-                                                        , PortController, &dev
-                                                        , nullptr, nullptr));
+                        SystemDevice ahciPort(SYSDEV_MAJOR_STORAGE
+                                              , SYSDEV_MINOR_AHCI_PORT
+                                              , PortController, &dev
+                                              , nullptr, nullptr);
+                        ahciPort.set_flag(SYSDEV_FLAG_STORAGE_SEARCH, true);
+                        SYSTEM->add_device(ahciPort);
                     }
                 }
             }
@@ -397,12 +401,21 @@ void kstage1(BootInfo* bInfo) {
      */
     SYSTEM->devices().for_each([](auto* it){
         SystemDevice& d = it->value();
-        if (d.major() == SYSDEV_MAJOR_STORAGE && d.minor() == SYSDEV_MINOR_AHCI_PORT) {
+        if (d.major() == SYSDEV_MAJOR_STORAGE
+            && d.minor() == SYSDEV_MINOR_AHCI_PORT
+            && d.flag(SYSDEV_FLAG_STORAGE_SEARCH) != 0)
+        {
             auto* portCon = (AHCI::PortController*)(&d)->data1();
             if(GPT::is_gpt_present((StorageDeviceDriver*)portCon)) {
                 UART::out("[kUtil]: GPT is present on port ");
                 UART::out(portCon->port_number());
                 UART::out("!\r\n");
+                /* Don't search port any further, we figured
+                 * out it's storage media that is GPT partitioned
+                 * and devices have been created for those
+                 * (that will themselves be searched for filesystems).
+                 */
+                d.set_flag(SYSDEV_FLAG_STORAGE_SEARCH, false);
                 auto gptHeader = SmartPtr<GPT::Header>(new GPT::Header);
                 auto sector = SmartPtr<u8[]>(new u8[512], 512);
                 portCon->read(512, sizeof(GPT::Header), (u8*)gptHeader.get());
@@ -427,13 +440,26 @@ void kstage1(BootInfo* bInfo) {
                     UART::out("\r\n        Attributes: ");
                     UART::out(part->Attributes);
                     UART::out("\r\n");
+                    /* TODO: Don't make partition driver until we know
+                     *       we will need it (search flag set to true).
+                     */
                     auto* partDriver = new GPTPartitionDriver((StorageDeviceDriver*)portCon
                                                               , part->TypeGUID, part->UniqueGUID
                                                               , part->StartLBA, 512);
-                    SYSTEM->add_device(SystemDevice(SYSDEV_MAJOR_STORAGE
-                                                    , SYSDEV_MINOR_GPT_PARTITION
-                                                    , partDriver, nullptr
-                                                    , nullptr, &it->value()));
+                    SystemDevice gptPartition(SYSDEV_MAJOR_STORAGE
+                                              , SYSDEV_MINOR_GPT_PARTITION
+                                              , partDriver, nullptr
+                                              , nullptr, &it->value());
+                    gptPartition.set_flag(SYSDEV_FLAG_STORAGE_SEARCH, true);
+                    // Don't touch partitions with ANY known GUIDs (for now).
+                    const GUID* knownGUID = &GPT::ReservedPartitionGUIDs[0];
+                    while (*knownGUID != GPT::NullGUID) {
+                        if (part->TypeGUID == *knownGUID)
+                            gptPartition.set_flag(SYSDEV_FLAG_STORAGE_SEARCH, false);
+
+                        knownGUID++;
+                    }
+                    SYSTEM->add_device(gptPartition);
                 }
             }
         }
@@ -448,7 +474,8 @@ void kstage1(BootInfo* bInfo) {
     SYSTEM->devices().for_each([FAT](auto* it) {
         SystemDevice& dev = it->value();
         if (dev.major() == SYSDEV_MAJOR_STORAGE
-            && dev.minor() == SYSDEV_MINOR_GPT_PARTITION)
+            && dev.minor() == SYSDEV_MINOR_GPT_PARTITION
+            && dev.flag(SYSDEV_FLAG_STORAGE_SEARCH))
         {
             auto* driver = (GPTPartitionDriver*)(dev.data1());
             if (driver) {

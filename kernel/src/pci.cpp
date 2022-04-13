@@ -91,10 +91,13 @@ namespace PCI {
             if (pciDevHdr->Subclass == 0x06) {
                 // ProgIF 0x01 = AHCI 1.0 Device
                 if (pciDevHdr->ProgIF == 0x01) {
-                    SYSTEM->add_device(SystemDevice(SYSDEV_MAJOR_STORAGE
-                                                    , SYSDEV_MINOR_AHCI_CONTROLLER
-                                                    , nullptr, pciDevHdr
-                                                    , nullptr, nullptr));
+                    SystemDevice storageDevice(SYSDEV_MAJOR_STORAGE
+                                               , SYSDEV_MINOR_AHCI_CONTROLLER
+                                               , nullptr, pciDevHdr
+                                               , nullptr, nullptr);
+                    storageDevice.set_flag(SYSDEV_FLAG_STORAGE_SEARCH
+                                           , true);
+                    SYSTEM->add_device(storageDevice);
                 }
             }
         }
