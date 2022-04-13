@@ -1,4 +1,5 @@
 # LensorOS Scripts
+A collection of shell scripts that automate processes surrounding LensorOS.
 
 ---
 
