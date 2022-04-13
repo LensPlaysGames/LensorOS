@@ -4,6 +4,8 @@ A collection of shell scripts that automate processes surrounding LensorOS.
 ---
 
 ### Table of Contents:
+- Visualization
+  - [cinclude2dot.sh](#kernel-cinclude2dot-sh)
 - Boot Media Generation
   - [install_mkgpt.sh](#bootmediagen-installmkgpt-sh)
   - [mkgpt.sh](#bootmediagen-mkgpt-sh)
@@ -12,16 +14,10 @@ A collection of shell scripts that automate processes surrounding LensorOS.
 - Booting into LensorOS
   - Linux
     - [run.sh](#booting-run-sh)
-    - [rundbg.sh](#booting-rundbg-sh)
 	- [runhda.sh](#booting-runhda-sh)
-	- [runhdadbg.sh](#booting-runhdadbg-sh)
   - Windows
     - [run.bat](#booting-run-bat)
-    - [rundbg.bat](#booting-rundbg-bat)
 	- [runhda.bat](#booting-runhda-bat)
-	- [runhdadbg.bat](#booting-runhdadbg-bat)
-- Visualization
-  - [cinclude2dot.sh](#kernel-cinclude2dot-sh)
 
 ---
 
@@ -138,21 +134,14 @@ Dependencies:
 Launch QEMU with the proper flags to boot into
   LensorOS from the raw FAT32 image, `LensorOS.img`.
 
+There is also a debug version of the script that
+  instructs QEMU to wait for a connection from the
+  GNU debugger (`gdb) before starting CPU execution.
+
 Invocation:
 ```bash
 bash run.sh
 ```
-
-Dependencies:
-- [QEMU](https://www.qemu.org/download/#linux)
-
----
-
-### `rundbg.sh` <a name="booting-rundbg-sh"></a>
-Do the same as [run.sh](#booting-run-sh) but instruct QEMU to wait
-  for a connection from the GNU debugger (`gdb`) before starting CPU execution.
-
-Invocation:
 ```bash
 bash rundbg.sh
 ```
@@ -166,21 +155,14 @@ Dependencies:
 Launch QEMU with the proper flags to boot into
   LensorOS from the GPT formatted disk image, `LensorOS.bin`.
 
+There is also a debug version of the script that
+  instructs QEMU to wait for a connection from the
+  GNU debugger (`gdb) before starting CPU execution.
+
 Invocation:
 ```bash
 bash runhda.sh
 ```
-
-Dependencies:
-- [QEMU](https://www.qemu.org/download/#linux)
-
----
-
-### `runhdadbg.sh` <a name="booting-runhdadbg-sh"></a>
-Do the same as [runhda.sh](#booting-runhda-sh) but instruct QEMU to wait
-  for a connection from the GNU debugger (`gdb`) before starting CPU execution.
-
-Invocation:
 ```bash
 bash runhdadbg.sh
 ```
@@ -194,21 +176,14 @@ Dependencies:
 Launch QEMU with the proper flags to boot into
   LensorOS from the raw FAT32 image, `LensorOS.img`.
 
+There is also a debug version of the script that
+  instructs QEMU to wait for a connection from the
+  GNU debugger (`gdb) before starting CPU execution.
+
 Invocation:
 ```pwsh
 .\run.bat
 ```
-
-Dependencies:
-- [QEMU](https://www.qemu.org/download/#windows)
-
----
-
-### `rundbg.bat` <a name="booting-rundbg-bat"></a>
-Do the same as [run.bat](#booting-run-bat) but instruct QEMU to wait
-  for a connection from the GNU debugger (`gdb`) before starting CPU execution.
-
-Invocation:
 ```pwsh
 .\rundbg.bat
 ```
@@ -222,21 +197,14 @@ Dependencies:
 Launch QEMU with the proper flags to boot into
   LensorOS from the GPT formatted disk image, `LensorOS.bin`.
 
+There is also a debug version of the script that
+  instructs QEMU to wait for a connection from the
+  GNU debugger (`gdb) before starting CPU execution.
+
 Invocation:
 ```pwsh
 .\runhda.bat
 ```
-
-Dependencies:
-- [QEMU](https://www.qemu.org/download/#windows)
-
----
-
-### `runhdadbg.bat` <a name="booting-runhdadbg-bat"></a>
-Do the same as [runhda.bat](#booting-runhda-bat) but instruct QEMU to wait
-  for a connection from the GNU debugger (`gdb) before starting CPU execution.
-
-Invocation:
 ```pwsh
 .\runhdadbg.bat
 ```
