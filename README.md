@@ -88,7 +88,7 @@ Upon completion, this will have generated a disk image file `LensorOS.img`
 
 Alternatively, Create a disk image file that is GPT formatted (aka supports
   partitions) by utilizing the `mkgpt.sh` script that is included.
-  [See the scripts README](kernel/scripts/README.scripts.md) for more info.
+  [See the scripts README](/scripts/README.scripts.md) for more info.
 
 #### On Linux <a name="qemu-boot-linux"></a>
 To run QEMU with the correct command line options automatically, use
@@ -165,9 +165,8 @@ There are two possible pathways that LensorOS bootable media can be generated.
 - [Live CD](#vbox-boot-live-cd)
 
 #### GPT <a name="vbox-boot-gpt"></a>
-Utilize the `mkgpt.sh` script that is included
-  in the `kernel/scripts/` directory.
-  [See the scripts README](kernel/scripts/README.scripts.md)
+Utilize the `mkgpt.sh` script that is included in the `/scripts/` directory.
+  [See the scripts README](/scripts/README.scripts.md)
   for more information on this script.
 
 If all has went well, there will be a `LensorOS.img` and a
