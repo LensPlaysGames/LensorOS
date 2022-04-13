@@ -157,20 +157,6 @@ bash rundbg.sh
 ```
 
 Dependencies:
-- [QEMU](https://www.qemu.org/download/#windows)
-
----
-
-### `run.bat` <a name="booting-run-bat"></a>
-Launch QEMU with the proper flags to boot into
-  LensorOS from the raw FAT32 image, `LensorOS.img`.
-
-Invocation:
-```pwsh
-.\run.bat
-```
-
-Dependencies:
 - [QEMU](https://www.qemu.org/download/#linux)
 
 ---
@@ -200,6 +186,20 @@ bash runhdadbg.sh
 
 Dependencies:
 - [QEMU](https://www.qemu.org/download/#linux)
+
+---
+
+### `run.bat` <a name="booting-run-bat"></a>
+Launch QEMU with the proper flags to boot into
+  LensorOS from the raw FAT32 image, `LensorOS.img`.
+
+Invocation:
+```pwsh
+.\run.bat
+```
+
+Dependencies:
+- [QEMU](https://www.qemu.org/download/#windows)
 
 ---
 
