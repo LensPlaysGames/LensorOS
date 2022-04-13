@@ -366,6 +366,13 @@ A huge amount of entertainment and inspiration has come from
 
 The compeletely-from-scratch [ToaruOS](https://github.com/klange/toaruos)
   has also been an amazing source of knowledge, inspiration, and information.
+  
+The 
+  [FreeBSD](https://github.com/freebsd/freebsd-src)
+  and 
+  [Linux](https://github.com/torvalds/linux) 
+  codebases have been a huge help in seeing how 
+  hard-to-solve problems have been solved in the past.
 
 ---
 
