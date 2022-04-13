@@ -4,52 +4,12 @@ A 64-bit operating system with everything built from scratch!
 ---
 
 ### Table of Contents
-- [Booting into LensorOS on hardware](#hardware-boot)
-- [Booting into LensorOS using QEMU](#qemu-boot)
-- [Booting into LensorOS using VirtualBox](#vbox-boot)
+- Booting into LensorOS
+  - [using QEMU](#qemu-boot)
+  - [using VirtualBox](#vbox-boot)
+  - [on hardware](#hardware-boot)
 - [Building LensorOS](#build)
 - [Acknowledgements](#ack)
-
----
-
-## Booting into LensorOS on hardware <a name="hardware-boot"></a>
-DISCLAIMER: LensorOS IS IN NO WAY GUARANTEED TO BE 'SAFE';
-  RUN AT YOUR OWN RISK! (see [LICENSE](LICENSE))
-
-Before beginning, ensure you have the LensorOS bootloader and kernel binaries. \
-[See the build section](#build).
-
-Ensure you have a USB storage device that is working.
-Remove all data from the USB. This can be done by formatting,
-  or simply deleting/moving everything off of it.
-
-Next, create a folder called `EFI`, then inside that a folder called `BOOT`. \
-Move `main.efi` from `/gnu-efi/x86_64/bootloader/`
-  directory into the `BOOT` folder on the USB. \
-Rename `main.efi` in the usb's `BOOT` folder to
-  `bootx64.efi`, as per the UEFI specification.
-
-Finally, navigate back to the root directory of
-  the USB (where the `EFI` folder resides). \
-Create a folder named `LensorOS`, then move
-  the following resources into the directory:
-- `kernel.elf` from `/kernel/bin/`
-- Any `.psf` version 1 font renamed to `dfltfont.psf`
-  - A font comes included; it can be found at `kernel/res/dfltfont.psf`.
-  - Many fonts can be found [here](https://github.com/ercanersoy/PSF-Fonts).
-  - [GNU Unifont](http://unifoundry.com/unifont/index.html) provides PSF1.
-
-```
-Final Directory Structure:
-USB
-|-- efi
-|   `-- boot
-|       `-- bootx64.efi
-|-- LensorOS
-|   |-- kernel.elf
-|   `-- dfltfont.psf
-`-- startup.nsh
-```
 
 ---
 
@@ -88,7 +48,7 @@ Upon completion, this will have generated a disk image file `LensorOS.img`
 
 Alternatively, Create a disk image file that is GPT formatted (aka supports
   partitions) by utilizing the `mkgpt.sh` script that is included.
-  [See the scripts README](/scripts/README.md) for more info.
+  [See the scripts README](scripts/README.md) for more info.
 
 #### On Linux <a name="qemu-boot-linux"></a>
 To run QEMU with the correct command line options automatically, use
@@ -166,7 +126,7 @@ There are two possible pathways that LensorOS bootable media can be generated.
 
 #### GPT <a name="vbox-boot-gpt"></a>
 Utilize the `mkgpt.sh` script that is included in the `/scripts/` directory.
-  [See the scripts README](/scripts/README.md)
+  [See the scripts README](scripts/README.md)
   for more information on this script.
 
 If all has went well, there will be a `LensorOS.img` and a
@@ -231,11 +191,52 @@ After all of this has been done, you are ready to click `Start` on the
 
 ---
 
+## Booting into LensorOS on hardware <a name="hardware-boot"></a>
+DISCLAIMER: LensorOS IS IN NO WAY GUARANTEED TO BE 'SAFE';
+  RUN AT YOUR OWN RISK! (see [LICENSE](LICENSE))
+
+Before beginning, ensure you have the LensorOS bootloader and kernel binaries. \
+[See the build section](#build).
+
+Ensure you have a USB storage device that is working.
+Remove all data from the USB. This can be done by formatting,
+  or simply deleting/moving everything off of it.
+
+Next, create a folder called `EFI`, then inside that a folder called `BOOT`. \
+Move `main.efi` from `/gnu-efi/x86_64/bootloader/`
+  directory into the `BOOT` folder on the USB. \
+Rename `main.efi` in the usb's `BOOT` folder to
+  `bootx64.efi`, as per the UEFI specification.
+
+Finally, navigate back to the root directory of
+  the USB (where the `EFI` folder resides). \
+Create a folder named `LensorOS`, then move
+  the following resources into the directory:
+- `kernel.elf` from `/kernel/bin/`
+- Any `.psf` version 1 font renamed to `dfltfont.psf`
+  - A font comes included; it can be found at `kernel/res/dfltfont.psf`.
+  - Many fonts can be found [here](https://github.com/ercanersoy/PSF-Fonts).
+  - [GNU Unifont](http://unifoundry.com/unifont/index.html) provides PSF1.
+
+```
+Final Directory Structure:
+USB
+|-- efi
+|   `-- boot
+|       `-- bootx64.efi
+|-- LensorOS
+|   |-- kernel.elf
+|   `-- dfltfont.psf
+`-- startup.nsh
+```
+
+---
+
 ## Building LensorOS <a name="build"></a>
 There are three steps to building LensorOS:
-1. [the Toolchain](toolchain/README.md)
-1. the Bootloader
-2. the Kernel
+1. [the Toolchain](#build-step1)
+1. [the Bootloader](#build-step2)
+2. [the Kernel](#build-step3)
 
 On Windows, use the Windows Subsystem for Linux
   (WSL) to emulate Linux exactly, no drawbacks.
@@ -278,10 +279,10 @@ NOTE: If on Windows using WSL, I recommend cloning onto your Windows
   not access the fake network path that is used (ie. `\\wsl$\`),
   and it over-all just causes a head-ache.
 
-#### 1. Build The LensorOS Toolchain
+#### 1. Build The LensorOS Toolchain <a name="build-step1"></a>
 [Follow the instructions in the toolchain README](toolchain/README.md)
 
-#### 2. Build the bootloader
+#### 2. Build the bootloader <a name="build-step2"></a>
 The bootloader source code resides in the `gnu-efi` directory, for now.
 ```bash
 cd /Path/to/LensorOS/gnu-efi/
@@ -298,7 +299,7 @@ NOTE: One only needs to run `make` for the bootloader once; it
   sufficient to update the bootloader; even that only needs
   to be done if the bootloader code was changed.
 
-#### 3. Build the kernel
+#### 3. Build the kernel <a name="build-step3"></a>
 The LensorOS Kernel uses CMake to generate the build system;
   beware, as not all the build systems CMake can generate honor
   the request to use the LensorOS Toolchain (*ahem* Visual Studio *ahem*). \
@@ -309,15 +310,16 @@ cd /Path/to/LensorOS/kernel/
 cmake -G "Unix Makefiles" -S . -B rls -DCMAKE_BUILD_TYPE=Release
 cmake -G "Unix Makefiles" -S . -B rls -DCMAKE_BUILD_TYPE=Release
 ```
+
 Yes, I always recommend generating the build system
   twice in a row (weird bugs may appear otherwise).
 
-The above command should generate an out of source build system
-  in the `rls` subdirectory that is the default for your host. \
-To build the kernel, invoke the build system that was
-  generated by CMake; by default it's GNU's `make`. \
-Alternatively, generate any build system of your choice that
-  is supported by CMake (I recommend Ninja, it's fast). \
+The above command should generate an out-of-source 
+  `GNU make` build system in the `rls` subdirectory.
+  Alternatively, generate any build system of your choice that
+  is supported by CMake (I recommend Ninja, it's fast).
+
+To build the kernel, invoke the build system that was generated by CMake.
 No matter the build system you choose, invoke it using the following command:
 ```bash
 cmake --build /Path/to/LensorOS/kernel/rls
@@ -330,8 +332,8 @@ This final build step will generate `kernel.elf` within the `/kernel/bin`
 See the sections starting with "Booting into LensorOS" above.
 
 If building the kernel for real hardware, ensure to set the
-  `MACHINE` [kernel CMakeLists.txt](kernel/CMakeLists.txt) variable to
-  `PC`, and not any of the virtual machines (ie. `QEMU`, `VBOX`).
+  `MACHINE` CMake variable within [config.cmake](kernel/config.cmake) 
+  to `PC`, and not any of the virtual machines (ie. `QEMU`, `VBOX`).
   This allows for the hardware timers to be used to their full potential
   (asking QEMU for 1000hz interrupts from multiple devices overloads
   the emulator and guest time falls behind drastically; to counter-act this,
