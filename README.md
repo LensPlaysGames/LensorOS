@@ -238,23 +238,26 @@ There are three steps to building LensorOS:
 2. the Kernel
 
 On Windows, use the Windows Subsystem for Linux
-  (WSL) to emulate Linux exactly, no drawbacks. \
-[See this walkthrough](https://docs.microsoft.com/en-us/windows/wsl/filesystems#mixing-linux-and-windows-commands) on how easy it is to interweave and communicate between Linux and Windows processes.
+  (WSL) to emulate Linux exactly, no drawbacks.
+  [See this walkthrough](https://docs.microsoft.com/en-us/windows/wsl/filesystems#mixing-linux-and-windows-commands)
+  on how easy it is to interweave and communicate between Linux and Windows processes.
 
-If you don't want to use WSL, you'll need pre-built
-  binaries of a [Canadian Cross](https://wiki.osdev.org/Canadian_Cross)
-  LensorOS Toolchain, the bootloader, and
+If you don't want to use WSL, you'll need
+  [pre-built binaries](https://github.com/LensPlaysGames/LensorOS/releases)
+  of the LensorOS Toolchain, the LensorOS bootloader, and
   [GNU mtools](https://github.com/LensPlaysGames/mtools/releases);
-  ask and we will help you on your journey :^). \
-Keep in mind the bootloader can't be built natively
-  on Windows (yet), so skip step #2 if not using WSL.
+  ask and we will help you on your journey :^).
+
+Keep in mind the bootloader can't be built natively on
+  Windows (yet), so skip straight to step #3 if not using WSL.
 
 Alternatively, one could use a virtual machine
   that emulates a linux distro (ie. `VirtualBox` running
   `Linux Mint`, or something), and develop from there.
 
-There's also [Cygwin](https://www.cygwin.com/) for a Unix-like
-  environment on native Windows, but I am not knowledgable on this topic.
+Alternatively alternatively, one could use
+  [Cygwin](https://www.cygwin.com/) for a Unix-like environment
+  on native Windows, but I am not knowledgable on this topic.
 
 ### Linux <a name="build-linux"></a>
 If you are on Windows 10+, you are able to use WSL
