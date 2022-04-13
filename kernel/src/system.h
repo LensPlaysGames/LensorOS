@@ -45,6 +45,7 @@ public:
         Data2 = nullptr;
         Data3 = nullptr;
         Data4 = nullptr;
+        Flags = 0;
     };
 
     SystemDevice(u64 major, u64 minor, void* data)
@@ -53,6 +54,7 @@ public:
         Data2 = nullptr;
         Data3 = nullptr;
         Data4 = nullptr;
+        Flags = 0;
     };
 
     SystemDevice(u64 major, u64 minor
@@ -60,8 +62,20 @@ public:
                  , void* data3, void* data4)
         : Major(major), Minor(minor)
         , Data1(data1), Data2(data2)
-        , Data3(data3), Data4(data4) {};
+        , Data3(data3), Data4(data4)
+    {
+        Flags = 0;
+    };
 
+    void set_flag(u64 flag) {
+        Flags |= (1 << flag);
+    }
+
+    u64 flag(u64 flag) {
+        return Flags & (1 << flag);
+    }
+
+    u64 flags() { return Flags; }
     u64 major() { return Major; }
     u64 minor() { return Minor; }
     void* data1() { return Data1; }
@@ -70,6 +84,7 @@ public:
     void* data4() { return Data4; }
 
 private:
+    u64 Flags { 0 };
     u64 Major { 0 };
     u64 Minor { 0 };
     void* Data1 { nullptr };
