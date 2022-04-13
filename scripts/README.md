@@ -12,6 +12,8 @@
   - Linux
     - [run.sh](#booting-run-sh)
     - [rundbg.sh](#booting-rundbg-sh)
+	- [runhda.sh](#booting-runhda-sh)
+	- [runhdadbg.sh](#booting-runhdadbg-sh)
   - Windows
     - [run.bat](#booting-run-bat)
     - [rundbg.bat](#booting-rundbg-bat)
@@ -169,7 +171,35 @@ Invocation:
 ```
 
 Dependencies:
-- [QEMU](https://www.qemu.org/download/#windows)
+- [QEMU](https://www.qemu.org/download/#linux)
+
+---
+
+### `runhda.sh` <a name="booting-runhda-sh"></a>
+Launch QEMU with the proper flags to boot into
+  LensorOS from the GPT formatted disk image, `LensorOS.bin`.
+
+Invocation:
+```bash
+bash runhda.sh
+```
+
+Dependencies:
+- [QEMU](https://www.qemu.org/download/#linux)
+
+---
+
+### `runhdadbg.sh` <a name="booting-runhdadbg-sh"></a>
+Do the same as [runhda.sh](#booting-runhda-sh) but instruct QEMU to wait
+  for a connection from the GNU debugger (`gdb`) before starting CPU execution.
+
+Invocation:
+```bash
+bash runhdadbg.sh
+```
+
+Dependencies:
+- [QEMU](https://www.qemu.org/download/#linux)
 
 ---
 
