@@ -5,7 +5,7 @@ SET BuildDirectory=%BuildDirectory:"=%
 IF NOT EXIST %BuildDirectory%/LensorOS.img echo " -> ERROR: Could not find %BuildDirectory%/LensorOS.img" & EXIT
 IF NOT EXIST %OVMFbin%/OVMF_CODE-pure-efi.fd echo " -> ERROR: Could not find %OVMFbin%/OVMF_CODE-pure-efi.fd" & EXIT
 IF NOT EXIST %OVMFbin%/OVMF_VARS_LensorOS.fd cp %OVMFbin%/OVMF_VARS-pure-efi.fd %OVMFbin%/OVMF_VARS_LensorOS.fd
-qemu-system-x86_64 ^
+qemu-system-x86_64.exe ^
  -s -S ^
  -d cpu_reset ^
  -machine q35 ^

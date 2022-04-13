@@ -1,11 +1,8 @@
 # LensorOS Scripts
-A collection of shell scripts that automate processes surrounding LensorOS.
 
 ---
 
 ### Table of Contents:
-- Kernel
-  - [cinclude2dot.sh](#kernel-cinclude2dot-sh)
 - Boot Media Generation
   - [install_mkgpt.sh](#bootmediagen-installmkgpt-sh)
   - [mkgpt.sh](#bootmediagen-mkgpt-sh)
@@ -18,6 +15,10 @@ A collection of shell scripts that automate processes surrounding LensorOS.
   - Windows
     - [run.bat](#booting-run-bat)
     - [rundbg.bat](#booting-rundbg-bat)
+	- [runhda.bat](#booting-runhda-bat)
+	- [runhdadbg.bat](#booting-runhdadbg-bat)
+- Visualization
+  - [cinclude2dot.sh](#kernel-cinclude2dot-sh)
 
 ---
 
@@ -179,6 +180,34 @@ Do the same as [run.bat](#booting-run-bat) but instruct QEMU to wait
 Invocation:
 ```pwsh
 .\rundbg.bat
+```
+
+Dependencies:
+- [QEMU](https://www.qemu.org/download/#windows)
+
+---
+
+### `runhda.bat` <a name="booting-runhda-bat"></a>
+Launch QEMU with the proper flags to boot into
+  LensorOS from the GPT formatted disk image, `LensorOS.bin`.
+
+Invocation:
+```pwsh
+.\runhda.bat
+```
+
+Dependencies:
+- [QEMU](https://www.qemu.org/download/#windows)
+
+---
+
+### `runhdadbg.bat` <a name="booting-runhdadbg-bat"></a>
+Do the same as [runhda.bat](#booting-runhda-bat) but instruct QEMU to wait
+  for a connection from the GNU debugger (`gdb) before starting CPU execution.
+
+Invocation:
+```pwsh
+.\runhdadbg.bat
 ```
 
 Dependencies:
