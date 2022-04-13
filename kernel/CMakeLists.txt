@@ -132,17 +132,3 @@ add_custom_command(
   ${CMAKE_SOURCE_DIR}/res
   ${CMAKE_SOURCE_DIR}/bin
 )
-
-# When using a Canadian Cross LensorOS Toolchain, the sysroot
-# is often different than what it is during the toolchain build.
-# This means it must be explicitly specified on the command line.
-if ( CMAKE_HOST_WIN32 )
-  target_compile_options(
-    Interrupts PRIVATE
-    --sysroot=${CMAKE_SOURCE_DIR}\\..\\root
-  )
-  target_compile_options(
-    Kernel PUBLIC
-    --sysroot=${CMAKE_SOURCE_DIR}\\..\\root
-  )
-endif ()
