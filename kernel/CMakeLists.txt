@@ -138,6 +138,10 @@ add_custom_command(
 # if QEMU is found in your system's PATH env. variable.
 find_program( QEMU_PROGRAM qemu-system-x86_64 )
 if ( QEMU_PROGRAM )
+  message(
+	VERBOSE
+	"Found QEMU for x86_64, creating targets: runimg_qemu runhda_qemu runiso_qemu"
+  )
   set(
     QEMU_FLAGS
     -machine q35
@@ -197,7 +201,7 @@ if ( QEMU_PROGRAM )
 	runimg_qemu
 	COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
     -drive format=raw,file=${IMAGE_DIR}/LensorOS.img
-	COMMENT "Running QEMU from FAT32 `LensorOS.img`"
+	COMMENT "Running QEMU for x86_64 from FAT32 `LensorOS.img`"
 	USES_TERMINAL
 	WORKING_DIRECTORY ${REPO_DIR}
 	VERBATIM
@@ -206,7 +210,7 @@ if ( QEMU_PROGRAM )
 	runhda_qemu
 	COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
     -drive format=raw,file=${IMAGE_DIR}/LensorOS.bin
-	COMMENT "Running QEMU from GPT `LensorOS.bin`"
+	COMMENT "Running QEMU for x86_64 from GPT `LensorOS.bin`"
 	USES_TERMINAL
 	WORKING_DIRECTORY ${REPO_DIR}
 	VERBATIM
@@ -215,7 +219,7 @@ if ( QEMU_PROGRAM )
 	runiso_qemu
 	COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
     -drive format=raw,file=${IMAGE_DIR}/LensorOS.iso,media=cdrom
-	COMMENT "Running QEMU from ISO `LensorOS.iso`"
+	COMMENT "Running QEMU for x86_64 from ISO `LensorOS.iso`"
 	USES_TERMINAL
 	WORKING_DIRECTORY ${REPO_DIR}
 	VERBATIM
