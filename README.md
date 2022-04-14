@@ -239,13 +239,13 @@ There are three steps to building LensorOS:
 2. [the Kernel](#build-step3)
 
 On Windows, use the Windows Subsystem for Linux
-  (WSL) to emulate Linux exactly, no drawbacks.
-  [See this walkthrough](https://docs.microsoft.com/en-us/windows/wsl/filesystems#mixing-linux-and-windows-commands)
-  on how easy it is to interweave and communicate between Linux and Windows processes.
+  (WSL) to emulate Linux exactly, no drawbacks. \
+[See this walkthrough](https://docs.microsoft.com/en-us/windows/wsl/filesystems#mixing-linux-and-windows-commands)
+  on how easy it is to communicate between Linux and Windows processes.
 
-If you don't want to use WSL, you'll need
-  [pre-built binaries](https://github.com/LensPlaysGames/LensorOS/releases)
-  of the LensorOS Toolchain, the LensorOS bootloader, and
+If you don't want to use WSL, you'll need pre-built binaries of the
+  [LensorOS Toolchain](https://github.com/LensPlaysGames/LensorOS/releases), 
+  the LensorOS bootloader, and
   [GNU mtools](https://github.com/LensPlaysGames/mtools/releases);
   ask and we will help you on your journey :^).
 
@@ -266,18 +266,25 @@ If you are on Windows 10+, you are able to use WSL
 
 Get dependencies:
 ```bash
-sudo apt install build-essential cmake git make nasm
+sudo apt install build-essential git make nasm
 ```
 
+You will need CMake version `3.20` or greater,
+  which is why we didn't install it through `apt`;
+  most distros only have up to version `3.16`.
+  Check your current installation of CMake's version using `cmake --version`.
+  [See the CMake downloads page](https://cmake.org/download/)
+  for pre-built binaries. Simply download the latest release
+  for `Linux` and your machine type, then (after extracting it),
+  add the `bin` subdirectory to the `PATH` environment variable.
+  CMake are nice guys and even provide self extracting options.
+  If you do not see your machine type, you must
+  download the source and build CMake from it.
+ 
 Obtain the source code:
 ```bash
 git clone https://github.com/LensPlaysGames/LensorOS
 ```
-NOTE: If on Windows using WSL, I recommend cloning onto your Windows
-  machine partition (i.e. a path starting with `/mnt/c/` or something).
-  If you use the WSL partition to store LensorOS, many tools can
-  not access the fake network path that is used (ie. `\\wsl$\`),
-  and it over-all just causes a head-ache.
 
 #### 1. Build The LensorOS Toolchain <a name="build-step1"></a>
 [Follow the instructions in the toolchain README](toolchain/README.md)
@@ -314,7 +321,7 @@ cmake -G "Unix Makefiles" -S . -B rls -DCMAKE_BUILD_TYPE=Release
 Yes, I always recommend generating the build system
   twice in a row (weird bugs may appear otherwise).
 
-The above command should generate an out-of-source 
+The above command should generate an out-of-source
   `GNU make` build system in the `rls` subdirectory.
   Alternatively, generate any build system of your choice that
   is supported by CMake (I recommend Ninja, it's fast).
@@ -332,7 +339,7 @@ This final build step will generate `kernel.elf` within the `/kernel/bin`
 See the sections starting with "Booting into LensorOS" above.
 
 If building the kernel for real hardware, ensure to set the
-  `MACHINE` CMake variable within [config.cmake](kernel/config.cmake) 
+  `MACHINE` CMake variable within [config.cmake](kernel/config.cmake)
   to `PC`, and not any of the virtual machines (ie. `QEMU`, `VBOX`).
   This allows for the hardware timers to be used to their full potential
   (asking QEMU for 1000hz interrupts from multiple devices overloads
@@ -366,12 +373,12 @@ A huge amount of entertainment and inspiration has come from
 
 The compeletely-from-scratch [ToaruOS](https://github.com/klange/toaruos)
   has also been an amazing source of knowledge, inspiration, and information.
-  
-The 
+
+The
   [FreeBSD](https://github.com/freebsd/freebsd-src)
-  and 
-  [Linux](https://github.com/torvalds/linux) 
-  codebases have been a huge help in seeing how 
+  and
+  [Linux](https://github.com/torvalds/linux)
+  codebases have been a huge help in seeing how
   hard-to-solve problems have been solved in the past.
 
 ---

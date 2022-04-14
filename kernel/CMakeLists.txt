@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 3.14 )
+cmake_minimum_required( VERSION 3.20 )
 set( LensorOS_VERSION 0.0.1 )
 set( LensorOS_LANGUAGES ASM_NASM CXX )
 
@@ -123,12 +123,101 @@ target_link_libraries( Kernel PUBLIC Assembly )
 add_custom_target(
   EnsureBinDirectory ALL
   COMMAND ${CMAKE_COMMAND} -E make_directory
-  ${CMAKE_SOURCE_DIR}/bin
+  ${CMAKE_CURRENT_LIST_DIR}/bin
 )
 # Copy contents of the resources directory into the final binary directory.
 add_custom_command(
   TARGET EnsureBinDirectory POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
-  ${CMAKE_SOURCE_DIR}/res
-  ${CMAKE_SOURCE_DIR}/bin
+  ${CMAKE_CURRENT_LIST_DIR}/res
+  ${CMAKE_CURRENT_LIST_DIR}/bin
 )
+
+
+# Add a custom target to run QEMU with the proper flags
+# if QEMU is found in your system's PATH env. variable.
+find_program( QEMU_PROGRAM qemu-system-x86_64 )
+if ( QEMU_PROGRAM )
+  set(
+    QEMU_FLAGS
+    -machine q35
+	# cpu: Broadwell, Cascadelake-Server, Cooperlake, Conroe, core2duo,
+	#      Denverton, Dhyana, EPYC, Haswell, IvyBridge, kvm64, max,
+	#      Nehalem, Penryn, qemu64, SandyBridge, Skylake-[Client|Server],
+	#      Snowridge, Westmere
+    -cpu qemu64
+	# One hundred megabytes of RAM.
+    -m 100M
+	# Use local time as real time clock base.
+    -rtc base=localtime,clock=host,driftfix=none
+	# This is deprecated, but we'll use it,
+	# until we write an actual sound driver.
+	-soundhw pcspk
+	# No networking drivers yet.
+    -net none
+	# Show extra information regarding triple faults.
+	-d cpu_reset
+	# Use stdio as serial input and output.
+	# This allows debug messages to reach the terminal.
+    -serial stdio
+  )
+  cmake_path(
+	GET
+	CMAKE_CURRENT_LIST_DIR
+	PARENT_PATH
+	REPO_DIR
+  )
+  set( IMAGE_DIR "${REPO_DIR}/kernel/bin" )
+  set( OVMF_CODE "${REPO_DIR}/OVMFbin/OVMF_CODE-pure-efi.fd" )
+  set( OVMF_VARS "${REPO_DIR}/OVMFbin/OVMF_VARS_LensorOS.fd" )
+  cmake_path(
+	NATIVE_PATH
+	IMAGE_DIR
+	NORMALIZE
+	IMAGE_DIR
+  )
+  cmake_path(
+	NATIVE_PATH
+	OVMF_CODE
+	NORMALIZE
+	OVMF_CODE
+  )
+  cmake_path(
+	NATIVE_PATH
+	OVMF_VARS
+	NORMALIZE
+	OVMF_VARS
+  )
+  list(
+	APPEND QEMU_FLAGS
+	-drive if=pflash,format=raw,unit=0,file=${OVMF_CODE},readonly=on
+    -drive if=pflash,format=raw,unit=1,file=${OVMF_VARS}
+  )
+  add_custom_target(
+	runimg_qemu
+	COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
+    -drive format=raw,file=${IMAGE_DIR}/LensorOS.img
+	COMMENT "Running QEMU from FAT32 `LensorOS.img`"
+	USES_TERMINAL
+	WORKING_DIRECTORY ${REPO_DIR}
+	VERBATIM
+  )
+  add_custom_target(
+	runhda_qemu
+	COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
+    -drive format=raw,file=${IMAGE_DIR}/LensorOS.bin
+	COMMENT "Running QEMU from GPT `LensorOS.bin`"
+	USES_TERMINAL
+	WORKING_DIRECTORY ${REPO_DIR}
+	VERBATIM
+  )
+  add_custom_target(
+	runiso_qemu
+	COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
+    -drive format=raw,file=${IMAGE_DIR}/LensorOS.iso,media=cdrom
+	COMMENT "Running QEMU from ISO `LensorOS.iso`"
+	USES_TERMINAL
+	WORKING_DIRECTORY ${REPO_DIR}
+	VERBATIM
+  )
+endif ()
