@@ -257,7 +257,6 @@ void kstage1(BootInfo* bInfo) {
         if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FXSR)) {
             SystemCPU->set_fxsr_capable();
             asm volatile ("fxsave %0" :: "m"(fxsave_region));
-            UART::out("  \033[32mFXSAVE/FXRSTOR Enabled\033[0m\r\n");
             SystemCPU->set_fxsr_enabled();
             // If FXSAVE/FXRSTOR is supported, setup FPU.
             if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FPU)) {
@@ -274,7 +273,6 @@ void kstage1(BootInfo* bInfo) {
                               "mov %%rdx, %%cr0\n"
                               "fninit\n"
                               ::: "rax", "rdx");
-                UART::out("  \033[32mFPU Enabled\033[0m\r\n");
                 SystemCPU->set_fpu_enabled();
             }
             else {
@@ -283,7 +281,6 @@ void kstage1(BootInfo* bInfo) {
                               "or $0b1100, %%dx\n"
                               "mov %%rdx, %%cr0\n"
                               ::: "rdx");
-                UART::out("  \033[31mFPU Not Supported\033[0m\r\n");
             }
             // If FXSAVE/FXRSTOR are supported and present, setup SSE.
             if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)) {
@@ -302,10 +299,8 @@ void kstage1(BootInfo* bInfo) {
                               "or $0b11000000000, %%rax\n"
                               "mov %%rax, %%cr4\n"
                               ::: "rax");
-                UART::out("  \033[32mSSE Enabled\033[0m\r\n");
                 SystemCPU->set_sse_enabled();
             }
-            else UART::out("  \033[31mSSE Not Supported\033[0m\r\n");
         }
         // Enable XSAVE feature set if CPU supports it.
         if (regs.C & static_cast<u32>(CPUID_FEATURE::ECX_XSAVE)) {
@@ -315,7 +310,6 @@ void kstage1(BootInfo* bInfo) {
             asm volatile ("mov %cr4, %rax\n"
                           "or $0b1000000000000000000, %rax\n"
                           "mov %rax, %cr4\n");
-            UART::out("  \033[32mXSAVE Enabled\033[0m\r\n");
             SystemCPU->set_xsave_enabled();
             // If SSE, AND XSAVE are supported, setup AVX feature set.
             if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)
@@ -327,12 +321,9 @@ void kstage1(BootInfo* bInfo) {
                               "or $0b111, %%eax\n"
                               "xsetbv\n"
                               ::: "rax", "rcx", "rdx");
-                UART::out("  \033[32mAVX Enabled\033[0m\r\n");
                 SystemCPU->set_avx_enabled();
             }
-            else UART::out("  \033[31mAVX Not Supported\033[0m\r\n");
         }
-        else UART::out("  \033[31mXSAVE Not Supported\033[0m\r\n");
         UART::out("\r\n");
     }
     UART::out("\r\n");
