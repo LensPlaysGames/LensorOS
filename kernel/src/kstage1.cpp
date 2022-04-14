@@ -488,6 +488,7 @@ void kstage1(BootInfo* bInfo) {
                 }
             }
             else if (dev.minor() == SYSDEV_MINOR_AHCI_PORT) {
+#ifndef VBOX
                 auto* portController = (AHCI::PortController*)dev.data1();
                 if (portController && FAT->test(portController)) {
                     UART::out("  Found valid File Allocation Table filesystem\r\n");
@@ -495,6 +496,7 @@ void kstage1(BootInfo* bInfo) {
                     // Done searching AHCI port, found valid filesystem.
                     dev.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
                 }
+#endif /* !defined VBOX */
             }
         }
     });
