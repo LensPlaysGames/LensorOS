@@ -1,7 +1,7 @@
-#include "guid.h"
 #include <kstage1.h>
 
 #include <acpi.h>
+#include <ahci.h>
 #include <basic_renderer.h>
 #include <boot.h>
 #include <bitmap.h>
@@ -12,6 +12,7 @@
 #include <fat_definitions.h>
 #include <gdt.h>
 #include <gpt.h>
+#include <guid.h>
 #include <memory/heap.h>
 #include <hpet.h>
 #include <interrupts/idt.h>
@@ -370,7 +371,7 @@ void kstage1(BootInfo* bInfo) {
         SystemDevice& dev = it->value();
         if (dev.major() == SYSDEV_MAJOR_STORAGE
             && dev.minor() == SYSDEV_MINOR_AHCI_CONTROLLER
-            && dev.flag(SYSDEV_FLAG_STORAGE_SEARCH))
+            && dev.flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
         {
             UART::out("[kstage1]: Probing AHCI Controller\r\n");
             AHCI::HBAMemory* ABAR = (AHCI::HBAMemory*)(u64)(((PCI::PCIHeader0*)dev.data2())->BAR5);
@@ -387,11 +388,13 @@ void kstage1(BootInfo* bInfo) {
                                               , SYSDEV_MINOR_AHCI_PORT
                                               , PortController, &dev
                                               , nullptr, nullptr);
-                        ahciPort.set_flag(SYSDEV_FLAG_STORAGE_SEARCH, true);
+                        ahciPort.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, true);
                         SYSTEM->add_device(ahciPort);
                     }
                 }
             }
+            // Don't search AHCI controller any further, already found all ports.
+            dev.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
         }
     });
 
@@ -403,19 +406,14 @@ void kstage1(BootInfo* bInfo) {
         SystemDevice& d = it->value();
         if (d.major() == SYSDEV_MAJOR_STORAGE
             && d.minor() == SYSDEV_MINOR_AHCI_PORT
-            && d.flag(SYSDEV_FLAG_STORAGE_SEARCH) != 0)
+            && d.flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
         {
             auto* portCon = (AHCI::PortController*)(&d)->data1();
+            UART::out("[kstage1]: Searching ACHI port ");
+            UART::out(portCon->port_number());
+            UART::out(" for a GPT\r\n");
             if(GPT::is_gpt_present((StorageDeviceDriver*)portCon)) {
-                UART::out("[kUtil]: GPT is present on port ");
-                UART::out(portCon->port_number());
-                UART::out("!\r\n");
-                /* Don't search port any further, we figured
-                 * out it's storage media that is GPT partitioned
-                 * and devices have been created for those
-                 * (that will themselves be searched for filesystems).
-                 */
-                d.set_flag(SYSDEV_FLAG_STORAGE_SEARCH, false);
+                UART::out("  GPT is present!\r\n");
                 auto gptHeader = SmartPtr<GPT::Header>(new GPT::Header);
                 auto sector = SmartPtr<u8[]>(new u8[512], 512);
                 portCon->read(512, sizeof(GPT::Header), (u8*)gptHeader.get());
@@ -450,17 +448,23 @@ void kstage1(BootInfo* bInfo) {
                                               , SYSDEV_MINOR_GPT_PARTITION
                                               , partDriver, nullptr
                                               , nullptr, &it->value());
-                    gptPartition.set_flag(SYSDEV_FLAG_STORAGE_SEARCH, true);
+                    gptPartition.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, true);
                     // Don't touch partitions with ANY known GUIDs (for now).
                     const GUID* knownGUID = &GPT::ReservedPartitionGUIDs[0];
                     while (*knownGUID != GPT::NullGUID) {
                         if (part->TypeGUID == *knownGUID)
-                            gptPartition.set_flag(SYSDEV_FLAG_STORAGE_SEARCH, false);
+                            gptPartition.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
 
                         knownGUID++;
                     }
                     SYSTEM->add_device(gptPartition);
                 }
+                /* Don't search port any further, we figured
+                 * out it's storage media that is GPT partitioned
+                 * and devices have been created for those
+                 * (that will themselves be searched for filesystems).
+                 */
+                d.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
             }
         }
     });
@@ -474,19 +478,31 @@ void kstage1(BootInfo* bInfo) {
     SYSTEM->devices().for_each([FAT](auto* it) {
         SystemDevice& dev = it->value();
         if (dev.major() == SYSDEV_MAJOR_STORAGE
-            && dev.minor() == SYSDEV_MINOR_GPT_PARTITION
-            && dev.flag(SYSDEV_FLAG_STORAGE_SEARCH))
+            && dev.flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
         {
-            auto* driver = (GPTPartitionDriver*)(dev.data1());
-            if (driver) {
-                UART::out("Partition:\r\n  Type GUID: ");
-                print_guid(driver->type_guid());
-                UART::out("  Unique GUID: ");
-                print_guid(driver->unique_guid());
-                UART::out("\r\n");
-                if (FAT->test(driver)) {
+            if (dev.minor() == SYSDEV_MINOR_GPT_PARTITION) {
+                auto* partDriver = (GPTPartitionDriver*)dev.data1();
+                if (partDriver) {
+                    UART::out("Partition:\r\n  Type GUID: ");
+                    print_guid(partDriver->type_guid());
+                    UART::out("  Unique GUID: ");
+                    print_guid(partDriver->unique_guid());
+                    UART::out("\r\n");
+                    if (FAT->test(partDriver)) {
+                        UART::out("  Found valid File Allocation Table filesystem\r\n");
+                        SYSTEM->add_fs(Filesystem(FilesystemType::FAT, FAT, partDriver));
+                        // Done searching GPT partition, found valid filesystem.
+                        dev.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
+                    }
+                }
+            }
+            else if (dev.minor() == SYSDEV_MINOR_AHCI_PORT) {
+                auto* portController = (AHCI::PortController*)dev.data1();
+                if (portController && FAT->test(portController)) {
                     UART::out("  Found valid File Allocation Table filesystem\r\n");
-                    SYSTEM->add_fs(Filesystem(FilesystemType::FAT, FAT, driver));
+                    SYSTEM->add_fs(Filesystem(FilesystemType::FAT, FAT, portController));
+                    // Done searching AHCI port, found valid filesystem.
+                    dev.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
                 }
             }
         }
