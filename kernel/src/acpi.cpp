@@ -6,12 +6,18 @@
 
 /* Helpful resource: https://github.com/freebsd/freebsd-src/blob/main/usr.sbin/acpi/acpidump/acpi.c */
 
+// Uncomment the following directive for extra debug information output.
+//#define DEBUG_ACPI
+
+
 namespace ACPI {
     void initialize(RSDP2* rootSystemDescriptorPointer) {
+#ifdef DEBUG_ACPI
         UART::out("[ACPI]: Initializing ACPI\r\n"
                   "  RSDP: 0x");
         UART::out(to_hexstring(rootSystemDescriptorPointer));
         UART::out("\r\n");
+#endif /* DEBUG_ACPI */
         if (rootSystemDescriptorPointer == nullptr) {
             UART::out("[ACPI]: \033[31mERROR\033[0m -> Root System Descriptor Pointer is null. "
                       "(error in bootloader or during boot process)\r\n");
@@ -20,10 +26,12 @@ namespace ACPI {
         gRSDP = (ACPI::SDTHeader*)rootSystemDescriptorPointer;
         // eXtended System Descriptor Table
         gXSDT = (ACPI::SDTHeader*)(rootSystemDescriptorPointer->XSDTAddress);
+#ifdef DEBUG_ACPI
         UART::out("  XSDT: 0x");
         UART::out(to_hexstring(gXSDT));
         UART::out("\r\n"
                   "[ACPI]: \033[32mInitialized\033[0m\r\n");
+#endif /* DEBUG_ACPI */
     }
 
     SDTHeader* gRSDP { nullptr };
@@ -75,21 +83,27 @@ namespace ACPI {
         if (header == nullptr || signature == nullptr)
             return nullptr;
 
+#ifdef DEBUG_ACPI
         UART::out("[ACPI]: Looking for ");
         UART::out(signature);
         UART::out(" table\r\n");
+#endif /* DEBUG_ACPI */
 
         u64 entries = (header->Length - sizeof(ACPI::SDTHeader)) / 8;
 
+#ifdef DEBUG_ACPI
         UART::out("  ");
         UART::out(header->Signature, 4);
         UART::out(": ");
         UART::out(entries);
         UART::out(" entries\r\n");
+#endif /* DEBUG_ACPI */
 
         for (u64 t = 0; t < entries; ++t) {
             SDTHeader* sdt = (SDTHeader*)*((u64*)((u64)header + sizeof(SDTHeader)) + t);
+#ifdef DEBUG_ACPI
             print_sdt(sdt);
+#endif /* DEBUG_ACPI */
             // Find matching signature.
             if (strcmp((char*)sdt->Signature, signature, 4)) {
                 if (int rc = checksum(sdt, sdt->Length)) {
