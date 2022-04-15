@@ -149,86 +149,82 @@ cmake_path(
 )
 
 # Boot media generation targets
-# Wrappers around bash `mk*` scripts.
-set( IMAGE_TARGETS "" )
+# Bash (Unix)
 find_program( BASH_PROGRAM bash )
-find_program( XORRISO_PROGRAM xorriso )
+find_program( DD_PROGRAM dd )
+find_program( MTOOLS_PROGRAM mtools )
 if( BASH_PROGRAM )
   # Boot media generation: raw FAT32 image.
-  # I would allow this on Windows except
-  # there is some weird issue with paths
-  # (i.e. "/EFI/BOOT" causes errors).
-  find_program( DD_PROGRAM dd )
-  find_program( MTOOLS_PROGRAM mtools )
   if( CMAKE_HOST_UNIX
-	  AND DD_PROGRAM
-	  AND MTOOLS_PROGRAM
-	)
-	message(
-	  VERBOSE
-	  "Found bash, dd, and mtools, creating targets: image_raw"
-	)
-	add_custom_target(
-	  image_raw
-	  COMMAND bash mkimg.sh
-	  WORKING_DIRECTORY ${SCRIPTS_DIR}
-	  USES_TERMINAL
-	  VERBATIM
-	)
-	list( APPEND IMAGE_TARGETS image_raw )
+      AND DD_PROGRAM
+      AND MTOOLS_PROGRAM )
+    message(
+      VERBOSE
+      "Found bash, dd, and mtools, creating targets: image_raw"
+    )
+    add_custom_target(
+      image_raw
+      COMMAND bash mkimg.sh
+      WORKING_DIRECTORY ${SCRIPTS_DIR}
+      USES_TERMINAL
+      VERBATIM
+    )
   endif()
   # Boot media generation: GPT partitioned hard drive.
   find_program( MKGPT_PROGRAM mkgpt )
   if( MKGPT_PROGRAM )
-	message(
-	  VERBOSE
-	  "Found mkgpt, creating targets: image_gpt"
-	)
-	add_custom_target(
-	  image_gpt
-	  COMMAND bash mkgpt.sh
-	  WORKING_DIRECTORY ${SCRIPTS_DIR}
-	  USES_TERMINAL
-	  VERBATIM
-	)
-	list( APPEND IMAGE_TARGETS image_gpt )
+    message(
+      VERBOSE
+      "Found mkgpt, creating targets: image_gpt"
+    )
+    add_custom_target(
+      image_gpt
+      COMMAND bash mkgpt.sh
+      WORKING_DIRECTORY ${SCRIPTS_DIR}
+      USES_TERMINAL
+      VERBATIM
+    )
   else()
-	message(
-	  "-- mkgpt was not found on your system, skipping image_gpt target generation.\n"
-	  "   Install it using ${SCRIPTS_DIR}/install_mkgpt.sh"
-	)
+    message(
+      "-- mkgpt was not found on your system, skipping image_gpt target generation.\n"
+      "   Install it using ${SCRIPTS_DIR}/install_mkgpt.sh"
+    )
   endif()
   # Boot media generation: ISO-9660 CD-ROM.
+  find_program( XORRISO_PROGRAM xorriso )
   if( XORRISO_PROGRAM )
-	message(
-	  VERBOSE
-	  "Found xorriso, creating targets: image_iso"
-	)
-	add_custom_target(
-	  image_iso
-	  COMMAND bash mkiso.sh
-	  WORKING_DIRECTORY ${SCRIPTS_DIR}
-	  USES_TERMINAL
-	  VERBATIM
-	)
-	list( APPEND IMAGE_TARGETS image_iso )
+    message(
+      VERBOSE
+      "Found xorriso, creating targets: image_iso"
+    )
+    add_custom_target(
+      image_iso
+      COMMAND bash mkiso.sh
+      WORKING_DIRECTORY ${SCRIPTS_DIR}
+      USES_TERMINAL
+      VERBATIM
+    )
   else()
-	message( "-- xorriso was not found on your system, skipping image_iso target generation." )
+    message( "-- xorriso was not found on your system, skipping image_iso target generation." )
   endif()
 endif()
 
-# Create image_all target, if needed.
-# This is very innefiecient due to rebuilding LensorOS.img
-# three times, but is useful to just get new boot media generated.
-if( IMAGE_TARGETS )
-  message(
-	VERBOSE
-	"Found image targets, creating target: image_all"
-  )
-  add_custom_target(
-	image_all
-	DEPENDS ${IMAGE_TARGETS}
-  )
+# Batch (Windows)
+if( CMAKE_HOST_WIN32 )
+  if( DD_PROGRAM
+      AND MTOOLS_PROGRAM )
+    message(
+      VERBOSE
+      "Found dd and mtools, creating targets: image_raw"
+    )
+    add_custom_target(
+      image_raw
+      COMMAND cmd
+      /c ${SCRIPTS_DIR}/mkimg.bat
+      USES_TERMINAL
+      VERBATIM
+    )
+  endif()
 endif()
 
 
@@ -237,85 +233,85 @@ endif()
 find_program( QEMU_PROGRAM qemu-system-x86_64 )
 if ( QEMU_PROGRAM )
   message(
-	VERBOSE
-	"Found QEMU for x86_64, creating targets: runimg_qemu runhda_qemu runiso_qemu"
+    VERBOSE
+    "Found QEMU for x86_64, creating targets: runimg_qemu runhda_qemu runiso_qemu"
   )
   set(
     QEMU_FLAGS
     -machine q35
-	# cpu: Broadwell, Cascadelake-Server, Cooperlake, Conroe, core2duo,
-	#      Denverton, Dhyana, EPYC, Haswell, IvyBridge, kvm64, max,
-	#      Nehalem, Penryn, qemu64, SandyBridge, Skylake-[Client|Server],
-	#      Snowridge, Westmere
+    # cpu: Broadwell, Cascadelake-Server, Cooperlake, Conroe, core2duo,
+    #      Denverton, Dhyana, EPYC, Haswell, IvyBridge, kvm64, max,
+    #      Nehalem, Penryn, qemu64, SandyBridge, Skylake-[Client|Server],
+    #      Snowridge, Westmere
     -cpu qemu64
-	# Multiple processors (commented until utilized).
-	#-smp 8,sockets=2,cores=2,threads=2,maxcpus=8
-	# One hundred megabytes of RAM.
+    # Multiple processors (commented until utilized).
+    #-smp 8,sockets=2,cores=2,threads=2,maxcpus=8
+    # One hundred megabytes of RAM.
     -m 100M
-	# Use local time as real time clock base.
+    # Use local time as real time clock base.
     -rtc base=localtime,clock=host,driftfix=none
-	# This is deprecated, but we'll use it,
-	# until we write an actual sound driver.
-	-soundhw pcspk
-	# No networking drivers yet.
+    # This is deprecated, but we'll use it,
+    # until we write an actual sound driver.
+    -soundhw pcspk
+    # No networking drivers yet.
     -net none
-	# Show extra information regarding triple faults.
-	-d cpu_reset
-	# Use stdio as serial input and output.
-	# This allows debug messages to reach the terminal.
+    # Show extra information regarding triple faults.
+    -d cpu_reset
+    # Use stdio as serial input and output.
+    # This allows debug messages to reach the terminal.
     -serial stdio
   )
   set( IMAGE_DIR "${REPO_DIR}/kernel/bin" )
   set( OVMF_CODE "${REPO_DIR}/OVMFbin/OVMF_CODE-pure-efi.fd" )
   set( OVMF_VARS "${REPO_DIR}/OVMFbin/OVMF_VARS_LensorOS.fd" )
   cmake_path(
-	NATIVE_PATH
-	IMAGE_DIR
-	NORMALIZE
-	IMAGE_DIR
+    NATIVE_PATH
+    IMAGE_DIR
+    NORMALIZE
+    IMAGE_DIR
   )
   cmake_path(
-	NATIVE_PATH
-	OVMF_CODE
-	NORMALIZE
-	OVMF_CODE
+    NATIVE_PATH
+    OVMF_CODE
+    NORMALIZE
+    OVMF_CODE
   )
   cmake_path(
-	NATIVE_PATH
-	OVMF_VARS
-	NORMALIZE
-	OVMF_VARS
+    NATIVE_PATH
+    OVMF_VARS
+    NORMALIZE
+    OVMF_VARS
   )
   list(
-	APPEND QEMU_FLAGS
-	-drive if=pflash,format=raw,unit=0,file=${OVMF_CODE},readonly=on
+    APPEND QEMU_FLAGS
+    -drive if=pflash,format=raw,unit=0,file=${OVMF_CODE},readonly=on
     -drive if=pflash,format=raw,unit=1,file=${OVMF_VARS}
   )
   add_custom_target(
-	runimg_qemu
-	COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
+    runimg_qemu
+    COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
     -drive format=raw,file=${IMAGE_DIR}/LensorOS.img
-	COMMENT "Running QEMU for x86_64 from FAT32 `LensorOS.img`"
-	USES_TERMINAL
-	WORKING_DIRECTORY ${REPO_DIR}
-	VERBATIM
+    COMMENT "Running QEMU for x86_64 from FAT32 `LensorOS.img`"
+    USES_TERMINAL
+    WORKING_DIRECTORY ${REPO_DIR}
+    VERBATIM
   )
   add_custom_target(
-	runhda_qemu
-	COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
+    runhda_qemu
+    COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
     -drive format=raw,file=${IMAGE_DIR}/LensorOS.bin
-	COMMENT "Running QEMU for x86_64 from GPT `LensorOS.bin`"
-	USES_TERMINAL
-	WORKING_DIRECTORY ${REPO_DIR}
-	VERBATIM
+    COMMENT "Running QEMU for x86_64 from GPT `LensorOS.bin`"
+    USES_TERMINAL
+    WORKING_DIRECTORY ${REPO_DIR}
+    VERBATIM
   )
   add_custom_target(
-	runiso_qemu
-	COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
+    runiso_qemu
+    COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
     -drive format=raw,file=${IMAGE_DIR}/LensorOS.iso,media=cdrom
-	COMMENT "Running QEMU for x86_64 from ISO `LensorOS.iso`"
-	USES_TERMINAL
-	WORKING_DIRECTORY ${REPO_DIR}
-	VERBATIM
+    COMMENT "Running QEMU for x86_64 from ISO `LensorOS.iso`"
+    USES_TERMINAL
+    WORKING_DIRECTORY ${REPO_DIR}
+    VERBATIM
   )
 endif ()
