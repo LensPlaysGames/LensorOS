@@ -73,7 +73,7 @@ extern "C" void kmain(BootInfo* bInfo) {
     gRend.clear(0x00000000);
     gRend.swap();
     ///// GPLv3 LICENSE REQUIREMENT (interactive terminal must print copyright notice).
-    const char* GPLv3 = "<LensorOS>  Copyright (C) <2022>  <Rylan Lens Kellogg>";
+    const char* GPLv3 = "LensorOS  Copyright (C) 2022, Contributors To LensorOS.";
     //// TO SERIAL
     UART::out(GPLv3);
     UART::out("\r\n\r\n");
@@ -126,7 +126,7 @@ extern "C" void kmain(BootInfo* bInfo) {
         gRend.puts("RTC Elapsed: ");
         gRend.puts(to_string(gRTC.seconds_since_boot()));
         gRend.crlf(debugInfoX);
-        // PRINT HPET ELAPSED TICKS.
+        // PRINT HPET ELAPSED TIME.
         gRend.puts("HPET Elapsed: ");
         gRend.puts(to_string(gHPET.get_seconds()));
         gRend.crlf(debugInfoX);
