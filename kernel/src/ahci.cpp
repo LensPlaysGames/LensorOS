@@ -152,7 +152,7 @@ namespace AHCI {
             UART::out("  \033[31mERROR\033[0m: `read()`  buffer can not be nullptr\r\n");
             return;
         }
-        // FIXME: Don't reject reads over port buffer max size,
+        // TODO: Don't reject reads over port buffer max size,
         //        just do multiple reads and copy as you go.
         if (byteCount > MAX_READ_BYTES) {
             UART::out("  \033[31mERROR\033[0m: `read()`  byteCount can"
