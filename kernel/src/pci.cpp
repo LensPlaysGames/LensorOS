@@ -61,7 +61,7 @@ namespace PCI {
         u64 offset = functionNumber << 12;
         u64 function_address = deviceAddress + offset;
         Memory::map((void*)function_address, (void*)function_address);
-        PCIDeviceHeader* pciDevHdr = (PCIDeviceHeader*)function_address;
+        PCIDeviceHeader* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(function_address);
         if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
             Memory::unmap((void*)function_address);
             return;
@@ -106,7 +106,7 @@ namespace PCI {
         u64 offset = deviceNumber << 15;
         u64 device_address = busAddress + offset;
         Memory::map((void*)device_address, (void*)device_address);
-        PCIDeviceHeader* pciDevHdr = (PCIDeviceHeader*)device_address;
+        PCIDeviceHeader* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(device_address);
         if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
             Memory::unmap((void*)device_address);
             return;
@@ -149,8 +149,10 @@ namespace PCI {
         u64 systemDeviceLengthBefore = SYSTEM->devices().length();
 #endif /* DEBUG_PCI */
         for (int t = 0; t < entries; ++t) {
-            ACPI::DeviceConfig* devCon = (ACPI::DeviceConfig*)((u64)mcfg + sizeof(ACPI::MCFGHeader)
-                                                               + (sizeof(ACPI::DeviceConfig) * t));
+            u64 devConAddr = (reinterpret_cast<u64>(mcfg)
+                              + sizeof(ACPI::MCFGHeader)
+                              + (sizeof(ACPI::DeviceConfig) * t));
+            auto* devCon = reinterpret_cast<ACPI::DeviceConfig*>(devConAddr);
 #ifdef DEBUG_PCI
             UART::out("    Entry ");
             UART::out(to_string(t));

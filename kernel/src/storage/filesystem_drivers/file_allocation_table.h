@@ -19,9 +19,7 @@ public:
 
         bool out { false };
         driver->read(0, 512, buffer.get());
-        // potential FIXME: Should this be a `reinterpret_cast`?
-        //                                   `static_cast`?
-        auto* br = (BootRecord*)buffer.get();
+        auto* br = reinterpret_cast<BootRecord*>(buffer.get());
         u64 totalSectors = br->BPB.TotalSectors16 == 0
             ? br->BPB.TotalSectors32 : br->BPB.TotalSectors16;
         /* Validate boot sector is of FAT format.
