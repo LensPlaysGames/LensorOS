@@ -7,17 +7,22 @@ A collection of shell scripts that automate processes surrounding LensorOS.
 - Visualization
   - [cinclude2dot.sh](#kernel-cinclude2dot-sh)
 - Boot Media Generation
-  - [install_mkgpt.sh](#bootmediagen-installmkgpt-sh)
-  - [mkgpt.sh](#bootmediagen-mkgpt-sh)
-  - [mkimg.sh](#bootmediagen-mkimg-sh)
-  - [mkiso.sh](#bootmediagen-mkiso-sh)
+  - Unix
+    - [install_mkgpt.sh](#bootmediagen-installmkgpt-sh)
+    - [mkgpt.sh](#bootmediagen-mkgpt-sh)
+    - [mkimg.sh](#bootmediagen-mkimg-sh)
+    - [mkiso.sh](#bootmediagen-mkiso-sh)
+  - Windows
+    - [mkimg.bat](#bootmediagen-mkimg-bat)
 - Booting into LensorOS
-  - Linux
+  - Unix
     - [run.sh](#booting-run-sh)
 	- [runhda.sh](#booting-runhda-sh)
+    - [runiso.sh](#booting-runiso-sh)
   - Windows
     - [run.bat](#booting-run-bat)
 	- [runhda.bat](#booting-runhda-bat)
+    - [runiso.bat](#booting-runiso-bat)
 
 ---
 
@@ -130,6 +135,21 @@ Dependencies:
 
 ---
 
+### `mkimg.bat` <a name="bootmediagen-mkimg-bat"></a>
+Generate a bootable disk image that is UEFI compatible (FAT32 formatted).
+
+Invocation:
+```pwsh
+.\mkimg.bat
+```
+
+Dependencies:
+- [GNU mtools](https://www.gnu.org/software/mtools/)
+  - [Pre-built binaries for Windows](https://github.com/LensPlaysGames/mtools/releases)
+  - [Source Code](http://ftp.gnu.org/gnu/mtools/)
+
+---
+
 ### `run.sh` <a name="booting-run-sh"></a>
 Launch QEMU with the proper flags to boot into
   LensorOS from the raw FAT32 image, `LensorOS.img`.
@@ -172,6 +192,20 @@ Dependencies:
 
 ---
 
+### `runiso.sh` <a name="booting-runiso-sh"></a>
+Launch QEMU with the proper flags to boot into
+  LensorOS from the ISO-9660 CD-ROM image, `LensorOS.iso`.
+
+Invocation:
+```bash
+bash runiso.sh
+```
+
+Dependencies:
+- [QEMU](https://www.qemu.org/download/#linux)
+
+---
+
 ### `run.bat` <a name="booting-run-bat"></a>
 Launch QEMU with the proper flags to boot into
   LensorOS from the raw FAT32 image, `LensorOS.img`.
@@ -207,6 +241,20 @@ Invocation:
 ```
 ```pwsh
 .\runhdadbg.bat
+```
+
+Dependencies:
+- [QEMU](https://www.qemu.org/download/#windows)
+
+---
+
+### `runiso.bat` <a name="booting-runiso-bat"></a>
+Launch QEMU with the proper flags to boot into
+  LensorOS from the ISO-9660 CD-ROM image, `LensorOS.iso`.
+
+Invocation:
+```pwsh
+.\runiso.bat
 ```
 
 Dependencies:
