@@ -36,8 +36,11 @@ class CPUDescription;
 class CPU {
     friend class CPUDescription;
 public:
+    CPU () {}
+
     CPU (CPUDescription* description)
         : Description(description) {}
+    
     CPU (CPUDescription* description
          , u16 logCore
          , u16 core
@@ -52,7 +55,7 @@ public:
         , APICID(apicID) {}
 
 private:
-    CPUDescription* Description;
+    CPUDescription* Description { nullptr };
     u16 LogicalCore { 0 };
     u16 Core        { 0 };
     // See non-uniform memory access resources above.
@@ -83,6 +86,8 @@ private:
  */
 class CPUDescription {
 public:
+    CPUDescription() {}
+
     // NOTE: This is not null-terminated! Do not print this directly!
     // VendorID has a size of twelve bytes, so ensure to not read outside that.
     char* get_vendor_id() {
@@ -158,8 +163,8 @@ public:
 
 private:
     // Used for CPU Logical/Physical core number calculation from APIC ID.
-    u8 LogicalCoreBits;
-    u8 PhysicalCoreBits;
+    u8 LogicalCoreBits { 0 };
+    u8 PhysicalCoreBits { 0 };
     /* CPU Feature Flags
      *   Once enabled, can not be disabled.
      */
@@ -175,7 +180,7 @@ private:
     bool AVXCapable   { false };
     bool AVXEnabled   { false };
     // 12-character string that represents the CPU vendor
-    char VendorID[12];
+    char VendorID[12] { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' };
     // List of central processing units (why call them central anymore??)
     SinglyLinkedList<CPU> CPUs;
 };
