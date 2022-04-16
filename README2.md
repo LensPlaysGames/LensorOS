@@ -160,11 +160,10 @@ cmake --build kernel/bld --target help
 ---
 
 ### Boot Media Generation <a name="boot-media-generation"></a>
-As stated above, CMake will create targets if the proper
-  dependencies are detected on the system. Here is a list
-  of the current build targets relating to boot media
-  generation, as well as their dependencies listed
-  underneath each one.
+CMake will create targets if the proper dependencies are
+  detected on the system. Here is a list of the current
+  build targets relating to boot media generation, as
+  well as their dependencies listed underneath each one.
 
 - `image_raw` --
   Combine built executables and resources to generate UEFI-compatible FAT32 boot media.
@@ -192,9 +191,8 @@ As stated above, CMake will create targets if the proper
     - [Pre-built binaries for Windows](https://github.com/PeyTy/xorriso-exe-for-windows)
 
 The targets can be chained together for easy, quick development. \
-To build LensorOS, generate boot media, and then
+To build the LensorOS kernel, generate new boot media, and then
   launch into LensorOS, it takes just one command.
-
 ```sh
 cmake --build kernel/bld -t all image_raw runimg_qemu
 ```
