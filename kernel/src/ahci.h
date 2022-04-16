@@ -12,15 +12,99 @@
 
 #define ATA_DEV_BUSY 0x80
 #define ATA_DEV_DRQ  0x08
-#define ATA_CMD_READ_DMA_EX 0x25
+
+#define ATA_CMD_WRITE_DMA        0xca
+#define ATA_CMD_WRITE_DMA_QUEUED 0xcc
+#define ATA_CMD_WRITE_MULTIPLE   0xc5
+#define ATA_CMD_WRITE_SECTORS    0x30
+
+#define ATA_CMD_READ_DMA        0xc8
+#define ATA_CMD_READ_DMA_QUEUED 0xc7
+#define ATA_CMD_READ_MULTIPLE   0xc4
+#define ATA_CMD_READ_SECTORS    0x20
+
+#define ATA_CMD_WRITE_DMA_EXT        0x35
+#define ATA_CMD_WRITE_DMA_QUEUED_EXT 0x36
+#define ATA_CMD_WRITE_MULTIPLE_EXT   0x39
+#define ATA_CMD_WRITE_SECTORS_EXT    0x34
+
+#define ATA_CMD_READ_DMA_EXT        0x25
+#define ATA_CMD_READ_DMA_QUEUED_EXT 0x26
+#define ATA_CMD_READ_MULTIPLE_EXT   0x29
+#define ATA_CMD_READ_SECTORS_EXT    0x24
+
+#define ATA_CMD_PACKET       0xa0
+#define ATA_CMD_DEVICE_RESET 0x08
+
+#define ATA_CMD_SERVICE 0xa2
+#define ATA_CMD_NOP     0
+
+#define SCSI_CMD_TEST_READY                     0x00
+#define SCSI_CMD_REQUEST_SENSE                  0x03
+#define SCSI_CMD_FORMAT                         0x04
+#define SCSI_CMD_INQUIRY                        0x12
+#define SCSI_CMD_START_STOP                     0x1b
+#define SCSI_CMD_PREVENT_REMOVAL                0x1e
+#define SCSI_CMD_READ_FORMAT_CAPACITIES         0x23
+#define SCSI_CMD_READ_CAPACITY                  0x25
+#define SCSI_CMD_READ_10                        0x28
+#define SCSI_CMD_WRITE_10                       0x2a
+#define SCSI_CMD_SEEK_10                        0x2b
+#define SCSI_CMD_WRITE_AND_VERIFY_10            0x2e
+#define SCSI_CMD_VERIFY_10                      0x2f
+#define SCSI_CMD_SYNC_CACHE                     0x35
+#define SCSI_CMD_WRITE_BUFFER                   0x3b
+#define SCSI_CMD_READ_BUFFER                    0x3c
+#define SCSI_CMD_READ_TOC_PMA_ATIP              0x43
+#define SCSI_CMD_GET_CONFIG                     0x46
+#define SCSI_CMD_GET_EVENT_STATUS_NOTIFICATION  0x4a
+#define SCSI_CMD_READ_DISC_INFORMATION          0x51
+#define SCSI_CMD_READ_TRACK_INFORMATION         0x52
+#define SCSI_CMD_RESERVE_TRACK                  0x53
+#define SCSI_CMD_SEND_OPC_INFORMATION           0x54
+#define SCSI_CMD_MODE_SELECT_10                 0x55
+#define SCSI_CMD_REPAIR_TRACK                   0x58
+#define SCSI_CMD_MODE_SENSE_10                  0x5a
+#define SCSI_CMD_CLOSE_TRACK_SESSION            0x5b
+#define SCSI_CMD_READ_BUFFER_CAPACITY           0x5c
+#define SCSI_CMD_SEND_CUE_SHEET                 0x5d
+#define SCSI_CMD_READ_16                        0x88
+#define SCSI_CMD_WRITE_16                       0x8a
+#define SCSI_CMD_VERIFY_16                      0x8f
+#define SCSI_CMD_WRITE_SAME_16                  0x93
+#define SCSI_CMD_REPORT_LUNS                    0xa0
+#define SCSI_CMD_BLANK                          0xa1
+#define SCSI_CMD_SECURITY_PROTOCOL_IN           0xa2
+#define SCSI_CMD_SEND_KEY                       0xa3
+#define SCSI_CMD_REPORT_KEY                     0xa4
+#define SCSI_CMD_LOAD_UNLOAD_MEDIUM             0xa6
+#define SCSI_CMD_SET_READ_AHEAD                 0xa7
+#define SCSI_CMD_READ_12                        0xa8
+#define SCSI_CMD_WRITE_12                       0xaa
+#define SCSI_CMD_GET_PERFORMANCE                0xac
+#define SCSI_CMD_READ_DISC_STRUCTURE            0xad
+#define SCSI_CMD_SECURITY_PROTOCOL_OUT          0xb5
+#define SCSI_CMD_SET_STREAMING                  0xb6
+#define SCSI_CMD_READ_CD_MSF                    0xb9
+#define SCSI_CMD_SET_CD_SPEED                   0xbb
+#define SCSI_CMD_MECHANISM_STATUS               0xbd
+#define SCSI_CMD_READ_CD                        0xbe
+#define SCSI_CMD_SEND_DISC_STRUCTURE            0xbf
 
 #define HBA_PORT_DEVICE_PRESENT 0x3
 #define HBA_PORT_IPM_ACTIVE     0x1
+
 // Px == Port x where x is 0-31 inclusive.
+
+// Command list Running (DMA active)
 #define HBA_PxCMD_CR   0x8000
+// FIS Recieve Running
 #define HBA_PxCMD_FR   0x4000
+// FIS Recieve Enable
 #define HBA_PxCMD_FRE  0x10
+// Start DMA
 #define HBA_PxCMD_ST   1
+
 #define HBA_PxIS_TFES (1 << 30)
 
 constexpr u32 HBA_PRDT_INTERRUPT_ON_COMPLETION = (1 << 31);
