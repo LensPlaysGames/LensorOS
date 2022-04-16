@@ -165,13 +165,10 @@ As stated above, the CMake will create targets if the
     - Debian distros: `sudo apt install xorriso`
     - [Pre-built Binaries for Windows](https://github.com/PeyTy/xorriso-exe-for-windows)
 
-As you can see, these targets could be chained together to
-  build LensorOS, generate boot media, and then, using the
-  `run` targets outlined near the top, launch into LensorOS,
-  all in just a few commands.
+As you can see, these targets can be chained together to
+  build LensorOS, generate boot media, and then launch
+  into LensorOS, all in just one command.
 
-```bash
-cmake --build kernel/bld \
-  && cmake --build kernel/bld -t image_raw \
-  && cmake --build kernel/bld -t runimg_qemu
+```sh
+cmake --build kernel/bld -t all image_raw runimg_qemu
 ```
