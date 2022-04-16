@@ -137,13 +137,14 @@ cmake --build kernel/bld --target help
 ---
 
 ### Boot Media Generation <a name="boot-media-generation"></a>
-As stated above, the CMake will create targets if the
-  proper dependencies are detected on the system. Here
-  is a list of the current build targets relating to boot 
-  media generation, as well as their dependencies listed 
+As stated above, CMake will create targets if the proper
+  dependencies are detected on the system. Here is a list
+  of the current build targets relating to boot media
+  generation, as well as their dependencies listed
   underneath each one.
 
-- `image_raw` -- Combine built executables and resources to generate bootable media.
+- `image_raw` --
+  Combine built executables and resources to generate UEFI-compatible FAT32 boot media.
   - dd
     - Native Unix command
     - On Windows, use one of the following options:
@@ -152,22 +153,24 @@ As stated above, the CMake will create targets if the
   - GNU mtools
     - [Home Page](https://www.gnu.org/software/mtools/)
     - Debian distros: `sudo apt install mtools`
-    - [Pre-built Binaries for Windows](https://github.com/LensPlaysGames/mtools/releases)
-- `image_gpt` -- Create GPT-partitioned, bootable hard drive image from bootable media.
+    - [Pre-built binaries for Windows](https://github.com/LensPlaysGames/mtools/releases)
+- `image_gpt` --
+  Create GPT-partitioned, bootable hard drive image from FAT32 boot media.
   - `image_raw`
   - mkgpt
     - [Repository](https://github.com/jncronin/mkgpt)
     - On Unix, use the automatic build + install script in the `scripts` subdirectory.
-- `image_iso` -- Create ISO-9660 "El-Torito" bootable CD-ROM image from bootable media.
+- `image_iso` --
+  Create ISO-9660 "El-Torito" bootable CD-ROM image from FAT32 boot media.
   - `image_raw`
   - GNU xorriso
     - [Home Page](https://www.gnu.org/software/xorriso/)
     - Debian distros: `sudo apt install xorriso`
-    - [Pre-built Binaries for Windows](https://github.com/PeyTy/xorriso-exe-for-windows)
+    - [Pre-built binaries for Windows](https://github.com/PeyTy/xorriso-exe-for-windows)
 
-As you can see, these targets can be chained together to
-  build LensorOS, generate boot media, and then launch
-  into LensorOS, all in just one command.
+The targets can be chained together for easy, quick development. \
+To build LensorOS, generate boot media, and then
+  launch into LensorOS, it takes just one command.
 
 ```sh
 cmake --build kernel/bld -t all image_raw runimg_qemu
