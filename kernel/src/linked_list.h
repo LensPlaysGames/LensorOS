@@ -14,7 +14,7 @@ class SinglyLinkedListNode {
     friend SinglyLinkedList<DataType>;
     
 public:
-    SinglyLinkedListNode(DataType value, SinglyLinkedListNode* next = nullptr)
+    SinglyLinkedListNode(const DataType& value, SinglyLinkedListNode* next = nullptr)
         : Data(value), Next(next) {}
 
     DataType& value()             { return Data; }
@@ -42,7 +42,7 @@ public:
         }
     }
 
-    void add(DataType value) {
+    void add(const DataType& value) {
         if (Tail == nullptr) {
             Head = new Node(value);
             Tail = Head;
