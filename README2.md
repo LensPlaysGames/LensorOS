@@ -38,8 +38,9 @@ If you are just interested in poking around LensorOS, and not editing code,
 ---
 
 ### Launching LensorOS using the Build System <a name="developers-go-here"></a>
-NOTE: There is no automation for VBOX, at least for now (I suck at using VBoxManage).
-  There are, however, instructions on how to setup a virtual machine in VBOX.
+NOTE: There is no automation anything except QEMU for now.
+  There are, however, instructions on how to setup a virtual
+  machine in VirtualBox and VMWare Workstation Player.
 
 When the CMake build system is generated, it looks for QEMU on your system;
   if it finds it, it will add the following targets to the project.
@@ -50,10 +51,51 @@ The targets:
 - `runhda_qemu` -- LensorOS.bin
 - `runiso_qemu` -- LensorOS.iso
 
-Assuming the CMake build system was generated in the `/kernel/bld/` subdirectory, invoke like:
+Assuming the CMake build system was generated in the `kernel/bld/` subdirectory, invoke like:
 ```sh
 cmake --build kernel/bld --target <name of target>
 ```
+
+#### VirtualBox
+1. Open VirtualBox.
+2. Click the `New` button to create a new virtual machine (VM).
+3. Give the VM a name and a file path you are comfortable with.
+4. Select Type of `Other` and Version of `Other/Unknown (64-bit)`.
+5. Leave the memory size how it is; 64MB is plenty at this time.
+6. Select the `Do not add a virtual hard disk` option.
+7. Click the `Create` button to create the new virtual machine.
+8. Select the new VM in the list on the left, then click the `Settings` button.
+9. Navigate to `System` within the list on the left.
+    1. Change Chipset to `ICH9`.
+    2. Enable Extended Feature `Enable EFI (special OSes only)`.
+    3. In the `Processor` tab, check the `Enable Nested VT-x/AMD-V` checkbox.
+10. Navigate to `Storage` within the list on the left.
+    1. Right click the default controller (`IDE`), and select `Remove Controller`.
+    2. Right click the area labeled `Storage Devices`, and select `AHCI (SATA)`.
+    3. Richt click the new AHCI storage controller, and select either `Optical Drive` or `Hard Disk` depending on whether you'd like to boot from the `.iso` or `.bin`, respectively.
+    4. Click `Add` in the new Virtual Media Selector window that pops up.
+    5. Browse to this folder and, depending on whether `Optical Drive` or `Hard Disk` was selected, choose either `LensorOS.iso` or `LensorOS.bin`.
+11. Navigate to `Network` within the list on the left.
+    1. Disable all network adapters.
+
+#### VMWare
+1. Open VMWare Workstation Player
+2. Select `Home` in the list on the left side. Click `Create a New Virtual Machine` on the right.
+3. Select the `I will install the operating system later.` option.
+4. Select a guest OS of `Other`, and a Version of `Other 64-bit`.
+5. Give the VM a name and path you are comfortable with. Keep note of the path.
+6. It will ask about a disk, but the disk it's asking about won't be used. Click next.
+7. The next screen should be an overview of the virtual machine hardware. Click `Customize Hardware...`.
+    1. Select `New CD/DVD` on the left, then click `Advanced...` on the right.
+	2. Select `SATA`, then click `OK`.
+	3. On the right, select `Use ISO image file`, and then click `Browse...`. 
+	4. Select the `LensorOS.iso` image file (located in `kernel/bin/`).
+	5. Click `Close` in the bottom right.
+8. Click `Finish`.
+9. Navigate to the path specified in step #5, where the virtual machine is located.
+    1. Open the file ending with `.vmx` in a text editor.
+	2. Add the following line of text: `firmware="efi"`.
+	3. Save the file, then close it.
 
 ---
 
