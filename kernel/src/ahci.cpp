@@ -118,13 +118,9 @@ namespace AHCI {
         // Issue command.
         Port->commandIssue = 1;
         // Wait until command is completed.
-        while (Port->commandIssue != 0) {
-            // I don't know why this is needed, but without
-            //   this `nop` instruction, this loop never exits.
-            asm volatile ("nop");
+        while (Port->commandIssue != 0)
             if (Port->interruptStatus & HBA_PxIS_TFES)
                 return false;
-        }
         // Check once more after break that read did not fail.
         if (Port->interruptStatus & HBA_PxIS_TFES)
             return false;

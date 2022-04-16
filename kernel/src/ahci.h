@@ -45,7 +45,7 @@
 
 namespace AHCI {
     /// Host Bus Adapter Port
-    struct HBAPort{
+    struct HBAPort {
         u32 commandListBase;
         u32 commandListBaseUpper;
         u32 fisBaseAddress;
@@ -190,7 +190,7 @@ namespace AHCI {
     private:
         PortType Type { PortType::None };
         u64 PortNumber { 99 };
-        HBAPort* Port { nullptr };
+        volatile HBAPort* Port { nullptr };
         u8* Buffer { nullptr };
         const u64 BYTES_PER_SECTOR = 512;
         const u64 PORT_BUFFER_PAGES = 0x100;
