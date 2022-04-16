@@ -18,8 +18,9 @@ NOTE: This is meant as a replacement for the original README, it's a WIP right n
 2. [As a developer](#developers-go-here)
 
 Free, compatible virtual machines:
-- [Quick Emulator (QEMU)](https://www.qemu.org/download/)
 - [VirtualBox (VBOX)](https://www.virtualbox.org/wiki/Downloads)
+- [VMWare Workstation Player](https://www.vmware.com/products/workstation-player.html)
+- [Quick Emulator (QEMU)](https://www.qemu.org/download/)
 
 ---
 
@@ -57,15 +58,37 @@ cmake --build kernel/bld --target <name of target>
 ---
 
 ## Building LensorOS  <a name="build"></a>
-As an operating system is quite a complicated piece of software,
-  there are multiple steps to the build process, outlined here.
+First, download the necessary project-wide dependencies, if you
+  don't have them already, or if the version you have isn't up to date.
 
+- A 64-bit version of the GNU toolset for your host OS.
+  - Linux: `sudo apt install build-essential make`
+  - Windows (may need to mix and match for full functionality, but likely only need one):
+    - [Cygwin](https://cygwin.com/install.html)
+    - [MinGW-w64](https://sourceforge.net/projects/mingw-w64/)
+    - [MSYS2](https://www.msys2.org/)
+    - [TDM64](https://jmeubank.github.io/tdm-gcc/download/)
+    - [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/about)
+- [CMake >= 3.20](https://www.cmake.org/download/)
+- [Git](https://git-scm.com/downloads)
+- [Netwide Assembler (nasm)](https://www.nasm.us)
+
+Next, clone the source code from the repository. If you would like to edit the code
+  and make contributions, be sure to fork first and clone from that repository.
+```sh
+git clone https://github.com/LensPlaysGames/LensorOS.git
+```
+
+This will create a subdirectory titled `LensorOS` with the
+  contents of this repository in the current working directory.
+
+There are multiple steps in the LensorOS build process, outlined here.
 1. [Bootloader](#bootloader)
 2. [LensorOS Toolchain + Kernel](#toolchain-kernel)
 3. [Boot Media Generation](#boot-media-generation)
 
-All groups of shell commands given are expected to start with
-  the root of the repository as the working directory.
+NOTE: All blocks of shell commands given are expected to start
+  with the working directory at the root of the repository.
 
 ---
 
