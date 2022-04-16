@@ -10,10 +10,12 @@ typedef u64 FileDescriptor;
 
 class File {
 public:
-    FileDescriptor(*open)();
-    void(*close)();
-    void(*read)();
-    void(*write)();
+    File() {}
+
+    FileDescriptor(*open)() { nullptr };
+    void(*close)() { nullptr };
+    void(*read)() { nullptr };
+    void(*write)() { nullptr };
 
     u64 flags() { return Flags; }
 
@@ -25,7 +27,7 @@ class Device : public File {
 public:
     Device(u64 maj, u64 min)
         : Major(maj), Minor(min) {};
-    Device(File f, u64 maj, u64 min)
+    Device(const File& f, u64 maj, u64 min)
         : File(f), Major(maj), Minor(min) {};
 
     u64 major() { return Major; }

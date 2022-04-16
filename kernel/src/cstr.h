@@ -27,6 +27,7 @@ char* to_hexstring(u64 value, bool capital = false);
 extern const char to_hex_not_supported[];
 template <typename T>
 char* to_hexstring(T value, bool capital = false) {
+    // FIXME: This is really, really bad!
     u8 sz = sizeof(T);
     if (sz == 1)
         return to_hexstring((u64)value, capital);

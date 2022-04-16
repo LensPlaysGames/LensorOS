@@ -131,7 +131,7 @@ enum class CPUID_FEATURE {
     EDX_HTT          = 1 << 28, 
     EDX_TM           = 1 << 29, 
     EDX_IA64         = 1 << 30,
-    EDX_PBE          = 1 << 31
+    EDX_PBE          = 1 << 31,
 };
 
 #endif /* LENSOR_OS_CPUID_H */
