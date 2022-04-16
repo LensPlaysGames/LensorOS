@@ -149,15 +149,12 @@ cmake_path(
 )
 
 # Boot media generation targets
-# Bash (Unix)
-find_program( BASH_PROGRAM bash )
 find_program( DD_PROGRAM dd )
 find_program( MTOOLS_PROGRAM mtools )
-if( BASH_PROGRAM )
+find_program( BASH_PROGRAM bash )
+if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
   # Boot media generation: raw FAT32 image.
-  if( CMAKE_HOST_UNIX
-      AND DD_PROGRAM
-      AND MTOOLS_PROGRAM )
+  if( DD_PROGRAM AND MTOOLS_PROGRAM )
     message(
       VERBOSE
       "Found bash, dd, and mtools, creating targets: image_raw"
@@ -211,6 +208,7 @@ endif()
 
 # Batch (Windows)
 if( CMAKE_HOST_WIN32 )
+  # Boot media generation: raw FAT32 image
   if( DD_PROGRAM
       AND MTOOLS_PROGRAM )
     message(
