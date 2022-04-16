@@ -90,12 +90,19 @@ cmake --build kernel/bld --target <name of target>
 	2. Select `SATA`, then click `OK`.
 	3. On the right, select `Use ISO image file`, and then click `Browse...`. 
 	4. Select the `LensorOS.iso` image file (located in `kernel/bin/`).
-	5. Click `Close` in the bottom right.
+	5. Select the hard drive that we skipped configuring in the list on the left.
+	6. Remove the hard drive using the `Remove` button near the bottom center.
+	7. Remove any and all network adapters and sound cards in the same manner.
+	5. Click `Close` in the bottom right to close the hardware configuration window.
 8. Click `Finish`.
 9. Navigate to the path specified in step #5, where the virtual machine is located.
     1. Open the file ending with `.vmx` in a text editor.
 	2. Add the following line of text: `firmware="efi"`.
 	3. Save the file, then close it.
+	
+You will have to select `UEFI Shell` upon booting and
+  entering the BIOS of the virtual machine in VMware
+  Workstation, even if it says something like `Unsupported`.
 
 ---
 
