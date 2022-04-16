@@ -49,34 +49,46 @@ constexpr u32 HBA_PRDT_INTERRUPT_ON_COMPLETION = (1 << 31);
 namespace AHCI {
     /// Host Bus Adapter Port
     struct HBAPort {
-        u32 commandListBase;
-        u32 commandListBaseUpper;
-        u32 fisBaseAddress;
-        u32 fisBaseAddressUpper;
-        u32 interruptStatus;
-        u32 interruptEnable;
-        u32 cmdSts;
-        u32 rsv0;
-        u32 taskFileData;
+        u32 CommandListBaseAddress;
+        u32 CommandListBaseAddressUpper;
+        u32 FISBaseAddress;
+        u32 FISBaseAddressUpper;
+        u32 InterruptStatus;
+        u32 InterruptEnable;
+        u32 CommandAndStatus;
+        u32 Reserved0;
+        u32 TaskFileData;
         u32 signature;
-        u32 sataStatus;
-        u32 sataControl;
-        u32 sataError;
-        u32 sataActive;
-        u32 commandIssue;
-        u32 sataNotification;
-        u32 fisSwitchControl;
-        u32 rsv1[11];
-        u32 vendor[4];
+        u32 SataStatus;
+        u32 SataControl;
+        u32 SataError;
+        u32 SataActive;
+        u32 CommandIssue;
+        u32 SataNotification;
+        u32 FISSwitchControl;
+        u32 Reserved1[11];
+        u32 Vendor[4];
+
+        void set_command_list_base(void* commandListBaseAddress) volatile {
+            u64 commandListBase = reinterpret_cast<u64>(commandListBaseAddress);
+            CommandListBaseAddress = static_cast<u32>(commandListBase);
+            CommandListBaseAddressUpper = static_cast<u32>(commandListBase >> 32);
+        }
+
+        void set_frame_information_structure_base(void* fisBaseAddress) volatile {
+            u64 fisBase = reinterpret_cast<u64>(fisBaseAddress);
+            FISBaseAddress = static_cast<u32>(fisBase);
+            FISBaseAddressUpper = static_cast<u32>(fisBase >> 32);
+        }
 
         u64 command_list_base() volatile {
-            return static_cast<u64>(commandListBase)
-                + (static_cast<u64>(commandListBaseUpper) << 32);
+            return static_cast<u64>(CommandListBaseAddress)
+                + (static_cast<u64>(CommandListBaseAddressUpper) << 32);
         }
         
         u64 frame_information_structure_base() volatile {
-            return static_cast<u64>(fisBaseAddress)
-                + (static_cast<u64>(fisBaseAddressUpper) << 32);
+            return static_cast<u64>(FISBaseAddress)
+                + (static_cast<u64>(FISBaseAddressUpper) << 32);
         }
     };
 
@@ -84,60 +96,74 @@ namespace AHCI {
     ///   The layout of the memory registers
     ///     accessable through the Host Bus Adapter.
     struct HBAMemory {
-        u32 hostCapability;
-        u32 globalHostControl;
-        u32 interruptStatus;
-        u32 portsImplemented;
-        u32 version;
+        u32 HostCapability;
+        u32 GlobalHostControl;
+        u32 InterruptStatus;
+        u32 PortsImplemented;
+        u32 Version;
         u32 cccControl;
         u32 cccPorts;
-        u32 enclosureManagementLocation;
-        u32 enclosureManagementControl;
-        u32 hostCapabilitiesExtended;
-        u32 biosHandoffCtrlSts;
-        u8 rsv0[0x74];
-        u8 vendor[0x60];
-        HBAPort ports[1];
+        u32 EnclosureManagementLocation;
+        u32 EnclosureManagementControl;
+        u32 HostCapabilitiesExtended;
+        u32 BIOSHandoffControlStatus;
+        u8 Reserved0[0x74];
+        u8 Vendor[0x60];
+        HBAPort Ports[1];
     };
 
     /// Host Bus Adapter Command Header
     ///   The beginning of a Host Bus Adapter command is structured as shown.
     // FIXME: Get rid of bitfields!
     struct HBACommandHeader {
-        u8 commandFISLength :5;
-        u8 atapi            :1;
-        u8 write            :1;
-        u8 prefetchable     :1;
-        u8 reset            :1;
-        u8 bist             :1;
-        u8 clearBusy        :1;
-        u8 rsv0             :1;
-        u8 portMultiplier   :4;
-        u16 prdtLength;
-        u32 prdbCount;
-        u32 commandTableBaseAddress;
-        u32 commandTableBaseAddressUpper;
-        u32 rsv1[4];
+        u8 CommandFISLength :5;
+        u8 ATAPI            :1;
+        u8 Write            :1;
+        u8 Prefetchable     :1;
+        u8 Reset            :1;
+        u8 BIST             :1;
+        u8 ClearBusy        :1;
+        u8 Reserved0        :1;
+        u8 PortMultiplier   :4;
+        u16 PRDTLength;
+        u32 PRDBCount;
+        u32 CommandTableBaseAddress;
+        u32 CommandTableBaseAddressUpper;
+        u32 Reserved1[4];
+
+        void set_command_table_base(u64 commandTableBase) {
+            CommandTableBaseAddress = static_cast<u32>(commandTableBase);
+            CommandTableBaseAddressUpper = static_cast<u32>(commandTableBase >> 32);
+        }
+
+        void set_command_table_base(void* commandTableBaseAddress) {
+            set_command_table_base(reinterpret_cast<u64>(commandTableBaseAddress));
+        }
 
         u64 command_table_base() {
-            return static_cast<u64>(commandTableBaseAddress)
-                + (static_cast<u64>(commandTableBaseAddressUpper) << 32);
+            return static_cast<u64>(CommandTableBaseAddress)
+                + (static_cast<u64>(CommandTableBaseAddressUpper) << 32);
         }
     };
 
     /// Host Bus Adapter Physical Region Descriptor Table Entry
     ///   Specifies data payload address in memory as well as size.
     struct HBA_PRDTEntry {
-        u32 dataBaseAddress;
-        u32 dataBaseAddressUpper;
-        u32 rsv0;
+        u32 DataBaseAddress;
+        u32 DataBaseAddressUpper;
+        u32 Reserved0;
         /* 0b00000000000000000000000000000000
          *             ======================  Byte Count
-         *    =========                        Reserved
+         *    =========                        Reserved1
          *   =                                 Int. on Completion
          */
         u32 Information;
 
+
+        void set_data_base(u64 newDataBaseAddress) {
+            DataBaseAddress = static_cast<u32>(newDataBaseAddress);
+            DataBaseAddressUpper = static_cast<u32>(newDataBaseAddress >> 32);
+        }
 
         void set_byte_count(u32 newByteCount) {
             // Clear byte count bits to zero.
@@ -155,8 +181,8 @@ namespace AHCI {
         }
 
         u64 data_base() {
-            return static_cast<u64>(dataBaseAddress)
-                + (static_cast<u64>(dataBaseAddressUpper) << 32);
+            return static_cast<u64>(DataBaseAddress)
+                + (static_cast<u64>(DataBaseAddressUpper) << 32);
         }
 
         u32 byte_count() {
@@ -169,10 +195,11 @@ namespace AHCI {
     };
 
     struct HBACommandTable {
-        u8 commandFIS[64];
-        u8 atapiCommand[16];
-        u8 rsv[48];
-        HBA_PRDTEntry prdtEntry[];
+        u8 CommandFIS[64];
+        u8 ATAPICommand[16];
+        u8 Reserved[48];
+        // FIXME: Is this supposed to be a variable length array?
+        HBA_PRDTEntry PRDTEntry[];
     };
 
     /// Frame Information Structure Type
@@ -196,34 +223,55 @@ namespace AHCI {
     /// Frame Information Structure Reegister Host to Device
     struct FIS_REG_H2D {
         // FIXME: Get rid of bitfields!
-        u8 type;
-        u8 portMultiplier:4;
-        u8 rsv0:3;
-        u8 commandControl:1;
-        u8 command;
-        u8 featureLow;
-        u8 lba0;
-        u8 lba1;
-        u8 lba2;
-        u8 deviceRegister;
-        u8 lba3;
-        u8 lba4;
-        u8 lba5;
-        u8 featureHigh;
-        u8 countLow;
-        u8 countHigh;
-        u8 isoCommandCompletion;
-        u8 control;
-        u8 rsv1[4];
+        u8 Type;
+        u8 PortMultiplier:4;
+        u8 Reserved0:3;
+        u8 CommandControl:1;
+        u8 Command;
+        u8 FeatureLow;
+        u8 LBA0;
+        u8 LBA1;
+        u8 LBA2;
+        u8 DeviceRegister;
+        u8 LBA3;
+        u8 LBA4;
+        u8 LBA5;
+        u8 FeatureHigh;
+        u8 CountLow;
+        u8 CountHigh;
+        u8 ISOCommandCompletion;
+        u8 Control;
+        u8 Reserved1[4];
+
+        void set_logical_block_addresses(u64 sector) {
+            u32 sectorLow = static_cast<u32>(sector);
+            u32 sectorHigh = static_cast<u32>(sector >> 32);
+            LBA0 = static_cast<u8>(sectorLow);
+            LBA1 = static_cast<u8>(sectorLow >> 8);
+            LBA2 = static_cast<u8>(sectorLow >> 16);
+            LBA3 = static_cast<u8>(sectorHigh);
+            LBA4 = static_cast<u8>(sectorHigh >> 8);
+            LBA5 = static_cast<u8>(sectorHigh >> 16);
+        }
+
+        void set_feature(u16 newFeature) {
+            FeatureLow = static_cast<u8>(newFeature);
+            FeatureHigh = static_cast<u8>(newFeature >> 8);
+        }
+
+        void set_count(u16 newCount) {
+            CountLow = static_cast<u8>(newCount);
+            CountHigh = static_cast<u8>(newCount >> 8);
+        }
 
         u16 feature() {
-            return static_cast<u16>(featureLow)
-                + (static_cast<u16>(featureHigh) << 8);
+            return static_cast<u16>(FeatureLow)
+                + (static_cast<u16>(FeatureHigh) << 8);
         }
 
         u16 count() {
-            return static_cast<u16>(countLow)
-                + (static_cast<u16>(countHigh) << 8);
+            return static_cast<u16>(CountLow)
+                + (static_cast<u16>(CountHigh) << 8);
         }
     };
 
@@ -236,6 +284,7 @@ namespace AHCI {
         SATAPI = 4
     };
 
+    const char* port_type_string(PortType);
     PortType get_port_type(HBAPort* port);
 
     class PortController final : public StorageDeviceDriver {

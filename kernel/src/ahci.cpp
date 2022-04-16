@@ -8,8 +8,25 @@
 //#define DEBUG_AHCI
 
 namespace AHCI {
+    const char* port_type_string(PortType p) {
+        switch (p) {
+        case PortType::None:
+            return "None";
+        case PortType::SATA:
+            return "SATA";
+        case PortType::SEMB:
+            return "SEMB";
+        case PortType::PM:
+            return "PM";
+        case PortType::SATAPI:
+            return "SATAPI";
+        default:
+            return "Unknown Port Type";
+        };
+    }
+
     PortType get_port_type(HBAPort* port) {
-        u32 sataStatus = port->sataStatus;
+        u32 sataStatus = port->SataStatus;
         u8 interfacePowerManagement = (sataStatus >> 8) & 0b111;
         u8 deviceDetection = sataStatus & 0b111;
         if (deviceDetection != HBA_PORT_DEVICE_PRESENT
@@ -39,28 +56,25 @@ namespace AHCI {
         // Get contiguous physical memory for
         // this AHCI port to read to/write from.
         Buffer = (u8*)Memory::request_pages(PORT_BUFFER_PAGES);
-        // Prevent interruptions while initializing port.
+        // Wait for pending commands to finish, then stop any further commands.
         stop_commands();
         // Allocate memory for command list.
         void* base = Memory::request_page();
-        Port->commandListBase = (u32)(u64)base;
-        Port->commandListBaseUpper = (u32)((u64)base >> 32);
         memset(base, 0, 1024);
+        Port->set_command_list_base(base);
         // Allocate memory for Frame Information Structure.
         void* fisBase = Memory::request_page();
-        Port->fisBaseAddress = (u32)(u64)fisBase;
-        Port->fisBaseAddressUpper = (u32)((u64)fisBase >> 32);
         memset(fisBase, 0, 256);
+        Port->set_frame_information_structure_base(fisBase);
         // Populate command list with command tables.
-        auto* cmdHdr = (HBACommandHeader*)((u64)Port->commandListBase
-                                           + ((u64)Port->commandListBaseUpper << 32));
+        auto* commandHeader = reinterpret_cast<HBACommandHeader*>(Port->command_list_base());
         for (u8 i = 0; i < 32; ++i) {
-            cmdHdr[i].prdtLength = 8;
-            void* cmdTableAddress = Memory::request_page();
-            u64 address = (u64)cmdTableAddress + (i << 8);
-            cmdHdr[i].commandTableBaseAddress = (u32)address;
-            cmdHdr[i].commandTableBaseAddressUpper = (u32)((u64)address >> 32);
-            memset(cmdTableAddress, 0, 256);
+            // 8 PRDT entries per command table, aka 256 bytes.
+            commandHeader[i].PRDTLength = 8;
+            void* commandTableAddress = Memory::request_page();
+            u64 address = reinterpret_cast<u64>(commandTableAddress) + (i << 8);
+            commandHeader[i].set_command_table_base(address);
+            memset(reinterpret_cast<void*>(address), 0, 256);
         }
         start_commands();
 
@@ -76,53 +90,42 @@ namespace AHCI {
         // spinning until it isn't, or giving up.
         const u64 maxSpin = 1000000;
         u64 spin = 0;
-        while ((Port->taskFileData & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < maxSpin)
+        while ((Port->TaskFileData & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < maxSpin)
             spin++;
 
         if (spin >= maxSpin)
             return false;
 
-        u32 sectorL = (u32)sector;
-        u32 sectorH = (u32)(sector >> 32);
         // Disable interrupts during command construction.
-        Port->interruptStatus = (u32)-1;
-        auto* cmdHdr = (HBACommandHeader*)((u64)Port->commandListBase
-                                           + ((u64)Port->commandListBaseUpper << 32));
-        cmdHdr->commandFISLength = sizeof(FIS_REG_H2D)/sizeof(u32);
-        cmdHdr->write = 0;
-        cmdHdr->prdtLength = 1;
-        auto* cmdTable = (HBACommandTable*)((u64)cmdHdr->commandTableBaseAddress
-                                            + ((u64)cmdHdr->commandTableBaseAddressUpper << 32));
-        memset(cmdTable, 0, sizeof(HBACommandTable) + ((cmdHdr->prdtLength-1) * sizeof(HBA_PRDTEntry)));
-        cmdTable->prdtEntry[0].dataBaseAddress = (u32)((u64)Buffer);
-        cmdTable->prdtEntry[0].dataBaseAddressUpper = (u32)((u64)Buffer >> 32);
-        cmdTable->prdtEntry[0].byteCount = (sectors << 9) - 1;
-        cmdTable->prdtEntry[0].interruptOnCompletion = 1;
-        FIS_REG_H2D* cmdFIS = (FIS_REG_H2D*)(&cmdTable->commandFIS);
-        cmdFIS->type = FIS_TYPE::REG_H2D;
-        // Take control of command
-        cmdFIS->commandControl = 1;
-        cmdFIS->command = ATA_CMD_READ_DMA_EX;
-        // Assign lba's
-        cmdFIS->lba0 = (u8)(sectorL);
-        cmdFIS->lba1 = (u8)(sectorL >> 8);
-        cmdFIS->lba2 = (u8)(sectorL >> 16);
-        cmdFIS->lba3 = (u8)(sectorH);
-        cmdFIS->lba4 = (u8)(sectorH >> 8);
-        cmdFIS->lba5 = (u8)(sectorH >> 16);
+        Port->InterruptStatus = (u32)-1;
+        auto* commandHeader = (HBACommandHeader*)(Port->command_list_base());
+        commandHeader->CommandFISLength = sizeof(FIS_REG_H2D)/sizeof(u32);
+        commandHeader->Write = 0;
+        commandHeader->PRDTLength = 1;
+        auto* commandTable = (HBACommandTable*)(commandHeader->command_table_base());
+        memset(commandTable, 0, sizeof(HBACommandTable) + ((commandHeader->PRDTLength - 1) * sizeof(HBA_PRDTEntry)));
+        commandTable->PRDTEntry[0].set_data_base((u64)Buffer);
+        commandTable->PRDTEntry[0].set_byte_count((sectors << 9) - 1);
+        commandTable->PRDTEntry[0].set_interrupt_on_completion(true);
+        FIS_REG_H2D* commandFIS = (FIS_REG_H2D*)(&commandTable->CommandFIS);
+        commandFIS->Type = FIS_TYPE::REG_H2D;
+        // Take control of command structure.
+        commandFIS->CommandControl = 1;
+        // Read using extended DMA.
+        commandFIS->Command = ATA_CMD_READ_DMA_EX;
+        commandFIS->set_logical_block_addresses(sector);
         // Use lba mode.
-        cmdFIS->deviceRegister = 1 << 6;
+        commandFIS->DeviceRegister = 1 << 6;
         // Set sector count.
-        cmdFIS->countLow  = (sectors)      & 0xff;
-        cmdFIS->countHigh = (sectors >> 8) & 0xff;
+        commandFIS->set_count(static_cast<u16>(sectors));
         // Issue command.
-        Port->commandIssue = 1;
+        Port->CommandIssue = 1;
         // Wait until command is completed.
-        while (Port->commandIssue != 0)
-            if (Port->interruptStatus & HBA_PxIS_TFES)
+        while (Port->CommandIssue != 0)
+            if (Port->InterruptStatus & HBA_PxIS_TFES)
                 return false;
         // Check once more after break that read did not fail.
-        if (Port->interruptStatus & HBA_PxIS_TFES)
+        if (Port->InterruptStatus & HBA_PxIS_TFES)
             return false;
         
         return true;
@@ -143,6 +146,12 @@ namespace AHCI {
         UART::out("\r\n");
 #endif /* DEBUG_AHCI */
 
+        if (Type != PortType::SATA) {
+            UART::out("  \033[31mERRROR\033[0m: `read()`  port type not implemented: ");
+            UART::out(port_type_string(Type));
+            UART::out("\r\n");
+            return;
+        }
         // TODO: Actual error handling!
         if (buffer == nullptr) {
             UART::out("  \033[31mERROR\033[0m: `read()`  buffer can not be nullptr\r\n");
@@ -197,15 +206,15 @@ namespace AHCI {
 
     void PortController::start_commands() {
         // Spin until not busy.
-        while (Port->cmdSts & HBA_PxCMD_CR);
-        Port->cmdSts |= HBA_PxCMD_FRE;
-        Port->cmdSts |= HBA_PxCMD_ST;
+        while (Port->CommandAndStatus & HBA_PxCMD_CR);
+        Port->CommandAndStatus |= HBA_PxCMD_FRE;
+        Port->CommandAndStatus |= HBA_PxCMD_ST;
     }
     
     void PortController::stop_commands() {
-        Port->cmdSts &= ~HBA_PxCMD_ST;
-        Port->cmdSts &= ~HBA_PxCMD_FRE;
-        while (Port->cmdSts & HBA_PxCMD_FR
-               && Port->cmdSts & HBA_PxCMD_CR);
+        Port->CommandAndStatus &= ~HBA_PxCMD_ST;
+        Port->CommandAndStatus &= ~HBA_PxCMD_FRE;
+        while (Port->CommandAndStatus & HBA_PxCMD_FR
+               && Port->CommandAndStatus & HBA_PxCMD_CR);
     }
 }
