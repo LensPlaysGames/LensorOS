@@ -86,12 +86,6 @@ void draw_boot_gfx() {
     gRend.swap();
 }
 
-/* FIXME: STUFF DECLARED HERE SHOULD DEFINITELY BE MOVED :^) */
-
-// CPUDescription = common to all cores
-// CPU = a single core
-CPUDescription* SystemCPU { nullptr };
-
 // FXSAVE/FXRSTOR instructions require a pointer to a
 //   512-byte region of memory before use.
 u8 fxsave_region[512] __attribute__((aligned(16)));
@@ -199,7 +193,7 @@ void kstage1(BootInfo* bInfo) {
     Keyboard::gText = Keyboard::BasicTextRenderer();
 
     // Setup random number generators.
-    RTCData& tm = gRTC.Time;
+    const RTCData& tm = gRTC.Time;
     u64 someNumber =
         tm.century + tm.year
         + tm.month   + tm.date
@@ -471,7 +465,7 @@ void kstage1(BootInfo* bInfo) {
             && dev.flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
         {
             if (dev.minor() == SYSDEV_MINOR_GPT_PARTITION) {
-                auto* partDriver = (GPTPartitionDriver*)dev.data1();
+                auto* partDriver = static_cast<GPTPartitionDriver*>(dev.data1());
                 if (partDriver) {
                     UART::out("Partition:\r\n  Type GUID: ");
                     print_guid(partDriver->type_guid());
