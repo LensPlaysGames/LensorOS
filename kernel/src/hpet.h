@@ -73,10 +73,15 @@
 
 // Data cache for each HPET comparator.
 struct Comparator {
+    Comparator() {}
+    Comparator(bool largeCounterSupport, bool periodicCapable)
+        : LargeCounterSupport(largeCounterSupport)
+        , PeriodicCapable(periodicCapable) {}
+
     /* 64-bit Comparator Width */
-    bool LargeCounterSupport;
+    bool LargeCounterSupport { false };
     /* Capable of providing a regular, repeating interrupt. */
-    bool PeriodicCapable;
+    bool PeriodicCapable { false };
 };
 
 // High Precision Event Timer
@@ -105,7 +110,7 @@ public:
 
 private:
     Spinlock Lock;
-    ACPI::HPETHeader* Header;
+    ACPI::HPETHeader* Header { nullptr };
     bool Initialized { false };
     bool LargeCounterSupport { false };
     bool LegacyInterruptSupport { false };
@@ -113,7 +118,7 @@ private:
     u64 Frequency { 0 };
     /* Number of comparators implemented; can vary from 3-32. */
     u8 NumberOfComparators { 0 };
-    Comparator Comparators[HPET_MAX_COMPARATORS];
+    Comparator Comparators[HPET_MAX_COMPARATORS] {};
     /* NOTE: Registers may only be read from/written to at 32-byte boundaries.
      *   To extract a single byte, the caller must do it manually (mask & shift).
      */
