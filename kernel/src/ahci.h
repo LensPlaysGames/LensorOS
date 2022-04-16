@@ -16,11 +16,14 @@
 
 #define HBA_PORT_DEVICE_PRESENT 0x3
 #define HBA_PORT_IPM_ACTIVE     0x1
+// Px == Port x where x is 0-31 inclusive.
 #define HBA_PxCMD_CR   0x8000
 #define HBA_PxCMD_FR   0x4000
 #define HBA_PxCMD_FRE  0x10
 #define HBA_PxCMD_ST   1
 #define HBA_PxIS_TFES (1 << 30)
+
+constexpr u32 HBA_PRDT_INTERRUPT_ON_COMPLETION = (1 << 31);
 
 #define SATA_SIG_ATAPI 0xeb140101
 #define SATA_SIG_ATA   0x00000101
@@ -65,12 +68,22 @@ namespace AHCI {
         u32 fisSwitchControl;
         u32 rsv1[11];
         u32 vendor[4];
+
+        u64 command_list_base() volatile {
+            return static_cast<u64>(commandListBase)
+                + (static_cast<u64>(commandListBaseUpper) << 32);
+        }
+        
+        u64 frame_information_structure_base() volatile {
+            return static_cast<u64>(fisBaseAddress)
+                + (static_cast<u64>(fisBaseAddressUpper) << 32);
+        }
     };
 
     /// Host Bus Adapter Memory Registers
     ///   The layout of the memory registers
     ///     accessable through the Host Bus Adapter.
-    struct HBAMemory{
+    struct HBAMemory {
         u32 hostCapability;
         u32 globalHostControl;
         u32 interruptStatus;
@@ -89,6 +102,7 @@ namespace AHCI {
 
     /// Host Bus Adapter Command Header
     ///   The beginning of a Host Bus Adapter command is structured as shown.
+    // FIXME: Get rid of bitfields!
     struct HBACommandHeader {
         u8 commandFISLength :5;
         u8 atapi            :1;
@@ -104,6 +118,11 @@ namespace AHCI {
         u32 commandTableBaseAddress;
         u32 commandTableBaseAddressUpper;
         u32 rsv1[4];
+
+        u64 command_table_base() {
+            return static_cast<u64>(commandTableBaseAddress)
+                + (static_cast<u64>(commandTableBaseAddressUpper) << 32);
+        }
     };
 
     /// Host Bus Adapter Physical Region Descriptor Table Entry
@@ -112,9 +131,41 @@ namespace AHCI {
         u32 dataBaseAddress;
         u32 dataBaseAddressUpper;
         u32 rsv0;
-        u32 byteCount             :22;
-        u32 rsv1                  :9;
-        u32 interruptOnCompletion :1;
+        /* 0b00000000000000000000000000000000
+         *             ======================  Byte Count
+         *    =========                        Reserved
+         *   =                                 Int. on Completion
+         */
+        u32 Information;
+
+
+        void set_byte_count(u32 newByteCount) {
+            // Clear byte count bits to zero.
+            Information &= ~0b1111111111111111111111;
+            // Set byte count bits from new byte count.
+            Information |= newByteCount & 0b1111111111111111111111;
+        }
+
+        void set_interrupt_on_completion(bool value) {
+            // Clear the int. on completion bit.
+            Information &= ~(HBA_PRDT_INTERRUPT_ON_COMPLETION);
+            // Set the int. on completion bit if passed value is true.
+            if (value)
+                Information |= HBA_PRDT_INTERRUPT_ON_COMPLETION;
+        }
+
+        u64 data_base() {
+            return static_cast<u64>(dataBaseAddress)
+                + (static_cast<u64>(dataBaseAddressUpper) << 32);
+        }
+
+        u32 byte_count() {
+            return Information & (0b1111111111111111111111);
+        }
+
+        bool interrupt_on_completion() {
+            return Information & HBA_PRDT_INTERRUPT_ON_COMPLETION;
+        }
     };
 
     struct HBACommandTable {
@@ -144,6 +195,7 @@ namespace AHCI {
     
     /// Frame Information Structure Reegister Host to Device
     struct FIS_REG_H2D {
+        // FIXME: Get rid of bitfields!
         u8 type;
         u8 portMultiplier:4;
         u8 rsv0:3;
@@ -163,6 +215,16 @@ namespace AHCI {
         u8 isoCommandCompletion;
         u8 control;
         u8 rsv1[4];
+
+        u16 feature() {
+            return static_cast<u16>(featureLow)
+                + (static_cast<u16>(featureHigh) << 8);
+        }
+
+        u16 count() {
+            return static_cast<u16>(countLow)
+                + (static_cast<u16>(countHigh) << 8);
+        }
     };
 
     /// Port Type
