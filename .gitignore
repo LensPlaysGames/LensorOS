@@ -33,11 +33,22 @@
 
 # Builds
 **/bld/
+**/build/
+**/builds/
+**/win/
+**/winja/
+**/windows/
+**/lnx/
+**/linux/
+**/make/
+**/ninja/
+**/debug/
 **/dbg/
 **/rls/
+**/release/
 **/tst/
-**/lnx/
-**/win/
+**/test/
+**/testing/
 
 # Backups
 **/*~
