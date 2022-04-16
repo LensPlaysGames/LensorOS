@@ -107,11 +107,11 @@ public:
         CPU = cpu;
     }
 
-    void add_device(SystemDevice d) {
+    void add_device(const SystemDevice& d) {
         Devices.add(d);
     };
 
-    void add_fs(Filesystem fs) {
+    void add_fs(const Filesystem& fs) {
         Filesystems.add(fs);
     }
 
