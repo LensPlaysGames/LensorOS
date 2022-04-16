@@ -6,7 +6,7 @@ SET ScriptDirectory=%ScriptDirectory:"=%
 SET RepositoryDirectory=%RepositoryDirectory:"=%
 SET BootloaderEFI=%BootloaderEFI:"=%
 SET BuildDirectory=%BuildDirectory:"=%
-mkdir -p %BuildDirectory%
+md %BuildDirectory%
 dd if=/dev/zero of=%BuildDirectory%/LensorOS.img count=93750
 mformat -i %BuildDirectory%/LensorOS.img -F -v "EFI System" ::
 @echo " -> Created FAT32 UEFI bootable disk image"
