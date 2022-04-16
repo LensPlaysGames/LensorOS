@@ -151,6 +151,7 @@ cmake_path(
 # Boot media generation targets
 find_program( DD_PROGRAM dd )
 find_program( MTOOLS_PROGRAM mtools )
+find_program( XORRISO_PROGRAM xorriso )
 find_program( BASH_PROGRAM bash )
 if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
   # Boot media generation: raw FAT32 image.
@@ -163,6 +164,7 @@ if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
       image_raw
       COMMAND bash mkimg.sh
       WORKING_DIRECTORY ${SCRIPTS_DIR}
+      COMMENT "Generating UEFI-compatible FAT32 boot media"
       USES_TERMINAL
       VERBATIM
     )
@@ -178,6 +180,7 @@ if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
       image_gpt
       COMMAND bash mkgpt.sh
       WORKING_DIRECTORY ${SCRIPTS_DIR}
+      COMMENT "Generating GUID Partion Table with EFI System partion containing boot media"
       USES_TERMINAL
       VERBATIM
     )
@@ -188,7 +191,6 @@ if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
     )
   endif()
   # Boot media generation: ISO-9660 CD-ROM.
-  find_program( XORRISO_PROGRAM xorriso )
   if( XORRISO_PROGRAM )
     message(
       VERBOSE
@@ -198,6 +200,7 @@ if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
       image_iso
       COMMAND bash mkiso.sh
       WORKING_DIRECTORY ${SCRIPTS_DIR}
+      COMMENT "Generating El-Torito ISO-9660 boot media"
       USES_TERMINAL
       VERBATIM
     )
@@ -217,11 +220,27 @@ if( CMAKE_HOST_WIN32 )
     )
     add_custom_target(
       image_raw
-      COMMAND cmd
-      /c ${SCRIPTS_DIR}/mkimg.bat
+      COMMAND cmd /c ${SCRIPTS_DIR}/mkimg.bat
+      COMMENT "Generating UEFI-compatible FAT32 boot media"
       USES_TERMINAL
       VERBATIM
     )
+  endif()
+  # Boot media generation: ISO-9660 CD-ROM.
+  if( XORRISO_PROGRAM )
+    message(
+      VERBOSE
+      "Found xorriso, creating targets: image_iso"
+    )
+    add_custom_target(
+      image_iso
+      COMMAND cmd /c ${SCRIPTS_DIR}/mkiso.bat
+      COMMENT "Generating El-Torito ISO-9660 boot media"
+      USES_TERMINAL
+      VERBATIM
+    )
+  else()
+    message( "-- xorriso was not found on your system, skipping image_iso target generation." )
   endif()
 endif()
 
