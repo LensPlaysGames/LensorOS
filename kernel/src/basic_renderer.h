@@ -98,10 +98,10 @@ public:
     // Draw `size` of `pixels` buffer into target framebuffer.
     void drawpix(Vector2<u64> size, u32* pixels);
     // Draw `size` of `bitmap` as `color`.
-    void drawbmp(Vector2<u64> size, u8* bitmap, u32 color = 0xffffffff);
+    void drawbmp(Vector2<u64> size, const u8* bitmap, u32 color = 0xffffffff);
     // Draw `size` of `bitmap` as `color`, but don't clear `0` to background color.
     // This allows the use of bitmaps acting on alpha as well as color.
-    void drawbmpover(Vector2<u64> size, u8* bitmap, u32 color = 0xffffffff);
+    void drawbmpover(Vector2<u64> size, const u8* bitmap, u32 color = 0xffffffff);
     // Use PSF1 bitmap font to draw a character to the screen (don't advance).
     void drawchar(char c, u32 color = 0xffffffff);
     void drawcharover(char c, u32 color = 0xffffffff);

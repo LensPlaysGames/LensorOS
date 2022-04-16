@@ -184,7 +184,7 @@ void BasicRenderer::drawpix(Vector2<u64> size, u32* pixels) {
 
 /// Draw `size` of a bitmap `bitmap`, using passed color `color`
 ///   where bitmap is `1` and `BackgroundColor` where it is `0`.
-void BasicRenderer::drawbmp(Vector2<u64> size, u8* bitmap, u32 color) {
+void BasicRenderer::drawbmp(Vector2<u64> size, const u8* bitmap, u32 color) {
     if (bitmap == nullptr)
         return;
     clamp_draw_position();
@@ -207,7 +207,7 @@ void BasicRenderer::drawbmp(Vector2<u64> size, u8* bitmap, u32 color) {
 }
 
 /// Draw `size` of a bitmap `bitmap`, using passed color `color` where bitmap is `1`.
-void BasicRenderer::drawbmpover(Vector2<u64> size, u8* bitmap, u32 color) {
+void BasicRenderer::drawbmpover(Vector2<u64> size, const u8* bitmap, u32 color) {
     if (bitmap == nullptr)
         return;
     clamp_draw_position();
