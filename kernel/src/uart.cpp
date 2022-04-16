@@ -142,7 +142,7 @@ namespace UART {
         // Check for null-terminator at current character.
         while (*c != 0) {
 #ifdef LENSOR_OS_UART_HIDE_COLOR_CODES
-            if (*c == '\33' || *c == '\033' || *c == '\x1b' || *c == '\x1B') {
+            if (*c == '\033') {
                 // Loop until null terminator or 'm'.
                 do { c++; } while (*c != 'm' && *c != 0);
                 // Don't read memory past null terminator!
@@ -165,7 +165,7 @@ namespace UART {
 
         while (numberOfBytes > 0) {
 #ifdef LENSOR_OS_UART_HIDE_COLOR_CODES
-            if (*str == '\033' || *str == '\x1b' || *str == '\x1B') {
+            if (*str == '\033') {
                 // Loop until no more chars or 'm'
                 do {
                     str++;
