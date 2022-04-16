@@ -175,7 +175,7 @@ void stack_segment_fault_handler(InterruptFrame* frame, u64 err) {
         UART::out("  GDT");
     else if (table == 0b01 || table == 0b11)
         UART::out("  IDT");
-    else if (table == 0b01)
+    else if (table == 0b10)
         UART::out("  LDT");
     
     UART::out(" Selector Index: ");
@@ -205,7 +205,7 @@ void general_protection_fault_handler(InterruptFrame* frame, u64 err) {
         UART::out("  GDT");
     else if (table == 0b01 || table == 0b11)
         UART::out("  IDT");
-    else if (table == 0b01)
+    else if (table == 0b10)
         UART::out("  LDT");
     
     UART::out(" Selector Index: ");
