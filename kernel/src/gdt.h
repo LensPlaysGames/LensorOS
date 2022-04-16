@@ -19,11 +19,11 @@ struct GDTDescriptor {
 ///         "Figure 5-1: Descriptor Fields Used for Protection" of the Intel Software Manual, Volume 3-A.
 struct GDTEntry {
     /// Limit 15:0
-    u16 Limit0;
+    u16 Limit0 { 0 };
     /// Base 15:0
-    u16 Base0;
+    u16 Base0 { 0 };
     /// Base 23:16
-    u8 Base1;
+    u8 Base1 { 0 };
     /// 0b00000000
     ///          =  Accessed
     ///         =   Readable/Writable
@@ -32,16 +32,16 @@ struct GDTEntry {
     ///      =      Descriptor Type
     ///    ==       Descriptor Privilege Level
     ///   =         Segment Present
-    u8 AccessByte;
+    u8 AccessByte { 0 };
     /// 0b00000000
     ///       ==== Limit 19:16
     ///      =     Available
     ///     =      64-bit code segment
     ///    =       Default Operation Size
     ///   =        Granularity
-    u8 Limit1_Flags;
+    u8 Limit1_Flags { 0 };
     /// Base 31:24
-    u8 Base2;
+    u8 Base2 { 0 };
 
     // Limit is 20 bits and spread across two variables.
     // This helper function makes it easy to set the limit.
@@ -67,7 +67,7 @@ struct TSS_GDTEntry : public GDTEntry {
     u32 Reserved { 0 };
 
     TSS_GDTEntry(GDTEntry entry, u32 b3)
-        : GDTEntry(entry)
+      : GDTEntry(entry)
       , Base3(b3) {}
 } __attribute__((packed));
 
