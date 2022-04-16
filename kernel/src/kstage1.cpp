@@ -399,11 +399,12 @@ void kstage1(BootInfo* bInfo) {
             && d.minor() == SYSDEV_MINOR_AHCI_PORT
             && d.flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
         {
-            auto* portCon = (AHCI::PortController*)(&d)->data1();
+            auto* portCon = static_cast<AHCI::PortController*>((&d)->data1());
+            auto* driver = static_cast<StorageDeviceDriver*>(portCon);
             UART::out("[kstage1]: Searching ACHI port ");
             UART::out(portCon->port_number());
             UART::out(" for a GPT\r\n");
-            if(GPT::is_gpt_present((StorageDeviceDriver*)portCon)) {
+            if(GPT::is_gpt_present(driver)) {
                 UART::out("  GPT is present!\r\n");
                 auto gptHeader = SmartPtr<GPT::Header>(new GPT::Header);
                 auto sector = SmartPtr<u8[]>(new u8[512], 512);
@@ -429,11 +430,9 @@ void kstage1(BootInfo* bInfo) {
                     UART::out("\r\n        Attributes: ");
                     UART::out(part->Attributes);
                     UART::out("\r\n");
-                    /* TODO: Don't make partition driver until we know
-                     *       we will need it (search flag set to true).
-                     */
-                    auto* partDriver = new GPTPartitionDriver((StorageDeviceDriver*)portCon
-                                                              , part->TypeGUID, part->UniqueGUID
+                    // TODO: Delete partition driver if it isn't searchable.
+                    auto* partDriver = new GPTPartitionDriver(driver, part->TypeGUID
+                                                              , part->UniqueGUID
                                                               , part->StartLBA, 512);
                     SystemDevice gptPartition(SYSDEV_MAJOR_STORAGE
                                               , SYSDEV_MINOR_GPT_PARTITION
