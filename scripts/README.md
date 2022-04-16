@@ -7,6 +7,7 @@ A collection of shell scripts that automate processes surrounding LensorOS.
 - Visualization
   - [cinclude2dot.sh](#kernel-cinclude2dot-sh)
 - Boot Media Generation
+  - [sysroot.sh](#bootmediagen-sysroot-sh)
   - Unix
     - [install_mkgpt.sh](#bootmediagen-installmkgpt-sh)
     - [mkgpt.sh](#bootmediagen-mkgpt-sh)
@@ -52,6 +53,20 @@ Dependencies:
 - [Perl](https://www.perl.org/get.html)
   - This is likely already on your system.
 - [GraphViz](https://www.graphviz.org/download/)
+
+---
+
+### `sysroot.sh` <a name="bootmediagen-sysroot-sh"></a>
+Generate a system root for LensorOS and the LensorOS
+  toolchain in the `/root/` directory of the repository.
+
+Invocation:
+```bash
+bash sysroot.sh
+```
+
+No Dependencies.
+
 
 ---
 
