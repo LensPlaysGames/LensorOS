@@ -38,7 +38,7 @@ class CPU {
 public:
     CPU () {}
 
-    CPU (CPUDescription* description)
+    explicit CPU (CPUDescription* description)
         : Description(description) {}
     
     CPU (CPUDescription* description
@@ -98,7 +98,7 @@ public:
         memcpy(&id[0], &VendorID[0], 12 * sizeof(char));
     }
 
-    void add_cpu(CPU cpu) { CPUs.add(cpu); }
+    void add_cpu(const CPU& cpu) { CPUs.add(cpu); }
 
     void set_logical_core_bits (u8 bits) { LogicalCoreBits  = bits; }
     void set_physical_core_bits(u8 bits) { PhysicalCoreBits = bits; }
