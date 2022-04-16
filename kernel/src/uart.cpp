@@ -165,7 +165,7 @@ namespace UART {
 
         while (numberOfBytes > 0) {
 #ifdef LENSOR_OS_UART_HIDE_COLOR_CODES
-            if (*str == '\33' || *str == '\033' || *str == '\x1b' || *str == '\x1B') {
+            if (*str == '\033' || *str == '\x1b' || *str == '\x1B') {
                 // Loop until no more chars or 'm'
                 do {
                     str++;
