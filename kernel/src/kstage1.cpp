@@ -362,18 +362,21 @@ void kstage1(BootInfo* bInfo) {
             AHCI::HBAMemory* ABAR = (AHCI::HBAMemory*)(u64)(((PCI::PCIHeader0*)dev.data2())->BAR5);
             // TODO: Better MMIO!! It should be separate from regular virtual mappings, I think.
             Memory::map(ABAR, ABAR);
-            u32 ports = ABAR->portsImplemented;
+            u32 ports = ABAR->PortsImplemented;
             for (u64 i = 0; i < 32; ++i) {
                 if (ports & (1 << i)) {
-                    AHCI::HBAPort* port = &ABAR->ports[i];
+                    AHCI::HBAPort* port = &ABAR->Ports[i];
                     AHCI::PortType type = get_port_type(port);
-                    if (type == AHCI::PortType::SATA || type == AHCI::PortType::SATAPI) {
+                    if (type != AHCI::PortType::None) {
                         auto* PortController = new AHCI::PortController(type, i, port);
                         SystemDevice ahciPort(SYSDEV_MAJOR_STORAGE
                                               , SYSDEV_MINOR_AHCI_PORT
                                               , PortController, &dev
                                               , nullptr, nullptr);
-                        ahciPort.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, true);
+                        // Search SATA devices further for partitions and filesystems.
+                        if (type == AHCI::PortType::SATA)
+                            ahciPort.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, true);
+
                         SYSTEM->add_device(ahciPort);
                     }
                 }
@@ -395,7 +398,7 @@ void kstage1(BootInfo* bInfo) {
         {
             auto* portCon = static_cast<AHCI::PortController*>((&d)->data1());
             auto* driver = static_cast<StorageDeviceDriver*>(portCon);
-            UART::out("[kstage1]: Searching ACHI port ");
+            UART::out("[kstage1]: Searching AHCI port ");
             UART::out(portCon->port_number());
             UART::out(" for a GPT\r\n");
             if(GPT::is_gpt_present(driver)) {
@@ -481,7 +484,6 @@ void kstage1(BootInfo* bInfo) {
                 }
             }
             else if (dev.minor() == SYSDEV_MINOR_AHCI_PORT) {
-#ifndef VBOX
                 auto* portController = (AHCI::PortController*)dev.data1();
                 if (portController && FAT->test(portController)) {
                     UART::out("  Found valid File Allocation Table filesystem\r\n");
@@ -489,7 +491,6 @@ void kstage1(BootInfo* bInfo) {
                     // Done searching AHCI port, found valid filesystem.
                     dev.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
                 }
-#endif /* !defined VBOX */
             }
         }
     });
