@@ -98,27 +98,27 @@ namespace AHCI {
 
         // Disable interrupts during command construction.
         Port->InterruptStatus = (u32)-1;
-        auto* commandHeader = (HBACommandHeader*)(Port->command_list_base());
+        auto* commandHeader = reinterpret_cast<HBACommandHeader*>(Port->command_list_base());
         commandHeader->CommandFISLength = sizeof(FIS_REG_H2D)/sizeof(u32);
         commandHeader->Write = 0;
         commandHeader->PRDTLength = 1;
-        auto* commandTable = (HBACommandTable*)(commandHeader->command_table_base());
+
+        auto* commandTable = reinterpret_cast<HBACommandTable*>(commandHeader->command_table_base());
         memset(commandTable, 0, sizeof(HBACommandTable) + ((commandHeader->PRDTLength - 1) * sizeof(HBA_PRDTEntry)));
         commandTable->PRDTEntry[0].set_data_base((u64)Buffer);
         commandTable->PRDTEntry[0].set_byte_count((sectors << 9) - 1);
         commandTable->PRDTEntry[0].set_interrupt_on_completion(true);
-        FIS_REG_H2D* commandFIS = (FIS_REG_H2D*)(&commandTable->CommandFIS);
+        FIS_REG_H2D* commandFIS = reinterpret_cast<FIS_REG_H2D*>(&commandTable->CommandFIS);
         commandFIS->Type = FIS_TYPE::REG_H2D;
         // Take control of command structure.
         commandFIS->CommandControl = 1;
-        // Read using extended DMA.
-        commandFIS->Command = ATA_CMD_READ_DMA_EX;
+        commandFIS->Command = ATA_CMD_READ_DMA_EXT;
         commandFIS->set_logical_block_addresses(sector);
         // Use lba mode.
         commandFIS->DeviceRegister = 1 << 6;
         // Set sector count.
         commandFIS->set_count(static_cast<u16>(sectors));
-        // Issue command.
+        // Issue command in first slot.
         Port->CommandIssue = 1;
         // Wait until command is completed.
         while (Port->CommandIssue != 0)
