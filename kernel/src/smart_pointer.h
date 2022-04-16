@@ -33,7 +33,7 @@ private:
 template <typename T>
 class SmartPtr<T[]> {
 public:
-    SmartPtr() : ptr(nullptr) {}
+    SmartPtr() : ptr(nullptr), size(0) {}
     SmartPtr(T* ptr, u64 size) : ptr(ptr), size(size) {}
     SmartPtr(T* ptr, int size) : ptr(ptr), size((u64)size) {}
 
@@ -68,7 +68,7 @@ public:
 
 private:
     T* ptr;
-    u64 size;
+    u64 size { 0 };
 };
 
 #endif /* LENSOR_OS_SMART_POINTER_H */
