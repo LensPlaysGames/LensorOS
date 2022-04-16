@@ -42,7 +42,7 @@ void print_memory_info() {
 }
 
 void print_now(u64 xOffset = 0) {
-    RTCData& tm = gRTC.Time;
+    const RTCData& tm = gRTC.Time;
     gRend.puts("Now is ");
     gRend.puts(to_string(tm.hour));
     gRend.putchar(':');
