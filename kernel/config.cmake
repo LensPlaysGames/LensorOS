@@ -1,4 +1,4 @@
 # ARCH can be x86_64 only, for now.
 set( ARCH x86_64 )
-# MACHINE can be one of PC, QEMU, VBOX.
+# MACHINE can be one of PC, QEMU, VBOX, VMWARE.
 set( MACHINE VBOX )
