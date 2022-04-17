@@ -1,171 +1,60 @@
 # LensorOS
-A 64-bit operating system with everything built from scratch!
+A 64-bit all-inclusive operating system, from bootloader to userspace.
 
 ---
 
-### Table of Contents
-- Booting into LensorOS
-  - [using QEMU](#qemu-boot)
-  - [using VirtualBox](#vbox-boot)
-  - [on hardware](#hardware-boot)
+## Table of Contents
+
+- [Running LensorOS](#run)
 - [Building LensorOS](#build)
-- [Acknowledgements](#ack)
 
 ---
 
-## Booting into LensorOS using QEMU <a name="qemu-boot"></a>
-[Get QEMU](https://www.qemu.org/download)
+## Running LensorOS <a name="run"></a>
 
-Before beginning, ensure you have the LensorOS bootloader and kernel binaries. \
-[See the build section](#build).
+1. [As a tourist](#tourists-go-here)
+2. [As a developer](#developers-go-here)
 
-To change the font, replace `dfltfont.psf` in the
-  `kernel/res` folder with any PSF1 font (not PSF2). \
-For a few fonts that are compatible, check out
-  [this repository](https://github.com/ercanersoy/PSF-Fonts).
-
-Ensure the following dependencies are installed on your system:
-- Linux: `sudo apt install mtools`
-- [Windows](https://github.com/LensPlaysGames/mtools/releases)
-
-GNU mtools is a set of tools for manipulating
-  MS-DOS style files and filesystems.
-This is necessary as the UEFI specification requires
-  FAT32 to be used as it's boot device's filesystem.
-
-To build a disk image that will boot into LensorOS,
-  run the following included helper script:
-```bash
-bash /Path/to/LensorOS/kernel/mkimg.sh
-```
-
-Upon completion, this will have generated a disk image file `LensorOS.img`
-  that follows the UEFI standards, meaning any UEFI-supporting machine could
-  boot from this image, given it is a valid boot device.
-
-- [Continue on Linux](#qemu-boot-linux)
-- [Continue on Windows](#qemu-boot-windows)
-
-Alternatively, Create a disk image file that is GPT formatted (aka supports
-  partitions) by utilizing the `mkgpt.sh` script that is included.
-  [See the scripts README](scripts/README.md) for more info.
-
-#### On Linux <a name="qemu-boot-linux"></a>
-To run QEMU with the correct command line options automatically, use
-  the following helper script to launch QEMU booting into LensorOS:
-```bash
-bash /Path/to/LensorOS/kernel/run.sh
-```
-For debugging with gdb, run `bash rundbg.sh` instead.
-This will launch QEMU but wait to start cpu execution
-  until `gdb` has connected on port `1234` of `localhost`. \
-See [a note about debugging](#gdb-debug-note-1).
-
-#### On Windows <a name="qemu-boot-windows"></a>
-To launch QEMU from the generated disk image, A `run.bat` file is included. \
-The batch file requires the directory that the QEMU executable resides in be
-  added to the system's PATH variable.
-  [See this stackoverflow thread for help](https://stackoverflow.com/questions/9546324/adding-a-directory-to-the-path-environment-variable-in-windows). \
-If editing the PATH variable isn't a valid option, the batch script could always
-  be edited to use the path to the QEMU executable on your local machine. \
-
-By simply double clicking this batch file,
-  QEMU will open and boot into LensorOS.
-
-All serial output will be re-directed to stdin/stdout, which is likely a
-  `cmd.exe` window that opened along with QEMU. The problem with `cmd.exe`
-  is that it leaves the output looking rather mangled
-  (ie. left-pointing arrows, open square-brackets, etc).
-  This is due to the terminal not supporting ANSI color codes.
-
-To get around this, I use the (rather life-changing)
-  [Windows Terminal](https://github.com/Microsoft/Terminal).
-It should be the default terminal, and should have been for five
-  years now, but I'm glad it is available and open source none-the-less.
-
-This new terminal allows both WSL and PowerShell to be open in the same
-  terminal, but separate tabs. By the `run.bat` file from within a
-  PowerShell in the new Windows Terminal, you will
-  experience glorious full-color, formatted serial output.
-
-If you are having none of this, and would prefer to have a very monotone
-  serial output that is also not mangled with ANSI color codes, define
-  `LENSOR_OS_UART_HIDE_COLOR_CODES` during compilation and all color
-  codes will be hidden from serial output by the kernel itself.
-
-There is also a `rundbg.bat` that will launch QEMU with the appropriate
-  flags to wait for `gdb` to connect on port `1234` of `localhost`. \
-<a name="gdb-debug-note-1"></a>
-NOTE: When debugging with gdb, the kernel must be
-  built with debug symbols ("-g" compile flag).
-  To achieve this, run cmake with the following command line argument:
-  `-DCMAKE_BUILD_TYPE=Debug`
+Free, compatible virtual machines:
+- [VirtualBox (VBOX)](https://www.virtualbox.org/wiki/Downloads)
+- [VMWare Workstation Player](https://www.vmware.com/products/workstation-player.html)
+- [Quick Emulator (QEMU)](https://www.qemu.org/download/)
 
 ---
 
-## Booting into LensorOS using VirtualBox <a name="vbox-boot"></a>
-[Get VirtualBox](https://www.virtualbox.org/wiki/Downloads)
+### I just want to open LensorOS! <a name="tourists-go-here"></a>
+If you are just interested in poking around LensorOS, and not editing code,
+  I recommend a pre-built release from the 
+  [releases page](https://github.com/LensPlaysGames/LensorOS/releases). 
+  It will include all the necessary resources
+  and instructions on how to run LensorOS.
+  Keep in mind that this will be missing a lot of
+  features to ensure maximum compatibility across systems.
+  By building from source, you are able to build for
+  your exact system and get every possible feature enabled.
 
-VirtualBox is less lenient when it comes to virtual drive file formats. \
-Because of this fact, VirtualBox can not use the `.img` file raw like QEMU,
-  and either a `.bin` GPT formatted disk image with an EFI System partition
-  or `.iso` file with an ISO filesystem must be prepared from it first.
+---
 
-Ensure you have the LensorOS bootloader and kernel binaries built. \
-[See the build section](#build).
+### Launching LensorOS using the Build System <a name="developers-go-here"></a>
+NOTE: There is no automation for anything except QEMU for now.
+  There are, however, instructions on how to setup a virtual
+  machine in VirtualBox and VMWare Workstation Player.
 
-To change the font, replace `dfltfont.psf` in the
-  `kernel/res` folder with any PSF1 font (not PSF2). \
-For a few fonts that are compatible, check out
-  [this repository](https://github.com/ercanersoy/PSF-Fonts),
-  or even [GNU Unifont](http://unifoundry.com/unifont/index.html).
+When the CMake build system is generated, it looks for QEMU on your system;
+  if it finds it, it will add the following targets to the project.
+  Invoke them to launch QEMU from the corresponding LensorOS boot media.
 
-There are two possible pathways that LensorOS bootable media can be generated.
-- [GPT](#vbox-boot-gpt)
-- [Live CD](#vbox-boot-live-cd)
+The targets:
+- `runimg_qemu` -- LensorOS.img
+- `runhda_qemu` -- LensorOS.bin
+- `runiso_qemu` -- LensorOS.iso
 
-#### GPT <a name="vbox-boot-gpt"></a>
-Utilize the `mkgpt.sh` script that is included in the `/scripts/` directory.
-  [See the scripts README](scripts/README.md)
-  for more information on this script.
-
-If all has went well, there will be a `LensorOS.img` and a
-  `LensorOS.bin` in the `/kernel/bin/` directory of the repository.
-  While this binary `.bin` file is a perfectly valid image of a real
-  GPT formatted disk, VirtualBox does not accept it as valid.
-  When VirtualBox is installed, it also installs a lot of
-  command line tools, one of which is called `VBoxManage`.
-  This tool has a subcommand `convertfromraw` that we will utilize
-  to create a `.vdi` virtual disk image from our `.bin` binary disk image.
-
-```bash
-VBoxManage convertfromraw /Path/to/LensorOS/kernel/bin/LensorOS.bin /Path/to/LensorOS/kernel/bin/LensorOS.vdi --format VDI
+Assuming the CMake build system was generated in the `kernel/bld/` subdirectory, invoke like:
+```sh
+cmake --build kernel/bld --target <name of target>
 ```
 
-Continue to the [VirtualBox VM Configuration](#vbox-boot-vm-config),
-  and replace any mention of `Optical Drive` with `Hard Disk`,
-  and any mention of `LensorOS.iso` with `LensorOS.vdi`.
-
-#### Live CD <a name="vbox-boot-live-cd"></a>
-NOTE: On Windows, complete the following shell commands from
-  within WSL, or the Windows Subsystem for Linux.
-
-Install the tool necessary to create `.iso` files and ISO-9660
-  filesystems, as well as a tool to create and format MS-DOS style filesystems:
-```bash
-sudo apt install mtools xorriso
-```
-Next, simply run the `mkiso.sh` script with Bash:
-```bash
-bash /Path/to/LensorOS/kernel/mkiso.sh
-```
-
-If all goes well, this will first generate a FAT32 EFI-compatible boot
-  disk image, then create a bootable ISO-9660 CD-ROM disk image.
-
-#### Virtual Machine Configuration <a name="vbox-boot-vm-config"></a>
-To actually use the generated bootable media in
-  a VM in VirtualBox, it requires some setup:
+#### VirtualBox
 1. Open VirtualBox.
 2. Click the `New` button to create a new virtual machine (VM).
 3. Give the VM a name and a file path you are comfortable with.
@@ -177,211 +66,183 @@ To actually use the generated bootable media in
 9. Navigate to `System` within the list on the left.
     1. Change Chipset to `ICH9`.
     2. Enable Extended Feature `Enable EFI (special OSes only)`.
-    3. In the `Processor` tab, check the `Enable Nested VT-x/AMD-V` checkbox.
 10. Navigate to `Storage` within the list on the left.
-    1. Right click the storage controller (`IDE`), and select `Optical Drive`.
-    2. Click `Add` in the new `Optical Disk Selector` window that pops up.
-    3. Browse to `Path/To/LensorOS/kernel/bin/` and select `LensorOS.iso`.
-    4. Ensure `LensorOS.iso` is selected, then click the `Choose` button.
+    1. Right click the default controller (`IDE`), and select `Remove Controller`.
+    2. Right click the area labeled `Storage Devices`, and select `AHCI (SATA)`.
+    3. Richt click the new AHCI storage controller, and select either `Optical Drive` or `Hard Disk` depending on whether you'd like to boot from the `.iso` or `.bin`, respectively.
+    4. Click `Add` in the new Virtual Media Selector window that pops up.
+    5. Browse to this folder and, depending on whether `Optical Drive` or `Hard Disk` was selected, choose either `LensorOS.iso` or `LensorOS.bin`.
 11. Navigate to `Network` within the list on the left.
     1. Disable all network adapters.
 
-After all of this has been done, you are ready to click `Start` on the
-  VirtualBox VM; the bootloader should run automatically.
+#### VMWare
+1. Open VMWare Workstation Player
+2. Select `Home` in the list on the left side. Click `Create a New Virtual Machine` on the right.
+3. Select the `I will install the operating system later.` option.
+4. Select a guest OS of `Other`, and a Version of `Other 64-bit`.
+5. Give the VM a name and path you are comfortable with. Keep note of the path.
+6. It will ask about a disk, but the disk it's asking about won't be used. Click next.
+7. The next screen should be an overview of the virtual machine hardware. Click `Customize Hardware...`.
+    1. Select `New CD/DVD` on the left, then click `Advanced...` on the right.
+    2. Select `SATA`, then click `OK`.
+    3. On the right, select `Use ISO image file`, and then click `Browse...`. 
+    4. Select the `LensorOS.iso` image file (located in `kernel/bin/`).
+    5. Select the hard drive that we skipped configuring in the list on the left.
+    6. Remove the hard drive using the `Remove` button near the bottom center.
+    7. Remove any and all network adapters and sound cards in the same manner.
+    5. Click `Close` in the bottom right to close the hardware configuration window.
+8. Click `Finish`.
+9. Navigate to the path specified in step #5, where the virtual machine is located.
+    1. Open the file ending with `.vmx` in a text editor.
+    2. Add the following line of text: `firmware="efi"`.
+    3. Save the file, then close it.
+    
+You will have to select `UEFI Shell` the virtual machine in 
+  VMware Workstation (even if it says something like `Unsupported`).
 
 ---
 
-## Booting into LensorOS on hardware <a name="hardware-boot"></a>
-DISCLAIMER: LensorOS IS IN NO WAY GUARANTEED TO BE 'SAFE';
-  RUN AT YOUR OWN RISK! (see [LICENSE](LICENSE))
+## Building LensorOS  <a name="build"></a>
+There are multiple steps in the LensorOS build process, outlined here.
+1. [Dependencies](#dependencies)
+2. [Bootloader](#bootloader)
+3. [LensorOS Toolchain + Kernel](#toolchain-kernel)
+4. [Boot Media Generation](#boot-media-generation)
 
-Before beginning, ensure you have the LensorOS bootloader and kernel binaries. \
-[See the build section](#build).
-
-Ensure you have a USB storage device that is working.
-Remove all data from the USB. This can be done by formatting,
-  or simply deleting/moving everything off of it.
-
-Next, create a folder called `EFI`, then inside that a folder called `BOOT`. \
-Move `main.efi` from `/gnu-efi/x86_64/bootloader/`
-  directory into the `BOOT` folder on the USB. \
-Rename `main.efi` in the usb's `BOOT` folder to
-  `bootx64.efi`, as per the UEFI specification.
-
-Finally, navigate back to the root directory of
-  the USB (where the `EFI` folder resides). \
-Create a folder named `LensorOS`, then move
-  the following resources into the directory:
-- `kernel.elf` from `/kernel/bin/`
-- Any `.psf` version 1 font renamed to `dfltfont.psf`
-  - A font comes included; it can be found at `kernel/res/dfltfont.psf`.
-  - Many fonts can be found [here](https://github.com/ercanersoy/PSF-Fonts).
-  - [GNU Unifont](http://unifoundry.com/unifont/index.html) provides PSF1.
-
-```
-Final Directory Structure:
-USB
-|-- efi
-|   `-- boot
-|       `-- bootx64.efi
-|-- LensorOS
-|   |-- kernel.elf
-|   `-- dfltfont.psf
-`-- startup.nsh
-```
+NOTE: All blocks of shell commands given are expected to start
+  with the working directory at the root of the repository.
 
 ---
 
-## Building LensorOS <a name="build"></a>
-There are three steps to building LensorOS:
-1. [the Toolchain](#build-step1)
-1. [the Bootloader](#build-step2)
-2. [the Kernel](#build-step3)
+### Dependencies <a name="dependencies"></a>
+Download and install the following project-wide dependencies if you
+  don't have them already, or if the version you have isn't up to date.
 
-On Windows, use the Windows Subsystem for Linux
-  (WSL) to emulate Linux exactly, no drawbacks. \
-[See this walkthrough](https://docs.microsoft.com/en-us/windows/wsl/filesystems#mixing-linux-and-windows-commands)
-  on how easy it is to communicate between Linux and Windows processes.
+- A 64-bit version of the GNU toolset for your host OS.
+  - Debian distros: `sudo apt install build-essential make`
+  - Windows:
+    - [Cygwin](https://cygwin.com/install.html)
+    - [MinGW-w64](https://sourceforge.net/projects/mingw-w64/)
+    - [MSYS2](https://www.msys2.org/)
+    - [TDM64](https://jmeubank.github.io/tdm-gcc/download/)
+    - [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/about)
+- [CMake >= 3.20](https://www.cmake.org/download/)
+- [Git](https://git-scm.com/downloads)
+- [Netwide Assembler (nasm)](https://www.nasm.us)
 
-If you don't want to use WSL, you'll need pre-built binaries of the
-  [LensorOS Toolchain](https://github.com/LensPlaysGames/LensorOS/releases), 
-  the LensorOS bootloader, and
-  [GNU mtools](https://github.com/LensPlaysGames/mtools/releases);
-  ask and we will help you on your journey :^).
-
-Keep in mind the bootloader can't be built natively on
-  Windows (yet), so skip straight to step #3 if not using WSL.
-
-Alternatively, one could use a virtual machine
-  that emulates a linux distro (ie. `VirtualBox` running
-  `Linux Mint`, or something), and develop from there.
-
-Alternatively alternatively, one could use
-  [Cygwin](https://www.cygwin.com/) for a Unix-like environment
-  on native Windows, but I am not knowledgable on this topic.
-
-### Linux <a name="build-linux"></a>
-If you are on Windows 10+, you are able to use WSL
-  to complete the following Linux steps as-is.
-
-Get dependencies:
-```bash
-sudo apt install build-essential git make nasm
+Next, clone the source code from the repository. If you would like to edit the code
+  and make contributions, be sure to fork first and clone from that repository.
+```sh
+git clone https://github.com/LensPlaysGames/LensorOS.git
 ```
 
-You will need CMake version `3.20` or greater,
-  which is why we didn't install it through `apt`;
-  most distros only have up to version `3.16`.
-  Check your current installation of CMake's version using `cmake --version`.
-  [See the CMake downloads page](https://cmake.org/download/)
-  for pre-built binaries. Simply download the latest release
-  for `Linux` and your machine type, then (after extracting it),
-  add the `bin` subdirectory to the `PATH` environment variable.
-  CMake are nice guys and even provide self extracting options.
-  If you do not see your machine type, you must
-  download the source and build CMake from it.
- 
-Obtain the source code:
-```bash
-git clone https://github.com/LensPlaysGames/LensorOS
-```
+This will create a subdirectory titled `LensorOS` with the
+  contents of this repository in the current working directory.
 
-#### 1. Build The LensorOS Toolchain <a name="build-step1"></a>
-[Follow the instructions in the toolchain README](toolchain/README.md)
+---
 
-#### 2. Build the bootloader <a name="build-step2"></a>
-The bootloader source code resides in the `gnu-efi` directory, for now.
-```bash
-cd /Path/to/LensorOS/gnu-efi/
+### Bootloader <a name="bootloader"></a>
+
+NOTE: This section **is going to change**, and any information here may become incorrect or out of date at any moment. This is due to being in the middle of migrating bootloaders to the self-created RADII bootloader.
+
+The bootloader is an EFI application; specifically an OS loader written
+  for the [UEFI spec. (currently V2.9)](https://uefi.org/specifications/).
+  That specification outlines the use of PE32+ executables with a specific subsystem.
+  As you may know, the PE32+ format is also used by Windows as it's executable format.
+  This means that a compiler that generates Windows executables will generate the
+  proper format of executable for an EFI application, given the subsystem modification. 
+  However, twenty or so years ago, GNU decided to write custom relocation linker scripts 
+  that create PE32+ executables from ELF executables. This means that a compiler that generates ELF executables is used, then that executable
+  is transformed into a PE32+ executable with the proper subsystem for an EFI application.
+  Luckily, all of this is handled by a Makefile.
+  
+Build dependencies for the bootloader:
+```sh
+cd gnu-efi
 make
+```
+That only ever has to be done once, to generate `libgnuefi.a`.
+
+From here, the bootloader executable can be built using the `bootloader` make target:
+```sh
+cd gnu-efi
 make bootloader
 ```
-This will generate `main.efi` in the
-  `/gnu-efi/x86_64/bootloader/` directory within the repository.
-  This is the UEFI compatible executable file.
-
-NOTE: One only needs to run `make` for the bootloader once; it
-  generates `libgnuefi.a`, which the bootloader itself links with.
-  Following that, simply using the `bootloader` target will be
-  sufficient to update the bootloader; even that only needs
-  to be done if the bootloader code was changed.
-
-#### 3. Build the kernel <a name="build-step3"></a>
-The LensorOS Kernel uses CMake to generate the build system;
-  beware, as not all the build systems CMake can generate honor
-  the request to use the LensorOS Toolchain (*ahem* Visual Studio *ahem*). \
-To prepare a build system that will build the
-  kernel with `GNU make`, run the following:
-```bash
-cd /Path/to/LensorOS/kernel/
-cmake -G "Unix Makefiles" -S . -B rls -DCMAKE_BUILD_TYPE=Release
-cmake -G "Unix Makefiles" -S . -B rls -DCMAKE_BUILD_TYPE=Release
-```
-
-Yes, I always recommend generating the build system
-  twice in a row (weird bugs may appear otherwise).
-
-The above command should generate an out-of-source
-  `GNU make` build system in the `rls` subdirectory.
-  Alternatively, generate any build system of your choice that
-  is supported by CMake (I recommend Ninja, it's fast).
-
-To build the kernel, invoke the build system that was generated by CMake.
-No matter the build system you choose, invoke it using the following command:
-```bash
-cmake --build /Path/to/LensorOS/kernel/rls
-```
-NOTE: It's not necessary to provide an absolute path, but it
-  means the command can be run from any working directory.
-
-This final build step will generate `kernel.elf` within the `/kernel/bin`
-  directory, ready to be used in a boot usb or formatted into an image. \
-See the sections starting with "Booting into LensorOS" above.
-
-If building the kernel for real hardware, ensure to set the
-  `MACHINE` CMake variable within [config.cmake](kernel/config.cmake)
-  to `PC`, and not any of the virtual machines (ie. `QEMU`, `VBOX`).
-  This allows for the hardware timers to be used to their full potential
-  (asking QEMU for 1000hz interrupts from multiple devices overloads
-  the emulator and guest time falls behind drastically; to counter-act this,
-  very slow frequency periodic interrupts are setup as to allow the emulator
-  to process them accordingly, allowing for accurate time-keeping in QEMU).
-
-For faster build times, and better incremental building,
-  download `ccache` and add the directory in which it's
-  executable resides in to the `PATH` system environment variable.
-  The kernel CMake script will detect and use it automatically.
 
 ---
 
-### Acknowledgements <a name="ack"></a>
-At first, development followed tutorials that can be found at
-  [Poncho's GitHub](https://github.com/Absurdponcho). \
-Those tutorials were abandoned just after setting up a very
-  basic AHCI driver, so I've taken the wheels from there.
+### Toolchain + Kernel <a name="toolchain-kernel"></a>
 
-A large thanks to the huge portions of inspiration, knowledge,
-  and help that came from the OSDev
-  [wiki](https://wiki.osdev.org/Expanded_Main_Page)
-  and
-  [forums](https://forum.osdev.org/)
-  (sorry, Terry).
+[See the toolchain README](toolchain/README.md)
 
-A huge amount of entertainment and inspiration has come from
-  [SerenityOS](https://github.com/SerenityOS/serenity), an operating
-  system being built by the OS development hobbyist community.
+Once the toolchain is usable, continue on here.
 
-The compeletely-from-scratch [ToaruOS](https://github.com/klange/toaruos)
-  has also been an amazing source of knowledge, inspiration, and information.
+I recommend taking a look at `kernel/config.cmake` and seeing what
+  there is to fiddle with, but going with the defaults is just as well.
 
-The
-  [FreeBSD](https://github.com/freebsd/freebsd-src)
-  and
-  [Linux](https://github.com/torvalds/linux)
-  codebases have been a huge help in seeing how
-  hard-to-solve problems have been solved in the past.
+First, generate a build system using CMake.
+  If you choose a different build system, keep in mind not all
+  build systems honour our request to use a custom toolchain.
+  I recommend Ninja, as it can speed up build times.
+  Another tip to speed up build times; install `ccache`.
+  The CMake scripts in this project detect and use it automatically.
+```sh
+cmake -G "Unix Makefiles" -S kernel -B kernel/bld
+```
+To generate the kernel executable, invoke the build system generated by CMake:
+```sh
+cmake --build kernel/bld
+```
+
+CMake will create certain targets if the
+  proper dependencies are detected on the system.
+
+To see a list of all available targets, use the following command:
+```sh
+cmake --build kernel/bld --target help
+```
 
 ---
 
-#### LensorOS Birthday
-My birthday is January 14th! I am still a *wittle baby*.
+### Boot Media Generation <a name="boot-media-generation"></a>
+Here is a list of the current build targets relating to boot media
+  generation, as well as their dependencies listed underneath each.
+- `image_raw` --
+  Combine built executables and resources to generate UEFI-compatible FAT32 boot media.
+  - dd
+    - Native Unix command
+    - On Windows, use one of the following options:
+      - [use MinGW installer to get MSYS coreutils ext package](https://osdn.net/projects/mingw/)
+      - [use Cygwin](https://www.cygwin.com/)
+  - GNU mtools
+    - [Home Page](https://www.gnu.org/software/mtools/)
+    - Debian distros: `sudo apt install mtools`
+    - [Pre-built binaries for Windows](https://github.com/LensPlaysGames/mtools/releases)
+- `image_gpt` --
+  Create GPT-partitioned, bootable hard drive image from FAT32 boot media.
+  - `image_raw`
+  - mkgpt
+    - [Repository](https://github.com/jncronin/mkgpt)
+    - On Unix, use the automatic build + install script in the `scripts` subdirectory.
+- `image_iso` --
+  Create ISO-9660 "El-Torito" bootable CD-ROM image from FAT32 boot media.
+  - `image_raw`
+  - GNU xorriso
+    - [Home Page](https://www.gnu.org/software/xorriso/)
+    - Debian distros: `sudo apt install xorriso`
+    - [Pre-built binaries for Windows](https://github.com/PeyTy/xorriso-exe-for-windows)
+
+The generated targets can be chained together for easy, quick development. \
+To build the LensorOS kernel, generate new boot media, and then
+  launch into LensorOS, it takes just one command.
+```sh
+cmake --build kernel/bld -t all image_raw runimg_qemu
+```
+
+---
+
+### Birthday
+Work on LensorOS began on January 9th, 2022.
+
+---
+
