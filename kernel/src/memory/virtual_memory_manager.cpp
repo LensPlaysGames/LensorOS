@@ -115,7 +115,7 @@ namespace Memory {
          *   equal to physical memory addresses within the kernel.
          */
 
-        for (u64 t = 0; t < get_total_ram(); t+=PAGE_SIZE)
+        for (u64 t = 0; t < total_ram(); t+=PAGE_SIZE)
             map(pageMap, (void*)t, (void*)t);
 
         u64 kPhysicalStart = (u64)&KERNEL_PHYSICAL;

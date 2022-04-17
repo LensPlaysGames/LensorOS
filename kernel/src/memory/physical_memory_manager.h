@@ -9,11 +9,11 @@ namespace Memory {
     void init_physical(EFI_MEMORY_DESCRIPTOR* map, u64 size, u64 entrySize);
 
     /* Returns the total amount of RAM in bytes. */
-    u64 get_total_ram();
+    u64 total_ram();
     /* Returns the amount of free RAM in bytes. */
-    u64 get_free_ram();
+    u64 free_ram();
     /* Returns the amount of used RAM in bytes. */
-    u64 get_used_ram();
+    u64 used_ram();
 
     /* Return the physical address of the base of a free
      *   page in memory, while locking it at the same time. 

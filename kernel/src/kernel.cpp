@@ -16,9 +16,9 @@
 
 void print_memory_info() {
     u32 startOffset = gRend.DrawPos.x;
-    u64 totalRAM = Memory::get_total_ram();
-    u64 freeRAM = Memory::get_free_ram();
-    u64 usedRAM = Memory::get_used_ram();
+    u64 totalRAM = Memory::total_ram();
+    u64 freeRAM = Memory::free_ram();
+    u64 usedRAM = Memory::used_ram();
     gRend.puts("Memory Info:");
     gRend.crlf(startOffset);
     gRend.puts("|- Total RAM: ");

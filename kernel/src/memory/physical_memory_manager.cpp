@@ -9,7 +9,6 @@
 #include <memory/common.h>
 #include <memory/virtual_memory_manager.h>
 #include <panic.h>
-#include <uart.h>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_PMM
@@ -22,13 +21,13 @@ namespace Memory {
     u64 TotalUsedPages { 0 };
     u64 MaxFreePagesInARow { 0 };
 
-    u64 get_total_ram() {
+    u64 total_ram() {
         return TotalPages * PAGE_SIZE;
     }
-    u64 get_free_ram() {
+    u64 free_ram() {
         return TotalFreePages * PAGE_SIZE;
     }
-    u64 get_used_ram() {
+    u64 used_ram() {
         return TotalUsedPages * PAGE_SIZE;
     }
 
@@ -226,7 +225,7 @@ namespace Memory {
         // Map up to the entire amount of physical memory
         // present or the max amount addressable given the
         // size limitation of the pre-allocated bitmap.
-        PageTable* activePML4 = get_active_page_map();
+        PageTable* activePML4 = active_page_map();
         for (u64 t = 0; t < TotalPages * PAGE_SIZE && t < InitialPageBitmapMaxAddress; t += 0x1000)
             map(activePML4, (void*)t, (void*)t);
 
@@ -279,7 +278,7 @@ namespace Memory {
                "    .bss:    %x thru %x (%ull bytes)\r\n"
                "    Lost to page alignment: %ull bytes\r\n"
                "\r\n"
-               , 0ULL, get_total_ram()
+               , 0ULL, total_ram()
                , &KERNEL_PHYSICAL, TO_MiB(&KERNEL_PHYSICAL)
                , &KERNEL_START, &KERNEL_END
                , TO_KiB(&KERNEL_END - &KERNEL_START)
@@ -295,14 +294,33 @@ namespace Memory {
                );
     }
 
-    void print_debug() {
+    void print_debug_kib() {
+        dbgmsg("Memory Manager Debug Information:\r\n"
+               "  Total Memory: %ullKiB\r\n"
+               "  Free Memory: %ullKiB\r\n"
+               "  Used Memory: %ullKiB\r\n"
+               "\r\n"
+               , TO_KiB(total_ram())
+               , TO_KiB(free_ram())
+               , TO_KiB(used_ram())
+               );
+    }
+
+    void print_debug_mib() {
         dbgmsg("Memory Manager Debug Information:\r\n"
                "  Total Memory: %ullMiB\r\n"
                "  Free Memory: %ullMiB\r\n"
                "  Used Memory: %ullMiB\r\n"
                "\r\n"
-               , TotalPages * PAGE_SIZE / 1024 / 1024
-               , TotalFreePages * PAGE_SIZE / 1024 / 1024
-               , TotalUsedPages * PAGE_SIZE / 1024 / 1024);
+               , TO_MiB(total_ram())
+               , TO_MiB(free_ram())
+               , TO_MiB(used_ram())
+               );
+    }
+
+    void print_debug() {
+        if (total_ram() > MiB(64))
+            print_debug_mib();
+        else print_debug_kib();
     }
 }
