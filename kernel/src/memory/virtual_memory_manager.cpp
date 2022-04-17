@@ -19,7 +19,7 @@ namespace Memory {
 
         PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
         PageTable* PDP;
-        if (!PDE.get_flag(PageTableFlag::Present)) {
+        if (!PDE.flag(PageTableFlag::Present)) {
             PDP = (PageTable*)request_page();
             memset(PDP, 0, PAGE_SIZE);
             PDE.set_address((u64)PDP >> 12);
@@ -28,11 +28,11 @@ namespace Memory {
             PDE.set_flag(PageTableFlag::UserSuper, true);
             pageMapLevelFour->entries[indexer.page_directory_pointer()] = PDE;
         }
-        else PDP = (PageTable*)((u64)PDE.get_address() << 12);
+        else PDP = (PageTable*)((u64)PDE.address() << 12);
 
         PDE = PDP->entries[indexer.page_directory()];
         PageTable* PD;
-        if (!PDE.get_flag(PageTableFlag::Present)) {
+        if (!PDE.flag(PageTableFlag::Present)) {
             PD = (PageTable*)request_page();
             memset(PD, 0, PAGE_SIZE);
             PDE.set_address((u64)PD >> 12);
@@ -41,11 +41,11 @@ namespace Memory {
             PDE.set_flag(PageTableFlag::UserSuper, true);
             PDP->entries[indexer.page_directory()] = PDE;
         }
-        else PD = (PageTable*)((u64)PDE.get_address() << 12);
+        else PD = (PageTable*)((u64)PDE.address() << 12);
 
         PDE = PD->entries[indexer.page_table()];
         PageTable* PT;
-        if (!PDE.get_flag(PageTableFlag::Present)) {
+        if (!PDE.flag(PageTableFlag::Present)) {
             PT = (PageTable*)request_page();
             memset(PT, 0, PAGE_SIZE);
             PDE.set_address((u64)PT >> 12);
@@ -54,7 +54,7 @@ namespace Memory {
             PDE.set_flag(PageTableFlag::UserSuper, true);
             PD->entries[indexer.page_table()] = PDE;
         }
-        else PT = (PageTable*)((u64)PDE.get_address() << 12);
+        else PT = (PageTable*)((u64)PDE.address() << 12);
 
         PDE = PT->entries[indexer.page()];
         PDE.set_address((u64)physicalAddress >> 12);
@@ -76,11 +76,11 @@ namespace Memory {
         PageMapIndexer indexer((u64)virtualAddress);
         PageDirectoryEntry PDE;
         PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
-        PageTable* PDP = (PageTable*)((u64)PDE.get_address() << 12);
+        PageTable* PDP = (PageTable*)((u64)PDE.address() << 12);
         PDE = PDP->entries[indexer.page_directory()];
-        PageTable* PD = (PageTable*)((u64)PDE.get_address() << 12);
+        PageTable* PD = (PageTable*)((u64)PDE.address() << 12);
         PDE = PD->entries[indexer.page_table()];
-        PageTable* PT = (PageTable*)((u64)PDE.get_address() << 12);
+        PageTable* PT = (PageTable*)((u64)PDE.address() << 12);
         PDE = PT->entries[indexer.page()];
         PDE.set_flag(PageTableFlag::Present, false);
         PT->entries[indexer.page()] = PDE;
@@ -97,7 +97,7 @@ namespace Memory {
         ActivePageMap = pageMapLevelFour;
     }
 
-    PageTable* get_active_page_map() {
+    PageTable* active_page_map() {
         if (!ActivePageMap) {
             asm volatile ("mov %%cr3, %%rax\n\t"
                           "mov %%rax, %0"

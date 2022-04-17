@@ -55,7 +55,7 @@ namespace Memory {
 
     class PageDirectoryEntry {
     public:
-        u64 get_address()  {
+        u64 address()  {
             return (Value & 0x000ffffffffff000) >> 12;
         }
         
@@ -65,7 +65,7 @@ namespace Memory {
             Value |= (addr << 12);
         }
         
-        bool get_flag(PageTableFlag flag)  {
+        bool flag(PageTableFlag flag)  {
             return Value & (u64)1 << flag;
         }
         

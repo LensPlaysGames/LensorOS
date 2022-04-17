@@ -29,7 +29,7 @@ namespace Scheduler {
         // IRQ handler in assembly switches processes using this function.
         scheduler_switch_process = (void*)switch_process;
         // Setup currently executing code as the start process.
-        StartupProcess.CR3 = Memory::get_active_page_map();
+        StartupProcess.CR3 = Memory::active_page_map();
         // Create the process queue and add the startup process to it.
         ProcessQueue = new SinglyLinkedList<Process*>;
         add_process(&StartupProcess);

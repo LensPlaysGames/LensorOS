@@ -37,7 +37,7 @@ namespace Memory {
      */
     void flush_page_map(PageTable* pageMapLevelFour);
 
-    PageTable* get_active_page_map();
+    PageTable* active_page_map();
 }
 
 #endif /* LENSOR_OS_VIRTUAL_MEMORY_MANAGER_H */
