@@ -36,7 +36,7 @@ If you are just interested in poking around LensorOS, and not editing code,
 ---
 
 ### Launching LensorOS using the Build System <a name="developers-go-here"></a>
-NOTE: There is no automation anything except QEMU for now.
+NOTE: There is no automation for anything except QEMU for now.
   There are, however, instructions on how to setup a virtual
   machine in VirtualBox and VMWare Workstation Player.
 
