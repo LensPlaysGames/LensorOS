@@ -209,11 +209,11 @@ Here is a list of the current build targets relating to boot media
   generation, as well as their dependencies listed underneath each.
 - `image_raw` --
   Combine built executables and resources to generate UEFI-compatible FAT32 boot media.
-  - dd
-    - Native Unix command
+  - dd -- Native command on Unix
     - On Windows, use one of the following options:
-      - [use MinGW installer to get MSYS coreutils ext package](https://osdn.net/projects/mingw/)
-      - [use Cygwin](https://www.cygwin.com/)
+      - [MinGW installer to get MSYS coreutils ext package](https://osdn.net/projects/mingw/)
+      - [Cygwin](https://www.cygwin.com/)
+      - Windows Subsystem for Linux
   - GNU mtools
     - [Home Page](https://www.gnu.org/software/mtools/)
     - Debian distros: `sudo apt install mtools`
@@ -224,6 +224,7 @@ Here is a list of the current build targets relating to boot media
   - mkgpt
     - [Repository](https://github.com/jncronin/mkgpt)
     - On Unix, use the automatic build + install script in the `scripts` subdirectory.
+    - [Pre-built binary for Windows](https://github.com/LensPlaysGames/mkgpt/releases)
 - `image_iso` --
   Create ISO-9660 "El-Torito" bootable CD-ROM image from FAT32 boot media.
   - `image_raw`
