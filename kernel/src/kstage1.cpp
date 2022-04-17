@@ -8,6 +8,7 @@
 #include <cpu.h>
 #include <cpuid.h>
 #include <cstr.h>
+#include <debug.h>
 #include <efi_memory.h>
 #include <fat_definitions.h>
 #include <gdt.h>
@@ -151,7 +152,9 @@ void kstage1(BootInfo* bInfo) {
 
     // Setup serial communications chip to allow for debug messages as soon as possible.
     UART::initialize();
-    UART::out("\r\n!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n\r\n");
+    dbgmsg("\r\n"
+           "!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n"
+           "\r\n");
 
     // Setup physical memory allocator from EFI memory map.
     Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
@@ -165,29 +168,22 @@ void kstage1(BootInfo* bInfo) {
     // Initialize the Real Time Clock.
     gRTC = RTC();
     gRTC.set_periodic_int_enabled(true);
-    UART::out("[kUtil]: \033[32mReal Time Clock Initialized\033[0m\r\n");
-    UART::out("  Periodic interrupts enabled at \033[33m");
-    UART::out(to_string((double)RTC_PERIODIC_HERTZ));
-    UART::out("hz\033[0m\r\n"
-              "\033[1;33m"
-              "Now is ");
-    UART::out(to_string(gRTC.Time.hour));
-    UART::outc(':');
-    UART::out(to_string(gRTC.Time.minute));
-    UART::outc(':');
-    UART::out(to_string(gRTC.Time.second));
-    UART::out(" on ");
-    UART::out(to_string(gRTC.Time.year));
-    UART::outc('-');
-    UART::out(to_string(gRTC.Time.month));
-    UART::outc('-');
-    UART::out(to_string(gRTC.Time.date));
-    UART::out("\033[0m\r\n\r\n");
-
+    dbgmsg("[kstage1]: \033[32mReal Time Clock (RTC) initialized\033[0m\r\n"
+           "  Periodic interrupts enabled at \033[33m%fhz\033[0m\r\n"
+           "\r\n\033[1;33m"
+           "Now is %hhu:%hhu:%hhu on %ul-%hhu-%hhu"
+           "\033[0m\r\n\r\n"
+           , static_cast<double>(RTC_PERIODIC_HERTZ)
+           , gRTC.Time.hour
+           , gRTC.Time.minute
+           , gRTC.Time.second
+           , gRTC.Time.year
+           , gRTC.Time.month
+           , gRTC.Time.date);
     // Create basic framebuffer renderer.
-    UART::out("[kUtil]: Setting up Graphics Output Protocol Renderer\r\n");
+    dbgmsg("[kstage1]: Setting up Graphics Output Protocol Renderer\r\n");
     gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
-    UART::out("  \033[32mSetup Successful\033[0m\r\n\r\n");
+    dbgmsg("  \033[32mSetup Successful\033[0m\r\n\r\n");
     draw_boot_gfx();
     // Create basic text renderer for the keyboard.
     Keyboard::gText = Keyboard::BasicTextRenderer();
@@ -210,12 +206,11 @@ void kstage1(BootInfo* bInfo) {
     bool supportCPUID = static_cast<bool>(cpuid_support());
     if (supportCPUID) {
         SystemCPU->set_cpuid_capable();
-        UART::out("[kUtil]: \033[32mCPUID is supported\033[0m\r\n");
+        dbgmsg("[kstage1]: \033[32mCPUID is supported\033[0m\r\n");
         char* cpuVendorID = cpuid_string(0);
         SystemCPU->set_vendor_id(cpuVendorID);
-        UART::out("  CPU Vendor ID: ");
-        UART::out((u8*)SystemCPU->get_vendor_id(), 12);
-        UART::out("\r\n");
+        dbgmsg("  CPU Vendor ID: ");
+        dbgmsg((u8*)SystemCPU->get_vendor_id(), 12, ShouldNewline::Yes);
 
         CPUIDRegisters regs;
         cpuid(1, regs);
@@ -318,9 +313,8 @@ void kstage1(BootInfo* bInfo) {
                 SystemCPU->set_avx_enabled();
             }
         }
-        UART::out("\r\n");
     }
-    UART::out("\r\n");
+    dbgmsg("\r\n");
 
     // TODO: Parse CPUs from ACPI MADT table.
     //       For now we only support single core.
@@ -335,10 +329,10 @@ void kstage1(BootInfo* bInfo) {
     // Storage devices like AHCIs will be detected here.
     auto* mcfg = (ACPI::MCFGHeader*)ACPI::find_table("MCFG");
     if (mcfg) {
-        UART::out("[kstage1]: Found Memory-mapped Configuration Space\r\n"
-                  "  Address: 0x");
-        UART::out(to_hexstring(mcfg));
-        UART::out("\r\n");
+        dbgmsg("[kstage1]: Found Memory-mapped Configuration Space (MCFG) ACPI Table\r\n"
+               "  Address: 0x%x\r\n"
+               "\r\n"
+               , mcfg);
         PCI::enumerate_pci(mcfg);
     }
 
@@ -358,7 +352,7 @@ void kstage1(BootInfo* bInfo) {
             && dev.minor() == SYSDEV_MINOR_AHCI_CONTROLLER
             && dev.flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
         {
-            UART::out("[kstage1]: Probing AHCI Controller\r\n");
+            dbgmsg("[kstage1]: Probing AHCI Controller\r\n");
             AHCI::HBAMemory* ABAR = (AHCI::HBAMemory*)(u64)(((PCI::PCIHeader0*)dev.data2())->BAR5);
             // TODO: Better MMIO!! It should be separate from regular virtual mappings, I think.
             Memory::map(ABAR, ABAR);
@@ -390,7 +384,7 @@ void kstage1(BootInfo* bInfo) {
      * A storage device may be partitioned (i.e. GUID Partition Table).
      * These partitions are to be detected and new system devices created.
      */
-    SYSTEM->devices().for_each([](auto* it){
+    SYSTEM->devices().for_each([](auto* it) {
         SystemDevice& d = it->value();
         if (d.major() == SYSDEV_MAJOR_STORAGE
             && d.minor() == SYSDEV_MINOR_AHCI_PORT
@@ -398,11 +392,10 @@ void kstage1(BootInfo* bInfo) {
         {
             auto* portCon = static_cast<AHCI::PortController*>((&d)->data1());
             auto* driver = static_cast<StorageDeviceDriver*>(portCon);
-            UART::out("[kstage1]: Searching AHCI port ");
-            UART::out(portCon->port_number());
-            UART::out(" for a GPT\r\n");
+            dbgmsg("[kstage1]: Searching AHCI port %ull for a GPT\r\n"
+                   , portCon->port_number());
             if(GPT::is_gpt_present(driver)) {
-                UART::out("  GPT is present!\r\n");
+                dbgmsg("  GPT is present!\r\n");
                 auto gptHeader = SmartPtr<GPT::Header>(new GPT::Header);
                 auto sector = SmartPtr<u8[]>(new u8[512], 512);
                 portCon->read(512, sizeof(GPT::Header), (u8*)gptHeader.get());
@@ -412,21 +405,21 @@ void kstage1(BootInfo* bInfo) {
                     byteOffset %= 512;
                     portCon->read(partSector * 512, 512, sector.get());
                     auto* part = (GPT::PartitionEntry*)((u64)sector.get() + byteOffset);
-                    UART::out("      Partition ");
-                    UART::out(i);
-                    UART::out(": ");
-                    UART::out(part->Name, 72);
-                    UART::out(":\r\n        Type GUID: ");
+                    dbgmsg("      Partition %ul: ", i);
+                    dbgmsg(part->Name, 72);
+                    dbgmsg(":\r\n"
+                           "        Type GUID: ");
                     print_guid(part->TypeGUID);
-                    UART::out("\r\n        Unique GUID: ");
+                    dbgmsg("\r\n"
+                           "        Unique GUID: ");
                     print_guid(part->UniqueGUID);
-                    UART::out("\r\n        Sector Offset: ");
-                    UART::out(part->StartLBA);
-                    UART::out("\r\n        Size in Sectors: ");
-                    UART::out(part->EndLBA - part->StartLBA);
-                    UART::out("\r\n        Attributes: ");
-                    UART::out(part->Attributes);
-                    UART::out("\r\n");
+                    dbgmsg("\r\n"
+                           "        Sector Offset: %ull\r\n"
+                           "        Sector Count: %ull\r\n"
+                           "        Attributes: %ull\r\n"
+                           , part->StartLBA
+                           , part->EndLBA - part->StartLBA
+                           , part->Attributes);
                     // TODO: Delete partition driver if it isn't searchable.
                     auto* partDriver = new GPTPartitionDriver(driver, part->TypeGUID
                                                               , part->UniqueGUID
@@ -470,13 +463,15 @@ void kstage1(BootInfo* bInfo) {
             if (dev.minor() == SYSDEV_MINOR_GPT_PARTITION) {
                 auto* partDriver = static_cast<GPTPartitionDriver*>(dev.data1());
                 if (partDriver) {
-                    UART::out("Partition:\r\n  Type GUID: ");
+                    dbgmsg("Partition:\r\n"
+                           "  Type GUID: ");
                     print_guid(partDriver->type_guid());
-                    UART::out("  Unique GUID: ");
+                    dbgmsg("\r\n"
+                           "  Unique GUID: ");
                     print_guid(partDriver->unique_guid());
-                    UART::out("\r\n");
+                    dbgmsg("\r\n");
                     if (FAT->test(partDriver)) {
-                        UART::out("  Found valid File Allocation Table filesystem\r\n");
+                        dbgmsg("  Found valid File Allocation Table filesystem\r\n");
                         SYSTEM->add_fs(Filesystem(FilesystemType::FAT, FAT, partDriver));
                         // Done searching GPT partition, found valid filesystem.
                         dev.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
@@ -486,7 +481,7 @@ void kstage1(BootInfo* bInfo) {
             else if (dev.minor() == SYSDEV_MINOR_AHCI_PORT) {
                 auto* portController = (AHCI::PortController*)dev.data1();
                 if (portController && FAT->test(portController)) {
-                    UART::out("  Found valid File Allocation Table filesystem\r\n");
+                    dbgmsg("  Found valid File Allocation Table filesystem\r\n");
                     SYSTEM->add_fs(Filesystem(FilesystemType::FAT, FAT, portController));
                     // Done searching AHCI port, found valid filesystem.
                     dev.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
@@ -502,12 +497,12 @@ void kstage1(BootInfo* bInfo) {
 
     // Initialize the Programmable Interval Timer.
     gPIT = PIT();
-    UART::out("[kUtil]: \033[32mProgrammable Interval Timer Initialized\033[0m\r\n");
-    UART::out("  Channel 0, H/L Bit Access\r\n");
-    UART::out("  Rate Generator, BCD Disabled\r\n");
-    UART::out("  Periodic interrupts at \033[33m");
-    UART::out(to_string(PIT_FREQUENCY));
-    UART::out("hz\033[0m.\r\n\r\n");
+    dbgmsg("[kstage1]: \033[32mProgrammable Interval Timer Initialized\033[0m\r\n"
+           "  Channel 0, H/L Bit Access\r\n"
+           "  Rate Generator, BCD Disabled\r\n"
+           "  Periodic interrupts at \033[33m%fhz\033[0m.\r\n"
+           "\r\n"
+           , static_cast<double>(PIT_FREQUENCY));
 
     // The Task State Segment in x86_64 is used only
     // for switches between privilege levels.
@@ -531,7 +526,7 @@ void kstage1(BootInfo* bInfo) {
     SYSTEM->print();
 
     // Allow interrupts to trigger.
-    UART::out("[kUtil]: Enabling interrupts\r\n");
+    dbgmsg("[kstage1]: Enabling interrupts\r\n");
     asm ("sti");
-    UART::out("[kUtil]: \033[32mInterrupts enabled\033[0m\r\n");
+    dbgmsg("[kstage1]: \033[32mInterrupts enabled\033[0m\r\n");
 }
