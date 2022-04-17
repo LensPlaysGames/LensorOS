@@ -174,7 +174,7 @@ namespace Memory {
         return nullptr;
     }
 
-    constexpr u64 InitialPageBitmapMaxAddress = GiB(2);
+    constexpr u64 InitialPageBitmapMaxAddress = MiB(64);
     constexpr u64 InitialPageBitmapPageCount = InitialPageBitmapMaxAddress / PAGE_SIZE;
     constexpr u64 InitialPageBitmapSize = InitialPageBitmapPageCount / 8;
     u8 InitialPageBitmap[InitialPageBitmapSize];
