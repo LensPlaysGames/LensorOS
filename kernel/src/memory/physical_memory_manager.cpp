@@ -2,12 +2,17 @@
 
 #include <bitmap.h>
 #include <cstr.h>
+#include <debug.h>
 #include <efi_memory.h>
 #include <link_definitions.h>
 #include <memory/region.h>
 #include <memory/common.h>
 #include <memory/virtual_memory_manager.h>
+#include <panic.h>
 #include <uart.h>
+
+// Uncomment the following directive for extra debug information output.
+//#define DEBUG_PMM
 
 namespace Memory {
     Bitmap PageMap;
@@ -56,22 +61,49 @@ namespace Memory {
     }
 
     void free_pages(void* address, u64 numberOfPages) {
+#ifdef DEBUG_PMM
+        dbgmsg("free_pages():\r\n"
+               "  Address:     %x\r\n"
+               "  # of pages:  %ull\r\n"
+               "  Free before: %ull\r\n"
+               , address
+               , numberOfPages
+               , TotalFreePages);
+#endif
         for (u64 i = 0; i < numberOfPages; ++i)
             free_page((void*)((u64)address + (i * PAGE_SIZE)));
+
+#ifdef DEBUG_PMM
+        dbgmsg("  Free after: %ull\r\n"
+               "\r\n"
+               , TotalFreePages);
+#endif /* defined DEBUG_PMM */
     }
 
     u64 FirstFreePage { 0 };
     void* request_page() {
+#ifdef DEBUG_PMM
+        dbgmsg("request_page():\r\n"
+               "  Free pages:            %ull\r\n"
+               "  Max run of free pages: %ull\r\n"
+               "\r\n"
+               , TotalFreePages
+               , MaxFreePagesInARow);
+#endif
         for(; FirstFreePage < TotalPages; FirstFreePage++) {
             if (PageMap.get(FirstFreePage) == false) {
                 void* addr = (void*)(FirstFreePage * PAGE_SIZE);
                 lock_page(addr);
                 FirstFreePage += 1; // Eat current page.
+#ifdef DEBUG_PMM
+                dbgmsg("  Successfully fulfilled memory request: %x\r\n"
+                       "\r\n", addr);
+#endif
                 return addr;
             }
         }
         // TODO: Page swap from/to file on disk.
-        UART::out("\033[31mRan out of memory in request_page() :^<\033[0m\r\n");
+        panic("\033[31mRan out of memory in request_page() :^<\033[0m\r\n");
         return nullptr;
     }
     
@@ -84,21 +116,27 @@ namespace Memory {
             return request_page();
         // Can't allocate something larger than the amount of free memory.
         if (numberOfPages > TotalFreePages) {
-            UART::out("request_pages(): \033[31mERROR\033[0m:: Number of pages requested is larger than amount of pages available.");
+            dbgmsg("request_pages(): \033[31mERROR\033[0m:: "
+                   "Number of pages requested is larger than amount of pages available.");
             return nullptr;
         }
         if (numberOfPages > MaxFreePagesInARow) {
-            UART::out("request_pages(): \033[31mERROR\033[0m:: Number of pages requested is larger than any contiguous run of pages available.");
+            dbgmsg("request_pages(): \033[31mERROR\033[0m:: "
+                   "Number of pages requested is larger than any contiguous run of pages available."
+                   );
             return nullptr;
         }
         
-        // UART::out("request_pages():\r\n  # of Pages: ");
-        // UART::out(numberOfPages);
-        // UART::out("\r\n  Free Pages: ");
-        // UART::out(TotalFreePages);
-        // UART::out("\r\n  Max Run of Free Pages: ");
-        // UART::out(MaxFreePagesInARow);
-        // UART::out("\r\n\r\n");
+#ifdef DEBUG_PMM
+        dbgmsg("request_pages():\r\n"
+               "  # of pages requested:  %ull\r\n"
+               "  Free pages:            %ull\r\n"
+               "  Max run of free pages: %ull\r\n"
+               "\r\n"
+               , numberOfPages
+               , TotalFreePages
+               , MaxFreePagesInARow);
+#endif
 
         for (u64 i = FirstFreePage; i < PageMap.length(); ++i) {
             // Skip locked pages.
@@ -116,15 +154,16 @@ namespace Memory {
                 if (index >= PageMap.length()) {
                     // TODO: No memory matching criteria, should
                     //   probably do a page swap from disk or something.
-                    UART::out("\033[31mYou ran out of memory in request_pages():^<\033[0m\r\n");
-                    UART::out("  Attempted to allocate ");
-                    UART::out(numberOfPages);
-                    UART::out("  pages\r\n\r\n");
+                    panic("\033[0mRan out of memory in request_pages() :^<\033[0m\r\n");
                     return nullptr;
                 }
                 if (run >= numberOfPages) {
                     void* out = (void*)(i * PAGE_SIZE);
                     lock_pages(out, numberOfPages);
+#ifdef DEBUG_PMM
+                    dbgmsg("  Successfully fulfilled memory request: %x\r\n"
+                           "\r\n", out);
+#endif
                     return out;
                 }
             }
@@ -228,53 +267,42 @@ namespace Memory {
         deadSpace += (u64)&DATA_START - (u64)&TEXT_END;
         deadSpace += (u64)&READ_ONLY_DATA_START - (u64)&DATA_END;
         deadSpace += (u64)&BLOCK_STARTING_SYMBOLS_START - (u64)&READ_ONLY_DATA_END;
-        UART::out("\033[32mPhysical Memory Initialized\033[0m\r\n  Mapped from 0x");
-        UART::out(to_hexstring<u64>(0ULL));
-        UART::out(" thru 0x");
-        UART::out(to_hexstring<u64>(get_total_ram()));
-        UART::out("\r\n  Kernel mapped from 0x");
-        UART::out(to_hexstring<void*>(&KERNEL_START));
-        UART::out(" to 0x");
-        UART::out(to_hexstring<void*>(&KERNEL_END));
-        UART::out(" (");
-        UART::out((u64)&KERNEL_END - (u64)&KERNEL_START);
-        UART::out(" bytes)\r\n    .text:   0x");
-        UART::out(to_hexstring<void*>(&TEXT_START));
-        UART::out(" thru 0x");
-        UART::out(to_hexstring<void*>(&TEXT_END));
-        UART::out(" (");
-        UART::out((u64)&TEXT_END - (u64)&TEXT_START);
-        UART::out(" bytes)\r\n    .data:   0x");
-        UART::out(to_hexstring<void*>(&DATA_START));
-        UART::out(" thru 0x");
-        UART::out(to_hexstring<void*>(&DATA_END));
-        UART::out(" (");
-        UART::out((u64)&DATA_END - (u64)&DATA_START);
-        UART::out(" bytes)\r\n    .rodata: 0x");
-        UART::out(to_hexstring<void*>(&READ_ONLY_DATA_START));
-        UART::out(" thru 0x");
-        UART::out(to_hexstring<void*>(&READ_ONLY_DATA_END));
-        UART::out(" (");
-        UART::out((u64)&READ_ONLY_DATA_END - (u64)&READ_ONLY_DATA_START);
-        UART::out(" bytes)\r\n    .bss:    0x");
-        UART::out(to_hexstring<void*>(&BLOCK_STARTING_SYMBOLS_START));
-        UART::out(" thru 0x");
-        UART::out(to_hexstring<void*>(&BLOCK_STARTING_SYMBOLS_END));
-        UART::out(" (");
-        UART::out((u64)&BLOCK_STARTING_SYMBOLS_END - (u64)&BLOCK_STARTING_SYMBOLS_START);
-        UART::out(" bytes)\r\n");
-        UART::out("    Lost to Page Alignment: ");
-        UART::out(deadSpace);
-        UART::out(" bytes\r\n\r\n");
+        dbgmsg("\033[32m"
+               "Physical memory initialized"
+               "\033[0m\r\n"
+               "  Physical memory mapped from %x thru %x\r\n"
+               "  Kernel loaded at %x (%ullMiB)\r\n"
+               "  Kernel mapped from %x thru %x (%ullKiB)\r\n"
+               "    .text:   %x thru %x (%ull bytes)\r\n"
+               "    .data:   %x thru %x (%ull bytes)\r\n"
+               "    .rodata: %x thru %x (%ull bytes)\r\n"
+               "    .bss:    %x thru %x (%ull bytes)\r\n"
+               "    Lost to page alignment: %ull bytes\r\n"
+               "\r\n"
+               , 0ULL, get_total_ram()
+               , &KERNEL_PHYSICAL, TO_MiB(&KERNEL_PHYSICAL)
+               , &KERNEL_START, &KERNEL_END
+               , TO_KiB(&KERNEL_END - &KERNEL_START)
+               , &TEXT_START, &TEXT_END
+               , &TEXT_END - &TEXT_START
+               , &DATA_START, &DATA_END
+               , &DATA_END - &DATA_START
+               , &READ_ONLY_DATA_START, &READ_ONLY_DATA_END
+               , &READ_ONLY_DATA_END - &READ_ONLY_DATA_START
+               , &BLOCK_STARTING_SYMBOLS_START, &BLOCK_STARTING_SYMBOLS_END
+               , &BLOCK_STARTING_SYMBOLS_END - &BLOCK_STARTING_SYMBOLS_START
+               , deadSpace
+               );
     }
 
     void print_debug() {
-        UART::out("Memory Manager Debug Dump:\r\n  Total Memory: ");
-        UART::out(to_string(TotalPages * PAGE_SIZE / 1024 / 1024));
-        UART::out("MiB\r\n  Free Memory: ");
-        UART::out(to_string(TotalFreePages * PAGE_SIZE / 1024 / 1024));
-        UART::out("MiB\r\n  Used Memory: ");
-        UART::out(to_string(TotalUsedPages * PAGE_SIZE / 1024 / 1024));
-        UART::out("MiB\r\n\r\n");
+        dbgmsg("Memory Manager Debug Information:\r\n"
+               "  Total Memory: %ullMiB\r\n"
+               "  Free Memory: %ullMiB\r\n"
+               "  Used Memory: %ullMiB\r\n"
+               "\r\n"
+               , TotalPages * PAGE_SIZE / 1024 / 1024
+               , TotalFreePages * PAGE_SIZE / 1024 / 1024
+               , TotalUsedPages * PAGE_SIZE / 1024 / 1024);
     }
 }
