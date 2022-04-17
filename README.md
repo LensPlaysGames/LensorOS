@@ -235,8 +235,8 @@ Here is a list of the current build targets relating to boot media
 The generated targets can be chained together for easy, quick development. \
 To build the LensorOS kernel, generate new boot media, and then
   launch into LensorOS, it takes just one command.
-```sh
-cmake --build kernel/bld -t all image_raw runimg_qemu
+```bash
+cmake --build kernel/bld  && cmake --build kernel/bld -t image_raw runimg_qemu
 ```
 
 ---
@@ -245,4 +245,3 @@ cmake --build kernel/bld -t all image_raw runimg_qemu
 Work on LensorOS began on January 9th, 2022.
 
 ---
-
