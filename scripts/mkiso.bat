@@ -1,8 +1,6 @@
 SET ScriptDirectory=%0/..
-SET RepositoryDirectory=%ScriptDirectory%/..
-SET BuildDirectory=%RepositoryDirectory%/kernel/bin
+SET BuildDirectory=%ScriptDirectory%/../kernel/bin
 SET ScriptDirectory=%ScriptDirectory:"=%
-SET RepositoryDirectory=%RepositoryDirectory:"=%
 SET BuildDirectory=%BuildDirectory:"=%
 cmd /c %ScriptDirectory%/mkimg.bat
 cd %BuildDirectory%
