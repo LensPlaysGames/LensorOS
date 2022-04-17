@@ -60,6 +60,7 @@ set(
   src/bitmap.cpp
   src/cpuid.cpp
   src/cstr.cpp
+  src/debug.cpp
   src/efi_memory.cpp
   src/gdt.cpp
   src/gpt.cpp
