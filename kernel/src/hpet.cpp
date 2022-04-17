@@ -31,7 +31,7 @@ void hpet_init_failed(const char* msg) {
 bool HPET::initialize() {
 #ifdef VBOX
     // I can not get the HPET to work in VBOX for the life of me.
-    // It causes a strange crash that shutsdown the virtualbox VM.
+    // It causes a strange crash that shuts down the virtualbox VM.
     // Luckily, I know exactly what causes it, but (unluckily) not how to fix it.
     // The first call to `writel` and therefore `volatile_write` crashes.
     hpet_init_failed("LensorOS HPET implementation is buggy on VirtualBox");
@@ -88,7 +88,7 @@ bool HPET::initialize() {
      * By adding one to this value, we get the total
      *   number of comparators present on the HPET.  
      * Checking the hardware version (not ACPI provided) has
-     *   unexpected results in current testing environments (QEMU).
+     *   unexpected results in current testing environments.
      */
     NumberOfComparators = (Header->ID & 0b11111) + 1;
     if (NumberOfComparators < HPET_MIN_COMPARATORS

@@ -96,11 +96,11 @@ struct RTCData {
     }
 };
 
-#if defined QEMU || defined VBOX
+#if defined QEMU || defined VBOX || defined VMWARE
 #define RTC_PERIODIC_RATE 10
 #else
 #define RTC_PERIODIC_RATE 6
-#endif /* QEMU || VBOX */
+#endif /* defined QEMU || defined VBOX || defined VMWARE */
 #define RTC_PERIODIC_HERTZ (32768 >> (RTC_PERIODIC_RATE - 1))
 
 class RTC {
