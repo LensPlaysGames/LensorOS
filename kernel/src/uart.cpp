@@ -5,6 +5,9 @@
 
 namespace UART {
     bool Initialized { false };
+    bool initialized() {
+        return Initialized;
+    };
 
     enum class Chip {
         NONE = 0,
@@ -128,6 +131,7 @@ namespace UART {
         u16 maxSpins = (u16)1000000;
         while ((in8(LINE_STATUS_PORT(COM1)) & (1 << 5)) == 0 && maxSpins > 0)
             maxSpins--;
+
         if (maxSpins == 0) return;
 
         out8(COM1, byte);
@@ -153,7 +157,7 @@ namespace UART {
                 if (*c == 0)
                     return;
             }
-#endif
+#endif /* defined LENSOR_OS_UART_HIDE_COLOR_CODES */
             out((u8)*c);
             c++;
         }
@@ -178,7 +182,7 @@ namespace UART {
                 if (numberOfBytes == 0)
                     return;
             }
-#endif
+#endif /* defined LENSOR_OS_UART_HIDE_COLOR_CODES */
             out((u8)*str);
             str++;
             numberOfBytes--;

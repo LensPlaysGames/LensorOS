@@ -124,6 +124,7 @@
 // TODO: Add capability for selecting communication channel (COM1, COM2, etc).
 namespace UART {
     void initialize();
+    bool initialized();
     
     enum class Chip;
     const char* get_uart_chip_name(Chip);
