@@ -17,7 +17,7 @@ private:
 
 class SpinlockLocker {
 public:
-    SpinlockLocker(Spinlock&);
+    explicit SpinlockLocker(Spinlock&);
     ~SpinlockLocker();
 
     void unlock();
@@ -36,7 +36,7 @@ private:
      *
      *   Returns `true` when lock has been acquired.
      */
-    bool compare_and_swap_lock();
+    inline bool compare_and_swap_lock();
 
     /* Test and Set
      *   Cache original value of lock, then set the value to the new value.
@@ -47,7 +47,7 @@ private:
      *
      *   Returns `false` when lock has been acquired.
      */
-    bool test_and_set_lock();
+    inline bool test_and_set_lock();
 };
 
 #endif /* if not defined LENSOR_OS_SPIN_LOCK_H */

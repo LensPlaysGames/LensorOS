@@ -24,11 +24,10 @@ void LFSR::next() {
                   ^ (get_bit_value(2)) ^ (get_bit_value(7))) & 1) << 7;
     
     // Shift each byte within shift register
-    u8 carry { 0 };
     u8 lastCarry { 0 };
     for (u8 j = 128 / 8 - 1; j < 128 / 8; --j) {
         // left-most bit = bit that will be shifted out.
-        carry = (ShiftRegister[j] & 1) << 7;
+        u8 carry = (ShiftRegister[j] & 1) << 7;
         // Shift byte within shift register, taking into
         //   account previous byte's shifted value.
         ShiftRegister[j] = (ShiftRegister[j] >> 1) | lastCarry;

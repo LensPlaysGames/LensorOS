@@ -14,7 +14,8 @@ class SinglyLinkedListNode {
     friend SinglyLinkedList<DataType>;
     
 public:
-    SinglyLinkedListNode(const DataType& value, SinglyLinkedListNode* next = nullptr)
+    explicit SinglyLinkedListNode(const DataType& value
+                                  , SinglyLinkedListNode* next = nullptr)
         : Data(value), Next(next) {}
 
     DataType& value()             { return Data; }
@@ -34,9 +35,8 @@ class SinglyLinkedList {
 
 public:
     ~SinglyLinkedList() {
-        Node* tmp { nullptr };
         while (Head) {
-            tmp = Head;
+            Node* tmp = Head;
             Head = Head->Next;
             delete tmp;
         }

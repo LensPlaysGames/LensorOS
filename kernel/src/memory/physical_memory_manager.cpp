@@ -11,7 +11,7 @@
 #include <panic.h>
 
 // Uncomment the following directive for extra debug information output.
-//#define DEBUG_PMM
+#define DEBUG_PMM
 
 namespace Memory {
     Bitmap PageMap;
@@ -179,6 +179,11 @@ namespace Memory {
     u8 InitialPageBitmap[InitialPageBitmapSize];
 
     void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
+#ifdef DEBUG_PMM
+        dbgmsg("Attempting to initialize physical memory\r\n"
+               "Searching for largest free contiguous memory region under %x\r\n"
+               , InitialPageBitmapMaxAddress);
+#endif /* defined DEBUG_PMM */
         // Calculate number of entries within memoryMap array.
         u64 entries = size / entrySize;
         // Find largest free and usable contiguous region of memory
@@ -197,14 +202,22 @@ namespace Memory {
             }
             TotalPages += desc->numPages;
         }
-
         if (largestFreeMemorySegment == nullptr
             || largestFreeMemorySegmentPageCount == 0)
         {
+            dbgmsg("\033[31mERROR:\033[0m "
+                   "Could not find free memory segment during "
+                   "physical memory manager intialization."
+                   );
             while (true)
                 asm ("hlt");
         }
-
+#ifdef DEBUG_PMM
+        dbgmsg("Found initial free memory segment (%ullKiB) at %x\r\n"
+               , TO_KiB(largestFreeMemorySegmentPageCount * PAGE_SIZE)
+               , largestFreeMemorySegment
+               );
+#endif /* defined DEBUG_PMM */
         // Use pre-allocated memory region for initial physical page bitmap.
         PageMap.init(InitialPageBitmapSize, (u8*)&InitialPageBitmap[0]);
         // Lock all pages in initial bitmap.
@@ -219,9 +232,8 @@ namespace Memory {
         u64 kernelByteCount = (u64)&KERNEL_END - (u64)&KERNEL_START;
         u64 kernelPageCount = kernelByteCount / PAGE_SIZE;
         lock_pages(&KERNEL_PHYSICAL, kernelPageCount);
-        
         // Use the initial pre-allocated page bitmap as a guide
-        // for where to place allocate new virtual memory map entries.
+        // for where to allocate new virtual memory map entries.
         // Map up to the entire amount of physical memory
         // present or the max amount addressable given the
         // size limitation of the pre-allocated bitmap.
@@ -266,6 +278,16 @@ namespace Memory {
         deadSpace += (u64)&DATA_START - (u64)&TEXT_END;
         deadSpace += (u64)&READ_ONLY_DATA_START - (u64)&DATA_END;
         deadSpace += (u64)&BLOCK_STARTING_SYMBOLS_START - (u64)&READ_ONLY_DATA_END;
+        u64 kernelSize = reinterpret_cast<u64>(&KERNEL_END)
+            - reinterpret_cast<u64>(&KERNEL_START);
+        u64 textSize = reinterpret_cast<u64>(&TEXT_END)
+            - reinterpret_cast<u64>(&TEXT_START);
+        u64 dataSize = reinterpret_cast<u64>(&DATA_END)
+            - reinterpret_cast<u64>(&DATA_START);
+        u64 rodataSize = reinterpret_cast<u64>(&READ_ONLY_DATA_END)
+            - reinterpret_cast<u64>(&READ_ONLY_DATA_START);
+        u64 bssSize = reinterpret_cast<u64>(&BLOCK_STARTING_SYMBOLS_END)
+            - reinterpret_cast<u64>(&BLOCK_STARTING_SYMBOLS_START);
         dbgmsg("\033[32m"
                "Physical memory initialized"
                "\033[0m\r\n"
@@ -279,17 +301,20 @@ namespace Memory {
                "    Lost to page alignment: %ull bytes\r\n"
                "\r\n"
                , 0ULL, total_ram()
-               , &KERNEL_PHYSICAL, TO_MiB(&KERNEL_PHYSICAL)
+               , &KERNEL_PHYSICAL
+               , TO_MiB(&KERNEL_PHYSICAL)
                , &KERNEL_START, &KERNEL_END
-               , TO_KiB(&KERNEL_END - &KERNEL_START)
+               , TO_KiB(kernelSize)
                , &TEXT_START, &TEXT_END
-               , &TEXT_END - &TEXT_START
+               , textSize
                , &DATA_START, &DATA_END
-               , &DATA_END - &DATA_START
-               , &READ_ONLY_DATA_START, &READ_ONLY_DATA_END
-               , &READ_ONLY_DATA_END - &READ_ONLY_DATA_START
-               , &BLOCK_STARTING_SYMBOLS_START, &BLOCK_STARTING_SYMBOLS_END
-               , &BLOCK_STARTING_SYMBOLS_END - &BLOCK_STARTING_SYMBOLS_START
+               , dataSize
+               , &READ_ONLY_DATA_START
+               , &READ_ONLY_DATA_END
+               , rodataSize
+               , &BLOCK_STARTING_SYMBOLS_START
+               , &BLOCK_STARTING_SYMBOLS_END
+               , bssSize
                , deadSpace
                );
     }

@@ -19,7 +19,7 @@ namespace Memory {
 
     class PageMapIndexer {
     public:
-        PageMapIndexer(u64 virtualAddress) {
+        explicit PageMapIndexer(u64 virtualAddress) {
             virtualAddress >>= 12;
             PageIndex =                 virtualAddress & 0x1ff;
             virtualAddress >>= 9;

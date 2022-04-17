@@ -358,7 +358,7 @@ void kstage1(BootInfo* bInfo) {
             Memory::map(ABAR, ABAR);
             u32 ports = ABAR->PortsImplemented;
             for (u64 i = 0; i < 32; ++i) {
-                if (ports & (1 << i)) {
+                if (ports & (1u << i)) {
                     AHCI::HBAPort* port = &ABAR->Ports[i];
                     AHCI::PortType type = get_port_type(port);
                     if (type != AHCI::PortType::None) {

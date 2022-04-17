@@ -121,9 +121,8 @@ char hex_to_string_buf[LENSOR_OS_TO_STRING_BUF_SZ];
 char* to_hexstring(u64 value, bool capital) {
     s8 n = (s8)size;
     u8 i {0};
-    u8 tmp {0};
     for (; n >= 0; --n) {
-        tmp = (value >> (n * 4)) & 0xf;
+        u8 tmp = (value >> (n * 4)) & 0xf;
         if (capital)
             hex_to_string_buf[i] = hexmap_capital[tmp];
         else hex_to_string_buf[i] = hexmap[tmp];

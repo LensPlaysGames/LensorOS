@@ -107,7 +107,7 @@
 
 #define HBA_PxIS_TFES (1 << 30)
 
-constexpr u32 HBA_PRDT_INTERRUPT_ON_COMPLETION = (1 << 31);
+constexpr u32 HBA_PRDT_INTERRUPT_ON_COMPLETION = (1ul << 31);
 
 #define SATA_SIG_ATAPI 0xeb140101
 #define SATA_SIG_ATA   0x00000101

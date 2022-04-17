@@ -3,6 +3,7 @@
 #include <basic_renderer.h>
 #include <boot.h>
 #include <cstr.h>
+#include <debug.h>
 #include <hpet.h>
 #include <interrupts/interrupts.h>
 #include <keyboard.h>
@@ -90,11 +91,11 @@ extern "C" void kmain(BootInfo* bInfo) {
 
     // FIXME FIXME FIXME
     // NULL DE-REFERENCE TESTING
-    //UART::out("Going to null de-reference\r\n");
+    //dbgmsg("Going to null de-reference\r\n");
     //u8* badPtr = nullptr;
     //u8 dereferenced = *badPtr;
     //(void)dereferenced;
-    //UART::out("Null de-referenced!\r\n");
+    //dbgmsg("Null de-referenced!\r\n");
 
     // I'm lovin' it :^) (Plays Maccy's theme).
     constexpr double MACCYS_BPM = 125;

@@ -6,69 +6,69 @@
 template <typename T>
 class SmartPtr {
 public:
-    SmartPtr() : ptr(nullptr) {}
-    SmartPtr(T* ptr) : ptr(ptr) {}
+    SmartPtr() : Pointer(nullptr) {}
+    SmartPtr(T* ptr) : Pointer(ptr) {}
 
     ~SmartPtr() {
-        if (ptr != nullptr)
-            delete ptr;
+        if (Pointer != nullptr)
+            delete Pointer;
     }
 
     T* get() {
-        return this->ptr;
+        return this->Pointer;
     }
 
     T* operator -> () {
-        return this->ptr;
+        return this->Pointer;
     }
 
     T& operator * () {
-        return *(this->ptr);
+        return *(this->Pointer);
     }
 
 private:
-    T* ptr;
+    T* Pointer;
 };
 
 template <typename T>
 class SmartPtr<T[]> {
 public:
-    SmartPtr() : ptr(nullptr), size(0) {}
-    SmartPtr(T* ptr, u64 size) : ptr(ptr), size(size) {}
-    SmartPtr(T* ptr, int size) : ptr(ptr), size((u64)size) {}
+    SmartPtr() : Pointer(nullptr), Size(0) {}
+    SmartPtr(T* ptr, u64 size) : Pointer(ptr), Size(size) {}
+    SmartPtr(T* ptr, int size) : Pointer(ptr), Size((u64)size) {}
 
     ~SmartPtr() {
-        if (ptr != nullptr)
-            delete[] ptr;
+        if (Pointer != nullptr)
+            delete[] Pointer;
     }
 
     T* get() {
-        return this->ptr;
+        return this->Pointer;
     }
 
     T* operator -> () {
-        return this->ptr;
+        return this->Pointer;
     }
 
     T& operator * () {
-        return *(this->ptr);
+        return *(this->Pointer);
     }
 
     T& operator [] (int index) {
         if (index < 0) {
             // TODO: Throw exception, or something.
-            return *(this->ptr);
+            return *(this->Pointer);
         }
-        if ((u64)index >= size) {
-            // TODO: Throw exception...
-            return *(this->ptr);
+        if ((u64)index >= Size) {
+            // TODO: Something about it.
+            return *(this->Pointer);
         }
-        return this->ptr[index];            
+        return this->Pointer[index];
     }
 
 private:
-    T* ptr;
-    u64 size { 0 };
+    T* Pointer;
+    u64 Size { 0 };
 };
 
 #endif /* LENSOR_OS_SMART_POINTER_H */

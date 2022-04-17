@@ -32,6 +32,8 @@ namespace Memory {
     void free_pages(void* address, u64 numberOfPages);
 
     void print_debug();
+    void print_debug_kib();
+    void print_debug_mib();
 }
 
 #endif /* LENSOR_OS_PHYSICAL_MEMORY_MANAGER_H */
