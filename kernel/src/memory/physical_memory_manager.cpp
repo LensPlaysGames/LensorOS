@@ -11,7 +11,7 @@
 #include <panic.h>
 
 // Uncomment the following directive for extra debug information output.
-#define DEBUG_PMM
+//#define DEBUG_PMM
 
 namespace Memory {
     Bitmap PageMap;
