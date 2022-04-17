@@ -119,18 +119,16 @@ target_include_directories( Kernel PUBLIC src/ )
 target_link_libraries( Kernel PUBLIC Interrupts )
 target_link_libraries( Kernel PUBLIC Assembly )
 
-# Ensure `/bin` directory exists.
-add_custom_target(
-  EnsureBinDirectory ALL
-  COMMAND ${CMAKE_COMMAND} -E make_directory
-  ${CMAKE_CURRENT_LIST_DIR}/bin
-)
-# Copy contents of the resources directory into the final binary directory.
+# Ensure `kernel/bin` directory exists and copy `kernel/res` into it.
 add_custom_command(
-  TARGET EnsureBinDirectory POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy_directory
-  ${CMAKE_CURRENT_LIST_DIR}/res
-  ${CMAKE_CURRENT_LIST_DIR}/bin
+  TARGET Kernel
+  PRE_BUILD
+  COMMAND
+  ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_LIST_DIR}/bin
+  COMMAND
+  ${CMAKE_COMMAND} -E copy_directory
+  ${CMAKE_CURRENT_LIST_DIR}/res ${CMAKE_CURRENT_LIST_DIR}/bin
+  VERBATIM
 )
 
 # Get the directory of the repository.
