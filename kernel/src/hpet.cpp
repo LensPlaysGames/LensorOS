@@ -164,7 +164,7 @@ u64 HPET::get() {
     return result;
 }
 
-double HPET::get_seconds() {
+double HPET::seconds() {
     if (Initialized == false)
         return 0;
 

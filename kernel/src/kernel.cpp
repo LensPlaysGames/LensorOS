@@ -128,7 +128,7 @@ extern "C" void kmain(BootInfo* bInfo) {
         gRend.crlf(debugInfoX);
         // PRINT HPET ELAPSED TIME.
         gRend.puts("HPET Elapsed: ");
-        gRend.puts(to_string(gHPET.get_seconds()));
+        gRend.puts(to_string(gHPET.seconds()));
         gRend.crlf(debugInfoX);
         // PRINT MEMORY INFO.
         gRend.crlf(debugInfoX);
