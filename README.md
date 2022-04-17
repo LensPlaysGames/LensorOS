@@ -224,7 +224,6 @@ Here is a list of the current build targets relating to boot media
   - mkgpt
     - [Repository](https://github.com/jncronin/mkgpt)
     - On Unix, use the automatic build + install script in the `scripts` subdirectory.
-    - [Pre-built binary for Windows](https://github.com/LensPlaysGames/mkgpt/releases)
 - `image_iso` --
   Create ISO-9660 "El-Torito" bootable CD-ROM image from FAT32 boot media.
   - `image_raw`
