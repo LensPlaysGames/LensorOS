@@ -405,6 +405,15 @@ void kstage1(BootInfo* bInfo) {
                     byteOffset %= 512;
                     portCon->read(partSector * 512, 512, sector.get());
                     auto* part = (GPT::PartitionEntry*)((u64)sector.get() + byteOffset);
+                    if (part->should_ignore())
+                        continue;
+
+                    if (part->TypeGUID == GPT::NullGUID)
+                        continue;
+
+                    if (part->EndLBA < part->StartLBA)
+                        continue;
+
                     dbgmsg("      Partition %ul: ", i);
                     dbgmsg(part->Name, 72);
                     dbgmsg(":\r\n"
@@ -418,7 +427,7 @@ void kstage1(BootInfo* bInfo) {
                            "        Sector Count: %ull\r\n"
                            "        Attributes: %ull\r\n"
                            , part->StartLBA
-                           , part->EndLBA - part->StartLBA
+                           , part->size_in_sectors()
                            , part->Attributes);
                     // TODO: Delete partition driver if it isn't searchable.
                     auto* partDriver = new GPTPartitionDriver(driver, part->TypeGUID
