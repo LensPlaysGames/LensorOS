@@ -221,9 +221,11 @@ Here is a list of the current build targets relating to boot media
 - `image_gpt` --
   Create GPT-partitioned, bootable hard drive image from FAT32 boot media.
   - `image_raw`
-  - mkgpt
-    - [Repository](https://github.com/jncronin/mkgpt)
-    - On Unix, use the automatic build + install script in the `scripts` subdirectory.
+  - One of the following:
+    - fdisk -- Native command on Unix
+    - mkgpt
+      - [Repository](https://github.com/jncronin/mkgpt)
+      - On Unix, use the automatic build + install script in the `scripts` subdirectory.
 - `image_iso` --
   Create ISO-9660 "El-Torito" bootable CD-ROM image from FAT32 boot media.
   - `image_raw`

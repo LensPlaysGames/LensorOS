@@ -153,6 +153,8 @@ find_program( MTOOLS_PROGRAM mtools )
 find_program( XORRISO_PROGRAM xorriso )
 find_program( BASH_PROGRAM bash )
 if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
+  find_program( FDISK_PROGRAM fdisk )
+  find_program( MKGPT_PROGRAM mkgpt )
   # Boot media generation: raw FAT32 image.
   if( DD_PROGRAM AND MTOOLS_PROGRAM )
     message(
@@ -169,8 +171,20 @@ if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
     )
   endif()
   # Boot media generation: GPT partitioned hard drive.
-  find_program( MKGPT_PROGRAM mkgpt )
-  if( MKGPT_PROGRAM )
+  if( FDISK_PROGRAM )
+    message(
+      VERBOSE
+      "Found fdisk, creating targets: image_gpt"
+    )
+    add_custom_target(
+      image_gpt
+      COMMAND bash mkgpt_fdisk.sh
+      WORKING_DIRECTORY ${SCRIPTS_DIR}
+      COMMENT "Generating GUID Partion Table with EFI System partion containing boot media using `fdisk`"
+      USES_TERMINAL
+      VERBATIM
+    )
+  elseif( MKGPT_PROGRAM )
     message(
       VERBOSE
       "Found mkgpt, creating targets: image_gpt"
@@ -179,14 +193,14 @@ if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
       image_gpt
       COMMAND bash mkgpt.sh
       WORKING_DIRECTORY ${SCRIPTS_DIR}
-      COMMENT "Generating GUID Partion Table with EFI System partion containing boot media"
+      COMMENT "Generating GUID Partion Table with EFI System partion containing boot media using `mkgpt`"
       USES_TERMINAL
       VERBATIM
     )
   else()
     message(
-      "-- mkgpt was not found on your system, skipping image_gpt target generation.\n"
-      "   Install it using ${SCRIPTS_DIR}/install_mkgpt.sh"
+      "-- Neither fdisk nor mkgpt was found on your system, skipping image_gpt target generation.\n"
+      "   Install mkgpt using ${SCRIPTS_DIR}/install_mkgpt.sh"
     )
   endif()
   # Boot media generation: ISO-9660 CD-ROM.
@@ -210,7 +224,7 @@ endif()
 
 # Batch (Windows)
 if( CMAKE_HOST_WIN32 )
-  # Boot media generation: raw FAT32 image
+  # Boot media generation: raw FAT32 image.
   if( DD_PROGRAM
       AND MTOOLS_PROGRAM )
     message(

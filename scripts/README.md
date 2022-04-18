@@ -11,6 +11,7 @@ A collection of shell scripts that automate processes surrounding LensorOS.
   - Unix
     - [install_mkgpt.sh](#bootmediagen-installmkgpt-sh)
     - [mkgpt.sh](#bootmediagen-mkgpt-sh)
+    - [mkgpt_fdisk.sh](#bootmediagen-mkgptfdisk-sh)
     - [mkimg.sh](#bootmediagen-mkimg-sh)
     - [mkiso.sh](#bootmediagen-mkiso-sh)
   - Windows
@@ -18,11 +19,11 @@ A collection of shell scripts that automate processes surrounding LensorOS.
 - Booting into LensorOS
   - Unix
     - [run.sh](#booting-run-sh)
-	- [runhda.sh](#booting-runhda-sh)
+    - [runhda.sh](#booting-runhda-sh)
     - [runiso.sh](#booting-runiso-sh)
   - Windows
     - [run.bat](#booting-run-bat)
-	- [runhda.bat](#booting-runhda-bat)
+    - [runhda.bat](#booting-runhda-bat)
     - [runiso.bat](#booting-runiso-bat)
 
 ---
@@ -112,6 +113,23 @@ bash mkgpt.sh
 
 Dependencies:
 - [mkgpt](#bootmediagen-install-mkgpt-sh)
+
+---
+
+### `mkgpt_fdisk.sh` <a name="bootmediagen-mkgpt-sh"></a>
+Generate a bootable disk image with a valid GUID Partition Table.
+  An `EFI System` partition is added with the contents of `LensorOS.img`.
+
+[mkimg.sh](#bootmediagen-mkimg-sh) is run before generating the `EFI System`
+  partition to ensure the boot media is as up to date as possible.
+
+Invocation:
+```
+bash mkgpt_fdisk.sh
+```
+
+Dependencies:
+- fdisk -- Native command on Unix
 
 ---
 
