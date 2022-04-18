@@ -1,10 +1,10 @@
 #include <memory/heap.h>
 
 #include <cstr.h>
+#include <debug.h>
 #include <memory/common.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
-#include <uart.h>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_HEAP
@@ -91,21 +91,19 @@ void init_heap() {
     firstSegment->last = nullptr;
     firstSegment->free = true;
     sLastHeader = firstSegment;
-    UART::out("[Heap]: \033[32mInitialized\033[0m\r\n  Virtual Address: 0x");
-    UART::out(to_hexstring<void*>(sHeapStart));
-    UART::out(" thru 0x");
-    UART::out(to_hexstring<void*>(sHeapEnd));
-    UART::out("\r\n  Size: ");
-    UART::out(numBytes);
-    UART::out("\r\n\r\n");
+    dbgmsg("[Heap]: \033[32mInitialized\033[0m\r\n"
+           "  Virtual Address: %x thru %x\r\n"
+           "  Size: %ull\r\n"
+           "\r\n"
+           , sHeapStart, sHeapEnd
+           , numBytes);
     heap_print_debug();
 }
 
 void expand_heap(u64 numBytes) {
 #ifdef DEBUG_HEAP
-    UART::out("[Heap]: Expanding by ");
-    UART::out(numBytes);
-    UART::out(" bytes\r\n");
+    dbgmsg("[Heap]: Expanding by %ull bytes\r\n"
+           , numBytes);
 #endif /* DEBUG_HEAP */
     u64 numPages = (numBytes / PAGE_SIZE) + 1;
     // Round byte count to page-aligned boundary.
@@ -138,9 +136,8 @@ void* malloc(u64 numBytes) {
         numBytes += 8;
     }
 #ifdef DEBUG_HEAP
-    UART::out("[Heap]: malloc() -- numBytes=");
-    UART::out(numBytes);
-    UART::out("\r\n");
+    dbgmsg("[Heap]: malloc() -- numBytes=%ull\r\n"
+           , numBytes);
 #endif /* DEBUG_HEAP */
     // Start looking for a free segment at the start of the heap.
     HeapSegmentHeader* current = (HeapSegmentHeader*)sHeapStart;
@@ -150,7 +147,7 @@ void* malloc(u64 numBytes) {
                 if (HeapSegmentHeader* split = current->split(numBytes)) {
                     split->free = false;
 #ifdef DEBUG_HEAP
-                    UART::out("  Made split.\r\n");
+                    dbgmsg("  Made split.\r\n");
                     heap_print_debug();
 #endif /* DEBUG_HEAP */
                     return (void*)((u64)split + sizeof(HeapSegmentHeader));
@@ -159,7 +156,7 @@ void* malloc(u64 numBytes) {
             else if (current->length == numBytes) {
                 current->free = false;
 #ifdef DEBUG_HEAP
-                UART::out("  Found exact match.\r\n");
+                dbgmsg("  Found exact match.\r\n");
                 heap_print_debug();
 #endif /* DEBUG_HEAP */
                 return (void*)((u64)current + sizeof(HeapSegmentHeader));
@@ -181,11 +178,8 @@ void* malloc(u64 numBytes) {
 void free(void* address) {
     HeapSegmentHeader* segment = (HeapSegmentHeader*)((u64)address - sizeof(HeapSegmentHeader));
 #ifdef DEBUG_HEAP
-    UART::out("[Heap]: free() -- address=0x");
-    UART::out(to_hexstring(address));
-    UART::out(", numBytes=");
-    UART::out(segment->length);
-    UART::out("\r\n");
+    dbgmsg("[Heap]: free() -- address=%x, numBytes=%ull\r\n"
+           , address, segment->length);
 #endif /* DEBUG_HEAP */
     segment->free = true;
     segment->combine_forward();
@@ -198,41 +192,33 @@ void free(void* address) {
 void heap_print_debug() {
     // TODO: Interesting information, like average allocation
     //       size, number of malloc vs free calls, etc.
-    UART::out("[Heap]: Debug information dump:\r\n"
-              "Size: ");
-    UART::out(TO_KiB((u64)sHeapEnd - (u64)sHeapStart));
-    UART::out("KiB\r\n"
-              "Start: 0x");
-    UART::out(to_hexstring(sHeapStart));
-    UART::out("\r\n"
-              "End: 0x");
-    UART::out(to_hexstring(sHeapEnd));
-    UART::out("\r\n"
-              "Regions:\r\n");
+    u64 heapSizeKiB = reinterpret_cast<u64>(sHeapEnd)
+        - reinterpret_cast<u64>(sHeapStart);
+    dbgmsg("[Heap]: Debug information:\r\n"
+           "  Size:   %ull\r\n"
+           "  Start:  %x\r\n"
+           "  End:    %x\r\n"
+           "  Regions:\r\n"
+           , heapSizeKiB, sHeapStart, sHeapEnd);
     u64 i = 0;
     HeapSegmentHeader* it = (HeapSegmentHeader*)sHeapStart;
     do {
-        UART::out("    Region ");
-        UART::out(i);
-        UART::out(":\r\n"
-                  "      Free: ");
-        UART::out(to_string(it->free));
-        UART::out("\r\n"
-                  "      Length: ");
-        UART::out(it->length);
-        UART::out(" (");
-        UART::out(it->length + sizeof(HeapSegmentHeader));
-        UART::out(")\r\n"
-                  "      Header Address: 0x");
-        UART::out(to_hexstring(it));
-        UART::out("\r\n"
-                  "      Payload Address: 0x");
-        UART::out(to_hexstring((u64)it + sizeof(HeapSegmentHeader)));
-        UART::out("\r\n");
+        dbgmsg("    Region %ull:\r\n"
+               "      Free:   %s\r\n"
+               "      Length: %ull (%ull)\r\n"
+               "      Header Address: %x\r\n"
+               "      Payload Address: %x\r\n"
+               , i
+               , to_string(it->free)
+               , it->length
+               , it->length + sizeof(HeapSegmentHeader)
+               , it
+               , reinterpret_cast<u64>(it) + sizeof(HeapSegmentHeader)
+               );
         ++i;
         it = it->next;
     } while (it);
-    UART::out("\r\n");
+    dbgmsg("\r\n");
 }
 
 void* operator new   (u64 numBytes) { return malloc(numBytes); }
