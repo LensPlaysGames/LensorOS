@@ -37,7 +37,7 @@ if (-not(Test-Path -Path "$OVMFDirectory\OVMF_VARS_LensorOS.fd"))
         -Destination $OVMFDirectory\OVMF_VARS_LensorOS.fd
 }
 
-qemu-system-x86_64																			 `
+qemu-system-x86_64                                                                           `
     -d cpu_reset                                                                             `
     -machine q35                                                                             `
     -cpu qemu64                                                                              `
