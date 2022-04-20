@@ -27,6 +27,7 @@ Regarding PowerShell `.ps1` scripts:
     - [mkiso.bat](#bootmediagen-mkiso-bat)
   - PowerShell
     - [mkimg.ps1](#bootmediagen-mkimg-ps1)
+    - [mkiso.ps1](#bootmediagen-mkiso-ps1)
 - Booting into LensorOS
   - Bash
     - [run.sh](#booting-run-sh)
@@ -157,8 +158,7 @@ bash mkimg.sh
 
 Dependencies:
 - [GNU mtools](https://www.gnu.org/software/mtools/)
-  - [See Lens' fork of mtools on GitHub](https://github.com/LensPlaysGames/mtools/releases) 
-    with pre-built binaries for x86_64 Windows and Linux.
+  - [Pre-built binaries for Windows and Linux](https://github.com/LensPlaysGames/mtools/releases) 
   - On Debian distros: `sudo apt install mtools`
   - [Source Code](http://ftp.gnu.org/gnu/mtools/)
 
@@ -210,6 +210,41 @@ mkiso.bat
 Dependencies:
 - [GNU xorriso](https://www.gnu.org/software/xorriso/)
   - Windows executables can be found
+    [in this repository](https://github.com/PeyTy/xorriso-exe-for-windows)
+  - [Source Code](https://www.gnu.org/software/xorriso/xorriso-1.5.4.pl02.tar.gz)
+
+---
+
+### `mkimg.ps1` <a name="bootmediagen-mkimg-ps1"></a>
+Generate a bootable disk image that is UEFI compatible (FAT32 formatted).
+
+Invocation:
+```pwsh
+.\mkimg.ps1
+```
+
+Dependencies:
+- [GNU mtools](https://www.gnu.org/software/mtools/)
+  - [Pre-built binaries for Windows and Linux](https://github.com/LensPlaysGames/mtools/releases)
+  - On Debian distros: `sudo apt install mtools`
+  - [Source Code](http://ftp.gnu.org/gnu/mtools/)
+
+---
+
+### `mkiso.ps1` <a name="bootmediagen-mkiso-ps1"></a>
+Generate a bootable disk image with an ISO-9660 filesystem.
+  The contents of `LensorOS.img` are loaded onto it in the
+  "El-Torito" configuration, making the `.iso` bootable.
+
+Invocation:
+```pswh
+.\mkiso.ps1
+```
+
+Dependencies:
+- [GNU xorriso](https://www.gnu.org/software/xorriso/)
+  - On Debian distributions: `sudo apt install xorriso`
+  - Pre-built Windows executables can be found
     [in this repository](https://github.com/PeyTy/xorriso-exe-for-windows)
   - [Source Code](https://www.gnu.org/software/xorriso/xorriso-1.5.4.pl02.tar.gz)
 
