@@ -83,8 +83,10 @@ extern "C" void kmain(BootInfo* bInfo) {
     gRend.puts(GPLv3, 0x00000000);
     gRend.BackgroundColor = 0x00000000;
     gRend.crlf();
-    gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize});
     // END GPLv3 LICENSE REQUIREMENT.
+    gRend.puts("All your memory are belong to us, now");
+    gRend.crlf();
+    gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize * 2u});
 
     // USERLAND SWITCH TESTING
     // jump_to_userland_function((void*)test_userland_function);
