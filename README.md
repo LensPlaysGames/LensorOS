@@ -209,6 +209,8 @@ Here is a list of the current build targets relating to boot media
   generation, as well as their dependencies listed underneath each.
 - `image_raw` --
   Combine built executables and resources to generate UEFI-compatible FAT32 boot media.
+  - `Kernel` build target (creates `kernel/bin/kernel.elf`).
+  - The built bootloader EFI application at `gnu-efi/x86_64/bootloader/main.efi`.
   - dd -- Native command on Unix
     - On Windows, use one of the following options:
       - [MinGW installer to get MSYS coreutils ext package](https://osdn.net/projects/mingw/)
@@ -234,11 +236,16 @@ Here is a list of the current build targets relating to boot media
     - Debian distros: `sudo apt install xorriso`
     - [Pre-built binaries for Windows](https://github.com/PeyTy/xorriso-exe-for-windows)
 
-The generated targets can be chained together for easy, quick development. \
-To build the LensorOS kernel, generate new boot media, and then
-  launch into LensorOS, it takes just one command.
-```bash
-cmake --build kernel/bld  && cmake --build kernel/bld -t image_raw runimg_qemu
+As an example, a FAT32 formatted UEFI-compatible boot
+  image may be generated using the following command:
+```sh
+cmake --build kernel/bld --target image_raw
+```
+
+It takes just one command to build the LensorOS kernel, generate new
+  boot media, and then launch the QEMU virtual machine into LensorOS.
+```sh
+cmake --build kernel/bld --target runimg_qemu
 ```
 
 ---

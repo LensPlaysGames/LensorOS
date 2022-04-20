@@ -165,10 +165,14 @@ if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
       image_raw
       COMMAND bash mkimg.sh
       WORKING_DIRECTORY ${SCRIPTS_DIR}
+      DEPENDS
+      ${REPO_DIR}/gnu-efi/x86_64/bootloader/main.efi
+      ${SCRIPTS_DIR}/startup.nsh
       COMMENT "Generating UEFI-compatible FAT32 boot media"
       USES_TERMINAL
       VERBATIM
     )
+    add_dependencies( image_raw Kernel )
   endif()
   # Boot media generation: GPT partitioned hard drive.
   if( FDISK_PROGRAM )
@@ -203,6 +207,9 @@ if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
       "   Install mkgpt using ${SCRIPTS_DIR}/install_mkgpt.sh"
     )
   endif()
+  if( TARGET image_gpt AND TARGET image_raw )
+    add_dependencies( image_gpt image_raw )
+  endif()
   # Boot media generation: ISO-9660 CD-ROM.
   if( XORRISO_PROGRAM )
     message(
@@ -217,6 +224,9 @@ if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
       USES_TERMINAL
       VERBATIM
     )
+    if( TARGET image_raw )
+      add_dependencies( image_iso image_raw )
+    endif()
   else()
     message( "-- xorriso was not found on your system, skipping image_iso target generation." )
   endif()
@@ -235,9 +245,14 @@ if( CMAKE_HOST_WIN32 )
       image_raw
       COMMAND cmd /c ${SCRIPTS_DIR}/mkimg.bat
       COMMENT "Generating UEFI-compatible FAT32 boot media"
+      DEPENDS
+      ${REPO_DIR}/gnu-efi/x86_64/bootloader/main.efi
+      ${SCRIPTS_DIR}/startup.nsh
       USES_TERMINAL
       VERBATIM
     )
+    # Image generation relies on kernel.elf
+    add_dependencies( image_raw Kernel )
   endif()
   # Boot media generation: ISO-9660 CD-ROM.
   if( XORRISO_PROGRAM )
@@ -252,6 +267,9 @@ if( CMAKE_HOST_WIN32 )
       USES_TERMINAL
       VERBATIM
     )
+    if( TARGET image_raw )
+      add_dependencies( image_iso image_raw )
+    endif()
   else()
     message( "-- xorriso was not found on your system, skipping image_iso target generation." )
   endif()
@@ -344,4 +362,14 @@ if ( QEMU_PROGRAM )
     WORKING_DIRECTORY ${REPO_DIR}
     VERBATIM
   )
-endif ()
+  # Dependencies
+  if( TARGET image_raw )
+    add_dependencies( runimg_qemu image_raw )
+  endif()
+  if( TARGET image_gpt )
+    add_dependencies( runhda_qemu image_gpt )
+  endif()
+  if( TARGET image_iso )
+    add_dependencies( runiso_qemu image_iso )
+  endif()
+endif()
