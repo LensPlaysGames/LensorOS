@@ -51,10 +51,11 @@
 **/testing/
 
 # Backups
+**/*.tmp*
 **/*~
 **/#*#
 **/.#*
-**/*.backup
+**/*.backup*
 **/.swp
 
 # System Root
