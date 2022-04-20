@@ -206,7 +206,7 @@ void heap_print_debug() {
         dbgmsg("    Region %ull:\r\n"
                "      Free:   %s\r\n"
                "      Length: %ull (%ull)\r\n"
-               "      Header Address: %x\r\n"
+               "      Header Address:  %x\r\n"
                "      Payload Address: %x\r\n"
                , i
                , to_string(it->free)
