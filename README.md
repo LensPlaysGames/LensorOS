@@ -11,10 +11,6 @@ A 64-bit all-inclusive operating system, from bootloader to userspace.
 ---
 
 ## Running LensorOS <a name="run"></a>
-
-1. [As a tourist](#tourists-go-here)
-2. [As a developer](#developers-go-here)
-
 Free, compatible virtual machines:
 - [VirtualBox (VBOX)](https://www.virtualbox.org/wiki/Downloads)
 - [VMWare Workstation Player](https://www.vmware.com/products/workstation-player.html)
@@ -22,7 +18,7 @@ Free, compatible virtual machines:
 
 ---
 
-### I just want to open LensorOS! <a name="tourists-go-here"></a>
+### I just want to open LensorOS!
 If you are just interested in poking around LensorOS, and not editing code,
   I recommend a pre-built release from the 
   [releases page](https://github.com/LensPlaysGames/LensorOS/releases). 
@@ -35,7 +31,7 @@ If you are just interested in poking around LensorOS, and not editing code,
 
 ---
 
-### Launching LensorOS using the Build System <a name="developers-go-here"></a>
+### Launching LensorOS using the Build System
 NOTE: There is no automation for anything except QEMU for now.
   There are, however, instructions on how to setup a virtual
   machine in VirtualBox and VMWare Workstation Player.
