@@ -18,7 +18,23 @@ void dbgmsg(u8* buffer, u64 byteCount
 void dbgmsg_v(u8* fmt, va_list);
 /* Print a formatted string.
  * Supported formats:
- * `-- "%s" -- C-style null-terminated string
+ *  %s     -- null terminated C-style string
+ *
+ *  %hhu   -- 8 bit unsigned integer
+ *  %hu    -- 16 bit unsigned integer
+ *  %u     -- native bit width unsigned integer
+ *  %ul    -- 32 bit unsigned integer
+ *  %ull   -- 64 bit unsigned integer
+ *
+ *  %hhi   -- 8 bit signed integer
+ *  %hi    -- 16 bit signed integer
+ *  %i     -- native bit width signed integer
+ *  %il    -- 32 bit signed integer
+ *  %ill   -- 64 bit signed integer
+ *
+ *  %f     -- double, 2 digits of precision
+ *  %x     -- 16 digit 64 bit unsigned integer (hexadecimal)
+ *  %c     -- Character
  */
 void dbgmsg(const char* fmt, ...);
 
