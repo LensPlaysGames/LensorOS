@@ -146,24 +146,33 @@ cmake_path(
   NORMALIZE
   SCRIPTS_DIR
 )
+set( IMAGE_DIR "${REPO_DIR}/kernel/bin" )
+cmake_path(
+  NATIVE_PATH
+  IMAGE_DIR
+  NORMALIZE
+  IMAGE_DIR
+)
 
 # Boot media generation targets
+find_program( BASH_PROGRAM bash )
 find_program( DD_PROGRAM dd )
 find_program( MTOOLS_PROGRAM mtools )
 find_program( XORRISO_PROGRAM xorriso )
-find_program( BASH_PROGRAM bash )
-if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
+find_program( CREATEGPT_PROGRAM createGPT )
+
+if( CMAKE_HOST_UNIX )
   find_program( FDISK_PROGRAM fdisk )
   find_program( MKGPT_PROGRAM mkgpt )
   # Boot media generation: raw FAT32 image.
-  if( DD_PROGRAM AND MTOOLS_PROGRAM )
+  if( BAHS_PROGRAM AND DD_PROGRAM AND MTOOLS_PROGRAM )
     message(
       VERBOSE
       "Found bash, dd, and mtools, creating targets: image_raw"
     )
     add_custom_target(
       image_raw
-      COMMAND bash mkimg.sh
+      COMMAND ${BASH_PROGRAM} mkimg.sh
       WORKING_DIRECTORY ${SCRIPTS_DIR}
       DEPENDS
       ${REPO_DIR}/gnu-efi/x86_64/bootloader/main.efi
@@ -175,20 +184,39 @@ if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
     add_dependencies( image_raw Kernel )
   endif()
   # Boot media generation: GPT partitioned hard drive.
-  if( FDISK_PROGRAM )
+  if( CREATEGPT_PROGRAM )
     message(
       VERBOSE
-      "Found fdisk, creating targets: image_gpt"
+      "Found createGPT, creating targets: image_gpt"
     )
     add_custom_target(
       image_gpt
-      COMMAND bash mkgpt_fdisk.sh
+      COMMAND ${CREATEGPT_PROGRAM} -o ${IMAGE_DIR}/LensorOS.bin -p ${IMAGE_DIR}/LensorOS.img --type system
+      COMMENT "Generating GUID Partion Table with EFI System partion containing boot media using `createGPT`"
+      USES_TERMINAL
+      VERBATIM
+    )
+    if( TARGET image_gpt AND TARGET image_raw )
+      add_dependencies( image_gpt image_raw )
+    endif()
+  elseif( BASH_PROGRAM AND FDISK_PROGRAM )
+    message(
+      VERBOSE
+      "Found bash and fdisk, creating targets: image_gpt"
+    )
+    add_custom_target(
+      image_gpt
+      COMMAND ${BASH_PROGRAM} mkgpt_fdisk.sh
       WORKING_DIRECTORY ${SCRIPTS_DIR}
       COMMENT "Generating GUID Partion Table with EFI System partion containing boot media using `fdisk`"
       USES_TERMINAL
       VERBATIM
     )
-  elseif( MKGPT_PROGRAM )
+    # Script handles this dependency by itself right now.
+    #if( TARGET image_gpt AND TARGET image_raw )
+    #  add_dependencies( image_gpt image_raw )
+    #endif()
+  elseif( BASH_PROGRAM AND MKGPT_PROGRAM )
     message(
       VERBOSE
       "Found mkgpt, creating targets: image_gpt"
@@ -201,14 +229,14 @@ if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
       USES_TERMINAL
       VERBATIM
     )
+    # Script handles this dependency by itself right now.
+    #if( TARGET image_gpt AND TARGET image_raw )
+    #  add_dependencies( image_gpt image_raw )
+    #endif()
   else()
     message(
-      "-- Neither fdisk nor mkgpt was found on your system, skipping image_gpt target generation.\n"
-      "   Install mkgpt using ${SCRIPTS_DIR}/install_mkgpt.sh"
+      "-- Neither fdisk, createGPT, nor mkgpt was found on your system, skipping image_gpt target generation.\n"
     )
-  endif()
-  if( TARGET image_gpt AND TARGET image_raw )
-    add_dependencies( image_gpt image_raw )
   endif()
   # Boot media generation: ISO-9660 CD-ROM.
   if( XORRISO_PROGRAM )
@@ -218,21 +246,21 @@ if( CMAKE_HOST_UNIX AND BASH_PROGRAM )
     )
     add_custom_target(
       image_iso
-      COMMAND bash mkiso.sh
+      COMMAND ${BAHS_PROGRAM} mkiso.sh
       WORKING_DIRECTORY ${SCRIPTS_DIR}
       COMMENT "Generating El-Torito ISO-9660 boot media"
       USES_TERMINAL
       VERBATIM
     )
-    if( TARGET image_raw )
-      add_dependencies( image_iso image_raw )
-    endif()
+    # Script handles this dependency by itself right now.
+    #if( TARGET image_raw )
+    #  add_dependencies( image_iso image_raw )
+    #endif()
   else()
     message( "-- xorriso was not found on your system, skipping image_iso target generation." )
   endif()
 endif()
 
-# Batch (Windows)
 if( CMAKE_HOST_WIN32 )
   # Boot media generation: raw FAT32 image.
   if( DD_PROGRAM
@@ -253,6 +281,23 @@ if( CMAKE_HOST_WIN32 )
     )
     # Image generation relies on kernel.elf
     add_dependencies( image_raw Kernel )
+  endif()
+  # Boot media generation: GPT partitioned hard drive.
+  if( CREATEGPT_PROGRAM )
+    message(
+      VERBOSE
+      "Found createGPT, creating targets: image_gpt"
+    )
+    add_custom_target(
+      image_gpt
+      COMMAND ${CREATEGPT_PROGRAM} -o ${IMAGE_DIR}/LensorOS.bin -p ${IMAGE_DIR}/LensorOS.img --type system
+      COMMENT "Generating GUID Partion Table with EFI System partion containing boot media using `createGPT`"
+      USES_TERMINAL
+      VERBATIM
+    )
+    if( TARGET image_gpt AND TARGET image_raw )
+      add_dependencies( image_gpt image_raw )
+    endif()
   endif()
   # Boot media generation: ISO-9660 CD-ROM.
   if( XORRISO_PROGRAM )
@@ -275,7 +320,6 @@ if( CMAKE_HOST_WIN32 )
     message( "-- xorriso was not found on your system, skipping image_iso target generation." )
   endif()
 endif()
-
 
 # Add a custom target to run QEMU with the proper flags
 # if QEMU for x86_64 is found in the PATH environment variable.
@@ -310,15 +354,8 @@ if ( QEMU_PROGRAM )
     # This allows debug messages to reach the terminal.
     -serial stdio
   )
-  set( IMAGE_DIR "${REPO_DIR}/kernel/bin" )
   set( OVMF_CODE "${REPO_DIR}/OVMFbin/OVMF_CODE-pure-efi.fd" )
   set( OVMF_VARS "${REPO_DIR}/OVMFbin/OVMF_VARS_LensorOS.fd" )
-  cmake_path(
-    NATIVE_PATH
-    IMAGE_DIR
-    NORMALIZE
-    IMAGE_DIR
-  )
   cmake_path(
     NATIVE_PATH
     OVMF_CODE
