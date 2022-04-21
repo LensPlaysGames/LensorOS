@@ -267,9 +267,10 @@ if( CMAKE_HOST_WIN32 )
       USES_TERMINAL
       VERBATIM
     )
-    if( TARGET image_raw )
-      add_dependencies( image_iso image_raw )
-    endif()
+    # Script handles this dependency by itself right now.
+    #if( TARGET image_raw )
+    #  add_dependencies( image_iso image_raw )
+    #endif()
   else()
     message( "-- xorriso was not found on your system, skipping image_iso target generation." )
   endif()
