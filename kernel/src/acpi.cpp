@@ -7,8 +7,7 @@
 /* Helpful resource: https://github.com/freebsd/freebsd-src/blob/main/usr.sbin/acpi/acpidump/acpi.c */
 
 // Uncomment the following directive for extra debug information output.
-#define DEBUG_ACPI
-
+//#define DEBUG_ACPI
 
 namespace ACPI {
     void initialize(RSDP2* rootSystemDescriptorPointer) {
