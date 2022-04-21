@@ -221,6 +221,11 @@ Here is a list of the current build targets relating to boot media
   - `image_raw`
   - One of the following:
     - fdisk -- Native command on Unix
+    - createGPT
+      - [Repository](https://github.com/LensPlaysGames/createGPT)
+      - [Pre-built binaries for Linux + Windows](https://github.com/LensPlaysGames/createGPT/releases)
+      - I was annoyed that there wasn't a (working) cross platform tool for
+        creating GPT disk images that was open source, and easy to use, so I made one.
     - mkgpt
       - [Repository](https://github.com/jncronin/mkgpt)
       - On Unix, use the automatic build + install script in the `scripts` subdirectory.
