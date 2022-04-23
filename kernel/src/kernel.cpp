@@ -59,12 +59,12 @@ void print_now(u64 xOffset = 0) {
     gRend.crlf(xOffset);
 }
 
-void test_userland_function() {
-    for (;;) {
-        asm volatile ("mov $0, %rax\r\n\t"
-                      "int $0x80\r\n\t");
-    }
-}
+//void test_userland_function() {
+//    for (;;) {
+//        asm volatile ("mov $0, %rax\r\n\t"
+//                      "int $0x80\r\n\t");
+//    }
+//}
 
 extern "C" void kmain(BootInfo* bInfo) {
     // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
