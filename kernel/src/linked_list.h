@@ -2,7 +2,6 @@
 #define LENSOR_OS_LINKED_LIST_H
 
 #include <memory/heap.h>
-#include <uart.h>
 
 template <typename T>
 class SinglyLinkedList;
@@ -71,6 +70,31 @@ public:
             onEachNode(it);
             it = it->next();
         }
+    }
+
+    bool remove(u64 index) {
+        if (index >= Length)
+            return false;
+
+        if (index == 0) {
+            Head = Head->next();
+            return true;
+        }
+
+        Node* prev = Head;
+        Node* current = Head;
+        u64 i = 1;
+        while (current) {
+            current = current->next();
+            if (i == index)
+                break;
+
+            prev = current;
+            i++;
+        }
+        prev->Next = current->next();
+        Length--;
+        return true;
     }
 
     u64 length() { return Length; }
