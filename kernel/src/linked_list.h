@@ -50,6 +50,18 @@ public:
         Length += 1;
     }
 
+    void add_end(const DataType& value) {
+        if (Tail == nullptr) {
+            Head = new Node(value);
+            Tail = Head;
+        }
+        else {
+            Tail->Next = new Node(value, Head);
+            Tail = Tail->Next;
+        }
+        Length += 1;
+    }
+
     DataType& at(u64 index) {
         Node* it { Head };
         Node* out { nullptr };
