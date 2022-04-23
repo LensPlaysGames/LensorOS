@@ -6,26 +6,6 @@
 #include <uart.h>
 #include <va_list.h>
 
-/* Supported formats:
- *
- *  %s     -- null terminated C-style string
- *
- *  %hhu   -- 8 bit unsigned integer
- *  %hu    -- 16 bit unsigned integer
- *  %u     -- native bit width unsigned integer
- *  %ul    -- 32 bit unsigned integer
- *  %ull   -- 64 bit unsigned integer
- *
- *  %hhi   -- 8 bit signed integer
- *  %hi    -- 16 bit signed integer
- *  %i     -- native bit width signed integer
- *  %il    -- 32 bit signed integer
- *  %ill   -- 64 bit signed integer
- *
- *  %f     -- double, 2 digits of precision
- *  %x     -- 16 digit 64 bit unsigned integer (hexadecimal)
- *  %c     -- Character
- */
 void dbgmsg_v(const u8* fmt, va_list args) {
     const u8* current = fmt;
     for(; *current != '\0'; ++current) {
@@ -121,6 +101,7 @@ void dbgmsg_v(const u8* fmt, va_list args) {
             case 'f':
                 dbgmsg((va_arg(args, double)));
                 break;
+            case 'p':
             case 'x':
                 dbgmsg_s("0x");
                 dbgmsg_s(to_hexstring(va_arg(args, u64)));

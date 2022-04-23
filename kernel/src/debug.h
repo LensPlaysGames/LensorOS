@@ -19,6 +19,7 @@ void dbgmsg_v(u8* fmt, va_list);
 /* Print a formatted string.
  * Supported formats:
  *  %s     -- null terminated C-style string
+ *  %c     -- character (1-byte)
  *
  *  %hhu   -- 8 bit unsigned integer
  *  %hu    -- 16 bit unsigned integer
@@ -33,8 +34,9 @@ void dbgmsg_v(u8* fmt, va_list);
  *  %ill   -- 64 bit signed integer
  *
  *  %f     -- double, 2 digits of precision
- *  %x     -- 16 digit 64 bit unsigned integer (hexadecimal)
- *  %c     -- Character
+ *
+ *  %x,%p  -- 16 digit 64 bit unsigned integer (hexadecimal)
+ *
  */
 void dbgmsg(const char* fmt, ...);
 
