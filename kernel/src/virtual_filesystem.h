@@ -2,10 +2,11 @@
 #define LENSOR_OS_VIRTUAL_FILESYSTEM_H
 
 #include <cstr.h>
+#include <debug.h>
 #include <file.h>
+#include <filesystem.h>
 #include <linked_list.h>
-#include <system.h>
-#include <uart.h>
+#include <storage/storage_device_driver.h>
 
 // WHAT GOES HERE?
 // A path? That wouldn't really be all that efficient,
@@ -46,50 +47,79 @@ public:
          * |-- Store new OpenFileDescription in table of descriptions.
          * `-- Return index into table of OpenFileDescriptions as FileDescriptor.
          */
-        Opened.add(OpenFileDescription(nullptr, 0));
-        return 0;
+        u64 pathLength = strlen(path);
+        if (pathLength <= 1) {
+            dbgmsg("Path is not long enough.");
+            return -1ull;
+        }
+        if (path[0] != '/') {
+            dbgmsg("%s does not start with slash", path);
+            return -1ull;
+        }
+
+        FileDescriptor out = -1ull;
+
+        Mounts.for_each([this, &out, path, pathLength](auto* it){
+            MountPoint& mount = it->value();
+            u64 mountPathLength = strlen(mount.Path);
+            if (mountPathLength <= pathLength) {
+                if (strcmp(path, mount.Path, mountPathLength)) {
+                    // TODO: Get byte offset at path[mountPathLength] from filesystem driver.
+                    out = Opened.length();
+                    Opened.add_end(OpenFileDescription(mount.FS->storage_device_driver(), 0));
+                }
+            }
+        });
+        (void)flags;
+        (void)mode;
+        return out;
+    }
+
+    bool close(FileDescriptor fd) {
+        if (fd >= Opened.length())
+            return false;
+
+        Opened.remove(fd);
+        return true;
     }
 
     void print_debug() {
-        UART::out("[VFS]: Information Dump\r\n"
+        dbgmsg("[VFS]: Debug Info\r\n"
                   "  Mounts:\r\n");
         u64 i = 0;
         Mounts.for_each([&i](auto* it) {
             MountPoint& mp = it->value();
-            UART::out("    Mount ");
-            UART::out(i);
-            UART::out(":\r\n"
-                      "      Path: ");
-            UART::out(mp.Path);
-            UART::out("\r\n"
-                      "      Filesystem: ");
-            UART::out(Filesystem::type2name(mp.FS->type()));
-            UART::out("\r\n"
-                      "        Filesystem Driver Address: 0x");
-            UART::out(to_hexstring(mp.FS->filesystem_driver()));
-            UART::out("\r\n"
-                      "        Storage Device Driver Address: 0x");
-            UART::out(to_hexstring(mp.FS->storage_device_driver()));
-            UART::out("\r\n");
+            dbgmsg("    Mount %ull:\r\n"
+                   "      Path: %s\r\n"
+                   "      Filesystem: %s\r\n"
+                   "        Filesystem Driver Address: %x\r\n"
+                   "        Storage Device Driver Address: %x\r\n"
+                   , i
+                   , mp.Path
+                   , Filesystem::type2name(mp.FS->type())
+                   , mp.FS->filesystem_driver()
+                   , mp.FS->storage_device_driver()
+                   );
             i += 1;
         });
+        dbgmsg("\r\n"
+               "  Opened files:\r\n");
         i = 0;
-        UART::out("\r\n"
-                  "  Filesystems:\r\n");
         Opened.for_each([&i](auto* it){
             OpenFileDescription& file = it->value();
-            UART::out("    Storage Device Driver Address: 0x");
-            UART::out(to_hexstring(file.Driver));
-            UART::out("\r\n"
-                      "    Byte Offset: ");
-            UART::out(file.ByteOffset);
+            dbgmsg("    Open File %ull:\r\n"
+                   "      Storage Device Driver Address: %x\r\n"
+                   "      Byte Offset: %ull\r\n"
+                   , i
+                   , file.Driver
+                   , file.ByteOffset
+                   );
+            i++;
         });
-        UART::out("\r\n");
+        dbgmsg("\r\n");
     }
 
 private:
-    // FIXME: This should definitely be more
-    //        efficient than a singly linked list...
     SinglyLinkedList<OpenFileDescription> Opened;
     SinglyLinkedList<MountPoint> Mounts;
 };

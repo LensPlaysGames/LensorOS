@@ -11,6 +11,7 @@
 #include <memory/physical_memory_manager.h>
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
+#include <virtual_filesystem.h>
 
 /* TODO:
  * |-- What to do about duplicate devices? count? unique id?
@@ -116,6 +117,9 @@ public:
     }
 
     CPUDescription& cpu() { return CPU; }
+    VFS& virtual_filesystem() { return VirtualFilesystem; }
+
+    SinglyLinkedList<Filesystem>& filesystems() { return Filesystems; }
 
     SinglyLinkedList<SystemDevice>& devices() { return Devices; }
     SystemDevice* device(u64 major, u64 minor) {
@@ -187,6 +191,7 @@ private:
     CPUDescription CPU;
     SinglyLinkedList<SystemDevice> Devices;
     SinglyLinkedList<Filesystem> Filesystems;
+    VFS VirtualFilesystem;
 };
 
 extern System* SYSTEM;
