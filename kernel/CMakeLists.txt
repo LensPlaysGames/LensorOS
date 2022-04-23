@@ -251,6 +251,7 @@ elseif( CMAKE_HOST_UNIX )
         VERBATIM
       )
     endif()
+  endif()
 endif()
 
 # Boot media generation: ISO-9660 CD-ROM.
