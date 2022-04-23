@@ -30,7 +30,6 @@ add_library(
 )
 target_compile_options(
   Interrupts PRIVATE
-  -O3
   -ffreestanding
   -fno-exceptions
   -mcmodel=kernel
@@ -51,9 +50,8 @@ add_library(
 )
 string( APPEND CMAKE_ASM_NASM_COMPILE_OBJECT " -f elf64" )
 
-
-set(
-  KERNEL_SOURCES
+add_executable(
+  Kernel
   src/acpi.cpp
   src/ahci.cpp
   src/basic_renderer.cpp
@@ -91,34 +89,31 @@ set(
   src/tss.cpp
   src/uart.cpp
 )
-
-add_executable( Kernel ${KERNEL_SOURCES} )
 set_target_properties( Kernel PROPERTIES OUTPUT_NAME kernel.elf )
-target_compile_definitions( Kernel PUBLIC ${MACHINE} ${ARCH} )
+target_compile_definitions( Kernel PRIVATE ${MACHINE} ${ARCH} )
 target_compile_options(
-  Kernel PUBLIC
+  Kernel PRIVATE
   -ffreestanding
   -fno-exceptions
   -fno-rtti
   -fshort-wchar
   -mcmodel=kernel
   -mno-red-zone
-  -O3
   -Wall
   -Wextra
   -Werror
 )
 target_link_options(
-  Kernel PUBLIC
+  Kernel PRIVATE
   -T ${CMAKE_CURRENT_LIST_DIR}/kernel.ld
   -static
   -Bsymbolic
   -nostdlib
   -z max-page-size=0x1000
 )
-target_include_directories( Kernel PUBLIC src/ )
-target_link_libraries( Kernel PUBLIC Interrupts )
-target_link_libraries( Kernel PUBLIC Assembly )
+target_include_directories( Kernel PRIVATE src/ )
+target_link_libraries( Kernel PRIVATE Interrupts )
+target_link_libraries( Kernel PRIVATE Assembly )
 
 # Ensure `kernel/bin` directory exists and copy `kernel/res` into it.
 add_custom_command(
@@ -267,6 +262,26 @@ else()
   )
 endif()
 
+# Boot media generation: GPT formatted disk image in VDI format.
+find_program( QEMU_IMG_PROGRAM qemu-img )
+if( QEMU_IMG_PROGRAM )
+  message(
+    VERBOSE
+    "Found qemu-img, creating target: image_vdi"
+  )
+  add_custom_target(
+    image_vdi
+    COMMAND ${QEMU_IMG_PROGRAM} convert -O vdi LensorOS.bin LensorOS.vdi
+    COMMENT "Generating VDI format of GUID Partion Table with EFI System partition containing boot media using `mkgpt`"
+    WORKING_DIRECTORY ${IMAGE_DIR}
+    USES_TERMINAL
+    VERBATIM
+  )
+  if( TARGET image_gpt )
+    add_dependencies( image_vdi image_gpt )
+  endif()
+endif()
+
 if( TARGET image_raw )
   if( TARGET image_gpt )
     add_dependencies( image_gpt image_raw )
@@ -278,12 +293,15 @@ endif()
 
 
 # Add a custom target to run QEMU with the proper flags
-# if QEMU for x86_64 is found in the PATH environment variable.
-find_program( QEMU_PROGRAM qemu-system-x86_64 )
+# if QEMU for ARCH is found in the PATH environment variable.
+find_program( QEMU_PROGRAM qemu-system-${ARCH} )
 if ( QEMU_PROGRAM )
   message(
     VERBOSE
-    "Found QEMU for x86_64, creating targets: runimg_qemu runhda_qemu runiso_qemu"
+    "Found QEMU for ${ARCH}, creating targets:\r\n"
+    "|-- runimg_qemu\r\n"
+    "|-- runhda_qemu\r\n"
+    "`-- runiso_qemu"
   )
   set(
     QEMU_FLAGS
@@ -332,13 +350,13 @@ if ( QEMU_PROGRAM )
   file(
     COPY_FILE
     "${REPO_DIR}/OVMFbin/OVMF_VARS-pure-efi.fd"
-    ${OVMF_VARS}
+    "${OVMF_VARS}"
   )
   add_custom_target(
     runimg_qemu
     COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
     -drive format=raw,file=${IMAGE_DIR}/LensorOS.img
-    COMMENT "Running QEMU for x86_64 from FAT32 `LensorOS.img`"
+    COMMENT "Running QEMU for ${ARCH} from FAT32 `LensorOS.img`"
     USES_TERMINAL
     WORKING_DIRECTORY ${REPO_DIR}
     VERBATIM
@@ -347,7 +365,7 @@ if ( QEMU_PROGRAM )
     runhda_qemu
     COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
     -drive format=raw,file=${IMAGE_DIR}/LensorOS.bin
-    COMMENT "Running QEMU for x86_64 from GPT `LensorOS.bin`"
+    COMMENT "Running QEMU for ${ARCH} from GPT `LensorOS.bin`"
     USES_TERMINAL
     WORKING_DIRECTORY ${REPO_DIR}
     VERBATIM
@@ -356,7 +374,7 @@ if ( QEMU_PROGRAM )
     runiso_qemu
     COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
     -drive format=raw,file=${IMAGE_DIR}/LensorOS.iso,media=cdrom
-    COMMENT "Running QEMU for x86_64 from ISO `LensorOS.iso`"
+    COMMENT "Running QEMU for ${ARCH} from ISO `LensorOS.iso`"
     USES_TERMINAL
     WORKING_DIRECTORY ${REPO_DIR}
     VERBATIM
