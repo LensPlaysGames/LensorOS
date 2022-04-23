@@ -472,7 +472,7 @@ void kstage1(BootInfo* bInfo) {
             if (dev.minor() == SYSDEV_MINOR_GPT_PARTITION) {
                 auto* partDriver = static_cast<GPTPartitionDriver*>(dev.data1());
                 if (partDriver) {
-                    dbgmsg("Partition:\r\n"
+                    dbgmsg("[kstage1]: GPT Partition:\r\n"
                            "  Type GUID: ");
                     print_guid(partDriver->type_guid());
                     dbgmsg("\r\n"
@@ -489,11 +489,16 @@ void kstage1(BootInfo* bInfo) {
             }
             else if (dev.minor() == SYSDEV_MINOR_AHCI_PORT) {
                 auto* portController = (AHCI::PortController*)dev.data1();
-                if (portController && FAT->test(portController)) {
-                    dbgmsg("  Found valid File Allocation Table filesystem\r\n");
-                    SYSTEM->add_fs(Filesystem(FilesystemType::FAT, FAT, portController));
-                    // Done searching AHCI port, found valid filesystem.
-                    dev.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
+                if (portController) {
+                    dbgmsg("[kstage1]: AHCI port %ull:\r\n"
+                           , portController->port_number());
+                    dbgmsg("  Checking for valid File Allocation Table filesystem\r\n");
+                    if (FAT->test(portController)) {
+                        dbgmsg("  Found valid File Allocation Table filesystem\r\n");
+                        SYSTEM->add_fs(Filesystem(FilesystemType::FAT, FAT, portController));
+                        // Done searching AHCI port, found valid filesystem.
+                        dev.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
+                    }
                 }
             }
         }

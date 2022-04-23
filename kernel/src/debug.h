@@ -16,10 +16,12 @@ void dbgmsg(u8* buffer, u64 byteCount
             , ShouldNewline nl = ShouldNewline::No);
 
 void dbgmsg_v(u8* fmt, va_list);
+
 /* Print a formatted string.
  * Supported formats:
  *  %s     -- null terminated C-style string
  *  %c     -- character (1-byte)
+ *  %b     -- boolean
  *
  *  %hhu   -- 8 bit unsigned integer
  *  %hu    -- 16 bit unsigned integer

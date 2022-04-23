@@ -109,6 +109,11 @@ void dbgmsg_v(const u8* fmt, va_list args) {
             case 'c':
                 dbgmsg(static_cast<char>(va_arg(args, int)));
                 break;
+            case 'b':
+                static const char* t = "True";
+                static const char* f = "False";
+                dbgmsg_s(static_cast<bool>(va_arg(args, int)) ? t : f);
+                break;
             default:
                 dbgmsg(static_cast<char>(*current));
                 break;
