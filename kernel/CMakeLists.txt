@@ -346,9 +346,9 @@ if ( QEMU_PROGRAM )
     -drive if=pflash,format=raw,unit=1,file=${OVMF_VARS}
   )
   file(
-    COPY
+    COPY_FILE
     "${REPO_DIR}/OVMFbin/OVMF_VARS-pure-efi.fd"
-    "${OVMF_VARS}"
+    ${OVMF_VARS}
   )
   add_custom_target(
     runimg_qemu
