@@ -94,6 +94,7 @@ public:
         }
         prev->Next = current->next();
         Length--;
+        delete current;
         return true;
     }
 
