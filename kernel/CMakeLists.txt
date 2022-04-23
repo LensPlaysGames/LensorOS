@@ -368,6 +368,30 @@ if ( QEMU_PROGRAM )
     "${REPO_DIR}/OVMFbin/OVMF_VARS-pure-efi.fd"
     "${OVMF_VARS}"
   )
+  set( FAT_BOOT_DIR "${IMAGE_DIR}/fat" )
+  add_custom_target(
+    run_qemu
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${FAT_BOOT_DIR}/EFI/BOOT"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${FAT_BOOT_DIR}/LensorOS"
+    COMMAND ${CMAKE_COMMAND} -E copy
+    "${REPO_DIR}/gnu-efi/x86_64/bootloader/main.efi" "${FAT_BOOT_DIR}/EFI/BOOT/"
+    COMMAND ${CMAKE_COMMAND} -E copy
+    "${SCRIPTS_DIR}/startup.nsh" "${FAT_BOOT_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy
+    "${IMAGE_DIR}/kernel.elf" "${FAT_BOOT_DIR}/LensorOS/"
+    COMMAND ${CMAKE_COMMAND} -E copy
+    "${IMAGE_DIR}/dfltfont.psf" "${FAT_BOOT_DIR}/LensorOS/"
+    COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
+    -hdb fat:floppy:rw:${IMAGE_DIR}/fat
+    COMMAND ${CMAKE_COMMAND} -E rm -R ${FAT_BOOT_DIR}
+    COMMENT "Running QEMU for ${ARCH} from FAT32 `LensorOS.img`"
+    USES_TERMINAL
+    WORKING_DIRECTORY ${REPO_DIR}
+    DEPENDS
+    ${REPO_DIR}/gnu-efi/x86_64/bootloader/main.efi
+    ${SCRIPTS_DIR}/startup.nsh
+    VERBATIM
+  )
   add_custom_target(
     runimg_qemu
     COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
@@ -396,6 +420,7 @@ if ( QEMU_PROGRAM )
     VERBATIM
   )
   # Dependencies
+  add_dependencies( run_qemu Kernel )
   if( TARGET image_raw )
     add_dependencies( runimg_qemu image_raw )
   endif()

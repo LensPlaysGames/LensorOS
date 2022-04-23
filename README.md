@@ -41,6 +41,7 @@ When the CMake build system is generated, it looks for QEMU on your system;
   Invoke them to launch QEMU from the corresponding LensorOS boot media.
 
 The targets:
+- `run_qemu`    -- Straight from directory that mimics LensorOS.img (fastest)
 - `runimg_qemu` -- LensorOS.img
 - `runhda_qemu` -- LensorOS.bin
 - `runiso_qemu` -- LensorOS.iso
