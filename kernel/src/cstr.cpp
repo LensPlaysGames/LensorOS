@@ -2,6 +2,17 @@
 
 const char to_hex_not_supported[] = "TYPE_NOT_SUPPORTED";
 
+u64 strlen(const char* a) {
+    u64 out = 0;
+    while (true) {
+        if (*a == '\0')
+            return out + 1;
+
+        ++a;
+        ++out;
+    }
+}
+
 bool strcmp(const char* a, const char* b, u64 length) {
     for (u64 i = 0; i < length; ++i) {
         if (*a != *b)

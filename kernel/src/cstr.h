@@ -3,9 +3,14 @@
 
 #include <integers.h>
 
+/* String Length
+ *   Returns the number of characters including null terminator.
+ */
+u64 strlen(const char* a);
+
 /* String Compare
- *   Returns `true` only if all characters within 
- *     both strings up to length are exactly equal.
+ *   Returns `true` only if all characters within
+ *   both strings up to length are exactly equal.
  */
 bool strcmp(const char* a, const char* b, u64 length);
 
