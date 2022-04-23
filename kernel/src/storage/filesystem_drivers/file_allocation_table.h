@@ -62,9 +62,9 @@ public:
       if (buffer.get() == nullptr)
           return -1ull;
 
-      bool out { false };
       driver->read(0, 512, buffer.get());
       auto* br = reinterpret_cast<BootRecord*>(buffer.get());
+      (void)br;
 
       /* TODO: Next, we probably need to iterate clusters starting at root
        *       , saving subdirectories, checking for file with name of path.
