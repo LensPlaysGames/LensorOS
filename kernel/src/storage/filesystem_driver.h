@@ -10,6 +10,9 @@ public:
     /// If the storage device contains a valid filesystem, `test()` will
     /// return `true`; if a valid filesystem isn't found, `false` is returned.
     virtual bool test(StorageDeviceDriver* driver) = 0;
+    /// Get the byte offset for the file at path, if it exists.
+    virtual u64 byte_offset(StorageDeviceDriver* driver
+                            , const char* path) = 0;
     /// Read from the file at `path` a given
     /// number of bytes `numBytes` into `buffer`.
     virtual void read(StorageDeviceDriver* driver

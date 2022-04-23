@@ -53,6 +53,27 @@ public:
         return out;
     }
 
+    u64 byte_offset(StorageDeviceDriver* driver
+                    , const char* path) final
+    {
+      (void)path;
+
+      auto buffer = SmartPtr<u8[]>(new u8[512], 512);
+      if (buffer.get() == nullptr)
+          return -1ull;
+
+      bool out { false };
+      driver->read(0, 512, buffer.get());
+      auto* br = reinterpret_cast<BootRecord*>(buffer.get());
+
+      /* TODO: Next, we probably need to iterate files, saving
+       *       subdirectories, checking for file with name of path.
+       *       If not found in root, start checking subdirectories, etc.
+       */
+
+      return -1ull;
+    }
+
     void read(StorageDeviceDriver* driver
               , const char* path
               , void* buffer, u64 numBytes) final
@@ -62,6 +83,7 @@ public:
         (void)buffer;
         (void)numBytes;
     }
+
     void write(StorageDeviceDriver* driver
                , const char* path
                , void* buffer, u64 numBytes) final
