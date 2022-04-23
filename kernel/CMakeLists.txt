@@ -179,6 +179,10 @@ if( DD_PROGRAM AND MTOOLS_PROGRAM )
   )
   # Image generation relies on kernel.elf
   add_dependencies( image_raw Kernel )
+else()
+  message(
+    "-- dd and mtools not found on system, skipping image_raw target generation"
+  )
 endif()
 
 # Boot media generation: GPT partitioned hard drive.
@@ -229,8 +233,16 @@ elseif( CMAKE_HOST_UNIX )
         USES_TERMINAL
         VERBATIM
       )
+    else()
+      message(
+        "-- Neither createGPT, fdisk, or mkgpt found on system, skipping image_gpt target generation"
+      )
     endif()
   endif()
+else()
+  message(
+    "-- createGPT not found on system, skipping image_gpt target generation"
+  )
 endif()
 
 # Boot media generation: ISO-9660 CD-ROM.
@@ -280,6 +292,10 @@ if( QEMU_IMG_PROGRAM )
   if( TARGET image_gpt )
     add_dependencies( image_vdi image_gpt )
   endif()
+else()
+  message(
+    "-- qemu-img not found on system, skipping image_vdi target generation"
+  )
 endif()
 
 if( TARGET image_raw )
@@ -389,4 +405,8 @@ if ( QEMU_PROGRAM )
   if( TARGET image_iso )
     add_dependencies( runiso_qemu image_iso )
   endif()
+else()
+  message(
+    "-- QEMU for ${ARCH} not found on your system, skipping run[img|gpt|iso]_qemu target generation."
+  )
 endif()
