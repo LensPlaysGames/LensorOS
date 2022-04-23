@@ -1,8 +1,9 @@
 #ifndef LENSOR_OS_FILESYSTEM_H
 #define LENSOR_OS_FILESYSTEM_H
 
-#include "storage/filesystem_driver.h"
-#include "storage/storage_device_driver.h"
+#include <debug.h>
+#include <storage/filesystem_driver.h>
+#include <storage/storage_device_driver.h>
 
 enum class FilesystemType {
     INVALID = 0,
@@ -44,15 +45,13 @@ public:
     };
 
     void print() {
-        UART::out("Filesystem: ");
-        UART::out(type2name(Type));
-        UART::out("\r\n"
-                  "  Filesystem Driver Address: 0x");
-        UART::out(to_hexstring(FSDriver));
-        UART::out("\r\n"
-                  "  Storage Device Driver Address: 0x");
-        UART::out(to_hexstring(DevDriver));
-        UART::out("\r\n");
+        dbgmsg("Filesystem: %s\r\n"
+               "  Filesystem Driver Address: %x\r\n"
+               "  Storage Device Driver Address: %x\r\n"
+               , type2name(Type)
+               , FSDriver
+               , DevDriver
+               );
     }
 
 private:
