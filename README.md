@@ -205,8 +205,8 @@ Here is a list of the current build targets relating to boot media
   generation, as well as their dependencies listed underneath each.
 - `image_raw` --
   Combine built executables and resources to generate UEFI-compatible FAT32 boot media.
-  - `Kernel` build target (creates `kernel/bin/kernel.elf`).
   - The built bootloader EFI application at `gnu-efi/x86_64/bootloader/main.efi`.
+  - `Kernel` build target (relies on `kernel/bin/kernel.elf`).
   - dd -- Native command on Unix
     - On Windows, use one of the following options:
       - [MinGW installer to get MSYS coreutils ext package](https://osdn.net/projects/mingw/)
@@ -236,6 +236,10 @@ Here is a list of the current build targets relating to boot media
     - [Home Page](https://www.gnu.org/software/xorriso/)
     - Debian distros: `sudo apt install xorriso`
     - [Pre-built binaries for Windows](https://github.com/PeyTy/xorriso-exe-for-windows)
+- `image_vdi` --
+  Convert GPT-partitioned raw disk image into Virtual Disk Image format (`.vdi`).
+  - `image_gpt`
+  - [qemu-img](https://www.qemu.org/download/)
 
 As an example, a FAT32 formatted UEFI-compatible boot
   image may be generated using the following command:
