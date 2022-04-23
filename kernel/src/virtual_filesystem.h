@@ -75,6 +75,24 @@ public:
         return out;
     }
 
+    bool read(FileDescriptor fd, u8* buffer, u64 byteCount) {
+        if (fd >= Opened.length())
+            return false;
+
+        OpenFileDescription& file = Opened[fd];
+        file.Driver->read(file.ByteOffset, byteCount, buffer);
+        return true;
+    }
+
+    bool write(FileDescriptor fd, u8* buffer, u64 byteCount, u64 byteOffset) {
+        if (fd >= Opened.length())
+            return false;
+
+        OpenFileDescription& file = Opened[fd];
+        file.Driver->write(byteOffset, byteCount, buffer);
+        return true;
+    }
+
     bool close(FileDescriptor fd) {
         if (fd >= Opened.length())
             return false;
