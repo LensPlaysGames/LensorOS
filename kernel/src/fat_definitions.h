@@ -121,6 +121,77 @@ struct ClusterEntry {
         result |= (u32)ClusterNumberH << 16;
         return result;
     }
+
+    bool long_file_name() {
+        return Attributes & 0b1111;
+    }
+    bool read_only() {
+        return Attributes & 0b1;
+    }
+    bool hidden() {
+        return Attributes & 0b10;
+    }
+    bool system() {
+        return Attributes & 0b100;
+    }
+    bool volume_id() {
+        return Attributes & 0b1000;
+    }
+    bool directory() {
+        return Attributes & 0b10000;
+    }
+    bool archive() {
+        return Attributes & 0b100000;
+    }
+
+    u8 ctime_second() {
+        return (CTime >> 11) & 0b11111;
+    }
+    u8 ctime_minute() {
+        return (CTime >> 5) & 0b111111;
+    }
+    u8 ctime_hour() {
+        return CTime & 0b11111;
+    }
+    u8 cdate_day() {
+        return (CDate >> 11) & 0b11111;
+    }
+    u8 cdate_month() {
+        return (CDate >> 7) & 0b1111;
+    }
+    u8 cdate_year() {
+        return CDate & 0b1111111;
+    }
+
+    u8 adate_day() {
+        return (ADate >> 11) & 0b11111;
+    }
+    u8 adate_month() {
+        return (ADate >> 7) & 0b1111;
+    }
+    u8 adate_year() {
+        return ADate & 0b1111111;
+    }
+
+    u8 mtime_second() {
+        return (MTime >> 11) & 0b11111;
+    }
+    u8 mtime_minute() {
+        return (MTime >> 5) & 0b111111;
+    }
+    u8 mtime_hour() {
+        return MTime & 0b11111;
+    }
+    u8 mdate_day() {
+        return (MDate >> 11) & 0b11111;
+    }
+    u8 mdate_month() {
+        return (MDate >> 7) & 0b1111;
+    }
+    u8 mdate_year() {
+        return MDate & 0b1111111;
+    }
+
 } __attribute__((packed));
 
 /// Long File Name Cluster Entry
