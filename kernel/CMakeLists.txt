@@ -154,52 +154,36 @@ cmake_path(
   IMAGE_DIR
 )
 
-# Boot media generation targets
+# Boot media generation: raw FAT32 image.
 find_program( DD_PROGRAM dd )
 find_program( MTOOLS_PROGRAM mtools )
-if( CMAKE_HOST_UNIX )
-  find_program( BASH_PROGRAM bash )
-  # Boot media generation: raw FAT32 image.
-  if( BASH_PROGRAM AND DD_PROGRAM AND MTOOLS_PROGRAM )
-    message(
-      VERBOSE
-      "Found bash, dd, and mtools, creating target: image_raw"
-    )
-    add_custom_target(
-      image_raw
-      COMMAND ${BASH_PROGRAM} mkimg.sh
-      WORKING_DIRECTORY ${SCRIPTS_DIR}
-      DEPENDS
-      ${REPO_DIR}/gnu-efi/x86_64/bootloader/main.efi
-      ${SCRIPTS_DIR}/startup.nsh
-      COMMENT "Generating UEFI-compatible FAT32 boot media"
-      USES_TERMINAL
-      VERBATIM
-    )
-    add_dependencies( image_raw Kernel )
-  endif()
-endif()
-
-if( CMAKE_HOST_WIN32 )
-  # Boot media generation: raw FAT32 image.
-  if( DD_PROGRAM AND MTOOLS_PROGRAM )
-    message(
-      VERBOSE
-      "Found dd and mtools, creating target: image_raw"
-    )
-    add_custom_target(
-      image_raw
-      COMMAND cmd /c ${SCRIPTS_DIR}/mkimg.bat
-      COMMENT "Generating UEFI-compatible FAT32 boot media"
-      DEPENDS
-      ${REPO_DIR}/gnu-efi/x86_64/bootloader/main.efi
-      ${SCRIPTS_DIR}/startup.nsh
-      USES_TERMINAL
-      VERBATIM
-    )
-    # Image generation relies on kernel.elf
-    add_dependencies( image_raw Kernel )
-  endif()
+if( DD_PROGRAM AND MTOOLS_PROGRAM )
+  message(
+    VERBOSE
+    "Found dd and mtools, creating target: image_raw"
+  )
+  add_custom_target(
+    image_raw
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${IMAGE_DIR}
+    COMMAND ${DD_PROGRAM} if=/dev/zero of=${IMAGE_DIR}/LensorOS.img count=93750
+    COMMAND mformat -i ${IMAGE_DIR}/LensorOS.img -F -v "EFI System" ::
+    COMMAND mmd -i ${IMAGE_DIR}/LensorOS.img ::/EFI
+    COMMAND mmd -i ${IMAGE_DIR}/LensorOS.img ::/EFI/BOOT
+    COMMAND mmd -i ${IMAGE_DIR}/LensorOS.img ::/LensorOS
+    COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img
+    ${REPO_DIR}/gnu-efi/x86_64/bootloader/main.efi ::/EFI/BOOT
+    COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${SCRIPTS_DIR}/startup.nsh ::
+    COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${IMAGE_DIR}/kernel.elf ::/LensorOS
+    COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${IMAGE_DIR}/dfltfont.psf ::/LensorOS
+    COMMENT "Generating UEFI-compatible FAT32 boot media"
+    DEPENDS
+    ${REPO_DIR}/gnu-efi/x86_64/bootloader/main.efi
+    ${SCRIPTS_DIR}/startup.nsh
+    USES_TERMINAL
+    VERBATIM
+  )
+  # Image generation relies on kernel.elf
+  add_dependencies( image_raw Kernel )
 endif()
 
 # Boot media generation: GPT partitioned hard drive.
