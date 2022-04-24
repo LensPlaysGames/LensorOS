@@ -30,6 +30,13 @@ public:
         memcpy((void*)cstr, Buffer, Length+1);
     }
 
+    String(const char* cstr, u64 byteCount) {
+        Length = byteCount;
+        Buffer = new u8[Length+1];
+        memcpy((void*)cstr, Buffer, Length);
+        Buffer[Length] = '\0';
+    }
+
     ~String() {
         delete[] Buffer;
     }
