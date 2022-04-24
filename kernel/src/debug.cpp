@@ -3,8 +3,82 @@
 #include <basic_renderer.h>
 #include <cstr.h>
 #include <integers.h>
+#include <string.h>
 #include <uart.h>
 #include <va_list.h>
+
+void dbgmsg_s(const char* str) {
+    UART::out(str);
+}
+
+void dbgmsg(char character, ShouldNewline nl) {
+    UART::outc(character);
+    if (nl == ShouldNewline::Yes)
+        UART::out("\r\n");
+}
+
+void dbgmsg(u8* buffer, u64 byteCount, ShouldNewline nl) {
+    UART::out(buffer, byteCount);
+    if (nl == ShouldNewline::Yes)
+        UART::out("\r\n");
+}
+
+void dbgmsg(const String& str, ShouldNewline nl) {
+    dbgmsg(str.bytes(), str.length());
+    if (nl == ShouldNewline::Yes)
+        dbgmsg_s("\r\n");
+}
+
+void dbgmsg(double number, ShouldNewline nl) {
+    UART::out(to_string(number));
+    if (nl == ShouldNewline::Yes)
+        UART::out("\r\n");
+}
+
+void dbgmsg(s64 number, ShouldNewline nl) {
+    UART::out(to_string(number));
+    if (nl == ShouldNewline::Yes)
+        UART::out("\r\n");
+}
+
+void dbgmsg(s32 number, ShouldNewline nl) {
+    UART::out(to_string(number));
+    if (nl == ShouldNewline::Yes)
+        UART::out("\r\n");
+}
+
+void dbgmsg(s16 number, ShouldNewline nl) {
+    UART::out(to_string(number));
+    if (nl == ShouldNewline::Yes)
+        UART::out("\r\n");
+}
+
+void dbgmsg(s8 number, ShouldNewline nl) {
+    UART::out(to_string(number));
+    if (nl == ShouldNewline::Yes)
+        UART::out("\r\n");
+}
+
+void dbgmsg(u64 number, ShouldNewline nl) {
+    UART::out(to_string(number));
+    if (nl == ShouldNewline::Yes)
+        UART::out("\r\n");
+}
+void dbgmsg(u32 number, ShouldNewline nl) {
+    UART::out(to_string(number));
+    if (nl == ShouldNewline::Yes)
+        UART::out("\r\n");
+}
+void dbgmsg(u16 number, ShouldNewline nl) {
+    UART::out(to_string(number));
+    if (nl == ShouldNewline::Yes)
+        UART::out("\r\n");
+}
+void dbgmsg(u8 number, ShouldNewline nl) {
+    UART::out(to_string(number));
+    if (nl == ShouldNewline::Yes)
+        UART::out("\r\n");
+}
 
 void dbgmsg_v(const u8* fmt, va_list args) {
     const u8* current = fmt;
@@ -123,76 +197,9 @@ void dbgmsg_v(const u8* fmt, va_list args) {
     }
 }
 
-void dbgmsg_s(const char* str) {
-    UART::out(str);
-}
-
 void dbgmsg(const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
     dbgmsg_v(reinterpret_cast<const u8*>(fmt), args);
     va_end(args);
-}
-
-void dbgmsg(char character, ShouldNewline nl) {
-    UART::outc(character);
-    if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
-}
-
-void dbgmsg(u8* buffer, u64 byteCount, ShouldNewline nl) {
-    UART::out(buffer, byteCount);
-    if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
-}
-
-void dbgmsg(double number, ShouldNewline nl) {
-    UART::out(to_string(number));
-    if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
-}
-
-void dbgmsg(s64 number, ShouldNewline nl) {
-    UART::out(to_string(number));
-    if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
-}
-
-void dbgmsg(s32 number, ShouldNewline nl) {
-    UART::out(to_string(number));
-    if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
-}
-
-void dbgmsg(s16 number, ShouldNewline nl) {
-    UART::out(to_string(number));
-    if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
-}
-
-void dbgmsg(s8 number, ShouldNewline nl) {
-    UART::out(to_string(number));
-    if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
-}
-
-void dbgmsg(u64 number, ShouldNewline nl) {
-    UART::out(to_string(number));
-    if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
-}
-void dbgmsg(u32 number, ShouldNewline nl) {
-    UART::out(to_string(number));
-    if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
-}
-void dbgmsg(u16 number, ShouldNewline nl) {
-    UART::out(to_string(number));
-    if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
-}
-void dbgmsg(u8 number, ShouldNewline nl) {
-    UART::out(to_string(number));
-    if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
 }
