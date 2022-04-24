@@ -6,6 +6,7 @@
 #include <file.h>
 #include <filesystem.h>
 #include <linked_list.h>
+#include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
 
 // WHAT GOES HERE?
@@ -61,12 +62,15 @@ public:
 
         Mounts.for_each([this, &out, path, pathLength](auto* it){
             MountPoint& mount = it->value();
+            StorageDeviceDriver* dev = mount.FS->storage_device_driver();
+            FilesystemDriver* fileDriver = mount.FS->filesystem_driver();
             u64 mountPathLength = strlen(mount.Path);
             if (mountPathLength <= pathLength) {
                 if (strcmp(path, mount.Path, mountPathLength)) {
-                    // TODO: Get byte offset at path[mountPathLength] from filesystem driver.
+                    // TODO: Chop string into new string starting at path[mountPathLength]
                     out = Opened.length();
-                    Opened.add_end(OpenFileDescription(mount.FS->storage_device_driver(), 0));
+                    OpenFileDescription openedFile(dev, fileDriver->byte_offset(dev, path));
+                    Opened.add_end(openedFile);
                 }
             }
         });
