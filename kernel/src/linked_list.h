@@ -110,9 +110,13 @@ public:
         return true;
     }
 
-    u64 length() { return Length; }
+    u64 length() const { return Length; }
+
     Node* head() { return Head; }
+    const Node* head() const { return Head; }
+
     Node* tail() { return Tail; }
+    const Node* tail() const { return Tail; }
 
     DataType& operator [] (u64 index) {
         return at(index);
