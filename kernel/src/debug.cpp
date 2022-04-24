@@ -91,8 +91,15 @@ void dbgmsg_v(const u8* fmt, va_list args) {
                 dbgmsg(static_cast<char>('%'));
                 return;
             case 's':
-                // Found %s -- string
-                dbgmsg(va_arg(args, const char*));
+                // %s
+                current++;
+                if (*current != 'l') {
+                    // Found %s -- string
+                    dbgmsg(va_arg(args, const char*));
+                    current--;
+                    break;
+                }
+                dbgmsg(*(va_arg(args, const String*)));
                 break;
             case 'h':
                 // %h

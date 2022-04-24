@@ -49,6 +49,7 @@ void dbgmsg(u8, ShouldNewline nl = ShouldNewline::No);
  *
  *  %x,%p  -- 16 digit 64 bit unsigned integer (hexadecimal)
  *
+ *  %sl    -- LensorOS Dynamic String from <string.h>
  */
 void dbgmsg(const char* fmt, ...);
 
