@@ -17,6 +17,7 @@ Regarding PowerShell `.ps1` scripts:
 - Boot Media Generation
   - Bash
     - [sysroot.sh](#bootmediagen-sysroot-sh)
+    - [mkbootdir.sh](#bootmediagen-mkbootdir-sh)
     - [install_mkgpt.sh](#bootmediagen-installmkgpt-sh)
     - [mkgpt.sh](#bootmediagen-mkgpt-sh)
     - [mkgpt_fdisk.sh](#bootmediagen-mkgptfdisk-sh)
@@ -80,6 +81,21 @@ Generate a system root for LensorOS and the LensorOS
 Invocation:
 ```bash
 bash sysroot.sh
+```
+
+No Dependencies.
+
+---
+
+### `mkbootdir.sh` <a name="bootmediagen-mkbootdir-sh"></a>
+Create a bootable directory structure in the `boot` subdirectory.
+
+This boot directory could be flashed onto a physical USB storage media stick
+  and (theoretically) booted from like a floppy disk on any UEFI compatible machine.
+
+Invocation:
+```bash
+bash mkbootdir.sh
 ```
 
 No Dependencies.
