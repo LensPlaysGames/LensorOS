@@ -9,9 +9,12 @@
 #include <keyboard.h>
 #include <kstage1.h>
 #include <memory/common.h>
+#include <memory/heap.h>
+#include <memory/virtual_memory_manager.h>
 #include <memory/physical_memory_manager.h>
 #include <pit.h>
 #include <rtc.h>
+#include <string.h>
 #include <tss.h>
 #include <uart.h>
 
@@ -93,11 +96,12 @@ extern "C" void kmain(BootInfo* bInfo) {
 
     // FIXME FIXME FIXME
     // NULL DE-REFERENCE TESTING
-    //dbgmsg("Going to null de-reference\r\n");
-    //u8* badPtr = nullptr;
-    //u8 dereferenced = *badPtr;
-    //(void)dereferenced;
-    //dbgmsg("Null de-referenced!\r\n");
+    u8* badPtr = nullptr;
+    dbgmsg("%hhu\r\n", *badPtr);
+
+    // TODO: String concatenation ( + and << operator )
+    //       dbgmsg(const String& str)
+    //       Comparison Operators ( ==, !=, etc )
 
     // I'm lovin' it :^) (Plays Maccy's theme).
     constexpr double MACCYS_BPM = 125;

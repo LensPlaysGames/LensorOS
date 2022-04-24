@@ -62,13 +62,13 @@ public:
         return *this;
     }
 
-    // Concatenation
     String& operator + (const String& other) {
         if (this == &other)
             return *this;
 
         // FIXME: This code would fail with multiple threads.
         //        delete, switch context, access deleted buffer, etc...
+        //        Need atomic exchange.
         u64 oldLength = Length;
         Length += other.Length;
         u8* temporaryBuffer = new u8[oldLength];
@@ -85,7 +85,6 @@ public:
         return *this;
     }
 
-    // Array subscript
     u8 operator [] (u64 index) {
         if (index >= Length)
             return Buffer[Length-1];

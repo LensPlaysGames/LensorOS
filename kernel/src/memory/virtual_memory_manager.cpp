@@ -123,6 +123,9 @@ namespace Memory {
         for (u64 t = kPhysicalStart; t < kPhysicalStart + kernelBytesNeeded + PAGE_SIZE; t+=PAGE_SIZE)
             map(pageMap, (void*)(t + (u64)&KERNEL_VIRTUAL), (void*)t);
 
+        // Make null-dereference generate exception.
+        unmap(nullptr);
+
         flush_page_map(pageMap);
     }
 
