@@ -27,7 +27,9 @@ public:
     }
 
     u64 length() { return Length; }
-    u8* bytes() { return Buffer; }
+    u64 length() const { return Length; }
+
+    u8* bytes() const { return Buffer; }
 
     // Copy assignment
     String& operator = (const String& other) {
