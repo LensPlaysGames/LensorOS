@@ -10,21 +10,24 @@ constexpr u64 STRING_INITIAL_LENGTH = 10;
 
 class String {
 public:
+    // Default constructor
     String() : Length(STRING_INITIAL_LENGTH) {
-        Buffer = new u8[Length];
+        Buffer = new u8[Length+1];
         memset(Buffer, 0, Length);
     }
 
-    String(const char* cstr) {
-        Length = strlen(cstr) - 1;
-        Buffer = new u8[Length];
-        memcpy((void*)cstr, Buffer, Length);
-    }
-
+    // Copy constructor
     String(const String& original) {
         Length = original.length();
-        Buffer = new u8[Length];
+        Buffer = new u8[Length+1];
+        Buffer[Length] = '\0';
         memcpy(original.bytes(), Buffer, Length);
+    }
+
+    String(const char* cstr) {
+        Length = strlen(cstr)-1;
+        Buffer = new u8[Length+1];
+        memcpy((void*)cstr, Buffer, Length+1);
     }
 
     ~String() {
@@ -36,14 +39,24 @@ public:
 
     u8* bytes() const { return Buffer; }
 
+    const char* data() const { return (const char*)Buffer; }
+
+    const char* data_copy() const {
+        u8* copy = new u8[Length+1];
+        copy[Length] = '\0';
+        memcpy(Buffer, copy, Length);
+        return (const char*)copy;
+    }
+
     // Copy assignment
     String& operator = (const String& other) {
         if (this == &other)
             return *this;
 
-        delete[] Buffer;
-        Buffer = new u8[other.Length];
         Length = other.Length;
+        delete[] Buffer;
+        Buffer = new u8[Length+1];
+        Buffer[Length] = '\0';
         memcpy(other.Buffer, Buffer, Length);
         return *this;
     }
@@ -54,7 +67,7 @@ public:
             return *this;
 
         delete[] Buffer;
-        // FIXME: Need atomic exchange here?
+        // FIXME: Need atomic exchange here...
         Buffer = other.Buffer;
         other.Buffer = nullptr;
         Length = other.Length;
@@ -66,7 +79,7 @@ public:
         if (this == &other)
             return *this;
 
-        // FIXME: This code would fail with multiple threads.
+        // FIXME: This code could fail with multiple threads.
         //        delete, switch context, access deleted buffer, etc...
         //        Need atomic exchange.
         u64 oldLength = Length;
@@ -74,7 +87,8 @@ public:
         u8* temporaryBuffer = new u8[oldLength];
         memcpy(Buffer, temporaryBuffer, oldLength);
         delete[] Buffer;
-        Buffer = new u8[Length];
+        Buffer = new u8[Length+1];
+        Buffer[Length] = '\0';
         memcpy(temporaryBuffer, Buffer, oldLength);
         memcpy(other.Buffer, &Buffer[oldLength], other.Length);
         return *this;
