@@ -10,19 +10,10 @@ public:
     /// If the storage device contains a valid filesystem, `test()` will
     /// return `true`; if a valid filesystem isn't found, `false` is returned.
     virtual bool test(StorageDeviceDriver* driver) = 0;
+
     /// Get the byte offset for the file at path, if it exists.
     virtual u64 byte_offset(StorageDeviceDriver* driver
                             , const char* path) = 0;
-    /// Read from the file at `path` a given
-    /// number of bytes `numBytes` into `buffer`.
-    virtual void read(StorageDeviceDriver* driver
-                      , const char* path
-                      , void* buffer, u64 numBytes) = 0;
-    /// Write to the file at `path` a given
-    /// number of bytes `numBytes` from `buffer`.
-    virtual void write(StorageDeviceDriver* driver
-                       , const char* path
-                       , void* buffer, u64 numBytes) = 0;
 };
 
 #endif /* LENSOR_OS_FILESYSTEM_DRIVER_H */

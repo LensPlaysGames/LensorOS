@@ -36,14 +36,6 @@ public:
     FilesystemDriver* filesystem_driver() { return FSDriver; }
     StorageDeviceDriver* storage_device_driver() { return DevDriver; }
 
-    void read(const char* path, void* buffer, u64 numBytes) {
-        FSDriver->read(DevDriver, path, buffer, numBytes);
-    };
-
-    void write(const char* path, void* buffer, u64 numBytes) {
-        FSDriver->write(DevDriver, path, buffer, numBytes);
-    };
-
     void print() {
         dbgmsg("Filesystem: %s\r\n"
                "  Filesystem Driver Address: %x\r\n"
