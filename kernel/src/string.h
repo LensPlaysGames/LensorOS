@@ -41,10 +41,12 @@ public:
 
     const char* data() const { return (const char*)Buffer; }
 
+    /// Make a copy of the current contents of the string on the heap.
+    /// NOTE: Free responsiblity is transferred to the caller upon returning.
     const char* data_copy() const {
         u8* copy = new u8[Length+1];
-        copy[Length] = '\0';
         memcpy(Buffer, copy, Length);
+        copy[Length] = '\0';
         return (const char*)copy;
     }
 

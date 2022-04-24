@@ -458,12 +458,13 @@ void kstage1(BootInfo* bInfo) {
         }
     });
 
+    // Prepare filesystem drivers.
+    auto* FAT = new FileAllocationTableDriver;
+
     /* Detect filesystems
      * For every storage device we know how to read/write from,
      * check if a recognized filesystem resides on it.
      */
-    // Prepare filesystem drivers.
-    auto* FAT = new FileAllocationTableDriver;
     SYSTEM->devices().for_each([FAT](auto* it) {
         SystemDevice& dev = it->value();
         if (dev.major() == SYSDEV_MAJOR_STORAGE

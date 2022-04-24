@@ -85,6 +85,7 @@ add_executable(
   src/rtc.cpp
   src/scheduler.cpp
   src/spinlock.cpp
+  src/storage/filesystem_drivers/file_allocation_table.cpp
   src/system.cpp
   src/tss.cpp
   src/uart.cpp
