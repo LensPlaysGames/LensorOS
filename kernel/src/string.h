@@ -10,8 +10,7 @@ constexpr u64 STRING_INITIAL_LENGTH = 10;
 
 class String {
 public:
-    String() {
-        Length = STRING_INITIAL_LENGTH;
+    String() : Length(STRING_INITIAL_LENGTH) {
         Buffer = new u8[Length];
         memset(Buffer, 0, Length);
     }
@@ -20,6 +19,12 @@ public:
         Length = strlen(cstr) - 1;
         Buffer = new u8[Length];
         memcpy((void*)cstr, Buffer, Length);
+    }
+
+    String(const String& original) {
+        Length = original.length();
+        Buffer = new u8[Length];
+        memcpy(original.bytes(), Buffer, Length);
     }
 
     ~String() {
@@ -57,27 +62,56 @@ public:
         return *this;
     }
 
-    // Copy and swap assignment
-    String& operator = (String other) noexcept {
-        u8* buffer = Buffer;
-        Buffer = other.Buffer;
-        other.Buffer = buffer;
-        u64 length = Length;
-        Length = other.Length;
-        other.Length = length;
-        // Rely on other.~String to clean up.
+    // Concatenation
+    String& operator + (const String& other) {
+        if (this == &other)
+            return *this;
+
+        // FIXME: This code would fail with multiple threads.
+        //        delete, switch context, access deleted buffer, etc...
+        u64 oldLength = Length;
+        Length += other.Length;
+        u8* temporaryBuffer = new u8[oldLength];
+        memcpy(Buffer, temporaryBuffer, oldLength);
+        delete[] Buffer;
+        Buffer = new u8[Length];
+        memcpy(temporaryBuffer, Buffer, oldLength);
+        memcpy(other.Buffer, &Buffer[oldLength], other.Length);
         return *this;
     }
 
+    String& operator += (const String& rhs) {
+        this->operator+(rhs);
+        return *this;
+    }
+
+    // Array subscript
+    u8 operator [] (u64 index) {
+        if (index >= Length)
+            return Buffer[Length-1];
+
+        return Buffer[index];
+    }
+
 private:
-    u8* Buffer;
-    u64 Length;
+    u8* Buffer { nullptr };
+    u64 Length { 0 };
 };
 
-inline String& operator << (String& str, const u8& obj) {
-    (void)str;
-    (void)obj;
-    return str;
+inline String& operator << (String& lhs, const String& rhs) {
+    lhs += rhs;
+    return lhs;
+}
+
+inline bool operator == (const String& lhs, const String& rhs) {
+    if (lhs.length() != rhs.length())
+        return false;
+
+    return !memcmp(lhs.bytes(), rhs.bytes(), lhs.length());
+}
+
+inline bool operator != (const String& lhs, const String& rhs) {
+    return !(lhs == rhs);
 }
 
 #endif /* LENSOR_OS_STRING_H */
