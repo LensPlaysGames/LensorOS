@@ -429,7 +429,6 @@ void kstage1(BootInfo* bInfo) {
                            , part->StartLBA
                            , part->size_in_sectors()
                            , part->Attributes);
-                    // TODO: Delete partition driver if it isn't searchable.
                     auto* partDriver = new GPTPartitionDriver(driver, part->TypeGUID
                                                               , part->UniqueGUID
                                                               , part->StartLBA, 512);
@@ -446,7 +445,9 @@ void kstage1(BootInfo* bInfo) {
 
                         knownGUID++;
                     }
-                    SYSTEM->add_device(gptPartition);
+                    if (gptPartition.flag(SYSDEV_MAJOR_STORAGE_SEARCH))
+                        SYSTEM->add_device(gptPartition);
+                    else delete partDriver;
                 }
                 /* Don't search port any further, we figured
                  * out it's storage media that is GPT partitioned
