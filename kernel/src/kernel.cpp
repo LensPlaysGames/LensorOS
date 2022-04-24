@@ -94,15 +94,6 @@ extern "C" void kmain(BootInfo* bInfo) {
     // USERLAND SWITCH TESTING
     // jump_to_userland_function((void*)test_userland_function);
 
-    // FIXME FIXME FIXME
-    // NULL DE-REFERENCE TESTING
-    u8* badPtr = nullptr;
-    dbgmsg("%hhu\r\n", *badPtr);
-
-    // TODO: String concatenation ( + and << operator )
-    //       dbgmsg(const String& str)
-    //       Comparison Operators ( ==, !=, etc )
-
     // I'm lovin' it :^) (Plays Maccy's theme).
     constexpr double MACCYS_BPM = 125;
     constexpr double MACCYS_STEP_LENGTH_SECONDS = (60 / MACCYS_BPM) / 4;
