@@ -89,22 +89,29 @@ public:
             return false;
 
         if (index == 0) {
+            Node* old = Head;
             Head = Head->next();
+            Length--;
+            delete old;
             return true;
         }
 
         Node* prev = Head;
         Node* current = Head;
+        Node* next = Head->next();
         u64 i = 1;
         while (current) {
             current = current->next();
-            if (i == index)
-                break;
+            if (current)
+                next = current->next();
 
+            if (i >= index)
+                break;
+            
             prev = current;
             i++;
         }
-        prev->Next = current->next();
+        prev->Next = next;
         Length--;
         delete current;
         return true;

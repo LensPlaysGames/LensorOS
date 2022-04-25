@@ -32,12 +32,11 @@ namespace Scheduler {
         StartupProcess.CR3 = Memory::active_page_map();
         // Create the process queue and add the startup process to it.
         ProcessQueue = new SinglyLinkedList<Process*>;
-        add_process(&StartupProcess);
-        CurrentProcess = ProcessQueue->head();
-        // Confidence checks.
         if (ProcessQueue == nullptr || ProcessQueue->head() == nullptr)
             return false;
 
+        add_process(&StartupProcess);
+        CurrentProcess = ProcessQueue->head();
         // Install IRQ0 handler found in `scheduler.asm` (over-write default system timer handler).
         gIDT.install_handler((u64)irq0_handler, PIC_IRQ0);
         return true;
