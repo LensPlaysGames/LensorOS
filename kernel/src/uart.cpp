@@ -144,17 +144,17 @@ namespace UART {
         // Set current character to beginning of string.
         char* c = (char*)str;
         // Check for null-terminator at current character.
-        while (*c != 0) {
+        while (*c != '\0') {
 #ifdef LENSOR_OS_UART_HIDE_COLOR_CODES
             if (*c == '\033') {
                 // Loop until null terminator or 'm'.
-                do { c++; } while (*c != 'm' && *c != 0);
+                do { c++; } while (*c != 'm' && *c != '\0');
                 // Don't read memory past null terminator!
-                if (*c == 0)
+                if (*c == '\0')
                     return;
                 // Skip the 'm'.
                 c++;
-                if (*c == 0)
+                if (*c == '\0')
                     return;
             }
 #endif /* defined LENSOR_OS_UART_HIDE_COLOR_CODES */
@@ -179,8 +179,7 @@ namespace UART {
                     str++;
                     numberOfBytes--;
                 }
-                if (numberOfBytes == 0)
-                    return;
+                else return;
             }
 #endif /* defined LENSOR_OS_UART_HIDE_COLOR_CODES */
             out((u8)*str);

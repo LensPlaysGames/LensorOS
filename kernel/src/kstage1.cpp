@@ -152,9 +152,9 @@ void kstage1(BootInfo* bInfo) {
 
     // Setup serial communications chip to allow for debug messages as soon as possible.
     UART::initialize();
-    dbgmsg("\r\n"
-           "!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n"
-           "\r\n");
+    dbgmsg_s("\r\n"
+             "!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n"
+             "\r\n");
 
     // Setup physical memory allocator from EFI memory map.
     Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
@@ -181,9 +181,9 @@ void kstage1(BootInfo* bInfo) {
            , gRTC.Time.month
            , gRTC.Time.date);
     // Create basic framebuffer renderer.
-    dbgmsg("[kstage1]: Setting up Graphics Output Protocol Renderer\r\n");
+    dbgmsg_s("[kstage1]: Setting up Graphics Output Protocol Renderer\r\n");
     gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
-    dbgmsg("  \033[32mSetup Successful\033[0m\r\n\r\n");
+    dbgmsg_s("  \033[32mSetup Successful\033[0m\r\n\r\n");
     draw_boot_gfx();
     // Create basic text renderer for the keyboard.
     Keyboard::gText = Keyboard::BasicTextRenderer();
@@ -206,10 +206,10 @@ void kstage1(BootInfo* bInfo) {
     bool supportCPUID = static_cast<bool>(cpuid_support());
     if (supportCPUID) {
         SystemCPU->set_cpuid_capable();
-        dbgmsg("[kstage1]: \033[32mCPUID is supported\033[0m\r\n");
+        dbgmsg_s("[kstage1]: \033[32mCPUID is supported\033[0m\r\n");
         char* cpuVendorID = cpuid_string(0);
         SystemCPU->set_vendor_id(cpuVendorID);
-        dbgmsg("  CPU Vendor ID: ");
+        dbgmsg_s("  CPU Vendor ID: ");
         dbgmsg((u8*)SystemCPU->get_vendor_id(), 12, ShouldNewline::Yes);
 
         CPUIDRegisters regs;
@@ -314,7 +314,7 @@ void kstage1(BootInfo* bInfo) {
             }
         }
     }
-    dbgmsg("\r\n");
+    dbgmsg_s("\r\n");
 
     // TODO: Parse CPUs from ACPI MADT table.
     //       For now we only support single core.
@@ -352,7 +352,7 @@ void kstage1(BootInfo* bInfo) {
             && dev.minor() == SYSDEV_MINOR_AHCI_CONTROLLER
             && dev.flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
         {
-            dbgmsg("[kstage1]: Probing AHCI Controller\r\n");
+            dbgmsg_s("[kstage1]: Probing AHCI Controller\r\n");
             AHCI::HBAMemory* ABAR = (AHCI::HBAMemory*)(u64)(((PCI::PCIHeader0*)dev.data2())->BAR5);
             // TODO: Better MMIO!! It should be separate from regular virtual mappings, I think.
             Memory::map(ABAR, ABAR);
@@ -416,11 +416,11 @@ void kstage1(BootInfo* bInfo) {
 
                     dbgmsg("      Partition %ul: ", i);
                     dbgmsg(part->Name, 72);
-                    dbgmsg(":\r\n"
-                           "        Type GUID: ");
+                    dbgmsg_s(":\r\n"
+                             "        Type GUID: ");
                     print_guid(part->TypeGUID);
-                    dbgmsg("\r\n"
-                           "        Unique GUID: ");
+                    dbgmsg_s("\r\n"
+                             "        Unique GUID: ");
                     print_guid(part->UniqueGUID);
                     dbgmsg("\r\n"
                            "        Sector Offset: %ull\r\n"
@@ -474,15 +474,15 @@ void kstage1(BootInfo* bInfo) {
             if (dev.minor() == SYSDEV_MINOR_GPT_PARTITION) {
                 auto* partDriver = static_cast<GPTPartitionDriver*>(dev.data1());
                 if (partDriver) {
-                    dbgmsg("[kstage1]: GPT Partition:\r\n"
-                           "  Type GUID: ");
+                    dbgmsg_s("[kstage1]: GPT Partition:\r\n"
+                             "  Type GUID: ");
                     print_guid(partDriver->type_guid());
-                    dbgmsg("\r\n"
-                           "  Unique GUID: ");
+                    dbgmsg_s("\r\n"
+                             "  Unique GUID: ");
                     print_guid(partDriver->unique_guid());
-                    dbgmsg("\r\n");
+                    dbgmsg_s("\r\n");
                     if (FAT->test(partDriver)) {
-                        dbgmsg("  Found valid File Allocation Table filesystem\r\n");
+                        dbgmsg_s("  Found valid File Allocation Table filesystem\r\n");
                         SYSTEM->add_fs(Filesystem(FilesystemType::FAT, FAT, partDriver));
                         // Done searching GPT partition, found valid filesystem.
                         dev.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
@@ -494,7 +494,7 @@ void kstage1(BootInfo* bInfo) {
                 if (portController) {
                     dbgmsg("[kstage1]: AHCI port %ull:\r\n"
                            , portController->port_number());
-                    dbgmsg("  Checking for valid File Allocation Table filesystem\r\n");
+                    dbgmsg_s("  Checking for valid File Allocation Table filesystem\r\n");
                     if (FAT->test(portController)) {
                         dbgmsg("  Found valid File Allocation Table filesystem\r\n");
                         SYSTEM->add_fs(Filesystem(FilesystemType::FAT, FAT, portController));
@@ -506,6 +506,29 @@ void kstage1(BootInfo* bInfo) {
         }
     });
 
+    SYSTEM->virtual_filesystem().print_debug();
+
+    u64 i = 0;
+    SYSTEM->filesystems().for_each([&i](auto* it) {
+        Filesystem& fs = it->value();
+        String name("/fs");
+        name += to_string(i);
+        SYSTEM->virtual_filesystem().mount(name.data_copy(), &fs);
+        i++;
+    });
+
+    if (SYSTEM->filesystems().length() > 0) {
+        const char* filePath = "/fs0";
+        dbgmsg("Opening %s with VFS\r\n", filePath);
+        FileDescriptor fd = SYSTEM->virtual_filesystem().open("/fs0", 0, 0);
+        dbgmsg("  Got FileDescriptor %ull\r\n", fd);
+        SYSTEM->virtual_filesystem().print_debug();
+        dbgmsg("Closing FileDescriptor %ull\r\n", fd);
+        SYSTEM->virtual_filesystem().close(fd);
+        dbgmsg("FileDescriptor %ull closed\r\n", fd);
+        SYSTEM->virtual_filesystem().print_debug();
+    }
+    
     // Initialize High Precision Event Timer.
     (void)gHPET.initialize();
     // Prepare PS2 mouse.
@@ -542,7 +565,7 @@ void kstage1(BootInfo* bInfo) {
     SYSTEM->print();
 
     // Allow interrupts to trigger.
-    dbgmsg("[kstage1]: Enabling interrupts\r\n");
+    dbgmsg_s("[kstage1]: Enabling interrupts\r\n");
     asm ("sti");
-    dbgmsg("[kstage1]: \033[32mInterrupts enabled\033[0m\r\n");
+    dbgmsg_s("[kstage1]: \033[32mInterrupts enabled\033[0m\r\n");
 }
