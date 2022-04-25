@@ -7,32 +7,15 @@
 
 class FileAllocationTableDriver final : public FilesystemDriver {
 public:
+    void print_fat(BootRecord*);
+
+    // ^FilesystemDriver
+
     /// Return true if the storage device has a valid FAT filesystem.
     bool test (StorageDeviceDriver* driver) final;
+
+    /// Return the byte offset of the contents of a file at a given path.
     u64 byte_offset(StorageDeviceDriver* driver, const char* path) final;
-
-    void read(StorageDeviceDriver* driver
-              , const char* path
-              , void* buffer, u64 numBytes) final
-    {
-        (void)driver;
-        (void)path;
-        (void)buffer;
-        (void)numBytes;
-    }
-
-    void write(StorageDeviceDriver* driver
-               , const char* path
-               , void* buffer, u64 numBytes) final
-    {
-        (void)driver;
-        (void)path;
-        (void)buffer;
-        (void)numBytes;        
-    }
-
-    u64 root_directory_sectors(BootRecord*);
-    u64 fat_sectors(BootRecord*);
 };
 
 #endif /* LENSOR_OS_FILE_ALLOCATION_TABLE_DRIVER_H */

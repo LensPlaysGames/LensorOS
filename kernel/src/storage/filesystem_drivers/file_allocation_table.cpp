@@ -1,10 +1,42 @@
 #include <storage/filesystem_drivers/file_allocation_table.h>
 
+#include <debug.h>
+#include <fat_definitions.h>
 #include <integers.h>
 #include <linked_list.h>
 #include <smart_pointer.h>
+#include <string.h>
 
-bool FileAllocationTableDriver::test (StorageDeviceDriver* driver) {
+// Uncomment the following directive for extra debug information output.
+//#define DEBUG_FAT
+
+void FileAllocationTableDriver::print_fat(BootRecord* br) {
+    if (br == nullptr)
+        return;
+
+    dbgmsg("File Allocation Table Boot Record:\r\n"
+           "  Total Clusters:      %ull\r\n"
+           "  Sectors / Cluster:   %hhu\r\n"
+           "  Total Sectors:       %ull\r\n"
+           "  Bytes / Sector:      %hu\r\n"
+           "  Sectors / FAT:       %ull\r\n"
+           "  Sector Offsets:\r\n"
+           "    FATs:      %ull\r\n"
+           "    Data:      %ull\r\n"
+           "    Root Dir.: %ull\r\n"
+           "\r\n"
+           , br->total_clusters()
+           , br->BPB.NumSectorsPerCluster
+           , br->BPB.total_sectors()
+           , br->BPB.NumBytesPerSector
+           , br->fat_sectors()
+           , br->BPB.first_fat_sector()
+           , br->first_data_sector()
+           , br->first_root_directory_sector()
+           );
+}
+
+bool FileAllocationTableDriver::test(StorageDeviceDriver* driver) {
     if (driver == nullptr)
         return false;
 
@@ -45,43 +77,16 @@ bool FileAllocationTableDriver::test (StorageDeviceDriver* driver) {
            && (br->BPB.NumSectorsPerCluster
                & (br->BPB.NumSectorsPerCluster - 1)) == 0
            && br->BPB.NumFATsPresent > 0);
+
+#ifdef DEBUG_FAT
+    print_fat(br);
+#endif /* DEBUG_FAT */
+
     return out;
 }
 
 u64 FileAllocationTableDriver::byte_offset(StorageDeviceDriver* driver, const char* path) {
+    (void)driver;
     (void)path;
-
-    auto buffer = SmartPtr<u8[]>(new u8[512], 512);
-    if (buffer.get() == nullptr)
-        return -1ull;
-
-    driver->read(0, 512, buffer.get());
-    auto* br = reinterpret_cast<BootRecord*>(buffer.get());
-    (void)br;
-
-    /* TODO: Next, we probably need to iterate clusters starting at root
-     *       , saving subdirectories, checking for file with name of path.
-     *       If not found in root, start checking subdirectories, etc.
-     */
-
-    SinglyLinkedList<ClusterEntry*> subdirectories;
-
     return -1ull;
-}
-
-u64 FileAllocationTableDriver::root_directory_sectors(BootRecord* br) {
-    if (br == nullptr)
-        return 0;
-        
-    return ((br->BPB.NumEntriesInRoot * FAT_DIRECTORY_SIZE_BYTES)
-            + (br->BPB.NumBytesPerSector - 1)) / br->BPB.NumBytesPerSector;
-}
-
-u64 FileAllocationTableDriver::fat_sectors(BootRecord* br) {
-    if (br == nullptr)
-        return 0;
-        
-    if (br->BPB.NumSectorsPerFAT == 0)
-        return ((BootRecordExtension32*)br->Extended)->NumSectorsPerFAT;
-    else return br->BPB.NumSectorsPerFAT;
 }

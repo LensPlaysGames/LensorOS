@@ -43,6 +43,26 @@ struct BIOSParameterBlock {
     /// Number of hidden sectors (the LBA of the beginning of the partition).
     u32 NumHiddenSectors;
     u32 TotalSectors32;
+
+    u64 first_fat_sector() {
+        return NumReservedSectors;
+    }
+
+    /// Return the size of a single cluster in bytes.
+    u64 cluster_size() {
+        return NumSectorsPerCluster * NumBytesPerSector;
+    }
+
+    u64 root_directory_sectors() {
+        return ((NumEntriesInRoot * FAT_DIRECTORY_SIZE_BYTES)
+                + (NumBytesPerSector - 1)) / NumBytesPerSector;
+    }
+
+    u32 total_sectors() {
+        if (TotalSectors16 == 0)
+            return TotalSectors32;
+        else return TotalSectors16;
+    }
 } __attribute__((packed));
 
 // 26 BYTES
@@ -85,7 +105,40 @@ struct BootRecord {
     u8  BootCode[420];
     u16 Magic; // 0xaa55
 
-    
+    /// Return the number of sectors per FAT.
+    u64 fat_sectors() {
+        if (BPB.NumSectorsPerFAT == 0)
+            return ((BootRecordExtension32*)Extended)->NumSectorsPerFAT;
+        else return BPB.NumSectorsPerFAT;
+    }
+
+    u64 data_sectors() {
+        return BPB.total_sectors() - first_data_sector();
+    }
+
+    u64 total_clusters() {
+        return data_sectors() / BPB.NumSectorsPerCluster;
+    }
+
+    u64 first_data_sector() {
+        return BPB.NumReservedSectors
+            + (BPB.NumFATsPresent * fat_sectors())
+            + BPB.root_directory_sectors();
+    }
+
+    u64 first_root_directory_sector() {
+        return first_data_sector() - BPB.root_directory_sectors();
+    }
+
+    /// Return the sector offset of a given cluster.
+    u64 cluster_to_sector(u64 cluster) {
+        return ((cluster - 2) * BPB.NumSectorsPerCluster) + first_data_sector();
+    }
+
+    /// Return the cluster offset of a given sector.
+    u64 sector_to_cluster(u64 sector) {
+        return ((sector - first_data_sector()) / BPB.NumSectorsPerCluster) + 2;
+    }
 } __attribute__((packed));
 
 enum class FATType {
