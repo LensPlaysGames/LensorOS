@@ -91,7 +91,16 @@ add_executable(
   src/uart.cpp
 )
 set_target_properties( Kernel PROPERTIES OUTPUT_NAME kernel.elf )
-target_compile_definitions( Kernel PRIVATE ${MACHINE} ${ARCH} )
+target_compile_definitions(
+  Kernel PRIVATE
+  ${MACHINE} ${ARCH}
+)
+if( HIDE_UART_COLOR_CODES )
+  target_compile_definitions(
+    Kernel PRIVATE
+    "LENSOR_OS_UART_HIDE_COLOR_CODES"
+  )
+endif()
 target_compile_options(
   Kernel PRIVATE
   -ffreestanding
@@ -199,7 +208,7 @@ if( CREATEGPT_PROGRAM )
     ${CREATEGPT_PROGRAM}
     -o ${IMAGE_DIR}/LensorOS.bin
     -p ${IMAGE_DIR}/LensorOS.img --type system
-    COMMENT "Generating GUID Partion Table with EFI System partion containing boot media using `createGPT`"
+    COMMENT "Generating GUID Partion Table with EFI System partion using `createGPT`"
     USES_TERMINAL
     VERBATIM
   )
@@ -214,7 +223,7 @@ elseif( CMAKE_HOST_UNIX )
       image_gpt
       COMMAND ${BASH_PROGRAM} mkgpt_fdisk.sh
       WORKING_DIRECTORY ${SCRIPTS_DIR}
-      COMMENT "Generating GUID Partion Table with EFI System partion containing boot media using `fdisk`"
+      COMMENT "Generating GUID Partion Table with EFI System partion using `fdisk`"
       USES_TERMINAL
       VERBATIM
     )
@@ -230,7 +239,7 @@ elseif( CMAKE_HOST_UNIX )
         COMMAND ${MKGPT_PROGRAM}
         -o ${IMAGE_DIR}/LensorOS.bin
         --part ${IMAGE_DIR}/LensorOS.img --type system
-        COMMENT "Generating GUID Partion Table with EFI System partion containing boot media using `mkgpt`"
+        COMMENT "Generating GUID Partion Table with EFI System partion using `mkgpt`"
         USES_TERMINAL
         VERBATIM
       )
@@ -285,7 +294,7 @@ if( QEMU_IMG_PROGRAM )
   add_custom_target(
     image_vdi
     COMMAND ${QEMU_IMG_PROGRAM} convert -O vdi LensorOS.bin LensorOS.vdi
-    COMMENT "Generating VDI format of GUID Partion Table with EFI System partition containing boot media using `mkgpt`"
+    COMMENT "Generating VDI format of GUID Partion Table with EFI System partition using `mkgpt`"
     WORKING_DIRECTORY ${IMAGE_DIR}
     USES_TERMINAL
     VERBATIM

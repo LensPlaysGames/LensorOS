@@ -21,3 +21,8 @@ set_property(
   "VBOX"
   "VMWARE"
 )
+option(
+  HIDE_UART_COLOR_CODES
+  "Do not print ANSI terminal color codes to serial output.
+Particularly useful if the terminal you are using does not support it."
+)
