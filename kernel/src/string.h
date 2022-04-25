@@ -95,11 +95,13 @@ public:
         Length += other.Length;
         u8* temporaryBuffer = new u8[oldLength];
         memcpy(Buffer, temporaryBuffer, oldLength);
-        delete[] Buffer;
+        u8* oldBuffer = Buffer;
         Buffer = new u8[Length+1];
         Buffer[Length] = '\0';
         memcpy(temporaryBuffer, Buffer, oldLength);
         memcpy(other.Buffer, &Buffer[oldLength], other.Length);
+        delete[] temporaryBuffer;
+        delete[] oldBuffer;
         return *this;
     }
 
