@@ -132,7 +132,8 @@ namespace UART {
         while ((in8(LINE_STATUS_PORT(COM1)) & (1 << 5)) == 0 && maxSpins > 0)
             maxSpins--;
 
-        if (maxSpins == 0) return;
+        if (maxSpins == 0)
+            return;
 
         out8(COM1, byte);
     }

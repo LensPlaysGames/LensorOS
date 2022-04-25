@@ -38,13 +38,11 @@ public:
     }
 
     FileDescriptor open(const char* path, int flags, int mode) {
-        /* TODO
-         * |-- Parse path.
+        /* Flow
          * |-- Check beginning of path against each Mounts' Path.
          * |   If it matches, use that Filesystem's functions to proceed.
-         * |-- Pass the rest of the path to the filesystem.
+         * |-- Parse path (split on '/') into sections to feed filesystem.
          * |-- Store necessary information in a new OpenFileDescription.
-         * |   Just path? I dunno.
          * |-- Store new OpenFileDescription in table of descriptions.
          * `-- Return index into table of OpenFileDescriptions as FileDescriptor.
          */
@@ -60,7 +58,7 @@ public:
 
         FileDescriptor out = -1ull;
 
-        Mounts.for_each([this, &out, path, pathLength](auto* it){
+        Mounts.for_each([this, &out, path, pathLength](auto* it) {
             MountPoint& mount = it->value();
             StorageDeviceDriver* dev = mount.FS->storage_device_driver();
             FilesystemDriver* fileDriver = mount.FS->filesystem_driver();

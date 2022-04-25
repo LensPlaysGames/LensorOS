@@ -83,6 +83,19 @@ void dbgmsg(u8 number, ShouldNewline nl) {
 void dbgmsg_v(const u8* fmt, va_list args) {
     const u8* current = fmt;
     for(; *current != '\0'; ++current) {
+#ifdef LENSOR_OS_UART_HIDE_COLOR_CODES
+        if (*current == '\033') {
+            do {
+                current++;
+            } while(*current != 'm' && *current != '\0');
+            if (*current == '\0')
+                return;
+
+            current++;
+            if (*current == '\0')
+                return;
+        }
+#endif /* LENSOR_OS_UART_HIDE_COLOR_CODES */
         if (*current == '%') {
             current++;
             switch (*current) {
