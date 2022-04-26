@@ -46,6 +46,34 @@ public:
 
     u8* bytes() const { return Buffer; }
 
+    enum class Side {
+        Left,
+        Right,
+    };
+
+    // NOTE: Character at index is included in right side.
+    String& chop(u64 index, Side side) {
+        if (index > length() - 1)
+            return *this;
+
+        if (side == String::Side::Left) {
+            Length = index;
+            u8* oldBuffer = Buffer;
+            Buffer = new u8[Length + 1];
+            memcpy((void*)oldBuffer, Buffer, Length);
+            Buffer[Length] = '\0';
+            delete[] oldBuffer;
+        }
+        else {
+            Length = strlen(&data()[index]) - 1;
+            u8* oldBuffer = Buffer;
+            Buffer = new u8[Length+1];
+            memcpy((void*)&oldBuffer[index], Buffer, Length+1);
+            delete[] oldBuffer;
+        }
+        return *this;
+    }
+
     const char* data() const { return (const char*)Buffer; }
 
     /// Make a copy of the current contents of the string on the heap.
@@ -110,7 +138,14 @@ public:
         return *this;
     }
 
-    u8 operator [] (u64 index) {
+    u8& operator [] (u64 index) const {
+        if (index >= Length)
+            return Buffer[Length-1];
+
+        return Buffer[index];
+    }
+
+    u8& operator [] (u64 index) {
         if (index >= Length)
             return Buffer[Length-1];
 
