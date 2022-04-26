@@ -520,7 +520,7 @@ void kstage1(BootInfo* bInfo) {
     if (SYSTEM->filesystems().length() > 0) {
         const char* filePath = "/fs0";
         dbgmsg("Opening %s with VFS\r\n", filePath);
-        FileDescriptor fd = SYSTEM->virtual_filesystem().open("/fs0", 0, 0);
+        FileDescriptor fd = SYSTEM->virtual_filesystem().open("/fs0/startup.nsh", 0, 0);
         dbgmsg("  Got FileDescriptor %ull\r\n", fd);
         SYSTEM->virtual_filesystem().print_debug();
         dbgmsg("Closing FileDescriptor %ull\r\n", fd);
