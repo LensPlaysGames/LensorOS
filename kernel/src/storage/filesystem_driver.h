@@ -12,8 +12,7 @@ public:
     virtual bool test(StorageDeviceDriver* driver) = 0;
 
     /// Get the byte offset for the file at path, if it exists.
-    virtual u64 byte_offset(StorageDeviceDriver* driver
-                            , const char* path) = 0;
+    virtual u64 byte_offset(StorageDeviceDriver* driver, const char* path) = 0;
 };
 
 #endif /* LENSOR_OS_FILESYSTEM_DRIVER_H */

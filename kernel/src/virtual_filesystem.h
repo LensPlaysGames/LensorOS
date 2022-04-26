@@ -6,19 +6,17 @@
 #include <file.h>
 #include <filesystem.h>
 #include <linked_list.h>
+#include <storage/file_metadata.h>
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
+#include <string.h>
 
-// WHAT GOES HERE?
-// A path? That wouldn't really be all that efficient,
-// but the path could be passed to filesystem driver to read or write from or to files.
-// A better option may be to save the StorageDeviceDriver along with byte offset.
 struct OpenFileDescription {
-    OpenFileDescription(StorageDeviceDriver* driver, u64 byteOffset)
-        : Driver(driver), ByteOffset(byteOffset) {}
+    OpenFileDescription(StorageDeviceDriver* driver, FileMetadata md)
+        : DeviceDriver(driver), Metadata(md) {}
 
-    StorageDeviceDriver* Driver;
-    u64 ByteOffset;
+    StorageDeviceDriver* DeviceDriver;
+    FileMetadata Metadata;
 };
 
 struct MountPoint {
@@ -37,7 +35,7 @@ public:
         Mounts.add(MountPoint(path, fs));
     }
 
-    FileDescriptor open(const char* path, int flags, int mode) {
+    FileDescriptor open(const String& path, int flags, int mode) {
         /* Flow
          * |-- Check beginning of path against each Mounts' Path.
          * |   If it matches, use that Filesystem's functions to proceed.
@@ -46,29 +44,37 @@ public:
          * |-- Store new OpenFileDescription in table of descriptions.
          * `-- Return index into table of OpenFileDescriptions as FileDescriptor.
          */
-        u64 pathLength = strlen(path);
-        if (pathLength <= 1) {
-            dbgmsg("Path is not long enough.");
+        u64 fullPathLength = path.length();
+        if (fullPathLength <= 1) {
+            dbgmsg_s("Path is not long enough.\r\n");
             return -1ull;
         }
         if (path[0] != '/') {
-            dbgmsg("%s does not start with slash", path);
+            dbgmsg("path does not start with slash, %s\r\n", fullPathLength);
             return -1ull;
         }
 
         FileDescriptor out = -1ull;
 
-        Mounts.for_each([this, &out, path, pathLength](auto* it) {
+        Mounts.for_each([this, &out, path, fullPathLength](auto* it) {
             MountPoint& mount = it->value();
             StorageDeviceDriver* dev = mount.FS->storage_device_driver();
             FilesystemDriver* fileDriver = mount.FS->filesystem_driver();
-            u64 mountPathLength = strlen(mount.Path);
-            if (mountPathLength <= pathLength) {
-                if (strcmp(path, mount.Path, mountPathLength)) {
-                    // TODO: Chop string into new string starting at path[mountPathLength]
-                    out = Opened.length();
-                    OpenFileDescription openedFile(dev, fileDriver->byte_offset(dev, path));
-                    Opened.add_end(openedFile);
+            u64 mountPathLength = strlen(mount.Path) - 1;
+            if (mountPathLength <= fullPathLength) {
+                if (strcmp(path.data(), mount.Path, mountPathLength)) {
+                    String prefixlessPath = path;
+                    prefixlessPath.chop(mountPathLength, String::Side::Right);
+                    if (prefixlessPath == path) {
+                        // TODO: path matches a mount path exactly. How do we open a mount?
+                    }
+                    else {
+                        FileMetadata metadata = FileMetadata();
+                        metadata.ByteOffset = fileDriver->byte_offset(dev, prefixlessPath.data());
+                        OpenFileDescription openedFile(dev, metadata);
+                        out = Opened.length();
+                        Opened.add_end(openedFile);
+                    }
                 }
             }
         });
@@ -77,12 +83,16 @@ public:
         return out;
     }
 
+    FileDescriptor open(const char* path, int flags, int mode) {
+        return open(String(path), flags, mode);
+    }
+
     bool read(FileDescriptor fd, u8* buffer, u64 byteCount) {
         if (fd >= Opened.length())
             return false;
 
         OpenFileDescription& file = Opened[fd];
-        file.Driver->read(file.ByteOffset, byteCount, buffer);
+        file.DeviceDriver->read(file.Metadata.ByteOffset, byteCount, buffer);
         return true;
     }
 
@@ -91,7 +101,7 @@ public:
             return false;
 
         OpenFileDescription& file = Opened[fd];
-        file.Driver->write(byteOffset, byteCount, buffer);
+        file.DeviceDriver->write(byteOffset, byteCount, buffer);
         return true;
     }
 
@@ -131,8 +141,8 @@ public:
                    "      Storage Device Driver Address: %x\r\n"
                    "      Byte Offset: %ull\r\n"
                    , i
-                   , file.Driver
-                   , file.ByteOffset
+                   , file.DeviceDriver
+                   , file.Metadata.ByteOffset
                    );
             i++;
         });
