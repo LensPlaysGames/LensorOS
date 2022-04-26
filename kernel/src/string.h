@@ -104,7 +104,7 @@ public:
             return *this;
 
         delete[] Buffer;
-        // FIXME: Need atomic exchange here...
+        // FIXME: Need atomic exchange here for Buffer pointer swap...
         Buffer = other.Buffer;
         other.Buffer = nullptr;
         Length = other.Length;
@@ -116,25 +116,44 @@ public:
         if (this == &other)
             return *this;
 
-        // FIXME: This code could fail with multiple threads.
-        //        delete, switch context, access deleted buffer, etc...
-        //        Need atomic exchange.
         u64 oldLength = Length;
         Length += other.Length;
-        u8* temporaryBuffer = new u8[oldLength];
-        memcpy(Buffer, temporaryBuffer, oldLength);
+        u8* newBuffer = new u8[Length+1];
+        memcpy(&Buffer[0], &newBuffer[0], oldLength);
+        memcpy(&other.Buffer[0], &newBuffer[oldLength], other.Length);
         u8* oldBuffer = Buffer;
-        Buffer = new u8[Length+1];
-        Buffer[Length] = '\0';
-        memcpy(temporaryBuffer, Buffer, oldLength);
-        memcpy(other.Buffer, &Buffer[oldLength], other.Length);
-        delete[] temporaryBuffer;
+        Buffer = newBuffer;
+        delete[] oldBuffer;
+        return *this;
+    }
+
+    String& operator + (const char* cstr) {
+        if (cstr == nullptr)
+            return *this;
+
+        u64 stringLength = strlen(cstr);
+        if (stringLength <= 1)
+            return *this;
+
+        u64 oldLength = Length;
+        Length += stringLength - 1;
+        u8* newBuffer = new u8[Length + 1];
+        memcpy(&Buffer[0], &newBuffer[0], oldLength);
+        memcpy((void*)cstr, &newBuffer[oldLength], stringLength - 1);
+        newBuffer[Length] = '\0';
+        u8* oldBuffer = Buffer;
+        Buffer = newBuffer;
         delete[] oldBuffer;
         return *this;
     }
 
     String& operator += (const String& rhs) {
         this->operator+(rhs);
+        return *this;
+    }
+
+    String& operator += (const char* cstr) {
+        this->operator+(cstr);
         return *this;
     }
 
