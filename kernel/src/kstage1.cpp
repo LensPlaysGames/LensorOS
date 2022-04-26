@@ -518,15 +518,20 @@ void kstage1(BootInfo* bInfo) {
     });
 
     if (SYSTEM->filesystems().length() > 0) {
-        const char* filePath = "/fs0";
+        const char* filePath = "/fs0/startup.nsh";
+        VFS& vfs = SYSTEM->virtual_filesystem();
         dbgmsg("Opening %s with VFS\r\n", filePath);
-        FileDescriptor fd = SYSTEM->virtual_filesystem().open("/fs0/startup.nsh", 0, 0);
+        FileDescriptor fd = vfs.open(filePath, 0, 0);
         dbgmsg("  Got FileDescriptor %ull\r\n", fd);
-        SYSTEM->virtual_filesystem().print_debug();
+        vfs.print_debug();
+        dbgmsg_s("  Reading first few bytes: ");
+        SmartPtr<u8[]> tmpBuffer(new u8[11], 11);
+        vfs.read(fd, &tmpBuffer[0], 11);
+        dbgmsg(&tmpBuffer[0], 11, ShouldNewline::Yes);
         dbgmsg("Closing FileDescriptor %ull\r\n", fd);
-        SYSTEM->virtual_filesystem().close(fd);
+        vfs.close(fd);
         dbgmsg("FileDescriptor %ull closed\r\n", fd);
-        SYSTEM->virtual_filesystem().print_debug();
+        vfs.print_debug();
     }
     
     // Initialize High Precision Event Timer.
