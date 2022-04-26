@@ -176,7 +176,10 @@ struct ClusterEntry {
     }
 
     bool long_file_name() {
-        return Attributes & 0b1111;
+        return Attributes & 0b0001
+            && Attributes & 0b0010
+            && Attributes & 0b0100
+            && Attributes & 0b1000;
     }
     bool read_only() {
         return Attributes & 0b1;
