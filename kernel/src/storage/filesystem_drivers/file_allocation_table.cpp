@@ -85,8 +85,121 @@ bool FileAllocationTableDriver::test(StorageDeviceDriver* driver) {
     return out;
 }
 
-u64 FileAllocationTableDriver::byte_offset(StorageDeviceDriver* driver, const char* path) {
-    (void)driver;
-    (void)path;
+u64 FileAllocationTableDriver::byte_offset(StorageDeviceDriver* driver, const String& givenPath) {
+    if (driver == nullptr)
+        return -1ull;
+
+    if (givenPath.length() <= 1)
+        return -1ull;
+
+    // Translate path (FAT has very limited file names).
+    String path = String((const char*)&givenPath.bytes()[1]);
+    u8* currentCharacter = path.bytes();
+    for (u64 i = 0; i < path.length(); ++i) {
+        if (*currentCharacter >= 97 && *currentCharacter <= 122)
+            *currentCharacter -= 32;
+        else if (*currentCharacter == '.')
+            *currentCharacter = ' ';
+        currentCharacter++;
+    }
+
+    // TODO: Take in cached Boot Record from filesystem.
+    SmartPtr<u8[]> sector(new u8[sizeof(BootRecord)], sizeof(BootRecord));
+    if (sector.get() == nullptr)
+        return -1ull;
+    
+    driver->read(0, sizeof(BootRecord), sector.get());
+    auto* br = reinterpret_cast<BootRecord*>(sector.get());
+
+    // TODO: Take in cached FAT from filesystem.
+    SmartPtr<u8[]> FAT(new u8[br->BPB.NumBytesPerSector], br->BPB.NumBytesPerSector);
+    u64 lastFATsector { 0 };
+
+    constexpr u64 lfnBufferSize = 27;
+    SmartPtr<u8[]> lfnBuffer(new u8[lfnBufferSize], lfnBufferSize);
+    u32 clusterIndex = br->sector_to_cluster(br->first_root_directory_sector());
+    bool moreClusters = { true };
+    while (moreClusters) {
+        // Read cluster
+        u64 clusterSize = br->BPB.NumSectorsPerCluster * br->BPB.NumBytesPerSector;
+        SmartPtr<u8[]> clusterContents(new u8[clusterSize], clusterSize);
+        u64 clusterSector = br->cluster_to_sector(clusterIndex);
+        driver->read(clusterSector * br->BPB.NumBytesPerSector
+                     , clusterSize
+                     , clusterContents.get());
+        ClusterEntry* entry = reinterpret_cast<ClusterEntry*>(clusterContents.get());
+        bool lfnBufferFull { false };
+        while (entry->FileName[0] != 0) {
+            if (entry->FileName[0] == 0xe5)
+                continue;
+
+            if (entry->long_file_name()) {
+                LFNClusterEntry* lfn = reinterpret_cast<LFNClusterEntry*>(entry);
+                u8 offset = 0;
+                memcpy(&lfn->Characters1[0], &lfnBuffer[offset], sizeof(u16) * 5);
+                offset += 5;
+                memcpy(&lfn->Characters1[0], &lfnBuffer[offset], sizeof(u16) * 6);
+                offset += 6;
+                memcpy(&lfn->Characters3[0], &lfnBuffer[offset], sizeof(u16) * 2);
+                lfnBufferFull = true;
+                entry++;
+                continue;
+            }
+            String fileName(reinterpret_cast<const char*>(&entry->FileName[0]), 11);
+            if (lfnBufferFull) {
+               fileName += String((const char*)&lfnBuffer[0], lfnBufferSize);
+               lfnBufferFull = false;
+            }
+            String fileType("");
+            if (entry->read_only())
+                fileType += "read-only ";
+            if (entry->hidden())
+                fileType += "hidden ";
+            if (entry->system())
+                fileType += "system ";
+            if (entry->archive())
+                fileType += "archive ";
+            if (entry->directory())
+                fileType += "directory ";
+            else if (entry->volume_id())
+                fileType += "volume identifier ";
+            else fileType += "file ";
+
+            // This will get spammy very soon.
+            dbgmsg("Found %slnamed %sl\r\n", &fileType, &fileName);
+
+            if (fileName == path) {
+                return br->cluster_to_sector(entry->get_cluster_number())
+                    * br->BPB.NumBytesPerSector;
+            }
+
+            // TODO: Metadata (directory vs. file, permissions, etc).
+
+            entry++;
+        }
+
+        // Check if this is the last cluster in the chain.
+        u64 clusterNumber = entry->get_cluster_number();
+        // FIXME: This assumes FAT32, but we should really determine type dynamically.
+        u64 FAToffset = clusterNumber * 4;
+        u64 FATsector = br->BPB.first_fat_sector() + (FAToffset / br->BPB.NumBytesPerSector);
+        u64 entryOffset = FAToffset % br->BPB.NumBytesPerSector;
+        if (entryOffset <= 1 || FATsector == lastFATsector)
+            break;
+
+        lastFATsector = FATsector;
+        driver->read(FATsector * br->BPB.NumBytesPerSector
+                     , br->fat_sectors() * br->BPB.NumBytesPerSector
+                     , FAT.get());
+
+        // FIXME: This assumes FAT32, but we should really determine type dynamically.
+        u64 tableValue = *(reinterpret_cast<u32*>(&FAT[entryOffset]));
+        if (tableValue >= 0xfffff8)
+            moreClusters = false;
+        else if (tableValue == 0xffffff7)
+            continue;
+
+        clusterIndex = tableValue;
+    }
     return -1ull;
 }

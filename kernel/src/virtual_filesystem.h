@@ -12,10 +12,10 @@
 #include <string.h>
 
 struct OpenFileDescription {
-    OpenFileDescription(StorageDeviceDriver* driver, FileMetadata md)
+    OpenFileDescription(StorageDeviceDriver* driver, const FileMetadata& md)
         : DeviceDriver(driver), Metadata(md) {}
 
-    StorageDeviceDriver* DeviceDriver;
+    StorageDeviceDriver* DeviceDriver { nullptr };
     FileMetadata Metadata;
 };
 

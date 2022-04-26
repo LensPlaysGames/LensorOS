@@ -224,6 +224,7 @@ void heap_print_debug() {
     constexpr u8 characterGranularity = 64;
     u64 totalChars = heapSize / characterGranularity + 1;
     u8* out = new u8[totalChars];
+    memset(out, 0, totalChars);
     u64 freeLeftover = 0;
     u64 usedLeftover = 0;
     u64 offset = 0;
