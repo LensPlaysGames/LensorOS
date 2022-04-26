@@ -192,14 +192,14 @@ void free(void* address) {
 void heap_print_debug() {
     // TODO: Interesting information, like average allocation
     //       size, number of malloc vs free calls, etc.
-    u64 heapSizeKiB = reinterpret_cast<u64>(sHeapEnd)
+    u64 heapSize = reinterpret_cast<u64>(sHeapEnd)
         - reinterpret_cast<u64>(sHeapStart);
     dbgmsg("[Heap]: Debug information:\r\n"
            "  Size:   %ull\r\n"
            "  Start:  %x\r\n"
            "  End:    %x\r\n"
            "  Regions:\r\n"
-           , heapSizeKiB, sHeapStart, sHeapEnd);
+           , heapSize, sHeapStart, sHeapEnd);
     u64 i = 0;
     HeapSegmentHeader* it = (HeapSegmentHeader*)sHeapStart;
     do {
@@ -219,6 +219,45 @@ void heap_print_debug() {
         it = it->next;
     } while (it);
     dbgmsg("\r\n");
+
+    // One character per 64 bytes of heap.
+    constexpr u8 characterGranularity = 64;
+    u64 totalChars = heapSize / characterGranularity + 1;
+    u8* out = new u8[totalChars];
+    u64 freeLeftover = 0;
+    u64 usedLeftover = 0;
+    u64 offset = 0;
+    it = (HeapSegmentHeader*)sHeapStart;
+    do {
+        if (offset >= totalChars)
+            break;
+
+        u64 segmentSize = it->length + sizeof(HeapSegmentHeader);
+        u64 delta = segmentSize % characterGranularity;
+        u64 numChars = segmentSize / characterGranularity;
+        if (it->free) {
+            freeLeftover += delta;
+            if (freeLeftover > characterGranularity) {
+                out[offset] = '_';
+                offset++;
+                freeLeftover -= characterGranularity;
+            }
+        }
+        else {
+            usedLeftover += delta;
+            if (usedLeftover > characterGranularity) {
+                out[offset] = '*';
+                offset++;
+                usedLeftover -= characterGranularity;
+            }
+        }
+        char c = it->free ? '_' : '*';
+        memset(&out[offset], c, numChars);
+        offset += numChars;
+        it = it->next;
+    } while (it != nullptr);
+
+    dbgmsg("Heap (64b per char): %s\r\n", out);
 }
 
 void* operator new   (u64 numBytes) { return malloc(numBytes); }
