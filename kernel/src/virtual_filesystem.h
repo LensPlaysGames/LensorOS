@@ -69,8 +69,7 @@ public:
                         // TODO: path matches a mount path exactly. How do we open a mount?
                     }
                     else {
-                        FileMetadata metadata = FileMetadata();
-                        metadata.ByteOffset = fileDriver->byte_offset(dev, prefixlessPath.data());
+                        FileMetadata metadata = fileDriver->file(dev, prefixlessPath.data());
                         OpenFileDescription openedFile(dev, metadata);
                         out = Opened.length();
                         Opened.add_end(openedFile);
@@ -92,7 +91,7 @@ public:
             return false;
 
         OpenFileDescription& file = Opened[fd];
-        file.DeviceDriver->read(file.Metadata.ByteOffset, byteCount, buffer);
+        file.DeviceDriver->read(file.Metadata.byte_offset(), byteCount, buffer);
         return true;
     }
 
@@ -142,7 +141,7 @@ public:
                    "      Byte Offset: %ull\r\n"
                    , i
                    , file.DeviceDriver
-                   , file.Metadata.ByteOffset
+                   , file.Metadata.byte_offset()
                    );
             i++;
         });

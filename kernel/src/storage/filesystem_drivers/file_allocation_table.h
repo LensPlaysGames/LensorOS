@@ -16,7 +16,7 @@ public:
     bool test (StorageDeviceDriver* driver) final;
 
     /// Return the byte offset of the contents of a file at a given path.
-    u64 byte_offset(StorageDeviceDriver* driver, const String& path) final;
+    FileMetadata file(StorageDeviceDriver* driver, const String& path) final;
 };
 
 #endif /* LENSOR_OS_FILE_ALLOCATION_TABLE_DRIVER_H */
