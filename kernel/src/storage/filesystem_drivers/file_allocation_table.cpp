@@ -198,7 +198,7 @@ FileMetadata FileAllocationTableDriver::file(StorageDeviceDriver* driver, const 
                 u64 byteOffset =
                     br->cluster_to_sector(entry->get_cluster_number())
                     * br->BPB.NumBytesPerSector;
-                return { fileName, false, driver, this, byteOffset };
+                return { fileName, false, driver, this, entry->FileSizeInBytes, byteOffset };
             }
             entry++;
         }
