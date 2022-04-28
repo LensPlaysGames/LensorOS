@@ -1,26 +1,39 @@
 #ifndef LENSOR_OS_VIRTUAL_MEMORY_MANAGER_H
 #define LENSOR_OS_VIRTUAL_MEMORY_MANAGER_H
 
-namespace Memory {
-    class PageTable;
+#include <integers.h>
+#include <memory/paging.h>
 
+namespace Memory {
     /* Map the entire physical address space, virtual kernel space, and
      *   finally flush the map to use it as the active mapping.
      */
     void init_virtual(PageTable*);
     void init_virtual();
 
-    // TODO: Permissions handling.
+    enum class ShowDebug {
+        Yes = 0,
+        No  = 1,
+    };
 
     /* Map a virtual address to a physical 
      *   address in the given page map level four. 
      */
-    void map(PageTable*, void* virtualAddress, void* physicalAddress);
+    void map(PageTable*
+             , void* virtualAddress
+             , void* physicalAddress
+             , u64 mappingFlags = (1 << static_cast<int>(PageTableFlag::Present))
+             , ShowDebug d = ShowDebug::No
+             );
 
     /* Map a virtual address to a physical address in 
      *   the currently active page map level four.
      */
-    void map(void* virtualAddress, void* physicalAddress);
+    void map(void* virtualAddress
+             , void* physicalAddress
+             , u64 mappingFlags = (1 << static_cast<int>(PageTableFlag::Present))
+             , ShowDebug d = ShowDebug::No
+             );
 
     /* If a mapping is marked as present within the given 
      *   page map level four, it will be marked as not present. 
