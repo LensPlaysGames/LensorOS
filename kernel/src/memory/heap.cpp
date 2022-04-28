@@ -3,6 +3,7 @@
 #include <cstr.h>
 #include <debug.h>
 #include <memory/common.h>
+#include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 
@@ -78,9 +79,14 @@ HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
 
 void init_heap() {
     u64 numBytes = HEAP_INITIAL_PAGES * PAGE_SIZE;
-    for (u64 i = 0; i < HEAP_INITIAL_PAGES; ++i) {
+    for (u64 i = 0; i < HEAP_INITIAL_PAGES * PAGE_SIZE; i += PAGE_SIZE) {
         // Map virtual heap position to physical memory address returned by page frame allocator.
-        Memory::map((void*)((u64)HEAP_VIRTUAL_BASE + (i * PAGE_SIZE)), Memory::request_page());
+        // FIXME: Should this be global?
+        Memory::map((void*)((u64)HEAP_VIRTUAL_BASE + i), Memory::request_page()
+                    , (1 << Memory::PageTableFlag::Present)
+                    | (1 << Memory::PageTableFlag::ReadWrite)
+                    | (1 << Memory::PageTableFlag::Global)
+                    );
     }
     sHeapStart = (void*)HEAP_VIRTUAL_BASE;
     sHeapEnd = (void*)((u64)sHeapStart + numBytes);
@@ -112,7 +118,11 @@ void expand_heap(u64 numBytes) {
     HeapSegmentHeader* extension = (HeapSegmentHeader*)sHeapEnd;
     // Allocate and map a page in memory for new header.
     for (u64 i = 0; i < numPages; ++i) {
-        Memory::map(sHeapEnd, Memory::request_page());
+        Memory::map(sHeapEnd, Memory::request_page()
+                    , (1 << Memory::PageTableFlag::Present)
+                    | (1 << Memory::PageTableFlag::ReadWrite)
+                    | (1 << Memory::PageTableFlag::Global)
+                    );
         sHeapEnd = (void*)((u64)sHeapEnd + PAGE_SIZE);
     }
     extension->free = true;
