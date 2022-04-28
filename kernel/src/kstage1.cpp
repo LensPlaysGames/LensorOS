@@ -518,7 +518,7 @@ void kstage1(BootInfo* bInfo) {
     });
 
     if (SYSTEM->filesystems().length() > 0) {
-        const char* filePath = "/fs0/startup.nsh";
+        const char* filePath = "/fs0/blazeit";
         VFS& vfs = SYSTEM->virtual_filesystem();
         dbgmsg("Opening %s with VFS\r\n", filePath);
         FileDescriptor fd = vfs.open(filePath, 0, 0);

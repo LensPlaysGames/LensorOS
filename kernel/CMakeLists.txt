@@ -178,6 +178,7 @@ if( DD_PROGRAM AND MTOOLS_PROGRAM )
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img
     ${REPO_DIR}/gnu-efi/x86_64/bootloader/main.efi ::/EFI/BOOT
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${SCRIPTS_DIR}/startup.nsh ::
+    COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${REPO_DIR}/user/blazeit/blazeit ::
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${IMAGE_DIR}/kernel.elf ::/LensorOS
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${IMAGE_DIR}/dfltfont.psf ::/LensorOS
     COMMENT "Generating UEFI-compatible FAT32 boot media"
