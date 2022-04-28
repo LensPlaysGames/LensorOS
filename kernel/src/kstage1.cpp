@@ -10,6 +10,7 @@
 #include <cstr.h>
 #include <debug.h>
 #include <efi_memory.h>
+#include <elf_loader.h>
 #include <fat_definitions.h>
 #include <gdt.h>
 #include <gpt.h>
@@ -355,7 +356,10 @@ void kstage1(BootInfo* bInfo) {
             dbgmsg_s("[kstage1]: Probing AHCI Controller\r\n");
             AHCI::HBAMemory* ABAR = (AHCI::HBAMemory*)(u64)(((PCI::PCIHeader0*)dev.data2())->BAR5);
             // TODO: Better MMIO!! It should be separate from regular virtual mappings, I think.
-            Memory::map(ABAR, ABAR);
+            Memory::map(ABAR, ABAR
+                        , (1 << Memory::PageTableFlag::Present)
+                        | (1 << Memory::PageTableFlag::ReadWrite)
+                        );
             u32 ports = ABAR->PortsImplemented;
             for (u64 i = 0; i < 32; ++i) {
                 if (ports & (1u << i)) {
@@ -528,6 +532,14 @@ void kstage1(BootInfo* bInfo) {
         SmartPtr<u8[]> tmpBuffer(new u8[11], 11);
         vfs.read(fd, &tmpBuffer[0], 11);
         dbgmsg(&tmpBuffer[0], 11, ShouldNewline::Yes);
+
+
+        // TODO: Create ELF loader (again).
+        // TODO: Pass file descriptor to ELF loader for thread initialization.
+
+        ELF::RunUserspaceElf64(vfs, fd);
+
+
         dbgmsg("Closing FileDescriptor %ull\r\n", fd);
         vfs.close(fd);
         dbgmsg("FileDescriptor %ull closed\r\n", fd);
