@@ -86,12 +86,13 @@ public:
         return open(String(path), flags, mode);
     }
 
-    bool read(FileDescriptor fd, u8* buffer, u64 byteCount) {
+    bool read(FileDescriptor fd, u8* buffer, u64 byteCount, u64 byteOffset = 0) {
         if (fd >= Opened.length())
             return false;
 
         OpenFileDescription& file = Opened[fd];
-        file.DeviceDriver->read(file.Metadata.byte_offset(), byteCount, buffer);
+        file.DeviceDriver->read(file.Metadata.byte_offset() + byteOffset
+                                , byteCount, buffer);
         return true;
     }
 
