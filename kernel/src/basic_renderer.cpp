@@ -1,11 +1,11 @@
 #include <basic_renderer.h>
 
 #include <cstr.h>
+#include <debug.h>
 #include <integers.h>
 #include <math.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
-#include <uart.h>
 
 // Define global renderer for use anywhere within the kernel.
 BasicRenderer gRend;
@@ -24,15 +24,16 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
     // Allocate physical pages for Render framebuffer.
     Memory::lock_pages(render->BaseAddress, fbPages);
     // Map active framebuffer physical address to virtual addresses 1:1.
-    for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
-        Memory::map((void*)t, (void*)t);
-
-    UART::out("  Active GOP framebuffer mapped to 0x");
-    UART::out(to_hexstring(fbBase));
-    UART::out(" thru ");
-    UART::out(to_hexstring(fbBase + fbSize));
-    UART::out("\r\n");
-    
+    for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000) {
+        Memory::map((void*)t, (void*)t
+                    , (1 << Memory::PageTableFlag::Present)
+                    | (1 << Memory::PageTableFlag::ReadWrite)
+                    );
+    }
+    dbgmsg("  Active GOP framebuffer mapped to %x thru %x\r\n"
+           , fbBase
+           , fbBase + fbSize
+           );
     // Create a new framebuffer. This memory is what will be drawn to.
     // When the screen should be updated, this new framebuffer is copied into the active one.
     // This helps performance as the active framebuffer is very slow to read/write from.
@@ -47,15 +48,16 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
     }
     else {
         fbBase = (u64)target.BaseAddress;
-        for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
-            Memory::map((void*)t, (void*)t);
-
-        UART::out("  Deferred GOP framebuffer mapped to 0x");
-        UART::out(to_hexstring(fbBase));
-        UART::out(" thru ");
-        UART::out(to_hexstring(fbBase + fbSize));
-        UART::out("\r\n");
-
+        for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000) {
+            Memory::map((void*)t, (void*)t
+                        , (1 << Memory::PageTableFlag::Present)
+                        | (1 << Memory::PageTableFlag::ReadWrite)
+                        );
+        }
+        dbgmsg("  Deferred GOP framebuffer mapped to %x thru %x\r\n"
+               , fbBase
+               , fbBase + fbSize
+               );
         Target = &target;
     }
     clear();
