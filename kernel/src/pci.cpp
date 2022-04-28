@@ -4,6 +4,7 @@
 #include <acpi.h>
 #include <debug.h>
 #include <memory/heap.h>
+#include <memory/paging.h>
 #include <memory/virtual_memory_manager.h>
 #include <system.h>
 
@@ -46,11 +47,14 @@ namespace PCI {
 
     void enumerate_function(u64 deviceAddress, u64 functionNumber) {
         u64 offset = functionNumber << 12;
-        u64 function_address = deviceAddress + offset;
-        Memory::map((void*)function_address, (void*)function_address);
-        PCIDeviceHeader* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(function_address);
+        u64 functionAddress = deviceAddress + offset;
+        Memory::map((void*)functionAddress, (void*)functionAddress
+                    , (1 << Memory::PageTableFlag::Present)
+                    | (1 << Memory::PageTableFlag::ReadWrite)
+                    );
+        PCIDeviceHeader* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(functionAddress);
         if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
-            Memory::unmap((void*)function_address);
+            Memory::unmap((void*)functionAddress);
             return;
         }
 
@@ -87,11 +91,14 @@ namespace PCI {
     
     void enumerate_device(u64 busAddress, u64 deviceNumber) {
         u64 offset = deviceNumber << 15;
-        u64 device_address = busAddress + offset;
-        Memory::map((void*)device_address, (void*)device_address);
-        PCIDeviceHeader* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(device_address);
+        u64 deviceAddress = busAddress + offset;
+        Memory::map((void*)deviceAddress, (void*)deviceAddress
+                    , (1 << Memory::PageTableFlag::Present)
+                    | (1 << Memory::PageTableFlag::ReadWrite)
+                    );
+        PCIDeviceHeader* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(deviceAddress);
         if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
-            Memory::unmap((void*)device_address);
+            Memory::unmap((void*)deviceAddress);
             return;
         }
 #ifdef DEBUG_PCI
@@ -102,12 +109,12 @@ namespace PCI {
                );
 #endif /* DEBUG_PCI */
         for (u64 function = 0; function < 8; ++function)
-            enumerate_function(device_address, function);
+            enumerate_function(deviceAddress, function);
     }
     
     void enumerate_bus(u64 baseAddress, u64 busNumber) {
         u64 offset = busNumber << 20;
-        u64 bus_address = baseAddress + offset;
+        u64 busAddress = baseAddress + offset;
         // Memory::map((void*)bus_address, (void*)bus_address);
 #ifdef DEBUG_PCI
         dbgmsg("[PCI]: Bus %ull\r\n"
@@ -117,7 +124,7 @@ namespace PCI {
                );
 #endif /* DEBUG_PCI */
         for (u64 device = 0; device < 32; ++device)
-            enumerate_device(bus_address, device);
+            enumerate_device(busAddress, device);
     }
     
     void enumerate_pci(ACPI::MCFGHeader* mcfg) {
