@@ -10,6 +10,8 @@ enum class ShouldNewline {
     No = 1
 };
 
+void dbgmsg_c(char);
+
 /// Print a C-style null-terminated string.
 void dbgmsg_s(const char* str);
 void dbgmsg(char, ShouldNewline nl = ShouldNewline::No);

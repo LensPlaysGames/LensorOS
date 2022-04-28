@@ -7,6 +7,10 @@
 #include <uart.h>
 #include <va_list.h>
 
+void dbgmsg_c(char c) {
+    UART::outc(c);
+}
+
 void dbgmsg_s(const char* str) {
     UART::out(str);
 }
@@ -177,19 +181,19 @@ void dbgmsg_v(const u8* fmt, va_list args) {
             case 'i':
                 current++;
                 if (*current != 'l') {
-                    // Found %u -- native bit signed integer
+                    // Found %i -- native bit signed integer
                     dbgmsg(va_arg(args, signed));
                     current--;
                     break;
                 }
                 current++;
                 if (*current != 'l') {
-                    // Found %ul -- 32 bit unsigned integer
+                    // Found %il -- 32 bit unsigned integer
                     dbgmsg(va_arg(args, s32));
                     current--;
                     break;
                 }
-                // Found %ull -- 64 bit unsigned integer
+                // Found %ill -- 64 bit unsigned integer
                 dbgmsg(va_arg(args, s64));
                 break;
             case 'f':
