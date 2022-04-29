@@ -66,12 +66,11 @@ struct IDTR {
     IDTR() {}
     IDTR(u16 limit, u64 offset);
 
-    void install_handler
-    (u64 handler_address,
-     u8 entryOffset,
-     u8 typeAttribute = IDT_TA_InterruptGate,
-     u8 selector = 0x08
-     );
+  void install_handler(u64 handler_address
+                       , u8 entryOffset
+                       , u8 typeAttribute = IDT_TA_InterruptGate
+                       , u8 selector = 0x08
+                       );
 
     inline void flush() {
         asm volatile ("lidt %0" :: "m" (*this));

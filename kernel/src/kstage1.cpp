@@ -51,7 +51,7 @@ void prepare_interrupts() {
     gIDT = IDTR(0x0fff, (u64)&idt_storage[0]);
     // POPULATE TABLE.
     // NOTE: IRQ0 uses this handler by default, but scheduler over-rides this!
-    gIDT.install_handler((u64)system_timer_handler,             PIC_IRQ0);
+    //gIDT.install_handler((u64)system_timer_handler,             PIC_IRQ0);
     gIDT.install_handler((u64)keyboard_handler,                 PIC_IRQ1);
     gIDT.install_handler((u64)uart_com1_handler,                PIC_IRQ4);
     gIDT.install_handler((u64)rtc_handler,                      PIC_IRQ8);
@@ -521,6 +521,20 @@ void kstage1(BootInfo* bInfo) {
         i++;
     });
 
+    // Initialize the Programmable Interval Timer.
+    gPIT = PIT();
+    dbgmsg("[kstage1]: \033[32mProgrammable Interval Timer Initialized\033[0m\r\n"
+           "  Channel 0, H/L Bit Access\r\n"
+           "  Rate Generator, BCD Disabled\r\n"
+           "  Periodic interrupts at \033[33m%fhz\033[0m.\r\n"
+           "\r\n"
+           , static_cast<double>(PIT_FREQUENCY));
+
+    // The Task State Segment in x86_64 is used
+    // for switches between privilege levels.
+    TSS::initialize();
+    Scheduler::initialize();
+
     if (SYSTEM->filesystems().length() > 0) {
         const char* filePath = "/fs0/blazeit";
         VFS& vfs = SYSTEM->virtual_filesystem();
@@ -533,12 +547,8 @@ void kstage1(BootInfo* bInfo) {
         vfs.read(fd, &tmpBuffer[0], 11);
         dbgmsg(&tmpBuffer[0], 11, ShouldNewline::Yes);
 
-
-        // TODO: Create ELF loader (again).
-        // TODO: Pass file descriptor to ELF loader for thread initialization.
-
-        ELF::RunUserspaceElf64(vfs, fd);
-
+        if (ELF::CreateUserspaceElf64Process(vfs, fd))
+            dbgmsg_s("Successfully created new process from `/fs0/blazeit`\r\n");
 
         dbgmsg("Closing FileDescriptor %ull\r\n", fd);
         vfs.close(fd);
@@ -550,20 +560,6 @@ void kstage1(BootInfo* bInfo) {
     (void)gHPET.initialize();
     // Prepare PS2 mouse.
     init_ps2_mouse();
-
-    // Initialize the Programmable Interval Timer.
-    gPIT = PIT();
-    dbgmsg("[kstage1]: \033[32mProgrammable Interval Timer Initialized\033[0m\r\n"
-           "  Channel 0, H/L Bit Access\r\n"
-           "  Rate Generator, BCD Disabled\r\n"
-           "  Periodic interrupts at \033[33m%fhz\033[0m.\r\n"
-           "\r\n"
-           , static_cast<double>(PIT_FREQUENCY));
-
-    // The Task State Segment in x86_64 is used only
-    // for switches between privilege levels.
-    TSS::initialize();
-    Scheduler::initialize();
 
     // Enable IRQ interrupts that will be used.
     disable_all_interrupts();

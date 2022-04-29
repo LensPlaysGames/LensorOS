@@ -164,7 +164,7 @@ namespace ELF {
         process->CR3 = newPageTable;
         process->CPU.RBP = newStackTop;
         process->CPU.RSP = newStackTop;
-        Scheduler::add_process(process);
+        //Scheduler::add_process(process);
         return true;
     }
 }

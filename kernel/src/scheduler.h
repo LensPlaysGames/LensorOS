@@ -49,15 +49,16 @@ struct CPUState {
  * `-- As only processes should make syscalls, should syscalls be defined in terms of process?
  */
 struct Process {
+    Memory::PageTable* CR3 { nullptr };
     CPUState CPU;
-    Memory::PageTable* CR3;
 };
 
 /// External symbols for 'scheduler.asm', defined in `scheduler.cpp`
-extern void* scheduler_switch_process;
+extern void(*scheduler_switch_process)(CPUState*);
 extern void(*timer_tick)();
 
 namespace Scheduler {
+    /// External symbol defined in `scheduler.cpp`
     extern SinglyLinkedListNode<Process*>* CurrentProcess;
 
     bool initialize();
@@ -73,5 +74,7 @@ namespace Scheduler {
     // Add an existing process to the list of processes.
     void add_process(Process*);
 }
+
+void scheduler_switch(CPUState*);
 
 #endif

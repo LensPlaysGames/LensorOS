@@ -220,7 +220,8 @@ void general_protection_fault_handler(InterruptFrame* frame, u64 err) {
     }
 }
 
-__attribute__((interrupt)) void simd_exception_handler(InterruptFrame* frame) {
+__attribute__((interrupt))
+void simd_exception_handler(InterruptFrame* frame) {
     // NOTE: Data about why exception occurred can be found in MXCSR register.
     /* 0b00000000
      *          =   -- invalid operation flag

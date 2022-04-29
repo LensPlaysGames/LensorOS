@@ -5,7 +5,6 @@
 
     extern tss                  ; Pointer to 64-bit TSS Entry structure.
 
-    ;; TODO: Page Table Swap (or at least TLB)
 jump_to_userland_function:
     cli
     

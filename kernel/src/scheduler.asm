@@ -15,9 +15,6 @@ skip_swap:
 
     GLOBAL irq0_handler
 irq0_handler:
-    push rbp
-    mov rbp, rsp
-;;; SAVE CPU STATE ON STACK
     ;; Already on the stack thanks to interrupt:
     ;; |- Old GDT Segment Selector
     ;; |- Old Stack Pointer (RSP)
@@ -25,6 +22,7 @@ irq0_handler:
     ;; |- Code Segment Selector
     ;; |- Instruction Pointer (RIP)
     ;; `- Error Code
+;;; SAVE CPU STATE ON STACK
     call do_swapgs
     push rax
     push gs
@@ -50,7 +48,7 @@ irq0_handler:
     mov rdi, rsp
     call [rel scheduler_switch_process]
 ;;; END INTERRUPT
-    mov al, 0x20                ; 0x20 = PIC_EOI
+    mov ax, 0x20                ; 0x20 = PIC_EOI
     out 0x20, al                ; 0x20 = PIC1_COMMAND port
 ;;; RESTORE CPU STATE FROM STACK
     add rsp, 8                  ; Eat `rsp` off of stack.
@@ -72,5 +70,4 @@ irq0_handler:
     pop gs
     pop rax
     call do_swapgs
-    pop rbp
     iretq
