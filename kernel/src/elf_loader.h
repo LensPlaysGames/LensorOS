@@ -35,7 +35,7 @@ namespace ELF {
         return true;
     }
 
-    bool RunUserspaceElf64(VFS& vfs, FileDescriptor fd) {
+    bool CreateUserspaceElf64Process(VFS& vfs, FileDescriptor fd) {
         Elf64_Ehdr elfHeader;
         vfs.read(fd, reinterpret_cast<u8*>(&elfHeader), sizeof(Elf64_Ehdr));
         if (VerifyElf64Header(elfHeader) == false)
@@ -148,20 +148,23 @@ namespace ELF {
                 }
             }
         }
-
-
-
-        // TODO: Create new scheduler process.
         Process* process = new Process;
-        if (process == nullptr)
+        if (process == nullptr) {
+            dbgmsg_s("Couldn't allocate process structure for new userspace process\r\n");
             return false;
-
+        }
+        constexpr u64 UserProcessStackSizePages = 4;
+        constexpr u64 UserProcessStackSize = UserProcessStackSizePages * PAGE_SIZE;
+        u64 newStackBottom = (u64)Memory::request_pages(UserProcessStackSizePages);
+        if (newStackBottom == 0) {
+            dbgmsg_s("Couldn't allocate stack for new userspace process\r\n");
+            return false;
+        }
+        u64 newStackTop = newStackBottom + UserProcessStackSize;
         process->CR3 = newPageTable;
-
-        Memory::flush_page_map(newPageTable);
-        dbgmsg("Jumping to userland Elf64 at %x\r\n", elfHeader.e_entry);
-        jump_to_userland_function((void*)elfHeader.e_entry);
-  
+        process->CPU.RBP = newStackTop;
+        process->CPU.RSP = newStackTop;
+        Scheduler::add_process(process);
         return true;
     }
 }
