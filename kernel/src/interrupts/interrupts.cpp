@@ -294,3 +294,9 @@ void remap_pic() {
     out8(PIC2_DATA, childMasks);
     io_wait();
 }
+
+#include <scheduler.h>
+__attribute__((no_caller_saved_registers))
+void scheduler_switch(CPUState* cpu) {
+    Scheduler::switch_process(cpu);
+};

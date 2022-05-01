@@ -1,6 +1,7 @@
 #include <scheduler.h>
 
 #include <debug.h>
+#include <integers.h>
 #include <interrupts/idt.h>
 #include <interrupts/interrupts.h>
 #include <linked_list.h>
@@ -12,17 +13,74 @@
 #include <uart.h>
 
 /// External symbol definitions for `scheduler.asm`
-void(*scheduler_switch_process)(CPUState*)__attribute__((interrupt));
+void(*scheduler_switch_process)(CPUState*)
+    __attribute__((no_caller_saved_registers));
+
 void(*timer_tick)();
 
 namespace Scheduler {
+    // Not the best, but wouldn't be a problem unless ridiculous uptime.
+    pid_t the_pid { 0 };
+    pid_t request_pid() {
+        return the_pid++;
+    }
+
     Process StartupProcess;
 
     SinglyLinkedList<Process*>* ProcessQueue { nullptr };
     SinglyLinkedListNode<Process*>* CurrentProcess { nullptr };
 
+    void print_debug() {
+        dbgmsg_s("[SCHED]: Debug information:\r\n"
+                 "  Process Queue:\r\n");
+        ProcessQueue->for_each([](auto* it) {
+            Process& process = *it->value();
+            dbgmsg("    Process %ull:\r\n"
+                   "      CR3: %x\r\n"
+                   "      RAX: %x\r\n"
+                   "      RBX: %x\r\n"
+                   "      RCX: %x\r\n"
+                   "      RDX: %x\r\n"
+                   "      RSI: %x\r\n"
+                   "      RDI: %x\r\n"
+                   "      RBP: %x\r\n"
+                   "      RSP: %x\r\n"
+                   "      R8: %x\r\n"
+                   "      R9: %x\r\n"
+                   "      R10: %x\r\n"
+                   "      R11: %x\r\n"
+                   "      R12: %x\r\n"
+                   "      R13: %x\r\n"
+                   "      R14: %x\r\n"
+                   "      R15: %x\r\n"
+                   , process.ProcessID
+                   , process.CR3
+                   , process.CPU.RAX
+                   , process.CPU.RBX
+                   , process.CPU.RCX
+                   , process.CPU.RDX
+                   , process.CPU.RSI
+                   , process.CPU.RDI
+                   , process.CPU.RBP
+                   , process.CPU.RSP
+                   , process.CPU.R8
+                   , process.CPU.R9
+                   , process.CPU.R10
+                   , process.CPU.R11
+                   , process.CPU.R12
+                   , process.CPU.R13
+                   , process.CPU.R14
+                   , process.CPU.R15
+                   );
+        });
+        dbgmsg_s("\r\n");
+    }
+
     void add_process(Process* process) {
+        process->ProcessID = request_pid();
         ProcessQueue->add(process);
+        dbgmsg_s("[SCHED]: Added process.\r\n");
+        print_debug();
     }
 
     bool initialize() {
@@ -53,7 +111,22 @@ namespace Scheduler {
     void switch_process(CPUState* cpu) {
         dbgmsg_s("Switching processes\r\n");
 
-        memcpy(&cpu, &CurrentProcess->value()->CPU, sizeof(CPUState));
+        dbgmsg("Old Interrupt frame:\r\n"
+               "  Error Code:            %x\r\n"
+               "  Instruction Pointer:   %x\r\n"
+               "  Code Segment Selector: %x\r\n"
+               "  Flags:                 %x\r\n"
+               "  Stack Pointer:         %x\r\n"
+               "  Data Segment Selector: %x\r\n"
+               , cpu->Frame.error
+               , cpu->Frame.ip
+               , cpu->Frame.cs
+               , cpu->Frame.flags
+               , cpu->Frame.sp
+               , cpu->Frame.ss
+               );
+
+        memcpy(cpu, &CurrentProcess->value()->CPU, sizeof(CPUState));
         if (CurrentProcess->next() == nullptr) {
             if(CurrentProcess == ProcessQueue->head())
                 return;
@@ -61,14 +134,24 @@ namespace Scheduler {
             CurrentProcess = ProcessQueue->head();
         }
         else CurrentProcess = CurrentProcess->next();
-        memcpy(&CurrentProcess->value()->CPU, &cpu, sizeof(CPUState));
+        memcpy(&CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
         Memory::flush_page_map(CurrentProcess->value()->CR3);
+
+        dbgmsg("New Interrupt frame:\r\n"
+               "  Error Code:            %x\r\n"
+               "  Instruction Pointer:   %x\r\n"
+               "  Code Segment Selector: %x\r\n"
+               "  Flags:                 %x\r\n"
+               "  Stack Pointer:         %x\r\n"
+               "  Data Segment Selector: %x\r\n"
+               , cpu->Frame.error
+               , cpu->Frame.ip
+               , cpu->Frame.cs
+               , cpu->Frame.flags
+               , cpu->Frame.sp
+               , cpu->Frame.ss
+               );
 
         dbgmsg_s("Switched processes\r\n");
     }
 }
-
-// This work-around/hack is due to needing a function pointer
-void scheduler_switch(CPUState* cpu) {
-    Scheduler::switch_process(cpu);
-};
