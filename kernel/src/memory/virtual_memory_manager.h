@@ -50,6 +50,12 @@ namespace Memory {
      */
     void flush_page_map(PageTable* pageMapLevelFour);
 
+    /* Return the base address of an exact copy of the currently active page map.
+     * NOTE: Does not map itself, or unmap physical identity mapping.
+     */
+    PageTable* clone_active_page_map();
+
+    /// Return the base address of the currently active page map.
     PageTable* active_page_map();
 }
 

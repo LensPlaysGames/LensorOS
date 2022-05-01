@@ -157,6 +157,66 @@ namespace Memory {
         ActivePageMap = pageMapLevelFour;
     }
 
+    PageTable* clone_active_page_map() {
+        // FIXME: Free already allocated pages upon failure.
+        Memory::PageDirectoryEntry PDE;
+        Memory::PageTable* oldPageTable = Memory::active_page_map();
+        auto* newPageTable = reinterpret_cast<Memory::PageTable*>(Memory::request_page());
+        if (newPageTable == nullptr) {
+            dbgmsg_s("Failed to allocate memory for new process page map level four.\r\n");
+            return nullptr;
+        }
+        memset(newPageTable, 0, PAGE_SIZE);
+        for (u64 i = 0; i < 512; ++i) {
+            PDE = oldPageTable->entries[i];
+            if (PDE.flag(Memory::PageTableFlag::Present) == false)
+                continue;
+
+            auto* newPDP = (Memory::PageTable*)Memory::request_page();
+            if (newPDP == nullptr) {
+                dbgmsg_s("Failed to allocate memory for new process page directory pointer table.\r\n");
+                return nullptr;
+            }
+            auto* oldTable = (Memory::PageTable*)((u64)PDE.address() << 12);
+            for (u64 j = 0; j < 512; ++j) {
+                PDE = oldTable->entries[j];
+                if (PDE.flag(Memory::PageTableFlag::Present) == false)
+                    continue;
+
+                auto* newPD = (Memory::PageTable*)Memory::request_page();
+                if (newPD == nullptr) {
+                    dbgmsg_s("Failed to allocate memory for new process page directory table.\r\n");
+                    return nullptr;
+                }
+                auto* oldPD = (Memory::PageTable*)((u64)PDE.address() << 12);
+                for (u64 k = 0; k < 512; ++k) {
+                    PDE = oldPD->entries[k];
+                    if (PDE.flag(Memory::PageTableFlag::Present) == false)
+                        continue;
+
+                    auto* newPT = (Memory::PageTable*)Memory::request_page();
+                    if (newPT == nullptr) {
+                        dbgmsg_s("Failed to allocate memory for new process page table.\r\n");
+                        return nullptr;
+                    }
+                    auto* oldPT = (Memory::PageTable*)((u64)PDE.address() << 12);
+                    memcpy(oldPT, newPT, PAGE_SIZE);
+
+                    PDE = oldPD->entries[k];
+                    PDE.set_address((u64)newPT >> 12);
+                    newPD->entries[k] = PDE;
+                }
+                PDE = oldTable->entries[j];
+                PDE.set_address((u64)newPD >> 12);
+                newPDP->entries[j] = PDE;
+            }
+            PDE = oldPageTable->entries[i];
+            PDE.set_address((u64)newPDP >> 12);
+            newPageTable->entries[i] = PDE;
+        }
+        return newPageTable;
+    }
+
     PageTable* active_page_map() {
         if (!ActivePageMap) {
             asm volatile ("mov %%cr3, %%rax\n\t"

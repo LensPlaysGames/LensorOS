@@ -42,66 +42,17 @@ namespace ELF {
             return false;
 
         // Copy current page table (fork)
-        Memory::PageDirectoryEntry PDE;
-        Memory::PageTable* oldPageTable = Memory::active_page_map();
-        auto* newPageTable = reinterpret_cast<Memory::PageTable*>(Memory::request_page());
+        auto* newPageTable = Memory::clone_active_page_map();
         if (newPageTable == nullptr) {
-            dbgmsg_s("Failed to allocate memory for new process page map level four.\r\n");
+            dbgmsg_s("Failed to clone current page map for new process page map level four.\r\n");
             return false;
         }
-        memset(newPageTable, 0, PAGE_SIZE);
-        for (u64 i = 0; i < 512; ++i) {
-            PDE = oldPageTable->entries[i];
-            if (PDE.flag(Memory::PageTableFlag::Present) == false)
-                continue;
-
-            auto* newPDP = (Memory::PageTable*)Memory::request_page();
-            if (newPDP == nullptr) {
-                dbgmsg_s("Failed to allocate memory for new process page directory pointer table.\r\n");
-                return false;
-            }
-            auto* oldTable = (Memory::PageTable*)((u64)PDE.address() << 12);
-            for (u64 j = 0; j < 512; ++j) {
-                PDE = oldTable->entries[j];
-                if (PDE.flag(Memory::PageTableFlag::Present) == false)
-                    continue;
-
-                auto* newPD = (Memory::PageTable*)Memory::request_page();
-                if (newPD == nullptr) {
-                    dbgmsg_s("Failed to allocate memory for new process page directory table.\r\n");
-                    return false;
-                }
-                auto* oldPD = (Memory::PageTable*)((u64)PDE.address() << 12);
-                for (u64 k = 0; k < 512; ++k) {
-                    PDE = oldPD->entries[k];
-                    if (PDE.flag(Memory::PageTableFlag::Present) == false)
-                        continue;
-
-                    auto* newPT = (Memory::PageTable*)Memory::request_page();
-                    if (newPT == nullptr) {
-                        dbgmsg_s("Failed to allocate memory for new process page table.\r\n");
-                        return false;
-                    }
-                    auto* oldPT = (Memory::PageTable*)((u64)PDE.address() << 12);
-                    memcpy(oldPT, newPT, PAGE_SIZE);
-
-                    PDE = oldPD->entries[k];
-                    PDE.set_address((u64)newPT >> 12);
-                    newPD->entries[k] = PDE;
-                }
-                PDE = oldTable->entries[j];
-                PDE.set_address((u64)newPD >> 12);
-                newPDP->entries[j] = PDE;
-            }
-            PDE = oldPageTable->entries[i];
-            PDE.set_address((u64)newPDP >> 12);
-            newPageTable->entries[i] = PDE;
-        }
-
         for (u64 t = 0; t < Memory::total_ram(); t += PAGE_SIZE)
             unmap(newPageTable, (void*)t);
 
         Memory::map(newPageTable, newPageTable, newPageTable, true);
+
+        // Load PT_LOAD program headers, mapping to vaddr as necessary.
         u64 programHeadersTableSize = elfHeader.e_phnum * elfHeader.e_phentsize;
         SmartPtr<Elf64_Phdr[]> programHeaders(new Elf64_Phdr[elfHeader.e_phnum], elfHeader.e_phnum);
         vfs.read(fd, (u8*)(programHeaders.get()), programHeadersTableSize, elfHeader.e_phoff);
@@ -119,8 +70,7 @@ namespace ELF {
             if (phdr->p_type == PT_LOAD) {
                 // Allocate pages for program.
                 u64 pages = (phdr->p_memsz + PAGE_SIZE - 1) / PAGE_SIZE;
-
-                // Should I just use the kernel heap for this? It would grow very large...
+                // Should I just use the kernel heap for this? It could grow very large...
                 u8* loadedProgram = reinterpret_cast<u8*>(Memory::request_pages(pages));
                 memset(loadedProgram, 0, phdr->p_memsz);
                 bool read = vfs.read(fd, loadedProgram, phdr->p_filesz, phdr->p_offset);
