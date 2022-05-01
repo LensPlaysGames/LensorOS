@@ -111,10 +111,20 @@ namespace ELF {
             return false;
         }
         u64 newStackTop = newStackBottom + UserProcessStackSize;
+        // New page map.
         process->CR3 = newPageTable;
+        // New stack.
         process->CPU.RBP = newStackTop;
         process->CPU.RSP = newStackTop;
-        //Scheduler::add_process(process);
+        process->CPU.Frame.sp = newStackTop;
+        // Entry point.
+        process->CPU.Frame.ip = elfHeader.e_entry;
+        // Ring 3 GDT segment selectors.
+        process->CPU.Frame.cs = 0x20;
+        process->CPU.Frame.ss = 0x28;
+        // Enable interrupts after jump.
+        process->CPU.Frame.flags = 0b1000000000;
+        Scheduler::add_process(process);
         return true;
     }
 }
