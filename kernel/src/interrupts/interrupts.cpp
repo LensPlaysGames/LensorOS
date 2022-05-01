@@ -123,21 +123,21 @@ void divide_by_zero_handler(InterruptFrame* frame) {
 }
 
 __attribute__((interrupt))
-void page_fault_handler(InterruptFrame* frame, u64 err) {
+void page_fault_handler(InterruptFrameError* frame) {
     // POP ERROR CODE FROM STACK
     u64 address;
     asm volatile ("mov %%cr2, %0" : "=r" (address));
     // If bit 0 == 0, page not present
-    if ((err & 0b1) == 0)
+    if ((frame->error & 0b1) == 0)
         panic(frame, "Page fault detected (page not present)");
     // If bit 1 == 1, caused by page write access
-    else if (((err & 0b10) >> 1) == 1)
+    else if (((frame->error & 0b10) >> 1) == 1)
         panic(frame, "Page fault detected (Invalid page write access)");
     // If bit 5 == 1, caused by a protection key violation.
-    else if (((err & 0b10000) >> 4) == 1)
+    else if (((frame->error & 0b10000) >> 4) == 1)
         panic(frame, "Page fault detected (Protection-key violation)");
     // If bit 6 == 1, caused by a shadow stack access.
-    else if (((err & 0b100000) >> 5) == 1)
+    else if (((frame->error & 0b100000) >> 5) == 1)
         panic(frame, "Page fault detected (Shadow stack access)");
     else panic(frame, "Page fault detected");
     UART::out("  Faulty Address: 0x");
@@ -152,7 +152,7 @@ void page_fault_handler(InterruptFrame* frame, u64 err) {
 }
 
 __attribute__((interrupt))
-void double_fault_handler(InterruptFrame* frame, u64 err) {
+void double_fault_handler(InterruptFrameError* frame) {
     panic(frame, "Double fault detected!");
     while (true) {
         asm ("hlt");
@@ -160,17 +160,17 @@ void double_fault_handler(InterruptFrame* frame, u64 err) {
 }
 
 __attribute__((interrupt))
-void stack_segment_fault_handler(InterruptFrame* frame, u64 err) {
-    if (err == 0)
+void stack_segment_fault_handler(InterruptFrameError* frame) {
+    if (frame->error == 0)
         panic(frame, "Stack segment fault detected (0)");
     else panic(frame, "Stack segment fault detected (selector)!");
     UART::out("  Error Code: 0x");
-    UART::out(to_hexstring(err));
+    UART::out(to_hexstring(frame->error));
     UART::out("\r\n");
-    if (err & 0b1)
+    if (frame->error & 0b1)
         UART::out("  External\r\n");
     
-    u8 table = (err & 0b110) >> 1;
+    u8 table = (frame->error & 0b110) >> 1;
     if (table == 0b00)
         UART::out("  GDT");
     else if (table == 0b01 || table == 0b11)
@@ -179,28 +179,28 @@ void stack_segment_fault_handler(InterruptFrame* frame, u64 err) {
         UART::out("  LDT");
     
     UART::out(" Selector Index: ");
-    UART::out(to_hexstring(((err & 0b1111111111111000) >> 3)));
+    UART::out(to_hexstring(((frame->error & 0b1111111111111000) >> 3)));
     UART::out("\r\n");
 
     gRend.puts("Err: 0x", 0x00000000);
-    gRend.puts(to_hexstring(err), 0x00000000);
+    gRend.puts(to_hexstring(frame->error), 0x00000000);
     gRend.crlf();
     gRend.swap();
 }
 
 __attribute__((interrupt))
-void general_protection_fault_handler(InterruptFrame* frame, u64 err) {
-    if (err == 0)
+void general_protection_fault_handler(InterruptFrameError* frame) {
+    if (frame->error == 0)
         panic(frame, "General protection fault detected (0)!");
     else panic(frame, "General protection fault detected (selector)!");
 
     UART::out("  Error Code: 0x");
-    UART::out(to_hexstring(err));
+    UART::out(to_hexstring(frame->error));
     UART::out("\r\n");
-    if (err & 0b1)
+    if (frame->error & 0b1)
         UART::out("  External\r\n");
     
-    u8 table = (err & 0b110) >> 1;
+    u8 table = (frame->error & 0b110) >> 1;
     if (table == 0b00)
         UART::out("  GDT");
     else if (table == 0b01 || table == 0b11)
@@ -209,21 +209,21 @@ void general_protection_fault_handler(InterruptFrame* frame, u64 err) {
         UART::out("  LDT");
     
     UART::out(" Selector Index: ");
-    UART::out(to_hexstring(((err & 0b1111111111111000) >> 3)));
+    UART::out(to_hexstring(((frame->error & 0b1111111111111000) >> 3)));
     UART::out("\r\n");
     gRend.puts("Err: 0x", 0x00000000);
-    gRend.puts(to_hexstring(err), 0x00000000);
+    gRend.puts(to_hexstring(frame->error), 0x00000000);
     gRend.crlf();
     gRend.swap();
-    while (true) {
+    while (true)
         asm ("hlt");
-    }
 }
 
 __attribute__((interrupt))
 void simd_exception_handler(InterruptFrame* frame) {
-    // NOTE: Data about why exception occurred can be found in MXCSR register.
-    /* 0b00000000
+    /* NOTE: Data about why exception occurred can be found in MXCSR register.
+     * MXCSR Register breakdown:
+     * 0b00000000
      *          =   -- invalid operation flag
      *         =    -- denormal flag
      *        =     -- divide-by-zero flag
@@ -232,28 +232,25 @@ void simd_exception_handler(InterruptFrame* frame) {
      *     =        -- precision flag
      *    =         -- denormals are zeros flag
      */
-
     u32 mxcsr { 0 };
     asm volatile ("ldmxcsr %0"::"m"(mxcsr));
-
     if (mxcsr & 0b00000001)
-        panic(frame, "Single instruction, multiple data fault detected (Invalid Operation)!");
+        panic(frame, "SIMD fault detected (Invalid Operation)!");
     else if (mxcsr & 0b00000010)
-        panic(frame, "Single instruction, multiple data fault detected (Denormal)!");
+        panic(frame, "SIMD fault detected (Denormal)!");
     else if (mxcsr & 0b00000100)
-        panic(frame, "Single instruction, multiple data fault detected (Divide by Zero)!");
+        panic(frame, "SIMD fault detected (Divide by Zero)!");
     else if (mxcsr & 0b00001000)
-        panic(frame, "Single instruction, multiple data fault detected (Overflow)!");
+        panic(frame, "SIMD fault detected (Overflow)!");
     else if (mxcsr & 0b00010000)
-        panic(frame, "Single instruction, multiple data fault detected (Underflow)!");
+        panic(frame, "SIMD fault detected (Underflow)!");
     else if (mxcsr & 0b00100000)
-        panic(frame, "Single instruction, multiple data fault detected (Precision)!");
+        panic(frame, "SIMD fault detected (Precision)!");
     else if (mxcsr & 0b01000000)
-        panic(frame, "Single instruction, multiple data fault detected (Denormals are Zero)!");
-
-    while (true) {
+        panic(frame, "SIMD fault detected (Denormals are Zero)!");
+    else panic(frame, "Unknown SIMD fault");
+    while (true)
         asm ("hlt");
-    }
 }
 
 void remap_pic() {
