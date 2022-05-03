@@ -47,10 +47,13 @@ namespace ELF {
             dbgmsg_s("Failed to clone current page map for new process page map level four.\r\n");
             return false;
         }
-        for (u64 t = 0; t < Memory::total_ram(); t += PAGE_SIZE)
-            unmap(newPageTable, (void*)t);
 
-        Memory::map(newPageTable, newPageTable, newPageTable, true);
+        // FIXME: Something is being unmapped here that shouldn't be...
+        //        What is it?!?!? Is it the GDT?
+        //for (u64 t = 0; t < Memory::total_ram(); t += PAGE_SIZE)
+        //    unmap(newPageTable, (void*)t);
+
+        Memory::map(newPageTable, newPageTable, newPageTable);
 
         // Load PT_LOAD program headers, mapping to vaddr as necessary.
         u64 programHeadersTableSize = elfHeader.e_phnum * elfHeader.e_phentsize;
@@ -61,12 +64,14 @@ namespace ELF {
              (u64)phdr < (u64)programHeaders.get() + programHeadersTableSize;
              phdr++)
         {
+
 #ifdef DEBUG_ELF
             dbgmsg("Program header: type=%ul, offset=%ull\r\n"
                    , phdr->p_type
                    , phdr->p_offset
                    );
 #endif /* #ifdef DEBUG_ELF */
+
             if (phdr->p_type == PT_LOAD) {
                 // Allocate pages for program.
                 u64 pages = (phdr->p_memsz + PAGE_SIZE - 1) / PAGE_SIZE;
@@ -84,6 +89,7 @@ namespace ELF {
                        , phdr->p_offset
                        );
 #endif /* #ifdef DEBUG_ELF */
+
                 // Virtually map allocated pages.
                 u64 virtAddress = phdr->p_vaddr;
                 for (u64 t = 0; t < pages * PAGE_SIZE; t += PAGE_SIZE) {
@@ -120,10 +126,10 @@ namespace ELF {
         // Entry point.
         process->CPU.Frame.ip = elfHeader.e_entry;
         // Ring 3 GDT segment selectors.
-        process->CPU.Frame.cs = 0x20;
-        process->CPU.Frame.ss = 0x28;
+        process->CPU.Frame.cs = 0x18;// | 0b11;
+        process->CPU.Frame.ss = 0x20;// | 0b11;
         // Enable interrupts after jump.
-        process->CPU.Frame.flags = 0b1000000000;
+        process->CPU.Frame.flags = 0b1010000010;
         Scheduler::add_process(process);
         return true;
     }
