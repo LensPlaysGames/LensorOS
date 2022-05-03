@@ -126,8 +126,8 @@ namespace ELF {
         // Entry point.
         process->CPU.Frame.ip = elfHeader.e_entry;
         // Ring 3 GDT segment selectors.
-        process->CPU.Frame.cs = 0x18;// | 0b11;
-        process->CPU.Frame.ss = 0x20;// | 0b11;
+        process->CPU.Frame.cs = 0x18 | 0b11;
+        process->CPU.Frame.ss = 0x20 | 0b11;
         // Enable interrupts after jump.
         process->CPU.Frame.flags = 0b1010000010;
         Scheduler::add_process(process);
