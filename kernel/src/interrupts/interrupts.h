@@ -86,8 +86,18 @@ struct InterruptFrame {
     u64 ss;
 } __attribute__((packed));
 
-struct InterruptFrameError : public InterruptFrame {
+struct InterruptFrameError {
+    // Error Code
     u64 error;
+    // Instruction Pointer
+    u64 ip;
+    // Code Segment
+    u64 cs;
+    u64 flags;
+    // Stack Pointer
+    u64 sp;
+    // Segment Selector
+    u64 ss;
 } __attribute__((packed));
 
 // HARDWARE INTERRUPT REQUESTS (IRQs)

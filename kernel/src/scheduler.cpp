@@ -112,13 +112,11 @@ namespace Scheduler {
         dbgmsg_s("Switching processes\r\n");
 
         dbgmsg("Old Interrupt frame:\r\n"
-               "  Error Code:            %x\r\n"
                "  Instruction Pointer:   %x\r\n"
                "  Code Segment Selector: %x\r\n"
                "  Flags:                 %x\r\n"
                "  Stack Pointer:         %x\r\n"
                "  Data Segment Selector: %x\r\n"
-               , cpu->Frame.error
                , cpu->Frame.ip
                , cpu->Frame.cs
                , cpu->Frame.flags
@@ -137,14 +135,23 @@ namespace Scheduler {
         memcpy(&CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
         Memory::flush_page_map(CurrentProcess->value()->CR3);
 
+        asm("xor %%rax, %%rax\r\n\t"
+            "movq %0, %%rax\r\n\t"
+            "movw %%ax, %%es\r\n\t"
+            "movw %%ax, %%ds\r\n\t"
+            :: "r"(cpu->Frame.ss)
+            : "rax"
+            );
+        
+        cpu->FS = cpu->Frame.ss;
+        cpu->GS = cpu->Frame.ss;
+
         dbgmsg("New Interrupt frame:\r\n"
-               "  Error Code:            %x\r\n"
                "  Instruction Pointer:   %x\r\n"
                "  Code Segment Selector: %x\r\n"
                "  Flags:                 %x\r\n"
                "  Stack Pointer:         %x\r\n"
                "  Data Segment Selector: %x\r\n"
-               , cpu->Frame.error
                , cpu->Frame.ip
                , cpu->Frame.cs
                , cpu->Frame.flags

@@ -33,7 +33,7 @@ struct CPUState {
     u64 FS;
     u64 GS;
     u64 RAX;
-    InterruptFrameError Frame;
+    InterruptFrame Frame;
 } __attribute__((packed));
 
 typedef u64 pid_t;

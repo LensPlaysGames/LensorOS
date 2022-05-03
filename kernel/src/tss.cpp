@@ -33,20 +33,6 @@ void TSS::initialize() {
         );
     tssEntry.l_RSP0 = stackPointer;
     tssEntry.h_RSP0 = stackPointer >> 32;
-    /* FIXME: General protection fault here with error code of `0x28`.
-     *
-     * From Intel manual:
-     * SRC = given segment selector
-     *
-     * IF SRC is a NULL selector
-     *     THEN #GP(0);
-     *
-     * IF SRC(Offset) > descriptor table limit OR IF SRC(type) != global
-     *     THEN #GP(segment selector); FI
-     *
-     * IF segment descriptor is not for an available TSS
-     *     THEN #GP(segment selector); FI
-     */
     asm("mov $0x28, %%ax\r\n\t"
         "ltr %%ax\r\n\t"
         ::: "rax"
