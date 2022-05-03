@@ -93,12 +93,15 @@ namespace ELF {
                 // Virtually map allocated pages.
                 u64 virtAddress = phdr->p_vaddr;
                 for (u64 t = 0; t < pages * PAGE_SIZE; t += PAGE_SIZE) {
+                    // Unmap the identity paging that would over-write the
+                    // user process in the user process page table.
+                    Memory::unmap(newPageTable, (void*)(virtAddress + t), Memory::ShowDebug::Yes);
                     Memory::map(newPageTable
                                 , (void*)(virtAddress + t)
-                                , loadedProgram
-                                , (1 << Memory::PageTableFlag::Present)
-                                | (1 << Memory::PageTableFlag::ReadWrite)
-                                | (1 << Memory::PageTableFlag::UserSuper)
+                                , loadedProgram + t
+                                , (u64)Memory::PageTableFlag::Present
+                                | (u64)Memory::PageTableFlag::ReadWrite
+                                | (u64)Memory::PageTableFlag::UserSuper
                                 , Memory::ShowDebug::Yes
                                 );
                 }

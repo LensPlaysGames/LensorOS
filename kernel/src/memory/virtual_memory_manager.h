@@ -22,7 +22,7 @@ namespace Memory {
     void map(PageTable*
              , void* virtualAddress
              , void* physicalAddress
-             , u64 mappingFlags = (1 << static_cast<int>(PageTableFlag::Present))
+             , u64 mappingFlags = static_cast<u64>(PageTableFlag::Present)
              , ShowDebug d = ShowDebug::No
              );
 
@@ -31,7 +31,7 @@ namespace Memory {
      */
     void map(void* virtualAddress
              , void* physicalAddress
-             , u64 mappingFlags = (1 << static_cast<int>(PageTableFlag::Present))
+             , u64 mappingFlags = static_cast<u64>(PageTableFlag::Present)
              , ShowDebug d = ShowDebug::No
              );
 

@@ -142,7 +142,7 @@ namespace Scheduler {
             :: "r"(cpu->Frame.ss)
             : "rax"
             );
-        
+
         cpu->FS = cpu->Frame.ss;
         cpu->GS = cpu->Frame.ss;
 

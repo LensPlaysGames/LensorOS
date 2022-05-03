@@ -83,9 +83,9 @@ void init_heap() {
         // Map virtual heap position to physical memory address returned by page frame allocator.
         // FIXME: Should this be global?
         Memory::map((void*)((u64)HEAP_VIRTUAL_BASE + i), Memory::request_page()
-                    , (1 << Memory::PageTableFlag::Present)
-                    | (1 << Memory::PageTableFlag::ReadWrite)
-                    | (1 << Memory::PageTableFlag::Global)
+                    , (u64)Memory::PageTableFlag::Present
+                    | (u64)Memory::PageTableFlag::ReadWrite
+                    | (u64)Memory::PageTableFlag::Global
                     );
     }
     sHeapStart = (void*)HEAP_VIRTUAL_BASE;
@@ -119,9 +119,9 @@ void expand_heap(u64 numBytes) {
     // Allocate and map a page in memory for new header.
     for (u64 i = 0; i < numPages; ++i) {
         Memory::map(sHeapEnd, Memory::request_page()
-                    , (1 << Memory::PageTableFlag::Present)
-                    | (1 << Memory::PageTableFlag::ReadWrite)
-                    | (1 << Memory::PageTableFlag::Global)
+                    , (u64)Memory::PageTableFlag::Present
+                    | (u64)Memory::PageTableFlag::ReadWrite
+                    | (u64)Memory::PageTableFlag::Global
                     );
         sHeapEnd = (void*)((u64)sHeapEnd + PAGE_SIZE);
     }

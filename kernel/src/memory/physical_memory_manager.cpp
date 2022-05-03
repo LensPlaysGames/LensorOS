@@ -245,9 +245,9 @@ namespace Memory {
              t += PAGE_SIZE)
         {
             map(activePML4, (void*)t, (void*)t
-                , (1 << PageTableFlag::Present)
-                | (1 << PageTableFlag::ReadWrite)
-                | (1 << PageTableFlag::Global)
+                , (u64)PageTableFlag::Present
+                | (u64)PageTableFlag::ReadWrite
+                | (u64)PageTableFlag::Global
                 );
         }
         // Calculate total number of bytes needed for a physical page

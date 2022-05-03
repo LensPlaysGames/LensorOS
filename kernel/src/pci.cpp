@@ -49,8 +49,8 @@ namespace PCI {
         u64 offset = functionNumber << 12;
         u64 functionAddress = deviceAddress + offset;
         Memory::map((void*)functionAddress, (void*)functionAddress
-                    , (1 << Memory::PageTableFlag::Present)
-                    | (1 << Memory::PageTableFlag::ReadWrite)
+                    , (u64)Memory::PageTableFlag::Present
+                    | (u64)Memory::PageTableFlag::ReadWrite
                     );
         PCIDeviceHeader* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(functionAddress);
         if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
@@ -93,8 +93,8 @@ namespace PCI {
         u64 offset = deviceNumber << 15;
         u64 deviceAddress = busAddress + offset;
         Memory::map((void*)deviceAddress, (void*)deviceAddress
-                    , (1 << Memory::PageTableFlag::Present)
-                    | (1 << Memory::PageTableFlag::ReadWrite)
+                    , (u64)Memory::PageTableFlag::Present
+                    | (u64)Memory::PageTableFlag::ReadWrite
                     );
         PCIDeviceHeader* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(deviceAddress);
         if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {

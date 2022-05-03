@@ -18,15 +18,16 @@ namespace Memory {
         PageMapIndexer indexer((u64)virtualAddress);
         PageDirectoryEntry PDE;
 
-        bool present = mappingFlags & (1 << static_cast<int>(PageTableFlag::Present));
-        bool write = mappingFlags & (1 << static_cast<int>(PageTableFlag::ReadWrite));
-        bool user = mappingFlags & (1 << static_cast<int>(PageTableFlag::UserSuper));
-        bool write_through = mappingFlags & (1 << static_cast<int>(PageTableFlag::WriteThrough));
-        bool cache_disabled = mappingFlags & (1 << static_cast<int>(PageTableFlag::CacheDisabled));
-        bool accessed = mappingFlags & (1 << static_cast<int>(PageTableFlag::Accessed));
-        bool dirty = mappingFlags & (1 << static_cast<int>(PageTableFlag::Dirty));
-        bool larger_pages = mappingFlags & (1 << static_cast<int>(PageTableFlag::LargerPages));
-        bool global = mappingFlags & (1 << static_cast<int>(PageTableFlag::Global));
+        bool present       = mappingFlags & static_cast<u64>(PageTableFlag::Present);
+        bool write         = mappingFlags & static_cast<u64>(PageTableFlag::ReadWrite);
+        bool user          = mappingFlags & static_cast<u64>(PageTableFlag::UserSuper);
+        bool writeThrough  = mappingFlags & static_cast<u64>(PageTableFlag::WriteThrough);
+        bool cacheDisabled = mappingFlags & static_cast<u64>(PageTableFlag::CacheDisabled);
+        bool accessed      = mappingFlags & static_cast<u64>(PageTableFlag::Accessed);
+        bool dirty         = mappingFlags & static_cast<u64>(PageTableFlag::Dirty);
+        bool largerPages   = mappingFlags & static_cast<u64>(PageTableFlag::LargerPages);
+        bool global        = mappingFlags & static_cast<u64>(PageTableFlag::Global);
+        bool noExecute     = mappingFlags & static_cast<u64>(PageTableFlag::NX);
 
         if (debug == ShowDebug::Yes) {
             dbgmsg("Attempting to map virtual %x to physical %x in page table at %x\r\n"
@@ -47,11 +48,11 @@ namespace Memory {
                    , present
                    , write
                    , user
-                   , write_through
-                   , cache_disabled
+                   , writeThrough
+                   , cacheDisabled
                    , accessed
                    , dirty
-                   , larger_pages
+                   , largerPages
                    , global
                    );
         }
@@ -65,12 +66,13 @@ namespace Memory {
             PDE.set_flag(PageTableFlag::Present,       present);
             PDE.set_flag(PageTableFlag::ReadWrite,     write);
             PDE.set_flag(PageTableFlag::UserSuper,     user);
-            PDE.set_flag(PageTableFlag::WriteThrough,  write_through);
-            PDE.set_flag(PageTableFlag::CacheDisabled, cache_disabled);
+            PDE.set_flag(PageTableFlag::WriteThrough,  writeThrough);
+            PDE.set_flag(PageTableFlag::CacheDisabled, cacheDisabled);
             PDE.set_flag(PageTableFlag::Accessed,      accessed);
             PDE.set_flag(PageTableFlag::Dirty,         dirty);
-            PDE.set_flag(PageTableFlag::LargerPages,   larger_pages);
+            PDE.set_flag(PageTableFlag::LargerPages,   largerPages);
             PDE.set_flag(PageTableFlag::Global,        global);
+            PDE.set_flag(PageTableFlag::Global,        noExecute);
             pageMapLevelFour->entries[indexer.page_directory_pointer()] = PDE;
         }
         else PDP = (PageTable*)((u64)PDE.address() << 12);
@@ -84,12 +86,13 @@ namespace Memory {
             PDE.set_flag(PageTableFlag::Present,       present);
             PDE.set_flag(PageTableFlag::ReadWrite,     write);
             PDE.set_flag(PageTableFlag::UserSuper,     user);
-            PDE.set_flag(PageTableFlag::WriteThrough,  write_through);
-            PDE.set_flag(PageTableFlag::CacheDisabled, cache_disabled);
+            PDE.set_flag(PageTableFlag::WriteThrough,  writeThrough);
+            PDE.set_flag(PageTableFlag::CacheDisabled, cacheDisabled);
             PDE.set_flag(PageTableFlag::Accessed,      accessed);
             PDE.set_flag(PageTableFlag::Dirty,         dirty);
-            PDE.set_flag(PageTableFlag::LargerPages,   larger_pages);
+            PDE.set_flag(PageTableFlag::LargerPages,   largerPages);
             PDE.set_flag(PageTableFlag::Global,        global);
+            PDE.set_flag(PageTableFlag::Global,        noExecute);
             PDP->entries[indexer.page_directory()] = PDE;
         }
         else PD = (PageTable*)((u64)PDE.address() << 12);
@@ -103,12 +106,13 @@ namespace Memory {
             PDE.set_flag(PageTableFlag::Present,       present);
             PDE.set_flag(PageTableFlag::ReadWrite,     write);
             PDE.set_flag(PageTableFlag::UserSuper,     user);
-            PDE.set_flag(PageTableFlag::WriteThrough,  write_through);
-            PDE.set_flag(PageTableFlag::CacheDisabled, cache_disabled);
+            PDE.set_flag(PageTableFlag::WriteThrough,  writeThrough);
+            PDE.set_flag(PageTableFlag::CacheDisabled, cacheDisabled);
             PDE.set_flag(PageTableFlag::Accessed,      accessed);
             PDE.set_flag(PageTableFlag::Dirty,         dirty);
-            PDE.set_flag(PageTableFlag::LargerPages,   larger_pages);
+            PDE.set_flag(PageTableFlag::LargerPages,   largerPages);
             PDE.set_flag(PageTableFlag::Global,        global);
+            PDE.set_flag(PageTableFlag::Global,        noExecute);
             PD->entries[indexer.page_table()] = PDE;
         }
         else PT = (PageTable*)((u64)PDE.address() << 12);
@@ -118,14 +122,19 @@ namespace Memory {
         PDE.set_flag(PageTableFlag::Present,       present);
         PDE.set_flag(PageTableFlag::ReadWrite,     write);
         PDE.set_flag(PageTableFlag::UserSuper,     user);
-        PDE.set_flag(PageTableFlag::WriteThrough,  write_through);
-        PDE.set_flag(PageTableFlag::CacheDisabled, cache_disabled);
+        PDE.set_flag(PageTableFlag::WriteThrough,  writeThrough);
+        PDE.set_flag(PageTableFlag::CacheDisabled, cacheDisabled);
         PDE.set_flag(PageTableFlag::Accessed,      accessed);
         PDE.set_flag(PageTableFlag::Dirty,         dirty);
-        PDE.set_flag(PageTableFlag::LargerPages,   larger_pages);
+        PDE.set_flag(PageTableFlag::LargerPages,   largerPages);
         PDE.set_flag(PageTableFlag::Global,        global);
-    
+        PDE.set_flag(PageTableFlag::Global,        noExecute);
         PT->entries[indexer.page()] = PDE;
+        if (debug == ShowDebug::Yes) {
+            dbgmsg_s("  \033[32mMapped\033[0m\r\n"
+                     "\r\n"
+                     );
+        }
     }
     
     void map(void* virtualAddress, void* physicalAddress, u64 mappingFlags, ShowDebug debug) {
@@ -236,17 +245,17 @@ namespace Memory {
          */
         for (u64 t = 0; t < total_ram(); t+=PAGE_SIZE) {
             map(pageMap, (void*)t, (void*)t
-                , (1 << PageTableFlag::Present)
-                | (1 << PageTableFlag::ReadWrite)
+                , (u64)PageTableFlag::Present
+                | (u64)PageTableFlag::ReadWrite
                 );
         }
         u64 kPhysicalStart = (u64)&KERNEL_PHYSICAL;
         u64 kernelBytesNeeded = 1 + ((u64)&KERNEL_END - (u64)&KERNEL_START);
         for (u64 t = kPhysicalStart; t < kPhysicalStart + kernelBytesNeeded + PAGE_SIZE; t+=PAGE_SIZE) {
             map(pageMap, (void*)(t + (u64)&KERNEL_VIRTUAL), (void*)t
-                , (1 << PageTableFlag::Present)
-                | (1 << PageTableFlag::ReadWrite)
-                | (1 << PageTableFlag::Global)
+                , (u64)PageTableFlag::Present
+                | (u64)PageTableFlag::ReadWrite
+                | (u64)PageTableFlag::Global
                 );
         }
         // Make null-dereference generate exception.

@@ -359,8 +359,8 @@ void kstage1(BootInfo* bInfo) {
             AHCI::HBAMemory* ABAR = (AHCI::HBAMemory*)(u64)(((PCI::PCIHeader0*)dev.data2())->BAR5);
             // TODO: Better MMIO!! It should be separate from regular virtual mappings, I think.
             Memory::map(ABAR, ABAR
-                        , (1 << Memory::PageTableFlag::Present)
-                        | (1 << Memory::PageTableFlag::ReadWrite)
+                        , (u64)Memory::PageTableFlag::Present
+                        | (u64)Memory::PageTableFlag::ReadWrite
                         );
             u32 ports = ABAR->PortsImplemented;
             for (u64 i = 0; i < 32; ++i) {

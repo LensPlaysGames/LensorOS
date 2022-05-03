@@ -26,8 +26,8 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
     // Map active framebuffer physical address to virtual addresses 1:1.
     for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000) {
         Memory::map((void*)t, (void*)t
-                    , (1 << Memory::PageTableFlag::Present)
-                    | (1 << Memory::PageTableFlag::ReadWrite)
+                    , (u64)Memory::PageTableFlag::Present
+                    | (u64)Memory::PageTableFlag::ReadWrite
                     );
     }
     dbgmsg("  Active GOP framebuffer mapped to %x thru %x\r\n"
@@ -50,8 +50,8 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
         fbBase = (u64)target.BaseAddress;
         for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000) {
             Memory::map((void*)t, (void*)t
-                        , (1 << Memory::PageTableFlag::Present)
-                        | (1 << Memory::PageTableFlag::ReadWrite)
+                        , (u64)Memory::PageTableFlag::Present
+                        | (u64)Memory::PageTableFlag::ReadWrite
                         );
         }
         dbgmsg("  Deferred GOP framebuffer mapped to %x thru %x\r\n"
