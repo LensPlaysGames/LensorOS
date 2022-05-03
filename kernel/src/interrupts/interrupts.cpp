@@ -127,23 +127,58 @@ void divide_by_zero_handler(InterruptFrame* frame) {
         asm ("hlt");
 }
 
+enum class PageFaultErrorCode {
+    Present                                   = 1 << 0,
+    ReadWrite                                 = 1 << 1,
+    UserSuper                                 = 1 << 2,
+    Reserved                                  = 1 << 3,
+    InstructionFetch                          = 1 << 4,
+    ProtectionKeyViolation                    = 1 << 5,
+    ShadowStackAccess                         = 1 << 6,
+    HypervisorManagedLinearAddressTranslation = 1 << 7,
+    SoftwareGaurdExtensions                   = 1 << 15,
+};
+
 __attribute__((interrupt))
 void page_fault_handler(InterruptFrameError* frame) {
+    // Collect faulty address as soon as possible (it may be lost quickly).
     u64 address;
     asm volatile ("mov %%cr2, %0" : "=r" (address));
-    // If bit 0 == 0, page not present
-    if ((frame->error & 0b1) == 0)
-        panic(frame, "Page fault detected (page not present)");
-    // If bit 1 == 1, caused by page write access
-    else if (((frame->error & 0b10) >> 1) == 1)
-        panic(frame, "Page fault detected (Invalid page write access)");
-    // If bit 5 == 1, caused by a protection key violation.
-    else if (((frame->error & 0b10000) >> 4) == 1)
-        panic(frame, "Page fault detected (Protection-key violation)");
-    // If bit 6 == 1, caused by a shadow stack access.
-    else if (((frame->error & 0b100000) >> 5) == 1)
-        panic(frame, "Page fault detected (Shadow stack access)");
-    else panic(frame, "Page fault detected (Unknown error code)");
+    /* US RW P - Description
+     * 0  0  0 - Supervisory process tried to read a non-present page entry
+     * 0  0  1 - Supervisory process tried to read a page and caused a protection fault
+     * 0  1  0 - Supervisory process tried to write to a non-present page entry
+     * 0  1  1 - Supervisory process tried to write a page and caused a protection fault
+     * 1  0  0 - User process tried to read a non-present page entry
+     * 1  0  1 - User process tried to read a page and caused a protection fault
+     * 1  1  0 - User process tried to write to a non-present page entry
+     * 1  1  1 - User process tried to write a page and caused a protection fault
+     */
+    bool notPresent = (frame->error & (u64)PageFaultErrorCode::Present) == 0;
+    if ((frame->error & (u64)PageFaultErrorCode::UserSuper) > 0) {
+        if ((frame->error & (u64)PageFaultErrorCode::ReadWrite) > 0) {
+            if (notPresent)
+                panic(frame, "#PF: User process attempted to write to a page that is not present");
+            else panic(frame, "#PF: User process attempted to write to a page and caused a protection fault");
+        }
+        else {
+            if (notPresent)
+                panic(frame, "#PF: User process attempted to read from a page that is not present");
+            else panic(frame, "#PF: User process attempted to read from a page and caused a protection fault");
+        }
+    }
+    else {
+        if ((frame->error & (u64)PageFaultErrorCode::ReadWrite) > 0) {
+            if (notPresent)
+                panic(frame, "#PF: Supervisor process attempted to write to a page that is not present");
+            else panic(frame, "#PF: Supervisor process attempted to write to a page and caused a protection fault");
+        }
+        else {
+            if (notPresent)
+                panic(frame, "#PF: Supervisor process attempted to read from a page that is not present");
+            else panic(frame, "#PF: Supervisor process attempted to read from a page and caused a protection fault");
+        }
+    }
     UART::out("  Faulty Address: 0x");
     UART::out(to_hexstring(address));
     UART::out("\r\n");
