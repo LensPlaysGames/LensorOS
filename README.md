@@ -94,8 +94,8 @@ cmake --build kernel/bld --target <name of target>
     2. Add the following line of text: `firmware="efi"`.
     3. Save the file, then close it.
     
-You will have to select `UEFI Shell` the virtual machine in 
-  VMware Workstation (even if it says something like `Unsupported`).
+You will have to select `UEFI Shell` once VMware Workstation
+  boots into LensorOS (even if it says something like `Unsupported`).
 
 ---
 
