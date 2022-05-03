@@ -25,6 +25,7 @@
 #include <link_definitions.h>
 #include <memory.h>
 #include <memory/common.h>
+#include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 #include <mouse.h>
@@ -144,6 +145,7 @@ void kstage1(BootInfo* bInfo) {
      * memory segments (like privilege level of executing code,
      * or privilege level needed to access data).
      */
+    setup_gdt();
     gGDTD.Size = sizeof(GDT) - 1;
     gGDTD.Offset = V2P((u64)&gGDT);
     LoadGDT((GDTDescriptor*)V2P(&gGDTD));
@@ -555,7 +557,7 @@ void kstage1(BootInfo* bInfo) {
         dbgmsg("FileDescriptor %ull closed\r\n", fd);
         vfs.print_debug();
     }
-    
+
     // Initialize High Precision Event Timer.
     (void)gHPET.initialize();
     // Prepare PS2 mouse.
