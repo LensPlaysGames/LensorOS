@@ -141,7 +141,16 @@ namespace Memory {
         map(ActivePageMap, virtualAddress, physicalAddress, mappingFlags, debug);
     }
 
-    void unmap(PageTable* pageMapLevelFour, void* virtualAddress) {
+    void unmap(PageTable* pageMapLevelFour
+               , void* virtualAddress
+               , ShowDebug debug)
+    {
+        if (debug == ShowDebug::Yes) {
+            dbgmsg("Attempting to unmap virtual %p in page table at %p\r\n"
+                   , virtualAddress
+                   , pageMapLevelFour
+                   );
+        }
         PageMapIndexer indexer((u64)virtualAddress);
         PageDirectoryEntry PDE;
         PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
@@ -153,10 +162,15 @@ namespace Memory {
         PDE = PT->entries[indexer.page()];
         PDE.set_flag(PageTableFlag::Present, false);
         PT->entries[indexer.page()] = PDE;
+        if (debug == ShowDebug::Yes) {
+            dbgmsg_s("  \033[32mUnmapped\033[0m\r\n"
+                     "\r\n"
+                     );
+        }
     }
 
-    void unmap(void* virtualAddress) {
-        unmap(ActivePageMap, virtualAddress);
+    void unmap(void* virtualAddress, ShowDebug d) {
+        unmap(ActivePageMap, virtualAddress, d);
     }
 
     void flush_page_map(PageTable* pageMapLevelFour) {

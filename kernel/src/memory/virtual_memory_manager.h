@@ -38,12 +38,16 @@ namespace Memory {
     /* If a mapping is marked as present within the given 
      *   page map level four, it will be marked as not present. 
      */
-    void unmap(PageTable*, void* virtualAddress);
+    void unmap(PageTable*, void* virtualAddress
+               , ShowDebug d = ShowDebug::No
+               );
 
     /* If a mapping is marked as present within the given 
      *   page map level four, it will be marked as not present. 
      */
-    void unmap(void* virtualAddress);
+    void unmap(void* virtualAddress
+               , ShowDebug d = ShowDebug::No
+               );
 
     /* Load the given address into control register three to update 
      *   the virtual to physical mapping the CPU is using currently.
