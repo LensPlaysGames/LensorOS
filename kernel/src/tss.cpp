@@ -31,8 +31,7 @@ void TSS::initialize() {
     asm("movq %%rsp, %0\r\n\t"
         : "=m"(stackPointer)
         );
-    tssEntry.l_RSP0 = stackPointer;
-    tssEntry.h_RSP0 = stackPointer >> 32;
+    tssEntry.set_stack(stackPointer);
     asm("mov $0x28, %%ax\r\n\t"
         "ltr %%ax\r\n\t"
         ::: "rax"
