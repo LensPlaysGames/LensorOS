@@ -26,7 +26,7 @@ project( LensorOS VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGES} )
 add_library(
   Interrupts
   src/interrupts/interrupts.cpp
-  src/interrupts/interrupts.h
+  src/panic.cpp
 )
 target_compile_options(
   Interrupts PRIVATE
@@ -75,7 +75,6 @@ add_executable(
   src/memory/physical_memory_manager.cpp
   src/memory/virtual_memory_manager.cpp
   src/mouse.cpp
-  src/panic.cpp
   src/pci.cpp
   src/pci_descriptors.cpp
   src/pit.cpp

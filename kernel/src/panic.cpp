@@ -5,6 +5,7 @@
 #include <interrupts/interrupts.h>
 #include <uart.h>
 
+__attribute__((no_caller_saved_registers))
 void panic(const char* panicMessage) {
     UART::out("\r\n\033[1;37;41mLensorOS PANIC\033[0m\r\n");
     UART::out("  ");
@@ -21,6 +22,7 @@ void panic(const char* panicMessage) {
     gRend.swap({PanicStartX, PanicStartY}, {80000, 80000});
 }
 
+__attribute__((no_caller_saved_registers))
 void panic(InterruptFrame* frame, const char* panicMessage) {
     panic(panicMessage);
     UART::out("  Instruction Address: 0x");
@@ -39,6 +41,7 @@ void panic(InterruptFrame* frame, const char* panicMessage) {
     gRend.swap({PanicStartX, PanicStartY}, {80000, 80000});
 }
 
+__attribute__((no_caller_saved_registers))
 void panic(InterruptFrameError* frame, const char* panicMessage) {
     panic(panicMessage);
     UART::out("  Error Code: 0x");
