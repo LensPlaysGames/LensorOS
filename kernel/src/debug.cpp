@@ -21,6 +21,12 @@ void dbgmsg(char character, ShouldNewline nl) {
         dbgmsg_s("\r\n");
 }
 
+void dbgmsg(bool value, ShouldNewline nl) {
+    dbgmsg_s(value ? trueString : falseString);
+    if (nl == ShouldNewline::Yes)
+        dbgmsg_s("\r\n");
+}
+
 void dbgmsg(u8* buffer, u64 byteCount, ShouldNewline nl) {
     UART::out(buffer, byteCount);
     if (nl == ShouldNewline::Yes)
@@ -212,7 +218,7 @@ void dbgmsg_v(const u8* fmt, va_list args) {
                 dbgmsg(static_cast<char>(va_arg(args, int)));
                 break;
             case 'b':
-                dbgmsg_s(static_cast<bool>(va_arg(args, int)) ? trueString : falseString);
+                dbgmsg(static_cast<bool>(va_arg(args, int)));
                 break;
             }
         }

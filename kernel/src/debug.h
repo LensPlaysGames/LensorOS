@@ -19,10 +19,13 @@ void dbgmsg_s(const char* str);
 /// Print a single character with an optional newline.
 void dbgmsg(char, ShouldNewline nl = ShouldNewline::No);
 
-/// Print a number of bytes from a given buffer as characters.
+/// Print a human readable boolean value with an optional newline.
+void dbgmsg(bool, ShouldNewline nl = ShouldNewline::No);
+
+/// Print a number of bytes from a given buffer as characters with an optional newline.
 void dbgmsg(u8* buffer, u64 byteCount, ShouldNewline nl = ShouldNewline::No);
 
-/// Print the raw bytes of a string.
+/// Print the raw bytes of a string with an optional newline.
 void dbgmsg(const String&, ShouldNewline nl = ShouldNewline::No);
 
 void dbgmsg(double, ShouldNewline nl = ShouldNewline::No);
