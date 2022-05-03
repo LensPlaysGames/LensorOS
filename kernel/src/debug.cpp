@@ -16,15 +16,15 @@ void dbgmsg_s(const char* str) {
 }
 
 void dbgmsg(char character, ShouldNewline nl) {
-    UART::outc(character);
+    dbgmsg_c(character);
     if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
+        dbgmsg_s("\r\n");
 }
 
 void dbgmsg(u8* buffer, u64 byteCount, ShouldNewline nl) {
     UART::out(buffer, byteCount);
     if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
+        dbgmsg_s("\r\n");
 }
 
 void dbgmsg(const String& str, ShouldNewline nl) {
@@ -36,52 +36,52 @@ void dbgmsg(const String& str, ShouldNewline nl) {
 void dbgmsg(double number, ShouldNewline nl) {
     UART::out(to_string(number));
     if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
+        dbgmsg_s("\r\n");
 }
 
 void dbgmsg(s64 number, ShouldNewline nl) {
-    UART::out(to_string(number));
+    dbgmsg_s(to_string(number));
     if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
+        dbgmsg_s("\r\n");
 }
 
 void dbgmsg(s32 number, ShouldNewline nl) {
-    UART::out(to_string(number));
+    dbgmsg_s(to_string(number));
     if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
+        dbgmsg_s("\r\n");
 }
 
 void dbgmsg(s16 number, ShouldNewline nl) {
-    UART::out(to_string(number));
+    dbgmsg_s(to_string(number));
     if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
+        dbgmsg_s("\r\n");
 }
 
 void dbgmsg(s8 number, ShouldNewline nl) {
-    UART::out(to_string(number));
+    dbgmsg_s(to_string(number));
     if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
+        dbgmsg_s("\r\n");
 }
 
 void dbgmsg(u64 number, ShouldNewline nl) {
-    UART::out(to_string(number));
+    dbgmsg_s(to_string(number));
     if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
+        dbgmsg_s("\r\n");
 }
 void dbgmsg(u32 number, ShouldNewline nl) {
-    UART::out(to_string(number));
+    dbgmsg_s(to_string(number));
     if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
+        dbgmsg_s("\r\n");
 }
 void dbgmsg(u16 number, ShouldNewline nl) {
-    UART::out(to_string(number));
+    dbgmsg_s(to_string(number));
     if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
+        dbgmsg_s("\r\n");
 }
 void dbgmsg(u8 number, ShouldNewline nl) {
-    UART::out(to_string(number));
+    dbgmsg_s(to_string(number));
     if (nl == ShouldNewline::Yes)
-        UART::out("\r\n");
+        dbgmsg_s("\r\n");
 }
 
 void dbgmsg_v(const u8* fmt, va_list args) {
@@ -103,6 +103,11 @@ void dbgmsg_v(const u8* fmt, va_list args) {
         if (*current == '%') {
             current++;
             switch (*current) {
+            default:
+                // If char following `%` is unrecognized, pass through unchanged.
+                current--;
+                dbgmsg(static_cast<char>(*current));
+                break;
             case '\0':
                 // Handle '%' at end of format string.
                 dbgmsg(static_cast<char>('%'));
@@ -130,14 +135,13 @@ void dbgmsg_v(const u8* fmt, va_list args) {
                     current--;
                     break;
                 }
-                if (*current == 'i') {
-                    // Found %hi -- 16 bit signed integer
+                // %hi -- 16 bit signed integer
+                // %hu -- 16 bit unsigned integer
+                // %hh -- Lookahead for %hhi or %hhu
+                if (*current == 'i')
                     dbgmsg(static_cast<s16>(va_arg(args, int)));
-                }
-                if (*current == 'u') {
-                    // Found %hu -- 16 bit unsigned integer
+                if (*current == 'u')
                     dbgmsg(static_cast<u16>(va_arg(args, int)));
-                }
                 if (*current == 'h') {
                     current++;
                     if (*current != 'i'
@@ -208,12 +212,7 @@ void dbgmsg_v(const u8* fmt, va_list args) {
                 dbgmsg(static_cast<char>(va_arg(args, int)));
                 break;
             case 'b':
-                static const char* t = "True";
-                static const char* f = "False";
-                dbgmsg_s(static_cast<bool>(va_arg(args, int)) ? t : f);
-                break;
-            default:
-                dbgmsg(static_cast<char>(*current));
+                dbgmsg_s(static_cast<bool>(va_arg(args, int)) ? trueString : falseString);
                 break;
             }
         }
@@ -238,3 +237,6 @@ void dbgrainbow(const String& str, ShouldNewline nl) {
         dbgmsg_s("\r\n");
 }
 
+void dbgrainbow(const char* str, ShouldNewline nl) {
+    dbgrainbow(String(str), nl);
+}
