@@ -227,3 +227,14 @@ void dbgmsg(const char* fmt, ...) {
     dbgmsg_v(reinterpret_cast<const u8*>(fmt), args);
     va_end(args);
 }
+
+void dbgrainbow(const String& str, ShouldNewline nl) {
+    for (u64 i = 0; i < str.length(); ++i) {
+        dbgmsg("\033[1;3%im", i % 6 + 1);
+        dbgmsg_c(str[i]);
+    }
+    dbgmsg_s("\033[0m");
+    if (nl == ShouldNewline::Yes)
+        dbgmsg_s("\r\n");
+}
+

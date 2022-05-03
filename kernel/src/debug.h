@@ -19,6 +19,8 @@ void dbgmsg(char, ShouldNewline nl = ShouldNewline::No);
 void dbgmsg(u8* buffer, u64 byteCount, ShouldNewline nl = ShouldNewline::No);
 void dbgmsg(const String&, ShouldNewline nl = ShouldNewline::No);
 
+void dbgrainbow(const String&, ShouldNewline nl = ShouldNewline::No);
+
 void dbgmsg(double, ShouldNewline nl = ShouldNewline::No);
 void dbgmsg(s64, ShouldNewline nl = ShouldNewline::No);
 void dbgmsg(s32, ShouldNewline nl = ShouldNewline::No);
