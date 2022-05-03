@@ -118,6 +118,7 @@ __attribute__((interrupt)) void simd_exception_handler           (InterruptFrame
 void cause_div_by_zero(u8 one = 1);
 void cause_page_not_present();
 void cause_general_protection();
+void cause_nullptr_dereference();
 
 void remap_pic();
 

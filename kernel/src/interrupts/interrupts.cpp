@@ -47,19 +47,25 @@ inline void end_of_interrupt(u8 IRQx) {
     out8(PIC1_COMMAND, PIC_EOI);
 }
 
-void cause_div_by_zero(u8 one) {
+void cause_div_by_zero(volatile u8 one) {
     one /= one - 1;
 }
 
 void cause_page_not_present() {
     u8* badAddr = (u8*)0xdeadc0de;
-    u8 faultHere = *badAddr;
+    volatile u8 faultHere = *badAddr;
+    (void)faultHere;
+}
+
+void cause_nullptr_dereference() {
+    u8* badAddr = (u8*)nullptr;
+    volatile u8 faultHere = *badAddr;
     (void)faultHere;
 }
 
 void cause_general_protection() {
     u8* badAddr = (u8*)0xdeadbeefb00bface;
-    u8 faultHere = *badAddr;
+    volatile u8 faultHere = *badAddr;
     (void)faultHere;
 }
 
@@ -117,14 +123,12 @@ void mouse_handler(InterruptFrame* frame) {
 __attribute__((interrupt))
 void divide_by_zero_handler(InterruptFrame* frame) {
     panic(frame, "Divide by zero detected!");
-    while (true) {
+    while (true)
         asm ("hlt");
-    }
 }
 
 __attribute__((interrupt))
 void page_fault_handler(InterruptFrameError* frame) {
-    // POP ERROR CODE FROM STACK
     u64 address;
     asm volatile ("mov %%cr2, %0" : "=r" (address));
     // If bit 0 == 0, page not present
@@ -139,16 +143,16 @@ void page_fault_handler(InterruptFrameError* frame) {
     // If bit 6 == 1, caused by a shadow stack access.
     else if (((frame->error & 0b100000) >> 5) == 1)
         panic(frame, "Page fault detected (Shadow stack access)");
-    else panic(frame, "Page fault detected");
+    else panic(frame, "Page fault detected (Unknown error code)");
     UART::out("  Faulty Address: 0x");
     UART::out(to_hexstring(address));
     UART::out("\r\n");
     gRend.puts("Faulty Address: 0x", 0x00000000);
     gRend.puts(to_hexstring(address), 0x00000000);
+    gRend.crlf();
     gRend.swap();
-    while (true) {
+    while (true)
         asm ("hlt");
-    }
 }
 
 __attribute__((interrupt))
@@ -164,9 +168,7 @@ void stack_segment_fault_handler(InterruptFrameError* frame) {
     if (frame->error == 0)
         panic(frame, "Stack segment fault detected (0)");
     else panic(frame, "Stack segment fault detected (selector)!");
-    UART::out("  Error Code: 0x");
-    UART::out(to_hexstring(frame->error));
-    UART::out("\r\n");
+
     if (frame->error & 0b1)
         UART::out("  External\r\n");
     
@@ -181,11 +183,6 @@ void stack_segment_fault_handler(InterruptFrameError* frame) {
     UART::out(" Selector Index: ");
     UART::out(to_hexstring(((frame->error & 0b1111111111111000) >> 3)));
     UART::out("\r\n");
-
-    gRend.puts("Err: 0x", 0x00000000);
-    gRend.puts(to_hexstring(frame->error), 0x00000000);
-    gRend.crlf();
-    gRend.swap();
 }
 
 __attribute__((interrupt))
@@ -194,9 +191,6 @@ void general_protection_fault_handler(InterruptFrameError* frame) {
         panic(frame, "General protection fault detected (0)!");
     else panic(frame, "General protection fault detected (selector)!");
 
-    UART::out("  Error Code: 0x");
-    UART::out(to_hexstring(frame->error));
-    UART::out("\r\n");
     if (frame->error & 0b1)
         UART::out("  External\r\n");
     
@@ -211,10 +205,6 @@ void general_protection_fault_handler(InterruptFrameError* frame) {
     UART::out(" Selector Index: ");
     UART::out(to_hexstring(((frame->error & 0b1111111111111000) >> 3)));
     UART::out("\r\n");
-    gRend.puts("Err: 0x", 0x00000000);
-    gRend.puts(to_hexstring(frame->error), 0x00000000);
-    gRend.crlf();
-    gRend.swap();
     while (true)
         asm ("hlt");
 }
