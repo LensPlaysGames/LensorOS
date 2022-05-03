@@ -67,4 +67,46 @@ irq0_handler:
     pop gs
     pop rax
     call do_swapgs
+    ;; #GP(selector) with error code of `0x18` at `iretq`
+    ;; From the manual:
+    ;; #GP(selector) If a segment selector index is outside its descriptor table limits.
+    ;;                   I dont think it's this due to the "limits" being set to the highest possible number.
+    ;;
+    ;;               If the return code segment selector RPL is less than the CPL.
+    ;;                   RPL = request privilege level, and is set by the last 2 bits of the segment selector.
+    ;;                   I don't think it's this due to the CPL being zero, the minimum.
+    ;;
+    ;;               If the DPL of a conforming-code segment is greater than the return code segment selector RPL.
+    ;;                   DPL = descriptor privilege level, and is set in the access byte of the GDT descriptor.
+    ;;                   I don't think it's this due to every GDT entry being non-conforming.
+    ;;
+    ;;               If the DPL for a nonconforming-code segment is not equal to the RPL of the code segment selector.
+    ;;                   DPL = 0b11, RPL = 0b00
+    ;;                   THIS COULD BE A PROBLEM
+    ;;
+    ;;               If the stack segment descriptor DPL is not equal to the RPL of the return code segment selector.
+    ;;                   Code/Data segments must have matching privilege level.
+    ;;                   I don't think it's this due to the ring 3 code/data segments having the same DPL set (0b11).
+    ;;
+    ;;               If the stack segment is not a writable data segment.
+    ;;                   I don't think it's this due to the GDT data segments having the read/write bit set.
+    ;;
+    ;;               If the stack segment selector RPL is not equal to the RPL of the return code segment selector.
+    ;;                   Requested privilege level of SS must match RPL of code segment.
+    ;;                   THIS COULD BE A PROBLEM
+    ;;
+    ;;               If the segment descriptor for a code segment does not indicate it is a code segment.
+    ;;                   I don't think it's this due to the GDT code segments having the executable/code bit set.
+    ;;
+    ;;               If the segment selector for a TSS has its local/global bit set for local.
+    ;;                   I don't actually know what the local/global bit is???
+    ;;                   THIS COULD BE A PROBLEM
+    ;;
+    ;;               If a TSS segment descriptor specifies that the TSS is not busy.
+    ;;                   What causes the TSS to be busy? I assume some sort of bit flag, but which one?
+    ;;                   THIS COULD BE A PROBLEM
+    ;;
+    ;;               If a TSS segment descriptor specifies that the TSS is not available.
+    ;;                   What does not available mean? Is it the available bit flag?
+    ;;                   THIS COULD BE A PROBLEM
     iretq
