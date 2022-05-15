@@ -161,14 +161,16 @@ namespace AHCI {
 
         u64 sector = byteOffset / BYTES_PER_SECTOR;
         u64 byteOffsetWithinSector = byteOffset % BYTES_PER_SECTOR;
-        u64 sectors = (byteOffsetWithinSector + byteCount) / BYTES_PER_SECTOR;
+        u64 sectors = (byteOffsetWithinSector + byteCount + BYTES_PER_SECTOR - 1) / BYTES_PER_SECTOR;
+
         if (byteOffsetWithinSector + byteCount <= BYTES_PER_SECTOR)
             sectors = 1;
 
 #ifdef DEBUG_AHCI
-        dbgmsg("  Calculated sector data: sector=%ull, sectors=%ull\r\n"
+        dbgmsg("  Calculated sector data: sector=%ull, sectors=%ull, byteOffsetWithinSector=%ull\r\n"
                , sector
                , sectors
+               , byteOffsetWithinSector
                );
 #endif /* DEBUG_AHCI */
 
