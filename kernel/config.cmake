@@ -1,3 +1,9 @@
+# LensorOS Build Configuration
+# Settings and Options
+
+# Settings and options may be set during project configuration, like so:
+# cmake -G <generator> -S <srcdir> -B <blddir> -DMACHINE="QEMU"
+
 set(
   ARCH "x86_64"
   CACHE STRING
@@ -24,5 +30,12 @@ set_property(
 option(
   HIDE_UART_COLOR_CODES
   "Do not print ANSI terminal color codes to serial output.
-Particularly useful if the terminal you are using does not support it."
+Particularly useful if the terminal you are using does not support it.
+On by default for compatibility reasons."
+  ON
+)
+option(
+  QEMU_DEBUG
+  "Start QEMU with `-S -s` flags, halting startup until a debugger has been attached."
+  OFF
 )

@@ -355,6 +355,9 @@ if ( QEMU_PROGRAM )
     # This allows debug messages to reach the terminal.
     -serial stdio
   )
+  if( QEMU_DEBUG )
+    list( APPEND QEMU_FLAGS -S -s )
+  endif()
   set( OVMF_CODE "${REPO_DIR}/OVMFbin/OVMF_CODE-pure-efi.fd" )
   set( OVMF_VARS "${REPO_DIR}/OVMFbin/OVMF_VARS_LensorOS.fd" )
   cmake_path(

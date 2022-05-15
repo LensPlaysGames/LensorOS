@@ -67,8 +67,11 @@ namespace ELF {
 
 #ifdef DEBUG_ELF
             dbgmsg("Program header: type=%ul, offset=%ull\r\n"
+                   "  filesz=%x, memsz=%x\r\n"
                    , phdr->p_type
                    , phdr->p_offset
+                   , phdr->p_filesz
+                   , phdr->p_memsz
                    );
 #endif /* #ifdef DEBUG_ELF */
 
