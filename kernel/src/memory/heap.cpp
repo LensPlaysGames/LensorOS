@@ -6,6 +6,7 @@
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
+#include <string.h>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_HEAP
@@ -267,8 +268,9 @@ void heap_print_debug() {
         offset += numChars;
         it = it->next;
     } while (it != nullptr);
-
-    dbgmsg("Heap (64b per char): %s\r\n", out);
+    String heap_visualization((const char*)out);
+    dbgmsg_s("Heap (64b per char): ");
+    dbgrainbow(heap_visualization, ShouldNewline::Yes);
 }
 
 void* operator new   (u64 numBytes) { return malloc(numBytes); }
