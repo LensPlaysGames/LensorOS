@@ -5,6 +5,7 @@
 #include <integers.h>
 #include <elf.h>
 #include <file.h>
+#include <link_definitions.h>
 #include <memory/common.h>
 #include <memory/heap.h>
 #include <memory/paging.h>
@@ -19,7 +20,7 @@
 
 namespace ELF {
     /// Return zero when ELF header is of expected format.
-    bool VerifyElf64Header(const Elf64_Ehdr& ElfHeader) {
+    inline bool VerifyElf64Header(const Elf64_Ehdr& ElfHeader) {
         if (ElfHeader.e_ident[EI_MAG0] != ELFMAG0
             || ElfHeader.e_ident[EI_MAG1] != *ELFMAG1
             || ElfHeader.e_ident[EI_MAG2] != *ELFMAG2
@@ -35,7 +36,7 @@ namespace ELF {
         return true;
     }
 
-    bool CreateUserspaceElf64Process(VFS& vfs, FileDescriptor fd) {
+    inline bool CreateUserspaceElf64Process(VFS& vfs, FileDescriptor fd) {
         Elf64_Ehdr elfHeader;
         vfs.read(fd, reinterpret_cast<u8*>(&elfHeader), sizeof(Elf64_Ehdr));
         if (VerifyElf64Header(elfHeader) == false)
@@ -48,12 +49,10 @@ namespace ELF {
             return false;
         }
 
-        // FIXME: Something is being unmapped here that shouldn't be...
-        //        What is it?!?!? Is it the GDT?
-        //for (u64 t = 0; t < Memory::total_ram(); t += PAGE_SIZE)
-        //    unmap(newPageTable, (void*)t);
-
-        Memory::map(newPageTable, newPageTable, newPageTable);
+        Memory::map(newPageTable, newPageTable, newPageTable
+                    , (u64)Memory::PageTableFlag::Present
+                    | (u64)Memory::PageTableFlag::ReadWrite
+                    );
 
         // Load PT_LOAD program headers, mapping to vaddr as necessary.
         u64 programHeadersTableSize = elfHeader.e_phnum * elfHeader.e_phentsize;
@@ -96,9 +95,6 @@ namespace ELF {
                 // Virtually map allocated pages.
                 u64 virtAddress = phdr->p_vaddr;
                 for (u64 t = 0; t < pages * PAGE_SIZE; t += PAGE_SIZE) {
-                    // Unmap the identity paging that would over-write the
-                    // user process in the user process page table.
-                    Memory::unmap(newPageTable, (void*)(virtAddress + t), Memory::ShowDebug::Yes);
                     Memory::map(newPageTable
                                 , (void*)(virtAddress + t)
                                 , loadedProgram + t
@@ -123,6 +119,13 @@ namespace ELF {
             return false;
         }
         u64 newStackTop = newStackBottom + UserProcessStackSize;
+        for (u64 t = newStackBottom; t < newStackTop; t += PAGE_SIZE)
+            map(newPageTable, (void*)t, (void*)t
+                , (u64)(Memory::PageTableFlag::Present)
+                | (u64)(Memory::PageTableFlag::ReadWrite)
+                | (u64)(Memory::PageTableFlag::UserSuper)
+                );
+
         // New page map.
         process->CR3 = newPageTable;
         // New stack.

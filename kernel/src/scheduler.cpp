@@ -36,23 +36,29 @@ namespace Scheduler {
         ProcessQueue->for_each([](auto* it) {
             Process& process = *it->value();
             dbgmsg("    Process %ull:\r\n"
-                   "      CR3: %x\r\n"
-                   "      RAX: %x\r\n"
-                   "      RBX: %x\r\n"
-                   "      RCX: %x\r\n"
-                   "      RDX: %x\r\n"
-                   "      RSI: %x\r\n"
-                   "      RDI: %x\r\n"
-                   "      RBP: %x\r\n"
-                   "      RSP: %x\r\n"
-                   "      R8: %x\r\n"
-                   "      R9: %x\r\n"
-                   "      R10: %x\r\n"
-                   "      R11: %x\r\n"
-                   "      R12: %x\r\n"
-                   "      R13: %x\r\n"
-                   "      R14: %x\r\n"
-                   "      R15: %x\r\n"
+                   "      CR3:      %x\r\n"
+                   "      RAX:      %x\r\n"
+                   "      RBX:      %x\r\n"
+                   "      RCX:      %x\r\n"
+                   "      RDX:      %x\r\n"
+                   "      RSI:      %x\r\n"
+                   "      RDI:      %x\r\n"
+                   "      RBP:      %x\r\n"
+                   "      RSP:      %x\r\n"
+                   "      R8:       %x\r\n"
+                   "      R9:       %x\r\n"
+                   "      R10:      %x\r\n"
+                   "      R11:      %x\r\n"
+                   "      R12:      %x\r\n"
+                   "      R13:      %x\r\n"
+                   "      R14:      %x\r\n"
+                   "      R15:      %x\r\n"
+                   "      Frame:\r\n"
+                   "        RIP:    %x\r\n"
+                   "        CS:     %x\r\n"
+                   "        RFLAGS: %x\r\n"
+                   "        RSP:    %x\r\n"
+                   "        SS:     %x\r\n"
                    , process.ProcessID
                    , process.CR3
                    , process.CPU.RAX
@@ -71,6 +77,11 @@ namespace Scheduler {
                    , process.CPU.R13
                    , process.CPU.R14
                    , process.CPU.R15
+                   , process.CPU.Frame.ip
+                   , process.CPU.Frame.cs
+                   , process.CPU.Frame.flags
+                   , process.CPU.Frame.sp
+                   , process.CPU.Frame.ss
                    );
         });
         dbgmsg_s("\r\n");
