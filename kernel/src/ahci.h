@@ -371,6 +371,8 @@ namespace AHCI {
     const char* port_type_string(PortType);
     PortType get_port_type(HBAPort* port);
 
+    // TODO: Move PortController definition to storage/device_drivers/
+
     class PortController final : public StorageDeviceDriver {
     public:
         PortController(PortType type, u64 portNumber, HBAPort* portAddress);

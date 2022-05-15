@@ -188,7 +188,7 @@ namespace AHCI {
     }
 
     void PortController::write(u64 byteOffset, u64 byteCount, u8* buffer) {
-        dbgmsg("[TODO]: Implement write()  byteOffset=%ull, byteCount=%ull, buffer=%x\r\n"
+        dbgmsg("[AHCI]: TODO: Implement write()  byteOffset=%ull, byteCount=%ull, buffer=%x\r\n"
                , byteOffset
                , byteCount
                , buffer
@@ -196,7 +196,6 @@ namespace AHCI {
     }
 
     void PortController::start_commands() {
-        // Spin until not busy.
         while (Port->CommandAndStatus & HBA_PxCMD_CR);
         Port->CommandAndStatus |= HBA_PxCMD_FRE;
         Port->CommandAndStatus |= HBA_PxCMD_ST;

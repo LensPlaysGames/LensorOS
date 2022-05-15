@@ -45,7 +45,7 @@ namespace ELF {
         // Copy current page table (fork)
         auto* newPageTable = Memory::clone_active_page_map();
         if (newPageTable == nullptr) {
-            dbgmsg_s("Failed to clone current page map for new process page map level four.\r\n");
+            dbgmsg_s("Failed to clone current page map for new process page map.\r\n");
             return false;
         }
 
