@@ -179,6 +179,15 @@ void page_fault_handler(InterruptFrameError* frame) {
             else panic(frame, "#PF: Supervisor process attempted to read from a page and caused a protection fault");
         }
     }
+    if ((frame->error & (u64)PageFaultErrorCode::InstructionFetch) > 0)
+        UART::out("  Instruction fetch\r\n");
+    if ((frame->error & (u64)PageFaultErrorCode::ShadowStackAccess) > 0)
+        UART::out("  Shadow stack access\r\n");
+    if ((frame->error & (u64)PageFaultErrorCode::HypervisorManagedLinearAddressTranslation) > 0)
+        UART::out("  Hypvervisor-managed linear address translation\r\n");
+    if ((frame->error & (u64)PageFaultErrorCode::SoftwareGaurdExtensions) > 0)
+        UART::out("  Software gaurd extensions\r\n");
+
     UART::out("  Faulty Address: 0x");
     UART::out(to_hexstring(address));
     UART::out("\r\n");
