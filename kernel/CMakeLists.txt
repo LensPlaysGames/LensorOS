@@ -325,6 +325,7 @@ if ( QEMU_PROGRAM )
   message(
     VERBOSE
     "Found QEMU for ${ARCH}, creating targets:\r\n"
+    "|-- run_qemu\r\n"
     "|-- runimg_qemu\r\n"
     "|-- runhda_qemu\r\n"
     "`-- runiso_qemu"
@@ -392,9 +393,9 @@ if ( QEMU_PROGRAM )
     COMMAND ${CMAKE_COMMAND} -E copy
     "${IMAGE_DIR}/dfltfont.psf" "${FAT_BOOT_DIR}/LensorOS/"
     COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
-    -hdb fat:floppy:rw:${IMAGE_DIR}/fat
+    -hdb fat:floppy:rw:${FAT_BOOT_DIR}
     COMMAND ${CMAKE_COMMAND} -E rm -R ${FAT_BOOT_DIR}
-    COMMENT "Running QEMU for ${ARCH} from FAT32 `LensorOS.img`"
+    COMMENT "Running QEMU for ${ARCH} from directory treated as FAT32 floppy"
     USES_TERMINAL
     WORKING_DIRECTORY ${REPO_DIR}
     DEPENDS

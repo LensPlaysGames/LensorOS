@@ -87,7 +87,7 @@ extern "C" void kmain(BootInfo* bInfo) {
     gRend.BackgroundColor = 0x00000000;
     gRend.crlf();
     // END GPLv3 LICENSE REQUIREMENT.
-    gRend.puts("All your memory are belong to us, now");
+    gRend.puts("Do a barrel roll!");
     gRend.crlf();
     gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize * 2u});
 

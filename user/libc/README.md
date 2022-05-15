@@ -24,7 +24,7 @@ x86_64-lensor-gcc -c /Path/to/LensorOS/user/libc/crtn.s
 
 Once the object files have been generated, copy them into the
   system libraries directory within the sysroot (`/lib`).
-Alternatively, one could use the `-o` option to specify the correct output path.
+  Alternatively, one could use the `-o` option to specify the correct output path.
 
 ### Build the `C` Library for LensorOS
 Generate a build system using [CMake](https://www.cmake.org), then invoke it:

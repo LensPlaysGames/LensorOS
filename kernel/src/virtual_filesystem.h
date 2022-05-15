@@ -24,7 +24,7 @@ struct MountPoint {
         : Path(path), FS(fs) {}
 
     const char* Path { nullptr };
-    Filesystem* FS { nullptr};
+    Filesystem* FS { nullptr };
 };
 
 class VFS {
@@ -66,7 +66,7 @@ public:
                     String prefixlessPath = path;
                     prefixlessPath.chop(mountPathLength, String::Side::Right);
                     if (prefixlessPath == path) {
-                        // TODO: path matches a mount path exactly. How do we open a mount?
+                        // TODO: path matches a mount path exactly. How do we open a mount? Should we?
                     }
                     else {
                         FileMetadata metadata = fileDriver->file(dev, prefixlessPath.data());
