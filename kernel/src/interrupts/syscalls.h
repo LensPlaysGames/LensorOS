@@ -3,17 +3,14 @@
 
 #include <integers.h>
 
-#define LENSOR_OS_NUM_SYSCALLS 2
-
-/// SYSCALL NAMING SCHEME:
-/// "sys$" + number + "_" + descriptive name
-
-void sys$0_test0();
-void sys$1_test1();
-
+constexpr u64 LENSOR_OS_NUM_SYSCALLS = 2;
 extern void* syscalls[LENSOR_OS_NUM_SYSCALLS];
+
+// Defined in `syscalls.cpp`
+// Used by `syscalls.asm`
 extern u64 num_syscalls;
 
+// Defined in `syscalls.asm`
 extern "C" void system_call_handler_asm();
 
 #endif
