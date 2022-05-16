@@ -34,13 +34,13 @@ system_call_handler_asm:
     push r12
     push r11
     push r10
-    push r9
-    push r8
+    push r9                     ; 6th argument, rest on stack in reverse order
+    push r8                     ; 5th argument
     push rbp
-    push rdi
-    push rsi
-    push rdx
-    push rcx
+    push rdi                    ; 1st argument
+    push rsi                    ; 2nd argument
+    push rdx                    ; 3rd argument
+    push rcx                    ; 4th argument
     push rbx
     push rsp
 ;;; Execute the system call.
@@ -52,13 +52,13 @@ system_call_handler_asm:
 ;;; Restore CPU state, then return from interrupt.
     add rsp, 8                  ; Eat `rsp` off the stack.
     pop rbx
-    pop rcx
-    pop rdx
-    pop rsi
-    pop rdi
+    pop rcx                     ; 1st return value
+    pop rdx                     ; 2nd return value
+    pop rsi                     ; 3rd return value
+    pop rdi                     ; 4th return value
     pop rbp
-    pop r8
-    pop r9
+    pop r8                      ; 5th return value
+    pop r9                      ; 6th return value
     pop r10
     pop r11
     pop r12
