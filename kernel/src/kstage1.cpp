@@ -541,7 +541,7 @@ void kstage1(BootInfo* bInfo) {
         const char* filePath = "/fs0/blazeit";
         VFS& vfs = SYSTEM->virtual_filesystem();
         dbgmsg("Opening %s with VFS\r\n", filePath);
-        FileDescriptor fd = vfs.open(filePath, 0, 0);
+        FileDescriptor fd = vfs.open(filePath);
         dbgmsg("  Got FileDescriptor %ull\r\n", fd);
         vfs.print_debug();
         dbgmsg_s("  Reading first few bytes: ");

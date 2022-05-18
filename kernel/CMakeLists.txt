@@ -88,6 +88,7 @@ add_executable(
   src/system.cpp
   src/tss.cpp
   src/uart.cpp
+  src/virtual_filesystem.cpp
 )
 set_target_properties( Kernel PROPERTIES OUTPUT_NAME kernel.elf )
 target_compile_definitions(
