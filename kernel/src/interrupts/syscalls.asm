@@ -22,7 +22,7 @@ system_call_handler_asm:
 ;;; Do nothing if system call code is invalid:
 ;;; Syscall code invalid if greater than or equal to total number of syscalls.
     cmp rax, [rel num_syscalls]
-    jae invalid_system_call
+    jae invalid_syscall
 ;;; Save CPU state to be restored after system call.
     call do_swapgs
     push rax
@@ -69,7 +69,7 @@ system_call_handler_asm:
     pop gs
     add rsp, 8                  ; Eat `rax` off the stack.
     call do_swapgs
-invalid_system_call:            ; If system call code is invalid, jump directly to exit.
+invalid_syscall:                ; If system call code is invalid, jump directly to exit.
     iretq                       ; iretq -> interrupt return quad word (64 bit)
 
 GLOBAL system_call_handler_asm

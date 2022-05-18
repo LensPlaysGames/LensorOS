@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-
+  // Syscall declarations go here!
 
 #if defined (__cplusplus)
 } /* extern "C" */

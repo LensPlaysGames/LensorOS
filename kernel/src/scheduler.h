@@ -12,8 +12,10 @@ namespace Memory {
 /// Interrupt handler function found in `scheduler.asm`
 extern "C" void irq0_handler();
 
-// FIXME: Take into account different CPU architectures.
-//        This can be done by including ${ARCH}/ directory with CMake.
+/* TODO: Take into account different CPU architectures.
+ *  This can be done by including ${ARCH}/ directory
+ *  with the build system, and putting this there.
+ */
 struct CPUState {
     u64 RSP;
     u64 RBX;
@@ -55,6 +57,7 @@ extern void(*timer_tick)();
 
 namespace Scheduler {
     /// External symbol defined in `scheduler.cpp`
+    // The list node of the currently executing process.
     extern SinglyLinkedListNode<Process*>* CurrentProcess;
 
     bool initialize();

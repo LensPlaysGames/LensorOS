@@ -5,7 +5,7 @@
 /// SYSCALL NAMING SCHEME:
 /// "sys$" + number + "_" + descriptive name
 
-constexpr const char* sys$_dbgfmt = "[SYS$]: %d -- ";
+constexpr const char* sys$_dbgfmt = "[SYS$]: %d\r\n";
 
 void sys$0_open() {
     dbgmsg(sys$_dbgfmt, 0);

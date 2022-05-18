@@ -107,7 +107,6 @@ namespace Scheduler {
             dbgmsg_s("\033[31mScheduler failed to initialize:\033[0m Could not create process list.\r\n");
             return false;
         }
-
         add_process(&StartupProcess);
         CurrentProcess = ProcessQueue->head();
         // Install IRQ0 handler found in `scheduler.asm` (over-write default system timer handler).
@@ -120,21 +119,6 @@ namespace Scheduler {
     /// Called from `irq0_handler` in `scheduler.asm`
     /// A stupid simple round-robin process switcher.
     void switch_process(CPUState* cpu) {
-        dbgmsg_s("Switching processes\r\n");
-
-        dbgmsg("Old Interrupt frame:\r\n"
-               "  Instruction Pointer:   %x\r\n"
-               "  Code Segment Selector: %x\r\n"
-               "  Flags:                 %x\r\n"
-               "  Stack Pointer:         %x\r\n"
-               "  Data Segment Selector: %x\r\n"
-               , cpu->Frame.ip
-               , cpu->Frame.cs
-               , cpu->Frame.flags
-               , cpu->Frame.sp
-               , cpu->Frame.ss
-               );
-
         memcpy(cpu, &CurrentProcess->value()->CPU, sizeof(CPUState));
         if (CurrentProcess->next() == nullptr) {
             if(CurrentProcess == ProcessQueue->head())
@@ -143,9 +127,11 @@ namespace Scheduler {
             CurrentProcess = ProcessQueue->head();
         }
         else CurrentProcess = CurrentProcess->next();
+        // Update state of CPU that will be restored.
         memcpy(&CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
+        // Use new process' page map.
         Memory::flush_page_map(CurrentProcess->value()->CR3);
-
+        // Update ES and DS to SS.
         asm("xor %%rax, %%rax\r\n\t"
             "movq %0, %%rax\r\n\t"
             "movw %%ax, %%es\r\n\t"
@@ -153,23 +139,9 @@ namespace Scheduler {
             :: "r"(cpu->Frame.ss)
             : "rax"
             );
-
+        // Update FS and GS to SS.
+        // Technically we could use these for whatever.
         cpu->FS = cpu->Frame.ss;
         cpu->GS = cpu->Frame.ss;
-
-        dbgmsg("New Interrupt frame:\r\n"
-               "  Instruction Pointer:   %x\r\n"
-               "  Code Segment Selector: %x\r\n"
-               "  Flags:                 %x\r\n"
-               "  Stack Pointer:         %x\r\n"
-               "  Data Segment Selector: %x\r\n"
-               , cpu->Frame.ip
-               , cpu->Frame.cs
-               , cpu->Frame.flags
-               , cpu->Frame.sp
-               , cpu->Frame.ss
-               );
-
-        dbgmsg_s("Switched processes\r\n");
     }
 }
