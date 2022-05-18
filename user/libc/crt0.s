@@ -1,6 +1,5 @@
     .section .text
     .global _start
-    .type _start, @function
 _start:
     ;# Stack frame linked list null entry.
     movq $0, %rbp
@@ -22,6 +21,5 @@ _start:
     call main
 
     ;# Call exit with return status from main as argument
-    movl %rax, %rdi
+    movq %rax, %rdi
     call exit
-.size _start, . - _start

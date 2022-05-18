@@ -31,8 +31,7 @@ Generate a build system using [CMake](https://www.cmake.org), then invoke it:
 ```bash
 cd /Path/to/LensorOS/user/libc/
 cmake -S . -B bld
-cd bld
-make
+cmake --build bld
 ```
 
 This will generate a `libc.a` library file that may be stored in the
