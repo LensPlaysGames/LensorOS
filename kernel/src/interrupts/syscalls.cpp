@@ -33,13 +33,25 @@ void sys$2_read() {
 #endif /* #ifdef DEBUG_SYSCALLS */
 }
 
-void sys$3_write() {
+int sys$3_write(FileDescriptor fd, u8* buffer, u64 byteCount) {
 #ifdef DEBUG_SYSCALLS
     dbgmsg(sys$_dbgfmt, 3, "write");
 #endif /* #ifdef DEBUG_SYSCALLS */
+    // TODO: Implement seek behaviour.
+    dbgmsg("  file descriptor: %d\r\n"
+           "  buffer address:  %x\r\n"
+           "  byte count:      %ull\r\n"
+           "\r\n"
+           , fd
+           , buffer
+           , byteCount
+           );
+    return SYSTEM->virtual_filesystem().write(fd, buffer, byteCount, 0);
 }
 
 void sys$4_poke() {
+    // Prevent unused warning
+    (void)sys$_dbgfmt;
 #ifdef DEBUG_SYSCALLS
     dbgmsg(sys$_dbgfmt, 4, "poke");
 #endif /* #ifdef DEBUG_SYSCALLS */
