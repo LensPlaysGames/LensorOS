@@ -37,10 +37,20 @@ namespace ELF {
     }
 
     inline bool CreateUserspaceElf64Process(VFS& vfs, FileDescriptor fd) {
+#ifdef DEBUG_ELF
+        dbgmsg("Attempting to execute userspace process from file descriptor %d\r\n"
+               , fd);
+#endif /* #ifdef DEBUG_ELF */
         Elf64_Ehdr elfHeader;
-        vfs.read(fd, reinterpret_cast<u8*>(&elfHeader), sizeof(Elf64_Ehdr));
-        if (VerifyElf64Header(elfHeader) == false)
+        bool read = vfs.read(fd, reinterpret_cast<u8*>(&elfHeader), sizeof(Elf64_Ehdr));
+        if (read == false) {
+            dbgmsg_s("Failed to read ELF64 header.\r\n");
             return false;
+        }
+        if (VerifyElf64Header(elfHeader) == false) {
+            dbgmsg_s("Executable did not have valid ELF64 header.\r\n");
+            return false;
+        }
 
         // Copy current page table (fork)
         auto* newPageTable = Memory::clone_active_page_map();
