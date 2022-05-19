@@ -47,7 +47,7 @@ system_call_handler_asm:
     mov rsi, syscalls           ; Store address of syscalls function table.
     mov rbx, 8                  ; 8 = sizeof(pointer) in 64 bit.
     mul rbx                     ; Get addressoffset into syscalls table.
-    add rsi, rbx                ; Add offset to base address.
+    add rsi, rax                ; Add offset to base address.
     call [rel rsi]              ; Call function at syscalls table base address + syscall number offset.
 ;;; Restore CPU state, then return from interrupt.
     add rsp, 8                  ; Eat `rsp` off the stack.
