@@ -34,10 +34,11 @@ FileDescriptor VFS::open(const String& path) {
                 String prefixlessPath = path;
                 prefixlessPath.chop(mountPathLength, String::Side::Right);
                 if (prefixlessPath == path) {
-                    // TODO: path matches a mount path exactly. How do we open a mount? Should we?
+                    // TODO: path matches a mount path exactly.
+                    // How do we open a mount? Should we?
                 }
                 else {
-                    FileMetadata m = fileDriver->file(dev, prefixlessPath.data());
+                    FileMetadata metadata = fileDriver->file(dev, prefixlessPath.data());
 #ifdef DEBUG_VFS
                     dbgmsg("  Metadata:\r\n"
                            "    Name: %sl\r\n"
@@ -46,16 +47,16 @@ FileDescriptor VFS::open(const String& path) {
                            "    Filesystem Driver: %x\r\n"
                            "    Device Driver: %x\r\n"
                            "    Invalid: %b\r\n"
-                           , m.name()
-                           , m.file_size()
-                           , m.byte_offset()
-                           , m.file_driver()
-                           , m.device_driver()
-                           , m.invalid()
+                           , metadata.name()
+                           , metadata.file_size()
+                           , metadata.byte_offset()
+                           , metadata.file_driver()
+                           , metadata.device_driver()
+                           , metadata.invalid()
                            );
 #endif /* #ifdef DEBUG_VFS */
-                    if (m.invalid() == false) {
-                        OpenFileDescription openedFile(dev, m);
+                    if (metadata.invalid() == false) {
+                        OpenFileDescription openedFile(dev, metadata);
                         out = Opened.length();
                         Opened.add_end(openedFile);
                     }
@@ -115,7 +116,7 @@ bool VFS::write(FileDescriptor fd, u8* buffer, u64 byteCount, u64 byteOffset) {
 #endif /* #ifdef DEBUG_VFS */
 
     OpenFileDescription& file = Opened[fd];
-    file.DeviceDriver->write(byteOffset, byteCount, buffer);
+    file.DeviceDriver->write(file.Metadata.byte_offset() + byteOffset, byteCount, buffer);
     return true;
 }
 
@@ -153,4 +154,8 @@ void VFS::print_debug() {
         i++;
     });
     dbgmsg("\r\n");
+}
+
+void VFS::add_file(OpenFileDescription fileDescription) {
+    Opened.add_end(fileDescription);
 }

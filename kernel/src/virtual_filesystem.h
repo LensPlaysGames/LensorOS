@@ -45,6 +45,8 @@ public:
 
     void print_debug();
 
+    void add_file(OpenFileDescription);
+
 private:
     SinglyLinkedList<OpenFileDescription> Opened;
     SinglyLinkedList<MountPoint> Mounts;
