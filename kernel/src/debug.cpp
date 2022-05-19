@@ -15,26 +15,30 @@ void dbgmsg_s(const char* str) {
     UART::out(str);
 }
 
+void dbgmsg_buf(u8* buffer, u64 byteCount) {
+    UART::out(buffer, byteCount);
+}
+
 void dbgmsg(char character, ShouldNewline nl) {
     dbgmsg_c(character);
     if (nl == ShouldNewline::Yes)
         dbgmsg_s("\r\n");
 }
 
-void dbgmsg(bool value, ShouldNewline nl) {
-    dbgmsg_s(value ? trueString : falseString);
+void dbgmsg(const String& str, ShouldNewline nl) {
+    dbgmsg_buf(str.bytes(), str.length());
     if (nl == ShouldNewline::Yes)
         dbgmsg_s("\r\n");
 }
 
 void dbgmsg(u8* buffer, u64 byteCount, ShouldNewline nl) {
-    UART::out(buffer, byteCount);
+    dbgmsg_buf(buffer, byteCount);
     if (nl == ShouldNewline::Yes)
         dbgmsg_s("\r\n");
 }
 
-void dbgmsg(const String& str, ShouldNewline nl) {
-    dbgmsg(str.bytes(), str.length());
+void dbgmsg(bool value, ShouldNewline nl) {
+    dbgmsg_s(value ? trueString : falseString);
     if (nl == ShouldNewline::Yes)
         dbgmsg_s("\r\n");
 }
