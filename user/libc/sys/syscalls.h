@@ -3,19 +3,40 @@
 
 #include <stdint.h>
 
-inline uintptr_t syscall(uintptr_t systemCall) {
-    uintptr_t result { 0 };
-    asm volatile("int $0x80"
-                 : "=a"(result)
-                 : "a"(systemCall)
-                 : "memory"
-                 );
+#define SYS_open  0
+#define SYS_close 1
+#define SYS_read  2
+#define SYS_write 3
+#define SYS_poke  4
+
+#define SYS_MAXSYSCALL 5
+
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
+uintptr_t syscall(uintptr_t systemCall) {
+    if (systemCall >= SYS_MAXSYSCALL)
+        return -1;
+
+    uintptr_t result;
+    __asm__ volatile ("int $0x80"
+                      : "=a"(result)
+                      : "a"(systemCall)
+                      : "memory"
+                      );
     return result;
 }
 
+#if defined (__cplusplus)
+} /* extern "C" */
+#endif
+
+#if defined (__cplusplus)
+
 template<typename T0>
 inline uintptr_t syscall(uintptr_t systemCall, T0 arg0) {
-    uintptr_t result { 0 };
+    uintptr_t result;
     asm volatile("int $0x80"
                  : "=a"(result)
                  : "a"(systemCall)
@@ -27,7 +48,7 @@ inline uintptr_t syscall(uintptr_t systemCall, T0 arg0) {
 
 template<typename T0, typename T1>
 inline uintptr_t syscall(uintptr_t systemCall, T0 arg0, T1 arg1) {
-    uintptr_t result { 0 };
+    uintptr_t result;
     asm volatile("int $0x80"
                  : "=a"(result)
                  : "a"(systemCall)
@@ -40,7 +61,7 @@ inline uintptr_t syscall(uintptr_t systemCall, T0 arg0, T1 arg1) {
 
 template<typename T0, typename T1, typename T2>
 inline uintptr_t syscall(uintptr_t systemCall, T0 arg0, T1 arg1, T2 arg2) {
-    uintptr_t result { 0 };
+    uintptr_t result;
     asm volatile("int $0x80"
                  : "=a"(result)
                  : "a"(systemCall)
@@ -54,7 +75,7 @@ inline uintptr_t syscall(uintptr_t systemCall, T0 arg0, T1 arg1, T2 arg2) {
 
 template<typename T0, typename T1, typename T2, typename T3>
 inline uintptr_t syscall(uintptr_t systemCall, T0 arg0, T1 arg1, T2 arg2, T3 arg3) {
-    uintptr_t result { 0 };
+    uintptr_t result;
     // Arguments passed in RDI, RSI, RDX, RCX
     asm volatile("int $0x80"
                  : "=a"(result)
@@ -68,12 +89,6 @@ inline uintptr_t syscall(uintptr_t systemCall, T0 arg0, T1 arg1, T2 arg2, T3 arg
     return result;
 }
 
-
-#define SYS_open  0
-#define SYS_close 1
-#define SYS_read  2
-#define SYS_write  3
-
-#define SYS_MAXSYSCALL 2
+#endif /* #if defined (__cplusplus) */
 
 #endif /* #ifndef _SYSCALLS_H */

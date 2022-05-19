@@ -1,7 +1,7 @@
 #ifndef _TYPES_H
 #define _TYPES_H
 
-#include "../stdint.h"
+#include <stdint.h>
 
 #if defined (__cplusplus)
 extern "C" {

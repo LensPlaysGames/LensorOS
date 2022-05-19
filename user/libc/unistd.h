@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-  // Syscall declarations go here!
+    // Syscall declarations go here!
 
     int open(const char* path, int flags, int mode);
     void close(int fd);

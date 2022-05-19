@@ -3,7 +3,7 @@
 
 #include <integers.h>
 
-constexpr u64 LENSOR_OS_NUM_SYSCALLS = 2;
+constexpr u64 LENSOR_OS_NUM_SYSCALLS = 5;
 extern void* syscalls[LENSOR_OS_NUM_SYSCALLS];
 
 // Defined in `syscalls.cpp`
