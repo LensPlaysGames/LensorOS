@@ -549,13 +549,22 @@ void kstage1(BootInfo* bInfo) {
         vfs.read(fd, &tmpBuffer[0], 11);
         dbgmsg(&tmpBuffer[0], 11, ShouldNewline::Yes);
 
-        if (ELF::CreateUserspaceElf64Process(vfs, fd))
+        if ((s64)fd != -1 && ELF::CreateUserspaceElf64Process(vfs, fd)) {
             dbgmsg_s("Successfully created new process from `/fs0/blazeit`\r\n");
-
-        dbgmsg("Closing FileDescriptor %ull\r\n", fd);
-        vfs.close(fd);
-        dbgmsg("FileDescriptor %ull closed\r\n", fd);
-        vfs.print_debug();
+            dbgmsg("Closing FileDescriptor %ull\r\n", fd);
+            vfs.close(fd);
+            dbgmsg("FileDescriptor %ull closed\r\n", fd);
+            vfs.print_debug();
+        }
+        // Another userspace program
+        constexpr const char* programTwoFilePath = "/fs0/stdout";
+        dbgmsg("Opening %s with VFS\r\n", programTwoFilePath);
+        fd = vfs.open(programTwoFilePath);
+        dbgmsg("  Got FileDescriptor %ull\r\n", fd);
+        if ((s64)fd != -1 && ELF::CreateUserspaceElf64Process(vfs, fd)) {
+            dbgmsg("Sucessfully created new process from `/fs0/stdout`");
+            vfs.close(fd);
+        }
     }
 
     // Initialize High Precision Event Timer.
