@@ -1,8 +1,6 @@
 #ifndef LENSOR_OS_VIRTUAL_FILESYSTEM_H
 #define LENSOR_OS_VIRTUAL_FILESYSTEM_H
 
-#include <cstr.h>
-#include <debug.h>
 #include <file.h>
 #include <filesystem.h>
 #include <linked_list.h>

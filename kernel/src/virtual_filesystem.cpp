@@ -1,26 +1,29 @@
 #include <virtual_filesystem.h>
 
+#include <cstr.h>
+#include <debug.h>
+#include <file.h>
+#include <filesystem.h>
+#include <linked_list.h>
+#include <storage/file_metadata.h>
+#include <storage/filesystem_driver.h>
+#include <storage/storage_device_driver.h>
+#include <string.h>
+
+// Uncomment the following directive for extra debug information output.
+//#define DEBUG_VFS
+
 FileDescriptor VFS::open(const String& path) {
-    /* Flow
-     * |-- Check beginning of path against each Mounts' Path.
-     * |   If it matches, use that Filesystem's functions to proceed.
-     * |-- Parse path (split on '/') into sections to feed filesystem.
-     * |-- Store necessary information in a new OpenFileDescription.
-     * |-- Store new OpenFileDescription in table of descriptions.
-     * `-- Return index into table of OpenFileDescriptions as FileDescriptor.
-     */
     u64 fullPathLength = path.length();
     if (fullPathLength <= 1) {
-        dbgmsg_s("Path is not long enough.\r\n");
+        dbgmsg_s("[VFS]: path is not long enough.\r\n");
         return -1ull;
     }
     if (path[0] != '/') {
-        dbgmsg("path does not start with slash, %s\r\n", fullPathLength);
+        dbgmsg("[VFS]: path does not start with slash, %s\r\n", fullPathLength);
         return -1ull;
     }
-
     FileDescriptor out = -1ull;
-
     Mounts.for_each([this, &out, path, fullPathLength](auto* it) {
         MountPoint& mount = it->value();
         StorageDeviceDriver* dev = mount.FS->storage_device_driver();
@@ -35,6 +38,22 @@ FileDescriptor VFS::open(const String& path) {
                 }
                 else {
                     FileMetadata m = fileDriver->file(dev, prefixlessPath.data());
+#ifdef DEBUG_VFS
+                    dbgmsg("  Metadata:\r\n"
+                           "    Name: %sl\r\n"
+                           "    File Size: %ull\r\n"
+                           "    Byte Offset: %ull\r\n"
+                           "    Filesystem Driver: %x\r\n"
+                           "    Device Driver: %x\r\n"
+                           "    Invalid: %b\r\n"
+                           , m.name()
+                           , m.file_size()
+                           , m.byte_offset()
+                           , m.file_driver()
+                           , m.device_driver()
+                           , m.invalid()
+                           );
+#endif /* #ifdef DEBUG_VFS */
                     if (m.invalid() == false) {
                         OpenFileDescription openedFile(dev, m);
                         out = Opened.length();
@@ -59,6 +78,19 @@ bool VFS::read(FileDescriptor fd, u8* buffer, u64 byteCount, u64 byteOffset) {
     if (fd >= Opened.length())
         return false;
 
+#ifdef DEBUG_VFS
+    dbgmsg("[VFS]: read\r\n"
+           "  file descriptor: %ull\r\n"
+           "  buffer address:  %x\r\n"
+           "  byte count:      %ull\r\n"
+           "  byte offset:     %ull\r\n"
+           , fd
+           , buffer
+           , byteCount
+           , byteOffset
+           );
+#endif /* #ifdef DEBUG_VFS */
+
     OpenFileDescription& file = Opened[fd];
     file.DeviceDriver->read(file.Metadata.byte_offset() + byteOffset
                             , byteCount, buffer);
@@ -68,6 +100,19 @@ bool VFS::read(FileDescriptor fd, u8* buffer, u64 byteCount, u64 byteOffset) {
 bool VFS::write(FileDescriptor fd, u8* buffer, u64 byteCount, u64 byteOffset) {
     if (fd >= Opened.length())
         return false;
+
+#ifdef DEBUG_VFS
+    dbgmsg("[VFS]: write\r\n"
+           "  file descriptor: %ull\r\n"
+           "  buffer address:  %x\r\n"
+           "  byte count:      %ull\r\n"
+           "  byte offset:     %ull\r\n"
+           , fd
+           , buffer
+           , byteCount
+           , byteOffset
+           );
+#endif /* #ifdef DEBUG_VFS */
 
     OpenFileDescription& file = Opened[fd];
     file.DeviceDriver->write(byteOffset, byteCount, buffer);
