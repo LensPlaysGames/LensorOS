@@ -34,10 +34,12 @@ FileDescriptor VFS::open(const String& path) {
                     // TODO: path matches a mount path exactly. How do we open a mount? Should we?
                 }
                 else {
-                    FileMetadata metadata = fileDriver->file(dev, prefixlessPath.data());
-                    OpenFileDescription openedFile(dev, metadata);
-                    out = Opened.length();
-                    Opened.add_end(openedFile);
+                    FileMetadata m = fileDriver->file(dev, prefixlessPath.data());
+                    if (m.invalid() == false) {
+                        OpenFileDescription openedFile(dev, m);
+                        out = Opened.length();
+                        Opened.add_end(openedFile);
+                    }
                 }
             }
         }
