@@ -44,11 +44,13 @@ system_call_handler_asm:
     push rbx
     push rsp
 ;;; Execute the system call.
-    mov rsi, syscalls           ; Store address of syscalls function table.
+    mov r11, rdx                ; mul and friends clobber RDX, we need to save it.
     mov rbx, 8                  ; 8 = sizeof(pointer) in 64 bit.
-    mul rbx                     ; Get addressoffset into syscalls table.
-    add rsi, rax                ; Add offset to base address.
-    call [rel rsi]              ; Call function at syscalls table base address + syscall number offset.
+    mul rbx                     ; Get byte offset within syscall table of syscall entry.
+    mov r10, syscalls           ; Store address of syscalls function table.
+    add r10, rax                ; Add offset to base address.
+    mov rdx, r11                ; Restore clobbered RDX.
+    call [rel r10]              ; Call function at syscalls table base address + syscall number offset.
 ;;; Restore CPU state, then return from interrupt.
     add rsp, 8                  ; Eat `rsp` off the stack.
     pop rbx
