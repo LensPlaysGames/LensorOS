@@ -11,7 +11,7 @@ class SinglyLinkedListNode {
     typedef T DataType;
 
     friend SinglyLinkedList<DataType>;
-    
+
 public:
     explicit SinglyLinkedListNode(const DataType& value
                                   , SinglyLinkedListNode* next = nullptr)
@@ -20,7 +20,7 @@ public:
     DataType& value()             { return Data; }
     const DataType& value() const { return Data; }
     SinglyLinkedListNode* next()  { return Next; }
-    
+
 private:    
     DataType Data;
     SinglyLinkedListNode* Next { nullptr };
@@ -42,23 +42,24 @@ public:
     }
 
     void add(const DataType& value) {
-        if (Tail == nullptr) {
-            Head = new Node(value);
+        Head = new Node(value, Head);
+        if (Tail == nullptr)
             Tail = Head;
-        }
-        else Head = new Node(value, Head);
+
         Length += 1;
     }
 
     void add_end(const DataType& value) {
-        if (Tail == nullptr) {
-            Head = new Node(value);
+        // Handle empty list case.
+        if (Head == nullptr) {
+            add(value);
+            return;
+        }
+        // Prevent nullptr dereference.
+        if (Tail == nullptr)
             Tail = Head;
-        }
-        else {
-            Tail->Next = new Node(value, Head);
-            Tail = Tail->Next;
-        }
+        // Create new node at end of list.
+        Tail->Next = new Node(value, nullptr);
         Length += 1;
     }
 
@@ -91,7 +92,7 @@ public:
         if (index == 0) {
             Node* old = Head;
             Head = Head->next();
-            Length--;
+            Length -= 1;
             delete old;
             return true;
         }
@@ -107,12 +108,12 @@ public:
 
             if (i >= index)
                 break;
-            
+
             prev = current;
             i++;
         }
         prev->Next = next;
-        Length--;
+        Length -= 1;
         delete current;
         return true;
     }
