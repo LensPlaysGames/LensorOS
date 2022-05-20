@@ -36,10 +36,12 @@
 #include <rtc.h>
 #include <scheduler.h>
 #include <smart_pointer.h>
-#include <storage/filesystem_driver.h>
-#include <storage/storage_device_driver.h>
-#include <storage/filesystem_drivers/file_allocation_table.h>
+#include <storage/device_drivers/dbgout.h>
 #include <storage/device_drivers/gpt_partition.h>
+#include <storage/file_metadata.h>
+#include <storage/filesystem_driver.h>
+#include <storage/filesystem_drivers/file_allocation_table.h>
+#include <storage/storage_device_driver.h>
 #include <system.h>
 #include <tss.h>
 #include <uart.h>
@@ -537,9 +539,21 @@ void kstage1(BootInfo* bInfo) {
     TSS::initialize();
     Scheduler::initialize();
 
+    // Setup stdout file.
+    // FIXME: This is very, very rudimentary.
+    VFS& vfs = SYSTEM->virtual_filesystem();
+    DbgOutDriver driver;
+    FileMetadata dbgoutMetadata(String("stdout")
+                                , false
+                                , &driver
+                                , nullptr
+                                , 0, 0);
+    OpenFileDescription stdout(&driver, dbgoutMetadata);
+    vfs.add_file(stdout);
+    vfs.print_debug();
+
     if (SYSTEM->filesystems().length() > 0) {
         const char* filePath = "/fs0/blazeit";
-        VFS& vfs = SYSTEM->virtual_filesystem();
         dbgmsg("Opening %s with VFS\r\n", filePath);
         FileDescriptor fd = vfs.open(filePath);
         dbgmsg("  Got FileDescriptor %ull\r\n", fd);
@@ -562,7 +576,7 @@ void kstage1(BootInfo* bInfo) {
         fd = vfs.open(programTwoFilePath);
         dbgmsg("  Got FileDescriptor %ull\r\n", fd);
         if ((s64)fd != -1 && ELF::CreateUserspaceElf64Process(vfs, fd)) {
-            dbgmsg("Sucessfully created new process from `/fs0/stdout`");
+            dbgmsg("Sucessfully created new process from `/fs0/stdout`\r\n");
             vfs.close(fd);
         }
     }

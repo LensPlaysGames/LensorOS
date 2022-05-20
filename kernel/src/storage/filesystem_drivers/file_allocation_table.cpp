@@ -194,9 +194,8 @@ FileMetadata FileAllocationTableDriver::file(StorageDeviceDriver* driver, const 
 #ifdef DEBUG_FAT
                 dbgmsg_s("  Found file!\r\n");
 #endif /* #ifdef DEBUG_FAT */
-                // TODO: Metadata (directory vs. file, permissions, etc).
-                u64 byteOffset =
-                    br->cluster_to_sector(entry->get_cluster_number())
+                // TODO: directory vs. file metadata
+                u64 byteOffset = br->cluster_to_sector(entry->get_cluster_number())
                     * br->BPB.NumBytesPerSector;
                 return { fileName, false, driver, this, entry->FileSizeInBytes, byteOffset };
             }
