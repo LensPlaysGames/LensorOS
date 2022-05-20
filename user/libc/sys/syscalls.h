@@ -33,7 +33,6 @@ uintptr_t syscall(uintptr_t systemCall) {
 #endif
 
 #if defined (__cplusplus)
-
 template<typename T0>
 inline uintptr_t syscall(uintptr_t systemCall, T0 arg0) {
     uintptr_t result;
@@ -88,7 +87,6 @@ inline uintptr_t syscall(uintptr_t systemCall, T0 arg0, T1 arg1, T2 arg2, T3 arg
                  );
     return result;
 }
-
 #endif /* #if defined (__cplusplus) */
 
 #endif /* #ifndef _SYSCALLS_H */

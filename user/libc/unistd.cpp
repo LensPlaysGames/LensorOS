@@ -8,8 +8,8 @@ int open(const char *path, int flags, int mode) {
     return syscall(SYS_open, path);
 }
 
-int open(int fd) {
-    return syscall(SYS_close, fd);
+void close(int fd) {
+    syscall(SYS_close, fd);
 }
 
 ssize_t read(int fd, const void* buffer, size_t count) {
