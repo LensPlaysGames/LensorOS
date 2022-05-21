@@ -27,17 +27,9 @@ void sys$1_close(FileDescriptor fd) {
     SYSTEM->virtual_filesystem().close(fd);
 }
 
-void sys$2_read() {
+int sys$2_read(FileDescriptor fd, u8* buffer, u64 byteCount) {
 #ifdef DEBUG_SYSCALLS
     dbgmsg(sys$_dbgfmt, 2, "read");
-#endif /* #ifdef DEBUG_SYSCALLS */
-}
-
-int sys$3_write(FileDescriptor fd, u8* buffer, u64 byteCount) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 3, "write");
-#endif /* #ifdef DEBUG_SYSCALLS */
-    // TODO: Implement seek behaviour.
     dbgmsg("  file descriptor: %d\r\n"
            "  buffer address:  %x\r\n"
            "  byte count:      %ull\r\n"
@@ -46,6 +38,22 @@ int sys$3_write(FileDescriptor fd, u8* buffer, u64 byteCount) {
            , buffer
            , byteCount
            );
+#endif /* #ifdef DEBUG_SYSCALLS */
+    return SYSTEM->virtual_filesystem().read(fd, buffer, byteCount, 0);
+}
+
+int sys$3_write(FileDescriptor fd, u8* buffer, u64 byteCount) {
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 3, "write");
+    dbgmsg("  file descriptor: %d\r\n"
+           "  buffer address:  %x\r\n"
+           "  byte count:      %ull\r\n"
+           "\r\n"
+           , fd
+           , buffer
+           , byteCount
+           );
+#endif /* #ifdef DEBUG_SYSCALLS */
     return SYSTEM->virtual_filesystem().write(fd, buffer, byteCount, 0);
 }
 

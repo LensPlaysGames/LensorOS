@@ -3,6 +3,6 @@
 
 int main() {
   const char *message = "Hello, friends :^)\r\n";
-  write(0, message, strlen(message));
+  write(STDOUT_FILENO, message, strlen(message));
   return 0;
 }
