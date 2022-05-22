@@ -50,6 +50,7 @@ public:
                 Tail = Head;
             Length += 1;
         }
+        else dbgmsg_s("Failed to allocate memory for linked list.");
     }
 
     void add_end(const DataType& value) {
@@ -59,7 +60,6 @@ public:
         else {
             auto* newTail = new Node(value, nullptr);
             if (newTail != nullptr) {
-                dbgmsg_s("Adding to end of linked list");
                 // Prevent nullptr dereference.
                 if (Tail == nullptr)
                     Tail = Head;

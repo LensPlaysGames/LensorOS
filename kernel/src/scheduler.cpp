@@ -142,14 +142,18 @@ namespace Scheduler {
         return NextProcess;
     }
 
-    SinglyLinkedListNode<Process*>* next_viable_process(SinglyLinkedListNode<Process*>* startProcess) {
-        auto* NextProcess = find_next_viable_process_after(startProcess);
+    SinglyLinkedListNode<Process*>* next_viable_process
+    (SinglyLinkedListNode<Process*>* startProcess
+     , IncludeGivenProcess include = IncludeGivenProcess::No)
+    {
+        auto* NextProcess = find_next_viable_process_after(startProcess, include);
         if (NextProcess == nullptr) {
             NextProcess = find_next_viable_process_after(ProcessQueue->head(), IncludeGivenProcess::Yes);
             if (NextProcess == nullptr) {
                 // Process list has zero viable processes.
                 // FIXME: I honestly don't know how to handle this correctly.
                 // Hang forever.
+                dbgmsg("[SCHED]: I don't know what to do when there are no processes!\r\n");
                 while (true)
                     asm ("hlt");
             }
@@ -167,9 +171,11 @@ namespace Scheduler {
             // this is a short-cut to do nothing.
             if(CurrentProcess == ProcessQueue->head())
                 return;
+
             // Otherwise, we are at the end of the queue,
             // and must reset back to the beginning of it.
-            CurrentProcess = next_viable_process(ProcessQueue->head());
+            CurrentProcess = next_viable_process(ProcessQueue->head()
+                                                 , IncludeGivenProcess::Yes);
         }
         else CurrentProcess = next_viable_process(CurrentProcess);
         // Update state of CPU that will be restored.
