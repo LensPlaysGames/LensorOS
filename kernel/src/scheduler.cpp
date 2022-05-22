@@ -160,16 +160,13 @@ namespace Scheduler {
     /// Called from `irq0_handler` in `scheduler.asm`
     /// A stupid simple round-robin process switcher.
     void switch_process(CPUState* cpu) {
-        dbgmsg("\r\n");
         memcpy(cpu, &CurrentProcess->value()->CPU, sizeof(CPUState));
         // Handle single viable process or end of queue.
         if (CurrentProcess->next() == nullptr) {
-            dbgmsg("Handling singular viable process\r\n");
             // If there is only one viable process,
             // this is a short-cut to do nothing.
             if(CurrentProcess == ProcessQueue->head())
                 return;
-            dbgmsg("Turns out it was the end of queue\r\n");
             // Otherwise, we are at the end of the queue,
             // and must reset back to the beginning of it.
             CurrentProcess = next_viable_process(ProcessQueue->head());
