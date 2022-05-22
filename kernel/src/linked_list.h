@@ -1,6 +1,7 @@
 #ifndef LENSOR_OS_LINKED_LIST_H
 #define LENSOR_OS_LINKED_LIST_H
 
+#include <debug.h>
 #include <memory/heap.h>
 
 template <typename T>
