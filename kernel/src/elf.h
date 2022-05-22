@@ -6,9 +6,9 @@
 /// Thanks to the RADII bootloader source code for these ELF definitions :^)
 
 #define ELFMAG0 0x7f
-#define ELFMAG1 "E"
-#define ELFMAG2 "L"
-#define ELFMAG3 "F"
+#define ELFMAG1 'E'
+#define ELFMAG2 'L'
+#define ELFMAG3 'F'
 
 #define ELFCLASSNONE 0
 #define ELFCLASS32   1

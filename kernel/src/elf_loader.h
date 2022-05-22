@@ -23,9 +23,9 @@ namespace ELF {
     inline bool VerifyElf64Header(const Elf64_Ehdr& ElfHeader) {
 #ifndef DEBUG_ELF
         if (ElfHeader.e_ident[EI_MAG0] != ELFMAG0
-            || ElfHeader.e_ident[EI_MAG1] != *ELFMAG1
-            || ElfHeader.e_ident[EI_MAG2] != *ELFMAG2
-            || ElfHeader.e_ident[EI_MAG3] != *ELFMAG3
+            || ElfHeader.e_ident[EI_MAG1] != ELFMAG1
+            || ElfHeader.e_ident[EI_MAG2] != ELFMAG2
+            || ElfHeader.e_ident[EI_MAG3] != ELFMAG3
             || ElfHeader.e_ident[EI_CLASS] != ELFCLASS64
             || ElfHeader.e_ident[EI_DATA] != ELFDATA2LSB
             || ElfHeader.e_type != ET_EXEC
