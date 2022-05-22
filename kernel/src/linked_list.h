@@ -42,25 +42,33 @@ public:
     }
 
     void add(const DataType& value) {
-        Head = new Node(value, Head);
-        if (Tail == nullptr)
-            Tail = Head;
-
-        Length += 1;
+        auto* newHead = new Node(value, Head);
+        if (newHead != nullptr) {
+            Head = newHead;
+            if (Tail == nullptr)
+                Tail = Head;
+            Length += 1;
+        }
     }
 
     void add_end(const DataType& value) {
         // Handle empty list case.
-        if (Head == nullptr) {
+        if (Head == nullptr)
             add(value);
-            return;
+        else {
+            auto* newTail = new Node(value, nullptr);
+            if (newTail != nullptr) {
+                dbgmsg_s("Adding to end of linked list");
+                // Prevent nullptr dereference.
+                if (Tail == nullptr)
+                    Tail = Head;
+                // Place new node at end of list.
+                Tail->Next = newTail;
+                Tail = Tail->next();
+                Length += 1;
+            }
+            else dbgmsg_s("Failed to allocate memory for linked list.");
         }
-        // Prevent nullptr dereference.
-        if (Tail == nullptr)
-            Tail = Head;
-        // Create new node at end of list.
-        Tail->Next = new Node(value, nullptr);
-        Length += 1;
     }
 
     DataType& at(u64 index) {
@@ -89,11 +97,16 @@ public:
         if (index >= Length)
             return false;
 
+        // Handle head removal
         if (index == 0) {
-            Node* old = Head;
-            Head = Head->next();
-            Length -= 1;
-            delete old;
+            if (Head != nullptr) {
+                Node* old = Head;
+                Head = Head->next();
+                Length -= 1;
+                delete old;
+            }
+            // If head is nullptr, ensure tail is as well.
+            else Tail = nullptr;
             return true;
         }
 
@@ -112,6 +125,10 @@ public:
             prev = current;
             i++;
         }
+        // Set Tail if removing last item.
+        if (next == nullptr)
+            Tail = prev;
+
         prev->Next = next;
         Length -= 1;
         delete current;
