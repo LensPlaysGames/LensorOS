@@ -40,12 +40,19 @@ struct CPUState {
 
 typedef u64 pid_t;
 
+enum class ProcessState {
+    Halted,
+    CatchFire,
+    Running,
+};
+
 /* TODO:
  * |-- File Descriptor Table (Dynamic list of process' open file descriptors).
  * `-- As only processes should make syscalls, should syscalls be defined in terms of process?
  */
 struct Process {
     pid_t ProcessID;
+    ProcessState State { ProcessState::Running };
     Memory::PageTable* CR3 { nullptr };
     CPUState CPU;
 };

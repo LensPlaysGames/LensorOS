@@ -192,6 +192,8 @@ namespace ELF {
         process->CPU.Frame.ss = 0x20 | 0b11;
         // Enable interrupts after jump.
         process->CPU.Frame.flags = 0b1010000010;
+        // Set process state.
+        process->State = ProcessState::Running;
         Scheduler::add_process(process);
         return true;
     }

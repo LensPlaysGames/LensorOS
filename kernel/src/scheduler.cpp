@@ -89,7 +89,7 @@ namespace Scheduler {
 
     void add_process(Process* process) {
         process->ProcessID = request_pid();
-        ProcessQueue->add(process);
+        ProcessQueue->add_end(process);
         dbgmsg_s("[SCHED]: Added process.\r\n");
         print_debug();
     }
@@ -107,6 +107,7 @@ namespace Scheduler {
             dbgmsg_s("\033[31mScheduler failed to initialize:\033[0m Could not create process list.\r\n");
             return false;
         }
+        StartupProcess.State = ProcessState::Running;
         add_process(&StartupProcess);
         CurrentProcess = ProcessQueue->head();
         // Install IRQ0 handler found in `scheduler.asm` (over-write default system timer handler).
@@ -116,17 +117,64 @@ namespace Scheduler {
         return true;
     }
 
+    enum class IncludeGivenProcess {
+        Yes = 0,
+        No = 1,
+    };
+
+    // If passed nullptr, consider all processes.
+    inline SinglyLinkedListNode<Process*>* find_next_viable_process_after
+    (SinglyLinkedListNode<Process*>* startProcess
+     , IncludeGivenProcess include = IncludeGivenProcess::No)
+    {
+        auto* NextProcess = startProcess;
+        while (NextProcess != nullptr)
+        {
+            if (include == IncludeGivenProcess::Yes) {
+                NextProcess = startProcess;
+                include = IncludeGivenProcess::No;
+            }
+            else NextProcess = NextProcess->next();
+            if (NextProcess != nullptr
+                && NextProcess->value()->State == ProcessState::Running)
+                break;
+        }
+        return NextProcess;
+    }
+
+    SinglyLinkedListNode<Process*>* next_viable_process(SinglyLinkedListNode<Process*>* startProcess) {
+        auto* NextProcess = find_next_viable_process_after(startProcess);
+        if (NextProcess == nullptr) {
+            NextProcess = find_next_viable_process_after(ProcessQueue->head(), IncludeGivenProcess::Yes);
+            if (NextProcess == nullptr) {
+                // Process list has zero viable processes.
+                // FIXME: I honestly don't know how to handle this correctly.
+                // Hang forever.
+                while (true)
+                    asm ("hlt");
+            }
+        }
+        return NextProcess;
+    }
+
     /// Called from `irq0_handler` in `scheduler.asm`
     /// A stupid simple round-robin process switcher.
     void switch_process(CPUState* cpu) {
+        dbgmsg("\r\n");
         memcpy(cpu, &CurrentProcess->value()->CPU, sizeof(CPUState));
+        // Handle single viable process or end of queue.
         if (CurrentProcess->next() == nullptr) {
+            dbgmsg("Handling singular viable process\r\n");
+            // If there is only one viable process,
+            // this is a short-cut to do nothing.
             if(CurrentProcess == ProcessQueue->head())
                 return;
-
-            CurrentProcess = ProcessQueue->head();
+            dbgmsg("Turns out it was the end of queue\r\n");
+            // Otherwise, we are at the end of the queue,
+            // and must reset back to the beginning of it.
+            CurrentProcess = next_viable_process(ProcessQueue->head());
         }
-        else CurrentProcess = CurrentProcess->next();
+        else CurrentProcess = next_viable_process(CurrentProcess);
         // Update state of CPU that will be restored.
         memcpy(&CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
         // Use new process' page map.
