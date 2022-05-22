@@ -21,6 +21,7 @@
 namespace ELF {
     /// Return zero when ELF header is of expected format.
     inline bool VerifyElf64Header(const Elf64_Ehdr& ElfHeader) {
+#ifndef DEBUG_ELF
         if (ElfHeader.e_ident[EI_MAG0] != ELFMAG0
             || ElfHeader.e_ident[EI_MAG1] != *ELFMAG1
             || ElfHeader.e_ident[EI_MAG2] != *ELFMAG2
@@ -34,11 +35,53 @@ namespace ELF {
             return false;
         }
         return true;
+#else /* #ifndef DEBUG_ELF */
+        if (ElfHeader.e_ident[EI_MAG0] != ELFMAG0
+            || ElfHeader.e_ident[EI_MAG1] != ELFMAG1
+            || ElfHeader.e_ident[EI_MAG2] != ELFMAG2
+            || ElfHeader.e_ident[EI_MAG3] != ELFMAG3)
+        {
+            dbgmsg("[ELF]: Invalid ELF64 header: Magic bytes incorrect.\r\n"
+                   "  Bytes (given, expected):\r\n"
+                   "    0: %d, %d\r\n"
+                   "    1: %d, %d\r\n"
+                   "    2: %d, %d\r\n"
+                   "    3: %d, %d\r\n"
+                   "\r\n"
+                   , ElfHeader.e_ident[EI_MAG0], ELFMAG0
+                   , ElfHeader.e_ident[EI_MAG1], ELFMAG1
+                   , ElfHeader.e_ident[EI_MAG2], ELFMAG2
+                   , ElfHeader.e_ident[EI_MAG3], ELFMAG3
+                   );
+            return false;
+        }
+        if (ElfHeader.e_ident[EI_CLASS] != ELFCLASS64) {
+            dbgmsg_s("[ELF]: Invalid ELF64 header: Incorrect class.\r\n");
+            return false;
+        }
+        if (ElfHeader.e_ident[EI_DATA] != ELFDATA2LSB) {
+            dbgmsg_s("[ELF]: Invalid ELF64 header: Incorrect data type.\r\n");
+            return false;
+        }
+        if (ElfHeader.e_type != ET_EXEC) {
+            dbgmsg_s("[ELF]: Invalid ELF64 header: Type is not executable.\r\n");
+            return false;
+        }
+        if (ElfHeader.e_machine != EM_X86_64) {
+            dbgmsg_s("[ELF]: Invalid ELF64 header: Machine is not valid.\r\n");
+            return false;
+        }
+        if (ElfHeader.e_version != EV_CURRENT) {
+            dbgmsg_s("[ELF]: Invalid ELF64 header: ELF version is not expected.\r\n");
+            return false;
+        }
+        return true;
+#endif /* #ifndef DEBUG_ELF */
     }
 
     inline bool CreateUserspaceElf64Process(VFS& vfs, FileDescriptor fd) {
 #ifdef DEBUG_ELF
-        dbgmsg("Attempting to execute userspace process from file descriptor %d\r\n"
+        dbgmsg("Attempting to add userspace process from file descriptor %d\r\n"
                , fd);
 #endif /* #ifdef DEBUG_ELF */
         Elf64_Ehdr elfHeader;
