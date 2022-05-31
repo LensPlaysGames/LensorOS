@@ -62,17 +62,10 @@ void print_now(u64 xOffset = 0) {
     gRend.crlf(xOffset);
 }
 
-//void test_userland_function() {
-//    for (;;) {
-//        asm volatile ("mov $0, %rax\r\n\t"
-//                      "int $0x80\r\n\t");
-//    }
-//}
-
 extern "C" void kmain(BootInfo* bInfo) {
-    // The heavy lifting is done within the `kernel_init` function (found in `kUtility.cpp`).
+    // The heavy lifting is done within the kstage1 function.
     kstage1(bInfo);
-    UART::out("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
+    dbgmsg_s("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
     // Clear + swap screen (ensure known state: blank).
     gRend.clear(0x00000000);
     gRend.swap();
@@ -90,9 +83,6 @@ extern "C" void kmain(BootInfo* bInfo) {
     gRend.puts("Do a barrel roll!");
     gRend.crlf();
     gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize * 2u});
-
-    // USERLAND SWITCH TESTING
-    // jump_to_userland_function((void*)test_userland_function);
 
     // I'm lovin' it :^) (Plays Maccy's theme).
     constexpr double MACCYS_BPM = 125;
@@ -134,7 +124,6 @@ extern "C" void kmain(BootInfo* bInfo) {
         // UPDATE TOP RIGHT CORNER OF SCREEN.
         gRend.swap({debugInfoX, 0}, {80000, 400});
     }
-
     // HALT LOOP (KERNEL INACTIVE).
     while (true)
         asm ("hlt");

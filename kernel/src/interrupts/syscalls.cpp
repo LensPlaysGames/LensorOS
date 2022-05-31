@@ -1,7 +1,7 @@
-#include "file.h"
 #include <interrupts/syscalls.h>
 
 #include <debug.h>
+#include <file.h>
 #include <system.h>
 #include <virtual_filesystem.h>
 
@@ -13,7 +13,7 @@
 
 constexpr const char* sys$_dbgfmt = "[SYS$]: %d -- %s\r\n";
 
-int sys$0_open(const char* path) {
+FileDescriptor sys$0_open(const char* path) {
 #ifdef DEBUG_SYSCALLS
     dbgmsg(sys$_dbgfmt, 0, "open");
 #endif /* #ifdef DEBUG_SYSCALLS */
@@ -27,6 +27,7 @@ void sys$1_close(FileDescriptor fd) {
     SYSTEM->virtual_filesystem().close(fd);
 }
 
+// TODO: This should return the amount of bytes read.
 int sys$2_read(FileDescriptor fd, u8* buffer, u64 byteCount) {
 #ifdef DEBUG_SYSCALLS
     dbgmsg(sys$_dbgfmt, 2, "read");
@@ -42,6 +43,7 @@ int sys$2_read(FileDescriptor fd, u8* buffer, u64 byteCount) {
     return SYSTEM->virtual_filesystem().read(fd, buffer, byteCount, 0);
 }
 
+// TODO: This should return the amount of bytes written.
 int sys$3_write(FileDescriptor fd, u8* buffer, u64 byteCount) {
 #ifdef DEBUG_SYSCALLS
     dbgmsg(sys$_dbgfmt, 3, "write");
@@ -58,11 +60,11 @@ int sys$3_write(FileDescriptor fd, u8* buffer, u64 byteCount) {
 }
 
 void sys$4_poke() {
-    // Prevent unused warning
-    (void)sys$_dbgfmt;
 #ifdef DEBUG_SYSCALLS
     dbgmsg(sys$_dbgfmt, 4, "poke");
 #endif /* #ifdef DEBUG_SYSCALLS */
+    // Prevent unused warning
+    (void)sys$_dbgfmt;
     dbgmsg_s("Poke from userland!\r\n");
 }
 

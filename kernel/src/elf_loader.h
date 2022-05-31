@@ -146,6 +146,7 @@ namespace ELF {
 #endif /* #ifdef DEBUG_ELF */
 
                 // Virtually map allocated pages.
+                // FIXME: Use p_flags to determine mapping flags.
                 u64 virtAddress = phdr->p_vaddr;
                 for (u64 t = 0; t < pages * PAGE_SIZE; t += PAGE_SIZE) {
                     Memory::map(newPageTable
@@ -172,6 +173,7 @@ namespace ELF {
             return false;
         }
         u64 newStackTop = newStackBottom + UserProcessStackSize;
+        // TODO: Use GNU_STACK program header, if present, to determine NX flag.
         for (u64 t = newStackBottom; t < newStackTop; t += PAGE_SIZE)
             map(newPageTable, (void*)t, (void*)t
                 , (u64)(Memory::PageTableFlag::Present)
