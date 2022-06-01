@@ -38,7 +38,7 @@ extern "C" {
   __attribute__((noreturn)) void abort(void);
   int atexit(void (*function)(void));
   int at_quick_exit(void (*function)(void));
-  __attribute__((noreturn)) void exit(int status);
+  __attribute__((noreturn)) void exit(int status); // defined in "unistd.cpp"
   char* getenv(const char* name);
   __attribute__((noreturn)) void quick_exit(int status);
   int system(const char* command);

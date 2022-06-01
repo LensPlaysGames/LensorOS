@@ -1,6 +1,6 @@
-#include <string.h>
+#include "string.h"
 
-#include <errno.h>
+#include "errno.h"
 
 /// Copying
 void* memcpy(void* dst, const void* src, size_t n) {

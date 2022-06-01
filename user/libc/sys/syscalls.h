@@ -8,26 +8,15 @@
 #define SYS_read  2
 #define SYS_write 3
 #define SYS_poke  4
+#define SYS_exit  5
 
-#define SYS_MAXSYSCALL 5
+#define SYS_MAXSYSCALL 6
 
 #if defined (__cplusplus)
 extern "C" {
 #endif
-
-uintptr_t syscall(uintptr_t systemCall) {
-    if (systemCall >= SYS_MAXSYSCALL)
-        return -1;
-
-    uintptr_t result;
-    __asm__ volatile ("int $0x80"
-                      : "=a"(result)
-                      : "a"(systemCall)
-                      : "memory"
-                      );
-    return result;
-}
-
+    // TODO: Preprocessor macro trickery.
+    uintptr_t syscall(uintptr_t systemCall);
 #if defined (__cplusplus)
 } /* extern "C" */
 #endif

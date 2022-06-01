@@ -4,9 +4,7 @@ cmake_minimum_required(VERSION 3.14)
 # `-- Create target that copies built libraries and system headers to sysroot for cross compilation
 
 # Use cross compiler.
-set(CMAKE_ASM_COMPILER x86_64-lensoros-elf-gcc)
-set(CMAKE_C_COMPILER   x86_64-lensoros-elf-gcc)
-set(CMAKE_CXX_COMPILER x86_64-lensoros-elf-g++)
+set( CMAKE_TOOLCHAIN_FILE "../../kernel/lensor_gnu_toolchain.cmake" )
 
 project(LensorOS_libc VERSION 0.0.1 LANGUAGES ASM CXX)
 
@@ -29,6 +27,7 @@ target_sources(
   stdlib.cpp
   string.cpp
   unistd.cpp
+  sys/syscalls.cpp
 )
 target_compile_options(
   c
