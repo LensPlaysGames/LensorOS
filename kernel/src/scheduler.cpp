@@ -94,6 +94,24 @@ namespace Scheduler {
         print_debug();
     }
 
+    bool remove_process(pid_t pid) {
+        Process* processToRemove = nullptr;
+        int processToRemoveIndex = 0;
+        ProcessQueue->for_each([pid, &processToRemove, &processToRemoveIndex](auto* it) {
+            Process* process = it->value();
+            if (process->ProcessID == pid) {
+                processToRemove = process;
+            } else if (processToRemove == nullptr) {
+                processToRemoveIndex += 1;
+            }
+        });
+        if (processToRemove) {
+            // TODO: Actually de-allocate memory!!!
+            ProcessQueue->remove(processToRemoveIndex);
+        }
+        return processToRemove != nullptr;
+    }
+
     bool initialize() {
         // IRQ handler in assembly increments PIT ticks counter using this function.
         timer_tick = pit_tick;

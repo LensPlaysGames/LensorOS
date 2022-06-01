@@ -40,19 +40,12 @@ struct CPUState {
 
 typedef u64 pid_t;
 
-enum class ProcessState {
-    Halted,
-    CatchFire,
-    Running,
-};
-
 /* TODO:
  * |-- File Descriptor Table (Dynamic list of process' open file descriptors).
  * `-- As only processes should make syscalls, should syscalls be defined in terms of process?
  */
 struct Process {
     pid_t ProcessID;
-    ProcessState State { ProcessState::Running };
     Memory::PageTable* CR3 { nullptr };
     CPUState CPU;
 };
@@ -80,8 +73,13 @@ namespace Scheduler {
      */
     void switch_process(CPUState*);
 
-    // Add an existing process to the list of processes.
+    /// Add an existing process to the list of processes.
     void add_process(Process*);
+
+    /// remove the process with PID list of processes.
+    bool remove_process(pid_t);
+
+    void print_debug();
 }
 
 __attribute__((no_caller_saved_registers))

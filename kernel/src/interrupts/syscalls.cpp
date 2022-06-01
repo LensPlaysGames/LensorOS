@@ -2,6 +2,7 @@
 
 #include <debug.h>
 #include <file.h>
+#include <scheduler.h>
 #include <system.h>
 #include <virtual_filesystem.h>
 
@@ -68,6 +69,19 @@ void sys$4_poke() {
     dbgmsg_s("Poke from userland!\r\n");
 }
 
+void sys$5_exit(int status) {
+    pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 5, "exit");
+    dbgmsg("  status: %i\r\n"
+           "\r\n"
+           , status
+           );
+#endif /* #ifdef DEBUG_SYSCALLS */
+    Scheduler::remove_process(pid);
+    (void)status;
+}
+
 u64 num_syscalls = LENSOR_OS_NUM_SYSCALLS;
 void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     (void*)sys$0_open,
@@ -75,4 +89,5 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     (void*)sys$2_read,
     (void*)sys$3_write,
     (void*)sys$4_poke,
+    (void*)sys$5_exit,
 };
