@@ -108,8 +108,9 @@ namespace Scheduler {
         if (processToRemove) {
             // TODO: Actually de-allocate memory!!!
             ProcessQueue->remove(processToRemoveIndex);
+            return true;
         }
-        return processToRemove != nullptr;
+        return false;
     }
 
     bool initialize() {
@@ -139,7 +140,6 @@ namespace Scheduler {
         No = 1,
     };
 
-    // If passed nullptr, consider all processes.
     inline SinglyLinkedListNode<Process*>* find_next_viable_process_after
     (SinglyLinkedListNode<Process*>* startProcess
      , IncludeGivenProcess include = IncludeGivenProcess::No)

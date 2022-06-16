@@ -22,7 +22,7 @@ extern "C" {
     }
 
     __attribute__((noreturn)) void exit(int status) {
-        write(STDOUT_FILENO, "EXITING!", 8);
+        write(STDOUT_FILENO, "EXITING!\r\n", 10);
         syscall(SYS_exit, status);
         while (1);
     }

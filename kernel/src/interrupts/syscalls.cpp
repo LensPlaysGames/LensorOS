@@ -79,6 +79,7 @@ void sys$5_exit(int status) {
            );
 #endif /* #ifdef DEBUG_SYSCALLS */
     Scheduler::remove_process(pid);
+    dbgmsg("[SYS$]: exit() -- Removed process %ull\r\n", pid);
     (void)status;
 }
 
