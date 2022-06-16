@@ -75,18 +75,21 @@
 #define EV_CURRENT 1
 
 /// `Elf64_Phdr.p_type`
-#define PT_NULL    0
-#define PT_LOAD    1
-#define PT_DYNAMIC 2
-#define PT_INTERP  3
-#define PT_NOTE    4
-#define PT_SHLIB   5
-#define PT_PHDR    6
-#define PT_TLS     7
-#define PT_LOOS    0x60000000
-#define PT_HIOS    0x6fffffff
-#define PT_LOPROC  0x70000000
-#define PT_HIPROC  0x7fffffff
+#define PT_NULL         0
+#define PT_LOAD         1
+#define PT_DYNAMIC      2
+#define PT_INTERP       3
+#define PT_NOTE         4
+#define PT_SHLIB        5
+#define PT_PHDR         6
+#define PT_TLS          7
+#define PT_LOOS         0x60000000
+#define PT_GNU_EH_FRAME 0x6474e550
+#define PT_GNU_STACK    0x6474e551
+#define PT_GNU_RELRO    0x6474e552
+#define PT_HIOS         0x6fffffff
+#define PT_LOPROC       0x70000000
+#define PT_HIPROC       0x7fffffff
 
 /// `Elf64_Phdr.p_flags` bit-masks
 #define PF_X        0x1
@@ -110,30 +113,30 @@ typedef u16 Elf64_Section;
 /// This structure is found at the very beginning of every ELF file.
 struct Elf64_Ehdr {
     unsigned char e_ident[EI_NIDENT];
-    Elf64_Half e_type { 0 };
-    Elf64_Half e_machine { 0 };
-    Elf64_Word e_version { 0 };
-    Elf64_Addr e_entry { 0 };
-    Elf64_Off e_phoff { 0 };
-    Elf64_Off e_shoff { 0 };
-    Elf64_Word e_flags { 0 };
-    Elf64_Half e_ehsize { 0 };
-    Elf64_Half e_phentsize { 0 };
-    Elf64_Half e_phnum { 0 };
-    Elf64_Half e_shentsize { 0 };
-    Elf64_Half e_shnum { 0 };
-    Elf64_Half e_shstrndx { 0 };
+    Elf64_Half    e_type       { 0 };
+    Elf64_Half    e_machine    { 0 };
+    Elf64_Word    e_version    { 0 };
+    Elf64_Addr    e_entry      { 0 };
+    Elf64_Off     e_phoff      { 0 };
+    Elf64_Off     e_shoff      { 0 };
+    Elf64_Word    e_flags      { 0 };
+    Elf64_Half    e_ehsize     { 0 };
+    Elf64_Half    e_phentsize  { 0 };
+    Elf64_Half    e_phnum      { 0 };
+    Elf64_Half    e_shentsize  { 0 };
+    Elf64_Half    e_shnum      { 0 };
+    Elf64_Half    e_shstrndx   { 0 };
 };
 
 struct Elf64_Phdr {
-    Elf64_Word p_type { 0 };
-    Elf64_Word p_flags { 0 };
-    Elf64_Off  p_offset { 0 };
-    Elf64_Addr p_vaddr { 0 };
-    Elf64_Addr p_paddr { 0 };
-    Elf64_XWord p_filesz { 0 };
-    Elf64_XWord p_memsz { 0 };
-    Elf64_XWord p_align { 0 };
+    Elf64_Word  p_type    { 0 };
+    Elf64_Word  p_flags   { 0 };
+    Elf64_Off   p_offset  { 0 };
+    Elf64_Addr  p_vaddr   { 0 };
+    Elf64_Addr  p_paddr   { 0 };
+    Elf64_XWord p_filesz  { 0 };
+    Elf64_XWord p_memsz   { 0 };
+    Elf64_XWord p_align   { 0 };
 };
 #pragma pack(pop)
 

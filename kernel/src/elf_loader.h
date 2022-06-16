@@ -107,6 +107,10 @@ namespace ELF {
                     | (u64)Memory::PageTableFlag::ReadWrite
                     );
 
+        size_t stack_flags = 0;
+        stack_flags |= (size_t)Memory::PageTableFlag::Present;
+        stack_flags |= (size_t)Memory::PageTableFlag::ReadWrite;
+        stack_flags |= (size_t)Memory::PageTableFlag::UserSuper;
         // Load PT_LOAD program headers, mapping to vaddr as necessary.
         u64 programHeadersTableSize = elfHeader.e_phnum * elfHeader.e_phentsize;
         SmartPtr<Elf64_Phdr[]> programHeaders(new Elf64_Phdr[elfHeader.e_phnum], elfHeader.e_phnum);
@@ -146,40 +150,48 @@ namespace ELF {
 #endif /* #ifdef DEBUG_ELF */
 
                 // Virtually map allocated pages.
-                // FIXME: Use p_flags to determine mapping flags.
                 u64 virtAddress = phdr->p_vaddr;
+                size_t flags = 0;
+                flags |= (size_t)Memory::PageTableFlag::Present;
+                flags |= (size_t)Memory::PageTableFlag::UserSuper;
+                if (phdr->p_flags & PF_W) {
+                    flags |= (size_t)Memory::PageTableFlag::ReadWrite;
+                }
+                if (!(phdr->p_flags & PF_X)) {
+                    flags |= (size_t)Memory::PageTableFlag::NX;
+                }
                 for (u64 t = 0; t < pages * PAGE_SIZE; t += PAGE_SIZE) {
                     Memory::map(newPageTable
                                 , (void*)(virtAddress + t)
                                 , loadedProgram + t
-                                , (u64)Memory::PageTableFlag::Present
-                                | (u64)Memory::PageTableFlag::ReadWrite
-                                | (u64)Memory::PageTableFlag::UserSuper
+                                , flags
                                 , Memory::ShowDebug::Yes
                                 );
                 }
             }
+            else if (phdr->p_type == PT_GNU_STACK) {
+#ifdef DEBUG_ELF
+                dbgmsg_s("[ELF]: Stack permissions set by GNU_STACK program header.\r\n");
+#endif /* #ifdef DEBUG_ELF */
+                if (!(phdr->p_flags & PF_X)){
+                    stack_flags |= (size_t)Memory::PageTableFlag::NX;}
+            }
         }
         Process* process = new Process;
         if (process == nullptr) {
-            dbgmsg_s("Couldn't allocate process structure for new userspace process\r\n");
+            dbgmsg_s("[ELF]: Couldn't allocate process structure for new userspace process\r\n");
             return false;
         }
         constexpr u64 UserProcessStackSizePages = 4;
         constexpr u64 UserProcessStackSize = UserProcessStackSizePages * PAGE_SIZE;
         u64 newStackBottom = (u64)Memory::request_pages(UserProcessStackSizePages);
         if (newStackBottom == 0) {
-            dbgmsg_s("Couldn't allocate stack for new userspace process\r\n");
+            dbgmsg_s("[ELF]: Couldn't allocate stack for new userspace process\r\n");
             return false;
         }
         u64 newStackTop = newStackBottom + UserProcessStackSize;
-        // TODO: Use GNU_STACK program header, if present, to determine NX flag.
         for (u64 t = newStackBottom; t < newStackTop; t += PAGE_SIZE)
-            map(newPageTable, (void*)t, (void*)t
-                , (u64)(Memory::PageTableFlag::Present)
-                | (u64)(Memory::PageTableFlag::ReadWrite)
-                | (u64)(Memory::PageTableFlag::UserSuper)
-                );
+            map(newPageTable, (void*)t, (void*)t, stack_flags);
 
         // New page map.
         process->CR3 = newPageTable;
@@ -194,8 +206,6 @@ namespace ELF {
         process->CPU.Frame.ss = 0x20 | 0b11;
         // Enable interrupts after jump.
         process->CPU.Frame.flags = 0b1010000010;
-        // Set process state.
-        process->State = ProcessState::Running;
         Scheduler::add_process(process);
         return true;
     }

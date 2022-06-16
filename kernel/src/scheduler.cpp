@@ -125,7 +125,6 @@ namespace Scheduler {
             dbgmsg_s("\033[31mScheduler failed to initialize:\033[0m Could not create process list.\r\n");
             return false;
         }
-        StartupProcess.State = ProcessState::Running;
         add_process(&StartupProcess);
         CurrentProcess = ProcessQueue->head();
         // Install IRQ0 handler found in `scheduler.asm` (over-write default system timer handler).
@@ -153,8 +152,7 @@ namespace Scheduler {
                 include = IncludeGivenProcess::No;
             }
             else NextProcess = NextProcess->next();
-            if (NextProcess != nullptr
-                && NextProcess->value()->State == ProcessState::Running)
+            if (NextProcess != nullptr)
                 break;
         }
         return NextProcess;

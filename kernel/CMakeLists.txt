@@ -296,7 +296,7 @@ if( QEMU_IMG_PROGRAM )
   add_custom_target(
     image_vdi
     COMMAND ${QEMU_IMG_PROGRAM} convert -O vdi LensorOS.bin LensorOS.vdi
-    COMMENT "Generating VDI format of GUID Partion Table with EFI System partition using `mkgpt`"
+    COMMENT "Generating VDI format of GUID Partion Table with EFI System partition using `qemu_img`"
     WORKING_DIRECTORY ${IMAGE_DIR}
     USES_TERMINAL
     VERBATIM
