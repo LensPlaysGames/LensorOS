@@ -66,6 +66,8 @@ public:
         return this->Pointer[index];
     }
 
+    u64 size() const { return Size; }
+
 private:
     T* Pointer;
     u64 Size { 0 };

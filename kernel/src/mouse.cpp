@@ -126,7 +126,7 @@ u8 mouse_cursor[] = {
 u32 pixels_under_mouse_cursor[MouseCursorSize * MouseCursorSize + 1];
 
 // DRAW MOUSE CURSOR AT gMousePosition
-void DrawMouseCursor() {
+void draw_mouse_cursor() {
     Vector2<u64> cachedPos = gRend.DrawPos;
 
     Vector2<u64> refreshPos = gOldMousePosition;
@@ -247,7 +247,7 @@ void process_mouse_packet() {
     if (gMousePosition.y >= gRend.Target->PixelHeight)
         gMousePosition.y = gRend.Target->PixelHeight - 1;
     // USE GLOBAL OUTPUT PROTOCOL RENDERER TO DRAW THE MOUSE CURSOR.
-    DrawMouseCursor();
+    draw_mouse_cursor();
     // PACKET USED; DISCARD READY STATE
     mouse_packet_ready = false;
 }

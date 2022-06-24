@@ -22,7 +22,7 @@ system_call_handler_asm:
 ;;; Do nothing if system call code is invalid:
 ;;; Syscall code invalid if greater than or equal to total number of syscalls.
     cmp rax, [rel num_syscalls]
-    jae invalid_system_call
+    jae invalid_syscall
 ;;; Save CPU state to be restored after system call.
     call do_swapgs
     push rax
@@ -34,31 +34,33 @@ system_call_handler_asm:
     push r12
     push r11
     push r10
-    push r9
-    push r8
+    push r9                     ; 6th argument, rest on stack in reverse order
+    push r8                     ; 5th argument
     push rbp
-    push rdi
-    push rsi
-    push rdx
-    push rcx
+    push rdi                    ; 1st argument
+    push rsi                    ; 2nd argument
+    push rdx                    ; 3rd argument
+    push rcx                    ; 4th argument
     push rbx
     push rsp
 ;;; Execute the system call.
-    mov rsi, syscalls           ; Store address of syscalls function table.
+    mov r11, rdx                ; mul and friends clobber RDX, we need to save it.
     mov rbx, 8                  ; 8 = sizeof(pointer) in 64 bit.
-    mul rbx                     ; Get addressoffset into syscalls table.
-    add rsi, rbx                ; Add offset to base address.
-    call [rel rsi]              ; Call function at syscalls table base address + syscall number offset.
+    mul rbx                     ; Get byte offset within syscall table of syscall entry.
+    mov r10, syscalls           ; Store address of syscalls function table.
+    add r10, rax                ; Add offset to base address.
+    mov rdx, r11                ; Restore clobbered RDX.
+    call [rel r10]              ; Call function at syscalls table base address + syscall number offset.
 ;;; Restore CPU state, then return from interrupt.
     add rsp, 8                  ; Eat `rsp` off the stack.
     pop rbx
-    pop rcx
-    pop rdx
-    pop rsi
-    pop rdi
+    pop rcx                     ; 1st return value
+    pop rdx                     ; 2nd return value
+    pop rsi                     ; 3rd return value
+    pop rdi                     ; 4th return value
     pop rbp
-    pop r8
-    pop r9
+    pop r8                      ; 5th return value
+    pop r9                      ; 6th return value
     pop r10
     pop r11
     pop r12
@@ -69,7 +71,7 @@ system_call_handler_asm:
     pop gs
     add rsp, 8                  ; Eat `rax` off the stack.
     call do_swapgs
-invalid_system_call:            ; If system call code is invalid, jump directly to exit.
+invalid_syscall:                ; If system call code is invalid, jump directly to exit.
     iretq                       ; iretq -> interrupt return quad word (64 bit)
 
 GLOBAL system_call_handler_asm

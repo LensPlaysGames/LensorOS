@@ -1,4 +1,11 @@
+# Generated directories
 /cross/
 /wincross/
-/binutils*
-/gcc*
+/binutils*/
+/gcc*/
+
+# Downloaded archives
+*.tar*
+
+# Untouched (for generating patches)
+/untouched/

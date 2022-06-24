@@ -1,22 +1,20 @@
 #include <basic_renderer.h>
 
 #include <cstr.h>
+#include <debug.h>
 #include <integers.h>
 #include <math.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
-#include <uart.h>
 
 // Define global renderer for use anywhere within the kernel.
 BasicRenderer gRend;
 
 Framebuffer target;
 BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
-    : Render(render), Font(f)
-{
+    : Render(render), Font(f) {
     // Framebuffer supplied by GOP is in physical memory; map the
-    //   physical memory dedicated to the framebuffer into virtual memory.
-
+    // physical memory dedicated to the framebuffer into virtual memory.
     // Calculate size of framebuffer in pages.
     u64 fbBase = (u64)render->BaseAddress;
     u64 fbSize = render->BufferSize + 0x1000;
@@ -24,39 +22,53 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
     // Allocate physical pages for Render framebuffer.
     Memory::lock_pages(render->BaseAddress, fbPages);
     // Map active framebuffer physical address to virtual addresses 1:1.
-    for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
-        Memory::map((void*)t, (void*)t);
-
-    UART::out("  Active GOP framebuffer mapped to 0x");
-    UART::out(to_hexstring(fbBase));
-    UART::out(" thru ");
-    UART::out(to_hexstring(fbBase + fbSize));
-    UART::out("\r\n");
-    
+    for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000) {
+        Memory::map((void*)t, (void*)t
+                    , (u64)Memory::PageTableFlag::Present
+                    | (u64)Memory::PageTableFlag::ReadWrite
+                    );
+    }
+    dbgmsg("  Active GOP framebuffer mapped to %x thru %x\r\n"
+           , fbBase
+           , fbBase + fbSize
+           );
     // Create a new framebuffer. This memory is what will be drawn to.
-    // When the screen should be updated, this new framebuffer is copied into the active one.
-    // This helps performance as the active framebuffer is very slow to read/write from.
+    // When the screen should be updated, this new framebuffer is copied
+    // into the active one. This helps performance as the active framebuffer
+    // may be very slow to read/write from.
     // Copy render framebuffer data to target.
     target = *render;
     // Find physical pages for target framebuffer and allocate them.
     target.BaseAddress = Memory::request_pages(fbPages);
-    // If memory allocation fails, pretend there is two buffers
-    // but they both point to the same spot.
     if (target.BaseAddress == nullptr) {
+        // If memory allocation fails, pretend there is
+        // two buffers but they both point to the same spot.
+        // This isn't the most performant, but it does work.
         Target = Render;
     }
     else {
-        fbBase = (u64)target.BaseAddress;
-        for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000)
-            Memory::map((void*)t, (void*)t);
-
-        UART::out("  Deferred GOP framebuffer mapped to 0x");
-        UART::out(to_hexstring(fbBase));
-        UART::out(" thru ");
-        UART::out(to_hexstring(fbBase + fbSize));
-        UART::out("\r\n");
-
+        dbgmsg("  Deferred GOP framebuffer allocated at %x thru %x\r\n"
+               , target.BaseAddress
+               , (u64)target.BaseAddress + fbSize
+               );
+        // If memory allocation succeeds, map memory somewhere
+        // out of the way in the virtual address range.
+        // FIXME: Don't hard code this address.
+        constexpr u64 virtualTargetBaseAddress = 0xffffff8000000000;
+        u64 physicalTargetBaseAddress = (u64)target.BaseAddress;
+        for (u64 t = 0; t < fbSize; t += 0x1000) {
+            Memory::map((void*)(virtualTargetBaseAddress + t)
+                        , (void*)(physicalTargetBaseAddress + t)
+                        , (u64)Memory::PageTableFlag::Present
+                        | (u64)Memory::PageTableFlag::ReadWrite
+                        );
+        }
+        target.BaseAddress = (void*)virtualTargetBaseAddress;
         Target = &target;
+        dbgmsg("  Deferred GOP framebuffer mapped to %x thru %x\r\n"
+               , virtualTargetBaseAddress
+               , virtualTargetBaseAddress + fbSize
+               );
     }
     clear();
     swap();
@@ -70,9 +82,12 @@ inline void BasicRenderer::clamp_draw_position() {
 }
 
 void BasicRenderer::swap(Vector2<u64> position, Vector2<u64> size) {
+    if (Render->BaseAddress == Target->BaseAddress)
+        return;
     // Only swap what is within the bounds of the framebuffer.
     if (position.x > Target->PixelWidth
-        || position.y > Target->PixelHeight) { return; }
+        || position.y > Target->PixelHeight)
+        return;
     // Ensure size doesn't over-run edge of framebuffer.
     u64 diffX = Target->PixelWidth - position.x;
     u64 diffY = Target->PixelHeight - position.y;

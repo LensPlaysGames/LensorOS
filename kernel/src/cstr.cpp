@@ -25,15 +25,8 @@ bool strcmp(const char* a, const char* b, u64 length) {
     return true;
 }
 
-#ifndef LENSOR_OS_UART_HIDE_COLOR_CODES
-const char* t = "\033[32mTrue\033[0m";
-const char* f = "\033[31mFalse\033[0m";
-#else
-const char* t = "True";
-const char* f = "False";
-#endif /* if !defined (LENSOR_OS_UART_HIDE_COLOR_CODES) */
 const char* to_string(bool b) {
-    return b ? t : f;
+    return b ? trueString : falseString;
 }
 
 char uint_to_str_buf[LENSOR_OS_TO_STRING_BUF_SZ];

@@ -36,7 +36,7 @@ public:
 
 private:
     String Name = { "" };
-    bool Invalid { false };
+    bool Invalid { true };
     StorageDeviceDriver* DeviceDriver { nullptr };
     FilesystemDriver* FileDriver { nullptr };
     u64 FileSize   { -1ull };

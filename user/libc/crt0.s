@@ -11,16 +11,15 @@ _start:
     pushq %rsi
     pushq %rdi
 
-    ;# call initialize_standard_library
-
     ;# Run global constructors.
     call _init
 
     popq %rdi
     popq %rsi
 
+    ;# Run the code!
     call main
 
-    movl %eax, %edi
+    ;# Call exit with return status from main as argument
+    movq %rax, %rdi
     call exit
-.size _start, . - _start

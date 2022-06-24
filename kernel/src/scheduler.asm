@@ -1,13 +1,11 @@
     [BITS 64]
-    
     ;; External symbols provided in `scheduler.h` and `scheduler.cpp`
     ;; A pointer to task switching handler function.
     extern scheduler_switch_process
     ;; A pointer to a function that increments timer ticks by one.
     extern timer_tick
-
 do_swapgs:
-    cmp QWORD [rsp + 0x08], 0x08
+    cmp QWORD [rsp + 0x8], 0x8
     je skip_swap
     swapgs
 skip_swap:
@@ -15,16 +13,13 @@ skip_swap:
 
     GLOBAL irq0_handler
 irq0_handler:
-    push rbp
-    mov rbp, rsp
+    ;; `iretq` arguments already on the stack:
+    ;; |-- Data Segment Selector
+    ;; |-- Old Stack Pointer (RSP)
+    ;; |-- Flags Register (RFLAGS)
+    ;; |-- Code Segment Selector
+    ;; `-- Instruction Pointer (RIP)
 ;;; SAVE CPU STATE ON STACK
-    ;; Already on the stack thanks to interrupt:
-    ;; |- Old GDT Segment Selector
-    ;; |- Old Stack Pointer (RSP)
-    ;; |- Flags Register (RFLAGS)
-    ;; |- Code Segment Selector
-    ;; |- Instruction Pointer (RIP)
-    ;; `- Error Code
     call do_swapgs
     push rax
     push gs
@@ -50,7 +45,7 @@ irq0_handler:
     mov rdi, rsp
     call [rel scheduler_switch_process]
 ;;; END INTERRUPT
-    mov al, 0x20                ; 0x20 = PIC_EOI
+    mov ax, 0x20                ; 0x20 = PIC_EOI
     out 0x20, al                ; 0x20 = PIC1_COMMAND port
 ;;; RESTORE CPU STATE FROM STACK
     add rsp, 8                  ; Eat `rsp` off of stack.
@@ -72,5 +67,4 @@ irq0_handler:
     pop gs
     pop rax
     call do_swapgs
-    pop rbp
     iretq

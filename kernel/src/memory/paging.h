@@ -4,17 +4,17 @@
 #include <integers.h>
 
 namespace Memory {
-    enum PageTableFlag {
-        Present = 0,
-        ReadWrite = 1,
-        UserSuper = 2,
-        WriteThrough = 3,
-        CacheDisabled = 4,
-        Accessed = 5,
-        Dirty = 6,
-        LargerPages = 7,
-        Global = 8,
-        NX = 63,
+    enum class PageTableFlag : u64 {
+        Present       = 1ull << 0,
+        ReadWrite     = 1ull << 1,
+        UserSuper     = 1ull << 2,
+        WriteThrough  = 1ull << 3,
+        CacheDisabled = 1ull << 4,
+        Accessed      = 1ull << 5,
+        Dirty         = 1ull << 6,
+        LargerPages   = 1ull << 7,
+        Global        = 1ull << 8,
+        NX            = 1ull << 63,
     };
 
     class PageMapIndexer {
@@ -66,11 +66,11 @@ namespace Memory {
         }
         
         bool flag(PageTableFlag flag)  {
-            return Value & (u64)1 << flag;
+            return Value & (u64)flag;
         }
         
         void set_flag(PageTableFlag flag, bool enabled) {
-            u64 bitSelector = (u64)1 << flag;
+            u64 bitSelector = (u64)flag;
             Value &= ~bitSelector;
             if (enabled) {
                 Value |= bitSelector;
