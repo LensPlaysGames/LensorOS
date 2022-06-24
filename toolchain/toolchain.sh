@@ -12,38 +12,46 @@ ToolchainDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 TARGET="x86_64-lensor"
 PREFIX="$ToolchainDir/cross"
 SYSROOT="$ToolchainDir/../root"
+if [ -z "$BINUTILS_VERSION" ]; then
+    BINUTILS_VERSION="2.38";
+fi
+BINUTILS_STRING="binutils-$BINUTILS_VERSION"
+if [ -z "$GCC_VERSION" ]; then
+    GCC_VERSION="12.1.0"
+fi
+GCC_STRING="gcc-$GCC_VERSION"
 # Ensure known working directory (assuming script wasn't moved).
 cd $ToolchainDir
 # Download, extract, and patch source archives if they haven't been already.
-if [ ! -d "binutils-2.38" ]; then
+if [ ! -d $BINUTILS_STRING ]; then
     echo -e "\n\n -> Downloading GNU Binutils Source Archive\n\n"
-    curl https://mirrors.kernel.org/gnu/binutils/binutils-2.38.tar.xz \
-         --output binutils-2.38.tar.xz
+    curl https://mirrors.kernel.org/gnu/binutils/$BINUTILS_STRING.tar.xz \
+         --output $BINUTILS_STRING.tar.xz
     echo -e "\n\n -> Extracting GNU Binutils\n\n"
-    mkdir -p "binutils-2.38"
-    tar -xf binutils-2.38.tar.xz -C .
+    mkdir -p "$BINUTILS_STRING"
+    tar -xf $BINUTILS_STRING.tar.xz -C .
     echo -e "\n\n -> Patching GNU Binutils\n\n"
-    patch -s -u -p0 < $ToolchainDir/binutils-2.38-lensor.patch
+    patch -s -u -p0 < $ToolchainDir/$BINUTILS_STRING-lensor.patch
 else
     echo -e "\n\n -> Using existing GNU Binutils Source\n\n"
 fi
-if [ ! -d "gcc-11.2.0" ]; then
+if [ ! -d $GCC_STRING ]; then
     echo -e "\n\n -> Downloading GNU Compiler Collection Source Archive\n\n"
-    curl https://mirrors.kernel.org/gnu/gcc/gcc-11.2.0/gcc-11.2.0.tar.xz \
-         --output gcc-11.2.0.tar.xz
+    curl https://mirrors.kernel.org/gnu/gcc/$GCC_STRING/$GCC_STRING.tar.xz \
+         --output $GCC_STRING.tar.xz
     echo -e "\n\n -> Extracting GNU Compiler Collection\n\n"
-    mkdir -p "gcc-11.2.0"
-    tar -xf gcc-11.2.0.tar.xz -C .
+    mkdir -p "$GCC_STRING"
+    tar -xf $GCC_STRING.tar.xz -C .
     echo -e "\n\n -> Downloading GNU Compiler Collection Prerequisites\n\n"
-    cd gcc-11.2.0
+    cd $GCC_STRING
     ./contrib/download_prerequisites
     cd $ToolchainDir
     echo -e "\n\n -> Patching GNU Compiler Collection\n\n"
-    patch -s -u -p0 < $ToolchainDir/gcc-11.2.0-lensor.patch
+    patch -s -u -p0 < $ToolchainDir/$GCC_STRING-lensor.patch
 else
     echo -e "\n\n -> Using existing GNU Compiler Collection Source\n\n"
 fi
-if [ ! -d "$SYSROOT" ] ; then
+if [ ! -d $SYSROOT ] ; then
     cd $ToolchainDir/../scripts
     source sysroot.sh
     cd $ToolchainDir
@@ -52,11 +60,11 @@ else
 fi
 # Create output build directory.
 mkdir -p cross
-if [ ! -d "binutils-build" ] ; then
+if [ ! -d $BINUTILS_STRING"-build" ] ; then
     echo -e "\n\n -> Configuring GNU Binutils\n\n"
-    mkdir -p binutils-build
-    cd binutils-build
-    $ToolchainDir/binutils-2.38/configure  \
+    mkdir -p $BINUTILS_STRING"-build"
+    cd $BINUTILS_STRING"-build"
+    $ToolchainDir/$BINUTILS_STRING/configure  \
         --target=$TARGET                      \
         --prefix="$PREFIX"                    \
         --with-sysroot="$SYSROOT"             \
@@ -66,19 +74,21 @@ if [ ! -d "binutils-build" ] ; then
     echo -e "\n\n -> Building & Installing GNU Binutils\n\n"
     make -j
     make install -j
+    cd ..
 else
     echo -e "\n\n -> Using existing build of GNU Binutils\n\n"
 fi
-if [ ! -d "gcc-build" ] ; then
+if [ ! -d $GCC_STRING"-build" ] ; then
     echo -e "\n\n -> Configuring GNU Compiler Collection\n\n"
     cd $ToolchainDir
-    mkdir -p gcc-build
-    cd gcc-build
-    $ToolchainDir/gcc-11.2.0/configure     \
-        --target=$TARGET                      \
-        --prefix="$PREFIX"                    \
-        --disable-nls                         \
-        --enable-languages=c,c++              \
+    mkdir -p $GCC_STRING"-build"
+    cd $GCC_STRING"-build"
+    $ToolchainDir/$GCC_STRING/configure  \
+        --target=$TARGET                 \
+        --prefix="$PREFIX"               \
+        --disable-nls                    \
+        --disable-werror                 \
+        --enable-languages=c,c++         \
         --with-sysroot="$SYSROOT"
     # Build GCC.
     echo -e "\n\n -> Building & Installing GNU Compiler Collection\n\n"
@@ -86,6 +96,7 @@ if [ ! -d "gcc-build" ] ; then
     make all-target-libgcc -j
     make install-gcc -j
     make install-target-libgcc -j
+    cd ..
 else
     echo -e "\n\n -> Using existing build of GNU Compiler Collection\n\n"
 fi
