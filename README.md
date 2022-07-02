@@ -1,6 +1,12 @@
 # LensorOS
 A 64-bit all-inclusive operating system, from bootloader to userspace.
 
+## Migration
+
+LensorOS is migrating away from GitHub, in favor of the FOSS Codeberg.
+
+[LensorOS on Codeberg](https://codeberg.org/LensPlaysGames/LensorOS)
+
 ---
 
 ## Table of Contents
