@@ -41,6 +41,7 @@ void operator delete (void* address, u64 unused);
 void operator delete[] (void* address, u64 unused);
 
 void heap_print_debug();
+void heap_print_debug_summed();
 
 extern void* sHeapStart;
 extern void* sHeapEnd;

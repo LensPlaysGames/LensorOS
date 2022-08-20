@@ -28,7 +28,7 @@ void HeapSegmentHeader::combine_forward() {
     // Set next next segment last to this segment.
     if (next->next != nullptr)
         next->next->last = this;
-    
+
     length = length + next->length + sizeof(HeapSegmentHeader);
     next = next->next;
 }
@@ -36,7 +36,7 @@ void HeapSegmentHeader::combine_forward() {
 void HeapSegmentHeader::combine_backward() {
     if (last == nullptr)
         return;
-    
+
     if (last->free == false)
         return;
 
@@ -49,7 +49,7 @@ HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
 
     if (splitLength < 8)
         return nullptr;
-    
+
     /// Length of segment that is leftover after creating new header of `splitLength` length.
     u64 splitSegmentLength = length - splitLength - sizeof(HeapSegmentHeader);
     if (splitSegmentLength < 8)
@@ -61,7 +61,7 @@ HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
         // Set next segment's last segment to the new segment.
         next->last = splitHeader;
         // Set new segment's next segment.
-        splitHeader->next = next;       
+        splitHeader->next = next;
     }
     else {
         splitHeader->next = nullptr;
@@ -200,46 +200,17 @@ void free(void* address) {
 #endif /* DEBUG_HEAP */
 }
 
-void heap_print_debug() {
-    // TODO: Interesting information, like average allocation
-    //       size, number of malloc vs free calls, etc.
-    u64 heapSize = reinterpret_cast<u64>(sHeapEnd)
-        - reinterpret_cast<u64>(sHeapStart);
-    dbgmsg("[Heap]: Debug information:\r\n"
-           "  Size:   %ull\r\n"
-           "  Start:  %x\r\n"
-           "  End:    %x\r\n"
-           "  Regions:\r\n"
-           , heapSize, sHeapStart, sHeapEnd);
-    u64 i = 0;
-    HeapSegmentHeader* it = (HeapSegmentHeader*)sHeapStart;
-    do {
-        dbgmsg("    Region %ull:\r\n"
-               "      Free:   %s\r\n"
-               "      Length: %ull (%ull)\r\n"
-               "      Header Address:  %x\r\n"
-               "      Payload Address: %x\r\n"
-               , i
-               , to_string(it->free)
-               , it->length
-               , it->length + sizeof(HeapSegmentHeader)
-               , it
-               , reinterpret_cast<u64>(it) + sizeof(HeapSegmentHeader)
-               );
-        ++i;
-        it = it->next;
-    } while (it);
-    dbgmsg("\r\n");
-
+void heap_print_debug_starchart() {
     // One character per 64 bytes of heap.
     constexpr u8 characterGranularity = 64;
+    u64 heapSize = (u64)(sHeapEnd) - (u64)(sHeapStart);
     u64 totalChars = heapSize / characterGranularity + 1;
     u8* out = new u8[totalChars];
     memset(out, 0, totalChars);
     u64 freeLeftover = 0;
     u64 usedLeftover = 0;
     u64 offset = 0;
-    it = (HeapSegmentHeader*)sHeapStart;
+    HeapSegmentHeader* it = (HeapSegmentHeader*)sHeapStart;
     do {
         if (offset >= totalChars)
             break;
@@ -271,6 +242,110 @@ void heap_print_debug() {
     String heap_visualization((const char*)out);
     dbgmsg_s("Heap (64b per char): ");
     dbgrainbow(heap_visualization, ShouldNewline::Yes);
+    dbgmsg_s("\r\n");
+}
+
+void heap_print_debug() {
+    // TODO: Interesting information, like average allocation
+    //       size, number of malloc vs free calls, etc.
+    u64 heapSize = (u64)(sHeapEnd) - (u64)(sHeapStart);
+    dbgmsg("[Heap]: Debug information:\r\n"
+           "  Size:   %ull\r\n"
+           "  Start:  %x\r\n"
+           "  End:    %x\r\n"
+           "  Regions:\r\n"
+           , heapSize, sHeapStart, sHeapEnd);
+    u64 i = 0;
+    u64 usedCount = 0;
+    float usedSpaceEfficiency = 0.0f;
+    HeapSegmentHeader* it = (HeapSegmentHeader*)sHeapStart;
+    while (it) {
+        float efficiency = (float)it->length / (float)(it->length + sizeof(HeapSegmentHeader));
+        dbgmsg("    Region %ull:\r\n"
+               "      Free:   %s\r\n"
+               "      Length: %ull (%ull) %%f\r\n"
+               "      Header Address:  %x\r\n"
+               "      Payload Address: %x\r\n",
+               i,
+               to_string(it->free),
+               it->length,
+               it->length + sizeof(HeapSegmentHeader),
+               100.0f * efficiency,
+               it,
+               (u64)(it) + sizeof(HeapSegmentHeader));
+        if (!it->free) {
+            usedSpaceEfficiency += efficiency;
+            usedCount++;
+        }
+        ++i;
+        it = it->next;
+    };
+    dbgmsg("\r\n");
+
+    dbgmsg("Heap Metadata vs Payload ratio in used regions (lower is better): %%f\r\n\r\n",
+           100.0f * (1.0f - usedSpaceEfficiency / (float)usedCount));
+
+    heap_print_debug_starchart();
+}
+
+void heap_print_debug_summed() {
+    // TODO: Interesting information, like average allocation
+    //       size, number of malloc vs free calls, etc.
+    u64 heapSize = (u64)(sHeapEnd) - (u64)(sHeapStart);
+    dbgmsg("[Heap]: Debug information:\r\n"
+           "  Size:   %ull\r\n"
+           "  Start:  %x\r\n"
+           "  End:    %x\r\n"
+           "  Regions:\r\n"
+           , heapSize, sHeapStart, sHeapEnd);
+    float usedSpaceEfficiency = 0.0f;
+    u64 i = 0;
+    u64 usedCount = 0;
+    HeapSegmentHeader* it = (HeapSegmentHeader*)sHeapStart;
+    while (it) {
+        HeapSegmentHeader* start_it = it;
+        u64 payload_total = it->length;
+        u64 total_length = it->length + sizeof(HeapSegmentHeader);
+        float efficiency = (float)it->length / (float)(it->length + sizeof(HeapSegmentHeader));
+        if (!it->free) {
+            usedSpaceEfficiency += efficiency;
+            ++usedCount;
+        }
+        u64 start_i = i;
+        bool free = it->free;
+        while ((it = it->next)) {
+            ++i;
+            if (it->free != free) {
+                break;
+            }
+            payload_total += it->length;
+            total_length += it->length + sizeof(HeapSegmentHeader);
+            float localEfficiency = (float)it->length / (float)(it->length + sizeof(HeapSegmentHeader));
+            efficiency += localEfficiency;
+            if (!it->free) {
+                usedSpaceEfficiency += localEfficiency;
+                ++usedCount;
+            }
+        }
+        if (i - start_i == 1 || i - start_i == 0) {
+            dbgmsg("    Region %ull:\r\n", start_i);
+        } else {
+            dbgmsg("    Region %ull through %ull:\r\n", start_i, i - 1);
+        }
+        efficiency = efficiency / (i - start_i ? i - start_i : 1);
+        dbgmsg("      Free:          %s\r\n"
+               "      Length:        %ull (%ull) %%f\r\n"
+               "      Start Address: %x\r\n",
+               to_string(free),
+               payload_total, total_length, 100.0f * efficiency,
+               start_it);
+    };
+    dbgmsg("\r\n");
+
+    dbgmsg("Heap Metadata vs Payload ratio in used regions (lower is better): %%f\r\n\r\n",
+           100.0f * (1.0f - (usedSpaceEfficiency / (float)usedCount)));
+
+    heap_print_debug_starchart();
 }
 
 void* operator new   (u64 numBytes) { return malloc(numBytes); }

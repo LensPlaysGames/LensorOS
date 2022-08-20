@@ -597,8 +597,9 @@ void kstage1(BootInfo* bInfo) {
     enable_interrupt(IRQ_PS2_MOUSE);
 
     //Memory::print_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
-    //Memory::print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
-    heap_print_debug();
+    Memory::print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    //heap_print_debug();
+    heap_print_debug_summed();
     Memory::print_debug();
 
     SYSTEM->print();

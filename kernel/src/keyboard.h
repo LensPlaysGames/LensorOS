@@ -8,9 +8,9 @@
 namespace Keyboard {
     const u8 KBCursorSizeX = 8;
     const u8 KBCursorSizeY = 2;
-
-    extern u8 KeyboardCursor[KBCursorSizeX * KBCursorSizeY];
-    extern u32 PixelsUnderKBCursor[KBCursorSizeX * KBCursorSizeY + 1];
+    constexpr u16 KBCursorSize = KBCursorSizeX * KBCursorSizeY;
+    extern u8 KeyboardCursor[KBCursorSize];
+    extern u32 PixelsUnderKBCursor[KBCursorSize + 1];
 
     struct KeyboardState {
         bool LeftShift  { false };
