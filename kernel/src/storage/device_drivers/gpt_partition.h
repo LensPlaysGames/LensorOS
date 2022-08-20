@@ -1,6 +1,8 @@
 #ifndef LENSOR_OS_GPT_PARTITION_DRIVER_H
 #define LENSOR_OS_GPT_PARTITION_DRIVER_H
 
+#include <integers.h>
+#include <guid.h>
 #include <storage/storage_device_driver.h>
 
 class GPTPartitionDriver final : public StorageDeviceDriver {

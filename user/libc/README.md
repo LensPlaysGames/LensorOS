@@ -24,15 +24,14 @@ x86_64-lensor-gcc -c /Path/to/LensorOS/user/libc/crtn.s
 
 Once the object files have been generated, copy them into the
   system libraries directory within the sysroot (`/lib`).
-Alternatively, one could use the `-o` option to specify the correct output path.
+  Alternatively, one could use the `-o` option to specify the correct output path.
 
 ### Build the `C` Library for LensorOS
 Generate a build system using [CMake](https://www.cmake.org), then invoke it:
 ```bash
 cd /Path/to/LensorOS/user/libc/
 cmake -S . -B bld
-cd bld
-make
+cmake --build bld
 ```
 
 This will generate a `libc.a` library file that may be stored in the
@@ -40,3 +39,17 @@ This will generate a `libc.a` library file that may be stored in the
 From here, if a program is built that links to the standard `C` library,
   it will link to the LensorOS implementation, allowing the
   generated executable to be run from LensorOS in userland.
+
+### Rebuilding
+
+To rebuild the C Library for LensorOS, there are multiple steps required:
+
+- Build the C Library
+
+  Follow the instructions above.
+
+- Copy built library, `libc.a`, into `base/lib/` subdirectory of repository.
+
+- Run sysroot creation script at `scripts/sysroot.sh` to rebuild system root.
+
+- Re-compile any and all userspace programs to be able to link with new libc.

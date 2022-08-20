@@ -1,8 +1,8 @@
 #include <ahci.h>
 
 #include <cstr.h>
+#include <debug.h>
 #include <integers.h>
-#include <uart.h>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_AHCI
@@ -79,9 +79,7 @@ namespace AHCI {
         start_commands();
 
 #ifdef DEBUG_AHCI
-        UART::out("[AHCI]: Port ");
-        UART::out(PortNumber);
-        UART::out(" initialized\r\n");
+        dbgmsg("[AHCI]: Port %ull initialized.\r\n", PortNumber);
 #endif /* DEBUG_AHCI */
     }
 
@@ -135,77 +133,71 @@ namespace AHCI {
     /// `Buffer` to given `buffer` until all data is read and copied.
     void PortController::read(u64 byteOffset, u64 byteCount, u8* buffer) {
 #ifdef DEBUG_AHCI
-        UART::out("[AHCI]: Port ");
-        UART::out(PortNumber);
-        UART::out(" -- read()  byteOffset=");
-        UART::out(byteOffset);
-        UART::out(", byteCount=");
-        UART::out(byteCount);
-        UART::out(", buffer=0x");
-        UART::out(to_hexstring(buffer));
-        UART::out("\r\n");
+        dbgmsg("[AHCI]: Port %ull -- read()  byteOffset=%ull, byteCount=%ull, buffer=%x\r\n"
+               , PortNumber
+               , byteOffset
+               , byteCount
+               , buffer
+               );
 #endif /* DEBUG_AHCI */
 
         if (Type != PortType::SATA) {
-            UART::out("  \033[31mERRROR\033[0m: `read()`  port type not implemented: ");
-            UART::out(port_type_string(Type));
-            UART::out("\r\n");
+            dbgmsg("  \033[31mERRROR\033[0m: `read()`  port type not implemented: %s\r\n"
+                   , port_type_string(Type)
+                   );
             return;
         }
         // TODO: Actual error handling!
         if (buffer == nullptr) {
-            UART::out("  \033[31mERROR\033[0m: `read()`  buffer can not be nullptr\r\n");
+            dbgmsg_s("  \033[31mERROR\033[0m: `read()`  buffer can not be nullptr\r\n");
             return;
         }
         // TODO: Don't reject reads over port buffer max size,
         //        just do multiple reads and copy as you go.
         if (byteCount > MAX_READ_BYTES) {
-            UART::out("  \033[31mERROR\033[0m: `read()`  byteCount can"
-                      " not be larger than maximum readable bytes.\r\n");
+            dbgmsg_s("  \033[31mERROR\033[0m: `read()`  byteCount can not be larger than maximum readable bytes.\r\n");
             return;
         }
 
         u64 sector = byteOffset / BYTES_PER_SECTOR;
         u64 byteOffsetWithinSector = byteOffset % BYTES_PER_SECTOR;
-        u64 sectors = (byteOffsetWithinSector + byteCount) / BYTES_PER_SECTOR;
+        u64 sectors = (byteOffsetWithinSector + byteCount + BYTES_PER_SECTOR - 1) / BYTES_PER_SECTOR;
+
         if (byteOffsetWithinSector + byteCount <= BYTES_PER_SECTOR)
             sectors = 1;
 
 #ifdef DEBUG_AHCI
-        UART::out("  Calculated sector data: sector=");
-        UART::out(sector);
-        UART::out(", sectors=");
-        UART::out(sectors);
-        UART::out("\r\n");
+        dbgmsg("  Calculated sector data: sector=%ull, sectors=%ull, byteOffsetWithinSector=%ull\r\n"
+               , sector
+               , sectors
+               , byteOffsetWithinSector
+               );
 #endif /* DEBUG_AHCI */
 
         if (sectors * BYTES_PER_SECTOR > PORT_BUFFER_BYTES) {
-            UART::out("  \033[31mERROR\033[0m: `read()`  can not read more bytes than internal buffer size.\r\n");
+            dbgmsg_s("  \033[31mERROR\033[0m: `read()`  can not read more bytes than internal buffer size.\r\n");
             return;
         }
 
         if (read_low_level(sector, sectors)) {
 #ifdef DEBUG_AHCI
-            UART::out("  \033[32mSUCCESS\033[0m: `read_low_level()` SUCCEEDED\r\n");
+            dbgmsg_s("  \033[32mSUCCESS\033[0m: `read_low_level()` SUCCEEDED\r\n");
 #endif /* DEBUG_AHCI */
             void* bufferAddress = (void*)((u64)&Buffer[0] + byteOffsetWithinSector);
             memcpy(bufferAddress, buffer, byteCount);
         }
-        else UART::out("  \033[31mERROR\033[0m: `read_low_level()` FAILED\r\n");
+        else dbgmsg_s("  \033[31mERROR\033[0m: `read_low_level()` FAILED\r\n");
     }
 
     void PortController::write(u64 byteOffset, u64 byteCount, u8* buffer) {
-        UART::out("[TODO]: Implement write()  byteOffset=");
-        UART::out(byteOffset);
-        UART::out(", byteCount=");
-        UART::out(byteCount);
-        UART::out(", buffer=0x");
-        UART::out(to_hexstring(buffer));
-        UART::out("\r\n");
+        dbgmsg("[AHCI]: TODO: Implement write()  byteOffset=%ull, byteCount=%ull, buffer=%x\r\n"
+               , byteOffset
+               , byteCount
+               , buffer
+               );
     }
 
     void PortController::start_commands() {
-        // Spin until not busy.
         while (Port->CommandAndStatus & HBA_PxCMD_CR);
         Port->CommandAndStatus |= HBA_PxCMD_FRE;
         Port->CommandAndStatus |= HBA_PxCMD_ST;

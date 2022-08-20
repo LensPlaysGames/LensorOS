@@ -22,7 +22,6 @@ namespace Keyboard {
     public:
         Vector2<u64> SizeInCharacters;
         Vector2<u64> DrawPosition;
-        Vector2<u64> CachedDrawPosition;
         Vector2<u64> CursorPosition;
         Vector2<u64> LastCursorPosition;
         KeyboardState State;

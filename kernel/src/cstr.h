@@ -3,6 +3,14 @@
 
 #include <integers.h>
 
+#ifndef LENSOR_OS_UART_HIDE_COLOR_CODES
+constexpr const char* trueString = "\033[32mTrue\033[0m";
+constexpr const char* falseString = "\033[31mFalse\033[0m";
+#else
+constexpr const char* trueString = "True";
+constexpr const char* falseString = "False";
+#endif /* #ifndef LENSOR_OS_UART_HIDE_COLOR_CODES */
+
 /* String Length
  *   Returns the number of characters including null terminator.
  */

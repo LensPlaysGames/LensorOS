@@ -26,7 +26,7 @@ project( LensorOS VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGES} )
 add_library(
   Interrupts
   src/interrupts/interrupts.cpp
-  src/interrupts/interrupts.h
+  src/panic.cpp
 )
 target_compile_options(
   Interrupts PRIVATE
@@ -75,7 +75,6 @@ add_executable(
   src/memory/physical_memory_manager.cpp
   src/memory/virtual_memory_manager.cpp
   src/mouse.cpp
-  src/panic.cpp
   src/pci.cpp
   src/pci_descriptors.cpp
   src/pit.cpp
@@ -89,6 +88,7 @@ add_executable(
   src/system.cpp
   src/tss.cpp
   src/uart.cpp
+  src/virtual_filesystem.cpp
 )
 set_target_properties( Kernel PROPERTIES OUTPUT_NAME kernel.elf )
 target_compile_definitions(
@@ -178,6 +178,8 @@ if( DD_PROGRAM AND MTOOLS_PROGRAM )
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img
     ${REPO_DIR}/gnu-efi/x86_64/bootloader/main.efi ::/EFI/BOOT
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${SCRIPTS_DIR}/startup.nsh ::
+    COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${REPO_DIR}/user/blazeit/blazeit ::
+    COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${REPO_DIR}/user/stdout/stdout ::
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${IMAGE_DIR}/kernel.elf ::/LensorOS
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${IMAGE_DIR}/dfltfont.psf ::/LensorOS
     COMMENT "Generating UEFI-compatible FAT32 boot media"
@@ -294,7 +296,7 @@ if( QEMU_IMG_PROGRAM )
   add_custom_target(
     image_vdi
     COMMAND ${QEMU_IMG_PROGRAM} convert -O vdi LensorOS.bin LensorOS.vdi
-    COMMENT "Generating VDI format of GUID Partion Table with EFI System partition using `mkgpt`"
+    COMMENT "Generating VDI format of GUID Partion Table with EFI System partition using `qemu_img`"
     WORKING_DIRECTORY ${IMAGE_DIR}
     USES_TERMINAL
     VERBATIM
@@ -325,6 +327,7 @@ if ( QEMU_PROGRAM )
   message(
     VERBOSE
     "Found QEMU for ${ARCH}, creating targets:\r\n"
+    "|-- run_qemu\r\n"
     "|-- runimg_qemu\r\n"
     "|-- runhda_qemu\r\n"
     "`-- runiso_qemu"
@@ -354,6 +357,9 @@ if ( QEMU_PROGRAM )
     # This allows debug messages to reach the terminal.
     -serial stdio
   )
+  if( QEMU_DEBUG )
+    list( APPEND QEMU_FLAGS -S -s )
+  endif()
   set( OVMF_CODE "${REPO_DIR}/OVMFbin/OVMF_CODE-pure-efi.fd" )
   set( OVMF_VARS "${REPO_DIR}/OVMFbin/OVMF_VARS_LensorOS.fd" )
   cmake_path(
@@ -392,9 +398,9 @@ if ( QEMU_PROGRAM )
     COMMAND ${CMAKE_COMMAND} -E copy
     "${IMAGE_DIR}/dfltfont.psf" "${FAT_BOOT_DIR}/LensorOS/"
     COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
-    -hdb fat:floppy:rw:${IMAGE_DIR}/fat
+    -hdb fat:floppy:rw:${FAT_BOOT_DIR}
     COMMAND ${CMAKE_COMMAND} -E rm -R ${FAT_BOOT_DIR}
-    COMMENT "Running QEMU for ${ARCH} from FAT32 `LensorOS.img`"
+    COMMENT "Running QEMU for ${ARCH} from directory treated as FAT32 floppy"
     USES_TERMINAL
     WORKING_DIRECTORY ${REPO_DIR}
     DEPENDS

@@ -3,8 +3,10 @@
 #include <cstr.h>
 #include <debug.h>
 #include <memory/common.h>
+#include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
+#include <string.h>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_HEAP
@@ -78,9 +80,14 @@ HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
 
 void init_heap() {
     u64 numBytes = HEAP_INITIAL_PAGES * PAGE_SIZE;
-    for (u64 i = 0; i < HEAP_INITIAL_PAGES; ++i) {
+    for (u64 i = 0; i < HEAP_INITIAL_PAGES * PAGE_SIZE; i += PAGE_SIZE) {
         // Map virtual heap position to physical memory address returned by page frame allocator.
-        Memory::map((void*)((u64)HEAP_VIRTUAL_BASE + (i * PAGE_SIZE)), Memory::request_page());
+        // FIXME: Should this be global?
+        Memory::map((void*)((u64)HEAP_VIRTUAL_BASE + i), Memory::request_page()
+                    , (u64)Memory::PageTableFlag::Present
+                    | (u64)Memory::PageTableFlag::ReadWrite
+                    | (u64)Memory::PageTableFlag::Global
+                    );
     }
     sHeapStart = (void*)HEAP_VIRTUAL_BASE;
     sHeapEnd = (void*)((u64)sHeapStart + numBytes);
@@ -112,7 +119,11 @@ void expand_heap(u64 numBytes) {
     HeapSegmentHeader* extension = (HeapSegmentHeader*)sHeapEnd;
     // Allocate and map a page in memory for new header.
     for (u64 i = 0; i < numPages; ++i) {
-        Memory::map(sHeapEnd, Memory::request_page());
+        Memory::map(sHeapEnd, Memory::request_page()
+                    , (u64)Memory::PageTableFlag::Present
+                    | (u64)Memory::PageTableFlag::ReadWrite
+                    | (u64)Memory::PageTableFlag::Global
+                    );
         sHeapEnd = (void*)((u64)sHeapEnd + PAGE_SIZE);
     }
     extension->free = true;
@@ -257,8 +268,9 @@ void heap_print_debug() {
         offset += numChars;
         it = it->next;
     } while (it != nullptr);
-
-    dbgmsg("Heap (64b per char): %s\r\n", out);
+    String heap_visualization((const char*)out);
+    dbgmsg_s("Heap (64b per char): ");
+    dbgrainbow(heap_visualization, ShouldNewline::Yes);
 }
 
 void* operator new   (u64 numBytes) { return malloc(numBytes); }

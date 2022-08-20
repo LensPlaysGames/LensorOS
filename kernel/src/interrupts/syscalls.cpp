@@ -1,94 +1,94 @@
 #include <interrupts/syscalls.h>
 
-#include <basic_renderer.h>
-#include <cstr.h>
+#include <debug.h>
 #include <file.h>
-#include <uart.h>
+#include <scheduler.h>
+#include <system.h>
+#include <virtual_filesystem.h>
 
-/// Get a FileDescriptor that may be used in subsequent
-/// syscalls (`read`, `write`, etc) from a file path.
-void sys$open(const char* path, int flags, int mode) {
-    /* TODO:
-     * |-- Resolve file from path using VFS.
-     * `-- Create open file description in system-wide table.
-     */
-    (void)path;
-    (void)flags;
+// Uncomment the following directive for extra debug information output.
+//#define DEBUG_SYSCALLS
 
-    UART::out("[SYS$]: `open`  path=");
-    UART::out(path);
-    UART::out(", flags=");
-    UART::out(to_string(flags));
-    UART::out(", mode=");
-    UART::out(to_string(mode));
-    UART::out("\r\n");
+/// SYSCALL NAMING SCHEME:
+/// "sys$" + number + "_" + descriptive name
 
-    // TODO: Figure out how to return FileDescriptor!
+constexpr const char* sys$_dbgfmt = "[SYS$]: %d -- %s\r\n";
+
+FileDescriptor sys$0_open(const char* path) {
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 0, "open");
+#endif /* #ifdef DEBUG_SYSCALLS */
+    return SYSTEM->virtual_filesystem().open(path);
 }
 
-/// Close the OpenFileDescription pointed to by `fd`.
-void sys$close(FileDescriptor fd) {
-    /* TODO:
-     * |-- Find open file description entry in system-wide table.
-     * `-- Either remove the entry, or mark it for removal.
-     */
-    (void)fd;
-
-    UART::out("[SYS$]: `close`  fd=");
-    UART::out((u64)fd);
-    UART::out("\r\n");
+void sys$1_close(FileDescriptor fd) {
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 1, "close");
+#endif /* #ifdef DEBUG_SYSCALLS */
+    SYSTEM->virtual_filesystem().close(fd);
 }
 
-/// Read `numBytes` bytes of the contents of `buffer`
-/// to the OpenFileDescription pointed to by `fd`.
-void sys$read(FileDescriptor fd, void* buffer, u64 numBytes) {
-    /* TODO:
-     * |-- Resolve open file desc. using `fd` as index into system-wide table.
-     * `-- Call read on the open file description.
-     */
-    (void)fd;
-    (void)buffer;
-    (void)numBytes;
-
-    UART::out("[SYS$]: `read`  fd=");
-    UART::out((u64)fd);
-    UART::out(", buffer=0x");
-    UART::out(to_hexstring(buffer));
-    UART::out(", numBytes=");
-    UART::out(numBytes);
-    UART::out("\r\n");
+// TODO: This should return the amount of bytes read.
+int sys$2_read(FileDescriptor fd, u8* buffer, u64 byteCount) {
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 2, "read");
+    dbgmsg("  file descriptor: %d\r\n"
+           "  buffer address:  %x\r\n"
+           "  byte count:      %ull\r\n"
+           "\r\n"
+           , fd
+           , buffer
+           , byteCount
+           );
+#endif /* #ifdef DEBUG_SYSCALLS */
+    return SYSTEM->virtual_filesystem().read(fd, buffer, byteCount, 0);
 }
 
-/// Write `numBytes` bytes of the contents of `buffer`
-/// to the OpenFileDescription pointed to by `fd`.
-void sys$write(FileDescriptor fd, void* buffer, u64 numBytes) {
-    /* TODO:
-     * |-- Resolve open file desc. using `fd` as index into system-wide table.
-     * `-- Call write on the open file description.
-     */
-    (void)fd;
-    (void)buffer;
-    (void)numBytes;
-
-    UART::out("[SYS$]: `write`  fd=");
-    UART::out((u64)fd);
-    UART::out(", buffer=0x");
-    UART::out(to_hexstring(buffer));
-    UART::out(", numBytes=");
-    UART::out(numBytes);
-    UART::out("\r\n");
+// TODO: This should return the amount of bytes written.
+int sys$3_write(FileDescriptor fd, u8* buffer, u64 byteCount) {
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 3, "write");
+    dbgmsg("  file descriptor: %d\r\n"
+           "  buffer address:  %x\r\n"
+           "  byte count:      %ull\r\n"
+           "\r\n"
+           , fd
+           , buffer
+           , byteCount
+           );
+#endif /* #ifdef DEBUG_SYSCALLS */
+    return SYSTEM->virtual_filesystem().write(fd, buffer, byteCount, 0);
 }
 
-void sys$0_test0() {
-    UART::out("[SYS$]: System call 'test0'\r\n");
+void sys$4_poke() {
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 4, "poke");
+#endif /* #ifdef DEBUG_SYSCALLS */
+    // Prevent unused warning
+    (void)sys$_dbgfmt;
+    dbgmsg_s("Poke from userland!\r\n");
 }
 
-void sys$1_test1() {
-    UART::out("[SYS$]: System call 'test1'\r\n");
+void sys$5_exit(int status) {
+    pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 5, "exit");
+    dbgmsg("  status: %i\r\n"
+           "\r\n"
+           , status
+           );
+#endif /* #ifdef DEBUG_SYSCALLS */
+    Scheduler::remove_process(pid);
+    dbgmsg("[SYS$]: exit() -- Removed process %ull\r\n", pid);
+    (void)status;
 }
 
 u64 num_syscalls = LENSOR_OS_NUM_SYSCALLS;
 void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
-    (void*)sys$0_test0,
-    (void*)sys$1_test1
+    (void*)sys$0_open,
+    (void*)sys$1_close,
+    (void*)sys$2_read,
+    (void*)sys$3_write,
+    (void*)sys$4_poke,
+    (void*)sys$5_exit,
 };

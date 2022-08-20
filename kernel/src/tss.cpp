@@ -1,5 +1,7 @@
 #include <tss.h>
 
+#include <debug.h>
+#include <link_definitions.h>
 #include <memory.h>
 #include <gdt.h>
 
@@ -12,9 +14,26 @@ void TSS::initialize() {
     // Zero out TSS entry.
     memset(&tssEntry, 0, sizeof(TSSEntry));
     // Set byte limit of TSS Entry past base address.
-    gGDT.TSS.set_limit(sizeof(TSSEntry) - 1);
+    u64 limit = sizeof(TSSEntry) - 1;
+    gGDT.TSS.set_limit(limit);
     // Set base address to address of TSS Entry.
-    u64 base = (u64)&tssEntry;
+    u64 base = V2P((u64)&tssEntry);
+    //u64 base = (u64)&tssEntry;
     gGDT.TSS.set_base(base);
-    gGDT.TSS.Base3 = base >> 32;
+    dbgmsg("[TSS]: Initialized\r\n"
+           "  Base:  %x\r\n"
+           "  Limit: %x\r\n"
+           , gGDT.TSS.base()
+           , gGDT.TSS.limit()
+           );
+    // Store current stack pointer in TSS entry.
+    u64 stackPointer { 0 };
+    asm("movq %%rsp, %0\r\n\t"
+        : "=m"(stackPointer)
+        );
+    tssEntry.set_stack(stackPointer);
+    asm("mov $0x28, %%ax\r\n\t"
+        "ltr %%ax\r\n\t"
+        ::: "rax"
+        );
 }

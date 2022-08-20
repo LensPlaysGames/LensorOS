@@ -1,5 +1,12 @@
 # LensorOS
+
 A 64-bit all-inclusive operating system, from bootloader to userspace.
+
+## Migration
+
+LensorOS is migrating away from GitHub, in favor of the FOSS Codeberg.
+
+[LensorOS on Codeberg](https://codeberg.org/LensPlaysGames/LensorOS)
 
 ---
 
@@ -11,6 +18,7 @@ A 64-bit all-inclusive operating system, from bootloader to userspace.
 ---
 
 ## Running LensorOS <a name="run"></a>
+
 Free, compatible virtual machines:
 - [VirtualBox (VBOX)](https://www.virtualbox.org/wiki/Downloads)
 - [VMWare Workstation Player](https://www.vmware.com/products/workstation-player.html)
@@ -19,26 +27,28 @@ Free, compatible virtual machines:
 ---
 
 ### I just want to open LensorOS!
-If you are just interested in poking around LensorOS, and not editing code,
-  I recommend a pre-built release from the 
-  [releases page](https://github.com/LensPlaysGames/LensorOS/releases). 
-  It will include all the necessary resources
-  and instructions on how to run LensorOS.
-  Keep in mind that this will be missing a lot of
-  features to ensure maximum compatibility across systems.
-  By building from source, you are able to build for
-  your exact system and get every possible feature enabled.
+
+If you are just interested in poking around LensorOS, and not editing
+code, I recommend a pre-built release from the
+[releases page](https://codeberg.org/LensPlaysGames/LensorOS/releases).
+It will include all the necessary resources and instructions on how
+to run LensorOS. Keep in mind that this will be missing a lot of
+features to ensure maximum compatibility across systems. By building
+from source, you are able to build for your exact system and get every
+possible feature enabled.
 
 ---
 
-### Launching LensorOS using the Build System
-NOTE: There is no automation for anything except QEMU for now.
-  There are, however, instructions on how to setup a virtual
-  machine in VirtualBox and VMWare Workstation Player.
+#### Launching LensorOS using the Build System
 
-When the CMake build system is generated, it looks for QEMU on your system;
-  if it finds it, it will add the following targets to the project.
-  Invoke them to launch QEMU from the corresponding LensorOS boot media.
+NOTE: There is no automation for anything except QEMU for now. There
+are, however, instructions on how to setup a virtual machine in
+VirtualBox and VMWare Workstation Player.
+
+When the CMake build system is generated, it looks for QEMU on your
+system; if it finds it, it will add the following targets to the
+project. Invoke them to launch QEMU from the corresponding LensorOS
+boot media.
 
 The targets:
 - `run_qemu`    -- Straight from directory that mimics LensorOS.img (fastest)
@@ -46,12 +56,14 @@ The targets:
 - `runhda_qemu` -- LensorOS.bin
 - `runiso_qemu` -- LensorOS.iso
 
-Assuming the CMake build system was generated in the `kernel/bld/` subdirectory, invoke like:
+Assuming the CMake build system was generated in the `kernel/bld/`
+subdirectory, invoke like:
 ```sh
 cmake --build kernel/bld --target <name of target>
 ```
 
 #### VirtualBox
+
 1. Open VirtualBox.
 2. Click the `New` button to create a new virtual machine (VM).
 3. Give the VM a name and a file path you are comfortable with.
@@ -73,6 +85,7 @@ cmake --build kernel/bld --target <name of target>
     1. Disable all network adapters.
 
 #### VMWare
+
 1. Open VMWare Workstation Player
 2. Select `Home` in the list on the left side. Click `Create a New Virtual Machine` on the right.
 3. Select the `I will install the operating system later.` option.
@@ -82,7 +95,7 @@ cmake --build kernel/bld --target <name of target>
 7. The next screen should be an overview of the virtual machine hardware. Click `Customize Hardware...`.
     1. Select `New CD/DVD` on the left, then click `Advanced...` on the right.
     2. Select `SATA`, then click `OK`.
-    3. On the right, select `Use ISO image file`, and then click `Browse...`. 
+    3. On the right, select `Use ISO image file`, and then click `Browse...`.
     4. Select the `LensorOS.iso` image file (located in `kernel/bin/`).
     5. Select the hard drive that we skipped configuring in the list on the left.
     6. Remove the hard drive using the `Remove` button near the bottom center.
@@ -93,13 +106,14 @@ cmake --build kernel/bld --target <name of target>
     1. Open the file ending with `.vmx` in a text editor.
     2. Add the following line of text: `firmware="efi"`.
     3. Save the file, then close it.
-    
-You will have to select `UEFI Shell` the virtual machine in 
-  VMware Workstation (even if it says something like `Unsupported`).
+
+You will have to select `UEFI Shell` once VMware Workstation
+boots into LensorOS (even if it says something like `Unsupported`).
 
 ---
 
 ## Building LensorOS  <a name="build"></a>
+
 There are multiple steps in the LensorOS build process, outlined here.
 1. [Dependencies](#dependencies)
 2. [Bootloader](#bootloader)
@@ -107,13 +121,14 @@ There are multiple steps in the LensorOS build process, outlined here.
 4. [Boot Media Generation](#boot-media-generation)
 
 NOTE: All blocks of shell commands given are expected to start
-  with the working directory at the root of the repository.
+with the working directory at the root of the repository.
 
 ---
 
 ### Dependencies <a name="dependencies"></a>
+
 Download and install the following project-wide dependencies if you
-  don't have them already, or if the version you have isn't up to date.
+don't have them already, or if the version you have isn't up to date.
 
 - A 64-bit version of the GNU toolset for your host OS.
   - Debian distros: `sudo apt install build-essential make`
@@ -127,40 +142,47 @@ Download and install the following project-wide dependencies if you
 - [Git](https://git-scm.com/downloads)
 - [Netwide Assembler (nasm)](https://www.nasm.us)
 
-Next, clone the source code from the repository. If you would like to edit the code
-  and make contributions, be sure to fork first and clone from that repository.
+Next, clone the source code from the repository. If you would like to
+edit the code and make contributions, be sure to fork first and clone
+from that repository.
 ```sh
-git clone https://github.com/LensPlaysGames/LensorOS.git
+git clone https://codeberg.org/LensPlaysGames/LensorOS.git
 ```
 
-This will create a subdirectory titled `LensorOS` with the
-  contents of this repository in the current working directory.
+This will create a subdirectory titled `LensorOS` with the contents of
+this repository in the current working directory.
 
 ---
 
 ### Bootloader <a name="bootloader"></a>
 
-NOTE: This section **is going to change**, and any information here may become incorrect or out of date at any moment. This is due to being in the middle of migrating bootloaders to the self-created RADII bootloader.
+NOTE: This section **is going to change**, and any information here may
+become incorrect or out of date at any moment. This is due to being in
+the middle of migrating bootloaders to the self-created RADII bootloader.
 
 The bootloader is an EFI application; specifically an OS loader written
-  for the [UEFI spec. (currently V2.9)](https://uefi.org/specifications/).
-  That specification outlines the use of PE32+ executables with a specific subsystem.
-  As you may know, the PE32+ format is also used by Windows as it's executable format.
-  This means that a compiler that generates Windows executables will generate the
-  proper format of executable for an EFI application, given the subsystem modification. 
-  However, twenty or so years ago, GNU decided to write custom relocation linker scripts 
-  that create PE32+ executables from ELF executables. This means that a compiler that generates ELF executables is used, then that executable
-  is transformed into a PE32+ executable with the proper subsystem for an EFI application.
-  Luckily, all of this is handled by a Makefile.
-  
-Build dependencies for the bootloader:
+for the [UEFI spec. (currently V2.9)](https://uefi.org/specifications/).
+That specification outlines the use of PE32+ executables with a
+specific subsystem. As you may know, the PE32+ format is also used by
+Windows as it's executable format. This means that a compiler that
+generates Windows executables will generate the proper format of
+executable for an EFI application, given the subsystem modification.
+However, twenty or so years ago, GNU decided to write custom relocation
+linker scripts that create PE32+ executables from ELF executables. This
+means that a compiler that generates ELF executables is used, then that
+executable is transformed into a PE32+ executable with the proper
+subsystem for an EFI application. Luckily, all of this is handled by a
+Makefile.
+
+Build the dependencies for the bootloader:
 ```sh
 cd gnu-efi
 make
 ```
 That only ever has to be done once, to generate `libgnuefi.a`.
 
-From here, the bootloader executable can be built using the `bootloader` make target:
+From here, the bootloader executable can be built using the
+`bootloader` make target:
 ```sh
 cd gnu-efi
 make bootloader
@@ -175,33 +197,35 @@ make bootloader
 Once the toolchain is usable, continue on here.
 
 I recommend taking a look at `kernel/config.cmake` and seeing what
-  there is to fiddle with, but going with the defaults is just as well.
+there is to fiddle with, but going with the defaults is just as well.
 
-First, generate a build system using CMake.
-  If you choose a different build system, keep in mind not all
-  build systems honour our request to use a custom toolchain.
-  I recommend Ninja, as it can speed up build times.
-  Another tip to speed up build times; install `ccache`.
-  The CMake scripts in this project detect and use it automatically.
-```sh
+First, generate a build system using CMake. If you choose a different
+build system, keep in mind not all build systems honour our request to
+use a custom toolchain. I recommend Ninja, as it can speed up build
+times. Another tip to speed up build times; install `ccache`. The CMake
+scripts in this project detect and use it automatically.
+```shell
 cmake -G "Unix Makefiles" -S kernel -B kernel/bld
 ```
-To generate the kernel executable, invoke the build system generated by CMake:
-```sh
+
+To generate the kernel executable, invoke the build system generated by
+CMake:
+```shell
 cmake --build kernel/bld
 ```
 
-CMake will create certain targets if the
-  proper dependencies are detected on the system.
+CMake will create certain targets if the proper dependencies are
+detected on the system.
 
 To see a list of all available targets, use the following command:
-```sh
+```shell
 cmake --build kernel/bld --target help
 ```
 
 ---
 
 ### Boot Media Generation <a name="boot-media-generation"></a>
+
 Here is a list of the current build targets relating to boot media
   generation, as well as their dependencies listed underneath each.
 - `image_raw` --
@@ -242,14 +266,14 @@ Here is a list of the current build targets relating to boot media
   - `image_gpt`
   - [qemu-img](https://www.qemu.org/download/)
 
-As an example, a FAT32 formatted UEFI-compatible boot
-  image may be generated using the following command:
+As an example, a FAT32 formatted UEFI-compatible boot image may be
+generated using the following command:
 ```sh
 cmake --build kernel/bld --target image_raw
 ```
 
 It takes just one command to build the LensorOS kernel, generate new
-  boot media, and then launch the QEMU virtual machine into LensorOS.
+boot media, and then launch the QEMU virtual machine into LensorOS.
 ```sh
 cmake --build kernel/bld --target runimg_qemu
 ```
@@ -257,6 +281,7 @@ cmake --build kernel/bld --target runimg_qemu
 ---
 
 ### Birthday
+
 Work on LensorOS began on January 9th, 2022.
 
 ---

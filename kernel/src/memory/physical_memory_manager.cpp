@@ -5,8 +5,8 @@
 #include <debug.h>
 #include <efi_memory.h>
 #include <link_definitions.h>
-#include <memory/region.h>
 #include <memory/common.h>
+#include <memory/paging.h>
 #include <memory/virtual_memory_manager.h>
 #include <panic.h>
 
@@ -237,10 +237,19 @@ namespace Memory {
         // Map up to the entire amount of physical memory
         // present or the max amount addressable given the
         // size limitation of the pre-allocated bitmap.
+        // TODO: `.text` + `.rodata` should be read only.
         PageTable* activePML4 = active_page_map();
-        for (u64 t = 0; t < TotalPages * PAGE_SIZE && t < InitialPageBitmapMaxAddress; t += 0x1000)
-            map(activePML4, (void*)t, (void*)t);
-
+        for (u64 t = 0;
+             t < TotalPages * PAGE_SIZE
+                 && t < InitialPageBitmapMaxAddress;
+             t += PAGE_SIZE)
+        {
+            map(activePML4, (void*)t, (void*)t
+                , (u64)PageTableFlag::Present
+                | (u64)PageTableFlag::ReadWrite
+                | (u64)PageTableFlag::Global
+                );
+        }
         // Calculate total number of bytes needed for a physical page
         // bitmap that covers hardware's actual amount of memory present.
         u64 bitmapSize = (TotalPages / 8) + 1;
@@ -267,11 +276,6 @@ namespace Memory {
 
         // Lock the kernel in the new page bitmap (in case it already isn't).
         lock_pages(&KERNEL_PHYSICAL, kernelPageCount);
-
-        /* TODO:
-         * |-- Not everything should be user-accessible!
-         * `-- `.text` + `.rodata` should be read only.
-         */
 
         // Calculate space that is lost due to page alignment.
         u64 deadSpace { 0 };

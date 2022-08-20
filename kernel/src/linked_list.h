@@ -1,6 +1,7 @@
 #ifndef LENSOR_OS_LINKED_LIST_H
 #define LENSOR_OS_LINKED_LIST_H
 
+#include <debug.h>
 #include <memory/heap.h>
 
 template <typename T>
@@ -11,7 +12,7 @@ class SinglyLinkedListNode {
     typedef T DataType;
 
     friend SinglyLinkedList<DataType>;
-    
+
 public:
     explicit SinglyLinkedListNode(const DataType& value
                                   , SinglyLinkedListNode* next = nullptr)
@@ -20,7 +21,7 @@ public:
     DataType& value()             { return Data; }
     const DataType& value() const { return Data; }
     SinglyLinkedListNode* next()  { return Next; }
-    
+
 private:    
     DataType Data;
     SinglyLinkedListNode* Next { nullptr };
@@ -42,24 +43,33 @@ public:
     }
 
     void add(const DataType& value) {
-        if (Tail == nullptr) {
-            Head = new Node(value);
-            Tail = Head;
+        auto* newHead = new Node(value, Head);
+        if (newHead != nullptr) {
+            Head = newHead;
+            if (Tail == nullptr)
+                Tail = Head;
+            Length += 1;
         }
-        else Head = new Node(value, Head);
-        Length += 1;
+        else dbgmsg_s("Failed to allocate memory for linked list.");
     }
 
     void add_end(const DataType& value) {
-        if (Tail == nullptr) {
-            Head = new Node(value);
-            Tail = Head;
-        }
+        // Handle empty list case.
+        if (Head == nullptr)
+            add(value);
         else {
-            Tail->Next = new Node(value, Head);
-            Tail = Tail->Next;
+            auto* newTail = new Node(value, nullptr);
+            if (newTail != nullptr) {
+                // Prevent nullptr dereference.
+                if (Tail == nullptr)
+                    Tail = Head;
+                // Place new node at end of list.
+                Tail->Next = newTail;
+                Tail = Tail->next();
+                Length += 1;
+            }
+            else dbgmsg_s("Failed to allocate memory for linked list.");
         }
-        Length += 1;
     }
 
     DataType& at(u64 index) {
@@ -88,11 +98,16 @@ public:
         if (index >= Length)
             return false;
 
+        // Handle head removal
         if (index == 0) {
-            Node* old = Head;
-            Head = Head->next();
-            Length--;
-            delete old;
+            if (Head != nullptr) {
+                Node* old = Head;
+                Head = Head->next();
+                Length -= 1;
+                delete old;
+            }
+            // If head is nullptr, ensure tail is as well.
+            else Tail = nullptr;
             return true;
         }
 
@@ -107,12 +122,16 @@ public:
 
             if (i >= index)
                 break;
-            
+
             prev = current;
             i++;
         }
+        // Set Tail if removing last item.
+        if (next == nullptr)
+            Tail = prev;
+
         prev->Next = next;
-        Length--;
+        Length -= 1;
         delete current;
         return true;
     }

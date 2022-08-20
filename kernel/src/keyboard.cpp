@@ -14,8 +14,6 @@ namespace Keyboard {
     u32 PixelsUnderKBCursor[KBCursorSizeX * KBCursorSizeY + 1];
 
     void BasicTextRenderer::draw_cursor() {
-        CachedDrawPosition = gRend.DrawPos;
-
         // Calculate rectangle that needs to be updated (in characters).
         Vector2<u64> RefreshPosition = Vector2<u64>(0, 1) + LastCursorPosition;
         Vector2<u64> RefreshSize = Vector2<u64>(1, 1);
@@ -38,44 +36,40 @@ namespace Keyboard {
         // Skip first iteration in order to accurately read what is under the cursor before it is drawn.
         static bool skip = true;
         if (skip == false) {
-            gRend.DrawPos = Vector2<u64>(LastCursorPosition.x * 8, LastCursorPosition.y * gRend.Font->PSF1_Header->CharacterSize);
-            gRend.DrawPos.y = gRend.DrawPos.y + gRend.Font->PSF1_Header->CharacterSize;
-            gRend.drawpix({KBCursorSizeX, KBCursorSizeY}, &PixelsUnderKBCursor[0]);
+            DrawPosition = {
+                LastCursorPosition.x * 8,
+                LastCursorPosition.y
+                * gRend.Font->PSF1_Header->CharacterSize
+                + gRend.Font->PSF1_Header->CharacterSize
+            };
+            DrawPosition.y = DrawPosition.y + gRend.Font->PSF1_Header->CharacterSize;
+            gRend.drawpix(DrawPosition, {KBCursorSizeX, KBCursorSizeY}, &PixelsUnderKBCursor[0]);
         }
         else skip = false;
 
         update_draw_position();
         DrawPosition.y = DrawPosition.y + gRend.Font->PSF1_Header->CharacterSize;
-        gRend.DrawPos = DrawPosition;
         // READ PIXELS UNDER NEW POSITION INTO BUFFER.
-        gRend.readpix({KBCursorSizeX, KBCursorSizeY}, &PixelsUnderKBCursor[0]);
+        gRend.readpix(DrawPosition, {KBCursorSizeX, KBCursorSizeY}, &PixelsUnderKBCursor[0]);
         // DRAW CURSOR AT NEW POSITION.
-        gRend.drawbmpover({KBCursorSizeX, KBCursorSizeY}, &KeyboardCursor[0], 0xffffffff);
+        gRend.drawbmpover(DrawPosition, {KBCursorSizeX, KBCursorSizeY}, &KeyboardCursor[0], 0xffffffff);
         gRend.swap(RefreshPosition, RefreshSize);
-        // RETURN GLOBAL DRAW POSITION.
-        gRend.DrawPos = CachedDrawPosition;
 
         LastCursorPosition = CursorPosition;
     }
 
     void BasicTextRenderer::backspace() {
-        CachedDrawPosition = gRend.DrawPos;
         update_draw_position();
-        gRend.DrawPos = DrawPosition;
-        gRend.clearchar();
-        gRend.swap(gRend.DrawPos, {8, gRend.Font->PSF1_Header->CharacterSize});
+        gRend.clearchar(DrawPosition);
+        gRend.swap(DrawPosition, {8, gRend.Font->PSF1_Header->CharacterSize});
         cursor_left();
-        gRend.DrawPos = CachedDrawPosition;
     }
 
     void BasicTextRenderer::putc(char character) {
-        CachedDrawPosition = gRend.DrawPos;
         update_draw_position();
-        gRend.DrawPos = DrawPosition;
-        gRend.putchar(character);
+        gRend.putchar(DrawPosition, character);
         gRend.swap(DrawPosition, {8, gRend.Font->PSF1_Header->CharacterSize});
         cursor_right();
-        gRend.DrawPos = CachedDrawPosition;
     }
 
     void BasicTextRenderer::parse_character(char c) {

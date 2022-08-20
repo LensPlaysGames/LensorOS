@@ -10,6 +10,7 @@
 #include <cstr.h>
 #include <debug.h>
 #include <efi_memory.h>
+#include <elf_loader.h>
 #include <fat_definitions.h>
 #include <gdt.h>
 #include <gpt.h>
@@ -24,6 +25,7 @@
 #include <link_definitions.h>
 #include <memory.h>
 #include <memory/common.h>
+#include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 #include <mouse.h>
@@ -34,10 +36,12 @@
 #include <rtc.h>
 #include <scheduler.h>
 #include <smart_pointer.h>
-#include <storage/filesystem_driver.h>
-#include <storage/storage_device_driver.h>
-#include <storage/filesystem_drivers/file_allocation_table.h>
+#include <storage/device_drivers/dbgout.h>
 #include <storage/device_drivers/gpt_partition.h>
+#include <storage/file_metadata.h>
+#include <storage/filesystem_driver.h>
+#include <storage/filesystem_drivers/file_allocation_table.h>
+#include <storage/storage_device_driver.h>
 #include <system.h>
 #include <tss.h>
 #include <uart.h>
@@ -50,7 +54,7 @@ void prepare_interrupts() {
     gIDT = IDTR(0x0fff, (u64)&idt_storage[0]);
     // POPULATE TABLE.
     // NOTE: IRQ0 uses this handler by default, but scheduler over-rides this!
-    gIDT.install_handler((u64)system_timer_handler,             PIC_IRQ0);
+    //gIDT.install_handler((u64)system_timer_handler,             PIC_IRQ0);
     gIDT.install_handler((u64)keyboard_handler,                 PIC_IRQ1);
     gIDT.install_handler((u64)uart_com1_handler,                PIC_IRQ4);
     gIDT.install_handler((u64)rtc_handler,                      PIC_IRQ8);
@@ -67,23 +71,24 @@ void prepare_interrupts() {
 }
 
 void draw_boot_gfx() {
-    gRend.puts("<<<!===--- You are now booting into LensorOS ---===!>>>");
+    Vector2<u64> drawPosition = { 0, 0 };
+    gRend.puts(drawPosition, "<<<!===--- You are now booting into LensorOS ---===!>>>");
     // DRAW A FACE :)
+    drawPosition = {420, 420};
     // left eye
-    gRend.DrawPos = {420, 420};
-    gRend.drawrect({42, 42}, 0xff00ffff);
+    gRend.drawrect(drawPosition, {42, 42}, 0xff00ffff);
     // left pupil
-    gRend.DrawPos = {440, 440};
-    gRend.drawrect({20, 20}, 0xffff0000);
+    drawPosition = {440, 440};
+    gRend.drawrect(drawPosition, {20, 20}, 0xffff0000);
     // right eye
-    gRend.DrawPos = {520, 420};
-    gRend.drawrect({42, 42}, 0xff00ffff);
+    drawPosition = {520, 420};
+    gRend.drawrect(drawPosition, {42, 42}, 0xff00ffff);
     // right pupil
-    gRend.DrawPos = {540, 440};
-    gRend.drawrect({20, 20}, 0xffff0000);
+    drawPosition = {540, 440};
+    gRend.drawrect(drawPosition, {20, 20}, 0xffff0000);
     // mouth
-    gRend.DrawPos = {400, 520};
-    gRend.drawrect({182, 20}, 0xff00ffff);
+    drawPosition = {400, 520};
+    gRend.drawrect(drawPosition, {182, 20}, 0xff00ffff);
     gRend.swap();
 }
 
@@ -143,6 +148,7 @@ void kstage1(BootInfo* bInfo) {
      * memory segments (like privilege level of executing code,
      * or privilege level needed to access data).
      */
+    setup_gdt();
     gGDTD.Size = sizeof(GDT) - 1;
     gGDTD.Offset = V2P((u64)&gGDT);
     LoadGDT((GDTDescriptor*)V2P(&gGDTD));
@@ -355,7 +361,10 @@ void kstage1(BootInfo* bInfo) {
             dbgmsg_s("[kstage1]: Probing AHCI Controller\r\n");
             AHCI::HBAMemory* ABAR = (AHCI::HBAMemory*)(u64)(((PCI::PCIHeader0*)dev.data2())->BAR5);
             // TODO: Better MMIO!! It should be separate from regular virtual mappings, I think.
-            Memory::map(ABAR, ABAR);
+            Memory::map(ABAR, ABAR
+                        , (u64)Memory::PageTableFlag::Present
+                        | (u64)Memory::PageTableFlag::ReadWrite
+                        );
             u32 ports = ABAR->PortsImplemented;
             for (u64 i = 0; i < 32; ++i) {
                 if (ports & (1u << i)) {
@@ -517,28 +526,6 @@ void kstage1(BootInfo* bInfo) {
         i++;
     });
 
-    if (SYSTEM->filesystems().length() > 0) {
-        const char* filePath = "/fs0/startup.nsh";
-        VFS& vfs = SYSTEM->virtual_filesystem();
-        dbgmsg("Opening %s with VFS\r\n", filePath);
-        FileDescriptor fd = vfs.open(filePath, 0, 0);
-        dbgmsg("  Got FileDescriptor %ull\r\n", fd);
-        vfs.print_debug();
-        dbgmsg_s("  Reading first few bytes: ");
-        SmartPtr<u8[]> tmpBuffer(new u8[11], 11);
-        vfs.read(fd, &tmpBuffer[0], 11);
-        dbgmsg(&tmpBuffer[0], 11, ShouldNewline::Yes);
-        dbgmsg("Closing FileDescriptor %ull\r\n", fd);
-        vfs.close(fd);
-        dbgmsg("FileDescriptor %ull closed\r\n", fd);
-        vfs.print_debug();
-    }
-    
-    // Initialize High Precision Event Timer.
-    (void)gHPET.initialize();
-    // Prepare PS2 mouse.
-    init_ps2_mouse();
-
     // Initialize the Programmable Interval Timer.
     gPIT = PIT();
     dbgmsg("[kstage1]: \033[32mProgrammable Interval Timer Initialized\033[0m\r\n"
@@ -548,10 +535,57 @@ void kstage1(BootInfo* bInfo) {
            "\r\n"
            , static_cast<double>(PIT_FREQUENCY));
 
-    // The Task State Segment in x86_64 is used only
+    // The Task State Segment in x86_64 is used
     // for switches between privilege levels.
     TSS::initialize();
     Scheduler::initialize();
+
+    // Setup stdout file.
+    // FIXME: This is very, very rudimentary.
+    VFS& vfs = SYSTEM->virtual_filesystem();
+    DbgOutDriver driver;
+    FileMetadata dbgoutMetadata(String("stdout")
+                                , false
+                                , &driver
+                                , nullptr
+                                , 0, 0);
+    OpenFileDescription stdout(&driver, dbgoutMetadata);
+    vfs.add_file(stdout);
+    vfs.print_debug();
+
+    if (SYSTEM->filesystems().length() > 0) {
+        const char* filePath = "/fs0/blazeit";
+        dbgmsg("Opening %s with VFS\r\n", filePath);
+        FileDescriptor fd = vfs.open(filePath);
+        dbgmsg("  Got FileDescriptor %ull\r\n", fd);
+        vfs.print_debug();
+        dbgmsg_s("  Reading first few bytes: ");
+        SmartPtr<u8[]> tmpBuffer(new u8[11], 11);
+        vfs.read(fd, &tmpBuffer[0], 11);
+        dbgmsg(&tmpBuffer[0], 11, ShouldNewline::Yes);
+
+        if ((s64)fd != -1 && ELF::CreateUserspaceElf64Process(vfs, fd)) {
+            dbgmsg_s("Successfully created new process from `/fs0/blazeit`\r\n");
+            dbgmsg("Closing FileDescriptor %ull\r\n", fd);
+            vfs.close(fd);
+            dbgmsg("FileDescriptor %ull closed\r\n", fd);
+            vfs.print_debug();
+        }
+        // Another userspace program
+        constexpr const char* programTwoFilePath = "/fs0/stdout";
+        dbgmsg("Opening %s with VFS\r\n", programTwoFilePath);
+        fd = vfs.open(programTwoFilePath);
+        dbgmsg("  Got FileDescriptor %ull\r\n", fd);
+        if ((s64)fd != -1 && ELF::CreateUserspaceElf64Process(vfs, fd)) {
+            dbgmsg("Sucessfully created new process from `/fs0/stdout`\r\n");
+            vfs.close(fd);
+        }
+    }
+
+    // Initialize High Precision Event Timer.
+    (void)gHPET.initialize();
+    // Prepare PS2 mouse.
+    init_ps2_mouse();
 
     // Enable IRQ interrupts that will be used.
     disable_all_interrupts();

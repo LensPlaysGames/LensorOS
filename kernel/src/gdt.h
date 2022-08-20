@@ -18,6 +18,62 @@ struct GDTDescriptor {
 ///       See "Section 5.2: Fields and Flags Used for Segment-Level and Page-Level Protection" and
 ///         "Figure 5-1: Descriptor Fields Used for Protection" of the Intel Software Manual, Volume 3-A.
 struct GDTEntry {
+public:
+    GDTEntry() {}
+    GDTEntry(u32 base, u32 limit, u8 access, u8 flags) {
+        set_base(base);
+        set_limit(limit);
+        set_access(access);
+        set_flags(flags);
+    }
+
+    u32 base() {
+        return Base0
+            | Base1 << 16
+            | Base2 << 24;
+    }
+
+    u32 limit() {
+        return Limit0
+            | (Limit1_Flags & 0xf) << 16;
+    }
+
+    u8 access() {
+        return AccessByte;
+    }
+
+    u8 flags() {
+        return Limit1_Flags & 0xf0;
+    }
+
+    // Limit is 20 bits and spread across two variables.
+    // This helper function makes it easy to set the limit.
+    void set_limit(u32 limit) {
+        u8 flags = Limit1_Flags & 0xf0;
+        Limit0 = limit;
+        Limit1_Flags = (limit >> 16) & 0x0f;
+        Limit1_Flags |= flags;
+    }
+
+    // Base is 32 bits and spread across three variables.
+    // This helper function makes it easy to set the base address.
+    void set_base(u32 base) {
+        Base0 = base;
+        Base1 = base >> 16;
+        Base2 = base >> 24;
+    }
+
+    void set_access(u8 access) {
+        AccessByte = access;
+    }
+
+    void set_flags(u8 flags) {
+        u8 limitNibble = Limit1_Flags & 0x0f;
+        Limit1_Flags = flags & 0xf0;
+        Limit1_Flags |= limitNibble;
+    }
+
+private:
     /// Limit 15:0
     u16 Limit0 { 0 };
     /// Base 15:0
@@ -36,39 +92,37 @@ struct GDTEntry {
     /// 0b00000000
     ///       ==== Limit 19:16
     ///      =     Available
-    ///     =      64-bit code segment
+    ///     =      64-bit segment
     ///    =       Default Operation Size
-    ///   =        Granularity
+    ///   =        Granularity (set means limit in 4kib pages)
     u8 Limit1_Flags { 0 };
     /// Base 31:24
     u8 Base2 { 0 };
-
-    // Limit is 20 bits and spread across two variables.
-    // This helper function makes it easy to set the limit.
-    void set_limit(u32 limit) {
-        u8 flags = Limit1_Flags;
-        Limit0 = limit;
-        Limit1_Flags = limit >> 16;
-        Limit1_Flags |= flags;
-    }
-
-    // Base is 32 bits and spread across three variables.
-    // This helper function makes it easy to set the base address.
-    void set_base(u32 base) {
-        Base0 = base;
-        Base1 = base >> 16;
-        Base2 = base >> 24;
-    }
 } __attribute__((packed));
 
-struct TSS_GDTEntry : public GDTEntry {
-    /// Base 63:32
-    u32 Base3;
-    u32 Reserved { 0 };
+class TSS_GDTEntry : public GDTEntry {
+public:
+    TSS_GDTEntry() {}
+    TSS_GDTEntry(GDTEntry entry)
+        : GDTEntry(entry)
+    {
+        Reserved = 0;
+    }
 
-    TSS_GDTEntry(GDTEntry entry, u32 b3)
-      : GDTEntry(entry)
-      , Base3(b3) {}
+    u64 base() {
+        return GDTEntry::base()
+            | (u64)Base3 << 32;
+    }
+
+    void set_base(u64 base) {
+        GDTEntry::set_base(base);
+        Base3 = base >> 32;
+    }
+
+private:
+    /// Base 63:32
+    u32 Base3 { 0 };
+    u32 Reserved { 0 };
 } __attribute__((packed));
 
 /// Global Descriptor Table
@@ -85,11 +139,12 @@ struct GDT {
     GDTEntry Null;      // 0x00
     GDTEntry Ring0Code; // 0x08
     GDTEntry Ring0Data; // 0x10
-    GDTEntry Ring3Null; // 0x18
-    GDTEntry Ring3Code; // 0x20
-    GDTEntry Ring3Data; // 0x28
-    TSS_GDTEntry TSS;   // 0x30
-}__attribute__((packed)) __attribute__((aligned(0x1000)));
+    GDTEntry Ring3Code; // 0x18
+    GDTEntry Ring3Data; // 0x20
+    TSS_GDTEntry TSS;   // 0x28, 0x30
+} __attribute__((aligned(0x1000)));
+
+void setup_gdt();
 
 extern GDT gGDT;
 extern GDTDescriptor gGDTD;
