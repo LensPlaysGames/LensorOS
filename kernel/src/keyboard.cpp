@@ -38,11 +38,9 @@ namespace Keyboard {
         if (skip == false) {
             DrawPosition = {
                 LastCursorPosition.x * 8,
-                LastCursorPosition.y
+                (LastCursorPosition.y + 1)
                 * gRend.Font->PSF1_Header->CharacterSize
-                + gRend.Font->PSF1_Header->CharacterSize
             };
-            DrawPosition.y = DrawPosition.y + gRend.Font->PSF1_Header->CharacterSize;
             gRend.drawpix(DrawPosition, {KBCursorSizeX, KBCursorSizeY}, &PixelsUnderKBCursor[0]);
         }
         else skip = false;
@@ -111,7 +109,6 @@ namespace Keyboard {
             default:
                 break;
             }
-            
             GotE0 = false;
         }
         else {

@@ -20,9 +20,13 @@ namespace Keyboard {
 
     class BasicTextRenderer {
     public:
+        /// The two-dimensional size of the text renderer, in characters.
         Vector2<u64> SizeInCharacters;
+        /// Two-dimensional position to draw at in pixels.
         Vector2<u64> DrawPosition;
+        /// Two-dimensional position of cursor in character grid.
         Vector2<u64> CursorPosition;
+        /// Two-dimensional position of cursor in character grid last render.
         Vector2<u64> LastCursorPosition;
         KeyboardState State;
         bool GotE0 { false };
@@ -30,6 +34,11 @@ namespace Keyboard {
         BasicTextRenderer() {
             SizeInCharacters.x = gRend.Target->PixelWidth / 8;
             SizeInCharacters.y = gRend.Target->PixelHeight / gRend.Font->PSF1_Header->CharacterSize;
+        }
+
+        BasicTextRenderer(Vector2<u64> size) {
+            SizeInCharacters.x = size.x;
+            SizeInCharacters.y = size.y;
         }
 
         void newline() {
