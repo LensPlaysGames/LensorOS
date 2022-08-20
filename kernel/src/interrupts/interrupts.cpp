@@ -191,10 +191,10 @@ void page_fault_handler(InterruptFrameError* frame) {
     UART::out("  Faulty Address: 0x");
     UART::out(to_hexstring(address));
     UART::out("\r\n");
-    gRend.puts("Faulty Address: 0x", 0x00000000);
-    gRend.puts(to_hexstring(address), 0x00000000);
-    gRend.crlf();
-    gRend.swap();
+    Vector2<u64> drawPosition = { PanicStartX, PanicStartY };
+    gRend.puts(drawPosition, "Faulty Address: 0x", 0x00000000);
+    gRend.puts(drawPosition, to_hexstring(address), 0x00000000);
+    gRend.swap({ PanicStartX, PanicStartY }, { 1024, 128 } );
     while (true)
         asm ("hlt");
 }
@@ -215,7 +215,7 @@ void stack_segment_fault_handler(InterruptFrameError* frame) {
 
     if (frame->error & 0b1)
         UART::out("  External\r\n");
-    
+
     u8 table = (frame->error & 0b110) >> 1;
     if (table == 0b00)
         UART::out("  GDT");

@@ -6,7 +6,7 @@
 #include <memory.h>
 
 struct PSF1_HEADER {
-    // Magic bytes to indicate PSF1 font type   
+    // Magic bytes to indicate PSF1 font type
     u8 Magic[2];
     u8 Mode;
     u8 CharacterSize;
@@ -41,14 +41,14 @@ public:
     Framebuffer* Render          {nullptr};
     Framebuffer* Target          {nullptr};
     PSF1_FONT*   Font            {nullptr};
-    Vector2<u64> DrawPos         {0, 0};
     u32 BackgroundColor {0x00000000};
 
     BasicRenderer() {}
     BasicRenderer(Framebuffer* render, PSF1_FONT* f);
 
     /// ENSURE DRAW POSITION IS WITHIN FRAMEBUFFER.
-    void clamp_draw_position();
+    /// Used by renderer internally to ensure valid arguments.
+    void clamp_draw_position(Vector2<u64>& position);
 
     /// UPDATE MEMORY CONTENTS OF RENDER FROM TARGET
     void swap() {
@@ -58,8 +58,8 @@ public:
     /// UPDATE SIZE of MEMORY CONTENTS OF RENDER FROM TARGET AT POSITION
     void swap(Vector2<u64> position, Vector2<u64> size);
 
-    void readpix(Vector2<u64> size, u32* buffer);
-    
+    void readpix(Vector2<u64>& position, Vector2<u64> size, u32* buffer);
+
     /// Change every pixel in the target framebuffer to BackgroundColor.
     void clear() {
         // TODO: Make this more efficient (don't loop over every pixel).
@@ -70,8 +70,6 @@ public:
                 *(u32*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = BackgroundColor;
             }
         }
-        // Re-initialize draw position.
-        DrawPos = {0, 0};
     }
     /// Update BackgroundColor to given color, then clear screen.
     void clear(u32 color) {
@@ -82,34 +80,34 @@ public:
     void clear(Vector2<u64> position, Vector2<u64> size);
     void clear(Vector2<u64> position, Vector2<u64> size, u32 color);
 
-    // Remove a single character behind DrawPos.
-    void clearchar();
-    
+    // Remove a single character behind position.
+    void clearchar(Vector2<u64>& position);
+
     // '\r'
-    void cret();
+    void cret(Vector2<u64>& position);
     // '\n'
-    void newl();
+    void newl(Vector2<u64>& position);
     // '\r' + '\n'
-    void crlf();
-    void crlf(u32 offset);
+    void crlf(Vector2<u64>& position);
+    void crlf(Vector2<u64>& position, u32 offset);
 
     // Draw `size` of rectangle as `color`.
-    void drawrect(Vector2<u64> size, u32 color = 0xffffffff);
+    void drawrect(Vector2<u64>& position, Vector2<u64> size, u32 color = 0xffffffff);
     // Draw `size` of `pixels` buffer into target framebuffer.
-    void drawpix(Vector2<u64> size, u32* pixels);
+    void drawpix(Vector2<u64>& position, Vector2<u64> size, u32* pixels);
     // Draw `size` of `bitmap` as `color`.
-    void drawbmp(Vector2<u64> size, const u8* bitmap, u32 color = 0xffffffff);
+    void drawbmp(Vector2<u64>& position, Vector2<u64> size, const u8* bitmap, u32 color = 0xffffffff);
     // Draw `size` of `bitmap` as `color`, but don't clear `0` to background color.
     // This allows the use of bitmaps acting on alpha as well as color.
-    void drawbmpover(Vector2<u64> size, const u8* bitmap, u32 color = 0xffffffff);
+    void drawbmpover(Vector2<u64>& position, Vector2<u64> size, const u8* bitmap, u32 color = 0xffffffff);
     // Use PSF1 bitmap font to draw a character to the screen (don't advance).
-    void drawchar(char c, u32 color = 0xffffffff);
-    void drawcharover(char c, u32 color = 0xffffffff);
-    
+    void drawchar(Vector2<u64>& position, char c, u32 color = 0xffffffff);
+    void drawcharover(Vector2<u64>& position, char c, u32 color = 0xffffffff);
+
     // Use font to put a character to the screen (advance draw position).
-    void putchar(char c, u32 color = 0xffffffff);
+    void putchar(Vector2<u64>& position, char c, u32 color = 0xffffffff);
     // Put a null-terminated string of characters to the screen, wrapping if necessary.
-    void puts(const char* str, u32 color = 0xffffffff);
+    void puts(Vector2<u64>& position, const char* str, u32 color = 0xffffffff);
 };
 
 extern BasicRenderer gRend;

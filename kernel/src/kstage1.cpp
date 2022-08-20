@@ -71,23 +71,24 @@ void prepare_interrupts() {
 }
 
 void draw_boot_gfx() {
-    gRend.puts("<<<!===--- You are now booting into LensorOS ---===!>>>");
+    Vector2<u64> drawPosition = { 0, 0 };
+    gRend.puts(drawPosition, "<<<!===--- You are now booting into LensorOS ---===!>>>");
     // DRAW A FACE :)
+    drawPosition = {420, 420};
     // left eye
-    gRend.DrawPos = {420, 420};
-    gRend.drawrect({42, 42}, 0xff00ffff);
+    gRend.drawrect(drawPosition, {42, 42}, 0xff00ffff);
     // left pupil
-    gRend.DrawPos = {440, 440};
-    gRend.drawrect({20, 20}, 0xffff0000);
+    drawPosition = {440, 440};
+    gRend.drawrect(drawPosition, {20, 20}, 0xffff0000);
     // right eye
-    gRend.DrawPos = {520, 420};
-    gRend.drawrect({42, 42}, 0xff00ffff);
+    drawPosition = {520, 420};
+    gRend.drawrect(drawPosition, {42, 42}, 0xff00ffff);
     // right pupil
-    gRend.DrawPos = {540, 440};
-    gRend.drawrect({20, 20}, 0xffff0000);
+    drawPosition = {540, 440};
+    gRend.drawrect(drawPosition, {20, 20}, 0xffff0000);
     // mouth
-    gRend.DrawPos = {400, 520};
-    gRend.drawrect({182, 20}, 0xff00ffff);
+    drawPosition = {400, 520};
+    gRend.drawrect(drawPosition, {182, 20}, 0xff00ffff);
     gRend.swap();
 }
 

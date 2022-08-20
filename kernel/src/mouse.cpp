@@ -47,7 +47,7 @@ void init_ps2_mouse() {
     mouse_wait();
     // Tell keyboard controller a mouse message is incoming.
     out8(0x64, 0x20);
-    
+
     mouse_wait_input();
     u8 status = in8(0x60);
     status |= 0b10;
@@ -104,6 +104,7 @@ void handle_ps2_mouse_interrupt(u8 data) {
 }
 
 #define MouseCursorSize 16
+// This is a bitmap of the cursor, lmao.
 u8 mouse_cursor[] = {
     0b10000000, 0b00000000,
     0b11000000, 0b00000000,
@@ -127,8 +128,6 @@ u32 pixels_under_mouse_cursor[MouseCursorSize * MouseCursorSize + 1];
 
 // DRAW MOUSE CURSOR AT gMousePosition
 void draw_mouse_cursor() {
-    Vector2<u64> cachedPos = gRend.DrawPos;
-
     Vector2<u64> refreshPos = gOldMousePosition;
     Vector2<u64> refreshSize = {MouseCursorSize, MouseCursorSize};
 
@@ -151,23 +150,22 @@ void draw_mouse_cursor() {
     // what is under the cursor before it is drawn.
     static bool skip = true;
     if (skip == false) {
-        gRend.DrawPos = gOldMousePosition;
-        gRend.drawpix({MouseCursorSize, MouseCursorSize}
-                      , &pixels_under_mouse_cursor[0]);
+        gRend.drawpix(gOldMousePosition,
+                      {MouseCursorSize, MouseCursorSize},
+                      &pixels_under_mouse_cursor[0]);
     }
     else skip = false;
-    
-    gRend.DrawPos = gMousePosition;
+
     // READ PIXELS UNDER NEW MOUSE POSITION INTO BUFFER.
-    gRend.readpix({MouseCursorSize, MouseCursorSize}
+    gRend.readpix(gMousePosition,
+                  {MouseCursorSize, MouseCursorSize}
                   , &pixels_under_mouse_cursor[0]);
     // DRAW MOUSE CUSOR AT NEW POSITION.
-    gRend.drawbmpover({MouseCursorSize, MouseCursorSize}
+    gRend.drawbmpover(gMousePosition,
+                      {MouseCursorSize, MouseCursorSize}
                       , &mouse_cursor[0], 0xffffffff);
     gOldMousePosition = gMousePosition;
     gRend.swap(refreshPos, refreshSize);
-    // RETURN GLOBAL DRAW POSITION.
-    gRend.DrawPos = cachedPos;
 }
 
 u32 DrawColor = 0xffffffff;
@@ -180,11 +178,9 @@ void process_mouse_packet() {
     const Vector2<u64> DrawSize {2, 2};
     if (mouse_packet[0] & PS2_LEFT_BUTTON) {
         // Draw a rectangle of size `DrawSize` with color of `DrawColor`
-        Vector2<u64> cachedPos = gRend.DrawPos;
-        gRend.DrawPos = gMousePosition - DrawSize;
-        gRend.drawrect(DrawSize, DrawColor);
-        gRend.swap({DrawSize}, {gRend.DrawPos});
-        gRend.DrawPos = cachedPos;
+        Vector2<u64> drawPos = gMousePosition - DrawSize;
+        gRend.drawrect(drawPos, DrawSize, DrawColor);
+        gRend.swap({DrawSize}, drawPos);
     }
     // Right Mouse Button (RMB)
     else if (mouse_packet[0] & PS2_RIGHT_BUTTON) {
@@ -195,7 +191,7 @@ void process_mouse_packet() {
     }
     // Middle Mouse Button (MMB)
     else if (mouse_packet[0] & PS2_MIDDLE_BUTTON) {}
-    
+
     // MOUSE MOVEMENT
     bool isXNegative  {false};
     bool isYNegative  {false};
@@ -210,7 +206,7 @@ void process_mouse_packet() {
         xOverflow = true;
     if (mouse_packet[0] & PS2_Y_OVERFLOW)
         yOverflow = true;
-    
+
     // ACCUMULATE X MOUSE POSITION FROM SECOND PACKET
     if (isXNegative) {
         mouse_packet[1] = 256 - mouse_packet[1];
