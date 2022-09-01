@@ -1,3 +1,6 @@
+
+
+
 diff -x '*.*~' -ruN untouched/binutils-2.38/bfd/config.bfd binutils-2.38/bfd/config.bfd
 --- untouched/binutils-2.38/bfd/config.bfd	2022-01-22 04:14:07.000000000 -0800
 +++ binutils-2.38/bfd/config.bfd	2022-03-31 10:14:30.586398500 -0700
