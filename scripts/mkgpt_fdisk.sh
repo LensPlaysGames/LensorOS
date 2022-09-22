@@ -1,7 +1,7 @@
 
 
 #!/bin/bash
-#Copyright 2022, Contributors To LensorOS.
+# Copyright 2022, Contributors To LensorOS.
 # All rights reserved.
 
 # This file is part of LensorOS.
@@ -17,7 +17,7 @@
 # GNU General Public License for more details.
 
 # You should have received a copy of the GNU General Public License
-# along with LensorOS. If not, see <https://www.gnu.org/licenses/>. 
+# along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
 
 ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 BuildDirectory="$ScriptDirectory/../kernel/bin"
