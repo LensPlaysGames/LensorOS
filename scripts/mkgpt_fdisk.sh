@@ -1,5 +1,3 @@
-
-
 #!/bin/bash
 # Copyright 2022, Contributors To LensorOS.
 # All rights reserved.
