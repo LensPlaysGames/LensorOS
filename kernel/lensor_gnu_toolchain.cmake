@@ -1,3 +1,21 @@
+# Copyright 2022, Contributors To LensorOS.
+# All rights reserved.
+#
+# This file is part of LensorOS.
+#
+# LensorOS is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# LensorOS is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with LensorOS. If not, see <https://www.gnu.org/licenses
+
 include( "${CMAKE_CURRENT_LIST_DIR}/config.cmake" )
 
 # Until a LensorOS config is added to the CMake source code,
@@ -24,14 +42,14 @@ endif()
 
 # Look for LensorOS Toolchain executables.
 find_program(
-  CMAKE_C_COMPILER 
+  CMAKE_C_COMPILER
   ${ARCH}-lensor-gcc
   HINTS
   ${TOOLCHAIN_HINTS}
   REQUIRED
 )
 find_program(
-  CMAKE_CXX_COMPILER 
+  CMAKE_CXX_COMPILER
   ${ARCH}-lensor-g++
   HINTS
   ${TOOLCHAIN_HINTS}
