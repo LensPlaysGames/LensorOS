@@ -1,26 +1,27 @@
-    ; Copyright 2022, Contributors To LensorOS.
-; All rights reserved.
+;; Copyright 2022, Contributors To LensorOS.
+;; All rights reserved.
+;;
+;; This file is part of LensorOS.
+;;
+;; LensorOS is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+;;
+;; LensorOS is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with LensorOS. If not, see <https://www.gnu.org/licens
 
-; This file is part of LensorOS.
-
-; LensorOS is free software: you can redistribute it and/or modify
-; it under the terms of the GNU General Public License as published by
-; the Free Software Foundation, either version 3 of the License, or
-; (at your option) any later version.
-
-; LensorOS is distributed in the hope that it will be useful,
-; but WITHOUT ANY WARRANTY; without even the implied warranty of
-; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-; GNU General Public License for more details.
-
-; You should have received a copy of the GNU General Public License
-; along with LensorOS. If not, see <https://www.gnu.org/licenses 
-    [BITS 64]
-    ;; External symbols provided in `scheduler.h` and `scheduler.cpp`
-    ;; A pointer to task switching handler function.
-    extern scheduler_switch_process
-    ;; A pointer to a function that increments timer ticks by one.
-    extern timer_tick
+[BITS 64]
+;; External symbols provided in `scheduler.h` and `scheduler.cpp`
+;; A pointer to task switching handler function.
+extern scheduler_switch_process
+;; A pointer to a function that increments timer ticks by one.
+extern timer_tick
 do_swapgs:
     cmp QWORD [rsp + 0x8], 0x8
     je skip_swap
@@ -28,14 +29,14 @@ do_swapgs:
 skip_swap:
     ret
 
-    GLOBAL irq0_handler
+GLOBAL irq0_handler
 irq0_handler:
-    ;; `iretq` arguments already on the stack:
-    ;; |-- Data Segment Selector
-    ;; |-- Old Stack Pointer (RSP)
-    ;; |-- Flags Register (RFLAGS)
-    ;; |-- Code Segment Selector
-    ;; `-- Instruction Pointer (RIP)
+;; `iretq` arguments already on the stack:
+;; |-- Data Segment Selector
+;; |-- Old Stack Pointer (RSP)
+;; |-- Flags Register (RFLAGS)
+;; |-- Code Segment Selector
+;; `-- Instruction Pointer (RIP)
 ;;; SAVE CPU STATE ON STACK
     call do_swapgs
     push rax

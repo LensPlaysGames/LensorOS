@@ -1,3 +1,22 @@
+/* Copyright 2022, Contributors To LensorOS.
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
+
 #include <memory/virtual_memory_manager.h>
 
 #include <debug.h>
@@ -14,7 +33,7 @@ namespace Memory {
     void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddress, u64 mappingFlags, ShowDebug debug) {
         if (pageMapLevelFour == nullptr)
             return;
-        
+
         PageMapIndexer indexer((u64)virtualAddress);
         PageDirectoryEntry PDE;
 
@@ -137,7 +156,7 @@ namespace Memory {
                      );
         }
     }
-    
+
     void map(void* virtualAddress, void* physicalAddress, u64 mappingFlags, ShowDebug debug) {
         map(ActivePageMap, virtualAddress, physicalAddress, mappingFlags, debug);
     }
@@ -253,10 +272,10 @@ namespace Memory {
     }
 
     void init_virtual(PageTable* pageMap) {
-        /* Map all physical RAM addresses to virtual 
-         *   addresses 1:1, store them in the PML4.
-         * This means that virtual memory addresses will be
-         *   equal to physical memory addresses within the kernel.
+        /* Map all physical RAM addresses to virtual addresses 1:1,
+         * store them in the PML4. This means that virtual memory
+         * addresses will be equal to physical memory addresses within
+         * the kernel.
          */
         for (u64 t = 0; t < total_ram(); t+=PAGE_SIZE) {
             map(pageMap, (void*)t, (void*)t

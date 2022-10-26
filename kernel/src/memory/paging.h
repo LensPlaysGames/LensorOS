@@ -1,3 +1,22 @@
+/* Copyright 2022, Contributors To LensorOS.
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
+
 #ifndef LENSOR_OS_PAGING_H
 #define LENSOR_OS_PAGING_H
 
@@ -29,19 +48,19 @@ namespace Memory {
             virtualAddress >>= 9;
             PageDirectoryPointerIndex = virtualAddress & 0x1ff;
         }
-        
+
         u64 page_directory_pointer() {
             return PageDirectoryPointerIndex;
         }
-        
+
         u64 page_directory() {
             return PageDirectoryIndex;
         }
-        
+
         u64 page_table() {
             return PageTableIndex;
         }
-        
+
         u64 page() {
             return PageIndex;
         }
@@ -58,17 +77,17 @@ namespace Memory {
         u64 address()  {
             return (Value & 0x000ffffffffff000) >> 12;
         }
-        
+
         void set_address(u64 addr)  {
             addr &=  0x000000ffffffffff;
             Value &= 0xfff0000000000fff;
             Value |= (addr << 12);
         }
-        
+
         bool flag(PageTableFlag flag)  {
             return Value & (u64)flag;
         }
-        
+
         void set_flag(PageTableFlag flag, bool enabled) {
             u64 bitSelector = (u64)flag;
             Value &= ~bitSelector;

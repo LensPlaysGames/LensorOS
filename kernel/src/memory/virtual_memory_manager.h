@@ -1,3 +1,22 @@
+/* Copyright 2022, Contributors To LensorOS.
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
+
 #ifndef LENSOR_OS_VIRTUAL_MEMORY_MANAGER_H
 #define LENSOR_OS_VIRTUAL_MEMORY_MANAGER_H
 
@@ -16,8 +35,8 @@ namespace Memory {
         No  = 1,
     };
 
-    /* Map a virtual address to a physical 
-     *   address in the given page map level four. 
+    /* Map a virtual address to a physical
+     *   address in the given page map level four.
      */
     void map(PageTable*
              , void* virtualAddress
@@ -26,7 +45,7 @@ namespace Memory {
              , ShowDebug d = ShowDebug::No
              );
 
-    /* Map a virtual address to a physical address in 
+    /* Map a virtual address to a physical address in
      *   the currently active page map level four.
      */
     void map(void* virtualAddress
@@ -35,21 +54,21 @@ namespace Memory {
              , ShowDebug d = ShowDebug::No
              );
 
-    /* If a mapping is marked as present within the given 
-     *   page map level four, it will be marked as not present. 
+    /* If a mapping is marked as present within the given
+     *   page map level four, it will be marked as not present.
      */
     void unmap(PageTable*, void* virtualAddress
                , ShowDebug d = ShowDebug::No
                );
 
-    /* If a mapping is marked as present within the given 
-     *   page map level four, it will be marked as not present. 
+    /* If a mapping is marked as present within the given
+     *   page map level four, it will be marked as not present.
      */
     void unmap(void* virtualAddress
                , ShowDebug d = ShowDebug::No
                );
 
-    /* Load the given address into control register three to update 
+    /* Load the given address into control register three to update
      *   the virtual to physical mapping the CPU is using currently.
      */
     void flush_page_map(PageTable* pageMapLevelFour);

@@ -1,10 +1,28 @@
+;; Copyright 2022, Contributors To LensorOS.
+;; All rights reserved.
+;;
+;; This file is part of LensorOS.
+;;
+;; LensorOS is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+;;
+;; LensorOS is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with LensorOS. If not, see <https://www.gnu.org/licenses
+
 ;;; System Call Assembly Wrapper for C++ System Call Functions
 ;;; Inspiration taking from: https://www.cs.usfca.edu/~benson/cs326/pintos/pintos/src
 
-    [BITS 64]
-    
-    extern syscalls             ; Table of system call functions declared in "syscalls.h"
-    extern num_syscalls         ; Number of system call functions defined within syscalls table.
+[BITS 64]
+
+extern syscalls             ; Table of system call functions declared in "syscalls.h"
+extern num_syscalls         ; Number of system call functions defined within syscalls table.
 
 do_swapgs:
     cmp QWORD [rsp + 0x08], 0x08
@@ -16,7 +34,7 @@ skip_swap:
 ;;; System Call Handler
 ;;; Registers Used:
 ;;;   rax  --  System Call Code
-;;; 
+;;;
 ;;; System Call Code: Index offset into syscalls table.
 system_call_handler_asm:
 ;;; Do nothing if system call code is invalid:

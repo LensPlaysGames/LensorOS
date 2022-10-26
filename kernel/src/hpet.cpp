@@ -1,20 +1,22 @@
 /* Copyright 2022, Contributors To LensorOS.
-All rights reserved.
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
 
-This file is part of LensorOS.
-
-LensorOS is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-LensorOS is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with LensorOS. If not, see <https://www.gnu.org/licenses */
 #include <hpet.h>
 
 #include <cstr.h>
@@ -26,8 +28,8 @@ along with LensorOS. If not, see <https://www.gnu.org/licenses */
 
 HPET gHPET;
 
-/* Software doesn't know about hardware changing it's mmio 
- *   registers, so they must be marked as volatile! 
+/* Software doesn't know about hardware changing it's mmio
+ *   registers, so they must be marked as volatile!
  */
 void HPET::writel(u16 offset, u32 value) {
     volatile_write(&value, (volatile void*)(Header->Address.Address + (offset)), 4);
@@ -74,12 +76,12 @@ bool HPET::initialize() {
         return false;
     }
 
-    /* If bit 13 of general cap. & ID register is set, 
+    /* If bit 13 of general cap. & ID register is set,
      *   HPET is capable of a 64-bit main counter value.
      */
     LargeCounterSupport = static_cast<bool>(readl(HPET_REG_GENERAL_CAPABILITIES_AND_ID) & (1 << 13));
 
-    /* If bit 15 of general cap. & ID register is set, HPET is 
+    /* If bit 15 of general cap. & ID register is set, HPET is
      *   capable of legacy replacement interrupt mapping (IRQ0, IRQ8).
      */
     LegacyInterruptSupport = static_cast<bool>(readl(HPET_REG_GENERAL_CAPABILITIES_AND_ID) & (1 << 15));
@@ -97,13 +99,13 @@ bool HPET::initialize() {
     }
     /* Frequency can not be zero if Period is a 32-bit unsigned integer.
      * As Period grows past 49-bits wide, Frequency may become zero.
-     */ 
+     */
     Frequency = 1000000000000000 / Period;
 
-    /* The last five bits of the Header ID field 
+    /* The last five bits of the Header ID field
      *   stores the last index in the list of comparators.
      * By adding one to this value, we get the total
-     *   number of comparators present on the HPET.  
+     *   number of comparators present on the HPET.
      * Checking the hardware version (not ACPI provided) has
      *   unexpected results in current testing environments.
      */
@@ -120,13 +122,13 @@ bool HPET::initialize() {
 
     /* TODO: Initialize comparators.
      *       |- 1.) Determine if timer N is periodic capable; cache.
-     *       `- 2.) Determine allowed interrupt routing for current timer, 
-     *                allocate interrupt for it (or wait for late_init or something 
+     *       `- 2.) Determine allowed interrupt routing for current timer,
+     *                allocate interrupt for it (or wait for late_init or something
      *                so it's only done if the HPET is actually used as main timer).
      */
 
     locker.unlock();
-    
+
     start_main_counter();
     Initialized = true;
 

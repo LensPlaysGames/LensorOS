@@ -1,20 +1,22 @@
 /* Copyright 2022, Contributors To LensorOS.
-All rights reserved.
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
 
-This file is part of LensorOS.
-
-LensorOS is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-LensorOS is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with LensorOS. If not, see <https://www.gnu.org/licenses */
 #include <pci.h>
 
 #include <cstr.h>
@@ -28,6 +30,7 @@ along with LensorOS. If not, see <https://www.gnu.org/licenses */
  */
 
 namespace PCI {
+
     const char* DeviceClasses[] {
         "Unclassified",
         "Mass Storage Controller",
@@ -137,101 +140,101 @@ namespace PCI {
             switch (deviceID) {
             case 0x0001:
                 return "Bandit PowerPC host bridge";
-            case 0x0002:  
+            case 0x0002:
                 return "Grand Central I/O";
-            case 0x0003:  
+            case 0x0003:
                 return "Control Video";
-            case 0x0004:  
+            case 0x0004:
                 return "PlanB Video-In";
-            case 0x0007:  
+            case 0x0007:
                 return "O'Hare I/O";
-            case 0x000b:  
+            case 0x000b:
                 return "Apple Camera";
-            case 0x000c:  
+            case 0x000c:
                 return "DOS on Mac";
-            case 0x000e:  
+            case 0x000e:
                 return "Hydra Mac I/O";
-            case 0x0010:  
+            case 0x0010:
                 return "Heathrow Mac I/O";
-            case 0x0017:  
+            case 0x0017:
                 return "Paddington Mac I/O";
-            case 0x0018:  
+            case 0x0018:
                 return "UniNorth FireWire";
-            case 0x0019:  
+            case 0x0019:
                 return "KeyLargo USB";
-            case 0x001e:  
+            case 0x001e:
                 return "UniNorth Internal PCI";
-            case 0x001f:  
+            case 0x001f:
                 return "UniNorth PCI";
-            case 0x0020:  
+            case 0x0020:
                 return "UniNorth AGP";
-            case 0x0021:  
+            case 0x0021:
                 return "UniNorth GMAC (Sun GEM)";
-            case 0x0022:  
+            case 0x0022:
                 return "KeyLargo Mac I/O";
-            case 0x0024:  
+            case 0x0024:
                 return "UniNorth/Pangea GMAC (Sun GEM)";
-            case 0x0025:  
+            case 0x0025:
                 return "KeyLargo/Pangea Mac I/O";
-            case 0x0026:  
+            case 0x0026:
                 return "KeyLargo/Pangea USB";
-            case 0x0027:  
+            case 0x0027:
                 return "UniNorth/Pangea AGP";
-            case 0x0028:  
+            case 0x0028:
                 return "UniNorth/Pangea PCI";
-            case 0x0029:  
+            case 0x0029:
                 return "UniNorth/Pangea Internal PCI";
-            case 0x002d:  
+            case 0x002d:
                 return "UniNorth 1.5 AGP";
-            case 0x002e:  
+            case 0x002e:
                 return "UniNorth 1.5 PCI";
-            case 0x002f:  
+            case 0x002f:
                 return "UniNorth 1.5 Internal PCI";
-            case 0x0030:  
+            case 0x0030:
                 return "UniNorth/Pangea FireWire";
-            case 0x0031:  
+            case 0x0031:
                 return "UniNorth 2 FireWire";
-            case 0x0032:  
+            case 0x0032:
                 return "UniNorth 2 GMAC (Sun GEM)";
-            case 0x0033:  
+            case 0x0033:
                 return "UniNorth 2 ATA/100";
-            case 0x0034:  
+            case 0x0034:
                 return "UniNorth 2 AGP";
-            case 0x0035:  
+            case 0x0035:
                 return "UniNorth 2 PCI";
-            case 0x0036:  
+            case 0x0036:
                 return "UniNorth 2 Internal PCI";
-            case 0x003b:  
+            case 0x003b:
                 return "UniNorth/Intrepid ATA/100";
-            case 0x003e:  
+            case 0x003e:
                 return "KeyLargo/Intrepid Mac I/O";
-            case 0x003f:  
+            case 0x003f:
                 return "KeyLargo/Intrepid USB";
-            case 0x0040:  
+            case 0x0040:
                 return "K2 KeyLargo USB";
-            case 0x0041:  
+            case 0x0041:
                 return "K2 KeyLargo Mac/IO";
-            case 0x0042:  
+            case 0x0042:
                 return "K2 FireWire";
-            case 0x0043:  
+            case 0x0043:
                 return "K2 ATA/100";
-            case 0x0045:  
+            case 0x0045:
                 return "K2 HT-PCI Bridge";
-            case 0x0046:  
+            case 0x0046:
                 return "K2 HT-PCI Bridge";
-            case 0x0047:  
+            case 0x0047:
                 return "K2 HT-PCI Bridge";
-            case 0x0048:  
+            case 0x0048:
                 return "K2 HT-PCI Bridge";
-            case 0x0049:  
+            case 0x0049:
                 return "K2 HT-PCI Bridge";
-            case 0x004a:  
+            case 0x004a:
                 return "CPC945 HT Bridge";
-            case 0x004b:  
+            case 0x004b:
                 return "U3 AGP";
-            case 0x004c:  
+            case 0x004c:
                 return "K2 GMAC (Sun GEM)";
-            case 0x004f:  
+            case 0x004f:
                 return "Shasta Mac I/O";
             case 0x0050:
                 return "Shasta IDE";
@@ -772,7 +775,7 @@ namespace PCI {
         case 0x06:
             // Bridge
             switch (subclass) {
-            case 0x4: 
+            case 0x4:
                 // PCI-to-PCI Bridge
                 switch (progIF) {
                 case 0x0:
@@ -782,7 +785,7 @@ namespace PCI {
                 default:
                     return to_hexstring<u8>(progIF);
                 }
-            case 0x8: 
+            case 0x8:
                 // RACEway Bridge
                 switch (progIF) {
                 case 0x0:
@@ -792,7 +795,7 @@ namespace PCI {
                 default:
                     return to_hexstring<u8>(progIF);
                 }
-            case 0x9: 
+            case 0x9:
                 // PCI-to-PCI Bridge
                 switch (progIF) {
                 case 0x40:
