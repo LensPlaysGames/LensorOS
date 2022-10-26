@@ -1,3 +1,22 @@
+/* Copyright 2022, Contributors To LensorOS.
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
+
 #include <spinlock.h>
 
 bool SpinlockLocker::compare_and_swap_lock() {
@@ -24,15 +43,15 @@ bool SpinlockLocker::compare_and_swap_lock() {
 }
 
 bool SpinlockLocker::test_and_set_lock() {
-    /* In x86, when an instruction is prefixed with `lock`, 
+    /* In x86, when an instruction is prefixed with `lock`,
      *   it is guaranteed to be run atomically (thread-safe).
-     * The `xchg` instruction sets a memory address or register 
+     * The `xchg` instruction sets a memory address or register
      *   to a new value while returning the old value in RAX.
-     * It can be determined that the lock was free (unlocked) and is 
+     * It can be determined that the lock was free (unlocked) and is
      *   acquired (locked) by currently executing code by testing
      *   that the old value that is returned is equal to false.
      */
-    
+
     /* Inline Assembly:
      * |- Desc: Old value is set to lock, then lock is set to new value.
      * |  |- `lock`               -- Ensures that the following instruction runs atomically.

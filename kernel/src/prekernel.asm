@@ -1,28 +1,29 @@
-    ; Copyright 2022, Contributors To LensorOS.
-; All rights reserved.
+;; Copyright 2022, Contributors To LensorOS.
+;; All rights reserved.
+;;
+;; This file is part of LensorOS.
+;;
+;; LensorOS is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+;;
+;; LensorOS is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with LensorOS. If not, see <https://www.gnu.org/licenses
 
-; This file is part of LensorOS.
+extern kmain
 
-; LensorOS is free software: you can redistribute it and/or modify
-; it under the terms of the GNU General Public License as published by
-; the Free Software Foundation, either version 3 of the License, or
-; (at your option) any later version.
-
-; LensorOS is distributed in the hope that it will be useful,
-; but WITHOUT ANY WARRANTY; without even the implied warranty of
-; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-; GNU General Public License for more details.
-
-; You should have received a copy of the GNU General Public License
-; along with LensorOS. If not, see <https://www.gnu.org/licenses 
-    extern kmain
-
-;# Virtual to physical and Physical to virtual address conversion.
-;# These are needed because the kernel is loaded physically lower than it is linked.
+;;# Virtual to physical and Physical to virtual address conversion.
+;;# These are needed because the kernel is loaded physically lower than it is linked.
 %define V2P(a) ((a)-0xffffffff80000000)
 %define P2V(a) ((a)+0xffffffff80000000)
 
-;# Paging
+;;# Paging
 %define PAGE_SIZE               0x1000
 %define ENTRIES_PER_PAGE_TABLE  512
 %define PAGE_PRESENT            1
@@ -36,7 +37,7 @@
 %define PAGE_GLOBAL             1<<8
 %define PAGE_NX                 1<<63
 
-;# Allocate known good stack
+;;# Allocate known good stack
 SECTION .bss
 align 0x1000
 prekernel_stack_bottom:
