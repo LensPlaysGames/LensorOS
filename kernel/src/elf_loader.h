@@ -35,7 +35,7 @@
 #include <virtual_filesystem.h>
 
 // Uncomment the following directive for extra debug output.
-#define DEBUG_ELF
+//#define DEBUG_ELF
 
 namespace ELF {
     /// Return zero when ELF header is of expected format.
