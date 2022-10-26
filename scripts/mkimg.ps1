@@ -1,20 +1,22 @@
-#Copyright 2022, Contributors To LensorOS.
-# All rights reserved.
+<# Copyright 2022, Contributors To LensorOS.
+ All rights reserved.
 
-# This file is part of LensorOS.
+ This file is part of LensorOS.
 
-# LensorOS is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+ LensorOS is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
 
-# LensorOS is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+ LensorOS is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ GNU General Public License for more details.
 
-# You should have received a copy of the GNU General Public License
-# along with LensorOS. If not, see <https://www.gnu.org/licenses/>. 
+ You should have received a copy of the GNU General Public License
+ along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
+ #>
+
 $ScriptDirectory = $MyInvocation.MyCommand.Path
 if (-not($ScriptDirectory))
 {
@@ -29,12 +31,12 @@ $BuildDirectory = "$RepositoryDirectory\kernel\bin"
 if (-not(Get-Command -CommandType Application dd))
 {
     Write-Host "`nDid not find proper dependencies: dd`n"
-	Exit 1
+    Exit 1
 }
 if (-not(Get-Command -CommandType Application mtools))
 {
     Write-Host "`nDid not find proper dependencies: mtools`n"
-	Exit 1
+    Exit 1
 }
 
 New-Item $BuildDirectory -ItemType directory -Force
