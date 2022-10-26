@@ -1,20 +1,21 @@
 /* Copyright 2022, Contributors To LensorOS.
-All rights reserved.
-
-This file is part of LensorOS.
-
-LensorOS is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-LensorOS is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with LensorOS. If not, see <https://www.gnu.org/licenses/>. */
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 
 #ifndef _STDIO_H
@@ -38,7 +39,7 @@ extern "C" {
   extern FILE* stderr;
 
   /// File operations
-  int remove(const char* pathname);  
+  int remove(const char* pathname);
   int rename(const char* oldpath, const char* newpath);
 
 #define TMP_MAX 25 // Minimum is twenty five
@@ -93,7 +94,7 @@ extern "C" {
   /// Direct I/O
   size_t fread(void* ptr, size_t size, size_t nmemb, FILE*);
   size_t fwrite(const void* ptr, size_t size, size_t nmemb, FILE*);
-  
+
   /// File positioning
   int fgetpos(FILE*, fpos_t*);
 
