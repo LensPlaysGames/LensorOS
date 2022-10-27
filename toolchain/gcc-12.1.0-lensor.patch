@@ -18,43 +18,41 @@
 
 
 diff -bruN -x '*.cache' untouched/gcc-12.1.0/config.sub gcc-12.1.0/config.sub
---- untouched/gcc-12.1.0/config.sub 2022-05-06 00:30:56.000000000 -0700
-+++ gcc-12.1.0/config.sub   2022-06-21 23:31:08.998964700 -0700
+--- untouched/gcc-12.1.0/config.sub	2022-05-06 00:30:56.000000000 -0700
++++ gcc-12.1.0/config.sub	2022-10-26 12:51:44.858118500 -0700
 @@ -4,7 +4,7 @@
  
  # shellcheck disable=SC2006,SC2268 # see below for rationale
  
 -timestamp='2021-10-27'
-+timestamp='2022-06-21'
++timestamp='2022-10-26'
  
  # This file is free software; you can redistribute it and/or modify it
  # under the terms of the GNU General Public License as published by
 @@ -1719,7 +1719,7 @@
-    # The portable systems comes first.
-    # Each alternative MUST end in a * to match a version number.
-    gnu* | android* | bsd* | mach* | minix* | genix* | ultrix* | irix* \
--        | *vms* | esix* | aix* | cnk* | sunos | sunos[34]* \
-+         | *vms* | esix* | aix* | cnk* | lensor* | sunos | sunos[34]* \
-         | hpux* | unos* | osf* | luna* | dgux* | auroraux* | solaris* \
-         | sym* |  plan9* | psp* | sim* | xray* | os68k* | v88r* \
-         | hiux* | abug | nacl* | netware* | windows* \
+ 	# The portable systems comes first.
+ 	# Each alternative MUST end in a * to match a version number.
+ 	gnu* | android* | bsd* | mach* | minix* | genix* | ultrix* | irix* \
+-	     | *vms* | esix* | aix* | cnk* | sunos | sunos[34]* \
++	     | *vms* | esix* | aix* | cnk* | lensor* | sunos | sunos[34]* \
+ 	     | hpux* | unos* | osf* | luna* | dgux* | auroraux* | solaris* \
+ 	     | sym* |  plan9* | psp* | sim* | xray* | os68k* | v88r* \
+ 	     | hiux* | abug | nacl* | netware* | windows* \
 diff -bruN -x '*.cache' untouched/gcc-12.1.0/fixincludes/mkfixinc.sh gcc-12.1.0/fixincludes/mkfixinc.sh
---- untouched/gcc-12.1.0/fixincludes/mkfixinc.sh    2022-05-06 00:30:56.000000000 -0700
-+++ gcc-12.1.0/fixincludes/mkfixinc.sh  2022-06-21 23:32:00.964263800 -0700
-@@ -20,7 +20,9 @@
-     powerpcle-*-eabisim* | \
-     powerpcle-*-eabi* | \
-     *-*-vxworks7* | \
--    *-musl* )
-+    *-musl* | \
+--- untouched/gcc-12.1.0/fixincludes/mkfixinc.sh	2022-05-06 00:30:56.000000000 -0700
++++ gcc-12.1.0/fixincludes/mkfixinc.sh	2022-10-26 12:52:30.394575000 -0700
+@@ -11,6 +11,8 @@
+ 
+ # Check for special fix rules for particular targets
+ case $machine in
 +    *-lensor* | \
-+    *-*-lensor*)
-    #  IF there is no include fixing,
-    #  THEN create a no-op fixer and exit
-    (echo "#! /bin/sh" ; echo "exit 0" ) > ${target}
++    *-*-lensor* | \
+     i?86-*-cygwin* | \
+     i?86-*-mingw32* | \
+     x86_64-*-mingw32* | \
 diff -bruN -x '*.cache' untouched/gcc-12.1.0/gcc/c/c-typeck.cc gcc-12.1.0/gcc/c/c-typeck.cc
---- untouched/gcc-12.1.0/gcc/c/c-typeck.cc  2022-05-06 00:30:56.000000000 -0700
-+++ gcc-12.1.0/gcc/c/c-typeck.cc    2022-06-22 00:22:46.428745500 -0700
+--- untouched/gcc-12.1.0/gcc/c/c-typeck.cc	2022-05-06 00:30:56.000000000 -0700
++++ gcc-12.1.0/gcc/c/c-typeck.cc	2022-10-26 13:14:53.342657200 -0700
 @@ -2572,17 +2572,10 @@
  
        return ref;
@@ -63,49 +61,50 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/gcc/c/c-typeck.cc gcc-12.1.0/gcc/c/
 +  else if (code == POINTER_TYPE)
      {
 -      /* Special-case the error message for "ptr.field" for the case
--    where the user has confused "." vs "->".  */
+-	 where the user has confused "." vs "->".  */
 -      rich_location richloc (line_table, loc);
 -      /* "loc" should be the "." token.  */
 -      richloc.add_fixit_replace ("->");
 -      error_at (&richloc,
--       "%qE is a pointer; did you mean to use %<->%>?",
--       datum);
+-		"%qE is a pointer; did you mean to use %<->%>?",
+-		datum);
 -      return error_mark_node;
 +      tree deref = build_indirect_ref(loc, datum, RO_UNARY_STAR);
-+      return build_component_ref (loc, deref, component, component_loc);
++      return build_component_ref(loc, deref, component, component_loc);
      }
    else if (code != ERROR_MARK)
      error_at (loc,
 diff -bruN -x '*.cache' untouched/gcc-12.1.0/gcc/config/i386/t-lensor gcc-12.1.0/gcc/config/i386/t-lensor
---- untouched/gcc-12.1.0/gcc/config/i386/t-lensor   1969-12-31 16:00:00.000000000 -0800
-+++ gcc-12.1.0/gcc/config/i386/t-lensor 2022-06-22 01:00:49.089443700 -0700
+--- untouched/gcc-12.1.0/gcc/config/i386/t-lensor	1969-12-31 16:00:00.000000000 -0800
++++ gcc-12.1.0/gcc/config/i386/t-lensor	2022-10-26 12:54:27.879524000 -0700
 @@ -0,0 +1,2 @@
 +MULTILIB_OPTIONS += mno-red-zone
 +MULTILIB_DIRNAMES += no-red-zone
 diff -bruN -x '*.cache' untouched/gcc-12.1.0/gcc/config/lensor.h gcc-12.1.0/gcc/config/lensor.h
---- untouched/gcc-12.1.0/gcc/config/lensor.h    1969-12-31 16:00:00.000000000 -0800
-+++ gcc-12.1.0/gcc/config/lensor.h  2022-06-22 01:00:17.541118300 -0700
-@@ -0,0 +1,42 @@
+--- untouched/gcc-12.1.0/gcc/config/lensor.h	1969-12-31 16:00:00.000000000 -0800
++++ gcc-12.1.0/gcc/config/lensor.h	2022-10-26 12:56:17.225632500 -0700
+@@ -0,0 +1,43 @@
 +#undef TARGET_LENSOR
 +#define TARGET_LENSOR 1
 +
-+/* Default arguments 
-+ * `-- `-lc` -> Link to C Standard Library
++/* Default arguments
++ * `-- `-lc`
++ *         Link to C Standard Library
 + */
 +#undef LIB_SPEC
 +#define LIB_SPEC "-lc"
 +
 +/* Default linker arguments
-+ * `-- `-z max-page-size=4096` -> Use 4KiB pages even on 64-bit systems.
++ * `-- `-z max-page-size=4096`
++ *        Use 4KiB pages by default, even on 64-bit systems.
 + */
 +#undef LINK_SPEC
 +#define LINK_SPEC "-z max-page-size=4096"
 +
 +/* Files that are linked before user code.
 + * The prefix is to match one of Binutils'
-+ *     /ld/configure.tgt `NATIVE_LIB_DIRS`.
-+ * The %s tells GCC to look for these 
-+ *     files in the library directory.
++ * /ld/configure.tgt `NATIVE_LIB_DIRS`.
++ * The %s tells GCC to look for these files in the library directory.
 + */
 +#undef STANDARD_STARTFILE_PREFIX
 +#define STANDARD_STARTFILE_PREFIX "/lib/"
@@ -129,8 +128,8 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/gcc/config/lensor.h gcc-12.1.0/gcc/
 +    builtin_assert ("system=posix");            \
 +  } while(0);
 diff -bruN -x '*.cache' untouched/gcc-12.1.0/gcc/config.gcc gcc-12.1.0/gcc/config.gcc
---- untouched/gcc-12.1.0/gcc/config.gcc 2022-05-06 00:30:56.000000000 -0700
-+++ gcc-12.1.0/gcc/config.gcc   2022-06-21 23:36:07.359809300 -0700
+--- untouched/gcc-12.1.0/gcc/config.gcc	2022-05-06 00:30:56.000000000 -0700
++++ gcc-12.1.0/gcc/config.gcc	2022-10-26 15:19:50.014985700 -0700
 @@ -673,6 +673,13 @@
  
  # Common parts for widely ported systems.
@@ -150,29 +149,29 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/gcc/config.gcc gcc-12.1.0/gcc/confi
  
  case ${target} in
 +x86_64-*-lensor*)
-+    tmake_file="${tmake_file} i386/t-lensor"
-+    tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h glibc-stdint.h i386/i386elf.h i386/x86-64.h lensor.h"
-+    ;;
++	tmake_file="${tmake_file} i386/t-lensor"
++	tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h glibc-stdint.h i386/i386elf.h i386/x86-64.h lensor.h"
++	;;
  aarch64*-*-elf | aarch64*-*-fuchsia* | aarch64*-*-rtems*)
-    tm_file="${tm_file} dbxelf.h elfos.h newlib-stdint.h"
-    tm_file="${tm_file} aarch64/aarch64-elf.h aarch64/aarch64-errata.h aarch64/aarch64-elf-raw.h"
+ 	tm_file="${tm_file} dbxelf.h elfos.h newlib-stdint.h"
+ 	tm_file="${tm_file} aarch64/aarch64-elf.h aarch64/aarch64-errata.h aarch64/aarch64-elf-raw.h"
 diff -bruN -x '*.cache' untouched/gcc-12.1.0/libgcc/config.host gcc-12.1.0/libgcc/config.host
---- untouched/gcc-12.1.0/libgcc/config.host 2022-05-06 00:30:59.000000000 -0700
-+++ gcc-12.1.0/libgcc/config.host   2022-06-21 23:37:13.981476500 -0700
+--- untouched/gcc-12.1.0/libgcc/config.host	2022-05-06 00:30:59.000000000 -0700
++++ gcc-12.1.0/libgcc/config.host	2022-10-26 13:06:30.969780000 -0700
 @@ -376,6 +376,10 @@
  esac
  
  case ${host} in
 +x86_64-*-lensor*)
-+    extra_parts="$extra_parts crti.o crtbegin.o crtend.o crtn.o"
-+    tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
-+    ;;
++	extra_parts="$extra_parts crti.o crtbegin.o crtend.o crtn.o"
++	tmake_file="${tmake_file} i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
++	;;
  aarch64*-*-elf | aarch64*-*-rtems*)
-    extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o"
-    extra_parts="$extra_parts crtfastmath.o"
+ 	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o"
+ 	extra_parts="$extra_parts crtfastmath.o"
 diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/libstdc++-v3/configure
---- untouched/gcc-12.1.0/libstdc++-v3/configure 2022-05-06 00:31:00.000000000 -0700
-+++ gcc-12.1.0/libstdc++-v3/configure   2022-06-21 23:44:03.503624600 -0700
+--- untouched/gcc-12.1.0/libstdc++-v3/configure	2022-05-06 00:31:00.000000000 -0700
++++ gcc-12.1.0/libstdc++-v3/configure	2022-10-26 13:05:05.606488600 -0700
 @@ -886,6 +886,7 @@
  docdir
  oldincludedir
@@ -206,11 +205,11 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
      ac_prev=sbindir ;;
    -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
 @@ -1404,7 +1415,7 @@
- for ac_var in  exec_prefix prefix bindir sbindir libexecdir datarootdir \
-        datadir sysconfdir sharedstatedir localstatedir includedir \
-        oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
--       libdir localedir mandir
-+       libdir localedir mandir runstatedir
+ for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
+ 		datadir sysconfdir sharedstatedir localstatedir includedir \
+ 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
+-		libdir localedir mandir
++		libdir localedir mandir runstatedir
  do
    eval ac_val=\$$ac_var
    # Remove trailing slashes.
@@ -229,8 +228,8 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 -#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
 +#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
    int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
-               && LARGE_OFF_T % 2147483647 == 1)
-              ? 1 : -1];
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
 @@ -5146,7 +5158,7 @@
      We can't simply define LARGE_OFF_T to be 9223372036854775807,
      since some C++ compilers masquerading as C compilers
@@ -238,8 +237,8 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 -#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
 +#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
    int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
-               && LARGE_OFF_T % 2147483647 == 1)
-              ? 1 : -1];
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
 @@ -5170,7 +5182,7 @@
      We can't simply define LARGE_OFF_T to be 9223372036854775807,
      since some C++ compilers masquerading as C compilers
@@ -247,8 +246,8 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 -#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
 +#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
    int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
-               && LARGE_OFF_T % 2147483647 == 1)
-              ? 1 : -1];
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
 @@ -5215,7 +5227,7 @@
      We can't simply define LARGE_OFF_T to be 9223372036854775807,
      since some C++ compilers masquerading as C compilers
@@ -256,8 +255,8 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 -#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
 +#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
    int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
-               && LARGE_OFF_T % 2147483647 == 1)
-              ? 1 : -1];
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
 @@ -5239,7 +5251,7 @@
      We can't simply define LARGE_OFF_T to be 9223372036854775807,
      since some C++ compilers masquerading as C compilers
@@ -265,8 +264,8 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 -#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
 +#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
    int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
-               && LARGE_OFF_T % 2147483647 == 1)
-              ? 1 : -1];
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
 @@ -12191,7 +12203,7 @@
    lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
    lt_status=$lt_dlunknown
@@ -340,7 +339,7 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
    struct same
    { typedef T2 type; };
 @@ -47933,6 +47945,5979 @@
-    ;;
+ 	;;
      esac
      ;;
 +  *-lensor*)
@@ -437,10 +436,10 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      glibcxx_ld_is_mold=yes
 +    fi
 +    ldver=`$LD --version 2>/dev/null |
-+      sed -e 's/[. ][0-9]\{8\}$//;s/.* \([^ ]\{1,\}\)$/\1/; q'`
++	   sed -e 's/[. ][0-9]\{8\}$//;s/.* \([^ ]\{1,\}\)$/\1/; q'`
 +
 +    glibcxx_gnu_ld_version=`echo $ldver | \
-+      $AWK -F. '{ if (NF<3) $3=0; print ($1*100+$2)*100+$3 }'`
++	   $AWK -F. '{ if (NF<3) $3=0; print ($1*100+$2)*100+$3 }'`
 +    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_gnu_ld_version" >&5
 +$as_echo "$glibcxx_gnu_ld_version" >&6; }
 +  fi
@@ -454,7 +453,7 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +  else
 +    glibcxx_gcsections_min_ld=21602
 +    if test x"$with_gnu_ld" = x"yes" &&
-+   test $glibcxx_gnu_ld_version -gt $glibcxx_gcsections_min_ld ; then
++	test $glibcxx_gnu_ld_version -gt $glibcxx_gcsections_min_ld ; then
 +      glibcxx_have_gc_sections=yes
 +    fi
 +  fi
@@ -497,10 +496,10 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      rm -f conftest.c
 +      touch conftest.c
 +      if $CC -c conftest.c; then
-+   if $LD --gc-sections -o conftest conftest.o 2>&1 | \
-+      grep "Warning: gc-sections option ignored" > /dev/null; then
-+     ac_gcsections=no
-+   fi
++	if $LD --gc-sections -o conftest conftest.o 2>&1 | \
++	   grep "Warning: gc-sections option ignored" > /dev/null; then
++	  ac_gcsections=no
++	fi
 +      fi
 +      rm -f conftest.c conftest.o conftest
 +    fi
@@ -620,9 +619,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -682,9 +681,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -749,9 +748,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -811,9 +810,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -878,9 +877,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -940,9 +939,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -1128,9 +1127,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -1190,9 +1189,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -1257,9 +1256,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -1319,9 +1318,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -1736,9 +1735,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -1798,9 +1797,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -1865,9 +1864,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -1927,9 +1926,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -1994,9 +1993,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -2056,9 +2055,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -2244,9 +2243,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -2306,9 +2305,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -2857,9 +2856,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -2919,9 +2918,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -2986,9 +2985,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -3048,9 +3047,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -3478,9 +3477,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -3540,9 +3539,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -3728,9 +3727,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -3790,9 +3789,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -4086,9 +4085,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -4148,9 +4147,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -4215,9 +4214,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -4277,9 +4276,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -4465,9 +4464,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -4527,9 +4526,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -4594,9 +4593,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -4656,9 +4655,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -5207,9 +5206,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -5269,9 +5268,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -5336,9 +5335,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -5398,9 +5397,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -5707,9 +5706,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -5769,9 +5768,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -5957,9 +5956,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -6019,9 +6018,9 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
 +      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 +/* end confdefs.h.  */
 +#include <math.h>
-+             #ifdef HAVE_IEEEFP_H
-+             #include <ieeefp.h>
-+             #endif
++		      #ifdef HAVE_IEEEFP_H
++		      #include <ieeefp.h>
++		      #endif
 +
 +int
 +main ()
@@ -6320,10 +6319,10 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/configure gcc-12.1.0/l
  
    # All these tests are for C++; save the language and the compiler flags.
 diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/crossconfig.m4 gcc-12.1.0/libstdc++-v3/crossconfig.m4
---- untouched/gcc-12.1.0/libstdc++-v3/crossconfig.m4    2022-05-06 00:31:00.000000000 -0700
-+++ gcc-12.1.0/libstdc++-v3/crossconfig.m4  2022-06-21 23:42:42.510895800 -0700
+--- untouched/gcc-12.1.0/libstdc++-v3/crossconfig.m4	2022-05-06 00:31:00.000000000 -0700
++++ gcc-12.1.0/libstdc++-v3/crossconfig.m4	2022-10-26 13:04:28.979947700 -0700
 @@ -183,6 +183,12 @@
-    ;;
+ 	;;
      esac
      ;;
 +  *-lensor*)
