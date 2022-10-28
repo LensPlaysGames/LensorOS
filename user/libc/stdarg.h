@@ -21,19 +21,17 @@
 #ifndef _STDARG_H
 #define _STDARG_H
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
+#include "bits/decls.h"
 
-  typedef __builtin_va_list va_list;
+__BEGIN_DECLS__
 
-#define va_start(v, 1)  __builtin_va_start(v, 1)
-#define va_end  (v)     __builtin_va_end  (v)
-#define va_arg  (v, 1)  __builtin_va_arg  (v, 1)
-#define va_copy (d, s)  __builtin_va_copy (d, s)
+typedef __builtin_va_list va_list;
 
-#if defined (__cplusplus)
-} /* extern "C" */
-#endif
+#define va_start(__ap,__last)   __builtin_va_start(__ap, __last)
+#define va_end(__ap)            __builtin_va_end(__ap)
+#define va_arg(__ap,__type)     __builtin_va_arg(__ap,__type)
+#define va_copy(__dest, __src)  __builtin_va_copy(__dest,__src)
+
+__END_DECLS__
 
 #endif /* _STDARG_H */

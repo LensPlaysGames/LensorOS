@@ -49,6 +49,8 @@
 **/tst/
 **/test/
 **/testing/
+**/cmake-build-debug/
+**/cmake-build-release/
 
 # Backups
 **/*.tmp*
@@ -77,3 +79,6 @@ OVMFbin/OVMF_VARS_LensorOS.fd
 
 # cinclude2dot
 **/include_visualization/
+
+# CLion
+.idea/

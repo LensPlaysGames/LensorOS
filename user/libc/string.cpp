@@ -22,17 +22,13 @@
 
 #include "errno.h"
 
-/// Copying
-void* memcpy(void* dst, const void* src, size_t n) {
-    void* original_dst = dst;
-    asm volatile
-        ("rep movsb"
-         : "+D"(dst), "+S"(src), "+c"(n)
-         : // No inputs
-         : "memory");
-    return original_dst;
-}
+#ifdef _LIBC_HAVE_ERMS
+bool __libc_have_erms = true;
+#else
+bool __libc_have_erms = false;
+#endif
 
+/// Copying
 void* memmove(void* dst, const void* src, size_t n) {
     unsigned char tmp[n];
     memcpy(tmp, src, n);

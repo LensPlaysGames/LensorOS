@@ -17,53 +17,57 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-
-#ifndef LENSOR_OS_LIBC_STRING_H
-#define LENSOR_OS_LIBC_STRING_H
+#ifndef _LENSOR_OS_LIBC_STRING_H
+#define _LENSOR_OS_LIBC_STRING_H
 
 #include "stddef.h"
 #include "sys/types.h"
+#include "bits/string_intrinsics.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+__BEGIN_DECLS__
 
-  /// Copying
-  void* memcpy(void*, const void*, size_t);
-  void* memmove(void*, const void*, size_t);
-  char* strcpy(char* dest, const char* src);
-  char* strncpy(char* dest, const char* src, size_t);
+/// Copying
+__forceinline void* memcpy(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n) {
+#   ifdef __SSE2__
+    __memcpy_sse_unaligned_intrin(__dest, __src, __n);
+#   else
+    __memcpy_naive(__dest, __src, __n);
+#   endif
+    return __dest;
+}
 
-  /// Concatenation
-  char* strcat(char* dest, const char* src);
-  char* strncat(char* dest, const char* src, size_t);
+void* memmove(void*, const void*, size_t);
+char* strcpy(char* __dest, const char* __src);
+char* strncpy(char* __dest, const char* __src, size_t);
 
-  /// Comparison
-  int memcmp(const void*, const void*, size_t);
-  int strcmp(const char*, const char*);
-  int strcoll(const char* s1, const char* s2);
-  int strncmp(const char*, const char*, size_t);
-  size_t strxfrm(char* dest, const char* src, size_t n);
+/// Concatenation
+char* strcat(char* __dest, const char* __src);
+char* strncat(char* __dest, const char* __src, size_t);
 
-  /// Searching
-  void* memchr(const void*, int c, size_t);
-  char* strchr(const char*, int c);
-  size_t strcspn(const char*, const char* reject);
-  char* strpbrk(const char*, const char* accept);
-  char* strrchr(const char*, int c);
-  size_t strspn(const char*, const char* accept);
-  char* strstr(const char* haystack, const char* needle);
-  char* strtok(char* str, const char* delim);
+/// Comparison
+int memcmp(const void*, const void*, size_t);
+int strcmp(const char*, const char*);
+int strcoll(const char* __s1, const char* __s2);
+int strncmp(const char*, const char*, size_t);
+size_t strxfrm(char* __dest, const char* __src, size_t __n);
 
-  /// Other
-  const void* memmem(const void* haystack, size_t haystacklen, const void* needle, size_t needlelen);
-  void* memset(void*, int, size_t);
-  char* strerror(int errnum);
-  size_t strlen(const char*);
-  size_t strnlen(const char*, size_t maxlen);
+/// Searching
+void* memchr(const void*, int __c, size_t);
+char* strchr(const char*, int __c);
+size_t strcspn(const char*, const char* __reject);
+char* strpbrk(const char*, const char* __accept);
+char* strrchr(const char*, int __c);
+size_t strspn(const char*, const char* __accept);
+char* strstr(const char* __haystack, const char* __needle);
+char* strtok(char* __str, const char* __delim);
 
-#if defined(__cplusplus)
-} /* extern "C" */
-#endif
+/// Other
+const void* memmem(const void* __haystack, size_t __haystacklen, const void* __needle, size_t __needlelen);
+void* memset(void*, int, size_t);
+char* strerror(int __errnum);
+size_t strlen(const char*);
+size_t strnlen(const char*, size_t __maxlen);
+
+__BEGIN_DECLS__
 
 #endif

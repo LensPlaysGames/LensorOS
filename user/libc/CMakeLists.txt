@@ -31,6 +31,21 @@ project(LensorOS_libc VERSION 0.0.1 LANGUAGES ASM CXX)
 # This gives language servers like `clangd` all the info they need.
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
+# Check if Enhanced REP MOVSB is supported using asm.
+# TODO: Figure out how to check this on Windows.
+if(NOT WIN32)
+    message(STATUS "Checking if Enhanced REP MOVSB is supported...")
+    execute_process(
+        COMMAND grep -q "erms" /proc/cpuinfo
+        RESULT_VARIABLE ERMS_SUPPORTED
+    )
+
+    if(ERMS_SUPPORTED EQUAL 0)
+        message(STATUS "Enhanced REP MOVSB is supported.")
+        add_compile_definitions(_LIBC_HAVE_ERMS)
+    endif()
+endif()
+
 add_library(c)
 target_include_directories(
   c
@@ -43,6 +58,7 @@ target_sources(
   crt0.s
   crti.s
   crtn.s
+  stdio.cpp
   stdlib.cpp
   string.cpp
   unistd.cpp
@@ -52,4 +68,7 @@ target_compile_options(
   c
   PRIVATE
   -fno-stack-protector
+  -nostdlib
+  -nostdinc
+  -msse2
 )
