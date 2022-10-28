@@ -68,6 +68,6 @@ char* strerror(int __errnum);
 size_t strlen(const char*);
 size_t strnlen(const char*, size_t __maxlen);
 
-__BEGIN_DECLS__
+__END_DECLS__
 
 #endif

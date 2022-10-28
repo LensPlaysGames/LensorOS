@@ -21,11 +21,11 @@
 #define _LENSOR_OS_LIBC_DECLS_H
 
 #ifdef __cplusplus
-#define __BEGIN_DECLS__
-#define __END_DECLS__
-#else
 #define __BEGIN_DECLS__ extern "C" {
 #define __END_DECLS__ }
+#else
+#define __BEGIN_DECLS__
+#define __END_DECLS__
 #endif
 
 #ifndef __forceinline
