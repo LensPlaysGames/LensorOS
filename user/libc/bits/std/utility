@@ -17,10 +17,28 @@
 * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "type_traits"
+
 #ifndef _LENSOR_OS_UTILITY
 #define _LENSOR_OS_UTILITY
 
 namespace std {
+
+/// *Very* simple std::pair.
+template <
+    typename _First, /// First member of the pair.
+    typename _Second,  /// Second member of the pair.
+
+    /// SFINAE: Make sure the types are not references.
+    typename = _Requires<_NotRef<_First>, _NotRef<_Second>>
+>
+struct pair {
+    using first_type = remove_cvref_t<_First>;
+    using second_type = remove_cvref_t<_Second>;
+
+    first_type first;
+    second_type second;
+};
 
 }
 

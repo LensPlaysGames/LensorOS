@@ -19,7 +19,8 @@
 
 #include "stdio.h"
 
-#include "bits/utils.h"
+#include "bits/std/utility"
+#include "bits/std/algorithm"
 #include "errno.h"
 #include "stdarg.h"
 #include "string.h"
@@ -178,6 +179,47 @@ bool stream_has_ungotten(FILE& stream) {
 }
 
 /// ===========================================================================
+///  File manipulation.
+/// ===========================================================================
+int stream_unget(FILE& stream, unsigned char c) {
+    if (!stream_may_unget(stream)) { return EOF; }
+
+    stream.__f_has_ungotten = true;
+    stream.__ungotten = c;
+
+    return c;
+}
+
+int stream_getpos(FILE& stream, fpos_t* pos) {
+    /// TODO: Implement.
+    void(stream);
+    void(pos);
+    return -1;
+}
+
+int stream_seek(FILE& stream, long offset, int whence) {
+    /// TODO: Implement.
+    void(stream);
+    void(offset);
+    void(whence);
+    return -1;
+}
+
+int stream_setpos(FILE& stream, const fpos_t* pos) {
+    /// TODO: Implement.
+    void(stream);
+    void(pos);
+    return -1;
+}
+
+long stream_tell(FILE& stream, long* offset) {
+    /// TODO: Implement.
+    void(stream);
+    void(offset);
+    return -1;
+}
+
+/// ===========================================================================
 ///  Reading.
 /// ===========================================================================
 /// Copy data into a buffer from a stream’s read buffer.
@@ -193,9 +235,7 @@ ssize_t stream_copy_from_read_buffer(FILE* __restrict__ stream, char* __restrict
     if (stream_rem == to_copy) { stream->__rdbuf.__start = stream->__rdbuf.__offs = 0; }
 
     /// Otherwise, move the start pointer.
-    else {
-        stream->__rdbuf.__start += to_copy;
-    }
+    else { stream->__rdbuf.__start += to_copy; }
 
     /// Return the number of bytes copied.
     return to_copy;
@@ -288,7 +328,7 @@ std::pair<size_t, bool> stream_copy_until_from_read_buffer(
     auto copied = stream_copy_from_read_buffer(stream, buf, to_copy);
 
     /// If we've filled the buffer or found `until`, we're done.
-    if (first || copied == rest) return {copied, true};
+    if (first || copied == rest) { return {copied, true}; }
     return {copied, false};
 }
 
@@ -310,7 +350,8 @@ bool stream_read_until(FILE* __restrict__ stream, char* __restrict__ buf, const 
     /// Copy data from the read buffer.
     if (stream->__rdbuf.__offs > stream->__rdbuf.__start) {
         auto [copied, done] = stream_copy_until_from_read_buffer(stream, buf, rest, until);
-        if (done) return size - rest + copied;
+        if (done || stream_at_eof(stream)) return true;
+        rest -= copied;
     }
 
     /// Read from the file descriptor.
@@ -319,7 +360,7 @@ bool stream_read_until(FILE* __restrict__ stream, char* __restrict__ buf, const 
         ssize_t n_read = read(stream->__fd, stream->__rdbuf.__buf, stream->__rdbuf.__cap);
         if (n_read == -1) {
             stream->__f_error = true;
-            return EOF;
+            return false;
         }
 
         /// If we've reached end of file, set the flag.
@@ -327,16 +368,11 @@ bool stream_read_until(FILE* __restrict__ stream, char* __restrict__ buf, const 
         stream->__rdbuf.__offs = n_read;
 
         /// Copy the data.
-        auto copied = stream_copy_from_read_buffer(stream, buf, rest);
-
-        /// We've copied all the data.
-        if (copied == rest) { return size; }
-
-        /// We've reached end of file.
-        return size - rest + copied;
+        auto [copied, done] = stream_copy_until_from_read_buffer(stream, buf, rest, until);
+        if (done) return true;
     }
 
-    return EOF;
+    return false;
 }
 
 /// ===========================================================================
@@ -717,7 +753,7 @@ char* fgets(char* __restrict__ str, int size, FILE* __restrict__ stream) {
     if (size == 0) return str;
 
     Lock lock{*stream};
-    return stream_read_until(*stream, str, size_t(size), '\n');
+    return stream_read_until(*stream, str, size_t(size), '\n') ? str : nullptr;
 }
 
 int fputc(int c, FILE* stream) {
@@ -758,7 +794,7 @@ int ungetc(int c, FILE* stream) {
     Lock lock{*stream};
 
     /// TODO: unget() isn't possible if the stream isn't open for reading.
-    return stream_unget(*stream, unsigned char(c));
+    return stream_unget(*stream, static_cast<unsigned char>(c));
 }
 
 /// ===========================================================================
@@ -831,7 +867,7 @@ void rewind(FILE* stream) {
 
     /// Rewind the file.
     stream_seek(*stream, 0, SEEK_SET);
-    stream->__flags &= ~ERROR_MASK;
+    stream->__f_error = false;
 }
 
 /// ===========================================================================
@@ -842,19 +878,24 @@ void clearerr(FILE* stream) {
     Lock lock{*stream};
 
     /// Clear the error flags.
-    stream->__flags &= ~(ERROR_MASK | EOF_MASK);
+    stream->__f_error = false;
+    stream->__f_eof = false;
 }
 
 int feof(FILE* stream) {
     /// Lock the file.
     Lock lock{*stream};
-    return stream->__flags & EOF_MASK;
+
+    /// We're logically at EOF if we're physically at EOF and there is no ungotten
+    /// character and the read buffer is empty.
+    return stream_at_eof(stream) && !stream_has_ungotten(stream) && stream->__rdbuf.__offs == 0;
 }
 
 int ferror(FILE* stream) {
     /// Lock the file.
     Lock lock{*stream};
-    return stream->__flags & ERROR_MASK;
+
+    return stream->__f_error;
 }
 
 void perror(const char* str) {
@@ -870,15 +911,5 @@ void perror(const char* str) {
 /// ===========================================================================
 ///  POSIX extensions.
 /// ===========================================================================
-
-int feof(FILE* stream) {
-    /// Lock the file.
-    Lock lock{*stream};
-    return stream_at_eof(*stream) && !stream_has_ungotten(*stream);
-}
-
-int feof_unlocked(FILE* stream) {
-    return stream_at_eof(*stream) && !stream_has_ungotten(*stream);
-}
 
 __END_DECLS__
