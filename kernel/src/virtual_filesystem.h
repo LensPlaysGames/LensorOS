@@ -59,8 +59,8 @@ public:
 
     bool close(FileDescriptor fd);
 
-    bool read(FileDescriptor fd, u8* buffer, u64 byteCount, u64 byteOffset = 0);
-    bool write(FileDescriptor fd, u8* buffer, u64 byteCount, u64 byteOffset);
+    ssz read(FileDescriptor fd, u8* buffer, usz byteCount, usz byteOffset = 0);
+    ssz write(FileDescriptor fd, u8* buffer, usz byteCount, usz byteOffset);
 
     void print_debug();
 

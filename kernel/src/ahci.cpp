@@ -27,21 +27,15 @@
 //#define DEBUG_AHCI
 
 namespace AHCI {
+    const char* port_type_strings[5] = {
+        "None",
+        "SATA",
+        "SEMB",
+        "PM",
+        "SATAPI"
+    };
     const char* port_type_string(PortType p) {
-        switch (p) {
-        case PortType::None:
-            return "None";
-        case PortType::SATA:
-            return "SATA";
-        case PortType::SEMB:
-            return "SEMB";
-        case PortType::PM:
-            return "PM";
-        case PortType::SATAPI:
-            return "SATAPI";
-        default:
-            return "Unknown Port Type";
-        };
+        return port_type_strings[p];
     }
 
     PortType get_port_type(HBAPort* port) {
@@ -144,13 +138,13 @@ namespace AHCI {
         // Check once more after break that read did not fail.
         if (Port->InterruptStatus & HBA_PxIS_TFES)
             return false;
-        
+
         return true;
     }
 
     /// Convert bytes to sectors, then read into and copy from intermediate
     /// `Buffer` to given `buffer` until all data is read and copied.
-    void PortController::read(u64 byteOffset, u64 byteCount, u8* buffer) {
+    ssz PortController::read(usz byteOffset, usz byteCount, u8* buffer) {
 #ifdef DEBUG_AHCI
         dbgmsg("[AHCI]: Port %ull -- read()  byteOffset=%ull, byteCount=%ull, buffer=%x\r\n"
                , PortNumber
@@ -164,18 +158,17 @@ namespace AHCI {
             dbgmsg("  \033[31mERRROR\033[0m: `read()`  port type not implemented: %s\r\n"
                    , port_type_string(Type)
                    );
-            return;
+            return -1;
         }
         // TODO: Actual error handling!
         if (buffer == nullptr) {
             dbgmsg_s("  \033[31mERROR\033[0m: `read()`  buffer can not be nullptr\r\n");
-            return;
+            return -1;
         }
-        // TODO: Don't reject reads over port buffer max size,
-        //        just do multiple reads and copy as you go.
+        // TODO: Don't reject reads over port buffer max size, just do multiple reads and copy as you go.
         if (byteCount > MAX_READ_BYTES) {
             dbgmsg_s("  \033[31mERROR\033[0m: `read()`  byteCount can not be larger than maximum readable bytes.\r\n");
-            return;
+            return -1;
         }
 
         u64 sector = byteOffset / BYTES_PER_SECTOR;
@@ -195,7 +188,7 @@ namespace AHCI {
 
         if (sectors * BYTES_PER_SECTOR > PORT_BUFFER_BYTES) {
             dbgmsg_s("  \033[31mERROR\033[0m: `read()`  can not read more bytes than internal buffer size.\r\n");
-            return;
+            return -1;
         }
 
         if (read_low_level(sector, sectors)) {
@@ -206,14 +199,17 @@ namespace AHCI {
             memcpy(bufferAddress, buffer, byteCount);
         }
         else dbgmsg_s("  \033[31mERROR\033[0m: `read_low_level()` FAILED\r\n");
+
+        return byteCount;
     }
 
-    void PortController::write(u64 byteOffset, u64 byteCount, u8* buffer) {
+    ssz PortController::write(usz byteOffset, usz byteCount, u8* buffer) {
         dbgmsg("[AHCI]: TODO: Implement write()  byteOffset=%ull, byteCount=%ull, buffer=%x\r\n"
                , byteOffset
                , byteCount
                , buffer
                );
+        return -1;
     }
 
     void PortController::start_commands() {
@@ -221,7 +217,7 @@ namespace AHCI {
         Port->CommandAndStatus |= HBA_PxCMD_FRE;
         Port->CommandAndStatus |= HBA_PxCMD_ST;
     }
-    
+
     void PortController::stop_commands() {
         Port->CommandAndStatus &= ~HBA_PxCMD_ST;
         Port->CommandAndStatus &= ~HBA_PxCMD_FRE;

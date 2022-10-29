@@ -33,12 +33,12 @@ public:
         , Type(type), Unique(unique)
         , Offset(startSector * sectorSize) {}
 
-    void read(u64 byteOffset, u64 byteCount, u8* buffer) final {
-        Driver->read(byteOffset + Offset, byteCount, buffer);
+    ssz read(usz byteOffset, usz byteCount, u8* buffer) final {
+        return Driver->read(byteOffset + Offset, byteCount, buffer);
     };
 
-    void write(u64 byteOffset, u64 byteCount, u8* buffer) final {
-        Driver->read(byteOffset + Offset, byteCount, buffer);
+    ssz write(usz byteOffset, usz byteCount, u8* buffer) final {
+        return Driver->read(byteOffset + Offset, byteCount, buffer);
     };
 
     GUID type_guid() { return Type; }
@@ -49,7 +49,7 @@ private:
     GUID Type;
     GUID Unique;
     /// Number of bytes to offset within storage device for start of partition.
-    u64 Offset { 0 };
+    usz Offset { 0 };
 };
 
 #endif /* LENSOR_OS_GPT_PARTITION_DRIVER_H */

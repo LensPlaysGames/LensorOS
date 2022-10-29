@@ -103,7 +103,7 @@ namespace UART {
         // Enable IRQs for data available interrupts.
         out8(INTERRUPT_PORT(COM1), INTERRUPT_PORT_DATA_AVAILABLE);
         Initialized = true;
-        
+
         // First serial messages output from the OS.
         out("\r\n\r\nWelcome to \033[5;1;33mLensorOS\033[0m\r\n\r\n");
         out("[UART]: Initialized driver\r\n  Detected '");
@@ -120,6 +120,7 @@ namespace UART {
         if (Initialized == false)
             return 0;
 
+        // TODO: We should use an actual timer instead of hardware specific "spins".
         // Wait until the UART chip flags data is ready to be read from the device.
         u16 maxSpins = (u16)1000000;
         while ((in8(LINE_STATUS_PORT(COM1)) & 0b1) == 0 && maxSpins > 0)
@@ -182,7 +183,7 @@ namespace UART {
             c++;
         }
     }
-    
+
     void out(u8* str, u64 numberOfBytes) {
         if (Initialized == false)
             return;
@@ -207,7 +208,7 @@ namespace UART {
             numberOfBytes--;
         }
     }
-    
+
     void out(u64 number) {
         out(to_string(number));
     }

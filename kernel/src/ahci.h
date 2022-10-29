@@ -188,7 +188,7 @@ namespace AHCI {
             return static_cast<u64>(CommandListBaseAddress)
                 + (static_cast<u64>(CommandListBaseAddressUpper) << 32);
         }
-        
+
         u64 frame_information_structure_base() volatile {
             return static_cast<u64>(FISBaseAddress)
                 + (static_cast<u64>(FISBaseAddressUpper) << 32);
@@ -216,8 +216,10 @@ namespace AHCI {
     };
 
     /// Host Bus Adapter Command Header
-    ///   The beginning of a Host Bus Adapter command is structured as shown.
-    // FIXME: Get rid of bitfields!
+    /// The beginning of a Host Bus Adapter command is structured as shown.
+    // FIXME: Get rid of bitfields! We would just have enough space for
+    // everything, then use functions that & and >> properly to make
+    // everything work. Not too difficult.
     struct HBACommandHeader {
         u8 CommandFISLength :5;
         u8 ATAPI            :1;
@@ -309,23 +311,25 @@ namespace AHCI {
     enum FIS_TYPE {
         /// Used by the host to send command or control to a device.
         REG_H2D   = 0x27,
-        /// Used by the device to notify the host
-        ///   that some ATA register has changed.
+        /// Used by the device to notify the host that some ATA
+        /// register has changed.
         REG_D2H   = 0x34,
         DMA_ACT   = 0x39,
         DMA_SETUP = 0x41,
         /// Used by both the host and device to send data payload.
         DATA      = 0x46,
         BIST      = 0x58,
-        /// Used by the device to notify the host that it's about to send
-        ///   (or ready to recieve) a PIO data payload.
+        /// Used by the device to notify the host that it's about to
+        /// send (or ready to recieve) a PIO data payload.
         PIO_SETUP = 0x5f,
         DEV_BITS  = 0xa1,
     };
-    
+
     /// Frame Information Structure Reegister Host to Device
     struct FIS_REG_H2D {
-        // FIXME: Get rid of bitfields!
+        // FIXME: Get rid of bitfields! Same situation here as above;
+        // replace bitfields with fields that are large enough to store
+        // them, then just write functions to access them.
         u8 Type;
         u8 PortMultiplier:4;
         u8 Reserved0:3;
@@ -379,6 +383,7 @@ namespace AHCI {
     };
 
     /// Port Type
+    /// DO NOT REORDER THESE UNLESS YOU ALSO REORDER PORT TYPE STRINGS ARRAY.
     enum PortType {
         None = 0,
         SATA = 1,
@@ -386,8 +391,10 @@ namespace AHCI {
         PM = 3,
         SATAPI = 4
     };
-
+    // This would need reordered if PortType is reordered.
+    extern const char* port_type_strings[5];
     const char* port_type_string(PortType);
+
     PortType get_port_type(HBAPort* port);
 
     // TODO: Move PortController definition to storage/device_drivers/
@@ -398,9 +405,11 @@ namespace AHCI {
 
         /// Convert bytes to sectors, then read into and copy from intermediate
         /// `Buffer` to given `buffer` until all data is read and copied.
-        void read(u64 byteOffset, u64 byteCount, u8* buffer) final;
-        void write(u64 byteOffset, u64 byteCount, u8* buffer) final;
+        ssz read(usz byteOffset, usz byteCount, u8* buffer) final;
+        ssz write(usz byteOffset, usz byteCount, u8* buffer) final;
 
+        // FIXME: I think there are a max of 32 ports, no? We can
+        // probably use something smaller than a u64 here.
         u64 port_number() { return PortNumber; }
 
     private:
