@@ -21,6 +21,9 @@
 
 #include <debug.h>
 #include <file.h>
+#include <memory/common.h>
+#include <memory/paging.h>
+#include <memory/region.h>
 #include <scheduler.h>
 #include <system.h>
 #include <virtual_filesystem.h>
@@ -101,6 +104,47 @@ void sys$5_exit(int status) {
     dbgmsg("[SYS$]: exit(%i) -- Removed process %ull\r\n", status, pid);
 }
 
+void* sys$6_map(void* address, usz size, u64 flags) {
+    (void)address;
+    (void)size;
+    (void)flags;
+
+    // Allocate physical RAM
+    // void* paddr = Memory::request_pages(size / PAGE_SIZE);
+
+    // TODO: If address is NULL, pick an address to place memory at.
+    // How do we ensure we pick an address that hasn't already been picked?
+    // I guess we should just keep track of the highest data segment
+    // address, and pick something past that.
+    // if (!address) address = pick_address();
+
+    // TODO: Add memory region to current process
+    // Scheduler::CurrentProcess->value()->add_memory_region(address, paddr, size);
+
+    // TODO: Convert given flags to Memory::PageTableFlag
+
+    // TODO: Map virtual address to physical with proper flags
+    // Don't forget to map all pages!
+    // Memory::map(address, paddr, flags);
+
+    // TODO: Return usable address.
+    return nullptr;
+}
+
+void* sys$7_unmap(void* address) {
+    (void)address;
+
+    // TODO: Search current process' memories for matching address.
+
+    // TODO: Unmap memory from current process page table.
+
+    // TODO: Free memory referred to by region (unlock in physical memory manager).
+
+    // TODO: Remove memory region from process memories list.
+    // Scheduler::CurrentProcess->value()->Memories.remove_memory_region(address);
+    return nullptr;
+}
+
 u64 num_syscalls = LENSOR_OS_NUM_SYSCALLS;
 void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     (void*)sys$0_open,
@@ -109,4 +153,6 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     (void*)sys$3_write,
     (void*)sys$4_poke,
     (void*)sys$5_exit,
+    (void*)sys$6_map,
+    (void*)sys$7_unmap,
 };

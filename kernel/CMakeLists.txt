@@ -122,6 +122,7 @@ endif()
 target_compile_options(
   Kernel PRIVATE
   -ffreestanding
+  -fno-use-cxa-atexit
   -fno-exceptions
   -fno-rtti
   -fshort-wchar

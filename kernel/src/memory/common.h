@@ -30,6 +30,6 @@
 #define TO_MiB(x) ((u64)(x) >> 20)
 #define TO_GiB(x) ((u64)(x) >> 30)
 
-constexpr u64 PAGE_SIZE = 4096;
+constexpr usz PAGE_SIZE = 4096;
 
 #endif /* LENSOR_OS_MEMORY_COMMON_H */

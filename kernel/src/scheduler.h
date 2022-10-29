@@ -23,6 +23,7 @@
 #include <integers.h>
 #include <interrupts/interrupts.h>
 #include <linked_list.h>
+#include <memory/region.h>
 
 namespace Memory {
     class PageTable;
@@ -60,13 +61,30 @@ struct CPUState {
 typedef u64 pid_t;
 
 /* TODO:
+ * |-- Each process should store a list of memory regions that are
+ * |   associated with that process. These memory regions are created
+ * |   through memory-allocating system calls (similar to `mmap`).
  * |-- File Descriptor Table (Dynamic list of process' open file descriptors).
+ * |   We should probably just store indices into `VFS::Opened` table.
  * `-- As only processes should make syscalls, should syscalls be defined in terms of process?
  */
 struct Process {
     pid_t ProcessID;
+    // TODO: Alter memory regions when process maps/unmaps memory regions.
+    SinglyLinkedList<Memory::Region> Memories;
+    // TODO: Populate open files when process opens a file (alter syscall impl.).
+    SinglyLinkedList<usz> OpenFiles;
     Memory::PageTable* CR3 { nullptr };
+    // Used to save/restore CPU state when a context switch occurs.
     CPUState CPU;
+
+    void add_memory_region(void* vaddr, void* paddr, usz size) {
+        Memories.add({vaddr, paddr, size});
+    }
+    void remove_memory_region(void* vaddr) {
+        (void)vaddr;
+        // TODO: Find region in memories by vaddr and remove it.
+    }
 };
 
 /// External symbols for 'scheduler.asm', defined in `scheduler.cpp`
