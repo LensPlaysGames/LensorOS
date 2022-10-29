@@ -26,16 +26,20 @@
 
 __BEGIN_DECLS__
 
-#define EOF -1
+#define EOF (-1)
 #define FILENAME_MAX 11
 
-typedef struct {
-int fd;
-} FILE;
+/// Opaque type representing a file.
+typedef struct _IO_File FILE;
 
 extern FILE* stdin;
 extern FILE* stdout;
 extern FILE* stderr;
+
+/// The standard requires these to be macros.
+#define stdin stdin
+#define stdout stdout
+#define stderr stderr
 
 /// File operations
 int remove(const char* pathname);
@@ -59,9 +63,11 @@ FILE* freopen(const char* pathname, const char* mode, FILE*);
 #define BUFSIZ 1024
 void setbuf(FILE*, char* buf);
 
+/// These MUST be 0, 1, 2 because of how we handle them internally.
 #define _IOFBF 0
 #define _IOLBF 1
 #define _IONBF 2
+
 int setvbuf(FILE*, char* buf, int mode, size_t);
 
 /// Formatted I/O

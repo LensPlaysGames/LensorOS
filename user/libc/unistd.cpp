@@ -29,15 +29,19 @@ extern "C" {
         return syscall(SYS_open, path);
     }
 
+    /// FIXME: close() should return an int.
     void close(int fd) {
+        /// TODO: check return value and set errno.
         syscall(SYS_close, fd);
     }
 
     ssize_t read(int fd, const void* buffer, size_t count) {
+        /// TODO: check return value and set errno.
         return syscall(SYS_read, fd, buffer, count);
     }
 
     ssize_t write(int fd, const void* buffer, size_t count) {
+        /// TODO: check return value and set errno.
         return syscall(SYS_write, fd, buffer, count);
     }
 

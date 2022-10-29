@@ -22,6 +22,13 @@
 #include "stdlib.h"
 #include "sys/syscalls.h"
 
+/// This MUST be thread-local.
+thread_local int __errno = 0;
+
+extern "C" int* __errno_location(void) {
+    return &__errno;
+}
+
 __attribute__((malloc, alloc_size(1))) void* malloc(size_t byteCount) {
     // TODO: Implement me!
     return nullptr;

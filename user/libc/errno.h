@@ -24,6 +24,10 @@
 extern "C" {
 #endif
 
+extern int* __errno_location(void);
+
+#define errno (*__errno_location())
+
 #define EPERM        1  /* Not permitted */
 #define ENOENT       2  /* No file (or directory) */
 #define ESRCH        3  /* Process doesn't exist */
