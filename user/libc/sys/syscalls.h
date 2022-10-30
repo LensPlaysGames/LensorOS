@@ -24,14 +24,23 @@
 #include "../bits/decls.h"
 #include "../bits/std/type_traits"
 
+#ifdef __lensor__
 #define SYS_open  0
 #define SYS_close 1
 #define SYS_read  2
 #define SYS_write 3
 #define SYS_poke  4
 #define SYS_exit  5
-
 #define SYS_MAXSYSCALL 6
+#else
+#define SYS_read  0
+#define SYS_write 1
+#define SYS_open  2
+#define SYS_close 3
+#define SYS_exit  60
+#define SYS_MAXSYSCALL 325
+#endif
+
 
 /// ===========================================================================
 ///  Syscall functions.
@@ -39,49 +48,92 @@
 __BEGIN_DECLS__
 #define __a uintptr_t
 
-#define _DEFINE_SYSCALL(_N, _Args, ...)                                                       \
-    __attribute__((__always_inline__, __artificial__)) inline uintptr_t __syscall##_N _Args { \
-        uintptr_t __result;                                                                   \
-        asm volatile("int $0x80"                                                              \
-                     : "=a"(__result)                                                         \
-                     : "a"(__n) __VA_OPT__(, ) __VA_ARGS__                                    \
-                     : "memory"                                                               \
-        );                                                                                    \
-        return __result;                                                                      \
+/// Syscall argument registers.
+#ifdef __lensor__
+#define _R1 "D"
+#define _R2 "S"
+#define _R3 "d"
+#define _R4 "rcx"
+#define _R5 "r8"
+#define _R6 "r9"
+#define _SYSCALL "int $0x80"
+#elif defined(__linux__)
+#define _R1 "D"
+#define _R2 "S"
+#define _R3 "d"
+#define _R4 "r10"
+#define _R5 "r8"
+#define _R6 "r9"
+#define _SYSCALL "syscall"
+#else
+#error "Unsupported platform."
+#endif
+
+#define _DEFINE_SYSCALL(_N, _Args, ...)                                                 \
+    __attribute__((__always_inline__, __artificial__)) inline __a __syscall##_N _Args { \
+        __a __result;                                                                   \
+        __asm__ __volatile__                                                            \
+            (_SYSCALL "\n"                                                              \
+             : "=a"(__result)                                                           \
+             : "a"(__n) __VA_OPT__(, ) __VA_ARGS__                                      \
+             : "memory"                                                                 \
+        );                                                                              \
+        return __result;                                                                \
     }
 
 #define _DEFINE_SYSCALL_ARGS(...) (__a __n __VA_OPT__(, ) __VA_ARGS__)
 
 _DEFINE_SYSCALL(0, _DEFINE_SYSCALL_ARGS())
-_DEFINE_SYSCALL(1, _DEFINE_SYSCALL_ARGS(__a __1), "D"(__1))
-_DEFINE_SYSCALL(2, _DEFINE_SYSCALL_ARGS(__a __1, __a __2), "D"(__1), "S"(__2))
-_DEFINE_SYSCALL(3, _DEFINE_SYSCALL_ARGS(__a __1, __a __2, __a __3), "D"(__1), "S"(__2), "d"(__3))
-_DEFINE_SYSCALL(4, _DEFINE_SYSCALL_ARGS(__a __1, __a __2, __a __3, __a __4), "D"(__1), "S"(__2), "d"(__3), "c"(__4))
+_DEFINE_SYSCALL(1, _DEFINE_SYSCALL_ARGS(__a __1), _R1(__1))
+_DEFINE_SYSCALL(2, _DEFINE_SYSCALL_ARGS(__a __1, __a __2), _R1(__1), _R2(__2))
+_DEFINE_SYSCALL(3, _DEFINE_SYSCALL_ARGS(__a __1, __a __2, __a __3), _R1(__1), _R2(__2), _R3(__3))
+
+__attribute__((__always_inline__, __artificial__))
+inline __a __syscall4(__a __n, __a __1, __a __2, __a __3, __a __4) {
+    __a __result;
+    __asm__ __volatile__
+        ("movq %0, %%" _R4 "\n"
+         _SYSCALL "\n"
+         : "=a"(__result)
+         : "a"(__n), _R1(__1), _R2(__2), _R3(__3), "r"(__4)
+         : "memory", _R4);
+    return __result;
+}
 
 __attribute__((__always_inline__, __artificial__))
 inline __a __syscall5(__a __n, __a __1, __a __2, __a __3, __a __4, __a __5) {
     __a __result;
-    asm volatile("mov %0, %%r8\n"
-                 "int $0x80\n"
-                 : "=a"(__result)
-                 : "a"(__n), "D"(__1), "S"(__2), "d"(__3), "c"(__4), "r"(__5)
-                 : "memory", "r8");
+    __asm__ __volatile__
+        ("movq %0, %%" _R4 "\n"
+         "movq %1, %%" _R5 "\n"
+         _SYSCALL "\n"
+         : "=a"(__result)
+         : "a"(__n), _R1(__1), _R2(__2), _R3(__3), "r"(__4), "r"(__5)
+         : "memory", _R4, _R5);
     return __result;
 }
 
 __attribute__((__always_inline__, __artificial__))
 inline __a __syscall6(__a __n, __a __1, __a __2, __a __3, __a __4, __a __5, __a __6) {
     __a __result;
-    asm volatile("mov %0, %%r8\n"
-                 "mov %1, %%r9\n"
-                 "int $0x80\n"
-                 : "=a"(__result)
-                 : "a"(__n), "D"(__1), "S"(__2), "d"(__3), "c"(__4), "r"(__5), "r"(__6)
-                 : "memory", "r8", "r9");
+    __asm__ __volatile__
+        ("movq %0, %%" _R4 "\n"
+         "movq %1, %%" _R5 "\n"
+         "movq %2, %%" _R6 "\n"
+         _SYSCALL "\n"
+         : "=a"(__result)
+         : "a"(__n), _R1(__1), _R2(__2), _R3(__3), "r"(__4), "r"(__5), "r"(__6)
+         : "memory", _R4, _R5, _R6);
     return __result;
 }
 
 #undef __a
+#undef _R1
+#undef _R2
+#undef _R3
+#undef _R4
+#undef _R5
+#undef _R6
 
 __END_DECLS__
 

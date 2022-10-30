@@ -1,0 +1,29 @@
+/opt/clion/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_MAKE_PROGRAM=/opt/clion/bin/ninja/linux/ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -G Ninja -S /home/ae/projects/forks/LensorOS/user/libc -B /home/ae/projects/forks/LensorOS/user/libc/cmake-build-relwithdebinfo
+-- Cross compiling LensorOS libc
+-- The ASM compiler identification is unknown
+-- Didn't find assembler
+-- The CXX compiler identification is unknown
+CMake Error at CMakeLists.txt:34 (project):
+  No CMAKE_ASM_COMPILER could be found.
+
+  Tell CMake where to find the compiler by setting either the environment
+  variable "ASM" or the CMake cache entry CMAKE_ASM_COMPILER to the full path
+  to the compiler, or to the compiler name if it is in the PATH.
+
+
+-- Warning: Did not find file Compiler/-ASM
+CMake Error at CMakeLists.txt:34 (project):
+  The CMAKE_CXX_COMPILER:
+
+    /home/ae/projects/forks/LensorOS/user/libc/cmake-build-relwithdebinfo/g++
+
+  is not a full path to an existing compiler tool.
+
+  Tell CMake where to find the compiler by setting either the environment
+  variable "CXX" or the CMake cache entry CMAKE_CXX_COMPILER to the full path
+  to the compiler, or to the compiler name if it is in the PATH.
+
+
+-- Configuring incomplete, errors occurred!
+See also "/home/ae/projects/forks/LensorOS/user/libc/cmake-build-relwithdebinfo/CMakeFiles/CMakeOutput.log".
+See also "/home/ae/projects/forks/LensorOS/user/libc/cmake-build-relwithdebinfo/CMakeFiles/CMakeError.log".

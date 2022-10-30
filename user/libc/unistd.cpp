@@ -44,10 +44,4 @@ extern "C" {
         /// TODO: check return value and set errno.
         return syscall<ssize_t>(SYS_write, fd, buffer, count);
     }
-
-    __attribute__((noreturn)) void exit(int status) {
-        write(STDOUT_FILENO, "EXITING!\r\n", 10);
-        syscall(SYS_exit, status);
-        while (1);
-    }
 }

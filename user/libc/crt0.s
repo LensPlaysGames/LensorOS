@@ -25,19 +25,8 @@ _start:
     pushq %rbp
     movq %rsp, %rbp
 
-    ;;# Store argc/argv
-    pushq %rsi
-    pushq %rdi
-
-    ;;# Run global constructors.
-    call _init
-
-    popq %rdi
-    popq %rsi
-
-    ;;# Run the code!
-    call main
+    call __libc_run_main
 
     ;;# Call exit with return status from main as argument
     movq %rax, %rdi
-    call exit
+    call _Exit

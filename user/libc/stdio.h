@@ -40,6 +40,10 @@ extern FILE* stderr;
 #define stdout stdout
 #define stderr stderr
 
+/// Initialise stdio.
+void __stdio_init();
+void __stdio_fini();
+
 /// File operations
 int remove(const char* __pathname);
 int rename(const char* __oldpath, const char* __newpath);

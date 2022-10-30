@@ -27,15 +27,17 @@
 extern "C" {
 #endif
 
+#ifdef __lensor__
 #define STDOUT_FILENO 0
+#else
+#define STDOUT_FILENO 1
+#endif
 
     int open(const char* path, int flags, int mode);
     void close(int fd);
 
     ssize_t read(int fd, const void* buffer, size_t count);
     ssize_t write(int fd, const void* buffer, size_t count);
-
-  __attribute__((noreturn)) void exit(int status);
 
 #if defined (__cplusplus)
 } /* extern "C" */

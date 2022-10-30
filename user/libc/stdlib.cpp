@@ -17,23 +17,31 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "stddef.h"
 #include "stdlib.h"
+
+#include "bits/file_struct.h"
+#include "bits/std/algorithm"
+#include "bits/cdtors.h"
+#include "errno.h"
+#include "stddef.h"
+#include "stdio.h"
 #include "string.h"
 #include "sys/syscalls.h"
-#include "stdio.h"
-#include "errno.h"
+#include "unistd.h"
 
-#include "bits/std/algorithm"
-
+/// ===========================================================================
+///  STDLIB Implementation.
+/// ===========================================================================
 namespace {
-
+/// ===========================================================================
+///  Globals.
+/// ===========================================================================
 /// This MUST be thread-local.
-thread_local int __errno = 0;
+thread_local int __errno { 0 };
 
 /// Temporary workaround to allow dynamic memory allocation.
 char heap_base[1'000'000];
-char* heap_ptr = heap_base;
+char* heap_ptr;
 
 /// Keep track of allocated blocks.
 struct alignas (max_align_t) alloc_header {
@@ -44,14 +52,17 @@ struct alignas (max_align_t) alloc_header {
 };
 
 /// Keep track of the last allocated block.
-alloc_header* alloc_list = nullptr;
+alloc_header* alloc_list;
 
 /// Keep track of the last freed block.
-alloc_header* free_list = nullptr;
+alloc_header* free_list;
 
 /// Free list for alloc_headers.
-alloc_header* free_headers = nullptr;
+alloc_header* free_headers;
 
+/// ===========================================================================
+///  Malloc
+/// ===========================================================================
 /// Check if the heap has enough space for a new allocation.
 bool heap_has_space(size_t size) {
     return heap_ptr + size < heap_base + sizeof(heap_base);
@@ -169,14 +180,38 @@ __attribute__((alloc_size(2))) void* realloc_impl(void* ptr, size_t size) {
     return new_ptr;
 }
 
+/// ===========================================================================
+///  Initialisation
+/// ===========================================================================
+[[gnu::constructor(_CDTOR_MALLOC)]] void init() {
+    __errno = 0;
+
+    /// Initialise the heap.
+    heap_ptr = heap_base;
+    alloc_list = nullptr;
+    free_list = nullptr;
+    free_headers = nullptr;
+}
+
+[[gnu::destructor(_CDTOR_MALLOC)]] void fini() {
+    /// Currently, this does nothing, but one could, for instance, check
+    /// for memory leaks here.
+}
+
 } // namespace
 
+/// ===========================================================================
+///  C Interface
+/// ===========================================================================
 __BEGIN_DECLS__
 
 int* __errno_location(void) {
     return &__errno;
 }
 
+/// ===========================================================================
+///  Assert and Exit
+/// ===========================================================================
 /// Report a failed assertion and abort.
 __attribute__((__noreturn__)) void __assert_abort(
     const char *expr,
@@ -184,7 +219,8 @@ __attribute__((__noreturn__)) void __assert_abort(
     unsigned line,
     const char *func
 ) {
-    fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s\n", file, func, line, expr);
+    //fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s\n", file, func, line, expr);
+    write(STDOUT_FILENO, "ASSERTION FAILED\n", 17);
     abort();
 }
 
@@ -197,10 +233,37 @@ __attribute__((__noreturn__)) void __assert_abort_msg(
     unsigned int line,
     const char *func
 ) {
-    fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s: %s\n", file, func, line, expr, msg);
+    //fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s: %s\n", file, func, line, expr, msg);
+    write(STDOUT_FILENO, "ASSERTION FAILED WITH MESSAGE\n", 30);
     abort();
 }
 
+__attribute__((noreturn)) void __libc_exit(int);
+
+__attribute__((noreturn)) void abort() {
+    syscall(SYS_exit, -1);
+    __builtin_unreachable();
+}
+
+__attribute__((__noreturn__)) void exit(int status) {
+    /// TODO: call atexit handlers.
+    __libc_exit(status);
+}
+
+__attribute__((__noreturn__)) void quick_exit(int status) {
+    /// TODO: call at_quick_exit handlers.
+    __libc_exit(status);
+}
+
+__attribute__((__noreturn__)) void _Exit(int status) {
+    /// TODO: call at_quick_exit handlers.
+    syscall(SYS_exit, status);
+    __builtin_unreachable();
+}
+
+/// ===========================================================================
+///  Malloc Interface.
+/// ===========================================================================
 __attribute__((malloc, alloc_size(1))) void* malloc(size_t bytes) {
     /// Round up to the maximum alignment.
     bytes = align_to_max_align_t(bytes);
@@ -292,11 +355,6 @@ void free(void* ptr) {
     block->next = free_list;
     if (free_list) { free_list->prev = block; }
     free_list = block;
-}
-
-__attribute__((noreturn)) void abort() {
-    syscall(SYS_exit, -1);
-    while (1);
 }
 
 __END_DECLS__

@@ -25,6 +25,8 @@
 #include "bits/std/new"
 #include "bits/std/utility"
 #include "bits/stub.h"
+#include "bits/file_struct.h"
+#include "bits/cdtors.h"
 #include "errno.h"
 #include "stdarg.h"
 #include "stdlib.h"
@@ -34,56 +36,6 @@
 enum : size_t {
     BUFFERED_READ_THRESHOLD = 64,
 };
-
-/// ===========================================================================
-///  File struct.
-/// ===========================================================================
-__BEGIN_DECLS__
-typedef int _IO_fd_t;
-typedef size_t _IO_size_t;
-typedef uint16_t _IO_flags_t;
-
-/// Recursive mutex because flockfile() is a thing.
-typedef std::recursive_mutex _IO_lock_t;
-
-typedef struct _IO_writebuf_t {
-    char* __buf;
-    _IO_size_t __offs;
-    _IO_size_t __cap;
-} _IO_writebuf_t;
-
-typedef struct _IO_readbuf_t {
-    char* __buf;
-    _IO_size_t __start;
-    _IO_size_t __offs;
-    _IO_size_t __cap;
-} _IO_readbuf_t;
-
-struct _IO_File {
-    _IO_writebuf_t __wbuf{};
-    _IO_readbuf_t __rdbuf{};
-    _IO_File* __next{};
-    _IO_File* __prev{};
-    _IO_lock_t __mutex{};
-    _IO_fd_t __fd = -1;
-
-    _IO_flags_t __f_buffering : 2;    /// Buffering mode.
-    _IO_flags_t __f_error : 1;        /// Error indicator.
-    _IO_flags_t __f_eof : 1;          /// End-of-file indicator.
-    _IO_flags_t __f_has_ungotten : 1; /// Whether ungetc() has been called.
-    _IO_flags_t __f_unused : 11;      /// Unused.
-
-    char __ungotten{}; /// The character that ungetc() should insert.
-
-    _IO_File() {
-        __f_buffering = 0;
-        __f_error = 0;
-        __f_eof = 0;
-        __f_has_ungotten = 0;
-        __f_unused = 0;
-    }
-};
-__END_DECLS__
 
 /// ===========================================================================
 ///  File I/O Implementation.
@@ -120,30 +72,6 @@ enum Buffering : _IO_flags_t {
 /// ===========================================================================
 _IO_File* open_files;
 std::mutex big_file_lock;
-
-/// Forward decls for init()/fini().
-FILE* stream_create(_IO_fd_t fd);
-void stream_create(FILE* stream, _IO_fd_t fd);
-void stream_delete(FILE&& stream);
-
-/// Initialise the standard streams.
-[[gnu::constructor(1)]] void init() {
-    /// TODO: stdin and stdout are fully buffered at program startup; stderr is not fully buffered.
-    stdout = stream_create(STDOUT_FILENO);
-
-    /// FIXME: These should be separate streams eventually.
-    open_files = stdin = stderr = stdout;
-}
-
-/// Flush the streams on exit.
-[[gnu::destructor(1)]] void fini() {
-    /// Flush all open streams and close them.
-    while (open_files) {
-        auto f = open_files;
-        open_files = open_files->__next;
-        stream_delete(std::move(*f));
-    }
-}
 
 /// ===========================================================================
 ///  Implementation.
@@ -660,6 +588,25 @@ __BEGIN_DECLS__
 FILE* stdin;
 FILE* stdout;
 FILE* stderr;
+
+/// Initialise the standard streams.
+[[gnu::constructor(_CDTOR_STDIO)]] void __stdio_init() {
+    /// TODO: stdin and stdout are fully buffered at program startup; stderr is not fully buffered.
+    stdout = stream_create(STDOUT_FILENO);
+
+    /// FIXME: These should be separate streams eventually.
+    open_files = stdin = stderr = stdout;
+}
+
+/// Flush the streams on exit.
+[[gnu::destructor(_CDTOR_STDIO)]] void __stdio_fini() {
+    /// Flush all open streams and close them.
+    while (open_files) {
+        auto f = open_files;
+        open_files = open_files->__next;
+        stream_delete(std::move(*f));
+    }
+}
 
 /// ===========================================================================
 ///  7.21.4 Operations on files.

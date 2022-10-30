@@ -58,14 +58,15 @@ extern "C" {
   __attribute__((alloc_size(2))) void* __mextend(void* ptr, size_t);
 
   /// Environment
-  __attribute__((noreturn)) void abort(void);
   int atexit(void (*function)(void));
   int at_quick_exit(void (*function)(void));
-  __attribute__((noreturn)) void exit(int status); // defined in "unistd.cpp"
   char* getenv(const char* name);
-  __attribute__((noreturn)) void quick_exit(int status);
   int system(const char* command);
-  __attribute__((noreturn)) void _Exit(int status);
+
+  __attribute__((__noreturn__)) void abort(void);
+  __attribute__((__noreturn__)) void exit(int status);
+  __attribute__((__noreturn__)) void quick_exit(int status);
+  __attribute__((__noreturn__)) void _Exit(int status);
 
   /// Searching and sorting
   void* bsearch(const void* key, const void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*));

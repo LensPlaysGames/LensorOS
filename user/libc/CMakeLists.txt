@@ -22,8 +22,14 @@ cmake_minimum_required(VERSION 3.14)
 # TODO:
 # `-- Create target that copies built libraries and system headers to sysroot for cross compilation
 
-# Use cross compiler.
-set( CMAKE_TOOLCHAIN_FILE "../../kernel/lensor_gnu_toolchain.cmake" )
+
+if (NOT LENSOR_OS_LIBC_BUILD_HOST)
+    message(STATUS "Cross compiling LensorOS libc")
+    # Use cross compiler.
+    set( CMAKE_TOOLCHAIN_FILE "../../kernel/lensor_gnu_toolchain.cmake" )
+else()
+    message(STATUS "Building LensorOS libc on host")
+endif()
 
 project(LensorOS_libc VERSION 0.0.1 LANGUAGES ASM CXX)
 
@@ -60,6 +66,7 @@ target_sources(
   crt0.s
   crti.s
   crtn.s
+  init.cpp
   stdio.cpp
   stdlib.cpp
   string.cpp
@@ -71,6 +78,7 @@ target_compile_options(
   -fno-stack-protector
   -fno-exceptions
   -fdiagnostics-color=always
+  -fPIE
   -nostdlib
   -nostdinc
   -msse2
@@ -84,8 +92,18 @@ target_compile_options(
   -Wno-unused-variable
 )
 
+if (LENSOR_OS_LIBC_BUILD_HOST)
+    target_compile_options(
+        c
+        PRIVATE
+        -g
+        -O0
+    )
+endif()
+
 set(ROOT "${PROJECT_SOURCE_DIR}/../../root")
 
+if (NOT LENSOR_OS_LIBC_BUILD_HOST)
 add_custom_target(
   install-libc ALL
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:c> ${ROOT}/lib
@@ -108,3 +126,4 @@ add_custom_target(
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/bits" "${ROOT}/inc/bits"
   DEPENDS c
 )
+endif()
