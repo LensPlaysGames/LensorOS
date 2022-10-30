@@ -15,7 +15,7 @@ RTC; Real-Time Clock
 
 Most of the data here was found at osdev:
   https://wiki.osdev.org/RTC
-  
+
 Any holes in the information on osdev were supplemented with this very technical, very helpful document:
   https://web.archive.org/web/20180102225942/http://www.walshcomptech.com/ohlandl/config/cmos_bank_0.html
 

@@ -24,8 +24,11 @@
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/region.h>
+#include <memory/virtual_memory_manager.h>
+#include <rtc.h>
 #include <scheduler.h>
 #include <system.h>
+#include <time.h>
 #include <virtual_filesystem.h>
 
 // Uncomment the following directive for extra debug information output.
@@ -105,54 +108,115 @@ void sys$5_exit(int status) {
 }
 
 void* sys$6_map(void* address, usz size, u64 flags) {
-    (void)address;
-    (void)size;
-    (void)flags;
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 6, "map");
+    dbgmsg("  address: %p\r\n"
+           "  size:    %ul\r\n" // TODO: %ul is wrong, we need a size type format
+           "  flags:   %ull\r\n"
+           "\r\n"
+           , address
+           , size
+           , flags
+           );
+#endif /* #ifdef DEBUG_SYSCALLS */
+
+    usz pages = 1;
+    pages += size / PAGE_SIZE;
 
     // Allocate physical RAM
-    // void* paddr = Memory::request_pages(size / PAGE_SIZE);
+    void* paddr = Memory::request_pages(pages);
 
-    // TODO: If address is NULL, pick an address to place memory at.
-    // How do we ensure we pick an address that hasn't already been picked?
-    // I guess we should just keep track of the highest data segment
-    // address, and pick something past that.
-    // if (!address) address = pick_address();
+    // If address is NULL, pick an address to place memory at.
+    if (!address) {
+        address = (void*)Scheduler::CurrentProcess->value()->next_region_vaddr;
+        Scheduler::CurrentProcess->value()->next_region_vaddr += pages * PAGE_SIZE;
+    }
 
-    // TODO: Add memory region to current process
-    // Scheduler::CurrentProcess->value()->add_memory_region(address, paddr, size);
+    // Add memory region to current process
+    Scheduler::CurrentProcess->value()->add_memory_region(address, paddr, size);
 
     // TODO: Convert given flags to Memory::PageTableFlag
+    // TODO: Figure out what flags we are given (libc, ig).
 
-    // TODO: Map virtual address to physical with proper flags
+    // Map virtual address to physical with proper flags
     // Don't forget to map all pages!
-    // Memory::map(address, paddr, flags);
+    usz vaddr_it = (usz)address;
+    usz paddr_it = (usz)paddr;
+    for (usz i = 0; i < pages; ++i) {
+        Memory::map((void*)vaddr_it, (void*)paddr_it, flags);
+        vaddr_it = vaddr_it + PAGE_SIZE;
+        paddr_it = paddr_it + PAGE_SIZE;
+    }
 
-    // TODO: Return usable address.
-    return nullptr;
+    // Return usable address.
+    return address;
 }
 
-void* sys$7_unmap(void* address) {
-    (void)address;
+void sys$7_unmap(void* address) {
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 7, "unmap");
+    dbgmsg("  address: %p\r\n"
+           "\r\n"
+           , address
+           );
+#endif /* #ifdef DEBUG_SYSCALLS */
 
-    // TODO: Search current process' memories for matching address.
+    // Search current process' memories for matching address.
+    SinglyLinkedListNode<Memory::Region>* region = Scheduler::CurrentProcess->value()->Memories.head();
+    for (; region; region = region->next()) {
+        if (region->value().vaddr == address) {
+            break;
+        }
+    }
 
-    // TODO: Unmap memory from current process page table.
+    // Ignore an attempt to unmap invalid address.
+    if (!region) return;
 
-    // TODO: Free memory referred to by region (unlock in physical memory manager).
+    // Unmap memory from current process page table.
+    // Don't forget to unmap all pages!
+    usz vaddr_it = (usz)address;
+    for (usz i = 0; i < region->value().length; ++i) {
+        Memory::unmap((void*)vaddr_it);
+        vaddr_it = vaddr_it + PAGE_SIZE;
+    }
 
-    // TODO: Remove memory region from process memories list.
-    // Scheduler::CurrentProcess->value()->Memories.remove_memory_region(address);
-    return nullptr;
+    // Free physical memory referred to by region.
+    Memory::free_pages(region->value().paddr, region->value().pages);
+
+    // Remove memory region from process memories list.
+    Scheduler::CurrentProcess->value()->remove_memory_region(address);
+    return;
+}
+
+void sys$8_time(Time::tm* time) {
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 8, "time");
+    dbgmsg("  tm: %p\r\n"
+           "\r\n"
+           , time
+           );
+#endif /* #ifdef DEBUG_SYSCALLS */
+
+    if (!time) { return; }
+    Time::fill_tm(time);
 }
 
 u64 num_syscalls = LENSOR_OS_NUM_SYSCALLS;
 void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
+    // FILE STUFFS
     (void*)sys$0_open,
     (void*)sys$1_close,
     (void*)sys$2_read,
     (void*)sys$3_write,
     (void*)sys$4_poke,
+
+    // PROCESSES & SCHEDULING
     (void*)sys$5_exit,
+
+    // MEMORY
     (void*)sys$6_map,
     (void*)sys$7_unmap,
+
+    // MISCELLANEOUS
+    (void*)sys$8_time,
 };

@@ -21,12 +21,22 @@
 #define LENSOR_OS_MEMORY_REGION_H
 
 #include <integers.h>
+#include <memory/common.h>
 
 namespace Memory {
     struct Region {
-        void* vaddr;
-        void* paddr;
-        usz length;
+        void* vaddr = 0;
+        void* paddr = 0;
+        usz length  = 0;
+        usz pages   = 0;
+
+        Region(void* vaddress, void* paddress, usz bytes) {
+            vaddr  = vaddress;
+            paddr  = paddress;
+            length = bytes;
+            pages  = 1;
+            pages += bytes / PAGE_SIZE;
+        }
     };
 }
 

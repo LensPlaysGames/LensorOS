@@ -130,6 +130,8 @@ namespace ELF {
         stack_flags |= (size_t)Memory::PageTableFlag::Present;
         stack_flags |= (size_t)Memory::PageTableFlag::ReadWrite;
         stack_flags |= (size_t)Memory::PageTableFlag::UserSuper;
+
+        // TODO: Keep track of allocated memory regions for process.
         // Load PT_LOAD program headers, mapping to vaddr as necessary.
         u64 programHeadersTableSize = elfHeader.e_phnum * elfHeader.e_phentsize;
         SmartPtr<Elf64_Phdr[]> programHeaders(new Elf64_Phdr[elfHeader.e_phnum], elfHeader.e_phnum);
@@ -211,6 +213,13 @@ namespace ELF {
         u64 newStackTop = newStackBottom + UserProcessStackSize;
         for (u64 t = newStackBottom; t < newStackTop; t += PAGE_SIZE)
             map(newPageTable, (void*)t, (void*)t, stack_flags);
+
+        // Keep track of stack, as it is a memory region that remains
+        // for the duration of the process, and should only be freed
+        // when it exits.
+        process->add_memory_region((void*)newStackBottom,
+                                   (void*)newStackBottom,
+                                   UserProcessStackSize);
 
         // New page map.
         process->CR3 = newPageTable;
