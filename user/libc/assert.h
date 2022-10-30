@@ -20,6 +20,8 @@
 #ifndef _LENSOR_OS_ASSERT_H
 #define _LENSOR_OS_ASSERT_H
 
+__BEGIN_DECLS__
+
 /// Report a failed assertion.
 __attribute__((__noreturn__)) void __assert_abort(
     const char *expr,
@@ -36,6 +38,8 @@ __attribute__((__noreturn__)) void __assert_abort_msg(
     unsigned int line,
     const char *func
 );
+
+__END_DECLS__
 
 /// Re-define assert() every time this header is included.
 #ifdef assert
