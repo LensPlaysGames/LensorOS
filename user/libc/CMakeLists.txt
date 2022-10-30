@@ -60,6 +60,7 @@ target_include_directories(
   PUBLIC
   .
 )
+
 target_sources(
   c
   PUBLIC
@@ -72,24 +73,30 @@ target_sources(
   string.cpp
   unistd.cpp
 )
+
 target_compile_options(
   c
   PRIVATE
-  -fno-stack-protector
-  -fno-exceptions
   -fdiagnostics-color=always
   -fPIE
-  -nostdlib
-  -nostdinc
   -msse2
   -Wall
   -Wextra
   -Wconversion
   -pedantic
   -Werror=return-type
-  -Wno-prio-ctor-dtor
   -Wno-unused-parameter
   -Wno-unused-variable
+)
+
+target_compile_options(
+    c
+    PUBLIC
+    -fno-stack-protector
+    -fno-exceptions
+    -nostdlib
+    -nostdinc
+    -Wno-prio-ctor-dtor
 )
 
 if (LENSOR_OS_LIBC_BUILD_HOST)
