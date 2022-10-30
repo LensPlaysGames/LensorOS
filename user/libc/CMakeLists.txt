@@ -96,7 +96,6 @@ target_compile_options(
     -fno-exceptions
     -nostdlib
     -nostdinc
-    -Wno-prio-ctor-dtor
 )
 
 if (LENSOR_OS_LIBC_BUILD_HOST)

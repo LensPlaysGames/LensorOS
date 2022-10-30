@@ -183,6 +183,8 @@ __attribute__((alloc_size(2))) void* realloc_impl(void* ptr, size_t size) {
 /// ===========================================================================
 ///  Initialisation
 /// ===========================================================================
+_PushIgnoreWarning("-Wprio-ctor-dtor")
+
 [[gnu::constructor(_CDTOR_MALLOC)]] void init() {
     __errno = 0;
 
@@ -198,6 +200,7 @@ __attribute__((alloc_size(2))) void* realloc_impl(void* ptr, size_t size) {
     /// for memory leaks here.
 }
 
+_PopWarnings();
 } // namespace
 
 /// ===========================================================================

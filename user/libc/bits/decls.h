@@ -33,31 +33,22 @@
 #    define __END_DECLS__
 #endif
 
+/// Attributes
 #ifndef __forceinline
 #    define __forceinline __inline__ __attribute__((__always_inline__))
 #endif
 
-#ifndef _Deprecated
-#    define _Deprecated(_Msg) __attribute__((__deprecated__(_Msg)))
-#endif
+#define _Deprecated(_Msg) __attribute__((__deprecated__(_Msg)))
+#define _Format(_Fmt, ...) __attribute__((__format__(_Fmt, __VA_ARGS__)))
 
-#ifndef _Format
-#    define _Format(_Fmt, ...) __attribute__((__format__(_Fmt, __VA_ARGS__)))
-#endif
+/// Pragmas
+#define __Pragma(_Str) _Pragma(#_Str)
 
-#ifndef __Pragma
-#    define __Pragma(_Str) _Pragma(#_Str)
-#endif
+#define _PushIgnoreWarning(_W)      \
+    _Pragma("GCC diagnostic push") \
+    __Pragma(GCC diagnostic ignored _W)
 
-#ifndef _IgnoreWarning
-#    define _IgnoreWarning(_W, _X) __extension__({                       \
-        _Pragma("GCC diagnostic push");                                  \
-        __Pragma(GCC diagnostic ignored _W); \
-        __typeof__(_X) __X = _X;                                         \
-        _Pragma("GCC diagnostic pop");                                   \
-        __X;                                                             \
-    })
-#endif
+#define _PopWarnings() _Pragma("GCC diagnostic pop")
 
 /// Some C++ compilers don't define _Bool.
 #ifdef __cplusplus

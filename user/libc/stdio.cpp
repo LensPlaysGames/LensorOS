@@ -458,7 +458,9 @@ bool stream_set_buffering(FILE& stream, Buffering buffering, char*, size_t size)
 
         case LineBuffered:
         case FullyBuffered:
-            _IgnoreWarning("-Wconversion", stream.__f_buffering = buffering);
+            _PushIgnoreWarning("-Wconversion")
+            stream.__f_buffering = buffering;
+            _PopWarnings()
 
             /// According to the standard, `size` is only supposed to be a hint
             /// if `buffer` is nullptr, so we should ignore it if it's too small.
@@ -589,6 +591,8 @@ FILE* stdin;
 FILE* stdout;
 FILE* stderr;
 
+_PushIgnoreWarning("-Wprio-ctor-dtor")
+
 /// Initialise the standard streams.
 [[gnu::constructor(_CDTOR_STDIO)]] void __stdio_init() {
     /// TODO: stdin and stdout are fully buffered at program startup; stderr is not fully buffered.
@@ -607,6 +611,8 @@ FILE* stderr;
         stream_delete(std::move(*f));
     }
 }
+
+_PopWarnings()
 
 /// ===========================================================================
 ///  7.21.4 Operations on files.
@@ -760,7 +766,9 @@ int snprintf(char* __restrict__ str, size_t size, const char* __restrict__ forma
 int sprintf(char* __restrict__ str, const char* __restrict__ format, ...) {
     va_list args;
     va_start(args, format);
-    auto ret = _IgnoreWarning("-Wdeprecated-declarations", vsprintf(str, format, args));
+    _PushIgnoreWarning("-Wdeprecated-declarations")
+    auto ret = vsprintf(str, format, args);
+    _PopWarnings()
     va_end(args);
     return ret;
 }
