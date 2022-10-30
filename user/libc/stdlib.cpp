@@ -243,10 +243,7 @@ __attribute__((__noreturn__)) void __assert_abort_msg(
 
 __attribute__((noreturn)) void __libc_exit(int);
 
-__attribute__((noreturn)) void abort() {
-    syscall(SYS_exit, -1);
-    __builtin_unreachable();
-}
+__attribute__((noreturn)) void abort() { _Exit(-1); }
 
 __attribute__((__noreturn__)) void exit(int status) {
     /// TODO: call atexit handlers.
@@ -261,7 +258,7 @@ __attribute__((__noreturn__)) void quick_exit(int status) {
 __attribute__((__noreturn__)) void _Exit(int status) {
     /// TODO: call at_quick_exit handlers.
     syscall(SYS_exit, status);
-    __builtin_unreachable();
+    for (;;);
 }
 
 /// ===========================================================================
