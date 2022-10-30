@@ -36,8 +36,8 @@ namespace {
 /// ===========================================================================
 ///  Globals.
 /// ===========================================================================
-/// This MUST be thread-local.
-thread_local int __errno { 0 };
+/// TODO: This MUST be thread-local.
+int __errno { 0 };
 
 /// Temporary workaround to allow dynamic memory allocation.
 char heap_base[1'000'000];
