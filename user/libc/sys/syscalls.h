@@ -22,7 +22,6 @@
 
 #include "../stdint.h"
 #include "../bits/decls.h"
-#include "../bits/std/type_traits"
 
 #ifdef __lensor__
 #define SYS_open  0
@@ -185,6 +184,9 @@ _Generic((_VA_FIRST(__VA_ARGS__ __VA_OPT__(,) _EMPTY_VAL)),     \
 ///  C++ Interface.
 /// ===========================================================================
 #else
+
+#include "../bits/std/type_traits"
+
 namespace std::__detail {
 /// Perform a system call.
 template <
