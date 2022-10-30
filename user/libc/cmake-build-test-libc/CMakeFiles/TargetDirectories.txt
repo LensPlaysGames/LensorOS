@@ -1,3 +1,0 @@
-/home/ae/projects/forks/LensorOS/user/libc/cmake-build-test-libc/CMakeFiles/c.dir
-/home/ae/projects/forks/LensorOS/user/libc/cmake-build-test-libc/CMakeFiles/edit_cache.dir
-/home/ae/projects/forks/LensorOS/user/libc/cmake-build-test-libc/CMakeFiles/rebuild_cache.dir

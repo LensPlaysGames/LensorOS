@@ -1,7 +1,0 @@
-/opt/clion/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/opt/clion/bin/ninja/linux/ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DLENSOR_OS_LIBC_BUILD_HOST=1 -G Ninja -S /home/ae/projects/forks/LensorOS/user/libc -B /home/ae/projects/forks/LensorOS/user/libc/cmake-build-test-libc
--- Building LensorOS libc on host
--- Checking if Enhanced REP MOVSB is supported...
--- Enhanced REP MOVSB is supported.
--- Configuring done
--- Generating done
--- Build files have been written to: /home/ae/projects/forks/LensorOS/user/libc/cmake-build-test-libc
