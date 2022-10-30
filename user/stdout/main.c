@@ -17,11 +17,10 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <string.h>
-#include <unistd.h>
+#include <stdio.h>
 
 int main() {
-  const char *message = "Hello, friends :^)\r\n";
-  write(STDOUT_FILENO, message, strlen(message));
+  const char *message = "Hello, friends :^)\r";
+  puts(message);
   return 0;
 }
