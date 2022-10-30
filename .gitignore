@@ -49,8 +49,7 @@
 **/tst/
 **/test/
 **/testing/
-**/cmake-build-debug/
-**/cmake-build-release/
+**/cmake-build-*/
 
 # Backups
 **/*.tmp*
