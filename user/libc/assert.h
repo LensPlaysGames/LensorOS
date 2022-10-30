@@ -28,9 +28,22 @@ __attribute__((__noreturn__)) void __assert_abort(
     const char *func
 );
 
+/// Report a failed assertion with a message.
+__attribute__((__noreturn__)) void __assert_abort_msg(
+    const char *expr,
+    const char *msg,
+    const char *file,
+    unsigned int line,
+    const char *func
+);
+
 /// Re-define assert() every time this header is included.
 #ifdef assert
 #   undef assert
+#endif
+
+#ifdef __libc_assert
+#   undef __libc_assert
 #endif
 
 /// Run-time assertions are pretty useful, so we *don't* compile
@@ -48,5 +61,11 @@ __attribute__((__noreturn__)) void __assert_abort(
         __assert_abort(#cond, __FILE__, __LINE__, __PRETTY_FUNCTION__); \
     }                                                                   \
 }))                                                                     \
+
+#define __libc_assert(cond, msg) ((void) sizeof ((cond) ? 1 : 0), __extension__ ({ \
+    if (!(cond)) {                                                                 \
+        __assert_abort_msg(#cond, msg, __FILE__, __LINE__, __PRETTY_FUNCTION__);   \
+    }                                                                              \
+}))
 
 #endif // _LENSOR_OS_ASSERT_H

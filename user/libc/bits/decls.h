@@ -23,6 +23,13 @@
 #ifdef __cplusplus
 #define __BEGIN_DECLS__ extern "C" {
 #define __END_DECLS__ }
+
+/// Raise a compile error.
+#define __raise_compile_error_impl(__msg) ([]<bool b> { static_assert(__b, __msg); }())
+#define __raise_compile_error(__msg) (__raise_compile_error_impl(__msg).template operator()<false>())
+#define __if if constexpr
+#define __elif else if constexpr
+#define __else else
 #else
 #define __BEGIN_DECLS__
 #define __END_DECLS__
@@ -38,5 +45,6 @@ __BEGIN_DECLS__
 typedef bool _Bool;
 __END_DECLS__
 #endif
+
 
 #endif // _LENSOR_OS_LIBC_DECLS_H

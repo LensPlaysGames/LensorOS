@@ -54,6 +54,9 @@ extern "C" {
   __attribute__((malloc, alloc_size(1))) void* malloc(size_t);
   __attribute__((alloc_size(2))) void* realloc(void* ptr, size_t);
 
+  /// Like realloc, but does not copy the old data.
+  __attribute__((alloc_size(2))) void* __mextend(void* ptr, size_t);
+
   /// Environment
   __attribute__((noreturn)) void abort(void);
   int atexit(void (*function)(void));

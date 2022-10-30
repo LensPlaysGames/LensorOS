@@ -111,6 +111,64 @@ constexpr size_t align_to_max_align_t(size_t n) {
     return n;
 }
 
+/// Realloc implementation.
+template <bool copy_data>
+__attribute__((alloc_size(2))) void* realloc_impl(void* ptr, size_t size) {
+    if (!ptr) { return malloc(size); }
+
+    /// `realloc` with a size of 0 is implementation-defined. Just do nothing.
+    if (!size) { return ptr; }
+
+    /// Round up to the maximum alignment.
+    size = align_to_max_align_t(size);
+
+    /// If the pointer was most recently allocated, we can just
+    /// extend or truncate the block.
+    if (alloc_list && alloc_list->ptr == ptr) {
+        /// Extend the block if possible and requested.
+        if (size > alloc_list->size && heap_ptr - alloc_list->size + size <= heap_base + sizeof(heap_base)) {
+            heap_ptr += size - alloc_list->size;
+            alloc_list->size = size;
+            return ptr;
+        }
+
+        /// Truncate the block if requested.
+        if (size < alloc_list->size) {
+            heap_ptr -= alloc_list->size - size;
+            alloc_list->size = size;
+            return ptr;
+        }
+
+        /// If the size is the same, do nothing.
+        return ptr;
+    }
+
+    /// Find the block in the allocated list.
+    auto block = find_alloc_block(ptr);
+    if (!block) {
+        fputs("realloc: invalid pointer\n", stderr);
+        abort();
+    }
+
+    /// If we're supposed to truncate the block, do nothing.
+    if (size <= block->size) { return ptr; }
+
+    /// Otherwise, allocate a new block.
+    auto new_ptr = malloc(size);
+    if (!new_ptr) { return nullptr; }
+
+    /// Copy the data from the old block to the new block.
+    if constexpr (copy_data) {
+        memcpy(new_ptr, ptr, std::min(size, block->size));
+    }
+
+    /// Free the old block.
+    free(ptr);
+
+    /// Done!
+    return new_ptr;
+}
+
 } // namespace
 
 __BEGIN_DECLS__
@@ -128,6 +186,17 @@ __attribute__((__noreturn__)) void __assert_abort(
 ) {
     fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s\n", file, func, line, expr);
     abort();
+}
+
+/// Report a failed assertion, print a message, and abort.
+/// Report a failed assertion with a message.
+__attribute__((__noreturn__)) void __assert_abort_msg(
+    const char *expr,
+    const char *msg,
+    const char *file,
+    unsigned int line,
+    const char *func
+) {
 }
 
 __attribute__((malloc, alloc_size(1))) void* malloc(size_t bytes) {
@@ -189,58 +258,12 @@ __attribute__((malloc, alloc_size(1, 2))) void* calloc(size_t n, size_t size) {
     return ptr;
 }
 
+__attribute__((alloc_size(2))) void* __mextend(void* ptr, size_t size) {
+    return realloc_impl<false>(ptr, size);
+}
+
 __attribute__((alloc_size(2))) void* realloc(void* ptr, size_t size) {
-    if (!ptr) { return malloc(size); }
-
-    /// `realloc` with a size of 0 is implementation-defined. Just do nothing.
-    if (!size) { return ptr; }
-
-    /// Round up to the maximum alignment.
-    size = align_to_max_align_t(size);
-
-    /// If the pointer was most recently allocated, we can just
-    /// extend or truncate the block.
-    if (alloc_list && alloc_list->ptr == ptr) {
-        /// Extend the block if possible and requested.
-        if (size > alloc_list->size && heap_ptr - alloc_list->size + size <= heap_base + sizeof(heap_base)) {
-            heap_ptr += size - alloc_list->size;
-            alloc_list->size = size;
-            return ptr;
-        }
-
-        /// Truncate the block if requested.
-        if (size < alloc_list->size) {
-            heap_ptr -= alloc_list->size - size;
-            alloc_list->size = size;
-            return ptr;
-        }
-
-        /// If the size is the same, do nothing.
-        return ptr;
-    }
-
-    /// Find the block in the allocated list.
-    auto block = find_alloc_block(ptr);
-    if (!block) {
-        fputs("realloc: invalid pointer\n", stderr);
-        abort();
-    }
-
-    /// If we're supposed to truncate the block, do nothing.
-    if (size <= block->size) { return ptr; }
-
-    /// Otherwise, allocate a new block.
-    auto new_ptr = malloc(size);
-    if (!new_ptr) { return nullptr; }
-
-    /// Copy the data from the old block to the new block.
-    memcpy(new_ptr, ptr, std::min(size, block->size));
-
-    /// Free the old block.
-    free(ptr);
-
-    /// Done!
-    return new_ptr;
+    return realloc_impl<true>(ptr, size);
 }
 
 void free(void* ptr) {

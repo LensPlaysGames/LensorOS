@@ -17,35 +17,18 @@
 * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "type_traits"
+#ifndef _LENSOR_OS_NEW
+#define _LENSOR_OS_NEW
 
-#ifndef _LENSOR_OS_UTILITY
-#define _LENSOR_OS_UTILITY
+#include "../../stdlib.h"
 
 namespace std {
 
-/// *Very* simple std::pair.
-template <
-    typename _First, /// First member of the pair.
-    typename _Second,  /// Second member of the pair.
-
-    /// SFINAE: Make sure the types are not references.
-    typename = _Requires<_NotRef<_First>, _NotRef<_Second>>
->
-struct pair {
-    using first_type = remove_cvref_t<_First>;
-    using second_type = remove_cvref_t<_Second>;
-
-    first_type first;
-    second_type second;
-};
-
-/// Move a value.
-template <typename _T>
-constexpr remove_cvref_t<_T>&& move(_T&& value) noexcept {
-    return static_cast<remove_cvref_t<_T>&&>(value);
-}
+[[nodiscard]] void* operator new(size_t size) noexcept { return malloc(size); }
+[[nodiscard]] void* operator new[](size_t size) noexcept { return malloc(size); }
+void operator delete(void* ptr) noexcept { free(ptr); }
+void operator delete[](void* ptr) noexcept { free(ptr); }
 
 }
 
-#endif // _LENSOR_OS_UTILITY
+#endif // _LENSOR_OS_NEW

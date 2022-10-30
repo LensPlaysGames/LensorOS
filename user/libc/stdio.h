@@ -71,20 +71,28 @@ void setbuf(FILE*, char* buf);
 int setvbuf(FILE*, char* buf, int mode, size_t);
 
 /// Formatted I/O
-int fprintf(FILE*, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
-int fscanf(FILE*, const char* fmt, ...) __attribute__((format(scanf, 2, 3)));
-int printf(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
-int scanf(const char* fmt, ...) __attribute__((format(scanf, 1, 2)));
-int snprintf(char* buffer, size_t, const char* fmt, ...) __attribute__((format(printf, 3, 4)));
-int sprintf(char* buffer, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
-int sscanf(const char* str, const char* fmt, ...) __attribute__((format(scanf, 2, 3)));
-int vfprintf(FILE*, const char* fmt, __builtin_va_list) __attribute__((format(printf, 2, 0)));
-int vfscanf(FILE*, const char*, __builtin_va_list) __attribute__((format(scanf, 2, 0)));
-int vprintf(const char* fmt, __builtin_va_list) __attribute__((format(printf, 1, 0)));
-int vscanf(const char*, __builtin_va_list) __attribute__((format(scanf, 1, 0)));
-int vsnprintf(char* buffer, size_t, const char* fmt, __builtin_va_list) __attribute__((format(printf, 3, 0)));
-int vsprintf(char* buffer, const char* fmt, __builtin_va_list) __attribute__((format(printf, 2, 0)));
-int vsscanf(const char*, const char*, __builtin_va_list) __attribute__((format(scanf, 2, 0)));
+int fprintf(FILE*, const char* fmt, ...) __attribute__((__format__(__printf__, 2, 3)));
+int fscanf(FILE*, const char* fmt, ...) __attribute__((__format__(__scanf__, 2, 3)));
+int printf(const char* fmt, ...) __attribute__((__format__(__printf__, 1, 2)));
+int scanf(const char* fmt, ...) __attribute__((__format__(__scanf__, 1, 2)));
+int snprintf(char* buffer, size_t, const char* fmt, ...) __attribute__((__format__(__printf__, 3, 4)));
+
+__attribute__((__format__( printf, 2, 3),
+__deprecated__("sprintf() is deprecated as it can cause buffer overflows. Use snprintf() instead.")))
+int sprintf(char* buffer, const char* fmt, ...);
+
+int sscanf(const char* str, const char* fmt, ...) __attribute__((__format__(__scanf__, 2, 3)));
+int vfprintf(FILE*, const char* fmt, __builtin_va_list) __attribute__((__format__(__printf__, 2, 0)));
+int vfscanf(FILE*, const char*, __builtin_va_list) __attribute__((__format__(__scanf__, 2, 0)));
+int vprintf(const char* fmt, __builtin_va_list) __attribute__((__format__(__printf__, 1, 0)));
+int vscanf(const char*, __builtin_va_list) __attribute__((__format__(__scanf__, 1, 0)));
+int vsnprintf(char* buffer, size_t, const char* fmt, __builtin_va_list) __attribute__((__format__(__printf__, 3, 0)));
+
+__attribute__((__format__(__printf__, 2, 0)),
+__deprecated__("vsprintf() is deprecated as it can cause buffer overflows. Use vsnprintf() instead."))
+int vsprintf(char* buffer, const char* fmt, __builtin_va_list);
+
+int vsscanf(const char*, const char*, __builtin_va_list) __attribute__((__format__(__scanf__, 2, 0)));
 int fgetc(FILE*);
 char* fgets(char* buffer, int size, FILE*);
 int fputc(int ch, FILE*);
@@ -117,6 +125,22 @@ void clearerr(FILE*);
 int feof(FILE*);
 int ferror(FILE*);
 void perror(const char*);
+
+/// POSIX extensions.
+#define L_ctermid 1
+char *ctermid(char *s);
+int dprintf(int fd, const char * __restrict__ fmt, ...) __attribute__((__format__(__printf__, 2, 3)));
+FILE* fdopen(int fd, const char* mode);
+void flockfile(FILE* stream);
+int ftrylockfile(FILE* stream);
+void funlockfile(FILE* stream);
+FILE* fmemopen(void* __restrict__ buf, size_t size, const char* __restrict__ mode);
+int fseeko(FILE *stream, off_t offset, int whence);
+off_t ftello(FILE *);
+int getc_unlocked(FILE *stream);
+int getchar_unlocked(void);
+int putc_unlocked(int c, FILE *stream);
+int putchar_unlocked(int c);
 
 __END_DECLS__
 

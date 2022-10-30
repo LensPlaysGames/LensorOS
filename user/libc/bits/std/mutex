@@ -15,37 +15,34 @@
 *
 * You should have received a copy of the GNU General Public License
 * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
- */
+*/
 
-#include "type_traits"
-
-#ifndef _LENSOR_OS_UTILITY
-#define _LENSOR_OS_UTILITY
+#ifndef _LENSOR_OS_MUTEX
+#define _LENSOR_OS_MUTEX
 
 namespace std {
 
-/// *Very* simple std::pair.
-template <
-    typename _First, /// First member of the pair.
-    typename _Second,  /// Second member of the pair.
-
-    /// SFINAE: Make sure the types are not references.
-    typename = _Requires<_NotRef<_First>, _NotRef<_Second>>
->
-struct pair {
-    using first_type = remove_cvref_t<_First>;
-    using second_type = remove_cvref_t<_Second>;
-
-    first_type first;
-    second_type second;
+struct mutex {
+    void lock() {}
+    bool try_lock() {}
+    void unlock() {}
 };
 
-/// Move a value.
-template <typename _T>
-constexpr remove_cvref_t<_T>&& move(_T&& value) noexcept {
-    return static_cast<remove_cvref_t<_T>&&>(value);
-}
+struct recursive_mutex {
+    void lock() {}
+    bool try_lock() {}
+    void unlock() {}
+};
 
-}
+template <typename _Lock = mutex>
+class unique_lock {
+    _Lock& __lock;
+public:
+    unique_lock(_Lock& lock) : __lock(lock) { __lock.lock(); }
+    ~unique_lock() { __lock.unlock(); }
+};
 
-#endif // _LENSOR_OS_UTILITY
+} // namespace std
+
+
+#endif // _LENSOR_OS_MUTEX

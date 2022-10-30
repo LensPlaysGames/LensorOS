@@ -47,6 +47,8 @@ if(NOT WIN32)
 endif()
 
 add_library(c)
+target_compile_features(c PUBLIC cxx_std_17)
+
 target_include_directories(
   c
   PUBLIC

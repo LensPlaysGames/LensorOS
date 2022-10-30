@@ -40,6 +40,50 @@ using true_type =  integral_constant<bool, true>;
 /// Compile-time false.
 using false_type =  integral_constant<bool, false>;
 
+/// Convert a bool to true_type or false_type.
+template <bool _Cond>
+struct bool_constant : integral_constant<bool, _Cond> {};
+
+/// Select `_True` if `_Cond` is true, otherwise select `_Else`.
+template <bool _Cond, typename _True, typename _Else>
+struct conditional;
+
+template <typename _True, typename _Else>
+struct conditional<true, _True, _Else> { using type = _True; };
+
+template <typename _True, typename _Else>
+struct conditional<false, _True, _Else> { using type = _Else; };
+
+/// Abbreviation for `conditional`
+template <bool _Cond, typename _True, typename _Else>
+struct _If : conditional<_Cond, _True, _Else> {};
+
+/// True if multiple conditions are true.
+template <typename...> struct _And;
+template <> struct _And<> : true_type {};
+template <typename __1> struct _And<__1> : __1 {};
+
+template <typename __1, typename __2>
+struct _And<__1, __2> : _If<__1::value, __2, __1> {};
+
+template <typename __1, typename __2, typename __3, typename ..._N>
+struct _And<__1, __2, __3, _N...> : _If<__1::value, _And<__2, __3, _N...>, __1> {};
+
+/// True if any condition is true.
+template <typename...> struct _Or;
+template <> struct _Or<> : false_type {};
+template <typename __1> struct _Or<__1> : __1 {};
+
+template <typename __1, typename __2>
+struct _Or<__1, __2> : _If<__1::value, __1, __2> {};
+
+template <typename __1, typename __2, typename __3, typename ..._N>
+struct _Or<__1, __2, __3, _N...> : _If<__1::value, __1, _Or<__2, __3, _N...>> {};
+
+/// True if a condition is not true.
+template <typename _T> struct _Not : false_type {};
+template <> struct _Not<false_type> : true_type {};
+
 /// Check if two types are the same.
 template <typename _T, typename _U>
 struct is_same : integral_constant<bool, __is_same(_T, _U)> {};
@@ -47,6 +91,26 @@ struct is_same : integral_constant<bool, __is_same(_T, _U)> {};
 /// A type is always equal to itself.
 template <typename _T>
 struct is_same<_T, _T> : true_type {};
+
+/// Check if a type is a pointer.
+template <typename _T>
+struct is_pointer : integral_constant<bool, __is_pointer(_T)> {};
+
+/// Check if a type is an integer.
+template <typename _T>
+struct is_integral : integral_constant<bool, __is_integral(_T)> {};
+
+/// Check if a type is a floating point type.
+template <typename _T>
+struct is_floating_point : integral_constant<bool, __is_floating_point(_T)> {};
+
+/// Check if a type is a number.
+template <typename _T>
+struct _Number : _Or<is_integral<_T>, is_floating_point<_T>> {};
+
+/// Check if a type is a pointer.
+template <typename _T>
+struct _Pointer : is_pointer<_T> {};
 
 /// Remove a reference from a type.
 template <typename _T> struct remove_reference { using type = _T; };
@@ -76,35 +140,6 @@ template <typename _T> struct is_reference : false_type {};
 template <typename _T> struct is_reference<_T&> : true_type {};
 template <typename _T> struct is_reference<_T&&> : true_type {};
 
-/// Select `_True` if `_Cond` is true, otherwise select `_Else`.
-template <bool _Cond, typename _True, typename _Else>
-struct conditional;
-
-template <typename _True, typename _Else>
-struct conditional<true, _True, _Else> { using type = _True; };
-
-template <typename _True, typename _Else>
-struct conditional<false, _True, _Else> { using type = _Else; };
-
-/// Abbreviation for `conditional`
-template <bool _Cond, typename _True, typename _Else>
-struct _If : conditional<_Cond, _True, _Else> {};
-
-/// True if multiple conditions are true.
-template <typename...> struct _And;
-template <> struct _And<> : true_type {};
-template <typename __1> struct _And<__1> : __1 {};
-
-template <typename __1, typename __2>
-struct _And<__1, __2> : _If<__1::value, __2, __1> {};
-
-template <typename __1, typename __2, typename __3, typename ..._N>
-struct _And<__1, __2, __3, _N...> : _If<__1::value, _And<__2, __3, _N...>, __1> {};
-
-/// True if a condition is not true.
-template <typename _T> struct _Not : false_type {};
-template <> struct _Not<false_type> : true_type {};
-
 /// Check if something is a reference.
 template <typename _T> struct _IsRef : is_reference<_T> {};
 
@@ -125,6 +160,9 @@ struct _Requires : enable_if<_And<_Conditions...>::value> {};
 /// Abbreviations.
 template <typename _T, typename _U> constexpr inline bool is_same_v = is_same<_T, _U>::value;
 template <typename _T> constexpr inline bool is_reference_v = is_reference<_T>::value;
+template <typename _T> constexpr inline bool is_pointer_v = is_pointer<_T>::value;
+template <typename _T> constexpr inline bool is_integral_v = is_integral<_T>::value;
+template <typename _T> constexpr inline bool is_floating_point_v = is_floating_point<_T>::value;
 
 template <typename _T> using remove_reference_t = typename remove_reference<_T>::type;
 template <typename _T> using remove_const_t = typename remove_const<_T>::type;
