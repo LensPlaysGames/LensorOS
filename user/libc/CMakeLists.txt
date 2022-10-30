@@ -112,7 +112,10 @@ set(ROOT "${PROJECT_SOURCE_DIR}/../../root")
 if (NOT LENSOR_OS_LIBC_BUILD_HOST)
 add_custom_target(
   install-libc ALL
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:c> ${ROOT}/lib
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:c> "${ROOT}/lib"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crt0.s.obj" "${ROOT}/lib/crt0.o"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crti.s.obj" "${ROOT}/lib/crti.o"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crtn.s.obj" "${ROOT}/lib/crtn.o"
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/assert.h" "${ROOT}/inc/assert.h"
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/errno.h" "${ROOT}/inc/errno.h"
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/float.h" "${ROOT}/inc/float.h"
