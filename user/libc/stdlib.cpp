@@ -258,7 +258,7 @@ __attribute__((__noreturn__)) void quick_exit(int status) {
 __attribute__((__noreturn__)) void _Exit(int status) {
     /// TODO: call at_quick_exit handlers.
     syscall(SYS_exit, status);
-    for (;;);
+    for (;;) asm volatile ("");
 }
 
 /// ===========================================================================
