@@ -93,7 +93,7 @@ _mm256_storeu_si256 (__m256i_u *__P, __m256i __A)
 /// be a constant. __extension__ suppresses a warning about the fact that we're
 /// using a GNU extension to make sure that we're not evaluating _I twice. The
 /// sizeof’s are so that warnings that occur in _P and _I are not swallowed.
-#define _mm_prefetch(_P, _I) (sizeof(_P), sizeof(_I), __extension__ ({ \
+#define _mm_prefetch(_P, _I) ((void) sizeof ((_P) ? 1 : 0), __extension__ ({ \
   const __typeof__(_P) __P = _P;                                       \
   const __typeof__(_I) __I = _I;                                       \
   __builtin_prefetch ((__P), ((__I & 0x4) >> 2), (__I & 0x3));         \

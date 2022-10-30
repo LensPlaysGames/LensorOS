@@ -22,13 +22,13 @@
 
 namespace std {
 
-template <typename integer, typename integers...>
+template <typename integer, typename ...integers>
 constexpr integer min(integer a, integer b, integers... ints) {
     if constexpr (sizeof...(ints) == 0) return a < b ? a : b;
     else return min(a < b ? a : b, ints...);
 }
 
-template <typename integer, typename integers...>
+template <typename integer, typename ...integers>
 constexpr integer max(integer a, integer b, integers... ints) {
     if constexpr (sizeof...(ints) == 0) return a < b ? a : b;
     else return max(a < b ? a : b, ints...);

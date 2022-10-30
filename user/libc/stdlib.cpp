@@ -17,16 +17,16 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #include "stddef.h"
 #include "stdlib.h"
+#include "string.h"
 #include "sys/syscalls.h"
 #include "stdio.h"
 #include "errno.h"
 
 #include "bits/std/algorithm"
 
-namespace  {
+namespace {
 
 /// This MUST be thread-local.
 thread_local int __errno = 0;
@@ -106,7 +106,7 @@ alloc_header* find_alloc_block(void* ptr) {
 
 /// Align a number to the maximum possible alignment.
 constexpr size_t align_to_max_align_t(size_t n) {
-    static constexpr size_t max_align = alignof(max_align_t);
+    constexpr size_t max_align = alignof(max_align_t);
     n = n ? (n + max_align - 1) & ~(max_align - 1) : max_align;
     return n;
 }
@@ -197,6 +197,8 @@ __attribute__((__noreturn__)) void __assert_abort_msg(
     unsigned int line,
     const char *func
 ) {
+    fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s: %s\n", file, func, line, expr, msg);
+    abort();
 }
 
 __attribute__((malloc, alloc_size(1))) void* malloc(size_t bytes) {
@@ -225,7 +227,7 @@ __attribute__((malloc, alloc_size(1))) void* malloc(size_t bytes) {
 
     /// We need to allocate a new block. Make sure we have enough space in the
     /// heap for both the block and the memory we need to allocate.
-    static constexpr block_sz = align_to_max_align_t(sizeof(alloc_header));
+    static constexpr size_t block_sz = align_to_max_align_t(sizeof(alloc_header));
     if (heap_ptr + bytes + block_sz > heap_base + sizeof(heap_base)) {
         __errno = ENOMEM;
         return nullptr;
@@ -243,7 +245,7 @@ __attribute__((malloc, alloc_size(1))) void* malloc(size_t bytes) {
     }
 
     /// Add the block to the allocated list.
-    block->ptr = ptr;
+    block->ptr = static_cast<char*>(ptr);
     block->size = bytes;
     block->next = alloc_list;
     if (alloc_list) { alloc_list->prev = block; }

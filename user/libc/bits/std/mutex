@@ -24,21 +24,25 @@ namespace std {
 
 struct mutex {
     void lock() {}
-    bool try_lock() {}
+    bool try_lock() { return true; }
     void unlock() {}
+
+    explicit mutex() {}
 };
 
 struct recursive_mutex {
     void lock() {}
-    bool try_lock() {}
+    bool try_lock() { return true; }
     void unlock() {}
+
+    explicit recursive_mutex() {}
 };
 
 template <typename _Lock = mutex>
 class unique_lock {
     _Lock& __lock;
 public:
-    unique_lock(_Lock& lock) : __lock(lock) { __lock.lock(); }
+    explicit unique_lock(_Lock& lock) : __lock(lock) { __lock.lock(); }
     ~unique_lock() { __lock.unlock(); }
 };
 

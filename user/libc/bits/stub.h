@@ -22,7 +22,7 @@
 
 #include "../assert.h"
 
-#define LIBC_STUB()                              \
+#define _LIBC_STUB()                              \
     do {                                         \
         __libc_assert(false, "Not implemented"); \
     } while (0)

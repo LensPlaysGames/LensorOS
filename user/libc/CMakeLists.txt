@@ -64,13 +64,21 @@ target_sources(
   stdlib.cpp
   string.cpp
   unistd.cpp
-  sys/syscalls.cpp
 )
 target_compile_options(
   c
   PRIVATE
   -fno-stack-protector
+  -fdiagnostics-color=always
   -nostdlib
   -nostdinc
   -msse2
+  -Wall
+  -Wextra
+  -Wconversion
+  -pedantic
+  -Werror=return-type
+  -Wno-prio-ctor-dtor
+  -Wno-unused-parameter
+  -Wno-unused-variable
 )

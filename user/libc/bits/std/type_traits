@@ -26,7 +26,7 @@ template<typename _T, _T __v>
 struct integral_constant
 {
     using value_type = _T;
-    using type = integral_constant<_Tp, __v>;
+    using type = integral_constant<_T, __v>;
 
     static constexpr _T value = __v;
 
@@ -86,23 +86,36 @@ template <> struct _Not<false_type> : true_type {};
 
 /// Check if two types are the same.
 template <typename _T, typename _U>
-struct is_same : integral_constant<bool, __is_same(_T, _U)> {};
+struct is_same : false_type {};
 
 /// A type is always equal to itself.
 template <typename _T>
 struct is_same<_T, _T> : true_type {};
 
 /// Check if a type is a pointer.
-template <typename _T>
-struct is_pointer : integral_constant<bool, __is_pointer(_T)> {};
+template <typename _T> struct is_pointer : false_type {};
+template <typename _T> struct is_pointer<_T*> : true_type {};
 
 /// Check if a type is an integer.
 template <typename _T>
-struct is_integral : integral_constant<bool, __is_integral(_T)> {};
+struct is_integral : _Or<is_same<_T, bool>,
+                         is_same<_T, char>,
+                         is_same<_T, unsigned char>,
+                         is_same<_T, signed char>,
+                         is_same<_T, short>,
+                         is_same<_T, unsigned short>,
+                         is_same<_T, int>,
+                         is_same<_T, unsigned int>,
+                         is_same<_T, long>,
+                         is_same<_T, unsigned long>,
+                         is_same<_T, long long>,
+                         is_same<_T, unsigned long long>> {};
 
-/// Check if a type is a floating point type.
+/// Check if a type is a floating point.
 template <typename _T>
-struct is_floating_point : integral_constant<bool, __is_floating_point(_T)> {};
+struct is_floating_point : _Or<is_same<_T, float>,
+                               is_same<_T, double>,
+                               is_same<_T, long double>> {};
 
 /// Check if a type is a number.
 template <typename _T>

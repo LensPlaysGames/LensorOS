@@ -18,15 +18,16 @@
  */
 
 #include "stdio.h"
-#include "stdlib.h"
 
-#include "bits/std/utility"
 #include "bits/std/algorithm"
-#include "bits/std/new"
 #include "bits/std/atomic"
 #include "bits/std/mutex"
+#include "bits/std/new"
+#include "bits/std/utility"
+#include "bits/stub.h"
 #include "errno.h"
 #include "stdarg.h"
+#include "stdlib.h"
 #include "string.h"
 #include "unistd.h"
 
@@ -156,11 +157,6 @@ struct [[nodiscard]] Lock {
 /// Check how a stream is buffered.
 Buffering stream_buffering(FILE& stream) {
     return Buffering(stream.__f_buffering);
-}
-
-/// Check if a stream has an error.
-bool stream_errored(FILE& stream) {
-    return stream.__f_error;
 }
 
 /// Check if a stream has reached EOF. This only checks if we're actually at
@@ -506,10 +502,10 @@ bool stream_flush(FILE& stream) {
     if (stream.__wbuf.__offs == 0) { return true; }
 
     /// Write the data.
-    auto written = write(stream.__fd, stream.__wbuf.__buf, stream.__wbuf.__offs);
+    ssize_t written = write(stream.__fd, stream.__wbuf.__buf, stream.__wbuf.__offs);
 
     /// Check for errors.
-    if (written != stream.__wbuf.__offs) {
+    if (written < 0 || size_t(written) != stream.__wbuf.__offs) {
         stream.__f_error = true;
         return false;
     }
@@ -534,7 +530,7 @@ bool stream_set_buffering(FILE& stream, Buffering buffering, char*, size_t size)
 
         case LineBuffered:
         case FullyBuffered:
-            stream.__f_buffering = buffering;
+            _IgnoreWarning("-Wconversion", stream.__f_buffering = buffering);
 
             /// According to the standard, `size` is only supposed to be a hint
             /// if `buffer` is nullptr, so we should ignore it if it's too small.
@@ -587,7 +583,7 @@ ssize_t stream_put(FILE& __restrict__ stream, const char* __restrict__ buffer, s
     /// Write data directly to the stream if it doesn't fit in the buffer.
     if (count > stream.__wbuf.__cap) {
         auto written = write(stream.__fd, buffer, count);
-        if (written != count) {
+        if (written < 0 || size_t(written) != count) {
             stream.__f_error = true;
             return EOF;
         }
@@ -608,7 +604,7 @@ ssize_t stream_put_maybe_buffered(FILE& __restrict__ stream, const char* __restr
         case Unbuffered: {
             /// TODO: Check if the stream is open for writing.
             auto written = write(stream.__fd, str, sz);
-            if (written != sz) {
+            if (written < 0 || size_t(written) != sz) {
                 stream.__f_error = true;
                 return EOF;
             }
@@ -669,23 +665,19 @@ FILE* stderr;
 ///  7.21.4 Operations on files.
 /// ===========================================================================
 int remove(const char*) {
-    /// FIXME: Stub.
-    return -1;
+    _LIBC_STUB();
 }
 
 int rename(const char*, const char*) {
-    /// FIXME: Stub.
-    return -1;
+    _LIBC_STUB();
 }
 
 FILE* tmpfile(void) {
-    /// FIXME: Stub.
-    return nullptr;
+    _LIBC_STUB();
 }
 
 char* tmpnam(char*) {
-    /// FIXME: Stub.
-    return nullptr;
+    _LIBC_STUB();
 }
 
 /// ===========================================================================
@@ -771,6 +763,8 @@ int setvbuf(FILE* __restrict__ stream, char* __restrict__ buffer, int mode, size
             break;
         default: return -1;
     }
+
+    return 0;
 }
 
 /// ===========================================================================
@@ -819,7 +813,7 @@ int snprintf(char* __restrict__ str, size_t size, const char* __restrict__ forma
 int sprintf(char* __restrict__ str, const char* __restrict__ format, ...) {
     va_list args;
     va_start(args, format);
-    auto ret = vsprintf(str, format, args);
+    auto ret = _IgnoreWarning("-Wdeprecated-declarations", vsprintf(str, format, args));
     va_end(args);
     return ret;
 }
@@ -837,7 +831,7 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
     (void)stream;
     (void)format;
     (void)args;
-
+    _LIBC_STUB();
     return -1;
 }
 
@@ -846,7 +840,7 @@ int vfscanf(FILE* __restrict__ stream, const char* __restrict__ format, va_list 
     (void)stream;
     (void)format;
     (void)args;
-
+    _LIBC_STUB();
     return EOF;
 }
 
@@ -864,7 +858,7 @@ int vsnprintf(char* __restrict__ str, size_t size, const char* __restrict__ form
     (void)size;
     (void)format;
     (void)args;
-
+    _LIBC_STUB();
     return -1;
 }
 
@@ -873,7 +867,7 @@ int vsprintf(char* __restrict__ str, const char* __restrict__ format, va_list ar
     (void)str;
     (void)format;
     (void)args;
-
+    _LIBC_STUB();
     return -1;
 }
 
@@ -882,7 +876,7 @@ int vsscanf(const char* __restrict__ str, const char* __restrict__ format, va_li
     (void)str;
     (void)format;
     (void)args;
-
+    _LIBC_STUB();
     return EOF;
 }
 
@@ -1068,12 +1062,14 @@ char *ctermid(char *s) {
 
 int dprintf(int fd, const char * __restrict__ fmt, ...) {
     /// TODO: Like fprintf, but it accepts a file descriptor rather than a FILE.
+    _LIBC_STUB();
 }
 
 FILE* fdopen(int fd, const char* mode) {
     /// TODO: Parse mode.
     /// TODO: Stub.
     /// NOTE: Semantics of 'w' are different.
+    _LIBC_STUB();
     return nullptr;
 }
 
@@ -1083,6 +1079,7 @@ void funlockfile(FILE* stream) { stream->__mutex.unlock(); }
 
 FILE* fmemopen(void* __restrict__ buf, size_t size, const char* __restrict__ mode) {
     /// Screw you, I'm not implementing this; thank you very much.
+    _LIBC_STUB();
     return nullptr;
 }
 

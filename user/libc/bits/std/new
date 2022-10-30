@@ -22,13 +22,12 @@
 
 #include "../../stdlib.h"
 
-namespace std {
-
-[[nodiscard]] void* operator new(size_t size) noexcept { return malloc(size); }
-[[nodiscard]] void* operator new[](size_t size) noexcept { return malloc(size); }
+[[nodiscard]] void* operator new(size_t size) { return malloc(size); }
+[[nodiscard]] void* operator new[](size_t size) { return malloc(size); }
 void operator delete(void* ptr) noexcept { free(ptr); }
 void operator delete[](void* ptr) noexcept { free(ptr); }
+void operator delete(void* ptr, size_t) noexcept { free(ptr); }
+void operator delete[](void* ptr, size_t) noexcept { free(ptr); }
 
-}
 
 #endif // _LENSOR_OS_NEW

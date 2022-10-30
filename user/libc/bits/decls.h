@@ -21,22 +21,42 @@
 #define _LENSOR_OS_LIBC_DECLS_H
 
 #ifdef __cplusplus
-#define __BEGIN_DECLS__ extern "C" {
-#define __END_DECLS__ }
+#    define __BEGIN_DECLS__ extern "C" {
+#    define __END_DECLS__ }
 
 /// Raise a compile error.
-#define __raise_compile_error_impl(__msg) ([]<bool b> { static_assert(__b, __msg); }())
-#define __raise_compile_error(__msg) (__raise_compile_error_impl(__msg).template operator()<false>())
-#define __if if constexpr
-#define __elif else if constexpr
-#define __else else
+#    define __if if constexpr
+#    define __elif else if constexpr
+#    define __else else
 #else
-#define __BEGIN_DECLS__
-#define __END_DECLS__
+#    define __BEGIN_DECLS__
+#    define __END_DECLS__
 #endif
 
 #ifndef __forceinline
-#define __forceinline __inline__ __attribute__((__always_inline__))
+#    define __forceinline __inline__ __attribute__((__always_inline__))
+#endif
+
+#ifndef _Deprecated
+#    define _Deprecated(_Msg) __attribute__((__deprecated__(_Msg)))
+#endif
+
+#ifndef _Format
+#    define _Format(_Fmt, ...) __attribute__((__format__(_Fmt, __VA_ARGS__)))
+#endif
+
+#ifndef __Pragma
+#    define __Pragma(_Str) _Pragma(#_Str)
+#endif
+
+#ifndef _IgnoreWarning
+#    define _IgnoreWarning(_W, _X) __extension__({                       \
+        _Pragma("GCC diagnostic push");                                  \
+        __Pragma(GCC diagnostic ignored _W); \
+        __typeof__(_X) __X = _X;                                         \
+        _Pragma("GCC diagnostic pop");                                   \
+        __X;                                                             \
+    })
 #endif
 
 /// Some C++ compilers don't define _Bool.

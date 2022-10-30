@@ -25,7 +25,7 @@
 
 #ifdef __cplusplus
 #   define NULL nullptr
-#   typedef decltype(nullptr) nullptr_t;
+typedef decltype(nullptr) nullptr_t;
 #else
 #   define NULL ((void*)0)
     typedef __WCHAR_TYPE__ wchar_t;

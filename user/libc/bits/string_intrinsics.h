@@ -20,6 +20,9 @@
 #ifndef _LENSOR_OS_LIBC_STRING_INTRINSICS_H
 #define _LENSOR_OS_LIBC_STRING_INTRINSICS_H
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-label"
+
 #include "decls.h"
 #include "../sys/intrin.h"
 
@@ -203,5 +206,7 @@ __inline__ void* __memcpy_naive(void* __restrict__ __dest, const void* __restric
 }
 
 __END_DECLS__
+
+#pragma GCC diagnostic pop
 
 #endif //_LENSOR_OS_LIBC_STRING_INTRINSICS_H

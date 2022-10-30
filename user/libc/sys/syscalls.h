@@ -136,21 +136,22 @@ _Generic((_VA_FIRST(__VA_ARGS__ __VA_OPT__(,) _EMPTY_VAL)),     \
 namespace std::__detail {
 /// Perform a system call.
 template <
+    typename _Ret = uintptr_t,
     typename... _Args,
     typename = _Requires<
-        _And<bool_constant<sizeof...(_Args) <= 6>,
+        bool_constant<sizeof...(_Args) <= 6>,
         _Or<_Number<_Args>,
-            _Pointer<_Args>>...>>
+            _Pointer<_Args>>...>
 >
 [[__gnu__::__always_inline__, __gnu__::__artificial__]]
-inline uintptr_t syscall(uintptr_t __sys, _Args&& ...__args) {
-    __if   (sizeof...(_Args) == 0) return __syscall0(__sys);
-    __elif (sizeof...(_Args) == 1) return __syscall1(__sys, (uintptr_t)__args...);
-    __elif (sizeof...(_Args) == 2) return __syscall2(__sys, (uintptr_t)__args...);
-    __elif (sizeof...(_Args) == 3) return __syscall3(__sys, (uintptr_t)__args...);
-    __elif (sizeof...(_Args) == 4) return __syscall4(__sys, (uintptr_t)__args...);
-    __elif (sizeof...(_Args) == 5) return __syscall5(__sys, (uintptr_t)__args...);
-    __elif (sizeof...(_Args) == 6) return __syscall6(__sys, (uintptr_t)__args...);
+inline _Ret syscall(uintptr_t __sys, _Args&& ...__args) {
+    __if   (sizeof...(_Args) == 0) return _Ret(__syscall0(__sys));
+    __elif (sizeof...(_Args) == 1) return _Ret(__syscall1(__sys, (uintptr_t)__args...));
+    __elif (sizeof...(_Args) == 2) return _Ret(__syscall2(__sys, (uintptr_t)__args...));
+    __elif (sizeof...(_Args) == 3) return _Ret(__syscall3(__sys, (uintptr_t)__args...));
+    __elif (sizeof...(_Args) == 4) return _Ret(__syscall4(__sys, (uintptr_t)__args...));
+    __elif (sizeof...(_Args) == 5) return _Ret(__syscall5(__sys, (uintptr_t)__args...));
+    __elif (sizeof...(_Args) == 6) return _Ret(__syscall6(__sys, (uintptr_t)__args...));
     __else __builtin_unreachable();
 }
 }
