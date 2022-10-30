@@ -21,24 +21,29 @@
 #ifndef _STDDEF_H
 #define _STDDEF_H
 
-#if defined (__cplusplus)
-extern "C" {
-#define NULL 0L
+#include "bits/decls.h"
+
+#ifdef __cplusplus
+#   define NULL nullptr
+typedef decltype(nullptr) nullptr_t;
 #else
-#define NULL ((void*)0)
-#endif
-
-  typedef __PTRDIFF_TYPE__ ptrdiff_t;
-  typedef __SIZE_TYPE__ size_t;
-
-#if !defined (__cplusplus)
-  typedef __WCHAR_TYPE__ wchar_t;
+#   define NULL ((void*)0)
+    typedef __WCHAR_TYPE__ wchar_t;
 #endif
 
 #define offsetof(type, member) __builtin_offsetof(type, member)
 
-#if defined (__cplusplus)
-} /* extern "C" */
-#endif
+__BEGIN_DECLS__
+
+typedef __PTRDIFF_TYPE__ ptrdiff_t;
+typedef __SIZE_TYPE__ size_t;
+typedef __WINT_TYPE__ wint_t;
+
+typedef struct {
+    long long __ll __attribute__((__aligned__(__alignof__(long long))));
+    long double __ld __attribute__((__aligned__(__alignof__(long double))));
+} max_align_t;
+
+__END_DECLS__
 
 #endif /* _STDDEF_H */

@@ -1,0 +1,195 @@
+/* Copyright 2022, Contributors To LensorOS.
+* All rights reserved.
+*
+* This file is part of LensorOS.
+*
+* LensorOS is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* LensorOS is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#ifndef _LENSOR_OS_TYPE_TRAITS
+#define _LENSOR_OS_TYPE_TRAITS
+
+namespace std {
+/// Compile-time integer.
+template<typename _T, _T __v>
+struct integral_constant
+{
+    using value_type = _T;
+    using type = integral_constant<_T, __v>;
+
+    static constexpr _T value = __v;
+
+    constexpr operator value_type() const noexcept { return value; }
+    constexpr value_type operator()() const noexcept { return value; }
+};
+
+/// Compile-time true.
+using true_type =  integral_constant<bool, true>;
+
+/// Compile-time false.
+using false_type =  integral_constant<bool, false>;
+
+/// Convert a bool to true_type or false_type.
+template <bool _Cond>
+struct bool_constant : integral_constant<bool, _Cond> {};
+
+/// Select `_True` if `_Cond` is true, otherwise select `_Else`.
+template <bool _Cond, typename _True, typename _Else>
+struct conditional;
+
+template <typename _True, typename _Else>
+struct conditional<true, _True, _Else> { using type = _True; };
+
+template <typename _True, typename _Else>
+struct conditional<false, _True, _Else> { using type = _Else; };
+
+/// Abbreviation for `conditional`
+template <bool _Cond, typename _True, typename _Else>
+struct _If : conditional<_Cond, _True, _Else> {};
+
+/// True if multiple conditions are true.
+template <typename...> struct _And;
+template <> struct _And<> : true_type {};
+template <typename __1> struct _And<__1> : __1 {};
+
+template <typename __1, typename __2>
+struct _And<__1, __2> : _If<__1::value, __2, __1> {};
+
+template <typename __1, typename __2, typename __3, typename ..._N>
+struct _And<__1, __2, __3, _N...> : _If<__1::value, _And<__2, __3, _N...>, __1> {};
+
+/// True if any condition is true.
+template <typename...> struct _Or;
+template <> struct _Or<> : false_type {};
+template <typename __1> struct _Or<__1> : __1 {};
+
+template <typename __1, typename __2>
+struct _Or<__1, __2> : _If<__1::value, __1, __2> {};
+
+template <typename __1, typename __2, typename __3, typename ..._N>
+struct _Or<__1, __2, __3, _N...> : _If<__1::value, __1, _Or<__2, __3, _N...>> {};
+
+/// True if a condition is not true.
+template <typename _T> struct _Not : false_type {};
+template <> struct _Not<false_type> : true_type {};
+
+/// Check if two types are the same.
+template <typename _T, typename _U>
+struct is_same : false_type {};
+
+/// A type is always equal to itself.
+template <typename _T>
+struct is_same<_T, _T> : true_type {};
+
+/// Check if a type is a pointer.
+template <typename _T> struct is_pointer : false_type {};
+template <typename _T> struct is_pointer<_T*> : true_type {};
+
+/// Check if a type is an integer.
+template <typename _T>
+struct is_integral : _Or<is_same<_T, bool>,
+                         is_same<_T, char>,
+                         is_same<_T, unsigned char>,
+                         is_same<_T, signed char>,
+                         is_same<_T, short>,
+                         is_same<_T, unsigned short>,
+                         is_same<_T, int>,
+                         is_same<_T, unsigned int>,
+                         is_same<_T, long>,
+                         is_same<_T, unsigned long>,
+                         is_same<_T, long long>,
+                         is_same<_T, unsigned long long>> {};
+
+/// Check if a type is a floating point.
+template <typename _T>
+struct is_floating_point : _Or<is_same<_T, float>,
+                               is_same<_T, double>,
+                               is_same<_T, long double>> {};
+
+/// Check if a type is a number.
+template <typename _T>
+struct _Number : _Or<is_integral<_T>, is_floating_point<_T>> {};
+
+/// Check if a type is a pointer.
+template <typename _T>
+struct _Pointer : is_pointer<_T> {};
+
+/// Remove a reference from a type.
+template <typename _T> struct remove_reference { using type = _T; };
+template <typename _T> struct remove_reference<_T&> { using type = _T; };
+template <typename _T> struct remove_reference<_T&&> { using type = _T; };
+
+/// Remove const from a type.
+template <typename _T> struct remove_const { using type = _T; };
+template <typename _T> struct remove_const<const _T> { using type = _T; };
+
+/// Remove volatile from a type.
+template <typename _T> struct remove_volatile { using type = _T; };
+template <typename _T> struct remove_volatile<volatile _T> { using type = _T; };
+
+/// Remove const and volatile from a type.
+template <typename _T> struct remove_cv {
+    using type = typename remove_volatile<typename remove_const<_T>::type>::type;
+};
+
+/// Remove reference and cv from a type.
+template <typename _T> struct remove_cvref {
+    using type = typename remove_cv<typename remove_reference<_T>::type>::type;
+};
+
+/// True if _T is a reference.
+template <typename _T> struct is_reference : false_type {};
+template <typename _T> struct is_reference<_T&> : true_type {};
+template <typename _T> struct is_reference<_T&&> : true_type {};
+
+/// Check if something is a reference.
+template <typename _T> struct _IsRef : is_reference<_T> {};
+
+/// Check if something is NOT a reference.
+template <typename _T> struct _NotRef : _Not<_IsRef<_T>> {};
+
+/// Struct that has a member `type` iff `_Cond` is true.
+template <bool, typename _T = void>
+struct enable_if {};
+
+template <typename _T>
+struct enable_if<true, _T> { using type = _T; };
+
+/// SFINAE helper.
+template <typename... _Conditions>
+struct _Requires : enable_if<_And<_Conditions...>::value> {};
+
+/// Abbreviations.
+template <typename _T, typename _U> constexpr inline bool is_same_v = is_same<_T, _U>::value;
+template <typename _T> constexpr inline bool is_reference_v = is_reference<_T>::value;
+template <typename _T> constexpr inline bool is_pointer_v = is_pointer<_T>::value;
+template <typename _T> constexpr inline bool is_integral_v = is_integral<_T>::value;
+template <typename _T> constexpr inline bool is_floating_point_v = is_floating_point<_T>::value;
+
+template <typename _T> using remove_reference_t = typename remove_reference<_T>::type;
+template <typename _T> using remove_const_t = typename remove_const<_T>::type;
+template <typename _T> using remove_volatile_t = typename remove_volatile<_T>::type;
+template <typename _T> using remove_cv_t = typename remove_cv<_T>::type;
+template <typename _T> using remove_cvref_t = typename remove_cvref<_T>::type;
+
+template <bool _Cond, typename _True, typename _Else>
+using conditional_t = typename conditional<_Cond, _True, _Else>::type;
+
+template <bool _Cond, typename _T>
+using enable_if_t = typename enable_if<_Cond, _T>::type;
+
+} // namespace std
+
+#endif // _LENSOR_OS_TYPE_TRAITS
+

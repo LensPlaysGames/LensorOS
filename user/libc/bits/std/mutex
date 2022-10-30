@@ -1,0 +1,52 @@
+/* Copyright 2022, Contributors To LensorOS.
+* All rights reserved.
+*
+* This file is part of LensorOS.
+*
+* LensorOS is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* LensorOS is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
+*/
+
+#ifndef _LENSOR_OS_MUTEX
+#define _LENSOR_OS_MUTEX
+
+namespace std {
+
+struct mutex {
+    void lock() {}
+    bool try_lock() { return true; }
+    void unlock() {}
+
+    explicit mutex() {}
+};
+
+struct recursive_mutex {
+    void lock() {}
+    bool try_lock() { return true; }
+    void unlock() {}
+
+    explicit recursive_mutex() {}
+};
+
+template <typename _Lock = mutex>
+class unique_lock {
+    _Lock& __lock;
+public:
+    explicit unique_lock(_Lock& lock) : __lock(lock) { __lock.lock(); }
+    ~unique_lock() { __lock.unlock(); }
+};
+
+} // namespace std
+
+
+#endif // _LENSOR_OS_MUTEX

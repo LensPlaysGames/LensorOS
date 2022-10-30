@@ -47,10 +47,11 @@
 **/rls/
 **/release/
 **/tst/
-**/test/
 **/testing/
-**/cmake-build-debug/
-**/cmake-build-release/
+**/cmake-build-*/
+
+# LibC Tests
+user/libc/test/test
 
 # Backups
 **/*.tmp*

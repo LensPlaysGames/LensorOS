@@ -30,7 +30,7 @@ bool __libc_have_erms = false;
 
 /// Copying
 void* memmove(void* dst, const void* src, size_t n) {
-    unsigned char tmp[n];
+    __extension__ unsigned char tmp[n];
     memcpy(tmp, src, n);
     memcpy(dst, tmp, n);
     return dst;
@@ -265,7 +265,7 @@ const void* memmem
 
 void* memset(void* ptr, int value, size_t n) {
     for (size_t i = 0; i < n; ++i)
-        *(unsigned char*)((size_t)ptr + i) = value;
+        *(unsigned char*)((size_t)ptr + i) = static_cast<unsigned char>(value);
     return ptr;
 }
 
@@ -309,7 +309,7 @@ static const char* errno_strings[] = {
 };
 
 char* strerror(int errnum) {
-    if (errnum > errno_strings_size || errnum < 0)
+    if (errnum < 0 || size_t(errnum) > errno_strings_size)
         return (char*)"Invalid error number.";
     return (char*)errno_strings[errnum];
 }

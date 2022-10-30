@@ -17,19 +17,14 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#ifndef _LENSOR_OS_STUB_H
+#define _LENSOR_OS_STUB_H
 
-#include "syscalls.h"
+#include "../assert.h"
 
-extern "C" {
-    uintptr_t syscall(uintptr_t systemCall) {
-        if (systemCall >= SYS_MAXSYSCALL)
-            return -1;
-        uintptr_t result;
-        __asm__ volatile ("int $0x80"
-                          : "=a"(result)
-                          : "a"(systemCall)
-                          : "memory"
-                          );
-        return result;
-    }
-}
+#define _LIBC_STUB()                              \
+    do {                                         \
+        __libc_assert(false, "Not implemented"); \
+    } while (0)
+
+#endif // _LENSOR_OS_STUB_H
