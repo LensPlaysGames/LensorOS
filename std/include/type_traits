@@ -153,11 +153,24 @@ template <typename _T> struct is_reference : false_type {};
 template <typename _T> struct is_reference<_T&> : true_type {};
 template <typename _T> struct is_reference<_T&&> : true_type {};
 
+/// True if _T is an lvalue reference.
+template <typename _T> struct is_lvalue_reference : false_type {};
+template <typename _T> struct is_lvalue_reference<_T&> : true_type {};
+
 /// Check if something is a reference.
 template <typename _T> struct _IsRef : is_reference<_T> {};
 
 /// Check if something is NOT a reference.
 template <typename _T> struct _NotRef : _Not<_IsRef<_T>> {};
+
+/// Check whether a type is trivially copyable.
+template <typename _T> struct is_trivially_copyable : bool_constant<__is_trivially_copyable(_T)> {};
+
+/// Check whether a type is trivially destructible.
+template <typename _T> struct is_trivially_destructible : bool_constant<__is_trivially_destructible(_T)> {};
+
+/// Check whether a type is an object, i.e. not a function, reference, or void.
+template <typename _T> struct is_object : bool_constant<__is_object(_T)> {};
 
 /// Struct that has a member `type` iff `_Cond` is true.
 template <bool, typename _T = void>
@@ -173,9 +186,13 @@ struct _Requires : enable_if<_And<_Conditions...>::value> {};
 /// Abbreviations.
 template <typename _T, typename _U> constexpr inline bool is_same_v = is_same<_T, _U>::value;
 template <typename _T> constexpr inline bool is_reference_v = is_reference<_T>::value;
+template <typename _T> constexpr inline bool is_lvalue_reference_v = is_lvalue_reference<_T>::value;
 template <typename _T> constexpr inline bool is_pointer_v = is_pointer<_T>::value;
 template <typename _T> constexpr inline bool is_integral_v = is_integral<_T>::value;
 template <typename _T> constexpr inline bool is_floating_point_v = is_floating_point<_T>::value;
+template <typename _T> constexpr inline bool is_trivially_copyable_v = is_trivially_copyable<_T>::value;
+template <typename _T> constexpr inline bool is_trivially_destructible_v = is_trivially_destructible<_T>::value;
+template <typename _T> constexpr inline bool is_object_v = is_object<_T>::value;
 
 template <typename _T> using remove_reference_t = typename remove_reference<_T>::type;
 template <typename _T> using remove_const_t = typename remove_const<_T>::type;

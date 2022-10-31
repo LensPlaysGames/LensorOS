@@ -1,0 +1,66 @@
+/* Copyright 2022, Contributors To LensorOS.
+* All rights reserved.
+*
+* This file is part of LensorOS.
+*
+* LensorOS is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* LensorOS is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
+
+#ifndef LENSOROS_ITERATOR_
+#define LENSOROS_ITERATOR_
+
+#include <type_traits>
+#include <stddef.h>
+
+namespace std {
+
+template <
+    typename _T,
+    typename = _Requires<_Pointer<_T>>
+>
+class _ReverseIterator {
+    _T __it;
+
+public:
+    _ReverseIterator(_T __it) : __it(__it) {}
+
+    _ReverseIterator& operator++() { --__it; return *this; }
+    _ReverseIterator operator++(int) {
+        _ReverseIterator __tmp = *this;
+        --__it;
+        return __tmp;
+    }
+
+    _ReverseIterator& operator--() { ++__it; return *this; }
+    _ReverseIterator operator--(int) {
+        _ReverseIterator __tmp = *this;
+        ++__it;
+        return __tmp;
+    }
+
+    _ReverseIterator operator+(size_t __n) { return _ReverseIterator(__it - __n); }
+    _ReverseIterator operator-(size_t __n) { return _ReverseIterator(__it + __n); }
+    _ReverseIterator& operator+=(size_t __n) { __it -= __n; return *this; }
+    _ReverseIterator& operator-=(size_t __n) { __it += __n; return *this; }
+
+    _T operator->() { return __it; }
+    _T operator*() { return *__it; }
+
+    bool operator==(const _ReverseIterator& __other) const { return __it == __other.__it; }
+    bool operator!=(const _ReverseIterator& __other) const { return __it != __other.__it; }
+};
+
+}
+
+#endif // LENSOROS_ITERATOR_

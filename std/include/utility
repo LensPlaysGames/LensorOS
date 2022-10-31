@@ -26,12 +26,11 @@ namespace std {
 
 /// *Very* simple std::pair.
 template <
-    typename _First, /// First member of the pair.
-    typename _Second,  /// Second member of the pair.
+    typename _First,  /// First member of the pair.
+    typename _Second, /// Second member of the pair.
 
     /// SFINAE: Make sure the types are not references.
-    typename = _Requires<_NotRef<_First>, _NotRef<_Second>>
->
+    typename _Requires<_NotRef<_First>, _NotRef<_Second>>::type>
 struct pair {
     using first_type = remove_cvref_t<_First>;
     using second_type = remove_cvref_t<_Second>;
@@ -46,6 +45,18 @@ constexpr remove_cvref_t<_T>&& move(_T&& value) noexcept {
     return static_cast<remove_cvref_t<_T>&&>(value);
 }
 
+/// Forward a value.
+template <typename _T>
+constexpr _T&& forward(std::remove_reference_t<_T>& __t) noexcept {
+    return static_cast<_T&&>(__t);
 }
+
+template <typename _T>
+constexpr _T&& forward(std::remove_reference_t<_T>&& __t) noexcept {
+    static_assert(!std::is_lvalue_reference_v<_T>, "Can't forward an rvalue as an lvalue.");
+    return static_cast<_T&&>(__t);
+}
+
+} // namespace std
 
 #endif // _LENSOR_OS_UTILITY
