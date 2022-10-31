@@ -40,6 +40,10 @@ set( EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin )
 
 project( LensorOS VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGES} )
 
+add_definitions(-D__kernel__)
+
+include_directories( "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/../std/include")
+
 # Interrupts must be compiled with general registers only.
 add_library(
   Interrupts

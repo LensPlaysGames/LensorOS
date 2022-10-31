@@ -21,6 +21,7 @@
 #define LENSOR_OS_HEAP_H
 
 #include <integers.h>
+#include <new>
 
 #define HEAP_VIRTUAL_BASE 0xffffffffff000000
 #define HEAP_INITIAL_PAGES 1
@@ -45,19 +46,6 @@ void init_heap();
 
 // Enlarge the heap by a given number of bytes, aligned to next-highest page-aligned value.
 void expand_heap(u64 numBytes);
-
-__attribute__((malloc, alloc_size(1))) void* malloc(u64 numBytes);
-void free(void* address);
-
-void* operator new (u64 numBytes);
-void* operator new[] (u64 numBytes);
-void operator delete (void* address) noexcept;
-void operator delete[] (void* address) noexcept;
-
-/// According to www.cplusplus.com on the C++14 standard, delete calls
-///   with an extra `unsigned long` parameter just calls delete.
-void operator delete (void* address, u64 unused);
-void operator delete[] (void* address, u64 unused);
 
 void heap_print_debug();
 void heap_print_debug_summed();

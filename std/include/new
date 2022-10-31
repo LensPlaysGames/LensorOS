@@ -20,14 +20,21 @@
 #ifndef _LENSOR_OS_NEW
 #define _LENSOR_OS_NEW
 
-#include "../../stdlib.h"
+#include <bits/decls.h>
 
-[[nodiscard]] void* operator new(size_t size) { return malloc(size); }
-[[nodiscard]] void* operator new[](size_t size) { return malloc(size); }
-void operator delete(void* ptr) noexcept { free(ptr); }
-void operator delete[](void* ptr) noexcept { free(ptr); }
-void operator delete(void* ptr, size_t) noexcept { free(ptr); }
-void operator delete[](void* ptr, size_t) noexcept { free(ptr); }
+__BEGIN_DECLS__
 
+/// Declare these here to avoid having to include stdlib.h in the kernel.
+__attribute__((__malloc__, __alloc_size__(1))) void* malloc(size_t numBytes);
+void free(void* address);
+
+__END_DECLS__
+
+[[nodiscard]] void* operator new(size_t size);
+[[nodiscard]] void* operator new[](size_t size);
+void operator delete(void* ptr) noexcept;
+void operator delete[](void* ptr) noexcept;
+void operator delete(void* ptr, size_t) noexcept;
+void operator delete[](void* ptr, size_t) noexcept;
 
 #endif // _LENSOR_OS_NEW

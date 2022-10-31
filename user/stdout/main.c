@@ -18,9 +18,11 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
 
 int main() {
   const char *message = "Hello, friends :^)\r";
-  puts(message);
+  //puts(message);
+  write(0, "Hello, friends :^)\r\n", 20);
   return 0;
 }

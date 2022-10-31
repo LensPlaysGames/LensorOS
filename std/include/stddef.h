@@ -21,7 +21,7 @@
 #ifndef _STDDEF_H
 #define _STDDEF_H
 
-#include "bits/decls.h"
+#include <bits/decls.h>
 
 #ifdef __cplusplus
 #   define NULL nullptr

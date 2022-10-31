@@ -156,7 +156,7 @@ void expand_heap(u64 numBytes) {
 }
 
 
-void* malloc(u64 numBytes) {
+void* malloc(size_t numBytes) {
     // Can not allocate nothing.
     if (numBytes == 0)
         return nullptr;
@@ -367,16 +367,9 @@ void heap_print_debug_summed() {
     heap_print_debug_starchart();
 }
 
-void* operator new   (u64 numBytes) { return malloc(numBytes); }
-void* operator new[] (u64 numBytes) { return malloc(numBytes); }
-void  operator delete   (void* address) noexcept { return free(address); }
-void  operator delete[] (void* address) noexcept { return free(address); }
-
-void operator delete (void* address, u64 unused) {
-  (void)unused;
-  return free(address);
-}
-void operator delete[] (void* address, u64 unused) {
-  (void)unused;
-  return free(address);
-}
+[[nodiscard]] void* operator new(size_t size) { return malloc(size); }
+[[nodiscard]] void* operator new[](size_t size) { return malloc(size); }
+void operator delete(void* ptr) noexcept { free(ptr); }
+void operator delete[](void* ptr) noexcept { free(ptr); }
+void operator delete(void* ptr, size_t) noexcept { free(ptr); }
+void operator delete[](void* ptr, size_t) noexcept { free(ptr); }

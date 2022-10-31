@@ -1,0 +1,110 @@
+/* Copyright 2022, Contributors To LensorOS.
+* All rights reserved.
+*
+* This file is part of LensorOS.
+*
+* LensorOS is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* LensorOS is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with LensorOS. If not, see <https://www.gnu.org/licenses
+*/
+
+#ifndef LENSOROS_VECTOR_
+#define LENSOROS_VECTOR_
+
+#include "memory/heap.h"
+
+namespace std {
+
+template <typename T>
+class vector {
+    using DataType = T;
+
+    T* ptr{};
+    usz sz{};
+    usz cap{};
+
+public:
+    vector() = default;
+    vector(usz size) : cap(size)  { ptr = new T[size]; }
+
+    /// Copying.
+    vector(const vector& other) : sz(other.sz), cap(other.cap) {
+        ptr = new T[cap];
+
+        /// TODO: Type traits to check if T is trivially copyable.
+        //for (usz i = 0; i < sz; i++) { ptr[i] = other.ptr[i]; }
+        memcpy(ptr, other.ptr, sz * sizeof(T));
+    }
+
+    /// Moving.
+    vector(vector&& other) noexcept : ptr(other.ptr), sz(other.sz) {
+        other.ptr = nullptr;
+        other.sz = 0;
+    }
+
+    /// Destructor.
+    ~vector() { delete[] ptr; }
+
+    vector& operator=(const vector& other) {
+        if (this == &other) { return *this; }
+        delete[] ptr;
+
+        sz = other.sz;
+        ptr = new T[sz];
+
+        /// TODO: Type traits to check if T is trivially copyable.
+        //for (usz i = 0; i < sz; i++) { ptr[i] = other.ptr[i]; }
+        memcpy(ptr, other.ptr, sz * sizeof(T));
+        return *this;
+    }
+
+    vector& operator=(vector&& other) noexcept {
+        if (this == &other) { return *this; }
+        delete[] ptr;
+
+        sz = other.sz;
+        ptr = other.ptr;
+
+        other.ptr = nullptr;
+        other.sz = 0;
+
+        return *this;
+    }
+
+    [[nodiscard]] T& operator[](usz index) { return ptr[index]; }
+    [[nodiscard]] const T& operator[](usz index) const { return ptr[index]; }
+
+    [[nodiscard]] T* data() { return ptr; }
+    [[nodiscard]] const T* data() const { return ptr; }
+
+    [[nodiscard]] T* begin() { return ptr; }
+    [[nodiscard]] T* end() { return ptr + sz; }
+    [[nodiscard]] const T* begin() const { return ptr; }
+    [[nodiscard]] const T* end() const { return ptr + sz; }
+
+    [[nodiscard]] usz size() const { return sz; }
+    [[nodiscard]] bool empty() const { return sz == 0; }
+
+    /// Append an element to the end of the vector.
+    void push_back(const T& value) {
+        T* new_ptr = new T[sz + 1];
+        memcpy(new_ptr, ptr, sz * sizeof(T));
+        new_ptr[sz] = value;
+        delete[] ptr;
+        ptr = new_ptr;
+        sz++;
+    }
+};
+
+} // namespace std
+
+#endif // LENSOROS_VECTOR_

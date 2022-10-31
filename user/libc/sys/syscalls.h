@@ -20,8 +20,8 @@
 #ifndef _SYSCALLS_H
 #define _SYSCALLS_H
 
-#include "../stdint.h"
-#include "../bits/decls.h"
+#include <stdint.h>
+#include <bits/decls.h>
 
 #ifdef __lensor__
 #define SYS_open  0
@@ -185,7 +185,7 @@ _Generic((_VA_FIRST(__VA_ARGS__ __VA_OPT__(,) _EMPTY_VAL)),     \
 /// ===========================================================================
 #else
 
-#include "../bits/std/type_traits"
+#include <type_traits>
 
 namespace std::__detail {
 /// Perform a system call.

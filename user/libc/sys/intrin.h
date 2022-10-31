@@ -24,7 +24,7 @@
 #ifndef _LENSOR_OS_LIBC_INTRIN_H
 #define _LENSOR_OS_LIBC_INTRIN_H
 
-#include "../bits/decls.h"
+#include <bits/decls.h>
 
 __BEGIN_DECLS__
 

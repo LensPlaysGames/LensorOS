@@ -23,7 +23,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-label"
 
-#include "decls.h"
+#include <bits/decls.h>
 #include "../sys/intrin.h"
 
 __BEGIN_DECLS__

@@ -19,11 +19,11 @@
 
 #include "stdio.h"
 
-#include "bits/std/algorithm"
-#include "bits/std/atomic"
-#include "bits/std/mutex"
-#include "bits/std/new"
-#include "bits/std/utility"
+#include <algorithm>
+#include <atomic>
+#include <mutex>
+#include <new>
+#include <utility>
 #include "bits/stub.h"
 #include "bits/file_struct.h"
 #include "bits/cdtors.h"

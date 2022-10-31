@@ -17,8 +17,8 @@
 * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef _LENSOR_OS_LIBC_DECLS_H
-#define _LENSOR_OS_LIBC_DECLS_H
+#ifndef _LENSOR_OS_DECLS_H
+#define _LENSOR_OS_DECLS_H
 
 #ifdef __cplusplus
 #    define __BEGIN_DECLS__ extern "C" {
@@ -58,4 +58,4 @@ __END_DECLS__
 #endif
 
 
-#endif // _LENSOR_OS_LIBC_DECLS_H
+#endif // _LENSOR_OS_DECLS_H

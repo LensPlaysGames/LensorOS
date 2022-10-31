@@ -24,8 +24,10 @@
 #    error "This header is C++ only."
 #endif
 
-#include "decls.h"
-#include "bits/std/mutex"
+#include <bits/decls.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <mutex>
 
 /// ===========================================================================
 ///  File struct.

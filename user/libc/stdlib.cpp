@@ -19,8 +19,8 @@
 
 #include "stdlib.h"
 
+#include <algorithm>
 #include "bits/file_struct.h"
-#include "bits/std/algorithm"
 #include "bits/cdtors.h"
 #include "errno.h"
 #include "stddef.h"
@@ -358,3 +358,10 @@ void free(void* ptr) {
 }
 
 __END_DECLS__
+
+[[nodiscard]] void* operator new(size_t size) { return malloc(size); }
+[[nodiscard]] void* operator new[](size_t size) { return malloc(size); }
+void operator delete(void* ptr) noexcept { free(ptr); }
+void operator delete[](void* ptr) noexcept { free(ptr); }
+void operator delete(void* ptr, size_t) noexcept { free(ptr); }
+void operator delete[](void* ptr, size_t) noexcept { free(ptr); }
