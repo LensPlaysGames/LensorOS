@@ -37,7 +37,7 @@ GlobalFileDescriptor VFS::procfd_to_fd(ProcessFileDescriptor procfd) const {
     auto raw = static_cast<FileDescriptor>(procfd);
     const auto& proc = Scheduler::CurrentProcess->value();
 
-    if (raw > proc->FileDescriptorTable.size() || !proc->FileDescriptorTable[raw]) {
+    if (raw > proc->FileDescriptorTable.size() || proc->FileDescriptorTable[raw] == -1lu) {
 #ifdef DEBUG_VFS
         dbgmsg("ERROR: ProcFD %ull is unmapped.\r\n", raw);
 #endif
@@ -45,7 +45,7 @@ GlobalFileDescriptor VFS::procfd_to_fd(ProcessFileDescriptor procfd) const {
     }
 
 #ifdef DEBUG_VFS
-    dbgmsg("ProcFD %ull is mapped to SysFD %ull.\r\n", raw, proc->FileDescriptorTable[raw]);
+    dbgmsg("procfd_to_fd: ProcFD %ull is mapped to SysFD %ull.\r\n", raw, proc->FileDescriptorTable[raw]);
 #endif
     return static_cast<GlobalFileDescriptor>(proc->FileDescriptorTable[raw]);
 }
@@ -54,15 +54,24 @@ auto VFS::file(ProcessFileDescriptor procfd) -> std::shared_ptr<OpenFileDescript
     auto raw = static_cast<FileDescriptor>(procfd);
     const auto& proc = Scheduler::CurrentProcess->value();
 
-    if (raw > proc->FileDescriptorTable.size() || !proc->FileDescriptorTable[raw]) {
 #ifdef DEBUG_VFS
-        dbgmsg("ERROR: ProcFD %ull is unmapped.\r\n", raw);
+    dbgmsg("[VFS] ProcFds:\r\n");
+    u64 n = 0;
+    for (const auto& entry : proc->FileDescriptorTable) {
+        dbgmsg("  %ull -> Sys %ull\r\n", n, entry);
+        n++;
+    }
+#endif
+
+    if (raw > proc->FileDescriptorTable.size() || proc->FileDescriptorTable[raw] == -1lu) {
+#ifdef DEBUG_VFS
+        dbgmsg("ERROR: ProcFD %ull is unmapped. (FDTable size: %ull)\r\n", raw, proc->FileDescriptorTable.size());
 #endif
         return {};
     }
 
 #ifdef DEBUG_VFS
-    dbgmsg("ProcFD %ull is mapped to SysFD %ull.\r\n", raw, proc->FileDescriptorTable[raw]);
+    dbgmsg("file: ProcFD %ull is mapped to SysFD %ull.\r\n", raw, proc->FileDescriptorTable[raw]);
 #endif
     return file(static_cast<GlobalFileDescriptor>(proc->FileDescriptorTable[raw]));
 }
@@ -98,7 +107,7 @@ void VFS::free_fd(GlobalFileDescriptor fd, ProcessFileDescriptor procfd) {
     auto raw_proc = static_cast<FileDescriptor>(procfd);
     const auto& proc = Scheduler::CurrentProcess->value();
 
-    proc->FileDescriptorTable[raw_proc] = {};
+    proc->FileDescriptorTable[raw_proc] = -1;
     proc->FreeFileDescriptors.push_back(raw_proc);
     Opened[raw] = {};
     FreeFileDescriptors.push_back(raw);
@@ -240,29 +249,54 @@ void VFS::print_debug() {
     dbgmsg("\r\n");
 }
 
-FileDescriptors VFS::add_file(std::shared_ptr<OpenFileDescription> file, Process& proc) {
+FileDescriptors VFS::add_file(std::shared_ptr<OpenFileDescription> file, Process* proc) {
     FileDescriptor fd;
     FileDescriptor procfd;
 
+    if (!proc) proc = Scheduler::CurrentProcess->value();
+
+#ifdef DEBUG_VFS
+    dbgmsg("[VFS]: Creating file descriptor mapping\r\n");
+#endif
+
     /// Add the file descriptor to the global file table.
-    if (!FreeFileDescriptors.empty()) {
+/*    if (!FreeFileDescriptors.empty()) {
         fd = FreeFileDescriptors.back();
         FreeFileDescriptors.pop_back();
         Opened[fd] = std::move(file);
-    } else {
+#ifdef DEBUG_VFS
+        dbgmsg("[VFS]: Reusing freed SysFD %ull\r\n", fd);
+#endif
+    } else*/
+
+     {
         fd = Opened.size();
         Opened.push_back(std::move(file));
+#ifdef DEBUG_VFS
+        dbgmsg("[VFS]: Allocating new SysFD %ull\r\n", fd);
+#endif
     }
 
     /// Add the file descriptor to the local process table.
-    if (!proc.FreeFileDescriptors.empty()) {
-        procfd = proc.FreeFileDescriptors.back();
-        proc.FreeFileDescriptors.pop_back();
-        proc.FileDescriptorTable[procfd] = fd;
-    } else {
-        procfd = proc.FileDescriptorTable.size();
-        proc.FileDescriptorTable.push_back(fd);
+    /*if (!proc->FreeFileDescriptors.empty()) {
+        procfd = proc->FreeFileDescriptors.back();
+        proc->FreeFileDescriptors.pop_back();
+        proc->FileDescriptorTable[procfd] = fd;
+#ifdef DEBUG_VFS
+        dbgmsg("[VFS]: Reusing freed ProcFD %ull\r\n", procfd);
+#endif
+    } else*/
+    {
+        procfd = proc->FileDescriptorTable.size();
+        proc->FileDescriptorTable.push_back(fd);
+#ifdef DEBUG_VFS
+        dbgmsg("[VFS]: Allocating new ProcFD %ull\r\n", procfd);
+#endif
     }
+
+#ifdef DEBUG_VFS
+    dbgmsg("[VFS]: Mapped ProcFD %ull to SysFD %ull\r\n", procfd, fd);
+#endif
 
     return {static_cast<ProcessFileDescriptor>(procfd), static_cast<GlobalFileDescriptor>(fd)};
 }

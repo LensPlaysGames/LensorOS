@@ -96,7 +96,7 @@ public:
     }
 
     /// Files are stored as shared_ptrs to support dup() more easily.
-    FileDescriptors add_file(std::shared_ptr<OpenFileDescription>, Process& proc = *Scheduler::CurrentProcess->value());
+    FileDescriptors add_file(std::shared_ptr<OpenFileDescription>, Process* proc = nullptr);
 
 private:
     /// TODO: Should these two be protected by a lock?

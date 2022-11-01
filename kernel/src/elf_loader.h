@@ -37,7 +37,7 @@
 #include <virtual_filesystem.h>
 
 // Uncomment the following directive for extra debug output.
-//#define DEBUG_ELF
+#define DEBUG_ELF
 
 namespace ELF {
     /// Return zero when ELF header is of expected format.
@@ -188,7 +188,7 @@ namespace ELF {
                                 , (void*)(virtAddress + t)
                                 , loadedProgram + t
                                 , flags
-                                , Memory::ShowDebug::Yes
+                                , Memory::ShowDebug::No
                                 );
                 }
             }
@@ -232,9 +232,17 @@ namespace ELF {
                                      , 0, 0);
 
         auto file = std::make_shared<OpenFileDescription>(driver, *meta);
-        vfs.add_file(file, *process);
-        vfs.add_file(file, *process);
-        vfs.add_file(std::move(file), *process);
+        vfs.add_file(file, process);
+        vfs.add_file(file, process);
+        vfs.add_file(std::move(file), process);
+        vfs.print_debug();
+
+        dbgmsg("[ELF] ProcFds:\r\n");
+        u64 n = 0;
+        for (const auto& entry : process->FileDescriptorTable) {
+            dbgmsg("  %ull -> Sys %ull\r\n", n, entry);
+            n++;
+        }
 
         // New page map.
         process->CR3 = newPageTable;
