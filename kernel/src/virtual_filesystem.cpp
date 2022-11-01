@@ -17,7 +17,7 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <virtual_filesystem.h>
+#include "scheduler.h"
 
 #include <cstr.h>
 #include <debug.h>
@@ -28,23 +28,94 @@
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
 #include <string.h>
+#include <virtual_filesystem.h>
 
 // Uncomment the following directive for extra debug information output.
-//#define DEBUG_VFS
+#define DEBUG_VFS
 
-FileDescriptor VFS::open(const String& path) {
+GlobalFileDescriptor VFS::procfd_to_fd(ProcessFileDescriptor procfd) const {
+    auto raw = static_cast<FileDescriptor>(procfd);
+    const auto& proc = Scheduler::CurrentProcess->value();
+
+    if (raw > proc->FileDescriptorTable.size() || !proc->FileDescriptorTable[raw]) {
+#ifdef DEBUG_VFS
+        dbgmsg("ERROR: ProcFD %ull is unmapped.\r\n", raw);
+#endif
+        return GlobalFileDescriptor::Invalid;
+    }
+
+#ifdef DEBUG_VFS
+    dbgmsg("ProcFD %ull is mapped to SysFD %ull.\r\n", raw, proc->FileDescriptorTable[raw]);
+#endif
+    return static_cast<GlobalFileDescriptor>(proc->FileDescriptorTable[raw]);
+}
+
+auto VFS::file(ProcessFileDescriptor procfd) -> std::shared_ptr<OpenFileDescription> {
+    auto raw = static_cast<FileDescriptor>(procfd);
+    const auto& proc = Scheduler::CurrentProcess->value();
+
+    if (raw > proc->FileDescriptorTable.size() || !proc->FileDescriptorTable[raw]) {
+#ifdef DEBUG_VFS
+        dbgmsg("ERROR: ProcFD %ull is unmapped.\r\n", raw);
+#endif
+        return {};
+    }
+
+#ifdef DEBUG_VFS
+    dbgmsg("ProcFD %ull is mapped to SysFD %ull.\r\n", raw, proc->FileDescriptorTable[raw]);
+#endif
+    return file(static_cast<GlobalFileDescriptor>(proc->FileDescriptorTable[raw]));
+}
+
+auto VFS::file(GlobalFileDescriptor fd) -> std::shared_ptr<OpenFileDescription> {
+    auto raw = static_cast<FileDescriptor>(fd);
+    if (raw > Opened.size() || !Opened[raw]) {
+#ifdef DEBUG_VFS
+        dbgmsg("ERROR: SysFD %ull is unmapped.\r\n", raw);
+#endif
+        return {};
+    }
+    return Opened[raw];
+}
+
+bool VFS::valid(ProcessFileDescriptor procfd) const {
+    return procfd_to_fd(procfd) != GlobalFileDescriptor::Invalid;
+}
+
+bool VFS::valid(GlobalFileDescriptor fd) const {
+    auto raw = static_cast<FileDescriptor>(fd);
+    if (raw > Opened.size() || !Opened[raw]) {
+#ifdef DEBUG_VFS
+        dbgmsg("ERROR: SysFD %ull is unmapped.\r\n", raw);
+#endif
+        return false;
+    }
+    return true;
+}
+
+void VFS::free_fd(GlobalFileDescriptor fd, ProcessFileDescriptor procfd) {
+    auto raw = static_cast<FileDescriptor>(fd);
+    auto raw_proc = static_cast<FileDescriptor>(procfd);
+    const auto& proc = Scheduler::CurrentProcess->value();
+
+    proc->FileDescriptorTable[raw_proc] = {};
+    proc->FreeFileDescriptors.push_back(raw_proc);
+    Opened[raw] = {};
+    FreeFileDescriptors.push_back(raw);
+}
+
+FileDescriptors VFS::open(const String& path) {
     u64 fullPathLength = path.length();
     if (fullPathLength <= 1) {
         dbgmsg_s("[VFS]: path is not long enough.\r\n");
-        return (FileDescriptor)-1;
+        return {};
     }
     if (path[0] != '/') {
         dbgmsg("[VFS]: path does not start with slash, %s\r\n", fullPathLength);
-        return (FileDescriptor)-1;
+        return {};
     }
-    FileDescriptor out = (FileDescriptor)-1;
-    Mounts.for_each([this, &out, path, fullPathLength](auto* it) {
-        MountPoint& mount = it->value();
+
+    for (const auto& mount : Mounts) {
         StorageDeviceDriver* dev = mount.FS->storage_device_driver();
         FilesystemDriver* fileDriver = mount.FS->filesystem_driver();
         u64 mountPathLength = strlen(mount.Path) - 1;
@@ -74,30 +145,29 @@ FileDescriptor VFS::open(const String& path) {
                            , metadata.invalid()
                            );
 #endif /* #ifdef DEBUG_VFS */
-                    if (metadata.invalid() == false) {
-                        OpenFileDescription openedFile(dev, metadata);
-                        out = Opened.length();
-                        Opened.add_end(openedFile);
+                    if (!metadata.invalid()) {
+                        return add_file(std::make_shared<OpenFileDescription>(dev, metadata));
                     }
                 }
             }
         }
-    });
-    return out;
+    }
+
+    return {};
 }
 
-bool VFS::close(FileDescriptor fd) {
-    if (fd >= Opened.length())
-        return false;
+bool VFS::close(ProcessFileDescriptor procfd) {
+    auto fd = procfd_to_fd(procfd);
+    if (fd == GlobalFileDescriptor::Invalid) { return false; }
 
-    Opened.remove(fd);
+    auto f = file(fd);
+    if (!f) { return false; }
+
+    free_fd(fd, procfd);
     return true;
 }
 
-ssz VFS::read(FileDescriptor fd, u8* buffer, usz byteCount, usz byteOffset) {
-    if (fd >= Opened.length())
-        return -1;
-
+ssz VFS::read(ProcessFileDescriptor fd, u8* buffer, usz byteCount, usz byteOffset) {
 #ifdef DEBUG_VFS
     dbgmsg("[VFS]: read\r\n"
            "  file descriptor: %ull\r\n"
@@ -111,14 +181,14 @@ ssz VFS::read(FileDescriptor fd, u8* buffer, usz byteCount, usz byteOffset) {
            );
 #endif /* #ifdef DEBUG_VFS */
 
-    OpenFileDescription& file = Opened[fd];
-    return file.DeviceDriver->read
-        (file.Metadata.byte_offset() + byteOffset, byteCount, buffer);
+    auto f = file(fd);
+    if (!f) { return -1; }
+
+    return f->DeviceDriver->read(f->Metadata.byte_offset() + byteOffset, byteCount, buffer);
 }
 
-ssz VFS::write(FileDescriptor fd, u8* buffer, u64 byteCount, u64 byteOffset) {
-    if (fd >= Opened.length())
-        return -1;
+ssz VFS::write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount, u64 byteOffset) {
+    auto f = file(fd);
 
 #ifdef DEBUG_VFS
     dbgmsg("[VFS]: write\r\n"
@@ -133,16 +203,14 @@ ssz VFS::write(FileDescriptor fd, u8* buffer, u64 byteCount, u64 byteOffset) {
            );
 #endif /* #ifdef DEBUG_VFS */
 
-    OpenFileDescription& file = Opened[fd];
-    return file.DeviceDriver->write(file.Metadata.byte_offset() + byteOffset, byteCount, buffer);
+    return f->DeviceDriver->write(f->Metadata.byte_offset() + byteOffset, byteCount, buffer);
 }
 
 void VFS::print_debug() {
     dbgmsg("[VFS]: Debug Info\r\n"
            "  Mounts:\r\n");
     u64 i = 0;
-    Mounts.for_each([&i](auto* it) {
-        MountPoint& mp = it->value();
+    for (const auto& mp : Mounts) {
         dbgmsg("    Mount %ull:\r\n"
                "      Path: %s\r\n"
                "      Filesystem: %s\r\n"
@@ -155,24 +223,46 @@ void VFS::print_debug() {
                , mp.FS->storage_device_driver()
                );
         i += 1;
-    });
+    }
     dbgmsg("\r\n"
            "  Opened files:\r\n");
     i = 0;
-    Opened.for_each([&i](auto* it){
-        OpenFileDescription& file = it->value();
+    for (const auto& f : Opened) {
         dbgmsg("    Open File %ull:\r\n"
                "      Storage Device Driver Address: %x\r\n"
                "      Byte Offset: %ull\r\n"
                , i
-               , file.DeviceDriver
-               , file.Metadata.byte_offset()
-               );
+               , f->DeviceDriver
+               , f->Metadata.byte_offset()
+        );
         i++;
-    });
+    }
     dbgmsg("\r\n");
 }
 
-void VFS::add_file(OpenFileDescription fileDescription) {
-    Opened.add_end(fileDescription);
+FileDescriptors VFS::add_file(std::shared_ptr<OpenFileDescription> file, Process& proc) {
+    FileDescriptor fd;
+    FileDescriptor procfd;
+
+    /// Add the file descriptor to the global file table.
+    if (!FreeFileDescriptors.empty()) {
+        fd = FreeFileDescriptors.back();
+        FreeFileDescriptors.pop_back();
+        Opened[fd] = std::move(file);
+    } else {
+        fd = Opened.size();
+        Opened.push_back(std::move(file));
+    }
+
+    /// Add the file descriptor to the local process table.
+    if (!proc.FreeFileDescriptors.empty()) {
+        procfd = proc.FreeFileDescriptors.back();
+        proc.FreeFileDescriptors.pop_back();
+        proc.FileDescriptorTable[procfd] = fd;
+    } else {
+        procfd = proc.FileDescriptorTable.size();
+        proc.FileDescriptorTable.push_back(fd);
+    }
+
+    return {static_cast<ProcessFileDescriptor>(procfd), static_cast<GlobalFileDescriptor>(fd)};
 }

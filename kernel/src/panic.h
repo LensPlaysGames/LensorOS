@@ -36,4 +36,6 @@ void panic(InterruptFrame*, const char* panicMessage);
 __attribute__((no_caller_saved_registers))
 void panic(InterruptFrameError*, const char* panicMessage);
 
+#define ASSERT(cond, msg) panic("Assertion \"" #cond "\" failed: " msg)
+
 #endif

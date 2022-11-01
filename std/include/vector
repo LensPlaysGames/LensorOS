@@ -20,7 +20,12 @@
 #ifndef LENSOROS_VECTOR_
 #define LENSOROS_VECTOR_
 
-#include "memory/heap.h"
+#ifdef __kernel__
+#   include "memory/heap.h"
+#   include "memory.h"
+#else
+#   include <stdlib.h>
+#endif
 
 #include <algorithm>
 #include <iterator>

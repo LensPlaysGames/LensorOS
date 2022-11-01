@@ -559,45 +559,36 @@ void kstage1(BootInfo* bInfo) {
     TSS::initialize();
     Scheduler::initialize();
 
-    // Setup stdout file.
-    // FIXME: This is very, very rudimentary.
+    /// Initialise the stdout driver.
     VFS& vfs = SYSTEM->virtual_filesystem();
-    DbgOutDriver driver;
-    FileMetadata dbgoutMetadata(String("stdout")
-                                , false
-                                , &driver
-                                , nullptr
-                                , 0, 0);
-    OpenFileDescription stdout(&driver, dbgoutMetadata);
-    vfs.add_file(stdout);
-    vfs.print_debug();
+    vfs.set_stdout_driver(std::make_unique<DbgOutDriver>());
 
     if (SYSTEM->filesystems().length() > 0) {
         const char* filePath = "/fs0/blazeit";
         dbgmsg("Opening %s with VFS\r\n", filePath);
-        FileDescriptor fd = vfs.open(filePath);
-        dbgmsg("  Got FileDescriptor %ull\r\n", fd);
+        auto fds = vfs.open(filePath);
+        dbgmsg("  Got FileDescriptors. Process: %ull, System: %ull\r\n", fds.Process, fds.Global);
         vfs.print_debug();
         dbgmsg_s("  Reading first few bytes: ");
         SmartPtr<u8[]> tmpBuffer(new u8[11], 11);
-        vfs.read(fd, &tmpBuffer[0], 11);
+        vfs.read(fds.Process, &tmpBuffer[0], 11);
         dbgmsg(&tmpBuffer[0], 11, ShouldNewline::Yes);
 
-        if ((s64)fd != -1 && ELF::CreateUserspaceElf64Process(vfs, fd)) {
+        if (fds.valid() && ELF::CreateUserspaceElf64Process(vfs, fds.Process)) {
             dbgmsg_s("Successfully created new process from `/fs0/blazeit`\r\n");
-            dbgmsg("Closing FileDescriptor %ull\r\n", fd);
-            vfs.close(fd);
-            dbgmsg("FileDescriptor %ull closed\r\n", fd);
+            dbgmsg("Closing FileDescriptor %ull\r\n", fds.Process);
+            vfs.close(fds.Process);
+            dbgmsg("FileDescriptor %ull closed\r\n", fds.Process);
             vfs.print_debug();
         }
         // Another userspace program
         constexpr const char* programTwoFilePath = "/fs0/stdout";
         dbgmsg("Opening %s with VFS\r\n", programTwoFilePath);
-        fd = vfs.open(programTwoFilePath);
-        dbgmsg("  Got FileDescriptor %ull\r\n", fd);
-        if ((s64)fd != -1 && ELF::CreateUserspaceElf64Process(vfs, fd)) {
+        fds = vfs.open(programTwoFilePath);
+        dbgmsg("  Got FileDescriptors. Process: %ull, System: %ull\r\n", fds.Process, fds.Global);
+        if (fds.valid() && ELF::CreateUserspaceElf64Process(vfs, fds.Process)) {
             dbgmsg("Sucessfully created new process from `/fs0/stdout`\r\n");
-            vfs.close(fd);
+            vfs.close(fds.Process);
         }
     }
 

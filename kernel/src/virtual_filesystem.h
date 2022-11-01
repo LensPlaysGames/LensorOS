@@ -20,13 +20,19 @@
 #ifndef LENSOR_OS_VIRTUAL_FILESYSTEM_H
 #define LENSOR_OS_VIRTUAL_FILESYSTEM_H
 
+#include "smart_pointer.h"
+#include "storage/device_drivers/dbgout.h"
+#include "vector"
+
 #include <file.h>
 #include <filesystem.h>
 #include <linked_list.h>
+#include <memory>
 #include <storage/file_metadata.h>
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
 #include <string.h>
+#include <scheduler.h>
 
 struct OpenFileDescription {
     OpenFileDescription(StorageDeviceDriver* driver, const FileMetadata& md)
@@ -37,6 +43,7 @@ struct OpenFileDescription {
 };
 
 struct MountPoint {
+    MountPoint() = default;
     MountPoint(const char* path, Filesystem* fs)
         : Path(path), FS(fs) {}
 
@@ -44,31 +51,60 @@ struct MountPoint {
     Filesystem* FS { nullptr };
 };
 
+enum struct ProcessFileDescriptor : FileDescriptor { Invalid = static_cast<FileDescriptor>(-1) };
+enum struct GlobalFileDescriptor : FileDescriptor { Invalid = static_cast<FileDescriptor>(-1) };
+
+struct FileDescriptors {
+    ProcessFileDescriptor Process { ProcessFileDescriptor::Invalid };
+    GlobalFileDescriptor Global { GlobalFileDescriptor::Invalid };
+
+    bool valid() const {
+        return Process != ProcessFileDescriptor::Invalid && Global != GlobalFileDescriptor::Invalid;
+    }
+};
+
 class VFS {
+    auto procfd_to_fd(ProcessFileDescriptor procfd) const -> GlobalFileDescriptor;
+    void free_fd(GlobalFileDescriptor fd, ProcessFileDescriptor procfd);
+    auto file(ProcessFileDescriptor fd) -> std::shared_ptr<OpenFileDescription>;
+    auto file(GlobalFileDescriptor fd) -> std::shared_ptr<OpenFileDescription>;
+    bool valid(ProcessFileDescriptor procfd) const;
+    bool valid(GlobalFileDescriptor fd) const;
 public:
     VFS() {}
 
-    void mount(const char* path, Filesystem* fs) {
-        Mounts.add(MountPoint(path, fs));
-    }
+    void mount(const char* path, Filesystem* fs) { Mounts.push_back(MountPoint{path, fs}); }
 
-    FileDescriptor open(const String& path);
-    FileDescriptor open(const char* path) {
+    FileDescriptors open(const String& path);
+    FileDescriptors open(const char* path) {
         return open(String(path));
     }
 
-    bool close(FileDescriptor fd);
+    bool close(ProcessFileDescriptor procfd);
 
-    ssz read(FileDescriptor fd, u8* buffer, usz byteCount, usz byteOffset = 0);
-    ssz write(FileDescriptor fd, u8* buffer, usz byteCount, usz byteOffset);
+    ssz read(ProcessFileDescriptor procfd, u8* buffer, usz byteCount, usz byteOffset = 0);
+    ssz write(ProcessFileDescriptor procfd, u8* buffer, usz byteCount, usz byteOffset);
+
 
     void print_debug();
 
-    void add_file(OpenFileDescription);
+    /// Set the driver that handles stdout. Returns the old driver.
+    std::unique_ptr<DbgOutDriver> set_stdout_driver(std::unique_ptr<DbgOutDriver>&& driver) {
+        auto old = std::move(StdoutDriver);
+        StdoutDriver = std::move(driver);
+        return old;
+    }
+
+    /// Files are stored as shared_ptrs to support dup() more easily.
+    FileDescriptors add_file(std::shared_ptr<OpenFileDescription>, Process& proc = *Scheduler::CurrentProcess->value());
 
 private:
-    SinglyLinkedList<OpenFileDescription> Opened;
-    SinglyLinkedList<MountPoint> Mounts;
+    /// TODO: Should these two be protected by a lock?
+    std::vector<std::shared_ptr<OpenFileDescription>> Opened;
+    std::vector<size_t> FreeFileDescriptors;
+
+    std::vector<MountPoint> Mounts;
+    std::unique_ptr<DbgOutDriver> StdoutDriver;
 };
 
 #endif /* LENSOR_OS_VIRTUAL_FILESYSTEM_H */

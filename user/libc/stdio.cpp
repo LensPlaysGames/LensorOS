@@ -595,11 +595,13 @@ _PushIgnoreWarning("-Wprio-ctor-dtor")
 
 /// Initialise the standard streams.
 [[gnu::constructor(_CDTOR_STDIO)]] void __stdio_init() {
-    /// TODO: stdin and stdout are fully buffered at program startup; stderr is not fully buffered.
+    stdin = stream_create(STDIN_FILENO);
     stdout = stream_create(STDOUT_FILENO);
+    stderr = stream_create(STDERR_FILENO);
 
-    /// FIXME: These should be separate streams eventually.
-    open_files = stdin = stderr = stdout;
+    stdin->__f_buffering = FullyBuffered;
+    stdout->__f_buffering = FullyBuffered;
+    stderr->__f_buffering = Unbuffered;
 }
 
 /// Flush the streams on exit.

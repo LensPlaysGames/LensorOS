@@ -25,6 +25,7 @@
 
 class StorageDeviceDriver {
 public:
+    virtual ~StorageDeviceDriver() = default;
     virtual ssz read(usz byteOffset, usz byteCount, u8* buffer) = 0;
     virtual ssz write(usz byteOffset, usz byteCount, u8* buffer) = 0;
 };

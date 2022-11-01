@@ -37,4 +37,8 @@ void operator delete[](void* ptr) noexcept;
 void operator delete(void* ptr, size_t) noexcept;
 void operator delete[](void* ptr, size_t) noexcept;
 
+/// Placement new.
+[[nodiscard]] void* operator new(size_t, void* ptr) noexcept;
+[[nodiscard]] void* operator new[](size_t, void* ptr) noexcept;
+
 #endif // _LENSOR_OS_NEW

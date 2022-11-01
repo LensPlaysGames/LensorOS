@@ -43,14 +43,14 @@ FileDescriptor sys$0_open(const char* path) {
 #ifdef DEBUG_SYSCALLS
     dbgmsg(sys$_dbgfmt, 0, "open");
 #endif /* #ifdef DEBUG_SYSCALLS */
-    return SYSTEM->virtual_filesystem().open(path);
+    return static_cast<FileDescriptor>(SYSTEM->virtual_filesystem().open(path).Process);
 }
 
 void sys$1_close(FileDescriptor fd) {
 #ifdef DEBUG_SYSCALLS
     dbgmsg(sys$_dbgfmt, 1, "close");
 #endif /* #ifdef DEBUG_SYSCALLS */
-    SYSTEM->virtual_filesystem().close(fd);
+    SYSTEM->virtual_filesystem().close(static_cast<ProcessFileDescriptor>(fd));
 }
 
 // TODO: This should return the amount of bytes read.
@@ -66,7 +66,7 @@ int sys$2_read(FileDescriptor fd, u8* buffer, u64 byteCount) {
            , byteCount
            );
 #endif /* #ifdef DEBUG_SYSCALLS */
-    return SYSTEM->virtual_filesystem().read(fd, buffer, byteCount, 0);
+    return SYSTEM->virtual_filesystem().read(static_cast<ProcessFileDescriptor>(fd), buffer, byteCount, 0);
 }
 
 // TODO: This should return the amount of bytes written.
@@ -82,7 +82,7 @@ int sys$3_write(FileDescriptor fd, u8* buffer, u64 byteCount) {
            , byteCount
            );
 #endif /* #ifdef DEBUG_SYSCALLS */
-    return SYSTEM->virtual_filesystem().write(fd, buffer, byteCount, 0);
+    return SYSTEM->virtual_filesystem().write(static_cast<ProcessFileDescriptor>(fd), buffer, byteCount, 0);
 }
 
 void sys$4_poke() {

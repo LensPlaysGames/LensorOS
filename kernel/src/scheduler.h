@@ -20,6 +20,7 @@
 #ifndef LENSOR_OS_SCHEDULER_H
 #define LENSOR_OS_SCHEDULER_H
 
+#include <vector>
 #include <integers.h>
 #include <interrupts/interrupts.h>
 #include <linked_list.h>
@@ -77,7 +78,8 @@ struct Process {
 
     // Keep track of opened files that may be freed when the process
     // exits, if no other process has it open.
-    SinglyLinkedList<usz> OpenFiles;
+    std::vector<u64> FileDescriptorTable;
+    std::vector<u64> FreeFileDescriptors;
 
     Memory::PageTable* CR3 { nullptr };
 

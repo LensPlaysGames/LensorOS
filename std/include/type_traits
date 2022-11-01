@@ -157,6 +157,15 @@ template <typename _T> struct is_reference<_T&&> : true_type {};
 template <typename _T> struct is_lvalue_reference : false_type {};
 template <typename _T> struct is_lvalue_reference<_T&> : true_type {};
 
+/// Check if something is void.
+template <typename _T> struct is_void : false_type {};
+template <> struct is_void<void> : true_type {};
+
+/// Check if something is a function.
+template <typename _T> struct is_function : false_type {};
+template <typename _R, typename ..._A> struct is_function<remove_cv<_R(_A...)>> : true_type {};
+template <typename _R, typename ..._A> struct is_function<remove_cv<_R(_A..., ...)>> : true_type {};
+
 /// Check if something is a reference.
 template <typename _T> struct _IsRef : is_reference<_T> {};
 
@@ -164,13 +173,17 @@ template <typename _T> struct _IsRef : is_reference<_T> {};
 template <typename _T> struct _NotRef : _Not<_IsRef<_T>> {};
 
 /// Check whether a type is trivially copyable.
-template <typename _T> struct is_trivially_copyable : bool_constant<__is_trivially_copyable(_T)> {};
+template <typename _T> struct is_trivially_copyable : bool_constant<__has_trivial_copy(_T)> {};
 
 /// Check whether a type is trivially destructible.
-template <typename _T> struct is_trivially_destructible : bool_constant<__is_trivially_destructible(_T)> {};
+template <typename _T> struct is_trivially_destructible : bool_constant<__has_trivial_destructor(_T)> {};
 
 /// Check whether a type is an object, i.e. not a function, reference, or void.
-template <typename _T> struct is_object : bool_constant<__is_object(_T)> {};
+template <typename _T> struct is_object : _And<
+    _Not<is_reference<_T>>,
+    _Not<is_void<_T>>,
+    _Not<is_function<_T>>
+> {};
 
 /// Struct that has a member `type` iff `_Cond` is true.
 template <bool, typename _T = void>

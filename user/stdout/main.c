@@ -22,7 +22,6 @@
 
 int main() {
   const char *message = "Hello, friends :^)\r";
-  //puts(message);
-  write(0, "Hello, friends :^)\r\n", 20);
+  puts(message);
   return 0;
 }

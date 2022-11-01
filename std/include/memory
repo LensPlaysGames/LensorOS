@@ -20,7 +20,11 @@
 #ifndef LENSOROS_MEMORY_HH
 #define LENSOROS_MEMORY_HH
 
+#include "atomic"
+
 #include <type_traits>
+#include <new>
+#include <utility>
 
 namespace std {
 
@@ -38,6 +42,146 @@ constexpr enable_if<!is_object_v<_T>, _T*> addressof(_T& __val) noexcept {
 
 template <typename _T>
 const _T* addressof(const _T&&) = delete;
+
+template <typename _T>
+class unique_ptr {
+    _T* __ptr{};
+
+    void __assign(_T* __p) noexcept {
+        if (__ptr != __p) {
+            delete __ptr;
+            __ptr = __p;
+        }
+    }
+
+public:
+    unique_ptr() = default;
+    explicit unique_ptr(_T* __ptr) : __ptr(__ptr) {}
+    explicit unique_ptr(nullptr_t) noexcept : unique_ptr() {}
+
+    /// Copying a unique_ptr would kind of defeat the purpose of it.
+    unique_ptr(const unique_ptr&) = delete;
+    unique_ptr& operator=(const unique_ptr&) = delete;
+
+    /// We need to be able to move it tho.
+    unique_ptr(unique_ptr&& __other) noexcept : __ptr(__other.__ptr) { __other.__ptr = nullptr; }
+    unique_ptr& operator=(unique_ptr&& __other) noexcept {
+        __assign(__other.__ptr);
+        __other.__ptr = nullptr;
+        return *this;
+    }
+
+    /// We can also asssign nullptr_t to this.
+    unique_ptr& operator=(nullptr_t) noexcept {
+        __assign(nullptr);
+        return *this;
+    }
+
+    ~unique_ptr() { delete __ptr; }
+
+    _T* get() const noexcept { return __ptr; }
+    _T* release() noexcept { auto __tmp = __ptr; __ptr = nullptr; return __tmp; }
+    _T& operator*() const noexcept { return *__ptr; }
+    _T* operator->() const noexcept { return __ptr; }
+    explicit operator bool() const noexcept { return __ptr != nullptr; }
+};
+
+template <typename _T, typename ..._Args>
+unique_ptr<_T> make_unique(_Args&& ...__args) {
+    return unique_ptr<_T>(new _T{std::forward<_Args>(__args)...});
+}
+
+using _Shared_ptr_ctrl_block_type = std::atomic<size_t>*;
+
+template <typename _T>
+class shared_ptr {
+    _T* __ptr{};
+    _Shared_ptr_ctrl_block_type __refcount{};
+
+    void __delete() noexcept {
+        /// If there is a refcount, decrement it and check if it was 1.
+        /// If so, delete the object and the refcount.
+        if (__refcount) {
+            if (atomic_fetch_add(__refcount, -1lu) == 1lu) {
+                delete __refcount;
+                delete __ptr;
+            }
+        }
+    }
+
+    template <typename _U, typename... _Args>
+    friend shared_ptr<_U> make_shared(_Args&&... __args);
+
+    /// Should only ever be used internally.
+    shared_ptr(_T* __ptr, _Shared_ptr_ctrl_block_type __refcount) : __ptr(__ptr), __refcount(__refcount) {}
+
+public:
+    shared_ptr() noexcept = default;
+    explicit shared_ptr(_T* __ptr) : __ptr(__ptr), __refcount(new std::atomic<size_t>{1}) {}
+    explicit shared_ptr(nullptr_t) noexcept : shared_ptr() {}
+    shared_ptr(const shared_ptr& __other) noexcept : __ptr(__other.__ptr), __refcount(__other.__refcount) {
+        if (__refcount) { atomic_fetch_add(__refcount, 1lu); }
+    }
+
+    shared_ptr(shared_ptr&& __other) noexcept : __ptr(__other.__ptr), __refcount(__other.__refcount) {
+        __other.__ptr = nullptr;
+        __other.__refcount = nullptr;
+    }
+
+    shared_ptr& operator=(const shared_ptr& __other) noexcept {
+        if (this == &__other) { return *this; }
+        __delete();
+        __ptr = __other.__ptr;
+        __refcount = __other.__refcount;
+        if (__refcount) { atomic_fetch_add(__refcount, 1lu); }
+        return *this;
+    }
+
+    shared_ptr& operator=(shared_ptr&& __other) noexcept {
+        if (this == &__other) { return *this; }
+        __delete();
+        __ptr = __other.__ptr;
+        __refcount = __other.__refcount;
+        __other.__ptr = nullptr;
+        __other.__refcount = nullptr;
+        return *this;
+    }
+
+    shared_ptr& operator=(nullptr_t) noexcept {
+        __delete();
+        __ptr = nullptr;
+        __refcount = nullptr;
+        return *this;
+    }
+
+    ~shared_ptr() noexcept { __delete(); }
+
+    _T* get() const noexcept { return __ptr; }
+    _T& operator*() const noexcept { return *__ptr; }
+    _T* operator->() const noexcept { return __ptr; }
+    explicit operator bool() const noexcept { return __ptr; }
+};
+
+/// Constructs a shared_ptr with the given arguments. This function is the prefferred
+/// way to construct a shared_ptr, because it allocates the refcount and the object
+/// in one allocation and next to each other on the heap.
+template <typename _T, typename... _Args>
+shared_ptr<_T> make_shared(_Args&&... __args) {
+    /// Make sure that everything is aligned properly.
+    static_assert(alignof(_T) <= alignof(max_align_t));
+    static_assert(alignof(_Shared_ptr_ctrl_block_type) <= alignof(max_align_t));
+    static_assert(sizeof(_Shared_ptr_ctrl_block_type) <= alignof(max_align_t));
+
+    /// Allocate the refcount and the object together.
+    auto __ptr = new char[alignof(max_align_t) + sizeof(_T)];
+
+    /// Construct the refcount and the object.
+    auto __refcount = new(__ptr) std::atomic<size_t>{1};
+    auto __obj = new(__ptr + alignof(max_align_t)) _T(forward<_Args>(__args)...);
+
+    /// Return the shared_ptr.
+    return shared_ptr<_T>(__obj, __refcount);
+}
 
 }
 

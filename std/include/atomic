@@ -31,7 +31,7 @@ struct atomic {
 };
 
 template <typename _T>
-bool atomic_compare_exchange_weak(volatile atomic<_T>* ptr, _T* expected, _T desired) {
+bool atomic_compare_exchange_weak(volatile atomic<_T>* ptr, _T* expected, _T desired) noexcept {
     return __atomic_compare_exchange(
         &ptr->__value,
         expected,
@@ -43,12 +43,12 @@ bool atomic_compare_exchange_weak(volatile atomic<_T>* ptr, _T* expected, _T des
 }
 
 template <typename _T>
-void atomic_fetch_add(volatile atomic<_T>* ptr, _T value) {
-    __atomic_fetch_add(&ptr->__value, value, __ATOMIC_SEQ_CST);
+_T atomic_fetch_add(volatile atomic<_T>* ptr, _T value) noexcept {
+    return __atomic_fetch_add(&ptr->__value, value, __ATOMIC_SEQ_CST);
 }
 
 template <typename _T>
-_T atomic_load(volatile atomic<_T>* ptr) {
+_T atomic_load(volatile atomic<_T>* ptr) noexcept {
     return __atomic_load_n(&ptr->__value, __ATOMIC_SEQ_CST);
 }
 
