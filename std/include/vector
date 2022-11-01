@@ -22,9 +22,6 @@
 
 #ifdef __kernel__
 #   include "memory/heap.h"
-#   include "memory.h"
-#else
-#   include <stdlib.h>
 #endif
 
 #include <algorithm>
@@ -77,11 +74,7 @@ public:
     template<typename _It>
     vector(_It __first, _It __last) : __sz(__last - __first), __cap(__last - __first) {
         __ptr = new value_type[__sz];
-        if constexpr (std::is_trivially_copyable_v<value_type>) {
-            memcpy(__ptr, __first, __sz * sizeof(value_type));
-        } else {
-            for (size_type i = 0; i < __sz; ++i) { __ptr[i] = *__first++; }
-        }
+        for (size_type i = 0; i < __sz; ++i) { __ptr[i] = *__first++; }
     }
 
     /// =======================================================================
@@ -89,11 +82,7 @@ public:
     /// =======================================================================
     vector(const vector& __other) : __sz(__other.__sz), __cap(__other.__cap) {
         __ptr = new value_type[__sz];
-        if constexpr (std::is_trivially_copyable_v<value_type>) {
-            memcpy(__ptr, __other.__ptr, __sz * sizeof(value_type));
-        } else {
-            for (size_type i = 0; i < __sz; ++i) { __ptr[i] = __other.__ptr[i]; }
-        }
+        for (size_type i = 0; i < __sz; ++i) { __ptr[i] = __other.__ptr[i]; }
     }
 
     vector(vector&& __other) noexcept : __ptr(__other.__ptr), __sz(__other.__sz), __cap(__other.__cap) {
@@ -107,11 +96,7 @@ public:
         __sz = __other.__sz;
         __cap = __other.__cap;
         __ptr = new value_type[__sz];
-        if constexpr (std::is_trivially_copyable_v<value_type>) {
-            memcpy(__ptr, __other.__ptr, __sz * sizeof(value_type));
-        } else {
-            for (size_type i = 0; i < __sz; ++i) { __ptr[i] = __other.__ptr[i]; }
-        }
+        for (size_type i = 0; i < __sz; ++i) { __ptr[i] = __other.__ptr[i]; }
         return *this;
     }
 
@@ -174,11 +159,7 @@ public:
         if (__n > max_size()) { /* TODO: Crash horribly */ }
         if (__n > __cap) {
             auto __new_ptr = new value_type[__n];
-            if constexpr (std::is_trivially_copyable_v<value_type>) {
-                memcpy(__new_ptr, __ptr, __sz * sizeof(value_type));
-            } else {
-                for (size_type i = 0; i < __sz; ++i) { __new_ptr[i] = __ptr[i]; }
-            }
+            for (size_type i = 0; i < __sz; ++i) { __new_ptr[i] = __ptr[i]; }
             delete[] __ptr;
             __ptr = __new_ptr;
             __cap = __n;
@@ -233,11 +214,7 @@ public:
         if (__pos > end() || __pos < begin()) { /* TODO: Crash horribly */ }
         const auto __idx = __pos - __ptr;
         if (__sz == __cap) { reserve(__cap == 0 ? 1 : __cap * 2); }
-        if constexpr (std::is_trivially_copyable_v<value_type>) {
-            memmove(__ptr + __idx + 1, __ptr + __idx, (__sz - __idx) * sizeof(value_type));
-        } else {
-            for (size_type i = __sz; i > __idx; --i) { __ptr[i] = __ptr[i - 1]; }
-        }
+        for (size_type i = __sz; i > __idx; --i) { __ptr[i] = __ptr[i - 1]; }
         __ptr[__idx] = move(__val);
         ++__sz;
         return __ptr + __idx;
@@ -254,17 +231,8 @@ public:
         const auto __n = __last - __first;
         if (__sz + __n > __cap) { reserve(max(__sz + __n, __cap == 0 ? 1 : __cap * 2)); }
 
-        if constexpr (std::is_trivially_copyable_v<value_type>) {
-            memmove(__ptr + __idx + __n, __ptr + __idx, (__sz - __idx) * sizeof(value_type));
-        } else {
-            for (size_type i = __sz + __n - 1; i >= __idx + __n; --i) { __ptr[i] = __ptr[i - __n]; }
-        }
-
-        if constexpr (std::is_pointer_v<_It> && std::is_trivially_copyable_v<decltype(*_It{})>) {
-            memcpy(__ptr + __idx, __first, __n * sizeof(value_type));
-        } else {
-            for (size_type i = 0; i < __n; ++i) { __ptr[__idx + i] = __first[i]; }
-        }
+        for (size_type i = __sz + __n - 1; i >= __idx + __n; --i) { __ptr[i] = __ptr[i - __n]; }
+        for (size_type i = 0; i < __n; ++i) { __ptr[__idx + i] = __first[i]; }
 
         __sz += __n;
         return __ptr + __idx;
@@ -274,11 +242,7 @@ public:
         if (__first > end() || __first < begin() || __last > end() || __last < begin()) { /* TODO: Crash horribly */ }
         const auto __idx = __first - __ptr;
         const auto __n = __last - __first;
-        if constexpr (std::is_trivially_copyable_v<value_type>) {
-            memmove(__ptr + __idx, __ptr + __idx + __n, (__sz - __idx - __n) * sizeof(value_type));
-        } else {
-            for (size_type i = __idx; i < __sz - __n; ++i) { __ptr[i] = __ptr[i + __n]; }
-        }
+        for (size_type i = __idx; i < __sz - __n; ++i) { __ptr[i] = __ptr[i + __n]; }
         __sz -= __n;
         return __ptr + __idx;
     }
