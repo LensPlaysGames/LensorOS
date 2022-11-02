@@ -20,8 +20,9 @@
 #ifndef _STDIO_H
 #define _STDIO_H
 
-#include "bits/decls.h"
-#include "sys/types.h"
+#include <bits/decls.h>
+#include <bits/io_defs.h>
+#include <sys/types.h>
 
 __BEGIN_DECLS__
 
@@ -65,11 +66,6 @@ FILE* freopen(const char* __pathname, const char* __mode, FILE*);
 
 #define BUFSIZ 1024
 void setbuf(FILE*, char* __buf);
-
-/// These MUST be 0, 1, 2 because of how we handle them internally.
-#define _IOFBF 0
-#define _IOLBF 1
-#define _IONBF 2
 
 int setvbuf(FILE*, char* __buf, int __mode, size_t);
 

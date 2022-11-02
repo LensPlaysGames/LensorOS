@@ -28,7 +28,11 @@
 
 __BEGIN_DECLS__
 
-#ifdef __SSE2__
+#if defined(__SSE2__) && 0
+#    define __have_memcpy_sse_unaligned_intrin
+#endif
+
+#ifdef __have_memcpy_sse_unaligned_intrin
 
 /// Flag that indicates whether Enhanced REP MOVSB is supported.
 extern _Bool __libc_have_erms;

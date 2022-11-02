@@ -19,298 +19,229 @@
 
 #include "stdio.h"
 
-#include <algorithm>
-#include <atomic>
-#include <mutex>
-#include <new>
-#include <utility>
-#include "bits/stub.h"
-#include "bits/file_struct.h"
 #include "bits/cdtors.h"
+#include "bits/file_struct.h"
+#include "bits/stub.h"
 #include "errno.h"
+#include "extensions"
 #include "stdarg.h"
 #include "stdlib.h"
 #include "string.h"
 #include "unistd.h"
 
-enum : size_t {
-    BUFFERED_READ_THRESHOLD = 64,
-};
+#include <algorithm>
+#include <atomic>
+#include <mutex>
+#include <new>
+#include <utility>
+#include <extensions>
+
+#define LOCK(stream) std::unique_lock _CAT(__lock_, __COUNTER__)(stream->__mutex)
 
 /// ===========================================================================
-///  File I/O Implementation.
+///  Internal definitions and state
 /// ===========================================================================
-/// The functions and data structures in this namespace implement stdio file streams.
-///
-/// In order to make sure that there are no deadlocks or data races in multithreaded
-/// code, the following invariants must hold at all times with respect to the stream
-/// lock in each I/O stream:
-///
-///   - Except for stream_delete(), no function in this namespace may lock a stream.
-///   - No function in this namespace may call a C stdio API function.
-///   - Any C stdio API function that calls a function in this namespace on a stream
-///     must lock the stream before calling any function in this namespace, except for
-///     stream_delete().
-namespace {
-/// Buffering mode.
-enum Buffering : _IO_flags_t {
-    /// No buffering. Write the character(s) immediately.
-    Unbuffered = _IONBF,
+std::sparse_vector<_IO_File*, nullptr> _IO_File::open_files;
+std::recursive_mutex _IO_File::big_file_lock;
 
-    /// Line buffering. Write the character(s) immediately if a newline is
-    /// encountered. Otherwise, write to a buffer and only flush when the
-    /// buffer is full or a newline is encountered.
-    LineBuffered = _IOLBF,
-
-    /// Full buffering. Write the character(s) to a buffer and only flush when
-    /// the buffer is full.
-    FullyBuffered = _IOFBF,
-};
+enum : size_t { BUFFERED_READ_THRESHOLD = 64 };
 
 /// ===========================================================================
-///  Initialisation.
+///  _IO_File — CDtors.
 /// ===========================================================================
-_IO_File* open_files;
-std::mutex big_file_lock;
+_IO_File::_IO_File(_IO_fd_t fd, Buffering buffering_mode) {
+    __f_buffering = 0;
+    __f_error = 0;
+    __f_eof = 0;
+    __f_has_ungotten = 0;
 
-/// ===========================================================================
-///  Implementation.
-/// ===========================================================================
-/// RAII helper to lock a stream.
-struct [[nodiscard]] Lock {
-    std::unique_lock<_IO_lock_t> lock;
-    explicit Lock(FILE& stream) : lock(stream.__mutex) {}
-};
-
-/// Check how a stream is buffered.
-Buffering stream_buffering(FILE& stream) {
-    return Buffering(stream.__f_buffering);
-}
-
-/// Check if a stream has reached EOF. This only checks if we're actually at
-/// the end of the file. There might be a character that is left in the stream
-/// because the user called ungetc(), so make sure to check that too to determine
-/// whether the stream is *actually* at EOF.
-bool stream_at_eof(FILE& stream) {
-    return stream.__f_eof;
-}
-
-/// Check if unget() may be called on a stream.
-bool stream_may_unget(FILE& stream) {
-    return !stream.__f_has_ungotten;
-}
-
-/// Check if unget() has been called on a stream.
-bool stream_has_ungotten(FILE& stream) {
-    return stream.__f_has_ungotten;
-}
-
-/// ===========================================================================
-///  Stream creation and destruction.
-/// ===========================================================================
-/// Create a new stream.
-void stream_create(FILE* stream, _IO_fd_t fd) {
     /// Write buffer.
     ///
     /// We use `malloc()` instead of `new` for the buffers because we might
     /// need to `realloc()` them later on.
     /// TODO: Only allocate a write buffer if the stream is open for writing.
-    stream->__wbuf.__buf = static_cast<char*>(malloc(BUFSIZ));
-    stream->__wbuf.__cap = BUFSIZ;
-    stream->__wbuf.__offs = 0;
+    __wbuf.__buf = static_cast<char*>(malloc(BUFSIZ));
+    __wbuf.__cap = BUFSIZ;
+    __wbuf.__offs = 0;
 
     /// Read buffer.
     /// TODO: Only allocate a read buffer if the stream is open for reading.
-    stream->__rdbuf.__buf = static_cast<char*>(malloc(BUFSIZ));
-    stream->__rdbuf.__cap = BUFSIZ;
-    stream->__rdbuf.__start = 0;
-    stream->__rdbuf.__offs = 0;
+    __rdbuf.__buf = static_cast<char*>(malloc(BUFSIZ));
+    __rdbuf.__cap = BUFSIZ;
+    __rdbuf.__start = 0;
+    __rdbuf.__offs = 0;
 
     /// File descriptor.
-    stream->__fd = fd;
+    __fd = fd;
 
     /// Flags.
-    stream->__f_buffering = FullyBuffered;
-
-    /// Add to the list of open files.
-    std::unique_lock file_list_lock{big_file_lock};
-    auto old_head = open_files;
-    stream->__next = old_head;
-    open_files = stream;
-
-    /// If there was an old head, update its previous pointer.
-    if (old_head) {
-        Lock lock{*old_head};
-        old_head->__prev = stream;
-    }
+    _PushIgnoreWarning("-Wconversion")
+    __f_buffering = buffering_mode;
+    _PopWarnings()
 }
 
-/// Create a new stream.
-FILE* stream_create(_IO_fd_t fd) {
-    auto stream = new FILE;
-    stream_create(stream, fd);
-    return stream;
-}
-
-/// Flush an output stream.
-bool stream_flush(FILE& stream);
-
-/// Close and delete.
-void stream_delete(FILE&& stream) {
-    /// Remove from the list of open files.
-    std::unique_lock file_list_lock{big_file_lock};
-    Lock lock{stream};
-    if (stream.__prev) {
-        Lock lock2{*stream.__prev};
-        stream.__prev->__next = stream.__next;
-    }
-    if (stream.__next) {
-        Lock lock2{*stream.__next};
-        stream.__next->__prev = stream.__prev;
-    }
-    if (open_files == &stream) {
-        open_files = stream.__next;
-    }
-
-    /// Flush the stream.
-    stream_flush(stream);
-
-    /// Close the file.
-    close(stream.__fd);
+_IO_File::~_IO_File() {
+    /// Flush and close the stream.
+    close();
 
     /// Delete the buffers.
-    free(stream.__wbuf.__buf);
-    free(stream.__rdbuf.__buf);
-
-    /// Delete the stream.
-    delete &stream;
+    free(__wbuf.__buf);
+    free(__rdbuf.__buf);
 }
 
-/// Clear the buffers of a stream.
-void stream_clear_buffers(FILE& stream) {
-    stream.__wbuf.__offs = 0;
-    stream.__rdbuf.__start = 0;
-    stream.__rdbuf.__offs = 0;
+/// ===========================================================================
+///  _IO_File — Flushing, closing, and reassociating.
+/// ===========================================================================
+void _IO_File::clear_buffers() {
+    __wbuf.__offs = 0;
+    __rdbuf.__start = 0;
+    __rdbuf.__offs = 0;
 }
 
-/// Clear the flags of a stream.
-void stream_clear_flags(FILE& stream) {
-    stream.__f_eof = false;
-    stream.__f_error = false;
-    stream.__f_has_ungotten = false;
-}
-
-/// Close the stream and clear the buffers, but don't delete the stream.
-void stream_close(FILE& stream) {
+void _IO_File::close() {
     /// Flush and close the stream.
-    if (stream.__fd != -1) {
-        stream_flush(stream);
-        close(stream.__fd);
+    if (__fd != -1) {
+        flush();
+        ::close(__fd);
     }
 
     /// Clear the file descriptor.
-    stream.__fd = -1;
+    __fd = -1;
 
     /// Reset the stream.
-    stream_clear_buffers(stream);
-    stream_clear_flags(stream);
+    clear_buffers();
+    clear_flags();
 }
 
-/// Set the file descriptor for a stream.
-void stream_reassociate(FILE& stream, _IO_fd_t fd) {
-    stream_close(stream);
-    stream.__fd = fd;
+void _IO_File::erase() {
+    /// Close the file.
+    close();
+
+    /// Remove it from the list of open files.
+    std::unique_lock lock(big_file_lock);
+
+#ifdef __lensor__
+    /// Because the file list mirrors the file descriptor table in the kernel,
+    /// there's a good chance that we might be able to index into the list of
+    /// open files using the file descriptor.
+    ///
+    /// If we can't, we'll have to search the list for the file.
+    size_t index = __fd;
+    auto element = open_files[index];
+    if (element && *element == this) { open_files.erase(index); }
+    else
+#endif
+        open_files.erase(std::find(open_files, this));
+}
+
+bool _IO_File::flush() {
+    if (__wbuf.__offs == 0) { return true; }
+
+    /// Write the data.
+    ssize_t written = ::write(__fd, __wbuf.__buf, __wbuf.__offs);
+
+    /// Check for errors.
+    if (written < 0 || size_t(written) != __wbuf.__offs) {
+        __f_error = true;
+        return false;
+    }
+
+    /// Clear the buffer.
+    __wbuf.__offs = 0;
+    return true;
+}
+
+void _IO_File::reassociate(_IO_fd_t fd) {
+    close();
+    __fd = fd;
 }
 
 /// ===========================================================================
-///  File manipulation.
+///  _IO_File (static) — Flushing, closing, and reassociating.
 /// ===========================================================================
-int stream_unget(FILE& stream, char c) {
+
+void _IO_File::close_all() {
+    std::unique_lock lock(big_file_lock);
+    for (auto file : open_files) {
+         file->erase();
+    }
+}
+
+/// Open a new file
+_IO_File* _IO_File::create(_IO_fd_t fd, Buffering buffering_mode) {
+    /// Create the file.
+    auto file = new _IO_File(fd, buffering_mode);
+
+    /// Add it to the list of open files.
+    std::unique_lock lock(big_file_lock);
+    open_files.push_back(file);
+    return file;
+}
+
+/// ===========================================================================
+///  _IO_File — File manipulation.
+/// ===========================================================================
+int _IO_File::unget(char c) {
     /// TODO: unget() isn't possible if the stream isn't open for reading.
-    if (!stream_may_unget(stream)) { return EOF; }
+    if (!may_unget()) { return EOF; }
 
-    stream.__f_has_ungotten = true;
-    stream.__ungotten = c;
+    __f_has_ungotten = true;
+    __ungotten = c;
 
     return c;
 }
 
-int stream_getpos(FILE& stream, fpos_t& pos) {
+int _IO_File::getpos(fpos_t& pos) const {
     /// TODO: Implement.
-    (void)stream;
     (void)pos;
     return -1;
 }
 
-int stream_seek(FILE& stream, long offset, int whence) {
+int _IO_File::seek(_IO_off_t offset, int whence) {
     /// TODO: Implement.
     /// TODO: This has to undo unget()s.
-    (void)stream;
     (void)offset;
     (void)whence;
     return -1;
 }
 
-int stream_setpos(FILE& stream, const fpos_t& pos) {
+int _IO_File::setpos(const fpos_t& pos) {
     /// TODO: Implement.
     /// TODO: This has to undo unget()s.
-    (void)stream;
     (void)pos;
     return -1;
 }
 
-long stream_tell(FILE& stream, long& offset) {
+auto _IO_File::tell(_IO_off_t& offset) const -> _IO_off_t{
     /// TODO: Implement.
-    (void)stream;
     (void)offset;
     return -1;
 }
 
 /// ===========================================================================
-///  Reading.
+///  _IO_File – Reading.
 /// ===========================================================================
-/// Copy data into a buffer from a stream’s read buffer.
-size_t stream_copy_from_read_buffer(FILE& __restrict__ stream, char* __restrict__ buf, size_t size) {
-    /// We can copy at most __offs - __start many bytes.
-    size_t stream_rem = stream.__rdbuf.__offs - stream.__rdbuf.__start;
-
-    /// Copy the data.
-    size_t to_copy = std::min(size, stream_rem);
-    memcpy(buf, stream.__rdbuf.__buf, to_copy);
-
-    /// If we've copied all the data, reset the buffer.
-    if (stream_rem == to_copy) { stream.__rdbuf.__start = stream.__rdbuf.__offs = 0; }
-
-    /// Otherwise, move the start pointer.
-    else { stream.__rdbuf.__start += to_copy; }
-
-    /// Return the number of bytes copied.
-    return to_copy;
-}
-
-/// Read up to `size` bytes from `stream` into `buf`.
-/// TODO: Check if the stream is readable.
-/// \return The number of bytes read or EOF on error.
-ssize_t stream_read(FILE& __restrict__ stream, char* __restrict__ buf, const size_t size) {
+ssize_t _IO_File::read(char* __restrict__ buf, const size_t size) {
+    /// TODO: Check if the stream is readable.
     /// If we have an ungotten character, store that in the buffer first.
     size_t rest = size;
-    if (stream_has_ungotten(stream)) {
-        buf[0] = stream.__ungotten;
-        stream.__f_has_ungotten = false;
+    if (has_ungotten()) {
+        buf[0] = __ungotten;
+        __f_has_ungotten = false;
         buf++;
         rest--;
     }
 
     /// Copy data from the read buffer.
-    if (stream.__rdbuf.__offs > stream.__rdbuf.__start) {
-        auto copied = stream_copy_from_read_buffer(stream, buf, rest);
+    if (__rdbuf.__offs > __rdbuf.__start) {
+        auto copied = copy_from_read_buffer(buf, rest);
 
         /// If we've copied all the data, return.
         if (copied == rest) { return size; }
     }
 
     /// Return if we're at end of file.
-    if (stream_at_eof(stream)) { return EOF; }
+    if (at_eof()) { return EOF; }
 
     /// Read from the file descriptor.
     ///
@@ -321,18 +252,18 @@ ssize_t stream_read(FILE& __restrict__ stream, char* __restrict__ buf, const siz
     ///
     /// Otherwise, read it directly into the destination buffer.
     if (rest < BUFFERED_READ_THRESHOLD) {
-        ssize_t n_read = read(stream.__fd, stream.__rdbuf.__buf, stream.__rdbuf.__cap);
+        ssize_t n_read = ::read(__fd, __rdbuf.__buf, __rdbuf.__cap);
         if (n_read == -1) {
-            stream.__f_error = true;
+            __f_error = true;
             return EOF;
         }
 
         /// If we've reached end of file, set the flag.
-        if (n_read == 0) { stream.__f_eof = true; }
-        stream.__rdbuf.__offs = n_read;
+        if (n_read == 0) { __f_eof = true; }
+        __rdbuf.__offs = n_read;
 
         /// Copy the data.
-        auto copied = stream_copy_from_read_buffer(stream, buf, rest);
+        auto copied = copy_from_read_buffer(buf, rest);
 
         /// We've copied all the data.
         if (copied == rest) { return ssize_t(size); }
@@ -340,126 +271,120 @@ ssize_t stream_read(FILE& __restrict__ stream, char* __restrict__ buf, const siz
         /// We've reached end of file.
         return ssize_t(size - rest + copied);
     } else {
-        auto n_read = read(stream.__fd, buf, rest);
+        auto n_read = ::read(__fd, buf, rest);
         if (n_read == -1) {
-            stream.__f_error = true;
+            __f_error = true;
             return EOF;
         }
 
         /// If we've reached end of file, set the flag.
-        if (n_read == 0) { stream.__f_eof = true; }
+        if (n_read == 0) { __f_eof = true; }
         return ssize_t(size - rest + n_read);
     }
 }
 
-/// Copy data into a buffer from a stream’s read buffer up to and including `until` is found
-std::pair<size_t, bool> stream_copy_until_from_read_buffer(
-    FILE& __restrict__ stream,
-    char* __restrict__ buf,
-    const size_t rest,
-    char until
-) {
-    /// Find the first occurrence of `until` in the read buffer.
-    auto* first = (char*) memchr(
-        stream.__rdbuf.__buf + stream.__rdbuf.__start,
-        until,
-        stream.__rdbuf.__offs - stream.__rdbuf.__start
-    );
-
-    /// Copy everything up to and including `until`, or the size of the buffer
-    /// if `until` was not found.
-    auto max_copy = first ? size_t(first - stream.__rdbuf.__start + 1) : stream.__rdbuf.__offs;
-    auto to_copy = std::min(rest, max_copy);
-
-    /// Copy the data.
-    auto copied = stream_copy_from_read_buffer(stream, buf, to_copy);
-
-    /// If we've filled the buffer or found `until`, we're done.
-    if (first || copied == rest) { return {copied, true}; }
-    return {copied, false};
-}
-
-/// Read up to `size` bytes from `stream` into `buf`. Stop if `until` is encountered.
+bool _IO_File::read_until(char* __restrict__ buf, const size_t size, char until) {
 /// TODO: Check if the stream is readable.
-/// \return True if `until` was found or EOF was reached, false if there was an error
-///         or if the stream is at EOF.
-bool stream_read_until(FILE& __restrict__ stream, char* __restrict__ buf, const size_t size, char until) {
     /// If we have an ungotten character, store that in the buffer first.
     size_t rest = size;
-    if (stream_has_ungotten(stream)) {
-        buf[0] = stream.__ungotten;
-        stream.__f_has_ungotten = false;
+    if (has_ungotten()) {
+        buf[0] = __ungotten;
+        __f_has_ungotten = false;
         buf++;
         rest--;
-        if (stream.__ungotten == until) { return true; }
+        if (__ungotten == until) { return true; }
     }
 
     /// Copy data from the read buffer.
-    if (stream.__rdbuf.__offs > stream.__rdbuf.__start) {
-        auto [copied, done] = stream_copy_until_from_read_buffer(stream, buf, rest, until);
-        if (done || stream_at_eof(stream)) return true;
+    if (__rdbuf.__offs > __rdbuf.__start) {
+        auto [copied, done] = copy_until_from_read_buffer(buf, rest, until);
+        if (done || at_eof()) return true;
         rest -= copied;
     }
 
     /// Read from the file descriptor.
     /// If we ever get here, then the read buffer is empty.
-    while (!stream_at_eof(stream)) {
-        ssize_t n_read = read(stream.__fd, stream.__rdbuf.__buf, stream.__rdbuf.__cap);
+    while (!at_eof()) {
+        ssize_t n_read = ::read(__fd, __rdbuf.__buf, __rdbuf.__cap);
         if (n_read == -1) {
-            stream.__f_error = true;
+            __f_error = true;
             return false;
         }
 
         /// If we've reached end of file, set the flag.
-        if (n_read == 0) { stream.__f_eof = true; }
-        stream.__rdbuf.__offs = n_read;
+        if (n_read == 0) { __f_eof = true; }
+        __rdbuf.__offs = n_read;
 
         /// Copy the data.
-        auto [copied, done] = stream_copy_until_from_read_buffer(stream, buf, rest, until);
+        auto [copied, done] = copy_until_from_read_buffer(buf, rest, until);
         if (done) return true;
     }
 
     return false;
 }
 
-/// ===========================================================================
-///  Writing.
-/// ===========================================================================
-/// Flush a stream.
-bool stream_flush(FILE& stream) {
-    if (stream.__wbuf.__offs == 0) { return true; }
+size_t _IO_File::copy_from_read_buffer(char* __restrict__ buf, size_t size) {
+    /// We can copy at most __offs - __start many bytes.
+    size_t stream_rem = __rdbuf.__offs - __rdbuf.__start;
 
-    /// Write the data.
-    ssize_t written = write(stream.__fd, stream.__wbuf.__buf, stream.__wbuf.__offs);
+    /// Copy the data.
+    size_t to_copy = std::min(size, stream_rem);
+    memcpy(buf, __rdbuf.__buf, to_copy);
 
-    /// Check for errors.
-    if (written < 0 || size_t(written) != stream.__wbuf.__offs) {
-        stream.__f_error = true;
-        return false;
-    }
+    /// If we've copied all the data, reset the buffer.
+    if (stream_rem == to_copy) { __rdbuf.__start = __rdbuf.__offs = 0; }
 
-    /// Clear the buffer.
-    stream.__wbuf.__offs = 0;
-    return true;
+    /// Otherwise, move the start pointer.
+    else { __rdbuf.__start += to_copy; }
+
+    /// Return the number of bytes copied.
+    return to_copy;
 }
 
-/// Set the buffering mode of a stream.
-bool stream_set_buffering(FILE& stream, Buffering buffering, char*, size_t size) {
+std::pair<size_t, bool> _IO_File::copy_until_from_read_buffer(
+    char* __restrict__ buf,
+    const size_t rest,
+    char until
+) {
+    /// Find the first occurrence of `until` in the read buffer.
+    auto* first = (char*) memchr(
+        __rdbuf.__buf + __rdbuf.__start,
+        until,
+        __rdbuf.__offs - __rdbuf.__start
+    );
+
+    /// Copy everything up to and including `until`, or the size of the buffer
+    /// if `until` was not found.
+    auto max_copy = first ? size_t(first - __rdbuf.__start + 1) : __rdbuf.__offs;
+    auto to_copy = std::min(rest, max_copy);
+
+    /// Copy the data.
+    auto copied = copy_from_read_buffer(buf, to_copy);
+
+    /// If we've filled the buffer or found `until`, we're done.
+    if (first || copied == rest) { return {copied, true}; }
+    return {copied, false};
+}
+
+/// ===========================================================================
+///  _IO_File – Writing.
+/// ===========================================================================
+bool _IO_File::setbuf(Buffering buffering, size_t size) {
     /// Flush the stream.
-    if (!stream_flush(stream)) return false;
+    if (!flush()) return false;
 
     /// Set the buffer.
     switch (buffering) {
         case Unbuffered:
             /// We don't free the buffer here because the read buffer may be
             /// non-empty, and we don't want to lose the data.
-            stream.__f_buffering = Unbuffered;
+            __f_buffering = Unbuffered;
             return true;
 
         case LineBuffered:
         case FullyBuffered:
             _PushIgnoreWarning("-Wconversion")
-            stream.__f_buffering = buffering;
+            __f_buffering = buffering;
             _PopWarnings()
 
             /// According to the standard, `size` is only supposed to be a hint
@@ -476,23 +401,23 @@ bool stream_set_buffering(FILE& stream, Buffering buffering, char*, size_t size)
 
             /// Realloc the write buffer. We've already flushed it, so there's no
             /// reason to copy its contents.
-            if (stream.__wbuf.__cap != size) {
-                stream.__wbuf.__cap = size;
-                stream.__wbuf.__buf = (char*) __mextend(stream.__wbuf.__buf, size);
+            if (__wbuf.__cap != size) {
+                __wbuf.__cap = size;
+                __wbuf.__buf = (char*) __mextend(__wbuf.__buf, size);
             }
 
             /// Realloc the read buffer. Make sure we don't lose any data.
-            if (stream.__rdbuf.__cap != size) {
+            if (__rdbuf.__cap != size) {
                 /// Buffer is empty; just extend it.
-                if (!stream.__rdbuf.__offs) {
-                    stream.__rdbuf.__cap = size;
-                    stream.__rdbuf.__buf = (char*) __mextend(stream.__rdbuf.__buf, size);
+                if (!__rdbuf.__offs) {
+                    __rdbuf.__cap = size;
+                    __rdbuf.__buf = (char*) __mextend(__rdbuf.__buf, size);
                 }
 
                 /// Buffer has data; make sure we don't lose any of it.
                 else {
-                    stream.__rdbuf.__cap = std::max(stream.__rdbuf.__offs, size);
-                    stream.__rdbuf.__buf = (char*) realloc(stream.__rdbuf.__buf, stream.__rdbuf.__cap);
+                    __rdbuf.__cap = std::max(__rdbuf.__offs, size);
+                    __rdbuf.__buf = (char*) realloc(__rdbuf.__buf, __rdbuf.__cap);
                 }
             }
 
@@ -503,39 +428,13 @@ bool stream_set_buffering(FILE& stream, Buffering buffering, char*, size_t size)
     }
 }
 
-/// Write to a stream. This function only flushes the buffer if it is full.
-/// TODO: Check if the stream is open for writing.
-/// \return The number of bytes written, or EOF on error.
-ssize_t stream_put(FILE& __restrict__ stream, const char* __restrict__ buffer, size_t count) {
-    /// Flush the buffer if this operation would overflow it.
-    if (stream.__wbuf.__offs + count > stream.__wbuf.__cap && !stream_flush(stream)) { return EOF; }
-
-    /// Write data directly to the stream if it doesn't fit in the buffer.
-    if (count > stream.__wbuf.__cap) {
-        auto written = write(stream.__fd, buffer, count);
-        if (written < 0 || size_t(written) != count) {
-            stream.__f_error = true;
-            return EOF;
-        }
-
-        return ssize_t(count);
-    }
-
-    /// Write data to the buffer.
-    memcpy(stream.__wbuf.__buf + stream.__wbuf.__offs, buffer, count);
-    stream.__wbuf.__offs += count;
-    return ssize_t(count);
-}
-
-/// Write a string to a stream. This function does not lock the stream.
-/// \return The number of characters written, or EOF on error.
-ssize_t stream_put_maybe_buffered(FILE& __restrict__ stream, const char* __restrict__ str, size_t sz) {
-    switch (stream_buffering(stream)) {
+ssize_t _IO_File::write(const char* __restrict__ str, size_t sz) {
+    /// TODO: Check if the stream is open for writing.
+    switch (buffering()) {
         case Unbuffered: {
-            /// TODO: Check if the stream is open for writing.
-            auto written = write(stream.__fd, str, sz);
+            auto written = ::write(__fd, str, sz);
             if (written < 0 || size_t(written) != sz) {
-                stream.__f_error = true;
+                __f_error = true;
                 return EOF;
             }
 
@@ -549,7 +448,7 @@ ssize_t stream_put_maybe_buffered(FILE& __restrict__ stream, const char* __restr
             while (auto nl = static_cast<char*>(memchr(str, '\n', sz))) {
                 /// Write to the stream.
                 auto nl_sz = nl - str + 1;
-                auto n_put = stream_put(stream, str, nl_sz);
+                auto n_put = write_internal(str, nl_sz);
                 if (n_put != nl_sz) return written;
 
                 /// Discard the data up to and including the newline.
@@ -557,30 +456,45 @@ ssize_t stream_put_maybe_buffered(FILE& __restrict__ stream, const char* __restr
                 sz -= nl_sz;
 
                 /// Flush the stream.
-                if (!stream_flush(stream)) return written;
+                if (!flush()) return written;
                 written += n_put;
             }
 
             /// Write the rest.
-            written += stream_put(stream, str, sz);
+            written += write_internal(str, sz);
             return written;
         }
 
-        case FullyBuffered: {
-            return stream_put(stream, str, sz);
-        }
+        case FullyBuffered: return write_internal(str, sz);
 
         /// Invalid buffering mode. Should be unreachable.
         default: return EOF;
     }
 }
 
-/// Write a character to a stream. This function does not lock the stream.
-bool stream_put_maybe_buffered(FILE& stream, char c) {
-    return stream_put_maybe_buffered(stream, &c, 1) == 1;
-}
+bool _IO_File::write(char c) { return write(&c, 1) == 1; }
 
-} // namespace
+ssize_t _IO_File::write_internal(const char* __restrict__ buffer, size_t count) {
+    /// TODO: Check if the stream is open for writing.
+    /// Flush the buffer if this operation would overflow it.
+    if (__wbuf.__offs + count > __wbuf.__cap && !flush()) { return EOF; }
+
+    /// Write data directly to the stream if it doesn't fit in the buffer.
+    if (count > __wbuf.__cap) {
+        auto written = ::write(__fd, buffer, count);
+        if (written < 0 || size_t(written) != count) {
+            __f_error = true;
+            return EOF;
+        }
+
+        return ssize_t(count);
+    }
+
+    /// Write data to the buffer.
+    memcpy(__wbuf.__buf + __wbuf.__offs, buffer, count);
+    __wbuf.__offs += count;
+    return ssize_t(count);
+}
 
 /// ===========================================================================
 ///  C Interface.
@@ -595,23 +509,14 @@ _PushIgnoreWarning("-Wprio-ctor-dtor")
 
 /// Initialise the standard streams.
 [[gnu::constructor(_CDTOR_STDIO)]] void __stdio_init() {
-    stdin = stream_create(STDIN_FILENO);
-    stdout = stream_create(STDOUT_FILENO);
-    stderr = stream_create(STDERR_FILENO);
-
-    stdin->__f_buffering = FullyBuffered;
-    stdout->__f_buffering = FullyBuffered;
-    stderr->__f_buffering = Unbuffered;
+    stdin = FILE::create(STDIN_FILENO);
+    stdout = FILE::create(STDOUT_FILENO);
+    stderr = FILE::create(STDERR_FILENO, Unbuffered);
 }
 
 /// Flush the streams on exit.
 [[gnu::destructor(_CDTOR_STDIO)]] void __stdio_fini() {
-    /// Flush all open streams and close them.
-    while (open_files) {
-        auto f = open_files;
-        open_files = open_files->__next;
-        stream_delete(std::move(*f));
-    }
+    FILE::close_all();
 }
 
 _PopWarnings()
@@ -639,29 +544,23 @@ char* tmpnam(char*) {
 ///  7.21.5 File access functions.
 /// ===========================================================================
 int fclose(FILE* stream) {
-    /// Do NOT lock the stream here.
-    stream_delete(std::move(*stream));
+    stream->erase();
     return 0;
 }
 
 int fflush(FILE* stream) {
     /// Flush all streams if `stream` is nullptr.
     if (!stream) {
-        std::unique_lock file_list_lock{big_file_lock};
-        auto next = open_files;
-        while (next) {
-            if (next->__f_buffering != Unbuffered) {
-                Lock lock{*next};
-                if (!stream_flush(*next)) return EOF;
-            }
-
-            next = next->__next;
+        std::unique_lock file_list_lock{FILE::big_file_lock};
+        for (auto f : FILE::open_files) {
+            LOCK(f);
+            if (!f->flush()) return EOF;
         }
         return 0;
     }
 
-    Lock lock{*stream};
-    if (!stream_flush(*stream)) return EOF;
+    LOCK(stream);
+    if (!stream->flush()) return EOF;
 
     return 0;
 }
@@ -674,7 +573,7 @@ FILE* fopen(const char* __restrict__ filename, const char* __restrict__ mode) {
     /// TODO: Parse mode and set the right flags.
     auto fd = open(filename, 0, 0);
     if (fd < 0) return nullptr;
-    return stream_create(fd);
+    return FILE::create(fd);
 }
 
 FILE* freopen(const char* __restrict__ filename, const char* __restrict__ mode, FILE* __restrict__ stream) {
@@ -688,8 +587,8 @@ FILE* freopen(const char* __restrict__ filename, const char* __restrict__ mode, 
     if (fd < 0) return nullptr;
 
     /// Reassociate the stream with the new file.
-    Lock lock{*stream};
-    stream_reassociate(*stream, fd);
+    LOCK(stream);
+    stream->reassociate(fd);
     return stream;
 }
 
@@ -697,9 +596,9 @@ void setbuf(FILE* __restrict__ stream, char* __restrict__ buffer) {
     setvbuf(stream, buffer, buffer ? _IOFBF : _IONBF, BUFSIZ);
 }
 
-int setvbuf(FILE* __restrict__ stream, char* __restrict__ buffer, int mode, size_t size) {
+int setvbuf(FILE* __restrict__ stream, char* __restrict__, int mode, size_t size) {
     /// It is illegal to call setvbuf() after any I/O operation has been performed on the stream.
-    Lock lock{*stream};
+    LOCK(stream);
     if (stream->__rdbuf.__offs != 0
         || stream->__wbuf.__offs != 0
         || stream->__f_error
@@ -708,13 +607,13 @@ int setvbuf(FILE* __restrict__ stream, char* __restrict__ buffer, int mode, size
     /// Set the buffer.
     switch (mode) {
         case _IONBF:
-            if (!stream_set_buffering(*stream, Unbuffered, nullptr, 0)) return -1;
+            if (!stream->setbuf(Unbuffered, 0)) return -1;
             break;
         case _IOLBF:
-            if (!stream_set_buffering(*stream, LineBuffered, buffer, size)) return -1;
+            if (!stream->setbuf(LineBuffered, size)) return -1;
             break;
         case _IOFBF:
-            if (!stream_set_buffering(*stream, FullyBuffered, buffer, size)) return -1;
+            if (!stream->setbuf(FullyBuffered, size)) return -1;
             break;
         default: return -1;
     }
@@ -841,9 +740,9 @@ int vsscanf(const char* __restrict__ str, const char* __restrict__ format, va_li
 ///  7.21.7 Character input/output functions.
 /// ===========================================================================
 int fgetc(FILE* stream) {
-    Lock lock{*stream};
+    LOCK(stream);
     char c;
-    if (stream_read(*stream, &c, 1) != 1) return EOF;
+    if (stream->read(&c, 1) != 1) return EOF;
     return c;
 }
 
@@ -851,26 +750,26 @@ char* fgets(char* __restrict__ str, int size, FILE* __restrict__ stream) {
     if (size < 0) return nullptr;
     if (size == 0) return str;
 
-    Lock lock{*stream};
-    return stream_read_until(*stream, str, size_t(size), '\n') ? str : nullptr;
+    LOCK(stream);
+    return stream->read_until(str, size_t(size), '\n') ? str : nullptr;
 }
 
 int fputc(int c, FILE* stream) {
     /// Lock the file.
-    Lock lock{*stream};
+    LOCK(stream);
 
     /// Perform the write.
     auto ch = static_cast<char>(c);
-    if (!stream_put_maybe_buffered(*stream, ch)) return EOF;
+    if (!stream->write(ch)) return EOF;
     return ch;
 }
 
 int fputs(const char* __restrict__ str, FILE* __restrict__ stream) {
     /// Lock the file.
-    Lock lock{*stream};
+    LOCK(stream);
 
     /// Perform the write.
-    if (stream_put_maybe_buffered(*stream, str, strlen(str)) == EOF) return EOF;
+    if (stream->write(str, strlen(str)) == EOF) return EOF;
     return 0;
 }
 
@@ -889,10 +788,8 @@ int puts(const char* str) {
 }
 
 int ungetc(int c, FILE* stream) {
-    /// Lock the file.
-    Lock lock{*stream};
-
-    return stream_unget(*stream, static_cast<char>(c));
+    LOCK(stream);
+    return stream->unget(static_cast<char>(c));
 }
 
 /// ===========================================================================
@@ -902,11 +799,11 @@ size_t fread(void* __restrict__ ptr, size_t size, size_t nmemb, FILE* __restrict
     if (size == 0 || nmemb == 0) return 0;
 
     /// Lock the file.
-    Lock lock{*stream};
+    LOCK(stream);
 
     /// Read the data. We assume that we don't overflow here because it would be
     /// physically impossible to allocate a buffer of that size anyway.
-    auto ret = stream_read(*stream, static_cast<char*>(ptr), size * nmemb);
+    auto ret = stream->read(static_cast<char*>(ptr), size * nmemb);
     return ret / size;
 }
 
@@ -914,11 +811,11 @@ size_t fwrite(const void* __restrict__ ptr, size_t size, size_t nmemb, FILE* __r
     if (size == 0 || nmemb == 0) return 0;
 
     /// Lock the file.
-    Lock lock{*stream};
+    LOCK(stream);
 
     /// Write the data. We assume that we don't overflow here because it would be
     /// physically impossible to allocate a buffer of that size anyway.
-    auto ret = stream_put_maybe_buffered(*stream, reinterpret_cast<const char* __restrict__>(ptr), size * nmemb);
+    auto ret = stream->write(reinterpret_cast<const char* __restrict__>(ptr), size * nmemb);
     return ret == EOF ? 0 : nmemb;
 }
 
@@ -927,46 +824,48 @@ size_t fwrite(const void* __restrict__ ptr, size_t size, size_t nmemb, FILE* __r
 /// ===========================================================================
 int fgetpos(FILE* __restrict__ stream, fpos_t* __restrict__ pos) {
     /// Lock the file.
-    Lock lock{*stream};
+    LOCK(stream);
 
     /// Get the position.
-    *pos = stream_getpos(*stream, *pos);
+    *pos = stream->getpos(*pos);
     return 0;
 }
 
 int fseek(FILE* stream, long offset, int whence) {
     /// Lock the file.
-    Lock lock{*stream};
+    LOCK(stream);
 
     /// Seek to the position.
-    return stream_seek(*stream, offset, whence) ? 0 : -1;
+    return stream->seek(offset, whence) ? 0 : -1;
 }
 
 int fsetpos(FILE* stream, const fpos_t* pos) {
     /// Lock the file.
-    Lock lock{*stream};
+    LOCK(stream);
 
     /// Set the position.
-    return stream_setpos(*stream, *pos) ? 0 : -1;
+    return stream->setpos(*pos) ? 0 : -1;
 }
 
 long ftell(FILE* stream) {
     /// Lock the file.
-    Lock lock{*stream};
+    LOCK(stream);
 
     /// Get the position.
     long pos;
-    [[maybe_unused]] auto res = stream_tell(*stream, pos);
+    [[maybe_unused]] auto res = stream->tell(pos);
     return pos;
 }
 
 void rewind(FILE* stream) {
     /// Lock the file.
-    Lock lock{*stream};
+    LOCK(stream);
 
     /// Rewind the file.
-    stream_seek(*stream, 0, SEEK_SET);
-    stream->__f_error = false;
+    stream->seek(0, SEEK_SET);
+    stream->__f_error = 0;
+    stream->__f_eof = 0;
+    stream->__f_has_ungotten = 0;
 }
 
 /// ===========================================================================
@@ -974,7 +873,7 @@ void rewind(FILE* stream) {
 /// ===========================================================================
 void clearerr(FILE* stream) {
     /// Lock the file.
-    Lock lock{*stream};
+    LOCK(stream);
 
     /// Clear the error flags.
     stream->__f_error = false;
@@ -983,17 +882,15 @@ void clearerr(FILE* stream) {
 
 int feof(FILE* stream) {
     /// Lock the file.
-    Lock lock{*stream};
+    LOCK(stream);
 
     /// We're logically at EOF if we're physically at EOF and there is no ungotten
     /// character and the read buffer is empty.
-    return stream_at_eof(*stream) && !stream_has_ungotten(*stream) && stream->__rdbuf.__offs == 0;
+    return stream->at_eof() && !stream->has_ungotten() && stream->__rdbuf.__offs == 0;
 }
 
 int ferror(FILE* stream) {
-    /// Lock the file.
-    Lock lock{*stream};
-
+    LOCK(stream);
     return stream->__f_error;
 }
 
@@ -1050,7 +947,7 @@ off_t ftello(FILE* stream) {
 
 int getc_unlocked(FILE *stream) {
     char c;
-    if (stream_read(*stream, &c, 1) != 1) return EOF;
+    if (stream->read(&c, 1) != 1) return EOF;
     return c;
 }
 
@@ -1060,7 +957,7 @@ int getchar_unlocked() {
 
 int putc_unlocked(int c, FILE *stream) {
     auto ch = static_cast<char>(c);
-    if (!stream_put_maybe_buffered(*stream, ch)) return EOF;
+    if (!stream->write(ch)) return EOF;
     return ch;
 }
 

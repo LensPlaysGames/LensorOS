@@ -68,7 +68,7 @@ target_sources(
   crt0.s
   crti.s
   crtn.s
-  init.cpp
+  abi.cpp
   stdio.cpp
   stdlib.cpp
   string.cpp
@@ -80,7 +80,7 @@ target_compile_options(
   PRIVATE
   -fdiagnostics-color=always
   -fPIE
-  -msse2
+#  -msse2
   -Wall
   -Wextra
   -Wconversion
@@ -97,6 +97,17 @@ target_compile_options(
     -fno-exceptions
     -nostdlib
     -nostdinc
+    -lgcc
+)
+
+target_link_options(
+    c
+    PUBLIC
+    -fno-stack-protector
+    -fno-exceptions
+    -nostdlib
+    -nostdinc
+    -lgcc
 )
 
 if (LENSOR_OS_LIBC_BUILD_HOST)
@@ -110,8 +121,6 @@ endif()
 
 set(ROOT "${PROJECT_SOURCE_DIR}/../../root")
 set(STD "${PROJECT_SOURCE_DIR}/../../std")
-
-message(WARNING "PATH: ${PROJECT_SOURCE_DIR}/../../std")
 
 if (NOT LENSOR_OS_LIBC_BUILD_HOST)
 add_custom_target(

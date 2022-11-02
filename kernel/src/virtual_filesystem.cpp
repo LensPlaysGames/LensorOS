@@ -31,7 +31,7 @@
 #include <virtual_filesystem.h>
 
 // Uncomment the following directive for extra debug information output.
-#define DEBUG_VFS
+//#define DEBUG_VFS
 
 #ifdef DEBUG_VFS
 #   define DBGMSG(...) dbgmsg(__VA_ARGS__)
@@ -154,7 +154,7 @@ FileDescriptors VFS::open(const String& path) {
 
 bool VFS::close(ProcFD procfd) {
     auto fd = procfd_to_fd(procfd);
-    auto& proc = Scheduler::CurrentProcess->value();
+    [[maybe_unused]] auto& proc = Scheduler::CurrentProcess->value();
     if (fd == SysFD::Invalid) {
         DBGMSG("[VFS]: Cannot close invalid ProcFD %x:%ull.\r\n", &proc, u64(procfd));
         return false;

@@ -32,7 +32,7 @@
 #include <virtual_filesystem.h>
 
 // Uncomment the following directive for extra debug information output.
-#define DEBUG_SYSCALLS
+//#define DEBUG_SYSCALLS
 
 /// SYSCALL NAMING SCHEME:
 /// "sys$" + number + "_" + descriptive name

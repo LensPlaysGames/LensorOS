@@ -28,7 +28,7 @@ __BEGIN_DECLS__
 
 /// Copying
 __forceinline void* memcpy(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n) {
-#   ifdef __SSE2__
+#   ifdef __have_memcpy_sse_unaligned_intrin
     __memcpy_sse_unaligned_intrin(__dest, __src, __n);
 #   else
     __memcpy_naive(__dest, __src, __n);

@@ -34,6 +34,5 @@ target_compile_options(
     -Wno-unused-parameter -Wno-unused-variable
     -O0 -g
 )
-target_link_options(test PRIVATE -nostdlib -nostdinc)
 target_link_libraries(test PRIVATE c)
 

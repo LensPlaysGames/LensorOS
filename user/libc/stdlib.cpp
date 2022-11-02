@@ -28,6 +28,7 @@
 #include "string.h"
 #include "sys/syscalls.h"
 #include "unistd.h"
+#include <bits/abi.h>
 
 /// ===========================================================================
 ///  STDLIB Implementation.
@@ -180,12 +181,14 @@ __attribute__((alloc_size(2))) void* realloc_impl(void* ptr, size_t size) {
     return new_ptr;
 }
 
-/// ===========================================================================
-///  Initialisation
-/// ===========================================================================
-_PushIgnoreWarning("-Wprio-ctor-dtor")
+} // namespace
 
-[[gnu::constructor(_CDTOR_MALLOC)]] void init() {
+/// ===========================================================================
+///  C Interface
+/// ===========================================================================
+__BEGIN_DECLS__
+
+void __libc_init_malloc() {
     __errno = 0;
 
     /// Initialise the heap.
@@ -195,18 +198,10 @@ _PushIgnoreWarning("-Wprio-ctor-dtor")
     free_headers = nullptr;
 }
 
-[[gnu::destructor(_CDTOR_MALLOC)]] void fini() {
+void __libc_fini_malloc() {
     /// Currently, this does nothing, but one could, for instance, check
     /// for memory leaks here.
 }
-
-_PopWarnings();
-} // namespace
-
-/// ===========================================================================
-///  C Interface
-/// ===========================================================================
-__BEGIN_DECLS__
 
 int* __errno_location(void) {
     return &__errno;
@@ -243,22 +238,35 @@ __attribute__((__noreturn__)) void __assert_abort_msg(
 
 __attribute__((noreturn)) void __libc_exit(int);
 
+__attribute__((noreturn)) void __libc_quick_exit(int);
+
 __attribute__((noreturn)) void abort() { _Exit(-1); }
 
 __attribute__((__noreturn__)) void exit(int status) {
-    /// TODO: call atexit handlers.
     __libc_exit(status);
 }
 
 __attribute__((__noreturn__)) void quick_exit(int status) {
-    /// TODO: call at_quick_exit handlers.
-    __libc_exit(status);
+    __libc_quick_exit(status);
 }
 
 __attribute__((__noreturn__)) void _Exit(int status) {
-    /// TODO: call at_quick_exit handlers.
     syscall(SYS_exit, status);
     for (;;) asm volatile ("");
+}
+
+int atexit(void function()) {
+    __cxa_atexit([](void* _arg){
+        if (__in_quick_exit) return;
+        auto arg = reinterpret_cast<void(*)()>(_arg);
+        arg();
+    }, reinterpret_cast<void*>(function), nullptr);
+    return 0;
+}
+
+int at_quick_exit(void function()) {
+    __cxa_atexit(reinterpret_cast<__dso_cb>(function), nullptr, nullptr);
+    return 0;
 }
 
 /// ===========================================================================
