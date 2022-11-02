@@ -34,9 +34,10 @@ namespace std {
 
 template <
     typename _T,
+    typename __index_type = size_t,
     typename = _Requires<_NotRef<_T>>
 >
-struct vector {
+struct __vector {
     using value_type = _T;
     using pointer = _T*;
     using const_pointer = const _T*;
@@ -59,20 +60,20 @@ public:
     ///  Constructors.
     /// =======================================================================
     /// Contstruct an empty vector.
-    vector() noexcept = default;
+    __vector() noexcept = default;
 
-    /// Construct a vector with a given size.
-    explicit vector(size_type __n) : __sz(__n), __cap(__n) { __ptr = new value_type[__n]; }
+    /// Construct a __vector with a given size.
+    explicit __vector(size_type __n) : __sz(__n), __cap(__n) { __ptr = new value_type[__n]; }
 
-    /// Construct a vector with __n copies of __val.
-    vector(size_type __n, const value_type& __val) : __sz(__n), __cap(__n) {
+    /// Construct a __vector with __n copies of __val.
+    __vector(size_type __n, const value_type& __val) : __sz(__n), __cap(__n) {
         __ptr = new value_type[__n];
         for (size_type i = 0; i < __n; ++i) { __ptr[i] = __val; }
     }
 
-    /// Construct a vector with the contents of the range [__first, __last).
+    /// Construct a __vector with the contents of the range [__first, __last).
     template<typename _It>
-    vector(_It __first, _It __last) : __sz(__last - __first), __cap(__last - __first) {
+    __vector(_It __first, _It __last) : __sz(__last - __first), __cap(__last - __first) {
         __ptr = new value_type[__sz];
         for (size_type i = 0; i < __sz; ++i) { __ptr[i] = *__first++; }
     }
@@ -80,18 +81,18 @@ public:
     /// =======================================================================
     ///  Copy and move constructors, assignment operators, and destructor.
     /// =======================================================================
-    vector(const vector& __other) : __sz(__other.__sz), __cap(__other.__cap) {
+    __vector(const __vector& __other) : __sz(__other.__sz), __cap(__other.__cap) {
         __ptr = new value_type[__sz];
         for (size_type i = 0; i < __sz; ++i) { __ptr[i] = __other.__ptr[i]; }
     }
 
-    vector(vector&& __other) noexcept : __ptr(__other.__ptr), __sz(__other.__sz), __cap(__other.__cap) {
+    __vector(__vector&& __other) noexcept : __ptr(__other.__ptr), __sz(__other.__sz), __cap(__other.__cap) {
         __other.__ptr = nullptr;
         __other.__sz = 0;
         __other.__cap = 0;
     }
 
-    vector& operator=(const vector& __other) {
+    __vector& operator=(const __vector& __other) {
         if (this == addressof(__other)) { return *this; }
         __sz = __other.__sz;
         __cap = __other.__cap;
@@ -100,7 +101,7 @@ public:
         return *this;
     }
 
-    vector& operator=(vector&& __other) noexcept {
+    __vector& operator=(__vector&& __other) noexcept {
         if (this == addressof(__other)) { return *this; }
         __ptr = __other.__ptr;
         __sz = __other.__sz;
@@ -112,7 +113,7 @@ public:
     }
 
     /// Destructor.
-    ~vector() { delete[] __ptr; }
+    ~__vector() { delete[] __ptr; }
 
     /// =======================================================================
     ///  Iterators.
@@ -159,20 +160,30 @@ public:
         if (__n > max_size()) { /* TODO: Crash horribly */ }
         if (__n > __cap) {
             auto __new_ptr = new value_type[__n];
-            for (size_type i = 0; i < __sz; ++i) { __new_ptr[i] = __ptr[i]; }
+            for (size_type i = 0; i < __sz; ++i) { __new_ptr[i] = std::move(__ptr[i]); }
             delete[] __ptr;
             __ptr = __new_ptr;
             __cap = __n;
         }
     }
 
+    void shrink_to_fit() {
+        if (__sz < __cap) {
+            auto __new_ptr = new value_type[__sz];
+            for (size_type i = 0; i < __sz; ++i) { __new_ptr[i] = std::move(__ptr[i]); }
+            delete[] __ptr;
+            __ptr = __new_ptr;
+            __cap = __sz;
+        }
+    }
+
     /// =======================================================================
     ///  Element access.
     /// =======================================================================
-    reference operator[](size_type __n) noexcept { return __ptr[__n]; }
-    const_reference operator[](size_type __n) const noexcept { return __ptr[__n]; }
-    reference at(size_type __n) { return __ptr[__n]; }
-    const_reference at(size_type __n) const { return __ptr[__n]; }
+    reference operator[](__index_type __n) noexcept { return __ptr[static_cast<size_t>(__n)]; }
+    const_reference operator[](__index_type __n) const noexcept { return __ptr[static_cast<size_t>(__n)]; }
+    reference at(__index_type __n) { return __ptr[static_cast<size_t>(__n)]; }
+    const_reference at(__index_type __n) const { return __ptr[static_cast<size_t>(__n)]; }
     reference front() noexcept { return __ptr[0]; }
     const_reference front() const noexcept { return __ptr[0]; }
     reference back() noexcept { return __ptr[__sz - 1]; }
@@ -249,6 +260,9 @@ public:
 
     iterator erase(const_iterator __pos) { return erase(__pos, __pos + 1); }
 };
+
+template <typename _T>
+using vector = __vector<_T, size_t>;
 
 } // namespace std
 

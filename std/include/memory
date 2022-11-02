@@ -29,15 +29,10 @@
 namespace std {
 
 template <typename _T>
-constexpr enable_if<is_object_v<_T>, _T*> addressof(_T& __val) noexcept {
+constexpr _T* addressof(_T& __val) noexcept {
     return reinterpret_cast<_T*>(
         &const_cast<char&>(reinterpret_cast<const volatile char&>(__val))
     );
-}
-
-template <typename _T>
-constexpr enable_if<!is_object_v<_T>, _T*> addressof(_T& __val) noexcept {
-    return &__val;
 }
 
 template <typename _T>
@@ -84,6 +79,10 @@ public:
     _T& operator*() const noexcept { return *__ptr; }
     _T* operator->() const noexcept { return __ptr; }
     explicit operator bool() const noexcept { return __ptr != nullptr; }
+
+    bool operator==(const unique_ptr& __rhs) const noexcept { return __ptr == __rhs.__ptr; }
+    friend bool operator==(const unique_ptr& __rhs, const nullptr_t) noexcept { return __rhs.__ptr == nullptr; }
+    friend bool operator==(const nullptr_t, const unique_ptr& __rhs) noexcept { return __rhs.__ptr == nullptr; }
 };
 
 template <typename _T, typename ..._Args>
@@ -160,6 +159,10 @@ public:
     _T& operator*() const noexcept { return *__ptr; }
     _T* operator->() const noexcept { return __ptr; }
     explicit operator bool() const noexcept { return __ptr; }
+
+    bool operator==(const shared_ptr& __rhs) const noexcept { return __ptr == __rhs.__ptr; }
+    friend bool operator==(const shared_ptr& __rhs, const nullptr_t) noexcept { return __rhs.__ptr == nullptr; }
+    friend bool operator==(const nullptr_t, const shared_ptr& __rhs) noexcept { return __rhs.__ptr == nullptr; }
 };
 
 /// Constructs a shared_ptr with the given arguments. This function is the prefferred

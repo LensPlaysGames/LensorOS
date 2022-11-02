@@ -33,6 +33,12 @@
 #    define __END_DECLS__
 #endif
 
+/// Stringification and concatenation.
+#define __STR(_X) #_X
+#define _STR(_X) __STR(_X)
+#define __CAT(_X, _Y) _X##_Y
+#define _CAT(_X, _Y) __CAT(_X, _Y)
+
 /// Attributes
 #ifndef __forceinline
 #    define __forceinline __inline__ __attribute__((__always_inline__))
@@ -40,6 +46,12 @@
 
 #define _Deprecated(_Msg) __attribute__((__deprecated__(_Msg)))
 #define _Format(_Fmt, ...) __attribute__((__format__(_Fmt, __VA_ARGS__)))
+
+#ifdef __cplusplus
+#    define _Nodiscard [[nodiscard]]
+#else
+#    define _Nodiscard __attribute__((__warn_unused_result__))
+#endif
 
 /// Pragmas
 #define __Pragma(_Str) _Pragma(#_Str)

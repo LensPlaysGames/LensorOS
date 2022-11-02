@@ -33,84 +33,71 @@
 // Uncomment the following directive for extra debug information output.
 #define DEBUG_VFS
 
-GlobalFileDescriptor VFS::procfd_to_fd(ProcessFileDescriptor procfd) const {
-    auto raw = static_cast<FileDescriptor>(procfd);
-    const auto& proc = Scheduler::CurrentProcess->value();
-
-    if (raw > proc->FileDescriptorTable.size() || proc->FileDescriptorTable[raw] == -1lu) {
 #ifdef DEBUG_VFS
-        dbgmsg("ERROR: ProcFD %ull is unmapped.\r\n", raw);
+#   define DBGMSG(...) dbgmsg(__VA_ARGS__)
+#else
+#   define DBGMSG(...)
 #endif
-        return GlobalFileDescriptor::Invalid;
+
+SysFD VFS::procfd_to_fd(ProcFD procfd) const {
+    const auto& proc = Scheduler::CurrentProcess->value();
+    auto sysfd = proc->FileDescriptors[procfd];
+    if (!sysfd) {
+        DBGMSG("[VFS]: ERROR: ProcFD %x:%ull is unmapped.\r\n", &proc, u64(procfd));
+        return SysFD::Invalid;
     }
 
-#ifdef DEBUG_VFS
-    dbgmsg("procfd_to_fd: ProcFD %ull is mapped to SysFD %ull.\r\n", raw, proc->FileDescriptorTable[raw]);
-#endif
-    return static_cast<GlobalFileDescriptor>(proc->FileDescriptorTable[raw]);
+    return *sysfd;
 }
 
-auto VFS::file(ProcessFileDescriptor procfd) -> std::shared_ptr<OpenFileDescription> {
-    auto raw = static_cast<FileDescriptor>(procfd);
+auto VFS::file(ProcFD procfd) -> std::shared_ptr<OpenFileDescription> {
     const auto& proc = Scheduler::CurrentProcess->value();
 
 #ifdef DEBUG_VFS
-    dbgmsg("[VFS] ProcFds:\r\n");
+    dbgmsg("[VFS]: ProcFds for process %x:\r\n", &proc);
     u64 n = 0;
-    for (const auto& entry : proc->FileDescriptorTable) {
+    for (const auto& entry : proc->FileDescriptors) {
         dbgmsg("  %ull -> Sys %ull\r\n", n, entry);
         n++;
     }
 #endif
 
-    if (raw > proc->FileDescriptorTable.size() || proc->FileDescriptorTable[raw] == -1lu) {
-#ifdef DEBUG_VFS
-        dbgmsg("ERROR: ProcFD %ull is unmapped. (FDTable size: %ull)\r\n", raw, proc->FileDescriptorTable.size());
-#endif
+    auto sysfd = proc->FileDescriptors[procfd];
+    if (!sysfd) {
+        DBGMSG("[VFS]: ERROR: ProcFD %x:%ull is unmapped.\r\n", &proc, u64(procfd));
         return {};
     }
 
-#ifdef DEBUG_VFS
-    dbgmsg("file: ProcFD %ull is mapped to SysFD %ull.\r\n", raw, proc->FileDescriptorTable[raw]);
-#endif
-    return file(static_cast<GlobalFileDescriptor>(proc->FileDescriptorTable[raw]));
+    DBGMSG("[VFS]: file: ProcFD %x:%ull is mapped to SysFD %ull.\r\n", &proc, u64(procfd), *sysfd);
+    return file(static_cast<SysFD>(*sysfd));
 }
 
-auto VFS::file(GlobalFileDescriptor fd) -> std::shared_ptr<OpenFileDescription> {
-    auto raw = static_cast<FileDescriptor>(fd);
-    if (raw > Opened.size() || !Opened[raw]) {
-#ifdef DEBUG_VFS
-        dbgmsg("ERROR: SysFD %ull is unmapped.\r\n", raw);
-#endif
+auto VFS::file(SysFD fd) -> std::shared_ptr<OpenFileDescription> {
+    auto f = Files[fd];
+    if (!f) {
+        DBGMSG("[VFS]: ERROR: SysFD %ull is unmapped.\r\n", fd);
         return {};
     }
-    return Opened[raw];
+    return *f;
 }
 
-bool VFS::valid(ProcessFileDescriptor procfd) const {
-    return procfd_to_fd(procfd) != GlobalFileDescriptor::Invalid;
+bool VFS::valid(ProcFD procfd) const {
+    return procfd_to_fd(procfd) != SysFD::Invalid;
 }
 
-bool VFS::valid(GlobalFileDescriptor fd) const {
-    auto raw = static_cast<FileDescriptor>(fd);
-    if (raw > Opened.size() || !Opened[raw]) {
-#ifdef DEBUG_VFS
-        dbgmsg("ERROR: SysFD %ull is unmapped.\r\n", raw);
-#endif
+bool VFS::valid(SysFD fd) const {
+    auto f = Files[fd];
+    if (!f) {
+        DBGMSG("[VFS]: ERROR: SysFD %ull is unmapped.\r\n", u64(fd));
         return false;
     }
     return true;
 }
 
-void VFS::free_fd(GlobalFileDescriptor fd, ProcessFileDescriptor procfd) {
-    auto raw = static_cast<FileDescriptor>(fd);
-    auto raw_proc = static_cast<FileDescriptor>(procfd);
+void VFS::free_fd(SysFD fd, ProcFD procfd) {
     const auto& proc = Scheduler::CurrentProcess->value();
-
-    proc->FileDescriptorTable[raw_proc] = -1;
-    proc->FreeFileDescriptors.push_back(raw_proc);
-    Opened[raw] = {};
-    FreeFileDescriptors.push_back(raw);
+    proc->FileDescriptors.erase(procfd);
+    Files.erase(fd);
 }
 
 FileDescriptors VFS::open(const String& path) {
@@ -165,18 +152,27 @@ FileDescriptors VFS::open(const String& path) {
     return {};
 }
 
-bool VFS::close(ProcessFileDescriptor procfd) {
+bool VFS::close(ProcFD procfd) {
     auto fd = procfd_to_fd(procfd);
-    if (fd == GlobalFileDescriptor::Invalid) { return false; }
+    auto& proc = Scheduler::CurrentProcess->value();
+    if (fd == SysFD::Invalid) {
+        DBGMSG("[VFS]: Cannot close invalid ProcFD %x:%ull.\r\n", &proc, u64(procfd));
+        return false;
+    }
 
     auto f = file(fd);
-    if (!f) { return false; }
+    if (!f) {
+        DBGMSG("[VFS]: Cannot close invalid SysFD %ull.\r\n", u64(fd));
+        return false;
+    }
 
+    DBGMSG("[VFS]: Unmapping ProcFD %x:%ull.\r\n", &proc, u64(procfd));
+    DBGMSG("[VFS]: Closing SysFD %ull.\r\n", u64(fd));
     free_fd(fd, procfd);
     return true;
 }
 
-ssz VFS::read(ProcessFileDescriptor fd, u8* buffer, usz byteCount, usz byteOffset) {
+ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
 #ifdef DEBUG_VFS
     dbgmsg("[VFS]: read\r\n"
            "  file descriptor: %ull\r\n"
@@ -196,7 +192,7 @@ ssz VFS::read(ProcessFileDescriptor fd, u8* buffer, usz byteCount, usz byteOffse
     return f->DeviceDriver->read(f->Metadata.byte_offset() + byteOffset, byteCount, buffer);
 }
 
-ssz VFS::write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount, u64 byteOffset) {
+ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
     auto f = file(fd);
 
 #ifdef DEBUG_VFS
@@ -236,7 +232,7 @@ void VFS::print_debug() {
     dbgmsg("\r\n"
            "  Opened files:\r\n");
     i = 0;
-    for (const auto& f : Opened) {
+    for (const auto& f : Files) {
         dbgmsg("    Open File %ull:\r\n"
                "      Storage Device Driver Address: %x\r\n"
                "      Byte Offset: %ull\r\n"
@@ -250,53 +246,18 @@ void VFS::print_debug() {
 }
 
 FileDescriptors VFS::add_file(std::shared_ptr<OpenFileDescription> file, Process* proc) {
-    FileDescriptor fd;
-    FileDescriptor procfd;
-
     if (!proc) proc = Scheduler::CurrentProcess->value();
-
-#ifdef DEBUG_VFS
-    dbgmsg("[VFS]: Creating file descriptor mapping\r\n");
-#endif
+    DBGMSG("[VFS]: Creating file descriptor mapping\r\n");
 
     /// Add the file descriptor to the global file table.
-/*    if (!FreeFileDescriptors.empty()) {
-        fd = FreeFileDescriptors.back();
-        FreeFileDescriptors.pop_back();
-        Opened[fd] = std::move(file);
-#ifdef DEBUG_VFS
-        dbgmsg("[VFS]: Reusing freed SysFD %ull\r\n", fd);
-#endif
-    } else*/
-
-     {
-        fd = Opened.size();
-        Opened.push_back(std::move(file));
-#ifdef DEBUG_VFS
-        dbgmsg("[VFS]: Allocating new SysFD %ull\r\n", fd);
-#endif
-    }
+    auto [fd, _] = Files.push_back(std::move(file));
+    DBGMSG("[VFS]: Allocated new SysFD %ull\r\n", fd);
 
     /// Add the file descriptor to the local process table.
-    /*if (!proc->FreeFileDescriptors.empty()) {
-        procfd = proc->FreeFileDescriptors.back();
-        proc->FreeFileDescriptors.pop_back();
-        proc->FileDescriptorTable[procfd] = fd;
-#ifdef DEBUG_VFS
-        dbgmsg("[VFS]: Reusing freed ProcFD %ull\r\n", procfd);
-#endif
-    } else*/
-    {
-        procfd = proc->FileDescriptorTable.size();
-        proc->FileDescriptorTable.push_back(fd);
-#ifdef DEBUG_VFS
-        dbgmsg("[VFS]: Allocating new ProcFD %ull\r\n", procfd);
-#endif
-    }
+    auto [procfd, __] = proc->FileDescriptors.push_back(fd);
+    DBGMSG("[VFS]: Allocated new ProcFD %x:%ull\r\n", &proc, procfd);
 
-#ifdef DEBUG_VFS
-    dbgmsg("[VFS]: Mapped ProcFD %ull to SysFD %ull\r\n", procfd, fd);
-#endif
-
-    return {static_cast<ProcessFileDescriptor>(procfd), static_cast<GlobalFileDescriptor>(fd)};
+    /// Return the fds.
+    DBGMSG("[VFS]: Mapped ProcFD %x:%ull to SysFD %ull\r\n", &proc, procfd, fd);
+    return {static_cast<ProcFD>(procfd), static_cast<SysFD>(fd)};
 }

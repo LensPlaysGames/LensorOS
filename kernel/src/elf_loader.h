@@ -224,14 +224,13 @@ namespace ELF {
                                    UserProcessStackSize);
 
         // Open stdin, stdout, and stderr.
-        auto driver = new DbgOutDriver{};
         auto meta = new FileMetadata(String("stdout")
                                      , false
-                                     , driver
+                                     , vfs.StdoutDriver.get()
                                      , nullptr
                                      , 0, 0);
 
-        auto file = std::make_shared<OpenFileDescription>(driver, *meta);
+        auto file = std::make_shared<OpenFileDescription>(vfs.StdoutDriver.get(), *meta);
         vfs.add_file(file, process);
         vfs.add_file(file, process);
         vfs.add_file(std::move(file), process);
@@ -239,7 +238,7 @@ namespace ELF {
 
         dbgmsg("[ELF] ProcFds:\r\n");
         u64 n = 0;
-        for (const auto& entry : process->FileDescriptorTable) {
+        for (const auto& entry : process->FileDescriptors) {
             dbgmsg("  %ull -> Sys %ull\r\n", n, entry);
             n++;
         }

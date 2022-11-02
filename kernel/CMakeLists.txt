@@ -371,7 +371,7 @@ if ( QEMU_PROGRAM )
     -rtc base=localtime,clock=host,driftfix=none
     # This is deprecated, but we'll use it,
     # until we write an actual sound driver.
-    -soundhw pcspk
+#    -soundhw pcspk
     # No networking drivers yet.
     -net none
     # Show extra information regarding triple faults.

@@ -17,13 +17,12 @@
 * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "type_traits"
+#include <type_traits>
 
 #ifndef _LENSOR_OS_UTILITY
 #define _LENSOR_OS_UTILITY
 
 namespace std {
-
 /// *Very* simple std::pair.
 template <
     typename _First,  /// First member of the pair.
@@ -38,6 +37,12 @@ struct pair {
     first_type first;
     second_type second;
 };
+
+template <typename _T> constexpr bool __false = false;
+template <typename _T>
+add_rvalue_reference_t<_T> declval() noexcept {
+    static_assert(__false<_T>, "std::declval() may not be used outside of sizeof, decltype, and other unevaluated contexts");
+}
 
 /// Move a value.
 template <typename _T>

@@ -20,11 +20,13 @@
 #ifndef LENSOR_OS_SCHEDULER_H
 #define LENSOR_OS_SCHEDULER_H
 
-#include <vector>
 #include <integers.h>
 #include <interrupts/interrupts.h>
 #include <linked_list.h>
 #include <memory/region.h>
+#include <vector>
+#include <extensions>
+#include <vfs_forward.h>
 
 namespace Memory {
     class PageTable;
@@ -78,14 +80,18 @@ struct Process {
 
     // Keep track of opened files that may be freed when the process
     // exits, if no other process has it open.
-    std::vector<u64> FileDescriptorTable;
-    std::vector<u64> FreeFileDescriptors;
+    std::sparse_vector<SysFD, -1, ProcFD> FileDescriptors;
 
     Memory::PageTable* CR3 { nullptr };
 
     // Used to save/restore CPU state when a context switch occurs.
     CPUState CPU;
 
+    Process() = default;
+
+    /// Processes are not copyable.
+    Process(const Process&) = delete;
+    Process& operator=(const Process&) = delete;
 
     void add_memory_region(void* vaddr, void* paddr, usz size) {
         Memories.add({vaddr, paddr, size});
