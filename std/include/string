@@ -118,8 +118,7 @@ class basic_string {
     /// String data. __flag is 0 if the string is small, and 1 otherwise.
     union {
         /// Large string representation. __data points to a heap allocated buffer
-        /// that contains __sz characters and a null terminator. (__cap >> 1) is
-        /// the capacity of the buffer.
+        /// that contains __sz characters and a null terminator.
         struct {
             _Char* __data;
             size_t __sz;
@@ -129,9 +128,8 @@ class basic_string {
 
         /// Small string representation.
         ///
-        /// The last _Char >> 1 is the capacity of the string. The size can be calculated
-        /// from the capacity. If the string is full, the capacity also acts as the null
-        /// terminator.
+        /// __rem_cap is the number of free characters in the buffer. If the string is
+        /// full, it and the flag will act as the null terminator.
         struct {
             _Char __data[sizeof __large - sizeof(_Char)];
             _Char __rem_cap : (sizeof(_Char) * __CHAR_BIT__) - 1;
