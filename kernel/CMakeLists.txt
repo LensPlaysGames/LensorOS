@@ -23,7 +23,9 @@ set( LensorOS_LANGUAGES ASM_NASM CXX )
 include( "${CMAKE_CURRENT_LIST_DIR}/config.cmake" )
 
 # Use LensorOS GNU-based toolchain by default.
-set( CMAKE_TOOLCHAIN_FILE lensor_gnu_toolchain.cmake )
+set( CMAKE_TOOLCHAIN_FILE lensor_gnu_toolchain.cmake)
+
+set( CMAKE_CXX_STANDARD 20 )
 
 # Use `ccache` if it is installed in system's PATH.
 find_program( CCACHE_PROGRAM ccache )
@@ -135,6 +137,14 @@ target_compile_options(
   -Wall
   -Wextra
   -Werror
+
+  -Wno-error=deprecated-enum-enum-conversion
+
+  ## C++20 deprecates volatile |= and &=. That's nonsense, so we disable this warning.
+  ##
+  ## If you don't believe me that it's nonsense, C++23 de-deprecates them because they
+  ## realised that this is nonsense.
+  -Wno-volatile
 )
 target_link_options(
   Kernel PRIVATE
