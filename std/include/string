@@ -115,35 +115,42 @@ class basic_string {
     using _Str = basic_string<_Char>;
     using _View = basic_string_view<_Char>;
 
-    enum : _Char { __large_flag = 1 };
-
-    /// Large string representation. __ptr points to a heap allocated buffer
-    /// that contains __sz characters and a null terminator. (__cap >> 1) is
-    /// the capacity of the buffer.
-    struct _Large {
-        _Char* __ptr;
-        size_t __sz;
-        size_t __cap;
-    };
-
-    /// String data. The last bit of the last byte of __data is 0 if the string
-    /// is small, and 1 otherwise.
+    /// String data. __flag is 0 if the string is small, and 1 otherwise.
     union {
-        _Large __large;
+        /// Large string representation. __data points to a heap allocated buffer
+        /// that contains __sz characters and a null terminator. (__cap >> 1) is
+        /// the capacity of the buffer.
+        struct {
+            _Char* __data;
+            size_t __sz;
+            size_t __cap : (sizeof(size_t) * __CHAR_BIT__) - 1;
+            size_t __is_large : 1;
+        } __large;
 
         /// Small string representation.
         ///
         /// The last _Char >> 1 is the capacity of the string. The size can be calculated
         /// from the capacity. If the string is full, the capacity also acts as the null
         /// terminator.
-        _Char __data[sizeof(_Large)];
+        struct {
+            _Char __data[sizeof __large - sizeof(_Char)];
+            _Char __rem_cap : (sizeof(_Char) * __CHAR_BIT__) - 1;
+            _Char __is_large : 1;
+        } __small;
     };
 
-    static constexpr size_t __max_chars_small = (sizeof(_Large) / sizeof(_Char)) - 1;
+    /// Make sure we didn't mess up.
+    static_assert(__builtin_offsetof(decltype(__large), __is_large)
+        == __builtin_offsetof(decltype(__small), __is_large),
+        "Large and small string representations must have the same layout.");
 
-    _Nodiscard __forceinline constexpr _Char& __last_char() { return __data[__max_chars_small]; };
-    _Nodiscard __forceinline constexpr const _Char& __last_char() const { return __data[__max_chars_small]; };
-    _Nodiscard _Flatten __forceinline constexpr bool __small() const { return (__last_char() & __large_flag) == 0; };
+    /// The maximum number of characters we can store in a small string.
+    static constexpr size_t __max_chars_small = (sizeof(__small) / sizeof(_Char)) - 1;
+
+    /// Check if a string is large.
+    _Nodiscard bool __is_large() const { return __small.__is_large; }
+
+    /// Get a string view of the string.
     _Nodiscard _View __view() const { return _View(data(), size()); };
 
     /// Compute the number of bytes required the string should be resized to
@@ -157,6 +164,7 @@ class basic_string {
     }
 
 public:
+    /// Invalid index.
     static constexpr size_t npos = static_cast<size_t>(-1);
 
     /// =======================================================================
@@ -164,27 +172,30 @@ public:
     /// =======================================================================
     /// Construct an empty string.
     constexpr basic_string() {
-        __data[0] = 0;
-        __last_char() = static_cast<_Char>(__max_chars_small << 1);
+        __small.__data[0] = 0;
+        __small.__rem_cap = __max_chars_small;
+        __small.__is_large = false;
     }
 
     explicit constexpr basic_string(_Char __c) {
-        __data[0] = __c;
-        __data[1] = 0;
-        __last_char() = static_cast<_Char>((__max_chars_small - 1) << 1);
+        __small.__data[0] = __c;
+        __small.__data[1] = 0;
+        __small.__rem_cap = __max_chars_small - 1;
+        __small.__is_large = false;
     }
 
     constexpr basic_string(const _Str& __other) {
         /// Copy the contents of the other string.
-        if (!__other.__small()) {
-            __large.__ptr = new _Char[(__other.__large.__sz + 1) * sizeof(_Char)];
+        if (__other.__is_large()) {
+            __large.__ptr = new _Char[(__other.__large.__sz + 1)];
             __large.__sz = __other.__large.__sz;
             __large.__cap = __other.__large.__cap;
+            __large.__is_large = true;
             memcpy(__large.__ptr, __other.__large.__ptr, __other.__large.__sz * sizeof(_Char));
         }
 
         /// The other string is small. Shallow-copy it.
-        else { memcpy(__data, __other.__data, sizeof __data); }
+        else { __small = __other.__small; }
     }
 
     constexpr basic_string(_View __sv) {
@@ -192,72 +203,54 @@ public:
         const size_t __size = __sv.size();
 
         if (__size > __max_chars_small) {
-            __large.__ptr = new _Char[(__size + 1) * sizeof(_Char)];
+            __large.__ptr = new _Char[(__size + 1)];
             __large.__sz = __size;
-            __large.__cap = (__size + 1) << 1;
+            __large.__cap = __size;
+            __large.__is_large = true;
             memcpy(__large.__ptr, __cstr, __size * sizeof(_Char));
             __large.__ptr[__size] = 0;
         }
 
         else {
-            memcpy(__data, __cstr, __size * sizeof(_Char));
-            __data[__size] = 0;
-            __last_char() = static_cast<_Char>((__max_chars_small - __size) * 2);
+            memcpy(&__small, __cstr, __size * sizeof(_Char));
+            __small.__data[__size] = 0;
+            __small.__rem_cap = __max_chars_small - __size;
+            __small.__is_large = false;
         }
     }
 
     constexpr basic_string(_Str&& __other) {
-        memcpy(__data, __other.__data, sizeof __data);
-        __other.__data[0] = 0;
-        __other.__last_char() = static_cast<_Char>(__max_chars_small << 1);
+        __small = __other.__small;
+        __other.__small.__data[0] = 0;
+        __other.__small.__rem_cap = __max_chars_small;
+        __other.__small.__is_large = false;
     }
 
     constexpr ~basic_string() {
-        if (!__small()) { delete[] __large.__ptr; }
+        if (__is_large()) { delete[] __large.__data; }
     }
 
     /// =======================================================================
     ///  Accessing elements.
     /// =======================================================================
-    _Nodiscard constexpr const _Char* data() const {
-        if (__small()) {
-            return __data;
-        } else {
-            return __large.__ptr;
-        }
-    }
+    _Nodiscard constexpr const _Char* data() const { return __is_large() ? __large.__data : __small.__data; }
+    _Nodiscard constexpr  _Char* data() { return __is_large() ? __large.__data : __small.__data; }
 
-    _Nodiscard constexpr  _Char* data() {
-        if (__small()) {
-            return __data;
-        } else {
-            return __large.__ptr;
-        }
-    }
-
-    _Nodiscard _Flatten constexpr _Char* c_str() { return data(); }
-    _Nodiscard _Flatten constexpr const _Char* c_str() const { return data(); }
+    _Nodiscard constexpr _Char* c_str() { return data(); }
+    _Nodiscard constexpr const _Char* c_str() const { return data(); }
 
     _Nodiscard constexpr size_t size() const {
-        if (__small()) {
-            return __max_chars_small - (__last_char() >> 1);
-        } else {
-            return __large.__sz;
-        }
+        return __is_large() ? __large.__sz : __max_chars_small - __small.__rem_cap;
     }
 
     _Nodiscard constexpr size_t capacity() const {
-        if (__small()) {
-            return __last_char() >> 1;
-        } else {
-            return __large.__cap >> 1;
-        }
+        return __is_large() ? __large.__cap : __max_chars_small;
     }
 
-    _Nodiscard _Flatten constexpr bool empty() const { return size() == 0; }
+    _Nodiscard constexpr bool empty() const { return size() == 0; }
 
-    _Nodiscard __forceinline constexpr _Char& operator[](size_t __i) { return data()[__i]; }
-    _Nodiscard __forceinline constexpr const _Char& operator[](size_t __i) const { return data()[__i]; }
+    _Nodiscard constexpr _Char& operator[](size_t __i) { return data()[__i]; }
+    _Nodiscard constexpr const _Char& operator[](size_t __i) const { return data()[__i]; }
 
     constexpr _Char& front() { return data()[0]; }
     constexpr const _Char& front() const { return data()[0]; }
@@ -270,58 +263,56 @@ public:
     /// =======================================================================
     ///  Iterators.
     /// =======================================================================
-    _Nodiscard __forceinline constexpr _Char* begin() { return data(); }
-    _Nodiscard __forceinline constexpr const _Char* begin() const { return data(); }
-    _Nodiscard __forceinline constexpr const _Char* cbegin() const { return data(); }
+    _Nodiscard constexpr _Char* begin() { return data(); }
+    _Nodiscard constexpr const _Char* begin() const { return data(); }
+    _Nodiscard constexpr const _Char* cbegin() const { return data(); }
 
-    _Nodiscard __forceinline constexpr _Char* end() { return data() + size(); }
-    _Nodiscard __forceinline constexpr const _Char* end() const { return data() + size(); }
-    _Nodiscard __forceinline constexpr const _Char* cend() const { return data() + size(); }
+    _Nodiscard constexpr _Char* end() { return data() + size(); }
+    _Nodiscard constexpr const _Char* end() const { return data() + size(); }
+    _Nodiscard constexpr const _Char* cend() const { return data() + size(); }
 
-    _Nodiscard __forceinline constexpr _ReverseIterator<_Char*> rbegin() { return data() + size() - 1; }
-    _Nodiscard __forceinline constexpr _ReverseIterator<const _Char*> rbegin() const { return data() + size() - 1; }
-    _Nodiscard __forceinline constexpr _ReverseIterator<const _Char*> crbegin() const { return data() + size() - 1; }
+    _Nodiscard constexpr _ReverseIterator<_Char*> rbegin() { return data() + size() - 1; }
+    _Nodiscard constexpr _ReverseIterator<const _Char*> rbegin() const { return data() + size() - 1; }
+    _Nodiscard constexpr _ReverseIterator<const _Char*> crbegin() const { return data() + size() - 1; }
 
-    _Nodiscard __forceinline constexpr _ReverseIterator<_Char*> rend() { return data() - 1; }
-    _Nodiscard __forceinline constexpr _ReverseIterator<const _Char*> rend() const { return data() - 1; }
-    _Nodiscard __forceinline constexpr _ReverseIterator<const _Char*> crend() const { return data() - 1; }
+    _Nodiscard constexpr _ReverseIterator<_Char*> rend() { return data() - 1; }
+    _Nodiscard constexpr _ReverseIterator<const _Char*> rend() const { return data() - 1; }
+    _Nodiscard constexpr _ReverseIterator<const _Char*> crend() const { return data() - 1; }
 
     /// =======================================================================
     ///  Adding elements.
     /// =======================================================================
     void append(basic_string_view<_Char> __sv) {
         const auto __size = size();
-        const auto __capacity = capacity();
         const auto __chars = __sv.data();
         const auto __n = __sv.size();
 
-        if (__small()) {
-            /// Char fits in the small string. The comparison <= __capacity is
-            /// correct here, since if __n == __capacity, then __capacity will
-            /// serve as the null terminator.
-            if (__n <= __capacity) {
+        if (!__is_large()) {
+            /// Char fits in the small string.
+            if (__n <= __small.__rem_cap) {
+                auto __data = __small.__data;
                 memcpy(__data + __size, __chars, __n * sizeof(_Char));
                 __data[__size + __n] = 0;
-                __last_char() = static_cast<_Char>((__capacity - __n) << 1);
+                __small.__rem_cap -= __n;
                 return;
             }
 
             /// Char would overflow the small string. Move it to the heap.
             const auto __new_cap = __new_size(__n);
             auto __p = new _Char[__new_cap];
-            memcpy(__p, __data, sizeof __data);
+            memcpy(__p, __small.__data, __max_chars_small * sizeof(_Char));
             memcpy(__p + __size, __chars, __n * sizeof(_Char));
             __p[__size + __n] = 0;
 
             __large.__ptr = __p;
             __large.__sz = __size + __n;
-            __large.__cap = (__new_cap << 1) | __large_flag;
+            __large.__cap = __new_cap;
+            __large.__is_large = true;
         }
 
         else {
-            /// Char fits in the large string. Here, we must use < instead of <=
-            /// because we need to reserve space for the null terminator as well.
-            if (__large.__sz + __n < __capacity) {
+            /// Char fits in the large string.
+            if (__large.__sz + __n < capacity()) {
                 memcpy(__large.__ptr + __size, __chars, __n * sizeof(_Char));
                 __large.__ptr[__size + __n] = 0;
                 __large.__sz += __n;
@@ -330,7 +321,7 @@ public:
 
             /// Char would overflow the large string. Reallocate.
             auto __new_cap = __new_size(__n);
-            auto __p = new _Char[__new_cap * sizeof(_Char)];
+            auto __p = new _Char[__new_cap];
             memcpy(__p, __large.__ptr, __large.__sz * sizeof(_Char));
             memcpy(__p + __size, __chars, __n * sizeof(_Char));
             __p[__size + __n] = 0;
@@ -338,33 +329,34 @@ public:
 
             __large.__ptr = __p;
             __large.__sz += __n;
-            __large.__cap = (__new_cap << 1) | __large_flag;
+            __large.__cap = __new_cap;
         }
     }
 
     void reserve(size_t __n) {
-        if (__n >= capacity()) return;
+        if (__n <= capacity()) return;
 
         /// If the string is small, move it to the heap.
         auto __size = size();
         auto __new_cap = __new_size(__n);
         auto __p = new _Char[__new_cap];
 
-        if (__small()) {
-            memcpy(__p, __data, sizeof __data);
+        if (!__is_large()) {
+            memcpy(__p, __small.__data, (__max_chars_small + 1) * sizeof(_Char));
             __large.__ptr = __p;
             __large.__sz = __size;
-            __large.__cap = (__new_cap << 1) | __large_flag;
+            __large.__cap = __new_cap;
+            __large.__is_large = true;
         } else {
             memcpy(__p, __large.__ptr, (__size + 1) * sizeof(_Char));
             delete[] __large.__ptr;
             __large.__ptr = __p;
-            __large.__cap = (__new_cap << 1) | __large_flag;
+            __large.__cap = __new_cap;
         }
     }
 
     void shrink_to_fit() {
-        if (__small()) return;
+        if (!__is_large()) return;
 
         auto __size = size();
         auto __capacity = capacity();
@@ -374,7 +366,7 @@ public:
         memcpy(__p, __large.__ptr, (__size + 1) * sizeof(_Char));
         delete[] __large.__ptr;
         __large.__ptr = __p;
-        __large.__cap = (__size << 1) | __large_flag;
+        __large.__cap = __size + 1;
     }
 
     basic_string& operator+=(basic_string_view<_Char> __sv) {
@@ -392,9 +384,9 @@ public:
     ///  Removing elements.
     /// =======================================================================
     void clear() {
-        if (__small()) {
-            __data[0] = 0;
-            __last_char() = __max_chars_small << 1;
+        if (!__is_large()) {
+            __small.__data[0] = 0;
+            __small.__rem_cap = __max_chars_small;
         }
 
         else {
@@ -410,9 +402,9 @@ public:
 
         /// Truncate if we're erasing up to the end of the string.
         if (__pos + __n == __size) {
-            if (__small()) {
-                __data[__pos] = 0;
-                __last_char() = static_cast<_Char>((__max_chars_small - __pos) << 1);
+            if (!__is_large()) {
+                __small.__data[__pos] = 0;
+                __small.__rem_cap += __n;
             } else {
                 __large.__ptr[__pos] = 0;
                 __large.__sz = __pos;
@@ -422,12 +414,10 @@ public:
 
         /// Otherwise, we need to move the remaining characters to the left.
         if (__small()) {
-            memmove(__data + __pos, __data + __pos + __n, (__size - __pos - __n) * sizeof(_Char));
-            __data[__size - __n] = 0;
-            __last_char() = static_cast<_Char>(__max_chars_small - __pos - __n) << 1;
+            memmove(__small.__data + __pos, __small.__data + __pos + __n, (__size - __pos - __n + 1) * sizeof(_Char));
+            __small.__rem_cap += __n;
         } else {
-            memmove(__large.__ptr + __pos, __large.__ptr + __pos + __n, (__size - __pos - __n) * sizeof(_Char));
-            __large.__ptr[__size - __n] = 0;
+            memmove(__large.__ptr + __pos, __large.__ptr + __pos + __n, (__size - __pos - __n + 1) * sizeof(_Char));
             __large.__sz -= __n;
         }
     }
