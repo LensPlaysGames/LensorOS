@@ -46,6 +46,7 @@
 
 #define _Deprecated(_Msg) __attribute__((__deprecated__(_Msg)))
 #define _Format(_Fmt, ...) __attribute__((__format__(_Fmt, __VA_ARGS__)))
+#define _Flatten __attribute__((__flatten__))
 
 #ifdef __cplusplus
 #    define _Nodiscard [[nodiscard]]

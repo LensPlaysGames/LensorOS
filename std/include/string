@@ -1,0 +1,469 @@
+/* Copyright 2022, Contributors To LensorOS.
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
+#ifndef _LENSOROS_STRING_
+#define _LENSOROS_STRING_
+
+#include <bits/decls.h>
+#include <cstring>
+#include <iterator>
+#include <stddef.h>
+#include <utility>
+
+__BEGIN_DECLS__
+void* memcpy(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n);
+__END_DECLS__
+
+namespace std {
+
+template <typename _Char>
+class basic_string;
+
+template <typename _Char>
+class basic_string_view {
+    using _View = basic_string_view<_Char>;
+
+    const _Char* __data{};
+    size_t __size{};
+
+public:
+    static constexpr size_t npos = static_cast<size_t>(-1);
+
+    basic_string_view() = default;
+    basic_string_view(const _Char* __data, size_t __size) : __data(__data), __size(__size) {}
+    basic_string_view(const _Char* __data) : __data(__data), __size(strlen(__data)) {}
+    basic_string_view(const basic_string<_Char>& __str) : __data(__str.data()), __size(__str.size()) {}
+
+    const _Char* data() const { return __data; }
+    size_t size() const { return __size; }
+
+    _Nodiscard int compare(_View __sv) const {
+        int __cmp = memcmp(__data, __sv.__data, __size < __sv.__size ? __size : __sv.__size);
+        if (__cmp == 0) {
+            if (__size < __sv.__size) return -1;
+            if (__size > __sv.__size) return 1;
+        }
+        return __cmp;
+    }
+
+    _Nodiscard bool operator==(_View __sv) const {
+        if (__size != __sv.__size) return false;
+        return memcmp(__data, __sv.__data, __size) == 0;
+    }
+
+    /// TODO: Use operator<=>.
+    _Nodiscard bool operator!=(_View __sv) const { return !(*this == __sv); }
+    _Nodiscard bool operator<(_View __sv) const { return compare(__sv) < 0; }
+    _Nodiscard bool operator>(_View __sv) const { return compare(__sv) > 0; }
+    _Nodiscard bool operator<=(_View __sv) const { return compare(__sv) <= 0; }
+    _Nodiscard bool operator>=(_View __sv) const { return compare(__sv) >= 0; }
+
+    _Nodiscard const char* begin() const { return __data; }
+    _Nodiscard const char* end() const { return __data + __size; }
+
+    _Nodiscard _ReverseIterator<const char*> rbegin() const { return _ReverseIterator<const char*>(data() + size() - 1); }
+    _Nodiscard _ReverseIterator<const char*> rend() const { return _ReverseIterator<const char*>(data() - 1); }
+
+    _Nodiscard _View substr(size_t __pos, size_t __len = npos) const {
+        if (__pos > __size) return {};
+        if (__len > __size - __pos) __len = __size - __pos;
+        return {data() + __pos, __len};
+    }
+
+    _Nodiscard size_t find(_Char __c, size_t __pos = 0) const { return find(_View(&__c, 1), __pos); }
+    _Nodiscard size_t find(_View __sv, size_t __pos = 0) const { return find(__sv, __pos); }
+
+    _Nodiscard bool starts_with(_View __sv) const {
+        if (__sv.size() > __size) return false;
+        return memcmp(__data, __sv.__data, __sv.size()) == 0;
+    }
+
+    _Nodiscard bool ends_with(_View __sv) const {
+        if (__sv.size() > __size) return false;
+        return memcmp(__data + __size - __sv.size(), __sv.__data, __sv.size()) == 0;
+    }
+
+    _Nodiscard bool contains(_View __sv) const {
+        if (__sv.size() > __size) return false;
+        return memmem(__data, __size, __sv.__data, __sv.size()) != nullptr;
+    }
+
+    _Nodiscard bool contains(_Char __c) const {
+        return find(__c) != npos;
+    }
+};
+
+/// Dynamically resiseable string with small string optimisation. Small strings
+/// are stored directly in the string object and are not heap allocated.
+template <typename _Char>
+class basic_string {
+    using _Str = basic_string<_Char>;
+    using _View = basic_string_view<_Char>;
+
+    enum : _Char { __large_flag = 1 };
+
+    /// Large string representation. __ptr points to a heap allocated buffer
+    /// that contains __sz characters and a null terminator. (__cap >> 1) is
+    /// the capacity of the buffer.
+    struct _Large {
+        _Char* __ptr;
+        size_t __sz;
+        size_t __cap;
+    };
+
+    /// String data. The last bit of the last byte of __data is 0 if the string
+    /// is small, and 1 otherwise.
+    union {
+        _Large __large;
+
+        /// Small string representation.
+        ///
+        /// The last _Char >> 1 is the capacity of the string. The size can be calculated
+        /// from the capacity. If the string is full, the capacity also acts as the null
+        /// terminator.
+        _Char __data[sizeof(_Large)];
+    };
+
+    static constexpr size_t __max_chars_small = (sizeof(_Large) / sizeof(_Char)) - 1;
+
+    _Nodiscard __forceinline constexpr _Char& __last_char() { return __data[__max_chars_small]; };
+    _Nodiscard __forceinline constexpr const _Char& __last_char() const { return __data[__max_chars_small]; };
+    _Nodiscard _Flatten __forceinline constexpr bool __small() const { return (__last_char() & __large_flag) == 0; };
+    _Nodiscard _View __view() const { return _View(data(), size()); };
+
+    /// Compute the number of bytes required the string should be resized to
+    /// to be able to store at least __size + __n many characters including
+    /// the null terminator.
+    ///
+    /// This function will always round up to the next power of two that is
+    /// *greater than* the number of bytes required.
+    _Nodiscard size_t __new_size(size_t __n) {
+        return (1 << (sizeof(size_t) - static_cast<size_t>(__builtin_clzll(size() + __n)))) * sizeof(_Char);
+    }
+
+public:
+    static constexpr size_t npos = static_cast<size_t>(-1);
+
+    /// =======================================================================
+    ///  Constructors.
+    /// =======================================================================
+    /// Construct an empty string.
+    constexpr basic_string() {
+        __data[0] = 0;
+        __last_char() = static_cast<_Char>(__max_chars_small << 1);
+    }
+
+    explicit constexpr basic_string(_Char __c) {
+        __data[0] = __c;
+        __data[1] = 0;
+        __last_char() = static_cast<_Char>((__max_chars_small - 1) << 1);
+    }
+
+    constexpr basic_string(const _Str& __other) {
+        /// Copy the contents of the other string.
+        if (!__other.__small()) {
+            __large.__ptr = new _Char[(__other.__large.__sz + 1) * sizeof(_Char)];
+            __large.__sz = __other.__large.__sz;
+            __large.__cap = __other.__large.__cap;
+            memcpy(__large.__ptr, __other.__large.__ptr, __other.__large.__sz * sizeof(_Char));
+        }
+
+        /// The other string is small. Shallow-copy it.
+        else { memcpy(__data, __other.__data, sizeof __data); }
+    }
+
+    constexpr basic_string(_View __sv) {
+        const _Char* __cstr = __sv.data();
+        const size_t __size = __sv.size();
+
+        if (__size > __max_chars_small) {
+            __large.__ptr = new _Char[(__size + 1) * sizeof(_Char)];
+            __large.__sz = __size;
+            __large.__cap = (__size + 1) << 1;
+            memcpy(__large.__ptr, __cstr, __size * sizeof(_Char));
+            __large.__ptr[__size] = 0;
+        }
+
+        else {
+            memcpy(__data, __cstr, __size * sizeof(_Char));
+            __data[__size] = 0;
+            __last_char() = static_cast<_Char>((__max_chars_small - __size) * 2);
+        }
+    }
+
+    constexpr basic_string(_Str&& __other) {
+        memcpy(__data, __other.__data, sizeof __data);
+        __other.__data[0] = 0;
+        __other.__last_char() = static_cast<_Char>(__max_chars_small << 1);
+    }
+
+    constexpr ~basic_string() {
+        if (!__small()) { delete[] __large.__ptr; }
+    }
+
+    /// =======================================================================
+    ///  Accessing elements.
+    /// =======================================================================
+    _Nodiscard constexpr const _Char* data() const {
+        if (__small()) {
+            return __data;
+        } else {
+            return __large.__ptr;
+        }
+    }
+
+    _Nodiscard constexpr  _Char* data() {
+        if (__small()) {
+            return __data;
+        } else {
+            return __large.__ptr;
+        }
+    }
+
+    _Nodiscard _Flatten constexpr _Char* c_str() { return data(); }
+    _Nodiscard _Flatten constexpr const _Char* c_str() const { return data(); }
+
+    _Nodiscard constexpr size_t size() const {
+        if (__small()) {
+            return __max_chars_small - (__last_char() >> 1);
+        } else {
+            return __large.__sz;
+        }
+    }
+
+    _Nodiscard constexpr size_t capacity() const {
+        if (__small()) {
+            return __last_char() >> 1;
+        } else {
+            return __large.__cap >> 1;
+        }
+    }
+
+    _Nodiscard _Flatten constexpr bool empty() const { return size() == 0; }
+
+    _Nodiscard __forceinline constexpr _Char& operator[](size_t __i) { return data()[__i]; }
+    _Nodiscard __forceinline constexpr const _Char& operator[](size_t __i) const { return data()[__i]; }
+
+    constexpr _Char& front() { return data()[0]; }
+    constexpr const _Char& front() const { return data()[0]; }
+
+    constexpr _Char& back() { return data()[size() - 1]; }
+    constexpr const _Char& back() const { return data()[size() - 1]; }
+
+    constexpr operator basic_string_view<_Char>() const { return __view(); }
+
+    /// =======================================================================
+    ///  Iterators.
+    /// =======================================================================
+    _Nodiscard __forceinline constexpr _Char* begin() { return data(); }
+    _Nodiscard __forceinline constexpr const _Char* begin() const { return data(); }
+    _Nodiscard __forceinline constexpr const _Char* cbegin() const { return data(); }
+
+    _Nodiscard __forceinline constexpr _Char* end() { return data() + size(); }
+    _Nodiscard __forceinline constexpr const _Char* end() const { return data() + size(); }
+    _Nodiscard __forceinline constexpr const _Char* cend() const { return data() + size(); }
+
+    _Nodiscard __forceinline constexpr _ReverseIterator<_Char*> rbegin() { return data() + size() - 1; }
+    _Nodiscard __forceinline constexpr _ReverseIterator<const _Char*> rbegin() const { return data() + size() - 1; }
+    _Nodiscard __forceinline constexpr _ReverseIterator<const _Char*> crbegin() const { return data() + size() - 1; }
+
+    _Nodiscard __forceinline constexpr _ReverseIterator<_Char*> rend() { return data() - 1; }
+    _Nodiscard __forceinline constexpr _ReverseIterator<const _Char*> rend() const { return data() - 1; }
+    _Nodiscard __forceinline constexpr _ReverseIterator<const _Char*> crend() const { return data() - 1; }
+
+    /// =======================================================================
+    ///  Adding elements.
+    /// =======================================================================
+    void append(basic_string_view<_Char> __sv) {
+        const auto __size = size();
+        const auto __capacity = capacity();
+        const auto __chars = __sv.data();
+        const auto __n = __sv.size();
+
+        if (__small()) {
+            /// Char fits in the small string. The comparison <= __capacity is
+            /// correct here, since if __n == __capacity, then __capacity will
+            /// serve as the null terminator.
+            if (__n <= __capacity) {
+                memcpy(__data + __size, __chars, __n * sizeof(_Char));
+                __data[__size + __n] = 0;
+                __last_char() = static_cast<_Char>((__capacity - __n) << 1);
+                return;
+            }
+
+            /// Char would overflow the small string. Move it to the heap.
+            const auto __new_cap = __new_size(__n);
+            auto __p = new _Char[__new_cap];
+            memcpy(__p, __data, sizeof __data);
+            memcpy(__p + __size, __chars, __n * sizeof(_Char));
+            __p[__size + __n] = 0;
+
+            __large.__ptr = __p;
+            __large.__sz = __size + __n;
+            __large.__cap = (__new_cap << 1) | __large_flag;
+        }
+
+        else {
+            /// Char fits in the large string. Here, we must use < instead of <=
+            /// because we need to reserve space for the null terminator as well.
+            if (__large.__sz + __n < __capacity) {
+                memcpy(__large.__ptr + __size, __chars, __n * sizeof(_Char));
+                __large.__ptr[__size + __n] = 0;
+                __large.__sz += __n;
+                return;
+            }
+
+            /// Char would overflow the large string. Reallocate.
+            auto __new_cap = __new_size(__n);
+            auto __p = new _Char[__new_cap * sizeof(_Char)];
+            memcpy(__p, __large.__ptr, __large.__sz * sizeof(_Char));
+            memcpy(__p + __size, __chars, __n * sizeof(_Char));
+            __p[__size + __n] = 0;
+            delete[] __large.__ptr;
+
+            __large.__ptr = __p;
+            __large.__sz += __n;
+            __large.__cap = (__new_cap << 1) | __large_flag;
+        }
+    }
+
+    void reserve(size_t __n) {
+        if (__n >= capacity()) return;
+
+        /// If the string is small, move it to the heap.
+        auto __size = size();
+        auto __new_cap = __new_size(__n);
+        auto __p = new _Char[__new_cap];
+
+        if (__small()) {
+            memcpy(__p, __data, sizeof __data);
+            __large.__ptr = __p;
+            __large.__sz = __size;
+            __large.__cap = (__new_cap << 1) | __large_flag;
+        } else {
+            memcpy(__p, __large.__ptr, (__size + 1) * sizeof(_Char));
+            delete[] __large.__ptr;
+            __large.__ptr = __p;
+            __large.__cap = (__new_cap << 1) | __large_flag;
+        }
+    }
+
+    void shrink_to_fit() {
+        if (__small()) return;
+
+        auto __size = size();
+        auto __capacity = capacity();
+        if (__size + 1 == __capacity) return;
+
+        auto __p = new _Char[__size + 1];
+        memcpy(__p, __large.__ptr, (__size + 1) * sizeof(_Char));
+        delete[] __large.__ptr;
+        __large.__ptr = __p;
+        __large.__cap = (__size << 1) | __large_flag;
+    }
+
+    basic_string& operator+=(basic_string_view<_Char> __sv) {
+        append(__sv);
+        return *this;
+    }
+
+    basic_string operator+(basic_string_view<_Char> __sv) const {
+        basic_string __result(*this);
+        __result.append(__sv);
+        return __result;
+    }
+
+    /// =======================================================================
+    ///  Removing elements.
+    /// =======================================================================
+    void clear() {
+        if (__small()) {
+            __data[0] = 0;
+            __last_char() = __max_chars_small << 1;
+        }
+
+        else {
+            __large.__ptr[0] = 0;
+            __large.__sz = 0;
+        }
+    }
+
+    void erase(size_t __pos, size_t __n) {
+        const auto __size = size();
+        if (__pos >= __size) { return; }
+        if (__pos + __n >= __size) { __n = __size - __pos; }
+
+        /// Truncate if we're erasing up to the end of the string.
+        if (__pos + __n == __size) {
+            if (__small()) {
+                __data[__pos] = 0;
+                __last_char() = static_cast<_Char>((__max_chars_small - __pos) << 1);
+            } else {
+                __large.__ptr[__pos] = 0;
+                __large.__sz = __pos;
+            }
+            return;
+        }
+
+        /// Otherwise, we need to move the remaining characters to the left.
+        if (__small()) {
+            memmove(__data + __pos, __data + __pos + __n, (__size - __pos - __n) * sizeof(_Char));
+            __data[__size - __n] = 0;
+            __last_char() = static_cast<_Char>(__max_chars_small - __pos - __n) << 1;
+        } else {
+            memmove(__large.__ptr + __pos, __large.__ptr + __pos + __n, (__size - __pos - __n) * sizeof(_Char));
+            __large.__ptr[__size - __n] = 0;
+            __large.__sz -= __n;
+        }
+    }
+
+    /// =======================================================================
+    ///  Comparisons, searches, and checks.
+    /// =======================================================================
+    _Nodiscard int compare(basic_string_view<_Char> __sv) const { return __sv.compare(__view()); }
+    _Nodiscard bool operator==(_View __sv) const { return __sv == *this; }
+
+    /// TODO: Use operator<=>.
+    _Nodiscard bool operator!=(_View __sv) const { return !(*this == __sv); }
+    _Nodiscard bool operator<(_View __sv) const { return __sv > *this; }
+    _Nodiscard bool operator>(_View __sv) const { return __sv < *this; }
+    _Nodiscard bool operator<=(_View __sv) const { return !(*this > __sv); }
+    _Nodiscard bool operator>=(_View __sv) const { return !(*this < __sv); }
+
+    _Nodiscard size_t find(_Char __c, size_t __pos = 0) const { return __view().find(__c, __pos); }
+    _Nodiscard size_t find(_View __sv, size_t __pos = 0) const { return __view().find(__sv, __pos); }
+
+    _Nodiscard bool starts_with(_View __sv) const { return __view().starts_with(__sv); }
+    _Nodiscard bool ends_with(_View __sv) const { return __view().ends_with(__sv); }
+
+    _Nodiscard bool contains(_View __sv) const { return __view().contains(__sv); }
+    _Nodiscard bool contains(_Char __c) const { return __view().contains(__c); }
+};
+
+using string_view = basic_string_view<char>;
+using wstring_view = basic_string_view<wchar_t>;
+using u16string_view = basic_string_view<char16_t>;
+using u32string_view = basic_string_view<char32_t>;
+
+using string = basic_string<char>;
+using wstring = basic_string<wchar_t>;
+using u16string = basic_string<char16_t>;
+using u32string = basic_string<char32_t>;
+
+} // namespace std
+#endif // _LENSOROS_STRING_
