@@ -251,7 +251,7 @@ constexpr void __format(_Format_context<_Output>& __ctx, string_view __fmt, _Arg
     };
 
     /// Format each argument.
-    (__format_one.template operator()<_Args>(std::forward<_Args>(__args)), ...);
+    (__format_one(std::forward<_Args>(__args)), ...);
 
     /// Make sure there are no more format specifiers.
 	size_t __old_pos = __pos;
