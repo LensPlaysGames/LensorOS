@@ -66,6 +66,8 @@ public:
         return memcmp(__data, __sv.__data, __size) == 0;
     }
 
+    constexpr _Char operator[](size_t __i) const { return __data[__i]; }
+
     /// TODO: Use operator<=>.
     _Nodiscard bool operator!=(_View __sv) const { return !(*this == __sv); }
     _Nodiscard bool operator<(_View __sv) const { return compare(__sv) < 0; }
@@ -87,6 +89,15 @@ public:
 
     _Nodiscard size_t find(_Char __c, size_t __pos = 0) const { return find(_View(&__c, 1), __pos); }
     _Nodiscard size_t find(_View __sv, size_t __pos = 0) const { return find(__sv, __pos); }
+
+    _Nodiscard constexpr size_t find_first_of(_View __sv, size_t __pos = 0) const {
+        for (size_t __i = __pos; __i < __size; __i++) {
+            for (size_t __j = 0; __j < __sv.__size; __j++) {
+                if (__data[__i] == __sv.__data[__j]) return __i;
+            }
+        }
+        return npos;
+    }
 
     _Nodiscard bool starts_with(_View __sv) const {
         if (__sv.size() > __size) return false;

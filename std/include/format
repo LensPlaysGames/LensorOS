@@ -24,6 +24,7 @@
 #include <concepts>
 #include <cstring>
 #include <bits/terminate.h>
+#include <type_traits>
 
 #ifndef __kernel__
 #   include <stdio.h>
@@ -211,35 +212,61 @@ constexpr void __format(_Format_context<_Output>& __ctx, string_view __fmt, _Arg
 
     /// Format one argument.
     [[maybe_unused]] const auto __format_one = [&]<typename _Arg>(_Arg&& __arg) constexpr {
-        /// Find the next format specifier.
-        auto* __fmt_spec = __constexpr_memchr(__fmt.data() + __pos, '{', __fmt.size() - __pos);
-        auto* __end = __constexpr_memchr(__fmt_spec, '}', __fmt.size() - size_t(__fmt_spec - __fmt.data()));
+		size_t __old_pos = __pos;
 
-        /// If there is no format specifier, then we have more arguments than format specifiers.
-        if (!__fmt_spec || !__end) { __invalid_format_string(); }
+		const auto __find_not = [&](char __other) {
+			size_t __found;
+
+			/// A format specifier starts with '{', but a double '{{' is an escaped '{'.
+			for (;;) {
+				/// Find the next '{' or '}'.
+				__found = __fmt.find_first_of("{}", __pos);
+				if (!__found) { __invalid_format_string(); }
+
+				/// Double '{{' or '}}' are escaped.
+				if (__fmt[__found] == __fmt[__found + 1]) {
+					if (!is_constant_evaluated()) { __ctx.append(__fmt.substr(__old_pos, __found - __old_pos + 1)); }
+					__pos = __old_pos = __found + 2;
+					continue;
+				}
+
+				/// If the character is not the one we’re looking for, then that’s an invalid format string.
+				if (__fmt[__found] == __other) { __invalid_format_string(); }
+				__pos = __found + 1;
+				break;
+			}
+
+			return __found;
+		};
+
+		/// Advance past the start of the format specifier.
+		size_t __fmt_spec = __find_not('}');
+		size_t __end = __find_not('{');
 
         /// Append the string up to the format specifier.
-        if (!is_constant_evaluated()) {
-            __ctx.append(__fmt.substr(__pos, size_t(__fmt_spec - __fmt.data()) - __pos));
-        }
+        if (!is_constant_evaluated()) { __ctx.append(__fmt.substr(__old_pos, __fmt_spec - __old_pos)); }
 
         /// Parse the format specifier and format the argument.
-        __format_arg(__ctx, __fmt_spec, std::forward<_Arg>(__arg));
-
-        /// Discard the format specifier and update the position.
-        __pos = __end - __fmt.data() + 1;
+        __format_arg(__ctx, __fmt.data() + __fmt_spec, std::forward<_Arg>(__arg));
     };
 
     /// Format each argument.
     (__format_one.template operator()<_Args>(std::forward<_Args>(__args)), ...);
 
     /// Make sure there are no more format specifiers.
-    if (__constexpr_memchr(__fmt.data() + __pos, '{', __fmt.size() - __pos)) { __invalid_format_string(); }
+	size_t __old_pos = __pos;
+	for (;;) {
+		__pos = __fmt.find_first_of("{}", __pos);
+		if (__pos == string_view::npos) { break; }
+		if (__fmt[__pos] != __fmt[__pos + 1]) { __invalid_format_string(); }
+		else {
+			if (!is_constant_evaluated()) { __ctx.append(__fmt.substr(__old_pos, __pos - __old_pos + 1)); }
+			__pos = __old_pos = __pos + 2;
+		}
+	}
 
     /// Append the rest of the string.
-    if (!is_constant_evaluated()) {
-        __ctx.append(__fmt.substr(__pos));
-    }
+    if (!is_constant_evaluated()) { __ctx.append(__fmt.substr(__old_pos)); }
 }
 }
 
