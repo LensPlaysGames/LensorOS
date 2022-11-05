@@ -23,6 +23,7 @@
 #include <cstring>
 #include <iterator>
 #include <stddef.h>
+#include <stdio.h>
 #include <utility>
 
 __BEGIN_DECLS__
@@ -44,13 +45,12 @@ class basic_string_view {
 public:
     static constexpr size_t npos = static_cast<size_t>(-1);
 
-    basic_string_view() = default;
-    basic_string_view(const _Char* __data, size_t __size) : __data(__data), __size(__size) {}
-    basic_string_view(const _Char* __data) : __data(__data), __size(strlen(__data)) {}
-    basic_string_view(const basic_string<_Char>& __str) : __data(__str.data()), __size(__str.size()) {}
+    constexpr basic_string_view() = default;
+    constexpr basic_string_view(const _Char* __data, size_t __size) : __data(__data), __size(__size) {}
+    constexpr basic_string_view(const _Char* __data) : __data(__data), __size(__builtin_strlen(__data)) {}
 
-    const _Char* data() const { return __data; }
-    size_t size() const { return __size; }
+    constexpr const _Char* data() const { return __data; }
+    constexpr size_t size() const { return __size; }
 
     _Nodiscard int compare(_View __sv) const {
         int __cmp = memcmp(__data, __sv.__data, __size < __sv.__size ? __size : __sv.__size);
@@ -115,6 +115,8 @@ class basic_string {
     using _Str = basic_string<_Char>;
     using _View = basic_string_view<_Char>;
 
+    static constexpr size_t __repr_size = sizeof(_Char*) + sizeof(size_t) + sizeof(size_t);
+
     /// String data. __flag is 0 if the string is small, and 1 otherwise.
     union {
         /// Large string representation. __data points to a heap allocated buffer
@@ -131,16 +133,15 @@ class basic_string {
         /// __rem_cap is the number of free characters in the buffer. If the string is
         /// full, it and the flag will act as the null terminator.
         struct {
-            _Char __data[sizeof __large - sizeof(_Char)];
+            _Char __data[__repr_size - sizeof(_Char)];
             _Char __rem_cap : (sizeof(_Char) * __CHAR_BIT__) - 1;
             _Char __is_large : 1;
         } __small;
     };
 
-    /// Make sure we didn't mess up.
-    static_assert(__builtin_offsetof(decltype(__large), __is_large)
-        == __builtin_offsetof(decltype(__small), __is_large),
-        "Large and small string representations must have the same layout.");
+    /// PRAY this is correct.
+    static_assert(sizeof(__small) == __repr_size);
+    static_assert(sizeof(__large) == __repr_size);
 
     /// The maximum number of characters we can store in a small string.
     static constexpr size_t __max_chars_small = (sizeof(__small) / sizeof(_Char)) - 1;
@@ -185,11 +186,11 @@ public:
     constexpr basic_string(const _Str& __other) {
         /// Copy the contents of the other string.
         if (__other.__is_large()) {
-            __large.__ptr = new _Char[(__other.__large.__sz + 1)];
+            __large.__data = new _Char[(__other.__large.__sz + 1)];
             __large.__sz = __other.__large.__sz;
             __large.__cap = __other.__large.__cap;
             __large.__is_large = true;
-            memcpy(__large.__ptr, __other.__large.__ptr, __other.__large.__sz * sizeof(_Char));
+            memcpy(__large.__data, __other.__large.__data, __other.__large.__sz * sizeof(_Char));
         }
 
         /// The other string is small. Shallow-copy it.
@@ -201,17 +202,16 @@ public:
         const size_t __size = __sv.size();
 
         if (__size > __max_chars_small) {
-            __large.__ptr = new _Char[(__size + 1)];
+            __large.__data = new _Char[(__size + 1)];
             __large.__sz = __size;
             __large.__cap = __size;
             __large.__is_large = true;
-            memcpy(__large.__ptr, __cstr, __size * sizeof(_Char));
-            __large.__ptr[__size] = 0;
+            memcpy(__large.__data, __cstr, (__size + 1) * sizeof(_Char));
+            __large.__data[__size] = 0;
         }
 
         else {
-            memcpy(&__small, __cstr, __size * sizeof(_Char));
-            __small.__data[__size] = 0;
+            memcpy(&__small, __cstr, (__size + 1) * sizeof(_Char));
             __small.__rem_cap = __max_chars_small - __size;
             __small.__is_large = false;
         }
@@ -287,7 +287,7 @@ public:
 
         if (!__is_large()) {
             /// Char fits in the small string.
-            if (__n <= __small.__rem_cap) {
+            if (__n <= size_t(__small.__rem_cap)) {
                 auto __data = __small.__data;
                 memcpy(__data + __size, __chars, __n * sizeof(_Char));
                 __data[__size + __n] = 0;
@@ -302,7 +302,7 @@ public:
             memcpy(__p + __size, __chars, __n * sizeof(_Char));
             __p[__size + __n] = 0;
 
-            __large.__ptr = __p;
+            __large.__data = __p;
             __large.__sz = __size + __n;
             __large.__cap = __new_cap;
             __large.__is_large = true;
@@ -311,8 +311,8 @@ public:
         else {
             /// Char fits in the large string.
             if (__large.__sz + __n < capacity()) {
-                memcpy(__large.__ptr + __size, __chars, __n * sizeof(_Char));
-                __large.__ptr[__size + __n] = 0;
+                memcpy(__large.__data + __size, __chars, __n * sizeof(_Char));
+                __large.__data[__size + __n] = 0;
                 __large.__sz += __n;
                 return;
             }
@@ -320,12 +320,12 @@ public:
             /// Char would overflow the large string. Reallocate.
             auto __new_cap = __new_size(__n);
             auto __p = new _Char[__new_cap];
-            memcpy(__p, __large.__ptr, __large.__sz * sizeof(_Char));
+            memcpy(__p, __large.__data, __large.__sz * sizeof(_Char));
             memcpy(__p + __size, __chars, __n * sizeof(_Char));
             __p[__size + __n] = 0;
-            delete[] __large.__ptr;
+            delete[] __large.__data;
 
-            __large.__ptr = __p;
+            __large.__data = __p;
             __large.__sz += __n;
             __large.__cap = __new_cap;
         }
@@ -341,14 +341,14 @@ public:
 
         if (!__is_large()) {
             memcpy(__p, __small.__data, (__max_chars_small + 1) * sizeof(_Char));
-            __large.__ptr = __p;
+            __large.__data = __p;
             __large.__sz = __size;
             __large.__cap = __new_cap;
             __large.__is_large = true;
         } else {
-            memcpy(__p, __large.__ptr, (__size + 1) * sizeof(_Char));
-            delete[] __large.__ptr;
-            __large.__ptr = __p;
+            memcpy(__p, __large.__data, (__size + 1) * sizeof(_Char));
+            delete[] __large.__data;
+            __large.__data = __p;
             __large.__cap = __new_cap;
         }
     }
@@ -361,20 +361,42 @@ public:
         if (__size + 1 == __capacity) return;
 
         auto __p = new _Char[__size + 1];
-        memcpy(__p, __large.__ptr, (__size + 1) * sizeof(_Char));
-        delete[] __large.__ptr;
-        __large.__ptr = __p;
+        memcpy(__p, __large.__data, (__size + 1) * sizeof(_Char));
+        delete[] __large.__data;
+        __large.__data = __p;
         __large.__cap = __size + 1;
     }
 
-    basic_string& operator+=(basic_string_view<_Char> __sv) {
-        append(__sv);
+    basic_string& operator+=(const _Str& __s) {
+        append(__s);
         return *this;
     }
 
-    basic_string operator+(basic_string_view<_Char> __sv) const {
+    basic_string& operator+=(const char* __s) {
+        append(__s);
+        return *this;
+    }
+
+    basic_string& operator+=(char __c) {
+        append({&__c, 1});
+        return *this;
+    }
+
+    basic_string operator+(const _Str& __s) const {
         basic_string __result(*this);
-        __result.append(__sv);
+        __result.append(__s);
+        return __result;
+    }
+
+    basic_string operator+(const char* __s) const {
+        basic_string __result(*this);
+        __result.append(__s);
+        return __result;
+    }
+
+    basic_string operator+(char __c) const {
+        basic_string __result(*this);
+        __result.append(__c);
         return __result;
     }
 
@@ -388,7 +410,7 @@ public:
         }
 
         else {
-            __large.__ptr[0] = 0;
+            __large.__data[0] = 0;
             __large.__sz = 0;
         }
     }
@@ -404,7 +426,7 @@ public:
                 __small.__data[__pos] = 0;
                 __small.__rem_cap += __n;
             } else {
-                __large.__ptr[__pos] = 0;
+                __large.__data[__pos] = 0;
                 __large.__sz = __pos;
             }
             return;
@@ -415,7 +437,7 @@ public:
             memmove(__small.__data + __pos, __small.__data + __pos + __n, (__size - __pos - __n + 1) * sizeof(_Char));
             __small.__rem_cap += __n;
         } else {
-            memmove(__large.__ptr + __pos, __large.__ptr + __pos + __n, (__size - __pos - __n + 1) * sizeof(_Char));
+            memmove(__large.__data + __pos, __large.__data + __pos + __n, (__size - __pos - __n + 1) * sizeof(_Char));
             __large.__sz -= __n;
         }
     }
@@ -452,6 +474,48 @@ using string = basic_string<char>;
 using wstring = basic_string<wchar_t>;
 using u16string = basic_string<char16_t>;
 using u32string = basic_string<char32_t>;
+
+template <typename _Int>
+string __to_string(_Int __i) {
+    string __result;
+
+    /// Append a '-' if the number is negative.
+    if constexpr (std::is_signed_v<_Int>) {
+        if (__i < 0) {
+            __result += '-';
+            __i = -__i;
+        }
+    }
+
+    /// If the number is 0, we're done.
+    if (__i == 0) {
+        __result += '0';
+        return __result;
+    }
+
+    /// Otherwise, append the digits.
+    while (__i > 0) {
+        __result += '0' + (__i % 10);
+        __i /= 10;
+    }
+
+    /// Reverse the string manually.
+    auto __size = __result.size();
+    for (size_t __j = 0; __j < __size / 2; ++__j) {
+        auto __tmp = __result[__j];
+        __result[__j] = __result[__size - __j - 1];
+        __result[__size - __j - 1] = __tmp;
+    }
+
+    return __result;
+}
+
+inline string to_string(int __i) { return __to_string(__i); }
+inline string to_string(long __i) { return __to_string(__i); }
+inline string to_string(long long __i) { return __to_string(__i); }
+inline string to_string(unsigned __i) { return __to_string(__i); }
+inline string to_string(unsigned long __i) { return __to_string(__i); }
+inline string to_string(unsigned long long __i) { return __to_string(__i); }
 
 } // namespace std
 #endif // _LENSOROS_STRING_

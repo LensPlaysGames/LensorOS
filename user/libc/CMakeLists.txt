@@ -22,7 +22,7 @@ cmake_minimum_required(VERSION 3.14)
 # TODO:
 # `-- Create target that copies built libraries and system headers to sysroot for cross compilation
 
-set( CMAKE_CXX_STANDARD 20 )
+set(CMAKE_CXX_STANDARD 20)
 
 if (NOT LENSOR_OS_LIBC_BUILD_HOST)
     message(STATUS "Cross compiling LensorOS libc")

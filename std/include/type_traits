@@ -40,6 +40,9 @@ using true_type =  integral_constant<bool, true>;
 /// Compile-time false.
 using false_type =  integral_constant<bool, false>;
 
+/// Compile-time type identity.
+template<typename _T> struct type_identity { using type = _T; };
+
 /// Convert a bool to true_type or false_type.
 template <bool _Cond>
 struct bool_constant : integral_constant<bool, _Cond> {};
@@ -96,26 +99,32 @@ struct is_same<_T, _T> : true_type {};
 template <typename _T> struct is_pointer : false_type {};
 template <typename _T> struct is_pointer<_T*> : true_type {};
 
+/// Check if a type is a signed integer.
+template <typename _T> struct is_signed : false_type {};
+template <> struct is_signed<char> : true_type {};
+template <> struct is_signed<signed char> : true_type {};
+template <> struct is_signed<signed short> : true_type {};
+template <> struct is_signed<signed int> : true_type {};
+template <> struct is_signed<signed long> : true_type {};
+template <> struct is_signed<signed long long> : true_type {};
+
+/// Check if a type is an unsigned integer.
+template <typename _T> struct is_unsigned : false_type {};
+template <> struct is_unsigned<unsigned char> : true_type {};
+template <> struct is_unsigned<unsigned short> : true_type {};
+template <> struct is_unsigned<unsigned int> : true_type {};
+template <> struct is_unsigned<unsigned long> : true_type {};
+template <> struct is_unsigned<unsigned long long> : true_type {};
+
 /// Check if a type is an integer.
 template <typename _T>
-struct is_integral : _Or<is_same<_T, bool>,
-                         is_same<_T, char>,
-                         is_same<_T, unsigned char>,
-                         is_same<_T, signed char>,
-                         is_same<_T, short>,
-                         is_same<_T, unsigned short>,
-                         is_same<_T, int>,
-                         is_same<_T, unsigned int>,
-                         is_same<_T, long>,
-                         is_same<_T, unsigned long>,
-                         is_same<_T, long long>,
-                         is_same<_T, unsigned long long>> {};
+struct is_integral : _Or<is_signed<_T>, is_unsigned<_T>>::type {};
 
 /// Check if a type is a floating point.
 template <typename _T>
 struct is_floating_point : _Or<is_same<_T, float>,
                                is_same<_T, double>,
-                               is_same<_T, long double>> {};
+                               is_same<_T, long double>>::type {};
 
 /// Check if a type is a number.
 template <typename _T>
@@ -194,6 +203,35 @@ template <typename _T> struct is_object : _And<
     _Not<is_function<_T>>
 > {};
 
+/// Check if a type is convertible to another type.
+namespace __detail {
+template <typename _T>
+auto __returnable(int) -> decltype(void(static_cast<_T (*)()>(nullptr)), std::true_type{});
+
+template <typename>
+auto __returnable(...) -> std::false_type;
+
+template <typename> constexpr bool __type_traits_false = false;
+template <typename _T>
+typename add_rvalue_reference<_T>::type __type_traits_declval() noexcept { static_assert(__type_traits_false<_T>); }
+
+template <typename _From, typename _To>
+auto __implicitly_convertible(int) ->
+    decltype(void(__type_traits_declval<void (&)(_To)>()
+                 (__type_traits_declval<_From>())),
+             std::true_type{});
+
+template <typename, typename>
+auto __implicitly_convertible(...) -> std::false_type;
+} // namespace __detail
+
+template <typename _From, typename _To>
+struct is_convertible : integral_constant<bool,
+    (decltype(__detail::__returnable<_To>(0))::value &&
+     decltype(__detail::__implicitly_convertible<_From, _To>(0))::value) ||
+    (is_void<_From>::value &&
+     is_void<_To>::value)> {};
+
 /// Struct that has a member `type` iff `_Cond` is true.
 template <bool, typename _T = void>
 struct enable_if {};
@@ -210,12 +248,18 @@ template <typename _T, typename _U> constexpr inline bool is_same_v = is_same<_T
 template <typename _T> constexpr inline bool is_reference_v = is_reference<_T>::value;
 template <typename _T> constexpr inline bool is_lvalue_reference_v = is_lvalue_reference<_T>::value;
 template <typename _T> constexpr inline bool is_pointer_v = is_pointer<_T>::value;
+template <typename _T> constexpr inline bool is_signed_v = is_signed<_T>::value;
+template <typename _T> constexpr inline bool is_unsigned_v = is_unsigned<_T>::value;
 template <typename _T> constexpr inline bool is_integral_v = is_integral<_T>::value;
 template <typename _T> constexpr inline bool is_floating_point_v = is_floating_point<_T>::value;
 template <typename _T> constexpr inline bool is_trivially_copyable_v = is_trivially_copyable<_T>::value;
 template <typename _T> constexpr inline bool is_trivially_destructible_v = is_trivially_destructible<_T>::value;
 template <typename _T> constexpr inline bool is_object_v = is_object<_T>::value;
+template <typename _T> constexpr inline bool is_void_v = is_void<_T>::value;
+template <typename _T> constexpr inline bool is_function_v = is_function<_T>::value;
+template <typename _From, typename _To> constexpr inline bool is_convertible_v = is_convertible<_From, _To>::value;
 
+template <typename _T> using type_identity_t = typename type_identity<_T>::type;
 template <typename _T> using remove_reference_t = typename remove_reference<_T>::type;
 template <typename _T> using remove_const_t = typename remove_const<_T>::type;
 template <typename _T> using remove_volatile_t = typename remove_volatile<_T>::type;
@@ -229,6 +273,8 @@ using conditional_t = typename conditional<_Cond, _True, _Else>::type;
 
 template <bool _Cond, typename _T>
 using enable_if_t = typename enable_if<_Cond, _T>::type;
+
+constexpr inline bool is_constant_evaluated() noexcept { return __builtin_is_constant_evaluated(); }
 
 } // namespace std
 

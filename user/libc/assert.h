@@ -20,6 +20,8 @@
 #ifndef _LENSOR_OS_ASSERT_H
 #define _LENSOR_OS_ASSERT_H
 
+#include <bits/decls.h>
+
 __BEGIN_DECLS__
 
 /// Report a failed assertion.

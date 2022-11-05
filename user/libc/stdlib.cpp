@@ -19,16 +19,19 @@
 
 #include "stdlib.h"
 
-#include <algorithm>
-#include "bits/file_struct.h"
+#include "assert.h"
 #include "bits/cdtors.h"
+#include "bits/file_struct.h"
 #include "errno.h"
 #include "stddef.h"
 #include "stdio.h"
 #include "string.h"
 #include "sys/syscalls.h"
 #include "unistd.h"
+
+#include <algorithm>
 #include <bits/abi.h>
+#include <bits/colours.h>
 
 /// ===========================================================================
 ///  STDLIB Implementation.
@@ -157,10 +160,7 @@ __attribute__((alloc_size(2))) void* realloc_impl(void* ptr, size_t size) {
 
     /// Find the block in the allocated list.
     auto block = find_alloc_block(ptr);
-    if (!block) {
-        fputs("realloc: invalid pointer\n", stderr);
-        abort();
-    }
+    __libc_assert(block, "realloc(): invalid pointer\n");
 
     /// If we're supposed to truncate the block, do nothing.
     if (size <= block->size) { return ptr; }
@@ -218,7 +218,13 @@ __attribute__((__noreturn__)) void __assert_abort(
     const char *func
 ) {
     //fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s\n", file, func, line, expr);
-    write(STDOUT_FILENO, "ASSERTION FAILED\n", 17);
+    fputs(file, stderr);
+    fputs(_Y ": " _RR "assertion failed" _N _Y ": " _R, stderr);
+    fputs(func, stderr);
+    fputs(_Y "\n    in function " _G, stderr);
+    fputs(expr, stderr);
+    fputs(_N "\n", stderr);
+    fflush(stderr);
     abort();
 }
 
@@ -232,7 +238,15 @@ __attribute__((__noreturn__)) void __assert_abort_msg(
     const char *func
 ) {
     //fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s: %s\n", file, func, line, expr, msg);
-    write(STDOUT_FILENO, "ASSERTION FAILED WITH MESSAGE\n", 30);
+    fputs(file, stderr);
+    fputs(_Y ": " _RR "assertion failed" _N _Y ": " _R, stderr);
+    fputs(expr, stderr);
+    fputs(_Y "\n    in function " _G, stderr);
+    fputs(func, stderr);
+    fputs(_Y "\n    message: " _B , stderr);
+    fputs(msg, stderr);
+    fputs(_N "\n", stderr);
+    fflush(stderr);
     abort();
 }
 
@@ -353,6 +367,16 @@ void free(void* ptr) {
         if (alloc_list) { alloc_list->prev = nullptr; }
         free_header(block);
         return;
+    }
+
+    /// Make sure we have a valid pointer.
+    if (!block) {
+        auto head = free_list;
+        while (head) {
+            if (head->ptr == ptr) { __libc_assert(false, "free(): double free"); }
+            head = head->next;
+        }
+        __libc_assert(false, "free(): invalid pointer");
     }
 
     /// Otherwise, remove the block from the allocated list.

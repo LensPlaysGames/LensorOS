@@ -21,12 +21,13 @@ project(libc-tests C CXX ASM)
 
 # Don't build LibC for LensorOS.
 set(LENSOR_OS_LIBC_BUILD_HOST 1)
+set(CMAKE_CXX_STANDARD 20)
 
 # Build libc.
 add_subdirectory(.. libc)
 
 # Build the tests.
-add_executable(test test.c)
+add_executable(test test.cc)
 target_compile_options(
     test
     PRIVATE

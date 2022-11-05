@@ -1,0 +1,36 @@
+/* Copyright 2022, Contributors To LensorOS.
+* All rights reserved.
+*
+* This file is part of LensorOS.
+*
+* LensorOS is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* LensorOS is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
+
+#ifndef _LENSOROS_CONCEPTS
+#define _LENSOROS_CONCEPTS
+
+#include <type_traits>
+#include <utility>
+
+namespace std {
+template <class From, class To>
+concept convertible_to =
+    is_convertible_v<From, To> &&
+    requires { static_cast<To>(std::declval<From>()); };
+
+template<typename _T>
+concept integral = std::is_integral_v<_T>;
+}
+
+#endif // _LENSOROS_CONCEPTS
