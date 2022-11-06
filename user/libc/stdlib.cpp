@@ -139,7 +139,8 @@ __attribute__((alloc_size(2))) void* realloc_impl(void* ptr, size_t size) {
 
     /// If the pointer was most recently allocated, we can just
     /// extend or truncate the block.
-    if (alloc_list && alloc_list->ptr == ptr) {
+    /// FIXME: I think this check is not correct.
+/*    if (alloc_list && alloc_list->ptr == ptr) {
         /// Extend the block if possible and requested.
         if (size > alloc_list->size && heap_ptr - alloc_list->size + size <= heap_base + sizeof(heap_base)) {
             heap_ptr += size - alloc_list->size;
@@ -156,7 +157,7 @@ __attribute__((alloc_size(2))) void* realloc_impl(void* ptr, size_t size) {
 
         /// If the size is the same, do nothing.
         return ptr;
-    }
+    }*/
 
     /// Find the block in the allocated list.
     auto block = find_alloc_block(ptr);
@@ -361,13 +362,14 @@ void free(void* ptr) {
     auto block = find_alloc_block(ptr);
 
     /// If it's the most recently allocated block, just decrement the heap pointer.
-    if (block == alloc_list) {
+    /// FIXME: I think this check is not correct.
+/*    if (block == alloc_list) {
         heap_ptr -= block->size;
         alloc_list = block->next;
         if (alloc_list) { alloc_list->prev = nullptr; }
         free_header(block);
         return;
-    }
+    }*/
 
     /// Make sure we have a valid pointer.
     if (!block) {
