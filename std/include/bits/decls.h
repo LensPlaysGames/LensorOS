@@ -70,5 +70,23 @@ typedef bool _Bool;
 __END_DECLS__
 #endif
 
+#ifdef __cplusplus
+template <typename _Callable>
+struct __defer_instance {
+    _Callable __func;
+    __defer_instance(_Callable&& __f) : __func(__f) {}
+    ~__defer_instance() { __func(); }
+};
+
+struct __defer_helper {
+    template <typename _Callable>
+    __defer_instance<_Callable> operator%(_Callable&& __f) {
+        return __defer_instance<_Callable>(static_cast<_Callable&&>(__f));
+    }
+};
+
+/// __defer { ... }; executes `...` at the end of the current block.
+#define __defer auto _CAT(__defer_instance_, __COUNTER__) = __defer_helper{} % [&]()
+#endif
 
 #endif // _LENSOR_OS_DECLS_H

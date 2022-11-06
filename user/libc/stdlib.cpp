@@ -64,6 +64,20 @@ alloc_header* free_list;
 /// Free list for alloc_headers.
 alloc_header* free_headers;
 
+[[maybe_unused]] void dump_list(const char* tag, alloc_header* list) {
+    __write(tag);
+    __write_ptr(list);
+    if (list) {
+        list = list->next;
+        while (list) {
+            __write(" -> ");
+            __write_ptr(list->ptr);
+            list = list->next;
+        }
+    }
+    __write("\n");
+}
+
 /// ===========================================================================
 ///  Malloc
 /// ===========================================================================
@@ -188,9 +202,11 @@ __attribute__((alloc_size(2))) void* realloc_impl(void* ptr, size_t size) {
 ///  C Interface
 /// ===========================================================================
 __BEGIN_DECLS__
+bool __stdio_destructed;
 
 void __libc_init_malloc() {
     __errno = 0;
+    __stdio_destructed = true;
 
     /// Initialise the heap.
     heap_ptr = heap_base;
@@ -218,14 +234,20 @@ __attribute__((__noreturn__)) void __assert_abort(
     unsigned line,
     const char *func
 ) {
-    //fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s\n", file, func, line, expr);
-    fputs(file, stderr);
-    fputs(_Y ": " _RR "assertion failed" _N _Y ": " _R, stderr);
-    fputs(func, stderr);
-    fputs(_Y "\n    in function " _G, stderr);
-    fputs(expr, stderr);
-    fputs(_N "\n", stderr);
-    fflush(stderr);
+    if (!__stdio_destructed) {
+        //fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s\n", file, func, line, expr);
+        fputs(file, stderr);
+        fputs(_Y ": " _RR "assertion failed" _N _Y ": " _R, stderr);
+        fputs(func, stderr);
+        fputs(_Y "\n    in function " _G, stderr);
+        fputs(expr, stderr);
+        fputs(_N "\n", stderr);
+        fflush(stderr);
+    } else {
+        write(2, "Assertion failed: ", 18);
+        __write(expr);
+        write(2, "\n", 1);
+    }
     abort();
 }
 
@@ -238,16 +260,25 @@ __attribute__((__noreturn__)) void __assert_abort_msg(
     unsigned int line,
     const char *func
 ) {
-    //fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s: %s\n", file, func, line, expr, msg);
-    fputs(file, stderr);
-    fputs(_Y ": " _RR "assertion failed" _N _Y ": " _R, stderr);
-    fputs(expr, stderr);
-    fputs(_Y "\n    in function " _G, stderr);
-    fputs(func, stderr);
-    fputs(_Y "\n    message: " _B , stderr);
-    fputs(msg, stderr);
-    fputs(_N "\n", stderr);
-    fflush(stderr);
+    if (!__stdio_destructed) {
+        //fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s: %s\n", file, func, line, expr, msg);
+        fputs(file, stderr);
+        fputs(_Y ": " _RR "assertion failed" _N _Y ": " _R, stderr);
+        fputs(expr, stderr);
+        fputs(_Y "\n    in function " _G, stderr);
+        fputs(func, stderr);
+        fputs(_Y "\n    message: " _B , stderr);
+        fputs(msg, stderr);
+        fputs(_N "\n", stderr);
+        fflush(stderr);
+    } else {
+        write(2, "Assertion failed: ", 18);
+        __write(expr);
+        write(2, "\n", 1);
+        write(2, "Message: ", 9);
+        __write(msg);
+        write(2, "\n", 1);
+    }
     abort();
 }
 
@@ -384,6 +415,7 @@ void free(void* ptr) {
     /// Otherwise, remove the block from the allocated list.
     if (block->prev) { block->prev->next = block->next; }
     if (block->next) { block->next->prev = block->prev; }
+    if (alloc_list == block) { alloc_list = block->next; }
 
     /// And add it to the free list.
     block->next = free_list;

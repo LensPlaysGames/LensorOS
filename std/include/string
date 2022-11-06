@@ -302,7 +302,9 @@ public:
                 auto __data = __small.__data;
                 memcpy(__data + __size, __chars, __n * sizeof(_Char));
                 __data[__size + __n] = 0;
+                _PushIgnoreWarning("-Wconversion");
                 __small.__rem_cap -= __n;
+                _PopWarnings();
                 return;
             }
 
@@ -315,7 +317,9 @@ public:
 
             __large.__data = __p;
             __large.__sz = __size + __n;
+            _PushIgnoreWarning("-Wconversion");
             __large.__cap = __new_cap;
+            _PopWarnings();
             __large.__is_large = true;
         }
 
@@ -338,7 +342,9 @@ public:
 
             __large.__data = __p;
             __large.__sz += __n;
+            _PushIgnoreWarning("-Wconversion");
             __large.__cap = __new_cap;
+            _PopWarnings();
         }
     }
 
@@ -506,7 +512,7 @@ string __to_string(_Int __i) {
 
     /// Otherwise, append the digits.
     while (__i > 0) {
-        __result += '0' + (__i % 10);
+        __result += char('0' + (__i % 10));
         __i /= 10;
     }
 

@@ -27,6 +27,8 @@
 extern "C" {
 #endif
 
+extern bool __stdio_destructed;
+
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
 

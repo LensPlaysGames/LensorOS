@@ -45,6 +45,10 @@ extern FILE* stderr;
 void __stdio_init();
 void __stdio_fini();
 
+/// For internal use only.
+void __write(const char*);
+void __write_ptr(void* ptr);
+
 /// File operations
 int remove(const char* __pathname);
 int rename(const char* __oldpath, const char* __newpath);

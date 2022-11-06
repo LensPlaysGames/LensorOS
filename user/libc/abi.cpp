@@ -141,9 +141,7 @@ void __cxa_finalize(__dso_handle_t dso) {
 void __libc_init() noexcept {
     __libc_init_malloc();
     for (init_cb* cb = __preinit_array_start; cb != __preinit_array_end; ++cb) { (*cb)(); }
-    for (init_cb* cb = __init_array_start; cb != __init_array_end; ++cb) {
-        (*cb)();
-    }
+    for (init_cb* cb = __init_array_start; cb != __init_array_end; ++cb) { (*cb)(); }
 }
 
 /// Call global destructors.

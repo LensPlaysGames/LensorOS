@@ -31,10 +31,11 @@
 
 #include <algorithm>
 #include <atomic>
+#include <extensions>
 #include <mutex>
 #include <new>
+#include <string>
 #include <utility>
-#include <extensions>
 
 #define LOCK(stream) std::unique_lock _CAT(__lock_, __COUNTER__)(stream->__mutex)
 
@@ -512,11 +513,13 @@ _PushIgnoreWarning("-Wprio-ctor-dtor")
     stdin = FILE::create(STDIN_FILENO);
     stdout = FILE::create(STDOUT_FILENO);
     stderr = FILE::create(STDERR_FILENO, Unbuffered);
+    __stdio_destructed = false;
 }
 
 /// Flush the streams on exit.
 [[gnu::destructor(_CDTOR_STDIO)]] void __stdio_fini() {
     FILE::close_all();
+    __stdio_destructed = true;
 }
 
 _PopWarnings()
@@ -963,6 +966,16 @@ int putc_unlocked(int c, FILE *stream) {
 
 int putchar_unlocked(int c) {
     return putc_unlocked(c, stdout);
+}
+
+/// ===========================================================================
+///  Internal
+/// ===========================================================================
+void __write(const char* str) { write(2, str, strlen(str)); }
+void __write_ptr(void* ptr) {
+    auto s = std::to_string(reinterpret_cast<uintptr_t>(ptr));
+    __write("0x");
+    write(2, s.data(), s.size());
 }
 
 __END_DECLS__

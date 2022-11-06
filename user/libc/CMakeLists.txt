@@ -75,10 +75,17 @@ target_sources(
   unistd.cpp
 )
 
+if(USE_DIAGNOSTICS_COLOUR)
+    target_compile_options(
+        c
+        PRIVATE
+        -fdiagnostics-color=always
+    )
+endif()
+
 target_compile_options(
   c
   PRIVATE
-  -fdiagnostics-color=always
   -fPIE
 #  -msse2
   -Wall
