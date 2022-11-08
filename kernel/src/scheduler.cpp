@@ -176,7 +176,7 @@ namespace Scheduler {
                 include = IncludeGivenProcess::No;
             }
             else NextProcess = NextProcess->next();
-            if (NextProcess != nullptr)
+            if (NextProcess != nullptr && NextProcess->value()->State == Process::RUNNING)
                 break;
         }
         return NextProcess;

@@ -63,16 +63,13 @@ struct CPUState {
 
 typedef u64 pid_t;
 
-/* TODO:
- * |-- Each process should store a list of memory regions that are
- * |   associated with that process. These memory regions are created
- * |   through memory-allocating system calls (similar to `mmap`).
- * |-- File Descriptor Table (Dynamic list of process' open file descriptors).
- * |   We should probably just store indices into `VFS::Opened` table.
- * `-- As only processes should make syscalls, should syscalls be defined in terms of process?
- */
 struct Process {
     pid_t ProcessID = 0;
+
+    enum ProcessState {
+        RUNNING,
+        SLEEPING,
+    } State = RUNNING;
 
     // Keep track of memory that should be freed when the process exits.
     SinglyLinkedList<Memory::Region> Memories;
@@ -100,7 +97,7 @@ struct Process {
     /// Find region in memories by vaddr and remove it.
     void remove_memory_region(void* vaddr) {
         usz index = 0;
-        SinglyLinkedListNode<Memory::Region>* region_it = Memories.head();
+        auto* region_it = Memories.head();
         for (; region_it; region_it = region_it->next()) {
             if (region_it->value().vaddr == vaddr) {
                 break;
