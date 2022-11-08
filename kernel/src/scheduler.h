@@ -23,6 +23,7 @@
 #include <integers.h>
 #include <interrupts/interrupts.h>
 #include <linked_list.h>
+#include <memory/physical_memory_manager.h>
 #include <memory/region.h>
 #include <vector>
 #include <extensions>
@@ -110,7 +111,10 @@ struct Process {
     }
 
     void destroy() {
-        // TODO: Free memory regions.
+        // Free memory regions.
+        Memories.for_each([](SinglyLinkedListNode<Memory::Region>* it){
+            Memory::free_pages(it->value().paddr, it->value().pages);
+        });
         // TODO: Close open files.
         // TODO: Free page table?
     }
