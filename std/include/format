@@ -185,7 +185,7 @@ private:
     /*enum struct __indexing { __unknown, __automatic, __manual } __idxing{__indexing::none};*/
 
 public:
-    constexpr explicit basic_format_parse_context(basic_string_view<_Char> __fmt, size_t __args = 0) noexcept
+    constexpr explicit basic_format_parse_context(basic_string_view<_Char> __fmt, size_t = 0) noexcept
         : __begin(__fmt.begin()), __end(__fmt.end())/*, __num_args(__args)*/ {}
 
     /*constexpr basic_format_parse_context(const basic_format_parse_context&) = delete;
@@ -261,9 +261,11 @@ public:
     };
 
     struct __none {};
+    struct __empty {};
 
 private:
     enum struct __arg_type {
+        __empty,
         __none,
         __character,
         __u64,
@@ -275,9 +277,9 @@ private:
         __handle,
     } __type = __arg_type::__none;
 
-
     union {
         __none __none__;
+        __empty __empty__;
         uint64_t __u64;
         int64_t __i64;
         _Char __character;
@@ -304,6 +306,7 @@ public:
     constexpr explicit basic_format_arg(double __f) : __type(__arg_type::__f64), __value{.__f64 = __f} {}
     constexpr explicit basic_format_arg(basic_string_view<_Char> __s) : __type(__arg_type::__str), __value{.__str = __s} {}
     constexpr explicit basic_format_arg(handle __h) : __type(__arg_type::__handle), __value{.__handle = __h} {}
+    constexpr explicit basic_format_arg(__empty) : __type(__arg_type::__empty) {}
 
     template <typename _Visitor, typename _Ctx>
     friend constexpr decltype(auto) visit_format_arg(_Visitor&& __vis, basic_format_arg<_Ctx> __arg);
@@ -315,7 +318,13 @@ public:
 template <typename _Context, typename ..._Args>
 struct __format_arg_store {
     array<basic_format_arg<_Context>, sizeof...(_Args)> args;
-    constexpr __format_arg_store(_Args&&... __args) : args{basic_format_arg<_Context>(std::forward<_Args>(__args))...} {}
+    constexpr __format_arg_store(_Args&&... __args) requires (sizeof...(_Args) > 0)
+        : args{basic_format_arg<_Context>(std::forward<_Args>(__args))...} {}
+    _PushIgnoreWarning("-Wunused-value")
+    constexpr __format_arg_store() : args{
+        (sizeof(_Args), basic_format_arg<_Context>(typename basic_format_arg<_Context>::__empty{}))...
+    } {}
+    _PopWarnings()
 };
 
 template <typename _Context = format_context, typename ..._Args>
@@ -325,9 +334,16 @@ constexpr __format_arg_store<_Context, _Args...> make_format_args(_Args&&... __a
 
 namespace __detail {
 template <typename _Output, typename _Char, typename ..._Args>
+requires (sizeof...(_Args) > 0)
 constexpr __format_arg_store<basic_format_context<_Output, _Char>, _Args...> __make_args(_Args&&... __args) {
     using _Context = basic_format_context<_Output, _Char>;
     return __format_arg_store<_Context, _Args...> { std::forward<_Args>(__args)... };
+}
+
+template <typename _Output, typename _Char, typename ..._Args>
+constexpr __format_arg_store<basic_format_context<_Output, _Char>, _Args...> __make_args() {
+    using _Context = basic_format_context<_Output, _Char>;
+    return __format_arg_store<_Context, _Args...> { };
 }
 }
 
@@ -520,6 +536,10 @@ constexpr decltype(auto) visit_format_arg(_Visitor&& __vis, basic_format_arg<_Co
     using __ty = typename __arg_ty::__arg_type;
     switch (__arg.__type) {
         case __ty::__none: return __vis(typename __arg_ty::__none{});
+        case __ty::__empty:
+            if (is_constant_evaluated()) return;
+            else __detail::__throw_format_error("Can not format empty argument at runtime.");
+            return;
         case __ty::__character: return __vis(__arg.__value.__character);
         case __ty::__u64: return __vis(__arg.__value.__u64);
         case __ty::__i64: return __vis(__arg.__value.__i64);
@@ -663,7 +683,7 @@ public:
     consteval basic_format_string(const _Str& __str) : __sv(__str) {
         /// Typecheck the format string.
         using _Output = __detail::__nop_insert_iterator<_Char>;
-        auto __store = __detail::__make_args<_Output, _Char, _Args...>(_Args{}...);
+        auto __store = __detail::__make_args<_Output, _Char, _Args...>();
         basic_format_context<_Output, _Char> __ctx(_Output{}, basic_format_args{__store});
         __detail::__format(std::move(__ctx), __sv);
     }
@@ -721,7 +741,7 @@ void print(format_string<_Args...> __fmt, _Args&&... __args) {
 template <typename... _Args>
 void vprint(string_view __fmt, _Args&&... __args) {
     using _Output = __detail::__kernel_log_insert_iterator;
-    basic_format_context __ctx(_Output{}, __detail::__make_args<_Output, char, _Args...>());
+    basic_format_context<_Output, char> __ctx(_Output{}, __detail::__make_args<_Output, char, _Args...>(std::forward<_Args>(__args)...));
     __detail::__format(std::move(__ctx), __fmt);
 }
 
