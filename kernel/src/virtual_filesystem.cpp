@@ -125,8 +125,7 @@ FileDescriptors VFS::open(const String& path) {
                 }
                 else {
                     FileMetadata metadata = fileDriver->file(dev, prefixlessPath.data());
-#ifdef DEBUG_VFS
-                    dbgmsg("  Metadata:\r\n"
+                    DBGMSG("  Metadata:\r\n"
                            "    Name: %sl\r\n"
                            "    File Size: %ull\r\n"
                            "    Byte Offset: %ull\r\n"
@@ -140,7 +139,6 @@ FileDescriptors VFS::open(const String& path) {
                            , metadata.device_driver()
                            , metadata.invalid()
                            );
-#endif /* #ifdef DEBUG_VFS */
                     if (!metadata.invalid()) {
                         return add_file(std::make_shared<OpenFileDescription>(dev, metadata));
                     }
@@ -195,8 +193,7 @@ ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
 ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
     auto f = file(fd);
 
-#ifdef DEBUG_VFS
-    dbgmsg("[VFS]: write\r\n"
+    DBGMSG("[VFS]: write\r\n"
            "  file descriptor: %ull\r\n"
            "  buffer address:  %x\r\n"
            "  byte count:      %ull\r\n"
@@ -206,7 +203,6 @@ ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
            , byteCount
            , byteOffset
            );
-#endif /* #ifdef DEBUG_VFS */
 
     return f->DeviceDriver->write(f->Metadata.byte_offset() + byteOffset, byteCount, buffer);
 }

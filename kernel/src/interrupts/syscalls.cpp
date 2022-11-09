@@ -31,6 +31,7 @@
 #include <time.h>
 #include <virtual_filesystem.h>
 #include <vfs_forward.h>
+#include <memory>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_SYSCALLS
@@ -212,6 +213,13 @@ void sys$8_time(Time::tm* time) {
 /// Wait for process with PID to terminate. If process with PID is
 /// invalid, return immediately.
 void sys$9_waitpid(pid_t pid) {
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 9, "waitpid");
+    dbgmsg("  pid: %ull\r\n"
+           "\r\n"
+           , pid
+           );
+#endif /* #ifdef DEBUG_SYSCALLS */
     (void)pid;
     // TODO: Return immediately if PID isn't valid.
     // TODO: Figure out how to wait for something without taking up
@@ -222,6 +230,9 @@ void sys$9_waitpid(pid_t pid) {
 /// fork call, but with the return value to each different (child gets
 /// zero, parent gets child's PID).
 void sys$10_fork() {
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 10, "fork");
+#endif /* #ifdef DEBUG_SYSCALLS */
     // TODO: Copy current process
     // TODO: Set return value of each process (this one and the new
     // child).
@@ -230,15 +241,35 @@ void sys$10_fork() {
 /// Replace the current process with a new process, specified by an
 /// executable found at PATH.
 void sys$11_exec(char *path) {
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 11, "exec");
+    dbgmsg("  path: %s\r\n"
+           "\r\n"
+           , path
+           );
+#endif /* #ifdef DEBUG_SYSCALLS */
     (void)path;
     // TODO: Ensure valid arguments
+
+    Process* process = Scheduler::CurrentProcess->value();
+
     // TODO: Replace current process with new process, if successfully
     // loaded...
+    process->destroy();
+
 }
 
 /// The second file descriptor given will be associated with the file
 /// description of the first.
 void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 12, "repfd");
+    dbgmsg("  fd: %ull, replaced: %ull\r\n"
+           "\r\n"
+           , fd
+           , replaced
+           );
+#endif /* #ifdef DEBUG_SYSCALLS */
     (void)fd;
     (void)replaced;
     // TODO: Point REPLACED to same file description as FD
@@ -246,13 +277,26 @@ void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
 
 /// Create two file descriptors. One of which can be read from, and the
 /// other which can be written to.
-ProcessFileDescriptor* sys$13_pipe() {
-    // TODO: Allocate process file descriptors array somewhere that
-    // makes sense.
-    // TODO: Populate fds with file descriptors that will act
-    // appropriately; basically, either conect each to a real file, or
-    // somehow manage buffers for it.
-    return nullptr;
+void sys$13_pipe(ProcessFileDescriptor fds[2]) {
+#ifdef DEBUG_SYSCALLS
+    dbgmsg(sys$_dbgfmt, 13, "pipe");
+#endif /* #ifdef DEBUG_SYSCALLS */
+    Process* process = Scheduler::CurrentProcess->value();
+    // TODO: Pick suitable file name for file metadata.
+
+    VFS& vfs = SYSTEM->virtual_filesystem();
+
+    // Get valid pipe index from pipe driver instead of zero.
+    ssz byteOffset = vfs.PipesDriver->lay_pipe();
+
+    FileMetadata* meta = new FileMetadata
+        ("", false, vfs.PipesDriver.get(), nullptr, PIPE_BUFSZ, byteOffset);
+    auto file = std::make_shared<OpenFileDescription>(vfs.PipesDriver.get(), *meta);
+    FileDescriptors readFDs = vfs.add_file(file, process);
+    FileDescriptors writeFDs = vfs.add_file(file, process);
+    // Write fds.
+    fds[0] = readFDs.Process;
+    fds[1] = writeFDs.Process;
 }
 
 u64 num_syscalls = LENSOR_OS_NUM_SYSCALLS;

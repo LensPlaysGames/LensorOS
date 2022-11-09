@@ -99,8 +99,8 @@ void system_timer_handler(InterruptFrame* frame) {
 /// IRQ1: PS/2 KEYBOARD
 __attribute__((interrupt))
 void keyboard_handler(InterruptFrame* frame) {
-    // TODO: Write to stdin of focused process. Well, not necessarily.
-    // Register a key input in the event system...
+    // TODO: Write key input to stdin of SHELL process.
+    // TODO: Register a key input in the event system...
     Keyboard::gText.handle_scancode(in8(0x60));
     end_of_interrupt(1);
 }

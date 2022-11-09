@@ -130,8 +130,8 @@ namespace Scheduler {
             }
         });
         if (processToRemove) {
-            // TODO: Actually de-allocate memory!!!
             ProcessQueue->remove(processToRemoveIndex);
+            processToRemove->destroy();
             return true;
         }
         return false;

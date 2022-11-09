@@ -224,13 +224,10 @@ namespace ELF {
                                    UserProcessStackSize);
 
         // Open stdin, stdout, and stderr.
-        auto meta = new FileMetadata(String("stdout")
-                                     , false
-                                     , vfs.StdoutDriver.get()
-                                     , nullptr
-                                     , 0, 0);
+        auto meta = FileMetadata
+            ("stdout", false, vfs.StdoutDriver.get(), nullptr, 0, 0);
 
-        auto file = std::make_shared<OpenFileDescription>(vfs.StdoutDriver.get(), *meta);
+        auto file = std::make_shared<OpenFileDescription>(vfs.StdoutDriver.get(), meta);
         vfs.add_file(file, process);
         vfs.add_file(file, process);
         vfs.add_file(std::move(file), process);
