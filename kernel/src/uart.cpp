@@ -107,14 +107,12 @@ namespace UART {
         Initialized = true;
 
         // First serial messages output from the OS.
-        out("\r\n\r\nWelcome to \033[5;1;33mLensorOS\033[0m\r\n\r\n");
-        out("[UART]: Initialized driver\r\n  Detected '");
-        out(get_uart_chip_name(chip));
-        out("' chip\r\n");
+        std::print("\r\n\r\nWelcome to \033[5;1;33mLensorOS\033[0m\r\n\r\n");
+        std::print("[UART]: Initialized driver\r\n  Detected '{}' chip\r\n", get_uart_chip_name(chip));
 
 #ifdef COM1_INPUT_DEBUG
-        out("[UART]: Data recieved over COM1 will be looped back in the following format:\r\n");
-        out("  \"[UART]: COM1 INPUT -> <hexadecimal> <integer> <raw byte>\"");
+        std::print("[UART]: Data recieved over COM1 will be looped back in the following format:\r\n");
+        std::print("  \"[UART]: COM1 INPUT -> <hexadecimal> <integer> <raw byte>\"");
 #endif
     }
 

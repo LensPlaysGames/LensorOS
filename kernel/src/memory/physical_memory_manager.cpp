@@ -19,6 +19,8 @@
 
 #include <memory/physical_memory_manager.h>
 
+#include <format>
+
 #include <bitmap.h>
 #include <cstr.h>
 #include <debug.h>
@@ -31,6 +33,13 @@
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_PMM
+
+#ifdef DEBUG_PMM
+#   define DBGMSG(...) std::print(__VA_ARGS__)
+#else
+#   define DBGMSG(...)
+#endif
+
 
 namespace Memory {
     Bitmap PageMap;
@@ -79,44 +88,36 @@ namespace Memory {
     }
 
     void free_pages(void* address, u64 numberOfPages) {
-#ifdef DEBUG_PMM
-        dbgmsg("free_pages():\r\n"
-               "  Address:     %x\r\n"
-               "  # of pages:  %ull\r\n"
-               "  Free before: %ull\r\n"
+        DBGMSG("free_pages():\r\n"
+               "  Address:     {}\r\n"
+               "  # of pages:  {}\r\n"
+               "  Free before: {}\r\n"
                , address
                , numberOfPages
                , TotalFreePages);
-#endif
         for (u64 i = 0; i < numberOfPages; ++i)
             free_page((void*)((u64)address + (i * PAGE_SIZE)));
 
-#ifdef DEBUG_PMM
-        dbgmsg("  Free after: %ull\r\n"
+        DBGMSG("  Free after: {}\r\n"
                "\r\n"
                , TotalFreePages);
-#endif /* defined DEBUG_PMM */
     }
 
     u64 FirstFreePage { 0 };
     void* request_page() {
-#ifdef DEBUG_PMM
-        dbgmsg("request_page():\r\n"
-               "  Free pages:            %ull\r\n"
-               "  Max run of free pages: %ull\r\n"
+        DBGMSG("request_page():\r\n"
+               "  Free pages:            {}\r\n"
+               "  Max run of free pages: {}\r\n"
                "\r\n"
                , TotalFreePages
                , MaxFreePagesInARow);
-#endif
         for(; FirstFreePage < TotalPages; FirstFreePage++) {
             if (PageMap.get(FirstFreePage) == false) {
                 void* addr = (void*)(FirstFreePage * PAGE_SIZE);
                 lock_page(addr);
                 FirstFreePage += 1; // Eat current page.
-#ifdef DEBUG_PMM
-                dbgmsg("  Successfully fulfilled memory request: %x\r\n"
+                DBGMSG("  Successfully fulfilled memory request: {}\r\n"
                        "\r\n", addr);
-#endif
                 return addr;
             }
         }
@@ -134,27 +135,24 @@ namespace Memory {
             return request_page();
         // Can't allocate something larger than the amount of free memory.
         if (numberOfPages > TotalFreePages) {
-            dbgmsg("request_pages(): \033[31mERROR\033[0m:: "
-                   "Number of pages requested is larger than amount of pages available.");
+            std::print("request_pages(): \033[31mERROR\033[0m:: "
+                       "Number of pages requested is larger than amount of pages available.");
             return nullptr;
         }
         if (numberOfPages > MaxFreePagesInARow) {
-            dbgmsg("request_pages(): \033[31mERROR\033[0m:: "
-                   "Number of pages requested is larger than any contiguous run of pages available."
-                   );
+            std::print("request_pages(): \033[31mERROR\033[0m:: "
+                       "Number of pages requested is larger than any contiguous run of pages available.");
             return nullptr;
         }
         
-#ifdef DEBUG_PMM
-        dbgmsg("request_pages():\r\n"
-               "  # of pages requested:  %ull\r\n"
-               "  Free pages:            %ull\r\n"
-               "  Max run of free pages: %ull\r\n"
+        DBGMSG("request_pages():\r\n"
+               "  # of pages requested:  {}\r\n"
+               "  Free pages:            {}\r\n"
+               "  Max run of free pages: {}\r\n"
                "\r\n"
                , numberOfPages
                , TotalFreePages
                , MaxFreePagesInARow);
-#endif
 
         for (u64 i = FirstFreePage; i < PageMap.length(); ++i) {
             // Skip locked pages.
@@ -178,10 +176,8 @@ namespace Memory {
                 if (run >= numberOfPages) {
                     void* out = (void*)(i * PAGE_SIZE);
                     lock_pages(out, numberOfPages);
-#ifdef DEBUG_PMM
-                    dbgmsg("  Successfully fulfilled memory request: %x\r\n"
+                    DBGMSG("  Successfully fulfilled memory request: {}\r\n"
                            "\r\n", out);
-#endif
                     return out;
                 }
             }
@@ -198,11 +194,9 @@ namespace Memory {
     u8 InitialPageBitmap[InitialPageBitmapSize];
 
     void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
-#ifdef DEBUG_PMM
-        dbgmsg("Attempting to initialize physical memory\r\n"
-               "Searching for largest free contiguous memory region under %x\r\n"
+        DBGMSG("Attempting to initialize physical memory\r\n"
+               "Searching for largest free contiguous memory region under {}\r\n"
                , InitialPageBitmapMaxAddress);
-#endif /* defined DEBUG_PMM */
         // Calculate number of entries within memoryMap array.
         u64 entries = size / entrySize;
         // Find largest free and usable contiguous region of memory
@@ -224,26 +218,22 @@ namespace Memory {
         if (largestFreeMemorySegment == nullptr
             || largestFreeMemorySegmentPageCount == 0)
         {
-            dbgmsg("\033[31mERROR:\033[0m "
-                   "Could not find free memory segment during "
-                   "physical memory manager intialization."
-                   );
+            std::print("\033[31mERROR:\033[0m "
+                       "Could not find free memory segment during "
+                       "physical memory manager intialization.");
             while (true)
                 asm ("hlt");
         }
-#ifdef DEBUG_PMM
-        dbgmsg("Found initial free memory segment (%ullKiB) at %x\r\n"
+        DBGMSG("Found initial free memory segment ({}KiB) at {}\r\n"
                , TO_KiB(largestFreeMemorySegmentPageCount * PAGE_SIZE)
-               , largestFreeMemorySegment
-               );
-#endif /* defined DEBUG_PMM */
+               , largestFreeMemorySegment);
         // Use pre-allocated memory region for initial physical page bitmap.
         PageMap.init(InitialPageBitmapSize, (u8*)&InitialPageBitmap[0]);
         // Lock all pages in initial bitmap.
         lock_pages(0, InitialPageBitmapPageCount);
         // Unlock free pages in bitmap.
         for (u64 i = 0; i < entries; ++i) {
-            EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
+            auto* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
             if (desc->type == 7)
                 free_pages(desc->physicalAddress, desc->numPages);
         }
@@ -279,7 +269,7 @@ namespace Memory {
         // We may be able to be a little more aggressive in what memory we take in the future.
         TotalFreePages = 0;
         for (u64 i = 0; i < entries; ++i) {
-            EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
+            auto* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
             if (desc->type == 7) {
                 free_pages(desc->physicalAddress, desc->numPages);
                 if (desc->numPages > MaxFreePagesInARow)
@@ -311,59 +301,59 @@ namespace Memory {
             - reinterpret_cast<u64>(&READ_ONLY_DATA_START);
         u64 bssSize = reinterpret_cast<u64>(&BLOCK_STARTING_SYMBOLS_END)
             - reinterpret_cast<u64>(&BLOCK_STARTING_SYMBOLS_START);
-        dbgmsg("\033[32m"
-               "Physical memory initialized"
-               "\033[0m\r\n"
-               "  Physical memory mapped from %x thru %x\r\n"
-               "  Kernel loaded at %x (%ullMiB)\r\n"
-               "  Kernel mapped from %x thru %x (%ullKiB)\r\n"
-               "    .text:   %x thru %x (%ull bytes)\r\n"
-               "    .data:   %x thru %x (%ull bytes)\r\n"
-               "    .rodata: %x thru %x (%ull bytes)\r\n"
-               "    .bss:    %x thru %x (%ull bytes)\r\n"
-               "    Lost to page alignment: %ull bytes\r\n"
-               "\r\n"
-               , 0ULL, total_ram()
-               , &KERNEL_PHYSICAL
-               , TO_MiB(&KERNEL_PHYSICAL)
-               , &KERNEL_START, &KERNEL_END
-               , TO_KiB(kernelSize)
-               , &TEXT_START, &TEXT_END
-               , textSize
-               , &DATA_START, &DATA_END
-               , dataSize
-               , &READ_ONLY_DATA_START
-               , &READ_ONLY_DATA_END
-               , rodataSize
-               , &BLOCK_STARTING_SYMBOLS_START
-               , &BLOCK_STARTING_SYMBOLS_END
-               , bssSize
-               , deadSpace
-               );
+        std::print("\033[32m"
+                   "Physical memory initialized"
+                   "\033[0m\r\n"
+                   "  Physical memory mapped from {} thru {}\r\n"
+                   "  Kernel loaded at {} ({}MiB)\r\n"
+                   "  Kernel mapped from {} thru {} ({}KiB)\r\n"
+                   "    .text:   {} thru {} ({} bytes)\r\n"
+                   "    .data:   {} thru {} ({} bytes)\r\n"
+                   "    .rodata: {} thru {} ({} bytes)\r\n"
+                   "    .bss:    {} thru {} ({} bytes)\r\n"
+                   "    Lost to page alignment: {} bytes\r\n"
+                   "\r\n"
+                   , 0ULL, total_ram()
+                   , u64(&KERNEL_PHYSICAL)
+                   , TO_MiB(&KERNEL_PHYSICAL)
+                   , u64(&KERNEL_START), u64(&KERNEL_END)
+                   , TO_KiB(kernelSize)
+                   , u64(&TEXT_START), u64(&TEXT_END)
+                   , textSize
+                   , u64(&DATA_START), u64(&DATA_END)
+                   , dataSize
+                   , u64(&READ_ONLY_DATA_START)
+                   , u64(&READ_ONLY_DATA_END)
+                   , rodataSize
+                   , u64(&BLOCK_STARTING_SYMBOLS_START)
+                   , u64(&BLOCK_STARTING_SYMBOLS_END)
+                   , bssSize
+                   , deadSpace
+                   );
     }
 
     void print_debug_kib() {
-        dbgmsg("Memory Manager Debug Information:\r\n"
-               "  Total Memory: %ullKiB\r\n"
-               "  Free Memory: %ullKiB\r\n"
-               "  Used Memory: %ullKiB\r\n"
-               "\r\n"
-               , TO_KiB(total_ram())
-               , TO_KiB(free_ram())
-               , TO_KiB(used_ram())
-               );
+        std::print("Memory Manager Debug Information:\r\n"
+                   "  Total Memory: {}KiB\r\n"
+                   "  Free Memory: {}KiB\r\n"
+                   "  Used Memory: {}KiB\r\n"
+                   "\r\n"
+                   , TO_KiB(total_ram())
+                   , TO_KiB(free_ram())
+                   , TO_KiB(used_ram())
+                   );
     }
 
     void print_debug_mib() {
-        dbgmsg("Memory Manager Debug Information:\r\n"
-               "  Total Memory: %ullMiB\r\n"
-               "  Free Memory: %ullMiB\r\n"
-               "  Used Memory: %ullMiB\r\n"
-               "\r\n"
-               , TO_MiB(total_ram())
-               , TO_MiB(free_ram())
-               , TO_MiB(used_ram())
-               );
+        std::print("Memory Manager Debug Information:\r\n"
+                   "  Total Memory: {}MiB\r\n"
+                   "  Free Memory: {}MiB\r\n"
+                   "  Used Memory: {}MiB\r\n"
+                   "\r\n"
+                   , TO_MiB(total_ram())
+                   , TO_MiB(free_ram())
+                   , TO_MiB(used_ram())
+                   );
     }
 
     void print_debug() {

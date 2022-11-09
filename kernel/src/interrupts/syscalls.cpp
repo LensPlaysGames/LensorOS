@@ -35,91 +35,82 @@
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_SYSCALLS
 
+#ifdef DEBUG_SYSCALLS
+#   define DBGMSG(...) std::print(__VA_ARGS__)
+#else
+#   define DBGMSG(...)
+#endif
+
 /// SYSCALL NAMING SCHEME:
 /// "sys$" + number + "_" + descriptive name
 
-constexpr const char* sys$_dbgfmt = "[SYS$]: %d -- %s\r\n";
+[[maybe_unused]]
+constexpr const char* sys$_dbgfmt = "[SYS$]: {} -- {}\r\n";
 
 ProcessFileDescriptor sys$0_open(const char* path) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 0, "open");
-#endif /* #ifdef DEBUG_SYSCALLS */
+    DBGMSG(sys$_dbgfmt, 0, "open");
     return static_cast<ProcessFileDescriptor>(SYSTEM->virtual_filesystem().open(path).Process);
 }
 
 void sys$1_close(ProcessFileDescriptor fd) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 1, "close");
-#endif /* #ifdef DEBUG_SYSCALLS */
+    DBGMSG(sys$_dbgfmt, 1, "close");
     SYSTEM->virtual_filesystem().close(static_cast<ProcessFileDescriptor>(fd));
 }
 
 // TODO: This should return the amount of bytes read.
 int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 2, "read");
-    dbgmsg("  file descriptor: %d\r\n"
-           "  buffer address:  %x\r\n"
-           "  byte count:      %ull\r\n"
+    DBGMSG(sys$_dbgfmt, 2, "read");
+    DBGMSG("  file descriptor: {}\r\n"
+           "  buffer address:  {}\r\n"
+           "  byte count:      {}\r\n"
            "\r\n"
            , fd
-           , buffer
+           , (void*) buffer
            , byteCount
            );
-#endif /* #ifdef DEBUG_SYSCALLS */
     return SYSTEM->virtual_filesystem().read(static_cast<ProcessFileDescriptor>(fd), buffer, byteCount, 0);
 }
 
 // TODO: This should return the amount of bytes written.
 int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 3, "write");
-    dbgmsg("  file descriptor: %d\r\n"
-           "  buffer address:  %x\r\n"
-           "  byte count:      %ull\r\n"
+    DBGMSG(sys$_dbgfmt, 3, "write");
+    DBGMSG("  file descriptor: {}\r\n"
+           "  buffer address:  {}\r\n"
+           "  byte count:      {}\r\n"
            "\r\n"
            , fd
-           , buffer
+           , (void*) buffer
            , byteCount
            );
-#endif /* #ifdef DEBUG_SYSCALLS */
     return SYSTEM->virtual_filesystem().write(static_cast<ProcessFileDescriptor>(fd), buffer, byteCount, 0);
 }
 
 void sys$4_poke() {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 4, "poke");
-#endif /* #ifdef DEBUG_SYSCALLS */
-    // Prevent unused warning
-    (void)sys$_dbgfmt;
-    dbgmsg_s("Poke from userland!\r\n");
+    DBGMSG(sys$_dbgfmt, 4, "poke");
+    DBGMSG("Poke from userland!\r\n");
 }
 
 void sys$5_exit(int status) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 5, "exit");
-    dbgmsg("  status: %i\r\n"
+    DBGMSG(sys$_dbgfmt, 5, "exit");
+    DBGMSG("  status: {}\r\n"
            "\r\n"
            , status
            );
-#endif /* #ifdef DEBUG_SYSCALLS */
     pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
     Scheduler::remove_process(pid);
-    dbgmsg("[SYS$]: exit(%i) -- Removed process %ull\r\n", status, pid);
+    DBGMSG("[SYS$]: exit({}) -- Removed process {}\r\n", status, pid);
 }
 
 void* sys$6_map(void* address, usz size, u64 flags) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 6, "map");
-    dbgmsg("  address: %p\r\n"
-           "  size:    %ull\r\n" // TODO: %ull is wrong, we need a size type format
-           "  flags:   %ull\r\n"
+    DBGMSG(sys$_dbgfmt, 6, "map");
+    DBGMSG("  address: {}\r\n"
+           "  size:    {}\r\n" // TODO: %ull is wrong, we need a size type format
+           "  flags:   {}\r\n"
            "\r\n"
            , address
            , size
            , flags
            );
-#endif /* #ifdef DEBUG_SYSCALLS */
 
     Process* process = Scheduler::CurrentProcess->value();
 
@@ -156,13 +147,11 @@ void* sys$6_map(void* address, usz size, u64 flags) {
 }
 
 void sys$7_unmap(void* address) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 7, "unmap");
-    dbgmsg("  address: %p\r\n"
+    DBGMSG(sys$_dbgfmt, 7, "unmap");
+    DBGMSG("  address: {}\r\n"
            "\r\n"
            , address
            );
-#endif /* #ifdef DEBUG_SYSCALLS */
 
     Process* process = Scheduler::CurrentProcess->value();
 
@@ -197,13 +186,11 @@ void sys$7_unmap(void* address) {
 }
 
 void sys$8_time(Time::tm* time) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 8, "time");
-    dbgmsg("  tm: %p\r\n"
+    DBGMSG(sys$_dbgfmt, 8, "time");
+    DBGMSG("  tm: {}\r\n"
            "\r\n"
-           , time
+           , (void*) time
            );
-#endif /* #ifdef DEBUG_SYSCALLS */
     if (!time) { return; }
     Time::fill_tm(time);
 }

@@ -178,7 +178,7 @@ void kstage1(BootInfo* bInfo) {
 
     // Setup serial communications chip to allow for debug messages as soon as possible.
     UART::initialize();
-    dbgmsg_s("\r\n"
+    std::print("\r\n"
              "!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n"
              "\r\n");
 
@@ -194,11 +194,11 @@ void kstage1(BootInfo* bInfo) {
     // Initialize the Real Time Clock.
     gRTC = RTC();
     gRTC.set_periodic_int_enabled(true);
-    dbgmsg("[kstage1]: \033[32mReal Time Clock (RTC) initialized\033[0m\r\n"
-           "  Periodic interrupts enabled at \033[33m%fhz\033[0m\r\n"
-           "\r\n\033[1;33m"
-           "Now is %hhu:%hhu:%hhu on %ul-%hhu-%hhu"
-           "\033[0m\r\n\r\n"
+    std::print("[kstage1]: \033[32mReal Time Clock (RTC) initialized\033[0m\r\n"
+               "  Periodic interrupts enabled at \033[33m{}hz\033[0m\r\n"
+               "\r\n\033[1;33m"
+               "Now is {}:{}:{} on {}-{}-{}"
+               "\033[0m\r\n\r\n"
            , static_cast<double>(RTC_PERIODIC_HERTZ)
            , gRTC.Time.hour
            , gRTC.Time.minute
@@ -554,30 +554,32 @@ void kstage1(BootInfo* bInfo) {
     vfs.StdoutDriver = std::make_unique<DbgOutDriver>();
 
     if (SYSTEM->filesystems().length() > 0) {
-        const char* filePath = "/fs0/blazeit";
+        constexpr const char* filePath = "/fs0/blazeit";
         std::print("Opening {} with VFS\r\n", filePath);
         auto fds = vfs.open(filePath);
-        dbgmsg("  Got FileDescriptors. Process: %ull, System: %ull\r\n", fds.Process, fds.Global);
+
+        std::print("  Got FileDescriptors. {}, {}\r\n", fds.Process, fds.Global);
         vfs.print_debug();
-        dbgmsg_s("  Reading first few bytes: ");
-        SmartPtr<u8[]> tmpBuffer(new u8[11], 11);
-        vfs.read(fds.Process, &tmpBuffer[0], 11);
-        dbgmsg(&tmpBuffer[0], 11, ShouldNewline::Yes);
+
+        std::print("  Reading first few bytes: ");
+        char tmpBuffer[11]{};
+        vfs.read(fds.Process, reinterpret_cast<u8*>(tmpBuffer), 11);
+        std::print("{}\r\n", std::string_view{tmpBuffer, 11});
 
         if (fds.valid() && ELF::CreateUserspaceElf64Process(vfs, fds.Process)) {
-            dbgmsg_s("Successfully created new process from `/fs0/blazeit`\r\n");
-            dbgmsg("Closing FileDescriptor %ull\r\n", fds.Process);
+            std::print("Successfully created new process from `/fs0/blazeit`\r\n");
+            std::print("Closing FileDescriptor {}\r\n", fds.Process);
             vfs.close(fds.Process);
-            dbgmsg("FileDescriptor %ull closed\r\n", fds.Process);
+            std::print("FileDescriptor {} closed\r\n", fds.Process);
             vfs.print_debug();
         }
         // Another userspace program
         constexpr const char* programTwoFilePath = "/fs0/stdout";
-        dbgmsg("Opening %s with VFS\r\n", programTwoFilePath);
+        std::print("Opening {} with VFS\r\n", programTwoFilePath);
         fds = vfs.open(programTwoFilePath);
-        dbgmsg("  Got FileDescriptors. Process: %ull, System: %ull\r\n", fds.Process, fds.Global);
+        std::print("  Got FileDescriptors. {}, {}\r\n", fds.Process, fds.Global);
         if (fds.valid() && ELF::CreateUserspaceElf64Process(vfs, fds.Process)) {
-            dbgmsg("Sucessfully created new process from `/fs0/stdout`\r\n");
+            std::print("Sucessfully created new process from `/fs0/stdout`\r\n");
             vfs.close(fds.Process);
         }
     }
@@ -605,7 +607,7 @@ void kstage1(BootInfo* bInfo) {
     SYSTEM->print();
 
     // Allow interrupts to trigger.
-    dbgmsg_s("[kstage1]: Enabling interrupts\r\n");
+    std::print("[kstage1]: Enabling interrupts\r\n");
     asm ("sti");
-    dbgmsg_s("[kstage1]: \033[32mInterrupts enabled\033[0m\r\n");
+    std::print("[kstage1]: \033[32mInterrupts enabled\033[0m\r\n");
 }

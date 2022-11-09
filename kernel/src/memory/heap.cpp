@@ -17,11 +17,12 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <memory/heap.h>
+#include "format"
 
 #include <cstr.h>
 #include <debug.h>
 #include <memory/common.h>
+#include <memory/heap.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
@@ -29,6 +30,12 @@
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_HEAP
+
+#ifdef DEBUG_HEAP
+#   define DBGMSG(...) std::print(__VA_ARGS__)
+#else
+#   define DBGMSG(...)
+#endif
 
 void* sHeapStart { nullptr };
 void* sHeapEnd { nullptr };
@@ -117,25 +124,22 @@ void init_heap() {
     firstSegment->last = nullptr;
     firstSegment->free = true;
     sLastHeader = firstSegment;
-    dbgmsg("[Heap]: \033[32mInitialized\033[0m\r\n"
-           "  Virtual Address: %x thru %x\r\n"
-           "  Size: %ull\r\n"
-           "\r\n"
-           , sHeapStart, sHeapEnd
-           , numBytes);
+    std::print("[Heap]: \033[32mInitialized\033[0m\r\n"
+               "  Virtual Address: {} thru {}\r\n"
+               "  Size: {}\r\n"
+               "\r\n"
+               , sHeapStart, sHeapEnd
+               , numBytes);
     heap_print_debug();
 }
 
 void expand_heap(u64 numBytes) {
-#ifdef DEBUG_HEAP
-    dbgmsg("[Heap]: Expanding by %ull bytes\r\n"
-           , numBytes);
-#endif /* DEBUG_HEAP */
+    DBGMSG("[Heap]: Expanding by {} bytes\r\n" , numBytes);
     u64 numPages = (numBytes / PAGE_SIZE) + 1;
     // Round byte count to page-aligned boundary.
     numBytes = numPages * PAGE_SIZE;
     // Get address of new header at the end of the heap.
-    HeapSegmentHeader* extension = (HeapSegmentHeader*)sHeapEnd;
+    auto* extension = (HeapSegmentHeader*)sHeapEnd;
     // Allocate and map a page in memory for new header.
     for (u64 i = 0; i < numPages; ++i) {
         Memory::map(sHeapEnd, Memory::request_page()
@@ -165,30 +169,23 @@ void* malloc(size_t numBytes) {
         numBytes -= (numBytes % 8);
         numBytes += 8;
     }
-#ifdef DEBUG_HEAP
-    dbgmsg("[Heap]: malloc() -- numBytes=%ull\r\n"
-           , numBytes);
-#endif /* DEBUG_HEAP */
+    DBGMSG("[Heap]: malloc() -- numBytes={}\r\n", numBytes);
     // Start looking for a free segment at the start of the heap.
-    HeapSegmentHeader* current = (HeapSegmentHeader*)sHeapStart;
+    auto* current = (HeapSegmentHeader*)sHeapStart;
     while (true) {
         if (current->free) {
             if (current->length > numBytes) {
                 if (HeapSegmentHeader* split = current->split(numBytes)) {
                     split->free = false;
-#ifdef DEBUG_HEAP
-                    dbgmsg("  Made split.\r\n");
+                    DBGMSG("  Made split.\r\n");
                     heap_print_debug();
-#endif /* DEBUG_HEAP */
                     return (void*)((u64)split + sizeof(HeapSegmentHeader));
                 }
             }
             else if (current->length == numBytes) {
                 current->free = false;
-#ifdef DEBUG_HEAP
-                dbgmsg("  Found exact match.\r\n");
+                DBGMSG("  Found exact match.\r\n");
                 heap_print_debug();
-#endif /* DEBUG_HEAP */
                 return (void*)((u64)current + sizeof(HeapSegmentHeader));
             }
         }
@@ -206,11 +203,8 @@ void* malloc(size_t numBytes) {
 }
 
 void free(void* address) {
-    HeapSegmentHeader* segment = (HeapSegmentHeader*)((u64)address - sizeof(HeapSegmentHeader));
-#ifdef DEBUG_HEAP
-    dbgmsg("[Heap]: free() -- address=%x, numBytes=%ull\r\n"
-           , address, segment->length);
-#endif /* DEBUG_HEAP */
+    auto* segment = (HeapSegmentHeader*)((u64)address - sizeof(HeapSegmentHeader));
+    DBGMSG("[Heap]: free() -- address={}, numBytes={}\r\n", address, segment->length);
     segment->free = true;
     segment->combine_forward();
     segment->combine_backward();
@@ -229,7 +223,7 @@ void heap_print_debug_starchart() {
     u64 freeLeftover = 0;
     u64 usedLeftover = 0;
     u64 offset = 0;
-    HeapSegmentHeader* it = (HeapSegmentHeader*)sHeapStart;
+    auto* it = (HeapSegmentHeader*)sHeapStart;
     do {
         if (offset >= totalChars)
             break;
@@ -259,39 +253,39 @@ void heap_print_debug_starchart() {
         it = it->next;
     } while (it != nullptr);
     String heap_visualization((const char*)out);
-    dbgmsg_s("Heap (64b per char): ");
+    std::print("Heap (64b per char): ");
     dbgrainbow(heap_visualization, ShouldNewline::Yes);
-    dbgmsg_s("\r\n");
+    std::print("\r\n");
 }
 
 void heap_print_debug() {
     // TODO: Interesting information, like average allocation
     //       size, number of malloc vs free calls, etc.
     u64 heapSize = (u64)(sHeapEnd) - (u64)(sHeapStart);
-    dbgmsg("[Heap]: Debug information:\r\n"
-           "  Size:   %ull\r\n"
-           "  Start:  %x\r\n"
-           "  End:    %x\r\n"
-           "  Regions:\r\n"
-           , heapSize, sHeapStart, sHeapEnd);
+    std::print("[Heap]: Debug information:\r\n"
+               "  Size:   {}\r\n"
+               "  Start:  {}\r\n"
+               "  End:    {}\r\n"
+               "  Regions:\r\n"
+               , heapSize, sHeapStart, sHeapEnd);
     u64 i = 0;
     u64 usedCount = 0;
     float usedSpaceEfficiency = 0.0f;
-    HeapSegmentHeader* it = (HeapSegmentHeader*)sHeapStart;
+    auto* it = (HeapSegmentHeader*)sHeapStart;
     while (it) {
         float efficiency = (float)it->length / (float)(it->length + sizeof(HeapSegmentHeader));
-        dbgmsg("    Region %ull:\r\n"
-               "      Free:   %s\r\n"
-               "      Length: %ull (%ull) %%f\r\n"
-               "      Header Address:  %x\r\n"
-               "      Payload Address: %x\r\n",
-               i,
-               to_string(it->free),
-               it->length,
-               it->length + sizeof(HeapSegmentHeader),
-               100.0f * efficiency,
-               it,
-               (u64)(it) + sizeof(HeapSegmentHeader));
+        std::print("    Region {}:\r\n"
+                   "      Free:   {}\r\n"
+                   "      Length: {} ({}) %{}\r\n"
+                   "      Header Address:  {}\r\n"
+                   "      Payload Address: {}\r\n",
+                   i,
+                   to_string(it->free),
+                   it->length,
+                   it->length + sizeof(HeapSegmentHeader),
+                   100.0f * efficiency,
+                   (void*) it,
+                   (u64)(it) + sizeof(HeapSegmentHeader));
         if (!it->free) {
             usedSpaceEfficiency += efficiency;
             usedCount++;
@@ -299,11 +293,9 @@ void heap_print_debug() {
         ++i;
         it = it->next;
     };
-    dbgmsg("\r\n");
 
-    dbgmsg("Heap Metadata vs Payload ratio in used regions (lower is better): %%f\r\n\r\n",
+    std::print("\r\nHeap Metadata vs Payload ratio in used regions (lower is better): %{}\r\n\r\n",
            100.0f * (1.0f - usedSpaceEfficiency / (float)usedCount));
-
     heap_print_debug_starchart();
 }
 
@@ -311,18 +303,18 @@ void heap_print_debug_summed() {
     // TODO: Interesting information, like average allocation
     //       size, number of malloc vs free calls, etc.
     u64 heapSize = (u64)(sHeapEnd) - (u64)(sHeapStart);
-    dbgmsg("[Heap]: Debug information:\r\n"
-           "  Size:   %ull\r\n"
-           "  Start:  %x\r\n"
-           "  End:    %x\r\n"
-           "  Regions:\r\n"
-           , heapSize, sHeapStart, sHeapEnd);
+    std::print("[Heap]: Debug information:\r\n"
+               "  Size:   {}\r\n"
+               "  Start:  {}\r\n"
+               "  End:    {}\r\n"
+               "  Regions:\r\n"
+               , heapSize, sHeapStart, sHeapEnd);
     float usedSpaceEfficiency = 0.0f;
     u64 i = 0;
     u64 usedCount = 0;
-    HeapSegmentHeader* it = (HeapSegmentHeader*)sHeapStart;
+    auto* it = (HeapSegmentHeader*)sHeapStart;
     while (it) {
-        HeapSegmentHeader* start_it = it;
+        auto* start_it = it;
         u64 payload_total = it->length;
         u64 total_length = it->length + sizeof(HeapSegmentHeader);
         float efficiency = (float)it->length / (float)(it->length + sizeof(HeapSegmentHeader));
@@ -347,23 +339,21 @@ void heap_print_debug_summed() {
             }
         }
         if (i - start_i == 1 || i - start_i == 0) {
-            dbgmsg("    Region %ull:\r\n", start_i);
+            std::print("    Region {}:\r\n", start_i);
         } else {
-            dbgmsg("    Region %ull through %ull:\r\n", start_i, i - 1);
+            std::print("    Region {} through {}:\r\n", start_i, i - 1);
         }
         efficiency = efficiency / (i - start_i ? i - start_i : 1);
-        dbgmsg("      Free:          %s\r\n"
-               "      Length:        %ull (%ull) %%f\r\n"
-               "      Start Address: %x\r\n",
-               to_string(free),
+        std::print("      Free:          {}\r\n"
+               "      Length:        {} ({}) %{}\r\n"
+               "      Start Address: {}\r\n",
+               free,
                payload_total, total_length, 100.0f * efficiency,
-               start_it);
+               (void*) start_it);
     };
-    dbgmsg("\r\n");
 
-    dbgmsg("Heap Metadata vs Payload ratio in used regions (lower is better): %%f\r\n\r\n",
+    std::print("\r\nHeap Metadata vs Payload ratio in used regions (lower is better): %{}\r\n\r\n",
            100.0f * (1.0f - (usedSpaceEfficiency / (float)usedCount)));
-
     heap_print_debug_starchart();
 }
 
