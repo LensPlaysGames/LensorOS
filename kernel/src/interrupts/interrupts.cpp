@@ -66,9 +66,11 @@ inline void end_of_interrupt(u8 IRQx) {
     out8(PIC1_COMMAND, PIC_EOI);
 }
 
+_PushIgnoreWarning("-Wvolatile")
 void cause_div_by_zero(volatile u8 one) {
     one /= one - 1;
 }
+_PopWarnings()
 
 void cause_page_not_present() {
     u8* badAddr = (u8*)0xdeadc0de;

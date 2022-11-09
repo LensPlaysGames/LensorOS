@@ -36,7 +36,7 @@ void dbgmsg_c(char);
 void dbgmsg_s(const char* str);
 
 /// Print a number of bytes from a given buffer as characters.
-void dbgmsg_buf(u8* buffer, u64 byteCount);
+void dbgmsg_buf(const u8* buffer, u64 byteCount);
 
 /// Print a single character with an optional newline.
 void dbgmsg(char, ShouldNewline nl = ShouldNewline::No);

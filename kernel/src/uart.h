@@ -160,7 +160,7 @@ namespace UART {
     // Write a c-style null-terminated string to serial output.
     void out(const char* string);
     // Write a number of bytes from a given buffer to serial output.
-    void out(u8* buffer, u64 numberOfBytes);
+    void out(const u8* buffer, u64 numberOfBytes);
     // Write the given number as a string to serial output.
     void out(u64);
     void out(u32);

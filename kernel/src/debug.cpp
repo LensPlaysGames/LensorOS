@@ -34,7 +34,7 @@ void dbgmsg_s(const char* str) {
     UART::out(str);
 }
 
-void dbgmsg_buf(u8* buffer, u64 byteCount) {
+void dbgmsg_buf(const u8* buffer, u64 byteCount) {
     UART::out(buffer, byteCount);
 }
 

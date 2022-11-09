@@ -87,7 +87,9 @@ void PIT::configure_channel(Channel channel, Access access, Mode mode, u64 frequ
     if (frequency == 0)
         return;
 
+    _PushIgnoreWarning("-Wdeprecated-enum-enum-conversion")
     u8 command = (channel | access | mode) & ~1;
+    _PopWarnings()
     u16 dataPort = PIT_CH0_DAT;
     u16 divisor = PIT_MAX_FREQ / frequency;
 

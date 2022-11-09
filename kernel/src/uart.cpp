@@ -184,7 +184,7 @@ namespace UART {
         }
     }
 
-    void out(u8* str, u64 numberOfBytes) {
+    void out(const u8* str, u64 numberOfBytes) {
         if (Initialized == false)
             return;
 
@@ -203,7 +203,7 @@ namespace UART {
                 else return;
             }
 #endif /* defined LENSOR_OS_UART_HIDE_COLOR_CODES */
-            out((u8)*str);
+            out(*str);
             str++;
             numberOfBytes--;
         }

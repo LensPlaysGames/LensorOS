@@ -25,14 +25,13 @@
 #include <cstring>
 #include <bits/terminate.h>
 #include <type_traits>
+#include <array>
+#include <memory>
 
 #ifndef __kernel__
-#    include "array"
-#    include "memory"
-
 #    include <stdio.h>
 #else
-#   include <debug.h>
+#    include <debug.h>
 #endif
 
 namespace std {
@@ -145,10 +144,10 @@ public:
 struct __kernel_log_insert_iterator {
     explicit constexpr __kernel_log_insert_iterator() {}
 
-    __kernel_log_insert_iterator& operator=(string_view __sv) { returns append(__sv); }
+    __kernel_log_insert_iterator& operator=(string_view __sv) { return append(__sv); }
     __kernel_log_insert_iterator& append(const char* __s, size_t __n) { return append({__s, __n}); }
     __kernel_log_insert_iterator& append(string_view __sv) {
-        dbgmsg_buf(reintepret_cast<const uint8_t*>(__sv.data()), __sv.size());
+        dbgmsg_buf(reinterpret_cast<const uint8_t*>(__sv.data()), __sv.size());
         return *this;
     }
 
@@ -720,9 +719,9 @@ void print(format_string<_Args...> __fmt, _Args&&... __args) {
 #else
 /// Print to the kernel log.
 template <typename... _Args>
-void vprint(basic_string_view<char> __fmt, _Args&&... __args) {
+void vprint(string_view __fmt, _Args&&... __args) {
     using _Output = __detail::__kernel_log_insert_iterator;
-    basic_format_context __ctx(_Output{}, __detail::__make_args<_Output, _Char, _Args...>());
+    basic_format_context __ctx(_Output{}, __detail::__make_args<_Output, char, _Args...>());
     __detail::__format(std::move(__ctx), __fmt);
 }
 
