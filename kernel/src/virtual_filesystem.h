@@ -28,6 +28,7 @@
 #include <smart_pointer.h>
 #include <extensions>
 #include <vector>
+#include <format>
 #include <storage/file_metadata.h>
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
@@ -35,6 +36,30 @@
 #include <string.h>
 #include <scheduler.h>
 #include <vfs_forward.h>
+
+namespace std {
+template <>
+struct formatter<ProcFD> : formatter<FileDescriptor> {
+    using formatter<FileDescriptor>::parse;
+
+    template <typename FormatContext>
+    auto format(const ProcFD& fd, FormatContext& ctx) {
+        format_to(ctx.out(), "procfd:");
+        return formatter<FileDescriptor>::format(static_cast<FileDescriptor>(fd), ctx);
+    }
+};
+
+template <>
+struct formatter<SysFD> : formatter<FileDescriptor> {
+    using formatter<FileDescriptor>::parse;
+
+    template <typename FormatContext>
+    auto format(const SysFD& fd, FormatContext& ctx) {
+        format_to(ctx.out(), "sysfd:");
+        return formatter<FileDescriptor>::format(static_cast<FileDescriptor>(fd), ctx);
+    }
+};
+} // namespace std
 
 struct OpenFileDescription {
     OpenFileDescription(StorageDeviceDriver* driver, const FileMetadata& md)

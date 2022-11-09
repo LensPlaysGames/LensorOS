@@ -207,9 +207,9 @@ void kstage1(BootInfo* bInfo) {
            , gRTC.Time.month
            , gRTC.Time.date);
     // Create basic framebuffer renderer.
-    dbgmsg_s("[kstage1]: Setting up Graphics Output Protocol Renderer\r\n");
+    std::print("[kstage1]: Setting up Graphics Output Protocol Renderer\r\n");
     gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
-    dbgmsg_s("  \033[32mSetup Successful\033[0m\r\n\r\n");
+    std::print("  \033[32mSetup Successful\033[0m\r\n\r\n");
     draw_boot_gfx();
     // Create basic text renderer for the keyboard.
     Keyboard::gText = Keyboard::BasicTextRenderer();
@@ -232,11 +232,10 @@ void kstage1(BootInfo* bInfo) {
     bool supportCPUID = static_cast<bool>(cpuid_support());
     if (supportCPUID) {
         SystemCPU->set_cpuid_capable();
-        dbgmsg_s("[kstage1]: \033[32mCPUID is supported\033[0m\r\n");
+        std::print("[kstage1]: \033[32mCPUID is supported\033[0m\r\n");
         char* cpuVendorID = cpuid_string(0);
         SystemCPU->set_vendor_id(cpuVendorID);
-        dbgmsg_s("  CPU Vendor ID: ");
-        dbgmsg((u8*)SystemCPU->get_vendor_id(), 12, ShouldNewline::Yes);
+        std::print("  CPU Vendor ID: {}\r\n", std::string_view{SystemCPU->get_vendor_id(), 12});
 
         CPUIDRegisters regs;
         cpuid(1, regs);
@@ -340,7 +339,7 @@ void kstage1(BootInfo* bInfo) {
             }
         }
     }
-    dbgmsg_s("\r\n");
+    std::print("\r\n");
 
     // TODO: Parse CPUs from ACPI MADT table.
     //       For now we only support single core.
@@ -355,10 +354,8 @@ void kstage1(BootInfo* bInfo) {
     // Storage devices like AHCIs will be detected here.
     auto* mcfg = (ACPI::MCFGHeader*)ACPI::find_table("MCFG");
     if (mcfg) {
-        dbgmsg("[kstage1]: Found Memory-mapped Configuration Space (MCFG) ACPI Table\r\n"
-               "  Address: 0x%x\r\n"
-               "\r\n"
-               , mcfg);
+        std::print("[kstage1]: Found Memory-mapped Configuration Space (MCFG) ACPI Table\r\n"
+                   "  Address: {}\r\n\r\n", static_cast<void*>(mcfg));
         PCI::enumerate_pci(mcfg);
     }
 
@@ -378,7 +375,7 @@ void kstage1(BootInfo* bInfo) {
             && dev.minor() == SYSDEV_MINOR_AHCI_CONTROLLER
             && dev.flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
         {
-            dbgmsg_s("[kstage1]: Probing AHCI Controller\r\n");
+            std::print("[kstage1]: Probing AHCI Controller\r\n");
             AHCI::HBAMemory* ABAR = (AHCI::HBAMemory*)(u64)(((PCI::PCIHeader0*)dev.data2())->BAR5);
             // TODO: Better MMIO!! It should be separate from regular virtual mappings, I think.
             Memory::map(ABAR, ABAR
@@ -421,10 +418,9 @@ void kstage1(BootInfo* bInfo) {
         {
             auto* portCon = static_cast<AHCI::PortController*>((&d)->data1());
             auto* driver = static_cast<StorageDeviceDriver*>(portCon);
-            dbgmsg("[kstage1]: Searching AHCI port %ull for a GPT\r\n"
-                   , portCon->port_number());
+            std::print("[kstage1]: Searching AHCI port {} for a GPT\r\n", portCon->port_number());
             if(GPT::is_gpt_present(driver)) {
-                dbgmsg("  GPT is present!\r\n");
+                std::print("  GPT is present!\r\n");
                 auto gptHeader = SmartPtr<GPT::Header>(new GPT::Header);
                 auto sector = SmartPtr<u8[]>(new u8[512], 512);
                 portCon->read(512, sizeof(GPT::Header), (u8*)gptHeader.get());
@@ -443,21 +439,18 @@ void kstage1(BootInfo* bInfo) {
                     if (part->EndLBA < part->StartLBA)
                         continue;
 
-                    dbgmsg("      Partition %ul: ", i);
-                    dbgmsg(part->Name, 72);
-                    dbgmsg_s(":\r\n"
-                             "        Type GUID: ");
-                    print_guid(part->TypeGUID);
-                    dbgmsg_s("\r\n"
-                             "        Unique GUID: ");
-                    print_guid(part->UniqueGUID);
-                    dbgmsg("\r\n"
-                           "        Sector Offset: %ull\r\n"
-                           "        Sector Count: %ull\r\n"
-                           "        Attributes: %ull\r\n"
-                           , part->StartLBA
-                           , part->size_in_sectors()
-                           , part->Attributes);
+                    std::print("      Partition {}: {}:\r\n"
+                               "        Type GUID: {}\r\n"
+                               "        Unique GUID: {}\r\n"
+                               "        Sector Offset: {}\r\n"
+                               "        Sector Count: {}\r\n"
+                               "        Attributes: {}\r\n",
+                               i, std::string_view{(const char*) part->Name, 72},
+                               static_cast<const GUID>(part->TypeGUID),
+                               static_cast<const GUID>(part->UniqueGUID),
+                               static_cast<u64>(part->StartLBA),
+                               part->size_in_sectors(),
+                               static_cast<u64>(part->Attributes));
                     auto* partDriver = new GPTPartitionDriver(driver, part->TypeGUID
                                                               , part->UniqueGUID
                                                               , part->StartLBA, 512);
@@ -503,15 +496,13 @@ void kstage1(BootInfo* bInfo) {
             if (dev.minor() == SYSDEV_MINOR_GPT_PARTITION) {
                 auto* partDriver = static_cast<GPTPartitionDriver*>(dev.data1());
                 if (partDriver) {
-                    dbgmsg_s("[kstage1]: GPT Partition:\r\n"
-                             "  Type GUID: ");
-                    print_guid(partDriver->type_guid());
-                    dbgmsg_s("\r\n"
-                             "  Unique GUID: ");
-                    print_guid(partDriver->unique_guid());
-                    dbgmsg_s("\r\n");
+                    std::print("[kstage1]: GPT Partition:\r\n"
+                               "  Type GUID: {}\r\n"
+                               "  Unique GUID: {}\r\n",
+                               partDriver->type_guid(),
+                               partDriver->unique_guid());
                     if (FAT->test(partDriver)) {
-                        dbgmsg_s("  Found valid File Allocation Table filesystem\r\n");
+                        std::print("  Found valid File Allocation Table filesystem\r\n");
                         SYSTEM->add_fs(Filesystem(FilesystemType::FAT, FAT, partDriver));
                         // Done searching GPT partition, found valid filesystem.
                         dev.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
@@ -521,11 +512,10 @@ void kstage1(BootInfo* bInfo) {
             else if (dev.minor() == SYSDEV_MINOR_AHCI_PORT) {
                 auto* portController = (AHCI::PortController*)dev.data1();
                 if (portController) {
-                    dbgmsg("[kstage1]: AHCI port %ull:\r\n"
-                           , portController->port_number());
-                    dbgmsg_s("  Checking for valid File Allocation Table filesystem\r\n");
+                    std::print("[kstage1]: AHCI port {}:\r\n", portController->port_number());
+                    std::print("  Checking for valid File Allocation Table filesystem\r\n");
                     if (FAT->test(portController)) {
-                        dbgmsg("  Found valid File Allocation Table filesystem\r\n");
+                        std::print("  Found valid File Allocation Table filesystem\r\n");
                         SYSTEM->add_fs(Filesystem(FilesystemType::FAT, FAT, portController));
                         // Done searching AHCI port, found valid filesystem.
                         dev.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
@@ -548,12 +538,11 @@ void kstage1(BootInfo* bInfo) {
 
     // Initialize the Programmable Interval Timer.
     gPIT = PIT();
-    dbgmsg("[kstage1]: \033[32mProgrammable Interval Timer Initialized\033[0m\r\n"
+    std::print("[kstage1]: \033[32mProgrammable Interval Timer Initialized\033[0m\r\n"
            "  Channel 0, H/L Bit Access\r\n"
            "  Rate Generator, BCD Disabled\r\n"
-           "  Periodic interrupts at \033[33m%fhz\033[0m.\r\n"
-           "\r\n"
-           , static_cast<double>(PIT_FREQUENCY));
+           "  Periodic interrupts at \033[33m{}hz\033[0m.\r\n"
+           "\r\n", static_cast<double>(PIT_FREQUENCY));
 
     // The Task State Segment in x86_64 is used
     // for switches between privilege levels.
@@ -566,7 +555,7 @@ void kstage1(BootInfo* bInfo) {
 
     if (SYSTEM->filesystems().length() > 0) {
         const char* filePath = "/fs0/blazeit";
-        dbgmsg("Opening %s with VFS\r\n", filePath);
+        std::print("Opening {} with VFS\r\n", filePath);
         auto fds = vfs.open(filePath);
         dbgmsg("  Got FileDescriptors. Process: %ull, System: %ull\r\n", fds.Process, fds.Global);
         vfs.print_debug();

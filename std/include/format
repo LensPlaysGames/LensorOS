@@ -59,7 +59,7 @@ struct formatter { formatter() = delete; };
 
 namespace __detail {
 [[maybe_unused]]
-constexpr void __make_not_constexpr(bool __b = true) noexcept {
+inline constexpr void __make_not_constexpr(bool __b = true) noexcept {
     if (__b) { __builtin_unreachable(); }
 }
 
@@ -68,18 +68,18 @@ constexpr void __make_not_constexpr(bool __b = true) noexcept {
 /// The default parameter is to trick the compiler into compiling this
 /// because a constexpr function must contain at least one constexpr code
 /// path.
-void __invalid_format_string(bool __b = true, const char* __msg = "") {
+inline void __invalid_format_string(bool __b = true, const char* __msg = "") {
     if (__b) { __terminate_with_message(__msg); }
 }
 
 /// This currently doesn’t actually throw.
-void __throw_format_error([[__maybe_unused__]] const char* __msg = "Invalid format string") {
+inline void __throw_format_error([[__maybe_unused__]] const char* __msg = "Invalid format string") {
     __invalid_format_string(true, __msg);
 }
 
 /// Parse a number.
 template <typename _It>
-size_t __parse_number(_It& __beg) {
+constexpr size_t __parse_number(_It& __beg) {
     size_t __result = 0;
     while (*__beg != '}' && isdigit(*__beg)) {
         __result = __result * 10 + (*__beg - '0');
@@ -179,6 +179,7 @@ struct __kernel_log_insert_iterator {
 template <typename... _Args>
 using format_string = basic_format_string<char, type_identity_t<_Args>...>;
 using format_context = basic_format_context<__detail::__str_insert_iterator<char>, char>;
+using format_parse_context = basic_format_parse_context<char>;
 
 /// ===========================================================================
 ///  Format (parse) context.
@@ -246,6 +247,14 @@ public:
 /// ===========================================================================
 ///  Format args.
 /// ===========================================================================
+template <typename _Ty>
+concept __builtin_type_base = is_integral_v<_Ty> ||
+                              is_floating_point_v<_Ty> ||
+                              is_same_v<_Ty, bool>;
+
+template <typename _Ty>
+concept __builtin_type = __builtin_type_base<_Ty> || (is_pointer_v<_Ty> && not __builtin_type_base<remove_pointer_t<_Ty>>);
+
 template <typename _Context>
 class basic_format_arg {
     using _Char = typename _Context::char_type;
@@ -257,14 +266,14 @@ public:
 
         template <typename _Ty>
         constexpr explicit handle(const _Ty& __val) noexcept
-            : __ptr(std::addressof(__val)), __format([](
+            : __ptr(&__val), __format([](
                 basic_format_parse_context<_Char>& __parse_ctx,
                 _Context& __ctx,
                 const void* __p
             ) constexpr {
                 formatter<_Ty, _Char> __f{};
-                __parse_ctx.advance_to(__f.parse(__parse_ctx));
-                __ctx.advance_to(__f.format(*static_cast<const _Ty*>(__p), __ctx));
+                __f.parse(__parse_ctx);
+                __f.format(*static_cast<const _Ty*>(__p), __ctx);
             }) {}
 
         friend class basic_format_arg<_Context>;
@@ -304,7 +313,6 @@ private:
 
 
 public:
-
     template <typename _Int>
     requires (std::is_signed_v<_Int> and not __char<_Int>)
     constexpr explicit basic_format_arg(_Int __i) : __type(__arg_type::__i64), __value{.__i64 = static_cast<int64_t>(__i)} {}
@@ -318,7 +326,10 @@ public:
     constexpr explicit basic_format_arg(float __f) : __type(__arg_type::__f32), __value{.__f32 = __f} {}
     constexpr explicit basic_format_arg(double __f) : __type(__arg_type::__f64), __value{.__f64 = __f} {}
     constexpr explicit basic_format_arg(basic_string_view<_Char> __s) : __type(__arg_type::__str), __value{.__str = __s} {}
-    constexpr explicit basic_format_arg(handle __h) : __type(__arg_type::__handle), __value{.__handle = __h} {}
+
+    template <typename _Ty>
+    requires (not __builtin_type<_Ty>)
+    constexpr explicit basic_format_arg(const _Ty& __ty) : __type(__arg_type::__handle), __value{.__handle = handle{__ty}} {}
 
     template <typename _Visitor, typename _Ctx>
     friend constexpr decltype(auto) visit_format_arg(_Visitor&& __vis, basic_format_arg<_Ctx> __arg);
@@ -330,12 +341,13 @@ public:
 template <typename _Context, typename ..._Args>
 struct __format_arg_store {
     array<basic_format_arg<_Context>, sizeof...(_Args)> args;
+
     constexpr __format_arg_store(_Args&&... __args) requires (sizeof...(_Args) > 0)
         : args{basic_format_arg<_Context>(std::forward<_Args>(__args))...} {}
-    _PushIgnoreWarning("-Wunused-value")
-    constexpr __format_arg_store() : args{ basic_format_arg<_Context>(_Args{})... } {}
-    _PopWarnings()
+
+    constexpr __format_arg_store() : args{ basic_format_arg<_Context>(remove_cvref_t<_Args>{})... } {}
 };
+//_PushIgnoreWarning("-Wunused-value")     _PopWarnings()
 
 template <typename _Context = format_context, typename ..._Args>
 constexpr __format_arg_store<_Context, _Args...> make_format_args(_Args&&... __args) {
@@ -344,14 +356,13 @@ constexpr __format_arg_store<_Context, _Args...> make_format_args(_Args&&... __a
 
 namespace __detail {
 template <typename _Output, typename _Char, typename ..._Args>
-requires (sizeof...(_Args) > 0)
 constexpr __format_arg_store<basic_format_context<_Output, _Char>, _Args...> __make_args(_Args&&... __args) {
     using _Context = basic_format_context<_Output, _Char>;
     return __format_arg_store<_Context, _Args...> { std::forward<_Args>(__args)... };
 }
 
 template <typename _Output, typename _Char, typename ..._Args>
-constexpr __format_arg_store<basic_format_context<_Output, _Char>, _Args...> __make_args() {
+constexpr __format_arg_store<basic_format_context<_Output, _Char>, _Args...> __make_dummy_args() {
     using _Context = basic_format_context<_Output, _Char>;
     return __format_arg_store<_Context, _Args...> { };
 }
@@ -399,9 +410,7 @@ struct formatter<string, _Char> : formatter<basic_string_view<_Char>, _Char> {};
 
 /// String literal formatter.
 template <typename _Char, size_t __size>
-struct formatter<const _Char[__size], _Char> : private formatter<basic_string_view<_Char>, _Char> {
-    using formatter<basic_string_view<_Char>, _Char>::parse;
-
+struct formatter<_Char[__size], _Char> : formatter<basic_string_view<_Char>, _Char> {
     template <typename _Ctx>
     auto format(const _Char* __str, _Ctx& __ctx) {
         return formatter<basic_string_view<_Char>, _Char>::format(basic_string_view<_Char>{__str, __size - 1}, __ctx);
@@ -410,9 +419,7 @@ struct formatter<const _Char[__size], _Char> : private formatter<basic_string_vi
 
 /// C-style string formatter.
 template <typename _Char>
-struct formatter<const _Char*, _Char> : private formatter<basic_string_view<_Char>, _Char> {
-    using formatter<basic_string_view<_Char>, _Char>::parse;
-
+struct formatter<const _Char*, _Char> : formatter<basic_string_view<_Char>, _Char> {
     template <typename _Ctx>
     auto format(const _Char* __str, _Ctx& __ctx) {
         return formatter<basic_string_view<_Char>, _Char>::format(basic_string_view<_Char>{__str}, __ctx);
@@ -451,7 +458,7 @@ struct formatter<_Ty, _Char> {
 };
 
 /// Integer formatter.
-template <std::integral _Type, typename _Char>
+template <integral _Type, typename _Char>
 requires (not __char<_Type>)
 struct formatter<_Type, _Char> {
     /// Integer format.
@@ -704,7 +711,7 @@ public:
     consteval basic_format_string(const _Str& __str) : __sv(__str) {
         /// Typecheck the format string.
         using _Output = __detail::__nop_insert_iterator<_Char>;
-        auto __store = __detail::__make_args<_Output, _Char, _Args...>();
+        auto __store = __detail::__make_dummy_args<_Output, _Char, _Args...>();
         basic_format_context<_Output, _Char> __ctx(_Output{}, basic_format_args{__store});
         __detail::__format(std::move(__ctx), __sv);
     }
@@ -724,6 +731,18 @@ auto vformat(basic_string_view<_Char> __fmt, _Args&&... __args) {
 template <typename _Char, typename... _Args>
 auto format(std::basic_format_string<_Char, _Args...> __str, _Args&&... __args) -> basic_string<_Char> {
     return vformat(__str.get(), std::forward<_Args>(__args)...);
+}
+
+/// Format to an output iterator.
+template <typename _Output, typename _Char, typename..._Args>
+void vformat_to(_Output&& __out, basic_string_view<_Char> __fmt, _Args&&... __args) {
+    __detail::__format_to<_Output>(std::forward<_Output>(__out), __fmt, std::forward<_Args>(__args)...);
+}
+
+/// Format to an output iterator. The format string is checked at compile time.
+template <typename _Output, typename..._Args>
+void format_to(_Output&& __out, format_string<_Args...> __str, _Args&&... __args) {
+    vformat_to(std::forward<_Output>(__out), __str.get(), std::forward<_Args>(__args)...);
 }
 
 /// ===========================================================================

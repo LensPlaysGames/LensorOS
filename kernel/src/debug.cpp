@@ -17,10 +17,12 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <debug.h>
+#include "panic.h"
+#include "string"
 
 #include <basic_renderer.h>
 #include <cstr.h>
+#include <debug.h>
 #include <integers.h>
 #include <string.h>
 #include <uart.h>

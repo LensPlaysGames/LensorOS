@@ -22,6 +22,7 @@
 
 #include <integers.h>
 #include <memory.h>
+#include <format>
 
 struct GUID {
     u32 Data1;
@@ -37,6 +38,24 @@ struct GUID {
         return !(*this == rhs);
     }
 };
+
+namespace std {
+template <>
+struct formatter<GUID, char> {
+    constexpr auto parse(basic_format_parse_context<char>& ctx) {
+        if (*ctx.begin() != '}') { __detail::__invalid_format_string(); }
+        return ctx.begin();
+    }
+
+    template <typename FormatContext>
+    auto format(const GUID& guid, FormatContext& ctx) {
+        return format_to(ctx.out(), "{:08x}-{:04x}-{:04x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
+            guid.Data1, guid.Data2, guid.Data3,
+            guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
+            guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
+    }
+};
+}
 
 // Debug purposes only!
 #include "cstr.h"

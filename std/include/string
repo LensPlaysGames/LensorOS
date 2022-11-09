@@ -54,7 +54,7 @@ public:
 
     static constexpr size_t npos = static_cast<size_t>(-1);
 
-    constexpr basic_string_view() = default;
+    constexpr basic_string_view() {}
     constexpr basic_string_view(const _Char* __data, size_t __size) : __data(__data), __size(__size) {}
     constexpr basic_string_view(const _Char* __data) : __data(__data), __size(__constexpr_strlen(__data)) {}
 
@@ -170,7 +170,7 @@ class basic_string {
     static constexpr size_t __max_chars_small = (sizeof(__small) / sizeof(_Char)) - 1;
 
     /// Check if a string is large.
-    _Nodiscard bool __is_large() const { return __small.__is_large; }
+    _Nodiscard constexpr bool __is_large() const { return __small.__is_large; }
 
     /// Get a string view of the string.
     _Nodiscard _View __view() const { return _View(data(), size()); };
@@ -213,7 +213,7 @@ public:
             __large.__sz = __other.__large.__sz;
             __large.__cap = __other.__large.__cap;
             __large.__is_large = true;
-            memcpy(__large.__data, __other.__large.__data, __other.__large.__sz * sizeof(_Char));
+            memcpy(__large.__data, __other.__large.__data, (__other.__large.__sz + 1) * sizeof(_Char));
         }
 
         /// The other string is small. Shallow-copy it.
@@ -229,16 +229,19 @@ public:
             __large.__sz = __size;
             __large.__cap = __size;
             __large.__is_large = true;
-            memcpy(__large.__data, __cstr, (__size + 1) * sizeof(_Char));
+            memcpy(__large.__data, __cstr, __size * sizeof(_Char));
             __large.__data[__size] = 0;
         }
 
         else {
-            memcpy(&__small, __cstr, (__size + 1) * sizeof(_Char));
+            memcpy(&__small, __cstr, __size * sizeof(_Char));
             __small.__rem_cap = __max_chars_small - __size;
+            __small.__data[__size] = 0;
             __small.__is_large = false;
         }
     }
+
+    constexpr basic_string(const _Char* __cstr) : basic_string(_View(__cstr)) {}
 
     constexpr basic_string(_Str&& __other) {
         __small = __other.__small;
@@ -557,9 +560,10 @@ __forceinline basic_string<_Char> __to_string(_Float __f) {
     __f -= static_cast<int64_t>(__f);
 
     /// Append the fractional part.
-    if (__f) {
+    /// TODO: Find a better way to do this.
+    if (__f < -.1e-10 || __f > .1e-10) {
         __result += _Char('.');
-        while (__f - static_cast<int64_t>(__f)) {
+        while (__f < -.1e-10 || __f > .1e-10) {
             __f *= 10;
             __result += _Char('0' + static_cast<int64_t>(__f));
             __f -= static_cast<int64_t>(__f);
