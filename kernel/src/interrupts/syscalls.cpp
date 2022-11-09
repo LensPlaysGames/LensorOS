@@ -222,8 +222,10 @@ void sys$9_waitpid(pid_t pid) {
 #endif /* #ifdef DEBUG_SYSCALLS */
     (void)pid;
     // TODO: Return immediately if PID isn't valid.
-    // TODO: Figure out how to wait for something without taking up
-    // precious processor time just spinning here.
+    // TODO: Add to WAITING list of process that we are waiting for,
+    // then just stop self. When the process is destroyed, it should
+    // restart this process and we can continue.
+
 }
 
 /// Copy the current process, resuming execution in both just after the
@@ -270,9 +272,9 @@ void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
            , replaced
            );
 #endif /* #ifdef DEBUG_SYSCALLS */
-    (void)fd;
-    (void)replaced;
-    // TODO: Point REPLACED to same file description as FD
+    bool result = SYSTEM->virtual_filesystem().dup2(fd, replaced);
+    // TODO: Use result/handle error in some way.
+    (void)result;
 }
 
 /// Create two file descriptors. One of which can be read from, and the

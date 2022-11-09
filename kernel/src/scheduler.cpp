@@ -205,6 +205,11 @@ namespace Scheduler {
     /// A stupid simple round-robin process switcher.
     void switch_process(CPUState* cpu) {
         memcpy(cpu, &CurrentProcess->value()->CPU, sizeof(CPUState));
+
+        // TODO: Check all processes that called `wait(ms)`, and run/
+        // unstop them if the timestamp is greater than the calculated
+        // one.
+
         // Handle single viable process or end of queue.
         if (CurrentProcess->next() == nullptr) {
             // If there is only one viable process,
