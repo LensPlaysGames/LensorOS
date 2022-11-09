@@ -33,10 +33,12 @@
 #   include <panic.h>
 [[noreturn]] void terminate() noexcept {
     panic("terminate() called");
+    for (;;) __asm__ __volatile__("hlt");
 }
 
 [[noreturn]] void __terminate_with_message(const char* __msg) noexcept {
     panic(__msg ?: "terminate() called");
+    for (;;) __asm__ __volatile__("hlt");
 }
 #endif
 
