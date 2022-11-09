@@ -27,283 +27,710 @@
 #include <type_traits>
 
 #ifndef __kernel__
-#   include <stdio.h>
+#    include "array"
+#    include "memory"
+
+#    include <stdio.h>
 #else
 #   include <debug.h>
 #endif
 
 namespace std {
-/// Forward declare this for __format().
+/// ===========================================================================
+///  Helpers, forward decls, and typedefs.
+/// ===========================================================================
 template <typename _Char, typename... _Args>
-struct basic_format_string;
+class basic_format_string;
 
-template <typename... _Args>
-using format_string = basic_format_string<char, type_identity_t<_Args>...>;
+template <typename _Char>
+struct basic_format_parse_context;
 
-/// ===========================================================================
-///  <format> implementation
-/// ===========================================================================
+template <typename _Output, typename _Char>
+struct basic_format_context;
+
+template <typename _Char>
+class basic_format_arg;
+
+template <typename _Char>
+class basic_format_args;
+
+template <typename _Type, typename _Char = char>
+struct formatter { formatter() = delete; };
+
 namespace __detail {
-    /// Format context.
-    template <typename _Output>
-    struct _Format_context;
+[[maybe_unused]]
+constexpr void __make_not_constexpr(bool __b = true) noexcept {
+    if (__b) { __builtin_unreachable(); }
+}
 
-    template <>
-    struct _Format_context<string> {
-        string __result;
-        void append(string_view __sv) { __result.append(__sv); }
-    };
+/// Stop compilation if the format string is invalid.
+///
+/// The default parameter is to trick the compiler into compiling this
+/// because a constexpr function must contain at least one constexpr code
+/// path.
+void __invalid_format_string(bool __b = true, const char* __msg = "") {
+    if (__b) { __terminate_with_message(__msg); }
+}
 
-/// ===========================================================================
-///  Format to a FILE* or to the kernel output
-/// ===========================================================================
+/// This currently doesn’t actually throw.
+void __throw_format_error([[__maybe_unused__]] const char* __msg = "Invalid format string") {
+    __invalid_format_string(true, __msg);
+}
+
+/// This does the actual formatting.
+template <typename _Output, typename _Char>
+constexpr void __format(basic_format_context<_Output, _Char>&&, basic_string_view<_Char>);
+
+/// Inserter for a string.
+template <typename _Char>
+class __str_insert_iterator {
+    string* __str{};
+
+public:
+    explicit constexpr __str_insert_iterator() : __str(nullptr) {}
+    explicit constexpr __str_insert_iterator(string& __s) : __str(&__s) {}
+
+    __str_insert_iterator& operator=(basic_string_view<_Char> __sv) { return append(__sv); }
+    __str_insert_iterator& append(const _Char* __s, size_t __n) { return append({__s, __n}); }
+    __str_insert_iterator& append(basic_string_view<_Char> __sv) {
+        __str += __sv;
+        return *this;
+    }
+
+    /// No-ops.
+    constexpr __str_insert_iterator& operator*() { return *this; }
+    constexpr __str_insert_iterator& operator++() { return *this; }
+    constexpr __str_insert_iterator operator++(int) { return *this; }
+};
+
+/// Iterator that does nothing. This is used for typechecking format strings.
+template <typename _Char>
+struct __nop_insert_iterator {
+    explicit constexpr __nop_insert_iterator() {}
+    constexpr __nop_insert_iterator& operator=(basic_string_view<_Char>) { return *this; }
+    constexpr __nop_insert_iterator& append(basic_string_view<_Char>) { return *this; }
+    constexpr __nop_insert_iterator& append(const _Char*, size_t) { return *this; }
+
+    /// No-ops.
+    constexpr __nop_insert_iterator& operator*() { return *this; }
+    constexpr __nop_insert_iterator& operator++() { return *this; }
+    constexpr __nop_insert_iterator operator++(int) { return *this; }
+};
+
 #ifndef __kernel__
 
-    template <>
-    struct _Format_context<FILE*> {
-        FILE* __file;
+/// Iterator that appends to a file.
+class __file_insert_iterator {
+    FILE* __file{};
+public:
+    explicit constexpr __file_insert_iterator() : __file(nullptr) {}
+    explicit constexpr __file_insert_iterator(FILE* __f) : __file(__f) {}
 
-        void append(string_view __sv) {
-            /// TODO: error checking.
-            fwrite(__sv.data(), 1, __sv.size(), __file);
-        }
-    };
+    __file_insert_iterator& operator=(string_view __sv) { return append(__sv); }
+    __file_insert_iterator& append(const char* __s, size_t __n) { return append({__s, __n}); }
+    __file_insert_iterator& append(string_view __sv) {
+        fwrite(__sv.data(), 1, __sv.size(), __file);
+        return *this;
+    }
+
+    /// No-ops.
+    constexpr __file_insert_iterator& operator*() { return *this; }
+    constexpr __file_insert_iterator& operator++() { return *this; }
+    constexpr __file_insert_iterator operator++(int) { return *this; }
+};
 
 #else
 
-    struct __kprint_helper {};
+/// Iterator that appends to the kernel log.
+struct __kernel_log_insert_iterator {
+    explicit constexpr __kernel_log_insert_iterator() {}
 
-    template <>
-    struct _Format_context<__kprint_helper> {
-        void append(string_view __sv) {
-            /// TODO: error checking.
-            dbgmesg_buf(__sv.data(), __sv.size());
-        }
-    };
+    __kernel_log_insert_iterator& operator=(string_view __sv) { returns append(__sv); }
+    __kernel_log_insert_iterator& append(const char* __s, size_t __n) { return append({__s, __n}); }
+    __kernel_log_insert_iterator& append(string_view __sv) {
+        dbgmsg_buf(reintepret_cast<const uint8_t*>(__sv.data()), __sv.size());
+        return *this;
+    }
+
+    /// No-ops.
+    constexpr __kernel_log_insert_iterator& operator*() { return *this; }
+    constexpr __kernel_log_insert_iterator& operator++() { return *this; }
+    constexpr __kernel_log_insert_iterator operator++(int) { return *this; }
+};
 
 #endif
 
-    template <>
-    struct _Format_context<void> { void append(string_view) {} };
-
-    /// This does the actual formatting.
-    template <typename _Output, typename... _Args>
-    constexpr void __format(_Format_context<_Output>& __ctx, string_view __fmt, _Args&&... __args);
-
-    /// Typecheck a format string.
-    template <typename ..._Args>
-    constexpr void __type_check_format_string(string_view __fmt) {
-        _Format_context<void> __ctx;
-        __format<void, type_identity<_Args>...>(__ctx, __fmt, type_identity<_Args>{}...);
-    }
-
-    /// Stop compilation if the format string is invalid.
-    ///
-    /// The default parameter is to trick the compiler into compiling this
-    /// because a constexpr function must contain at least one constexpr code
-    /// path.
-    constexpr void __invalid_format_string(bool b = true) {
-        if (b) { terminate(); }
-    }
-
-    /// Constexpr helpers.
-    constexpr const char* __constexpr_memchr(const char* __s, int __c, size_t __n) {
-        for (size_t __i = 0; __i < __n; ++__i)
-            if (__s[__i] == __c)
-                return __s + __i;
-        return nullptr;
-    }
 }
 
-/// ===========================================================================
-///  Format string
-/// ===========================================================================
-template <typename _Char, typename... _Args>
-struct basic_format_string {
-    basic_string_view<_Char> __format_str;
+template <typename... _Args>
+using format_string = basic_format_string<char, type_identity_t<_Args>...>;
+using format_context = basic_format_context<__detail::__str_insert_iterator<char>, char>;
 
-    template <typename _T>
-    requires convertible_to<const _T&, basic_string_view<_Char>>
-    consteval basic_format_string(const _T& __str) : __format_str(__str) {
-        __detail::__type_check_format_string<_Args...>(__format_str);
+/// ===========================================================================
+///  Format (parse) context.
+/// ===========================================================================
+/// Most of the nonsense in this struct that is currently commented out
+/// is there because the standard requires it, but I have no idea what
+/// in the world it expects me to do with it.
+template <typename _Char>
+struct basic_format_parse_context {
+    using char_type = _Char;
+    using const_iterator = typename basic_string_view<_Char>::const_iterator;
+    using iterator = const_iterator;
+
+private:
+    iterator __begin{};
+    iterator __end{};
+    /*size_t __next_arg_id{};
+    size_t __num_args{};*/
+    /*enum struct __indexing { __unknown, __automatic, __manual } __idxing{__indexing::none};*/
+
+public:
+    constexpr explicit basic_format_parse_context(basic_string_view<_Char> __fmt, size_t __args = 0) noexcept
+        : __begin(__fmt.begin()), __end(__fmt.end())/*, __num_args(__args)*/ {}
+
+    /*constexpr basic_format_parse_context(const basic_format_parse_context&) = delete;
+    constexpr basic_format_parse_context& operator=(const basic_format_parse_context&) = delete;*/
+
+
+    constexpr iterator begin() const noexcept { return __begin; }
+    constexpr iterator end() const noexcept { return __end; }
+    constexpr void advance_to(iterator __it) { __begin = __it; }
+
+    /*constexpr size_t next_arg_id() noexcept {
+        if (__idxing == __indexing::__manual) { __detail::__throw_format_error("Cannot mix automatic and manual indexing"); }
+        if (__idxing == __indexing::__unknown) { __idxing = __indexing::__automatic; }
+        return -1;
+    }
+    constexpr void check_arg_id(size_t __id) {
+        if (__idxing == __indexing::__automatic) { __detail::__throw_format_error("Cannot mix automatic and manual indexing"); }
+        if (__id >= __num_args) { __detail::__make_not_constexpr(); }
+        if (__idxing == __indexing::__unknown) { __idxing = __indexing::__manual; }
+    }*/
+};
+
+template <typename _Output, typename _Char>
+struct basic_format_context {
+    using char_type = _Char;
+    using iterator = _Output;
+    template <typename _Ty> using formatter_type = formatter<_Ty, _Char>;
+
+private:
+    iterator __out{};
+    basic_format_args<basic_format_context> __args{};
+
+public:
+    constexpr basic_format_context(iterator __o, basic_format_args<basic_format_context> __a) noexcept
+        : __out(__o), __args(__a) {}
+
+    constexpr basic_format_arg<basic_format_context> arg(size_t __id) const { return __args.get(__id); }
+    constexpr iterator out() const { return __out; }
+    constexpr void advance_to(iterator __it) { __out = __it; }
+    constexpr basic_format_args<basic_format_context>& __get_args() { return __args; }
+};
+
+/// ===========================================================================
+///  Format args.
+/// ===========================================================================
+template <typename _Context>
+class basic_format_arg {
+    using _Char = typename _Context::char_type;
+
+public:
+    class handle {
+        const void* __ptr;
+        void (*__format)(basic_format_parse_context<_Char>&, _Context&, const void*);
+
+        template <typename _Ty>
+        constexpr explicit handle(const _Ty& __val) noexcept
+            : __ptr(std::addressof(__val)), __format([](
+                basic_format_parse_context<_Char>& __parse_ctx,
+                _Context& __ctx,
+                const void* __p
+            ) constexpr {
+                formatter<_Ty, _Char> __f{};
+                __parse_ctx.advance_to(__f.parse(__parse_ctx));
+                __ctx.advance_to(__f.format(*static_cast<const _Ty*>(__p), __ctx));
+            }) {}
+
+        friend class basic_format_arg<_Context>;
+
+    public:
+        void format(basic_format_parse_context<_Char>& __parse_ctx, _Context& __ctx) const {
+            __format(__parse_ctx, __ctx, __ptr);
+        }
+    };
+
+    struct __none {};
+
+private:
+    enum struct __arg_type {
+        __none,
+        __character,
+        __u64,
+        __i64,
+        __vptr,
+        __f32,
+        __f64,
+        __str,
+        __handle,
+    } __type = __arg_type::__none;
+
+
+    union {
+        __none __none__;
+        uint64_t __u64;
+        int64_t __i64;
+        _Char __character;
+        const void* __vptr;
+        float __f32;
+        double __f64;
+        basic_string_view<_Char> __str;
+        handle __handle;
+    } __value{};
+
+
+public:
+    template <typename _Int>
+    requires (std::is_signed_v<_Int> and not __char<_Int>)
+    constexpr explicit basic_format_arg(_Int __i) : __type(__arg_type::__i64), __value{.__i64 = static_cast<int64_t>(__i)} {}
+
+    template <typename _Int>
+    requires (std::is_unsigned_v<_Int> and not __char<_Int>)
+    constexpr explicit basic_format_arg(_Int __i) : __type(__arg_type::__u64), __value{.__u64 = static_cast<uint64_t>(__i)} {}
+
+    constexpr explicit basic_format_arg(_Char __c) : __type(__arg_type::__character), __value{.__character = __c} {}
+    constexpr explicit basic_format_arg(__abstract_pointer auto __p) : __type(__arg_type::__vptr), __value{.__vptr = __p} {}
+    constexpr explicit basic_format_arg(float __f) : __type(__arg_type::__f32), __value{.__f32 = __f} {}
+    constexpr explicit basic_format_arg(double __f) : __type(__arg_type::__f64), __value{.__f64 = __f} {}
+    constexpr explicit basic_format_arg(basic_string_view<_Char> __s) : __type(__arg_type::__str), __value{.__str = __s} {}
+    constexpr explicit basic_format_arg(handle __h) : __type(__arg_type::__handle), __value{.__handle = __h} {}
+
+    template <typename _Visitor, typename _Ctx>
+    friend constexpr decltype(auto) visit_format_arg(_Visitor&& __vis, basic_format_arg<_Ctx> __arg);
+
+    constexpr basic_format_arg() noexcept {}
+    constexpr explicit operator bool() const noexcept { return __type != __arg_type::__none; }
+};
+
+template <typename _Context, typename ..._Args>
+struct __format_arg_store {
+    array<basic_format_arg<_Context>, sizeof...(_Args)> args;
+    constexpr __format_arg_store(_Args&&... __args) : args{basic_format_arg<_Context>(std::forward<_Args>(__args))...} {}
+};
+
+template <typename _Context = format_context, typename ..._Args>
+constexpr __format_arg_store<_Context, _Args...> make_format_args(_Args&&... __args) {
+    return __format_arg_store<_Context, _Args...> { std::forward<_Args>(__args)... };
+}
+
+namespace __detail {
+template <typename _Output, typename _Char, typename ..._Args>
+constexpr __format_arg_store<basic_format_context<_Output, _Char>, _Args...> __make_args(_Args&&... __args) {
+    using _Context = basic_format_context<_Output, _Char>;
+    return __format_arg_store<_Context, _Args...> { std::forward<_Args>(__args)... };
+}
+}
+
+template <typename _Context>
+class basic_format_args {
+    size_t __size{};
+    const basic_format_arg<_Context>* __args{};
+
+public:
+    constexpr basic_format_args() noexcept {}
+
+    template <typename ..._Args>
+    constexpr basic_format_args(const __format_arg_store<_Context, _Args...>& __args) noexcept
+        : __size(sizeof...(_Args)), __args(__args.args.data()) {}
+
+    constexpr basic_format_arg<_Context> get(size_t __id) const noexcept {
+        return __id < __size ? __args[__id] : basic_format_arg<_Context>{};
+    }
+
+    constexpr size_t __sz() const noexcept { return __size; }
+};
+
+/// ===========================================================================
+///  Formatters.
+/// ===========================================================================
+/// String view formatter.
+template <typename _Char>
+struct formatter<basic_string_view<_Char>, _Char> {
+    constexpr auto parse(basic_format_parse_context<_Char>& __ctx) {
+        if (*__ctx.begin() != '}') { __detail::__throw_format_error("Invalid format specifier in formatter<basic_string_view<_Char>>"); }
+        return __ctx.begin();
+    }
+
+    template <typename _Ctx>
+    auto format(basic_string_view<_Char> __str, _Ctx& __ctx) {
+        return __ctx.out().append(__str.data(), __str.size());
     }
 };
 
-namespace __detail {
-/// ===========================================================================
-///  Typechecking Formatters
-/// ===========================================================================
-template <typename _Output, typename _Arg>
-requires convertible_to<const _Arg&, string_view>
-constexpr void __format_arg(__detail::_Format_context<_Output>& __out, const char* __fmt, type_identity<_Arg>) {
-    if (__fmt[1] == '}') return;
-    else __detail::__invalid_format_string();
-}
-
-template <typename _Output, std::integral _Arg>
-constexpr void __format_arg(__detail::_Format_context<_Output>& __out, const char* __fmt, type_identity<_Arg>) {
-    if (__fmt[1] == '}') return;
-    __fmt++;
-    if (*__fmt++ != ':') __detail::__invalid_format_string();
-    if ((*__fmt != 'x' && *__fmt != 'X') || __fmt[1] != '}') __detail::__invalid_format_string();
-}
-
-/// ===========================================================================
-///  Formatters
-/// ===========================================================================
 /// String formatter.
-template <typename _Output, typename _Arg>
-requires convertible_to<const _Arg&, string_view>
-void __format_arg(__detail::_Format_context<_Output>& __out, const char*, _Arg&& __arg) {
-    __out.append(string_view(std::forward<_Arg>(__arg)));
-}
+template <typename _Char>
+struct formatter<string, _Char> : formatter<basic_string_view<_Char>, _Char> {};
+
+/// String literal formatter.
+template <typename _Char, size_t __size>
+struct formatter<const _Char[__size], _Char> : private formatter<basic_string_view<_Char>, _Char> {
+    using formatter<basic_string_view<_Char>, _Char>::parse;
+
+    template <typename _Ctx>
+    auto format(const _Char* __str, _Ctx& __ctx) {
+        return formatter<basic_string_view<_Char>, _Char>::format(basic_string_view<_Char>{__str, __size - 1}, __ctx);
+    }
+};
+
+/// C-style string formatter.
+template <typename _Char>
+struct formatter<const _Char*, _Char> : private formatter<basic_string_view<_Char>, _Char> {
+    using formatter<basic_string_view<_Char>, _Char>::parse;
+
+    template <typename _Ctx>
+    auto format(const _Char* __str, _Ctx& __ctx) {
+        return formatter<basic_string_view<_Char>, _Char>::format(basic_string_view<_Char>{__str}, __ctx);
+    }
+};
+
+/// Char formatter.
+template <typename _Char>
+struct formatter<_Char, _Char> {
+    constexpr auto parse(basic_format_parse_context<_Char>& __ctx) {
+        if (__ctx.begin() != __ctx.end()) { __detail::__invalid_format_string(); }
+        return __ctx.begin();
+    }
+
+    template <typename _Ctx>
+    auto format(_Char __c, _Ctx& __ctx) { return __ctx.out().append(&__c, 1); }
+};
+
+/// Disallow formatting other char types.
+template <__char _C, typename _Char>
+requires (not std::is_same_v<_C, _Char>)
+struct formatter<_C, _Char> { formatter() = delete; };
+
+/// Void*/nullptr formatter.
+template <__abstract_pointer _Type, typename _Char>
+struct formatter<_Type, _Char> {
+    constexpr auto parse(basic_format_parse_context<_Char>& __ctx) { return __ctx.begin(); }
+
+    template <typename _Ctx>
+    auto format(_Type __ptr, _Ctx& __ctx) {
+        return __ctx.out().append("0x").append(__to_string<_Char>(reinterpret_cast<uintptr_t>(__ptr), 16));
+    }
+};
 
 /// Integer formatter.
-///
-/// Supported formats:
-///   - {:X}/{:x} ... Hexadecimal
-///   - {}        ... Decimal
-template <typename _Output, std::integral _Arg>
-void __format_arg(__detail::_Format_context<_Output>& __out, const char* __fmt, _Arg __arg) {
-    if (__fmt[1] == '}') { __out.append(__to_string(__arg)); }
-    else {
-        /// Parse the format specifier.
-        __fmt++;
-        if (*__fmt++ != ':') terminate();
-        if ((*__fmt != 'x' && *__fmt != 'X') || __fmt[1] != '}') terminate();
-        auto base_hex = *__fmt == 'x' ? 'a' : 'A';
+template <std::integral _Type, typename _Char>
+requires (not __char<_Type>)
+struct formatter<_Type, _Char> {
+    /// Integer format.
+    enum struct __format : uint8_t {
+        __bin = 2,
+        __oct = 8,
+        __dec = 10,
+        __hex = 16,
+    } __fmt = __format::__dec;
 
-        /// I doubt the hex string representation of an integer will ever exceed 32 bytes.
-        char __hex[32]{};
+    /// Alternative representation.
+    bool __alt = false;
 
-        /// Convert the integer to hex.
-        size_t __i = 0;
-        for (; __arg != 0; __i++) {
-            char __c = __arg % 16;
-            __arg /= 16;
-            __hex[__i] = __c < 10 ? char(__c + '0'): char(__c - 10 + base_hex);
+    /// Uppercase hex/binary.
+    bool __upper = false;
+
+    /// Parse the format string.
+    constexpr auto parse(basic_format_parse_context<_Char>& __ctx) {
+        auto __beg = __ctx.begin();
+
+        /// '#' is allowed before {xXbBo}.
+        if (*__beg == '#') {
+            __alt = true;
+            ++__beg;
         }
 
-        /// Reverse the string.
-        for (size_t __j = 0; __j < __i / 2; __j++) {
-            char __c = __hex[__j];
-            __hex[__j] = __hex[__i - __j - 1];
-            __hex[__i - __j - 1] = __c;
+        /// Parse the format.
+        switch (*__beg++) {
+            case '}':
+                if (__alt) { __detail::__throw_format_error("{:#} is not a valid format specifier"); }
+                return __ctx.end();
+            case 'd':
+                if (__alt) { __detail::__invalid_format_string(); }
+                break;
+            case 'o': __fmt = __format::__oct; break;
+            case 'B': __upper = true; [[fallthrough]];
+            case 'b': __fmt = __format::__bin; break;
+            case 'X': __upper = true; [[fallthrough]];
+            case 'x': __fmt = __format::__hex; break;
+            default: __detail::__invalid_format_string();
         }
 
-        __out.append(string_view{__hex, __i});
+        if (*__beg != '}') { __detail::__invalid_format_string(); }
+        return __beg;
+    }
+
+    template <typename _Ctx>
+    auto format(_Type __val, _Ctx& __ctx) {
+        auto __out = __ctx.out();
+
+        /// Append the minus.
+        if constexpr (std::is_signed_v<_Type>) {
+            if (__val < 0) {
+                __out.append("-", 1);
+                __val = -__val;
+            }
+        }
+
+        /// Append the prefix if we’re using the alternative representation.
+        if (__alt) {
+            switch (__fmt) {
+                case __format::__dec: __detail::__throw_format_error("Invalid state in integer formatter."); break;
+                case __format::__oct: __out.append("0", 1); break;
+                case __format::__bin: __out.append(__upper ? "0B" : "0b", 2); break;
+                case __format::__hex: __out.append(__upper ? "0X" : "0x", 2); break;
+            }
+        }
+
+        /// Append the number.
+        __out.append(__to_string<_Char>(__val, static_cast<uint8_t>(__fmt), __upper));
+        return __out;
+    }
+};
+
+/// Floating-point formatter.
+template <floating_point _Type, typename _Char>
+struct formatter<_Type, _Char> {
+    constexpr auto parse(basic_format_parse_context<_Char>& __ctx) { return __ctx.begin(); }
+
+    template <typename _Ctx>
+    auto format(_Type __val, _Ctx& __ctx) {
+        auto __out = __ctx.out();
+        __out.append(__to_string<_Char>(__val));
+        return __out;
+    }
+};
+
+
+/// ===========================================================================
+///  Formatting functions – Implementation.
+/// ===========================================================================
+template <typename _Visitor, typename _Context>
+constexpr decltype(auto) visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
+    using __arg_ty = basic_format_arg<_Context>;
+    using __ty = typename __arg_ty::__arg_type;
+    switch (__arg.__type) {
+        case __ty::__none: return __vis(typename __arg_ty::__none{});
+        case __ty::__character: return __vis(__arg.__value.__character);
+        case __ty::__u64: return __vis(__arg.__value.__u64);
+        case __ty::__i64: return __vis(__arg.__value.__i64);
+        case __ty::__vptr: return __vis(__arg.__value.__vptr);
+        case __ty::__f32: return __vis(__arg.__value.__f32);
+        case __ty::__f64: return __vis(__arg.__value.__f64);
+        case __ty::__str: return __vis(__arg.__value.__str);
+        case __ty::__handle: return __vis(__arg.__value.__handle);
+        default: __detail::__throw_format_error("Invalid format argument type.");
     }
 }
 
-/// ===========================================================================
-///  Format implementation
-/// ===========================================================================
-/// This does the actual formatting.
-template <typename _Output, typename... _Args>
-constexpr void __format(_Format_context<_Output>& __ctx, string_view __fmt, _Args&&... __args) {
-    /// Sanity check.
-    if (__fmt.size() == 0) {
-        if constexpr (sizeof...(_Args) != 0) { __invalid_format_string(); }
-        return;
+namespace __detail {
+/// Formatting visitor.
+template <typename _Output, typename _Char>
+struct __format_visitor {
+    using __arg_t = basic_format_arg<basic_format_context<_Output, _Char>>;
+
+    basic_format_parse_context<_Char> __parse_ctx;
+    basic_format_context<_Output, _Char>& __ctx;
+
+    constexpr __format_visitor(basic_format_parse_context<_Char>&& __parse_ctx, basic_format_context<_Output, _Char>& __ctx)
+        : __parse_ctx(__parse_ctx), __ctx(__ctx) {}
+
+    /// Invalid format arg.
+    constexpr void operator()(typename __arg_t::__none) {
+        __detail::__throw_format_error("Invalid format argument type.");
     }
 
+    /// Custom format arg.
+    constexpr void operator()(typename __arg_t::handle __h) {
+        if (!is_constant_evaluated()) __h.format(__parse_ctx, __ctx);
+    }
+
+    /// Builtin format args.
+    template <typename _Ty>
+    constexpr void operator()(_Ty __val) {
+        formatter<remove_cvref_t<_Ty>, _Char> __fmt;
+        auto __end = __fmt.parse(__parse_ctx);
+        if (__end != __parse_ctx.end()) {
+            __throw_format_error("formatter::parse() must consume the entire format specifier");
+        }
+        if (!is_constant_evaluated()) __fmt.format(__val, __ctx);
+    }
+};
+
+/// This does the actual formatting.
+template <typename _Output, typename _Char>
+constexpr void __format(basic_format_context<_Output, _Char>&& __ctx, basic_string_view<_Char> __fmt) {
     /// We start at the beginning of the format string.
     size_t __pos = 0;
 
-    /// Format one argument.
-    [[maybe_unused]] const auto __format_one = [&]<typename _Arg>(_Arg&& __arg) constexpr {
-		size_t __old_pos = __pos;
+    if (__ctx.__get_args().__sz() == 0) __builtin_unreachable();
 
-		const auto __find_not = [&](char __other) {
-			size_t __found;
+    /// Format the arguments.
+    for (size_t __i = 0; __i < __ctx.__get_args().__sz(); __i++) {
+        size_t __old_pos = __pos;
 
-			/// A format specifier starts with '{', but a double '{{' is an escaped '{'.
-			for (;;) {
-				/// Find the next '{' or '}'.
-				__found = __fmt.find_first_of("{}", __pos);
-				if (!__found) { __invalid_format_string(); }
 
-				/// Double '{{' or '}}' are escaped.
-				if (__fmt[__found] == __fmt[__found + 1]) {
-					if (!is_constant_evaluated()) { __ctx.append(__fmt.substr(__old_pos, __found - __old_pos + 1)); }
-					__pos = __old_pos = __found + 2;
-					continue;
-				}
+        /// Find the next unescaped '{' or '}'.
+        const auto __find_delim = [&](char __delim) {
+            size_t __found;
 
-				/// If the character is not the one we’re looking for, then that’s an invalid format string.
-				if (__fmt[__found] == __other) { __invalid_format_string(); }
-				__pos = __found + 1;
-				break;
-			}
+            /// A format specifier starts with '{', but a double '{{' is an escaped '{'.
+            for (;;) {
+                /// Find the next '{' or '}'.
+                __found = __fmt.find_first_of("{}", __pos);
+                if (__found == basic_string_view<_Char>::npos) { __invalid_format_string(); }
 
-			return __found;
-		};
+                /// Double '{{' or '}}' are escaped.
+                if (__fmt[__found] == __fmt[__found + 1]) {
+                    __ctx.out() = __fmt.substr(__old_pos, __found - __old_pos + 1);
+                    __pos = __old_pos = __found + 2;
+                    continue;
+                }
 
-		/// Advance past the start of the format specifier.
-		size_t __fmt_spec = __find_not('}');
-		size_t __end = __find_not('{');
+                /// If the character is not the one we’re looking for, then that’s an invalid format string.
+                if (__fmt[__found] != __delim) { __invalid_format_string(); }
+                __pos = __found + 1;
+                break;
+            }
+
+            return __found;
+        };
+
+        /// Advance past the start of the format specifier.
+        size_t __fmt_spec = __find_delim('{');
+        size_t __end = __find_delim('}');
 
         /// Append the string up to the format specifier.
-        if (!is_constant_evaluated()) { __ctx.append(__fmt.substr(__old_pos, __fmt_spec - __old_pos)); }
+        __ctx.out() = __fmt.substr(__old_pos, __fmt_spec - __old_pos);
 
-        /// Parse the format specifier and format the argument.
-        __format_arg(__ctx, __fmt.data() + __fmt_spec, std::forward<_Arg>(__arg));
+        /// Current format argument.
+        auto __arg = __ctx.arg(__i);
+
+        /// Skip a ':' at the start of the format specifier.
+        if (__fmt[__fmt_spec + 1] == ':') __fmt_spec++;
+
+        /// Parse and format it.
+        basic_format_parse_context<_Char> __parse_ctx{__fmt.substr(__fmt_spec + 1, __end - __fmt_spec - 1)};
+        visit_format_arg(__format_visitor{std::move(__parse_ctx), __ctx}, __arg);
     };
 
-    /// Format each argument.
-    (__format_one(std::forward<_Args>(__args)), ...);
-
     /// Make sure there are no more format specifiers.
-	size_t __old_pos = __pos;
-	for (;;) {
-		__pos = __fmt.find_first_of("{}", __pos);
-		if (__pos == string_view::npos) { break; }
-		if (__fmt[__pos] != __fmt[__pos + 1]) { __invalid_format_string(); }
-		else {
-			if (!is_constant_evaluated()) { __ctx.append(__fmt.substr(__old_pos, __pos - __old_pos + 1)); }
-			__pos = __old_pos = __pos + 2;
-		}
-	}
+    size_t __old_pos = __pos;
+    for (;;) {
+        __pos = __fmt.find_first_of("{}", __pos);
+        if (__pos == string_view::npos) { break; }
+        if (__fmt[__pos] != __fmt[__pos + 1]) { __throw_format_error("Excess format specifiers"); }
+        else {
+            __ctx.out() = __fmt.substr(__old_pos, __pos - __old_pos + 1);
+            __pos = __old_pos = __pos + 2;
+        }
+    }
 
     /// Append the rest of the string.
-    if (!is_constant_evaluated()) { __ctx.append(__fmt.substr(__old_pos)); }
+    __ctx.out() = __fmt.substr(__old_pos);
 }
+
+/// Format to an output using an iterator.
+template <typename _It, typename _Dest, typename _Char, typename... _Args>
+void __format_to(_Dest&& __dest, basic_string_view<_Char> __fmt, _Args&& ...__args) {
+    auto __store = __detail::__make_args<_It, _Char, _Args...>(std::forward<_Args>(__args)...);
+    basic_format_context __ctx{_It{std::forward<_Dest>(__dest)}, basic_format_args{__store}};
+    __detail::__format(std::move(__ctx), __fmt);
+}
+
 }
 
 /// ===========================================================================
-///  format()
+///  Formatting functions – API.
 /// ===========================================================================
-template <typename... _Args>
-string format(format_string<_Args...> __fmt, _Args&&... __args) {
-    __detail::_Format_context<string> __ctx;
-    __detail::__format(__ctx, __fmt.__format_str, std::forward<_Args>(__args)...);
-    return std::move(__ctx.__result);
+/// Format string
+template <typename _Char, typename... _Args>
+class basic_format_string {
+    basic_string_view<_Char> __sv;
+
+public:
+    template <typename _Str>
+    requires (convertible_to<const _Str&, basic_string_view<_Char>>)
+    consteval basic_format_string(const _Str& __str) : __sv(__str) {
+        /// Typecheck the format string.
+        using _Output = __detail::__nop_insert_iterator<_Char>;
+        auto __store = __detail::__make_args<_Output, _Char, _Args...>(_Args{}...);
+        basic_format_context<_Output, _Char> __ctx(_Output{}, basic_format_args{__store});
+        __detail::__format(std::move(__ctx), __sv);
+    }
+
+    constexpr basic_string_view<_Char> get() const noexcept { return __sv; }
+};
+
+/// Format to a string.
+template <typename _Char, typename... _Args>
+auto vformat(basic_string_view<_Char> __fmt, _Args&&... __args) {
+    basic_string<_Char> __ret;
+    __detail::__format_to<__detail::__str_insert_iterator>(__ret, __fmt, std::forward<_Args>(__args)...);
+    return __ret;
+}
+
+/// Format to a string. The format string is checked at compile time.
+template <typename _Char, typename... _Args>
+auto format(std::basic_format_string<_Char, _Args...> __str, _Args&&... __args) -> basic_string<_Char> {
+    return vformat(__str.get(), std::forward<_Args>(__args)...);
 }
 
 /// ===========================================================================
-///  print()
+///  std::print() – User Space.
 /// ===========================================================================
 #ifndef __kernel__
-
+/// Print to a stream.
 template <typename... _Args>
-void print(FILE* __file, format_string<_Args...> __fmt, _Args&&... __args) {
-    __detail::_Format_context<FILE*> __ctx{__file};
-    __detail::__format(__ctx, __fmt.__format_str, std::forward<_Args>(__args)...);
+void vprint(FILE* __stream, basic_string_view<char> __fmt, _Args&&... __args) {
+    __detail::__format_to<__detail::__file_insert_iterator>(__stream, __fmt, std::forward<_Args>(__args)...);
 }
 
+/// Print to stdout.
+template <typename... _Args>
+void vprint(basic_string_view<char> __fmt, _Args&&... __args) {
+    vprint(stdout, __fmt, std::forward<_Args>(__args)...);
+}
+
+/// Print to a stream. The format string is checked at compile time.
+template <typename... _Args>
+void print(FILE* __stream, format_string<_Args...> __fmt, _Args&&... __args) {
+    vprint(__stream, __fmt.get(), std::forward<_Args>(__args)...);
+}
+
+/// Print to stdout. The format string is checked at compile time.
 template <typename... _Args>
 void print(format_string<_Args...> __fmt, _Args&&... __args) {
-    print(stdout, std::move(__fmt), std::forward<_Args>(__args)...);
+    vprint(__fmt.get(), std::forward<_Args>(__args)...);
 }
 
+/// ===========================================================================
+///  std::print() – Kernel
+/// ===========================================================================
 #else
-
+/// Print to the kernel log.
 template <typename... _Args>
-void print(format_string<_Args...> __fmt, _Args&&... __args) {
-    __detail::_Format_context<__detail::__kprint_helper> __ctx;
-    __detail::__format(__ctx, __fmt.__format_str, forward<_Args>(__args)...);
+void vprint(basic_string_view<char> __fmt, _Args&&... __args) {
+    using _Output = __detail::__kernel_log_insert_iterator;
+    basic_format_context __ctx(_Output{}, __detail::__make_args<_Output, _Char, _Args...>());
+    __detail::__format(std::move(__ctx), __fmt);
 }
 
+/// Print to the kernel log. The format string is checked at compile time.
+template <typename... _Args>
+void print(format_string<_Args...> __fmt, _Args&&... __args) {
+    vprint(__fmt.get(), std::forward<_Args>(__args)...);
+}
 #endif
 
 }

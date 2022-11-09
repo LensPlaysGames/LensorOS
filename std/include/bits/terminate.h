@@ -25,10 +25,18 @@
 [[noreturn]] void terminate() noexcept {
     __libc_assert(false, "terminate() called");
 }
+
+[[noreturn]] void __terminate_with_message(const char* __msg) noexcept {
+    __libc_assert(false, __msg ?: "terminate() called");
+}
 #else
 #   include <panic.h>
 [[noreturn]] void terminate() noexcept {
     panic("terminate() called");
+}
+
+[[noreturn]] void __terminate_with_message(const char* __msg) noexcept {
+    panic(__msg ?: "terminate() called");
 }
 #endif
 

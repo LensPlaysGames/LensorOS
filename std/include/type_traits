@@ -120,11 +120,11 @@ template <> struct is_unsigned<unsigned long long> : true_type {};
 template <typename _T>
 struct is_integral : _Or<is_signed<_T>, is_unsigned<_T>>::type {};
 
-/// Check if a type is a floating point.
-template <typename _T>
-struct is_floating_point : _Or<is_same<_T, float>,
-                               is_same<_T, double>,
-                               is_same<_T, long double>>::type {};
+/// Check if a type is a floating-point number.
+template <typename _T> struct is_floating_point : false_type {};
+template <> struct is_floating_point<float> : true_type {};
+template <> struct is_floating_point<double> : true_type {};
+template <> struct is_floating_point<long double> : true_type {};
 
 /// Check if a type is a number.
 template <typename _T>
@@ -156,6 +156,12 @@ template <typename _T> struct remove_cv {
 template <typename _T> struct remove_cvref {
     using type = typename remove_cv<typename remove_reference<_T>::type>::type;
 };
+
+
+/// Check if two types are the same, ignoring cv-qualifiers.
+template <typename _T, typename _U>
+struct _Is : is_same<typename remove_cv<_T>::type, typename remove_cv<_U>::type> {};
+
 
 /// True if _T is a reference.
 template <typename _T> struct is_reference : false_type {};

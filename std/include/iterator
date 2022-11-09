@@ -33,32 +33,32 @@ class _ReverseIterator {
     _T __it;
 
 public:
-    _ReverseIterator(_T __it) : __it(__it) {}
+    constexpr _ReverseIterator(_T __it) : __it(__it) {}
 
-    _ReverseIterator& operator++() { --__it; return *this; }
-    _ReverseIterator operator++(int) {
+    constexpr _ReverseIterator& operator++() { --__it; return *this; }
+    constexpr _ReverseIterator operator++(int) {
         _ReverseIterator __tmp = *this;
         --__it;
         return __tmp;
     }
 
-    _ReverseIterator& operator--() { ++__it; return *this; }
-    _ReverseIterator operator--(int) {
+    constexpr _ReverseIterator& operator--() { ++__it; return *this; }
+    constexpr _ReverseIterator operator--(int) {
         _ReverseIterator __tmp = *this;
         ++__it;
         return __tmp;
     }
 
-    _ReverseIterator operator+(size_t __n) { return _ReverseIterator(__it - __n); }
-    _ReverseIterator operator-(size_t __n) { return _ReverseIterator(__it + __n); }
-    _ReverseIterator& operator+=(size_t __n) { __it -= __n; return *this; }
-    _ReverseIterator& operator-=(size_t __n) { __it += __n; return *this; }
+    constexpr _ReverseIterator operator+(size_t __n) { return _ReverseIterator(__it - __n); }
+    constexpr _ReverseIterator operator-(size_t __n) { return _ReverseIterator(__it + __n); }
+    constexpr _ReverseIterator& operator+=(size_t __n) { __it -= __n; return *this; }
+    constexpr _ReverseIterator& operator-=(size_t __n) { __it += __n; return *this; }
 
-    _T operator->() { return __it; }
-    _T operator*() { return *__it; }
+    constexpr _T operator->() { return __it; }
+    constexpr _T operator*() { return *__it; }
 
-    bool operator==(const _ReverseIterator& __other) const { return __it == __other.__it; }
-    bool operator!=(const _ReverseIterator& __other) const { return __it != __other.__it; }
+    constexpr bool operator==(const _ReverseIterator& __other) const { return __it == __other.__it; }
+    constexpr bool operator!=(const _ReverseIterator& __other) const { return __it != __other.__it; }
 };
 
 }

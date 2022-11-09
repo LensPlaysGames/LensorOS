@@ -25,6 +25,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <utility>
+#include <concepts>
 
 __BEGIN_DECLS__
 void* memcpy(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n);
@@ -42,12 +43,23 @@ class basic_string_view {
     const _Char* __data{};
     size_t __size{};
 
+    static constexpr size_t __constexpr_strlen(const _Char* __str) {
+        size_t __len = 0;
+        while (*__str++) __len++;
+        return __len;
+    }
+
 public:
+    using const_iterator = const _Char*;
+
     static constexpr size_t npos = static_cast<size_t>(-1);
 
     constexpr basic_string_view() = default;
     constexpr basic_string_view(const _Char* __data, size_t __size) : __data(__data), __size(__size) {}
-    constexpr basic_string_view(const _Char* __data) : __data(__data), __size(__builtin_strlen(__data)) {}
+    constexpr basic_string_view(const _Char* __data) : __data(__data), __size(__constexpr_strlen(__data)) {}
+
+    template <size_t __N>
+    constexpr basic_string_view(const _Char (&__data)[__N]) : __data(__data), __size(__N - 1) {}
 
     constexpr const _Char* data() const { return __data; }
     constexpr size_t size() const { return __size; }
@@ -75,13 +87,13 @@ public:
     _Nodiscard bool operator<=(_View __sv) const { return compare(__sv) <= 0; }
     _Nodiscard bool operator>=(_View __sv) const { return compare(__sv) >= 0; }
 
-    _Nodiscard const char* begin() const { return __data; }
-    _Nodiscard const char* end() const { return __data + __size; }
+    _Nodiscard constexpr const char* begin() const { return __data; }
+    _Nodiscard constexpr const char* end() const { return __data + __size; }
 
-    _Nodiscard _ReverseIterator<const char*> rbegin() const { return _ReverseIterator<const char*>(data() + size() - 1); }
-    _Nodiscard _ReverseIterator<const char*> rend() const { return _ReverseIterator<const char*>(data() - 1); }
+    _Nodiscard constexpr _ReverseIterator<const char*> rbegin() const { return _ReverseIterator<const char*>(data() + size() - 1); }
+    _Nodiscard constexpr _ReverseIterator<const char*> rend() const { return _ReverseIterator<const char*>(data() - 1); }
 
-    _Nodiscard _View substr(size_t __pos, size_t __len = npos) const {
+    _Nodiscard constexpr _View substr(size_t __pos, size_t __len = npos) const {
         if (__pos > __size) return {};
         if (__len > __size - __pos) __len = __size - __pos;
         return {data() + __pos, __len};
@@ -492,28 +504,31 @@ using wstring = basic_string<wchar_t>;
 using u16string = basic_string<char16_t>;
 using u32string = basic_string<char32_t>;
 
-template <typename _Int>
-string __to_string(_Int __i) {
-    string __result;
+template <typename _Char, integral _Int>
+__forceinline basic_string<_Char> __to_string(_Int __i, uint8_t __base = 10, bool __uppercase = false) {
+    basic_string<_Char> __result;
 
     /// Append a '-' if the number is negative.
     if constexpr (std::is_signed_v<_Int>) {
         if (__i < 0) {
-            __result += '-';
+            __result += _Char('-');
             __i = -__i;
         }
     }
 
     /// If the number is 0, we're done.
     if (__i == 0) {
-        __result += '0';
+        __result += _Char('0');
         return __result;
     }
 
     /// Otherwise, append the digits.
-    while (__i > 0) {
-        __result += char('0' + (__i % 10));
-        __i /= 10;
+    while (__i) {
+        auto __digit = __i % __base;
+        __i /= __base;
+
+        if (__digit > 9) { __result += _Char((__uppercase ? 'A' : 'a') + __digit - 10); }
+        else { __result += _Char('0' + __digit); }
     }
 
     /// Reverse the string manually.
@@ -527,12 +542,42 @@ string __to_string(_Int __i) {
     return __result;
 }
 
-inline string to_string(int __i) { return __to_string(__i); }
-inline string to_string(long __i) { return __to_string(__i); }
-inline string to_string(long long __i) { return __to_string(__i); }
-inline string to_string(unsigned __i) { return __to_string(__i); }
-inline string to_string(unsigned long __i) { return __to_string(__i); }
-inline string to_string(unsigned long long __i) { return __to_string(__i); }
+template <typename _Char, floating_point _Float>
+__forceinline basic_string<_Char> __to_string(_Float __f) {
+    basic_string<_Char> __result;
+
+    /// Append a '-' if the number is negative.
+    if (__f < 0) {
+        __result += _Char('-');
+        __f = -__f;
+    }
+
+    /// Append the integer part.
+    __result += __to_string<_Char>(static_cast<int64_t>(__f));
+    __f -= static_cast<int64_t>(__f);
+
+    /// Append the fractional part.
+    if (__f) {
+        __result += _Char('.');
+        while (__f - static_cast<int64_t>(__f)) {
+            __f *= 10;
+            __result += _Char('0' + static_cast<int64_t>(__f));
+            __f -= static_cast<int64_t>(__f);
+        }
+    }
+
+    return __result;
+}
+
+inline string to_string(int __i) { return __to_string<char>(__i); }
+inline string to_string(long __i) { return __to_string<char>(__i); }
+inline string to_string(long long __i) { return __to_string<char>(__i); }
+inline string to_string(unsigned __i) { return __to_string<char>(__i); }
+inline string to_string(unsigned long __i) { return __to_string<char>(__i); }
+inline string to_string(unsigned long long __i) { return __to_string<char>(__i); }
+inline string to_string(float __f) { return __to_string<char>(__f); }
+inline string to_string(double __f) { return __to_string<char>(__f); }
+inline string to_string(long double __f) { return __to_string<char>(__f); }
 
 } // namespace std
 #endif // _LENSOROS_STRING_
