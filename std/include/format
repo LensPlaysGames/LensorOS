@@ -77,6 +77,9 @@ inline void __throw_format_error([[__maybe_unused__]] const char* __msg = "Inval
     __invalid_format_string(true, __msg);
 }
 
+/// Tag passed to certain constructors.
+struct __parse_only_tag { consteval explicit __parse_only_tag() {} };
+
 /// Parse a number.
 template <typename _It>
 constexpr size_t __parse_number(_It& __beg) {
@@ -265,8 +268,19 @@ public:
         void (*__format)(basic_format_parse_context<_Char>&, _Context&, const void*);
 
         template <typename _Ty>
+        consteval explicit handle(__detail::__parse_only_tag, type_identity<_Ty>) noexcept
+            : __ptr(nullptr), __format([](
+                basic_format_parse_context<_Char>& __parse_ctx,
+                _Context&,
+                const void*
+            ) consteval {
+                  formatter<_Ty, _Char> __f{};
+                  __f.parse(__parse_ctx);
+            }) {}
+
+        template <typename _Ty>
         constexpr explicit handle(const _Ty& __val) noexcept
-            : __ptr(&__val), __format([](
+            : __ptr(__builtin_addressof(__val)), __format([](
                 basic_format_parse_context<_Char>& __parse_ctx,
                 _Context& __ctx,
                 const void* __p
@@ -299,8 +313,8 @@ private:
         __handle,
     } __type = __arg_type::__none;
 
-    union {
-        __none __none__;
+    union __value_type {
+        __none __none__{};
         uint64_t __u64;
         int64_t __i64;
         _Char __character;
@@ -313,6 +327,32 @@ private:
 
 
 public:
+    /// Construct a dummy argument.
+    template <typename _Ty>
+    consteval basic_format_arg(__detail::__parse_only_tag, type_identity<_Ty>) noexcept
+       : __type([]() consteval {
+          if constexpr (is_signed_v<_Ty>) return __arg_type::__i64;
+          else if constexpr (is_unsigned_v<_Ty>) return __arg_type::__u64;
+          else if constexpr (is_same_v<_Ty, _Char>) return __arg_type::__character;
+          else if constexpr (is_same_v<_Ty, float>) return __arg_type::__f32;
+          else if constexpr (is_same_v<_Ty, double>) return __arg_type::__f64;
+          else if constexpr (is_convertible_v<_Ty, basic_string_view<_Char>>) return __arg_type::__str;
+          else if constexpr (is_same_v<_Ty, void*>) return __arg_type::__vptr;
+          else return __arg_type::__handle;
+          __builtin_unreachable();
+       } ())
+       , __value([]() consteval {
+          if constexpr (is_signed_v<_Ty>) return __value_type{.__i64 = {} };
+          else if constexpr (is_unsigned_v<_Ty>) return __value_type{.__u64 = {} };
+          else if constexpr (is_same_v<_Ty, _Char>) return __value_type{.__character = {} };
+          else if constexpr (is_same_v<_Ty, float>) return __value_type{.__f32 = {} };
+          else if constexpr (is_same_v<_Ty, double>) return __value_type{.__f64 = {} };
+          else if constexpr (is_convertible_v<_Ty, basic_string_view<_Char>>) return __value_type{.__str ={} };
+          else if constexpr (is_same_v<_Ty, void*>) return __value_type{.__vptr = nullptr };
+          else return __value_type{.__handle = handle{__detail::__parse_only_tag{}, type_identity<_Ty>{}} };
+          __builtin_unreachable();
+      }()) {}
+
     template <typename _Int>
     requires (std::is_signed_v<_Int> and not __char<_Int>)
     constexpr explicit basic_format_arg(_Int __i) : __type(__arg_type::__i64), __value{.__i64 = static_cast<int64_t>(__i)} {}
@@ -345,7 +385,12 @@ struct __format_arg_store {
     constexpr __format_arg_store(_Args&&... __args) requires (sizeof...(_Args) > 0)
         : args{basic_format_arg<_Context>(std::forward<_Args>(__args))...} {}
 
-    constexpr __format_arg_store() : args{ basic_format_arg<_Context>(remove_cvref_t<_Args>{})... } {}
+    consteval __format_arg_store() : args{
+        basic_format_arg<_Context>{
+            __detail::__parse_only_tag{},
+            type_identity<remove_cvref_t<_Args>>{}
+        }...
+    } {}
 };
 //_PushIgnoreWarning("-Wunused-value")     _PopWarnings()
 
@@ -362,7 +407,7 @@ constexpr __format_arg_store<basic_format_context<_Output, _Char>, _Args...> __m
 }
 
 template <typename _Output, typename _Char, typename ..._Args>
-constexpr __format_arg_store<basic_format_context<_Output, _Char>, _Args...> __make_dummy_args() {
+consteval __format_arg_store<basic_format_context<_Output, _Char>, _Args...> __make_dummy_args() {
     using _Context = basic_format_context<_Output, _Char>;
     return __format_arg_store<_Context, _Args...> { };
 }
