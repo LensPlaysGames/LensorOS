@@ -17,10 +17,12 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <uart.h>
+#include <format>
 
 #include <cstr.h>
 #include <io.h>
+#include <panic.h>
+#include <uart.h>
 
 namespace UART {
     bool Initialized { false };
@@ -188,6 +190,13 @@ namespace UART {
         if (Initialized == false)
             return;
 
+        /// Sanity check.
+        if (numberOfBytes > 1'000'000'000'000llu) {
+            std::print("[UART]: Refusing to output more than 1'000'000'000'000 bytes\r\n");
+            panic("Buffer overflow");
+            for (;;) asm volatile ("hlt");
+        }
+
         while (numberOfBytes > 0) {
 #ifdef LENSOR_OS_UART_HIDE_COLOR_CODES
             if (*str == '\033') {
@@ -196,11 +205,13 @@ namespace UART {
                     str++;
                     numberOfBytes--;
                 } while (*str != 'm' && numberOfBytes > 0);
-                if (*str == 'm') {
+
+                if (numberOfBytes > 0) {
                     str++;
                     numberOfBytes--;
                 }
-                else return;
+
+                continue;
             }
 #endif /* defined LENSOR_OS_UART_HIDE_COLOR_CODES */
             out(*str);
