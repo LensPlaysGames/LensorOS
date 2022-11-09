@@ -122,7 +122,7 @@ void BasicRenderer::swap(Vector2<u64> position, Vector2<u64> size) {
     // Copy rectangle line-by-line.
     u64 bytesPerLine = BytesPerPixel * size.x;
     for (u64 y = 0; y < size.y; ++y) {
-        memcpy(targetBaseAddress, renderBaseAddress, bytesPerLine);
+        memcpy(renderBaseAddress, targetBaseAddress, bytesPerLine);
         targetBaseAddress += Target->PixelsPerScanLine;
         renderBaseAddress += Render->PixelsPerScanLine;
     }

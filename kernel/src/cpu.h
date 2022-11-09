@@ -114,7 +114,7 @@ public:
     }
 
     void set_vendor_id(char id[12]) {
-        memcpy(&id[0], &VendorID[0], 12 * sizeof(char));
+        memcpy(&VendorID[0], &id[0], 12 * sizeof(char));
     }
 
     void add_cpu(const CPU& cpu) { CPUs.add(cpu); }

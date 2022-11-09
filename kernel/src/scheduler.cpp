@@ -204,7 +204,7 @@ namespace Scheduler {
     /// Called from `irq0_handler` in `scheduler.asm`
     /// A stupid simple round-robin process switcher.
     void switch_process(CPUState* cpu) {
-        memcpy(cpu, &CurrentProcess->value()->CPU, sizeof(CPUState));
+        memcpy(&CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
         // Handle single viable process or end of queue.
         if (CurrentProcess->next() == nullptr) {
             // If there is only one viable process,
@@ -219,7 +219,7 @@ namespace Scheduler {
         }
         else CurrentProcess = next_viable_process(CurrentProcess);
         // Update state of CPU that will be restored.
-        memcpy(&CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
+        memcpy(cpu, &CurrentProcess->value()->CPU, sizeof(CPUState));
         // Use new process' page map.
         Memory::flush_page_map(CurrentProcess->value()->CR3);
         // Update ES and DS to SS.

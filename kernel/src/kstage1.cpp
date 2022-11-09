@@ -17,13 +17,13 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <kstage1.h>
+#include "format"
 
 #include <acpi.h>
 #include <ahci.h>
 #include <basic_renderer.h>
-#include <boot.h>
 #include <bitmap.h>
+#include <boot.h>
 #include <cpu.h>
 #include <cpuid.h>
 #include <cstr.h>
@@ -34,16 +34,17 @@
 #include <gdt.h>
 #include <gpt.h>
 #include <guid.h>
-#include <memory/heap.h>
 #include <hpet.h>
 #include <interrupts/idt.h>
 #include <interrupts/interrupts.h>
 #include <interrupts/syscalls.h>
 #include <io.h>
 #include <keyboard.h>
+#include <kstage1.h>
 #include <link_definitions.h>
 #include <memory.h>
 #include <memory/common.h>
+#include <memory/heap.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>

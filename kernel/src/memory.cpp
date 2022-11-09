@@ -41,9 +41,9 @@ int memcmp(void* aPtr, void* bPtr, u64 numBytes) {
 // The signed comparison does limit `numBytes` to ~9 billion.
 // I think I'm okay with that, as nobody will be moving 8192 pebibytes
 //   around in memory any time soon. If you are, rewrite this, nerd :^)
-void memcpy(void* src, void* dest, u64 numBytes) {
+extern "C" void* memcpy(void* __restrict__ dest, const void* __restrict__ src, size_t numBytes) {
     if (src == dest)
-        return;
+        return dest;
 
     s64 i = 0;
     for (; i <= (s64)numBytes - 2048; i += 2048)
@@ -56,6 +56,8 @@ void memcpy(void* src, void* dest, u64 numBytes) {
         *(u64*)((u64)dest + i) = *(u64*)((u64)src + i);
     for (; i < (s64)numBytes; ++i)
         *(u8*)((u64)dest + i) = *(u8*)((u64)src + i);
+
+    return dest;
 }
 
 void memset(void* start, u8 value, u64 numBytes) {
@@ -89,7 +91,9 @@ void volatile_read(const volatile void* ptr, volatile void* out, u64 length) {
         *(u32*)out = *(volatile u32*)ptr;
     else if (length == 8)
         *(u64*)out = *(volatile u64*)ptr;
-    else memcpy((void*)ptr, (void*)out, length);
+
+    /// FIXME: this is horribly broken because that’s *not* how volatile works...
+    else memcpy((void*)out, (void*)ptr, length);
 }
 
 void volatile_write(void* data, volatile void* ptr, u64 length) {
@@ -104,5 +108,7 @@ void volatile_write(void* data, volatile void* ptr, u64 length) {
         *(volatile u32*)ptr = *(u32*)data;
     if (length == 8)
         *(volatile u64*)ptr = *(u64*)data;
-    else memcpy(data, (void*)ptr, length);
+
+    /// FIXME: This is horribly broken because that’s not how volatile works...
+    else memcpy((void*)ptr, data, length);
 }

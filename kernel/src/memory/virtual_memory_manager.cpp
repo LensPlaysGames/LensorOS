@@ -243,7 +243,7 @@ namespace Memory {
                         return nullptr;
                     }
                     auto* oldPT = (Memory::PageTable*)((u64)PDE.address() << 12);
-                    memcpy(oldPT, newPT, PAGE_SIZE);
+                    memcpy(newPT, oldPT, PAGE_SIZE);
 
                     PDE = oldPD->entries[k];
                     PDE.set_address((u64)newPT >> 12);

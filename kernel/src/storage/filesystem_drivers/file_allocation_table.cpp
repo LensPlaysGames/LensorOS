@@ -178,11 +178,11 @@ FileMetadata FileAllocationTableDriver::file(StorageDeviceDriver* driver, const 
             if (entry->long_file_name()) {
                 LFNClusterEntry* lfn = reinterpret_cast<LFNClusterEntry*>(entry);
                 u8 offset = 0;
-                memcpy(&lfn->Characters1[0], &lfnBuffer[offset], sizeof(u16) * 5);
+                memcpy(&lfnBuffer[offset], &lfn->Characters1[0], sizeof(u16) * 5);
                 offset += 5;
-                memcpy(&lfn->Characters1[0], &lfnBuffer[offset], sizeof(u16) * 6);
+                memcpy(&lfnBuffer[offset], &lfn->Characters1[0], sizeof(u16) * 6);
                 offset += 6;
-                memcpy(&lfn->Characters3[0], &lfnBuffer[offset], sizeof(u16) * 2);
+                memcpy(&lfnBuffer[offset], &lfn->Characters3[0], sizeof(u16) * 2);
                 lfnBufferFull = true;
                 entry++;
                 continue;

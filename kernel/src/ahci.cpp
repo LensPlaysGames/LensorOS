@@ -196,7 +196,7 @@ namespace AHCI {
             dbgmsg_s("  \033[32mSUCCESS\033[0m: `read_low_level()` SUCCEEDED\r\n");
 #endif /* DEBUG_AHCI */
             void* bufferAddress = (void*)((u64)&Buffer[0] + byteOffsetWithinSector);
-            memcpy(bufferAddress, buffer, byteCount);
+            memcpy(buffer, bufferAddress, byteCount);
         }
         else dbgmsg_s("  \033[31mERROR\033[0m: `read_low_level()` FAILED\r\n");
 

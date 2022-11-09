@@ -40,19 +40,19 @@ public:
         Length = original.length();
         Buffer = new u8[Length+1];
         Buffer[Length] = '\0';
-        memcpy(original.bytes(), Buffer, Length);
+        memcpy(Buffer, original.bytes(), Length);
     }
 
     String(const char* cstr) {
         Length = strlen(cstr)-1;
         Buffer = new u8[Length+1];
-        memcpy((void*)cstr, Buffer, Length+1);
+        memcpy(Buffer, cstr, Length+1);
     }
 
     String(const char* cstr, u64 byteCount) {
         Length = byteCount;
         Buffer = new u8[Length+1];
-        memcpy((void*)cstr, Buffer, Length);
+        memcpy(Buffer, cstr, Length);
         Buffer[Length] = '\0';
     }
 
@@ -79,7 +79,7 @@ public:
             Length = index;
             u8* oldBuffer = Buffer;
             Buffer = new u8[Length + 1];
-            memcpy((void*)oldBuffer, Buffer, Length);
+            memcpy(Buffer, oldBuffer, Length);
             Buffer[Length] = '\0';
             delete[] oldBuffer;
         }
@@ -87,7 +87,7 @@ public:
             Length = strlen(&data()[index]) - 1;
             u8* oldBuffer = Buffer;
             Buffer = new u8[Length+1];
-            memcpy((void*)&oldBuffer[index], Buffer, Length+1);
+            memcpy(Buffer, &oldBuffer[index], Length+1);
             delete[] oldBuffer;
         }
         return *this;
@@ -99,7 +99,7 @@ public:
     /// NOTE: Free responsiblity is transferred to the caller upon returning.
     const char* data_copy() const {
         u8* copy = new u8[Length+1];
-        memcpy(Buffer, copy, Length);
+        memcpy(copy, Buffer, Length);
         copy[Length] = '\0';
         return (const char*)copy;
     }
@@ -113,7 +113,7 @@ public:
         delete[] Buffer;
         Buffer = new u8[Length+1];
         Buffer[Length] = '\0';
-        memcpy(other.Buffer, Buffer, Length);
+        memcpy(Buffer, other.Buffer, Length);
         return *this;
     }
 
@@ -138,8 +138,8 @@ public:
         u64 oldLength = Length;
         Length += other.Length;
         u8* newBuffer = new u8[Length+1];
-        memcpy(&Buffer[0], &newBuffer[0], oldLength);
-        memcpy(&other.Buffer[0], &newBuffer[oldLength], other.Length);
+        memcpy(&newBuffer[0], &Buffer[0], oldLength);
+        memcpy(&newBuffer[oldLength], &other.Buffer[0], other.Length);
         u8* oldBuffer = Buffer;
         Buffer = newBuffer;
         delete[] oldBuffer;
@@ -157,8 +157,8 @@ public:
         u64 oldLength = Length;
         Length += stringLength - 1;
         u8* newBuffer = new u8[Length + 1];
-        memcpy(&Buffer[0], &newBuffer[0], oldLength);
-        memcpy((void*)cstr, &newBuffer[oldLength], stringLength - 1);
+        memcpy(&newBuffer[0], &Buffer[0], oldLength);
+        memcpy(&newBuffer[oldLength], cstr, stringLength - 1);
         newBuffer[Length] = '\0';
         u8* oldBuffer = Buffer;
         Buffer = newBuffer;
