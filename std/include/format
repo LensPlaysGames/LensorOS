@@ -304,6 +304,7 @@ private:
     enum struct __arg_type {
         __none,
         __character,
+        __bool,
         __u64,
         __i64,
         __vptr,
@@ -318,6 +319,7 @@ private:
         uint64_t __u64;
         int64_t __i64;
         _Char __character;
+        bool __bool;
         const void* __vptr;
         float __f32;
         double __f64;
@@ -331,7 +333,8 @@ public:
     template <typename _Ty>
     consteval basic_format_arg(__detail::__parse_only_tag, type_identity<_Ty>) noexcept
        : __type([]() consteval {
-          if constexpr (is_signed_v<_Ty>) return __arg_type::__i64;
+          if constexpr (is_same_v<_Ty, bool>) return __arg_type::__bool;
+          else if constexpr (is_signed_v<_Ty>) return __arg_type::__i64;
           else if constexpr (is_unsigned_v<_Ty>) return __arg_type::__u64;
           else if constexpr (is_same_v<_Ty, _Char>) return __arg_type::__character;
           else if constexpr (is_same_v<_Ty, float>) return __arg_type::__f32;
@@ -342,7 +345,8 @@ public:
           __builtin_unreachable();
        } ())
        , __value([]() consteval {
-          if constexpr (is_signed_v<_Ty>) return __value_type{.__i64 = {} };
+          if constexpr (is_same_v<_Ty, bool>) return __value_type{.__bool = {} };
+          else if constexpr (is_signed_v<_Ty>) return __value_type{.__i64 = {} };
           else if constexpr (is_unsigned_v<_Ty>) return __value_type{.__u64 = {} };
           else if constexpr (is_same_v<_Ty, _Char>) return __value_type{.__character = {} };
           else if constexpr (is_same_v<_Ty, float>) return __value_type{.__f32 = {} };
@@ -354,13 +358,14 @@ public:
       }()) {}
 
     template <typename _Int>
-    requires (std::is_signed_v<_Int> and not __char<_Int>)
+    requires (std::is_signed_v<_Int> and not __char<_Int> and not is_same_v<_Int, bool>)
     constexpr explicit basic_format_arg(_Int __i) : __type(__arg_type::__i64), __value{.__i64 = static_cast<int64_t>(__i)} {}
 
     template <typename _Int>
-    requires (std::is_unsigned_v<_Int> and not __char<_Int>)
+    requires (std::is_unsigned_v<_Int> and not __char<_Int> and not is_same_v<_Int, bool>)
     constexpr explicit basic_format_arg(_Int __i) : __type(__arg_type::__u64), __value{.__u64 = static_cast<uint64_t>(__i)} {}
 
+    constexpr explicit basic_format_arg(bool __b) : __type(__arg_type::__bool), __value{.__bool = __b} {}
     constexpr explicit basic_format_arg(_Char __c) : __type(__arg_type::__character), __value{.__character = __c} {}
     constexpr explicit basic_format_arg(void* __p) : __type(__arg_type::__vptr), __value{.__vptr = __p} {}
     constexpr explicit basic_format_arg(float __f) : __type(__arg_type::__f32), __value{.__f32 = __f} {}
@@ -392,7 +397,6 @@ struct __format_arg_store {
         }...
     } {}
 };
-//_PushIgnoreWarning("-Wunused-value")     _PopWarnings()
 
 template <typename _Context = format_context, typename ..._Args>
 constexpr __format_arg_store<_Context, _Args...> make_format_args(_Args&&... __args) {
@@ -481,6 +485,20 @@ struct formatter<_Char, _Char> {
 
     template <typename _Ctx>
     auto format(_Char __c, _Ctx& __ctx) { return __ctx.out().append(&__c, 1); }
+};
+
+/// Bool formatter.
+template <typename _Char>
+struct formatter<bool, _Char> {
+    constexpr auto parse(basic_format_parse_context<_Char>& __ctx) {
+        if (*__ctx.begin() != '}') { __detail::__invalid_format_string(); }
+        return __ctx.begin();
+    }
+
+    template <typename _Ctx>
+    auto format(bool __b, _Ctx& __ctx) {
+        return __ctx.out().append(__b ? "true" : "false");
+    }
 };
 
 /// Disallow formatting other char types.
@@ -615,6 +633,7 @@ constexpr decltype(auto) visit_format_arg(_Visitor&& __vis, basic_format_arg<_Co
     using __ty = typename __arg_ty::__arg_type;
     switch (__arg.__type) {
         case __ty::__none: return __vis(typename __arg_ty::__none{});
+        case __ty::__bool: return __vis(__arg.__value.__bool);
         case __ty::__character: return __vis(__arg.__value.__character);
         case __ty::__u64: return __vis(__arg.__value.__u64);
         case __ty::__i64: return __vis(__arg.__value.__i64);
