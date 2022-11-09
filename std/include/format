@@ -27,6 +27,7 @@
 #include <type_traits>
 #include <array>
 #include <memory>
+#include <ctype.h>
 
 #ifndef __kernel__
 #    include <stdio.h>
@@ -76,9 +77,23 @@ void __throw_format_error([[__maybe_unused__]] const char* __msg = "Invalid form
     __invalid_format_string(true, __msg);
 }
 
+/// Parse a number.
+template <typename _It>
+size_t __parse_number(_It& __beg) {
+    size_t __result = 0;
+    while (*__beg != '}' && isdigit(*__beg)) {
+        __result = __result * 10 + (*__beg - '0');
+        ++__beg;
+    }
+    return __result;
+}
+
 /// This does the actual formatting.
 template <typename _Output, typename _Char>
 constexpr void __format(basic_format_context<_Output, _Char>&&, basic_string_view<_Char>);
+
+template <typename _It, typename _Dest, typename _Char, typename... _Args>
+void __format_to(_Dest&& __dest, basic_string_view<_Char> __fmt, _Args&& ...__args);
 
 /// Inserter for a string.
 template <typename _Char>
@@ -261,11 +276,9 @@ public:
     };
 
     struct __none {};
-    struct __empty {};
 
 private:
     enum struct __arg_type {
-        __empty,
         __none,
         __character,
         __u64,
@@ -279,7 +292,6 @@ private:
 
     union {
         __none __none__;
-        __empty __empty__;
         uint64_t __u64;
         int64_t __i64;
         _Char __character;
@@ -292,6 +304,7 @@ private:
 
 
 public:
+
     template <typename _Int>
     requires (std::is_signed_v<_Int> and not __char<_Int>)
     constexpr explicit basic_format_arg(_Int __i) : __type(__arg_type::__i64), __value{.__i64 = static_cast<int64_t>(__i)} {}
@@ -301,12 +314,11 @@ public:
     constexpr explicit basic_format_arg(_Int __i) : __type(__arg_type::__u64), __value{.__u64 = static_cast<uint64_t>(__i)} {}
 
     constexpr explicit basic_format_arg(_Char __c) : __type(__arg_type::__character), __value{.__character = __c} {}
-    constexpr explicit basic_format_arg(__abstract_pointer auto __p) : __type(__arg_type::__vptr), __value{.__vptr = __p} {}
+    constexpr explicit basic_format_arg(void* __p) : __type(__arg_type::__vptr), __value{.__vptr = __p} {}
     constexpr explicit basic_format_arg(float __f) : __type(__arg_type::__f32), __value{.__f32 = __f} {}
     constexpr explicit basic_format_arg(double __f) : __type(__arg_type::__f64), __value{.__f64 = __f} {}
     constexpr explicit basic_format_arg(basic_string_view<_Char> __s) : __type(__arg_type::__str), __value{.__str = __s} {}
     constexpr explicit basic_format_arg(handle __h) : __type(__arg_type::__handle), __value{.__handle = __h} {}
-    constexpr explicit basic_format_arg(__empty) : __type(__arg_type::__empty) {}
 
     template <typename _Visitor, typename _Ctx>
     friend constexpr decltype(auto) visit_format_arg(_Visitor&& __vis, basic_format_arg<_Ctx> __arg);
@@ -321,9 +333,7 @@ struct __format_arg_store {
     constexpr __format_arg_store(_Args&&... __args) requires (sizeof...(_Args) > 0)
         : args{basic_format_arg<_Context>(std::forward<_Args>(__args))...} {}
     _PushIgnoreWarning("-Wunused-value")
-    constexpr __format_arg_store() : args{
-        (sizeof(_Args), basic_format_arg<_Context>(typename basic_format_arg<_Context>::__empty{}))...
-    } {}
+    constexpr __format_arg_store() : args{ basic_format_arg<_Context>(_Args{})... } {}
     _PopWarnings()
 };
 
@@ -413,7 +423,7 @@ struct formatter<const _Char*, _Char> : private formatter<basic_string_view<_Cha
 template <typename _Char>
 struct formatter<_Char, _Char> {
     constexpr auto parse(basic_format_parse_context<_Char>& __ctx) {
-        if (__ctx.begin() != __ctx.end()) { __detail::__invalid_format_string(); }
+        if (*__ctx.begin() != '}') { __detail::__invalid_format_string(); }
         return __ctx.begin();
     }
 
@@ -427,13 +437,16 @@ requires (not std::is_same_v<_C, _Char>)
 struct formatter<_C, _Char> { formatter() = delete; };
 
 /// Void*/nullptr formatter.
-template <__abstract_pointer _Type, typename _Char>
-struct formatter<_Type, _Char> {
-    constexpr auto parse(basic_format_parse_context<_Char>& __ctx) { return __ctx.begin(); }
+template <__abstract_pointer _Ty, typename _Char>
+struct formatter<_Ty, _Char> {
+    constexpr auto parse(basic_format_parse_context<_Char>& __ctx) {
+        if (*__ctx.begin() != '}') { __detail::__invalid_format_string(); }
+        return __ctx.begin();
+    }
 
     template <typename _Ctx>
-    auto format(_Type __ptr, _Ctx& __ctx) {
-        return __ctx.out().append("0x").append(__to_string<_Char>(reinterpret_cast<uintptr_t>(__ptr), 16));
+    auto format(_Ty __ptr, _Ctx& __ctx) {
+        return __detail::__format_to<typename _Ctx::iterator>(__ctx.out(), basic_string_view<_Char>{"{:#16x}"}, uintptr_t(__ptr));
     }
 };
 
@@ -455,6 +468,9 @@ struct formatter<_Type, _Char> {
     /// Uppercase hex/binary.
     bool __upper = false;
 
+    /// Width. 0 means no padding.
+    size_t __width = 0;
+
     /// Parse the format string.
     constexpr auto parse(basic_format_parse_context<_Char>& __ctx) {
         auto __beg = __ctx.begin();
@@ -462,8 +478,11 @@ struct formatter<_Type, _Char> {
         /// '#' is allowed before {xXbBo}.
         if (*__beg == '#') {
             __alt = true;
-            ++__beg;
+            __beg++;
         }
+
+        /// Parse a width.
+        if (isdigit(*__beg)) { __width = __detail::__parse_number(__beg); }
 
         /// Parse the format.
         switch (*__beg++) {
@@ -508,7 +527,12 @@ struct formatter<_Type, _Char> {
         }
 
         /// Append the number.
-        __out.append(__to_string<_Char>(__val, static_cast<uint8_t>(__fmt), __upper));
+        auto __num = __to_string<_Char>(__val, static_cast<uint8_t>(__fmt), __upper);
+        if (auto __wd = __width; __wd > __num.size()) {
+            __wd -= __num.size();
+            while (__wd --> 0) __out.append("0", 1);
+        }
+        __out.append(__num);
         return __out;
     }
 };
@@ -516,7 +540,10 @@ struct formatter<_Type, _Char> {
 /// Floating-point formatter.
 template <floating_point _Type, typename _Char>
 struct formatter<_Type, _Char> {
-    constexpr auto parse(basic_format_parse_context<_Char>& __ctx) { return __ctx.begin(); }
+    constexpr auto parse(basic_format_parse_context<_Char>& __ctx) {
+        if (*__ctx.begin() != '}') { __detail::__invalid_format_string(); }
+        return __ctx.begin();
+    }
 
     template <typename _Ctx>
     auto format(_Type __val, _Ctx& __ctx) {
@@ -536,10 +563,6 @@ constexpr decltype(auto) visit_format_arg(_Visitor&& __vis, basic_format_arg<_Co
     using __ty = typename __arg_ty::__arg_type;
     switch (__arg.__type) {
         case __ty::__none: return __vis(typename __arg_ty::__none{});
-        case __ty::__empty:
-            if (is_constant_evaluated()) return;
-            else __detail::__throw_format_error("Can not format empty argument at runtime.");
-            return;
         case __ty::__character: return __vis(__arg.__value.__character);
         case __ty::__u64: return __vis(__arg.__value.__u64);
         case __ty::__i64: return __vis(__arg.__value.__i64);
@@ -591,8 +614,6 @@ template <typename _Output, typename _Char>
 constexpr void __format(basic_format_context<_Output, _Char>&& __ctx, basic_string_view<_Char> __fmt) {
     /// We start at the beginning of the format string.
     size_t __pos = 0;
-
-    if (__ctx.__get_args().__sz() == 0) __builtin_unreachable();
 
     /// Format the arguments.
     for (size_t __i = 0; __i < __ctx.__get_args().__sz(); __i++) {

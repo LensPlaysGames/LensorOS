@@ -23,6 +23,7 @@
 #ifdef __cplusplus
 #    define __BEGIN_DECLS__ extern "C" {
 #    define __END_DECLS__ }
+#    define __constexpr constexpr
 
 /// Raise a compile error.
 #    define __if if constexpr
@@ -31,6 +32,7 @@
 #else
 #    define __BEGIN_DECLS__
 #    define __END_DECLS__
+#    define __constexpr
 #endif
 
 /// Stringification and concatenation.
