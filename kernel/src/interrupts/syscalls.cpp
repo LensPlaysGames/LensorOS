@@ -284,16 +284,16 @@ void sys$13_pipe(ProcessFileDescriptor fds[2]) {
     dbgmsg(sys$_dbgfmt, 13, "pipe");
 #endif /* #ifdef DEBUG_SYSCALLS */
     Process* process = Scheduler::CurrentProcess->value();
-    // TODO: Pick suitable file name for file metadata.
+
 
     VFS& vfs = SYSTEM->virtual_filesystem();
 
-    // Get valid pipe index from pipe driver instead of zero.
+    // Get valid pipe index from pipe driver.
     ssz byteOffset = vfs.PipesDriver->lay_pipe();
-
-    FileMetadata* meta = new FileMetadata
+    // TODO: Pick suitable file name for file metadata.
+    FileMetadata meta = FileMetadata
         ("", false, vfs.PipesDriver.get(), nullptr, PIPE_BUFSZ, byteOffset);
-    auto file = std::make_shared<OpenFileDescription>(vfs.PipesDriver.get(), *meta);
+    auto file = std::make_shared<OpenFileDescription>(vfs.PipesDriver.get(), meta);
     FileDescriptors readFDs = vfs.add_file(file, process);
     FileDescriptors writeFDs = vfs.add_file(file, process);
     // Write fds.
