@@ -858,4 +858,14 @@ void print(format_string<_Args...> __fmt, _Args&&... __args) {
 
 }
 
+/// Convenience functions because we need to print u8*’s a lot in the kernel.
+#ifdef __kernel__
+inline const char* __s(const u8* __s) { return reinterpret_cast<const char*>(__s); }
+inline const char* __s(const char* __s) { return __s; }
+inline std::string_view __s(const u8* __s, size_t __n) { return {reinterpret_cast<const char*>(__s), __n}; }
+
+template <size_t __sz>
+std::string_view __s(const u8 (&__str)[__sz]) { return {reinterpret_cast<const char*>(__str), __sz}; }
+#endif
+
 #endif // _LENSOROS_FORMAT

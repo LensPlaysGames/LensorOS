@@ -30,38 +30,44 @@
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_PCI
 
+#ifdef DEBUG_PCI
+#   define DBGMSG(...) std::print(__VA_ARGS__)
+#else
+#   define DBGMSG(...)
+#endif
+
 namespace PCI {
     void print_device_header(PCIDeviceHeader* pci) {
         if (pci == nullptr)
             return;
 
-        dbgmsg("[PCI]: Device Header at %x\r\n"
-               "  Vendor ID:        %hu\r\n"
-               "  Device ID:        %hu\r\n"
-               "  Command:          %hu\r\n"
-               "  Status:           %hu\r\n"
-               "  Revision ID:      %hhu\r\n"
-               "  ProgIF:           %hhu\r\n"
-               "  Subclass:         %hhu\r\n"
-               "  Class:            %hhu\r\n"
-               "  Cache Line Size:  %hhu\r\n"
-               "  Latency Timer:    %hhu\r\n"
-               "  Header Type:      %hhu\r\n"
-               "  BIST:             %hhu\r\n"
-               , pci
-               , pci->VendorID
-               , pci->DeviceID
-               , pci->Command
-               , pci->Status
-               , pci->RevisionID
-               , pci->ProgIF
-               , pci->Subclass
-               , pci->Class
-               , pci->CacheLineSize
-               , pci->LatencyTimer
-               , pci->HeaderType
-               , pci->BIST
-               );
+        std::print("[PCI]: Device Header at {}\r\n"
+                   "  Vendor ID:        {}\r\n"
+                   "  Device ID:        {}\r\n"
+                   "  Command:          {}\r\n"
+                   "  Status:           {}\r\n"
+                   "  Revision ID:      {}\r\n"
+                   "  ProgIF:           {}\r\n"
+                   "  Subclass:         {}\r\n"
+                   "  Class:            {}\r\n"
+                   "  Cache Line Size:  {}\r\n"
+                   "  Latency Timer:    {}\r\n"
+                   "  Header Type:      {}\r\n"
+                   "  BIST:             {}\r\n"
+                   , (void*) pci
+                   , pci->VendorID
+                   , pci->DeviceID
+                   , pci->Command
+                   , pci->Status
+                   , pci->RevisionID
+                   , pci->ProgIF
+                   , pci->Subclass
+                   , pci->Class
+                   , pci->CacheLineSize
+                   , pci->LatencyTimer
+                   , pci->HeaderType
+                   , pci->BIST
+                   );
     }
 
     void enumerate_function(u64 deviceAddress, u64 functionNumber) {
@@ -71,25 +77,23 @@ namespace PCI {
                     , (u64)Memory::PageTableFlag::Present
                     | (u64)Memory::PageTableFlag::ReadWrite
                     );
-        PCIDeviceHeader* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(functionAddress);
+        auto* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(functionAddress);
         if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
             Memory::unmap((void*)functionAddress);
             return;
         }
 
-#ifdef DEBUG_PCI
         // TODO: Cache human readable information with device in device tree.
-        dbgmsg("\r\n"
-               "      Function at %x: %s / %s / %s / %s / %s\r\n"
+        DBGMSG("\r\n"
+               "      Function at {}: {} / {} / {} / {} / {}\r\n"
                "\r\n"
-               , function_address
+               , (void*) functionAddress
                , get_vendor_name(pciDevHdr->VendorID)
                , get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID)
                , DeviceClasses[pciDevHdr->Class]
                , get_subclass_name(pciDevHdr->Class, pciDevHdr->Subclass)
                , get_prog_if_name(pciDevHdr->Class, pciDevHdr->Subclass, pciDevHdr->ProgIF)
                );
-#endif /* DEBUG_PCI */
 
         // Class 0x01 = Mass Storage Controller
         if (pciDevHdr->Class == 0x01) {
@@ -115,18 +119,16 @@ namespace PCI {
                     , (u64)Memory::PageTableFlag::Present
                     | (u64)Memory::PageTableFlag::ReadWrite
                     );
-        PCIDeviceHeader* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(deviceAddress);
+        auto* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(deviceAddress);
         if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
             Memory::unmap((void*)deviceAddress);
             return;
         }
-#ifdef DEBUG_PCI
-        dbgmsg("    Device %ull:\r\n"
-               "      Address: %x\r\n"
+        DBGMSG("    Device {}:\r\n"
+               "      Address: {}\r\n"
                , deviceNumber
-               , deviceAddress;
+               , (void*) deviceAddress
                );
-#endif /* DEBUG_PCI */
         for (u64 function = 0; function < 8; ++function)
             enumerate_function(deviceAddress, function);
     }
@@ -135,53 +137,45 @@ namespace PCI {
         u64 offset = busNumber << 20;
         u64 busAddress = baseAddress + offset;
         // Memory::map((void*)bus_address, (void*)bus_address);
-#ifdef DEBUG_PCI
-        dbgmsg("[PCI]: Bus %ull\r\n"
-               "  Address: %x\r\n"
+        DBGMSG("[PCI]: Bus {}\r\n"
+               "  Address: {}\r\n"
                , busNumber
-               , busAddress
+               , (void*) busAddress
                );
-#endif /* DEBUG_PCI */
         for (u64 device = 0; device < 32; ++device)
             enumerate_device(busAddress, device);
     }
     
     void enumerate_pci(ACPI::MCFGHeader* mcfg) {
-        dbgmsg_s("[PCI]: Discovering devices...\r\n");
+        std::print("[PCI]: Discovering devices...\r\n");
         int entries = ((mcfg->Length) - sizeof(ACPI::MCFGHeader)) / sizeof(ACPI::DeviceConfig);
-#ifdef DEBUG_PCI
-        dbgmsg("  Found %i MCFG entries\r\n", entries);
+        DBGMSG("  Found {} MCFG entries\r\n", entries);
         u64 systemDeviceLengthBefore = SYSTEM->devices().length();
-#endif /* DEBUG_PCI */
         for (int t = 0; t < entries; ++t) {
             u64 devConAddr = (reinterpret_cast<u64>(mcfg)
                               + sizeof(ACPI::MCFGHeader)
                               + (sizeof(ACPI::DeviceConfig) * t));
             auto* devCon = reinterpret_cast<ACPI::DeviceConfig*>(devConAddr);
 
-#ifdef DEBUG_PCI
-            dbgmsg("    Entry %i\r\n"
-                   "      Base Address: %x\r\n"
-                   "      Start Bus:    %x\r\n"
-                   "      End Bus:      %x\r\n"
+            DBGMSG("    Entry {}\r\n"
+                   "      Base Address: {}\r\n"
+                   "      Start Bus:    {}\r\n"
+                   "      End Bus:      {}\r\n"
                    , t
-                   , devCon->BaseAddress
+                   , (void*) devCon->BaseAddress
                    , devCon->StartBus
                    , devCon->EndBus
                    );
-#endif /* #ifdef DEBUG_PCI */
 
             for (u64 bus = devCon->StartBus; bus < devCon->EndBus; ++bus) {
                 enumerate_bus(devCon->BaseAddress, bus);
             }
         }
 
-#ifdef DEBUG_PCI
-        dbgmsg("[PCI]: Found %ull device(s)\r\n"
+        DBGMSG("[PCI]: Found {} device(s)\r\n"
                , SYSTEM->devices().length() - systemDeviceLengthBefore
                );
-#endif /* #ifdef DEBUG_PCI */
 
-        dbgmsg_s("  \033[32mDone\033[0m\r\n\r\n");
+        std::print("  \033[32mDone\033[0m\r\n\r\n");
     }
 }

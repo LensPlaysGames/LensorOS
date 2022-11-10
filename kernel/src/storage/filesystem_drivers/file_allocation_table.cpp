@@ -17,6 +17,8 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <format>
+
 #include <storage/filesystem_drivers/file_allocation_table.h>
 
 #include <debug.h>
@@ -30,30 +32,36 @@
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_FAT
 
+#ifdef DEBUG_FAT
+#   define DBGMSG(...) std::print(__VA_ARGS__)
+#else
+#   define DBGMSG(...)
+#endif
+
 void FileAllocationTableDriver::print_fat(BootRecord* br) {
     if (br == nullptr)
         return;
 
-    dbgmsg("File Allocation Table Boot Record:\r\n"
-           "  Total Clusters:      %ull\r\n"
-           "  Sectors / Cluster:   %hhu\r\n"
-           "  Total Sectors:       %ull\r\n"
-           "  Bytes / Sector:      %hu\r\n"
-           "  Sectors / FAT:       %ull\r\n"
-           "  Sector Offsets:\r\n"
-           "    FATs:      %ull\r\n"
-           "    Data:      %ull\r\n"
-           "    Root Dir.: %ull\r\n"
-           "\r\n"
-           , br->total_clusters()
-           , br->BPB.NumSectorsPerCluster
-           , br->BPB.total_sectors()
-           , br->BPB.NumBytesPerSector
-           , br->fat_sectors()
-           , br->BPB.first_fat_sector()
-           , br->first_data_sector()
-           , br->first_root_directory_sector()
-           );
+    std::print("File Allocation Table Boot Record:\r\n"
+               "  Total Clusters:      {}\r\n"
+               "  Sectors / Cluster:   {}\r\n"
+               "  Total Sectors:       {}\r\n"
+               "  Bytes / Sector:      {}\r\n"
+               "  Sectors / FAT:       {}\r\n"
+               "  Sector Offsets:\r\n"
+               "    FATs:      {}\r\n"
+               "    Data:      {}\r\n"
+               "    Root Dir.: {}\r\n"
+               "\r\n"
+               , br->total_clusters()
+               , br->BPB.NumSectorsPerCluster
+               , br->BPB.total_sectors()
+               , br->BPB.NumBytesPerSector
+               , br->fat_sectors()
+               , br->BPB.first_fat_sector()
+               , br->first_data_sector()
+               , br->first_root_directory_sector()
+               );
 }
 
 FATType fat_type(BootRecord* br) {
@@ -138,13 +146,11 @@ FileMetadata FileAllocationTableDriver::file(StorageDeviceDriver* driver, const 
 
         currentCharacter++;
     }
-#ifdef DEBUG_FAT
-    dbgmsg("[FAT]: Looking for file at %sl\r\n"
-           "  Translated path: %sl\r\n"
-           , &givenPath
-           , &path
+    DBGMSG("[FAT]: Looking for file at {}\r\n"
+           "  Translated path: {}\r\n"
+           , std::string_view{givenPath.data(), givenPath.length()}
+           , std::string_view{path.data(), path.length()}
            );
-#endif /* #ifdef DEBUG_FAT */
     // TODO: Take in cached Boot Record from filesystem.
     SmartPtr<u8[]> sector(new u8[sizeof(BootRecord)], sizeof(BootRecord));
     if (sector.get() == nullptr) {
@@ -169,14 +175,14 @@ FileMetadata FileAllocationTableDriver::file(StorageDeviceDriver* driver, const 
         driver->read(clusterSector * br->BPB.NumBytesPerSector
                      , clusterSize
                      , clusterContents.get());
-        ClusterEntry* entry = reinterpret_cast<ClusterEntry*>(clusterContents.get());
+        auto* entry = reinterpret_cast<ClusterEntry*>(clusterContents.get());
         bool lfnBufferFull { false };
         while (entry->FileName[0] != 0) {
             if (entry->FileName[0] == 0xe5)
                 continue;
 
             if (entry->long_file_name()) {
-                LFNClusterEntry* lfn = reinterpret_cast<LFNClusterEntry*>(entry);
+                auto* lfn = reinterpret_cast<LFNClusterEntry*>(entry);
                 u8 offset = 0;
                 memcpy(&lfnBuffer[offset], &lfn->Characters1[0], sizeof(u16) * 5);
                 offset += 5;
@@ -206,13 +212,11 @@ FileMetadata FileAllocationTableDriver::file(StorageDeviceDriver* driver, const 
             else if (entry->volume_id())
                 fileType += "volume identifier ";
             else fileType += "file ";
-#ifdef DEBUG_FAT
-            dbgmsg("    Found %slnamed %sl\r\n", &fileType, &fileName);
-#endif /* #ifdef DEBUG_FAT */
+            DBGMSG("    Found {}named {}\r\n",
+                   std::string_view { fileType.data(), fileType.length() },
+                   std::string_view { fileName.data(), fileName.length() });
             if (fileName == path) {
-#ifdef DEBUG_FAT
-                dbgmsg_s("  Found file!\r\n");
-#endif /* #ifdef DEBUG_FAT */
+                DBGMSG("  Found file!\r\n");
                 // TODO: directory vs. file metadata
                 u64 byteOffset = br->cluster_to_sector(entry->get_cluster_number())
                     * br->BPB.NumBytesPerSector;

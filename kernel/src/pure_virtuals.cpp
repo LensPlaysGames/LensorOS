@@ -17,6 +17,11 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <format>
+
 #include <pure_virtuals.h>
 
-extern "C" void __cxa_pure_virtual() { while(1); }
+extern "C" void __cxa_pure_virtual() {
+    panic("Pure virtual function called!");
+    for (;;) asm volatile ("hlt");
+}

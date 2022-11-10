@@ -17,6 +17,8 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <format>
+
 #include <basic_renderer.h>
 
 #include <cstr.h>
@@ -47,10 +49,10 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
                     | (u64)Memory::PageTableFlag::ReadWrite
                     );
     }
-    dbgmsg("  Active GOP framebuffer mapped to %x thru %x\r\n"
-           , fbBase
-           , fbBase + fbSize
-           );
+    std::print("  Active GOP framebuffer mapped to {:#016x} thru {:#016x}\r\n"
+               , fbBase
+               , fbBase + fbSize
+               );
     // Create a new framebuffer. This memory is what will be drawn to.
     // When the screen should be updated, this new framebuffer is copied
     // into the active one. This helps performance as the active framebuffer
@@ -66,10 +68,10 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
         Target = Render;
     }
     else {
-        dbgmsg("  Deferred GOP framebuffer allocated at %x thru %x\r\n"
-               , target.BaseAddress
-               , (u64)target.BaseAddress + fbSize
-               );
+        std::print("  Deferred GOP framebuffer allocated at {} thru {:#016x}\r\n"
+                   , target.BaseAddress
+                   , (u64)target.BaseAddress + fbSize
+                   );
         // If memory allocation succeeds, map memory somewhere
         // out of the way in the virtual address range.
         // FIXME: Don't hard code this address.
@@ -84,7 +86,7 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
         }
         target.BaseAddress = (void*)virtualTargetBaseAddress;
         Target = &target;
-        dbgmsg("  Deferred GOP framebuffer mapped to %x thru %x\r\n"
+        std::print("  Deferred GOP framebuffer mapped to {:#016x} thru {:#016x}\r\n"
                , virtualTargetBaseAddress
                , virtualTargetBaseAddress + fbSize
                );

@@ -17,6 +17,8 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <format>
+
 #include <ahci.h>
 
 #include <cstr.h>
@@ -25,6 +27,12 @@
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_AHCI
+
+#ifdef DEBUG_AHCI
+#   define DBGMSG(...) std::print(__VA_ARGS__)
+#else
+#   define DBGMSG(...)
+#endif
 
 namespace AHCI {
     const char* port_type_strings[5] = {
@@ -91,9 +99,7 @@ namespace AHCI {
         }
         start_commands();
 
-#ifdef DEBUG_AHCI
-        dbgmsg("[AHCI]: Port %ull initialized.\r\n", PortNumber);
-#endif /* DEBUG_AHCI */
+        DBGMSG("[AHCI]: Port {} initialized.\r\n", PortNumber);
     }
 
     bool PortController::read_low_level(u64 sector, u64 sectors) {
@@ -119,7 +125,7 @@ namespace AHCI {
         commandTable->PRDTEntry[0].set_data_base((u64)Buffer);
         commandTable->PRDTEntry[0].set_byte_count((sectors << 9) - 1);
         commandTable->PRDTEntry[0].set_interrupt_on_completion(true);
-        FIS_REG_H2D* commandFIS = reinterpret_cast<FIS_REG_H2D*>(&commandTable->CommandFIS);
+        auto* commandFIS = reinterpret_cast<FIS_REG_H2D*>(&commandTable->CommandFIS);
         commandFIS->Type = FIS_TYPE::REG_H2D;
         // Take control of command structure.
         commandFIS->CommandControl = 1;
@@ -145,29 +151,26 @@ namespace AHCI {
     /// Convert bytes to sectors, then read into and copy from intermediate
     /// `Buffer` to given `buffer` until all data is read and copied.
     ssz PortController::read(usz byteOffset, usz byteCount, u8* buffer) {
-#ifdef DEBUG_AHCI
-        dbgmsg("[AHCI]: Port %ull -- read()  byteOffset=%ull, byteCount=%ull, buffer=%x\r\n"
+        DBGMSG("[AHCI]: Port {} -- read()  byteOffset={}, byteCount={}, buffer={}\r\n"
                , PortNumber
                , byteOffset
                , byteCount
-               , buffer
+               , (void*) buffer
                );
-#endif /* DEBUG_AHCI */
 
         if (Type != PortType::SATA) {
-            dbgmsg("  \033[31mERRROR\033[0m: `read()`  port type not implemented: %s\r\n"
-                   , port_type_string(Type)
-                   );
+            std::print("  \033[31mERRROR\033[0m: `read()`  port type not implemented: {}\r\n"
+                       , port_type_string(Type));
             return -1;
         }
         // TODO: Actual error handling!
         if (buffer == nullptr) {
-            dbgmsg_s("  \033[31mERROR\033[0m: `read()`  buffer can not be nullptr\r\n");
+            std::print("  \033[31mERROR\033[0m: `read()`  buffer can not be nullptr\r\n");
             return -1;
         }
         // TODO: Don't reject reads over port buffer max size, just do multiple reads and copy as you go.
         if (byteCount > MAX_READ_BYTES) {
-            dbgmsg_s("  \033[31mERROR\033[0m: `read()`  byteCount can not be larger than maximum readable bytes.\r\n");
+            std::print("  \033[31mERROR\033[0m: `read()`  byteCount can not be larger than maximum readable bytes.\r\n");
             return -1;
         }
 
@@ -178,40 +181,36 @@ namespace AHCI {
         if (byteOffsetWithinSector + byteCount <= BYTES_PER_SECTOR)
             sectors = 1;
 
-#ifdef DEBUG_AHCI
-        dbgmsg("  Calculated sector data: sector=%ull, sectors=%ull, byteOffsetWithinSector=%ull\r\n"
+        DBGMSG("  Calculated sector data: sector={}, sectors={}, byteOffsetWithinSector={}\r\n"
                , sector
                , sectors
                , byteOffsetWithinSector
                );
-#endif /* DEBUG_AHCI */
 
         if (sectors * BYTES_PER_SECTOR > PORT_BUFFER_BYTES) {
-            dbgmsg_s("  \033[31mERROR\033[0m: `read()`  can not read more bytes than internal buffer size.\r\n");
+            DBGMSG("  \033[31mERROR\033[0m: `read()`  can not read more bytes than internal buffer size.\r\n");
             return -1;
         }
 
         if (read_low_level(sector, sectors)) {
-#ifdef DEBUG_AHCI
-            dbgmsg_s("  \033[32mSUCCESS\033[0m: `read_low_level()` SUCCEEDED\r\n");
-#endif /* DEBUG_AHCI */
+            DBGMSG("  \033[32mSUCCESS\033[0m: `read_low_level()` SUCCEEDED\r\n");
             void* bufferAddress = (void*)((u64)&Buffer[0] + byteOffsetWithinSector);
             memcpy(buffer, bufferAddress, byteCount);
-        }
-        else dbgmsg_s("  \033[31mERROR\033[0m: `read_low_level()` FAILED\r\n");
+        } else DBGMSG("  \033[31mERROR\033[0m: `read_low_level()` FAILED\r\n");
 
         return byteCount;
     }
 
     ssz PortController::write(usz byteOffset, usz byteCount, u8* buffer) {
-        dbgmsg("[AHCI]: TODO: Implement write()  byteOffset=%ull, byteCount=%ull, buffer=%x\r\n"
-               , byteOffset
-               , byteCount
-               , buffer
-               );
+        std::print("[AHCI]: TODO: Implement write()  byteOffset={}, byteCount={}, buffer={}\r\n"
+                   , byteOffset
+                   , byteCount
+                   , (void*) buffer
+                   );
         return -1;
     }
 
+    _PushIgnoreWarning("-Wvolatile")
     void PortController::start_commands() {
         while (Port->CommandAndStatus & HBA_PxCMD_CR);
         Port->CommandAndStatus |= HBA_PxCMD_FRE;
@@ -224,4 +223,5 @@ namespace AHCI {
         while (Port->CommandAndStatus & HBA_PxCMD_FR
                && Port->CommandAndStatus & HBA_PxCMD_CR);
     }
+    _PopWarnings()
 }

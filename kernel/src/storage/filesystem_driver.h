@@ -29,6 +29,8 @@ class FileMetadata;
 /// and byte offset of a given file path to the VFS.
 class FilesystemDriver {
 public:
+    virtual ~FilesystemDriver() = default;
+
     /// If the storage device contains a valid filesystem, `test()` will
     /// return `true`; if a valid filesystem isn't found, `false` is returned.
     virtual bool test(StorageDeviceDriver* driver) = 0;

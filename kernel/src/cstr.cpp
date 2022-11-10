@@ -44,6 +44,8 @@ bool strcmp(const char* a, const char* b, u64 length) {
     return true;
 }
 
+/// TODO: Yeet all of these and use std::to_string instead.
+
 const char* to_string(bool b) {
     return b ? trueString : falseString;
 }

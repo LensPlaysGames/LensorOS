@@ -17,6 +17,8 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <format>
+
 #include <hpet.h>
 
 #include <cstr.h>
@@ -42,9 +44,7 @@ u32 HPET::readl(u16 offset) {
 }
 
 void hpet_init_failed(const char* msg) {
-    UART::out("[HPET]: \033[31mFailed to initialize:\033[0m ");
-    UART::out(msg);
-    UART::out("\r\n");
+    std::print("[HPET]: \033[31mFailed to initialize:\033[0m {}\r\n", msg);
 }
 
 bool HPET::initialize() {
@@ -113,9 +113,7 @@ bool HPET::initialize() {
     if (NumberOfComparators < HPET_MIN_COMPARATORS
         || NumberOfComparators > HPET_MAX_COMPARATORS)
     {
-        UART::out("  Number of Comparators: ");
-        UART::out(to_string(NumberOfComparators));
-        UART::out("\r\n");
+        std::print("  Number of Comparators: {}\r\n", NumberOfComparators);
         hpet_init_failed("Number of comparators is invalid.");
         return false;
     }
@@ -215,47 +213,33 @@ void HPET::print_state() {
     if (Initialized == false)
         return;
 
-    UART::out("[HPET]: \033[32mInitialized\033[0m\r\n");
-    UART::out("  Revision ID: 0x");
-    UART::out(to_hexstring(Header->RevisionID));
-    UART::out("\r\n");
-    UART::out("  ID: 0x");
-    UART::out(to_hexstring(Header->ID));
-    UART::out("\r\n");
-    UART::out("  PCI Vendor ID: 0x");
-    UART::out(to_hexstring(Header->PCIvendorID));
-    UART::out("\r\n");
-    UART::out("  Main Counter Enabled: ");
-    UART::out(to_string(readl(HPET_REG_GENERAL_CONFIGURATION) & 1));
-    UART::out("\r\n");
-    UART::out("  Supports 64-bit Main Counter: ");
-    UART::out(to_string(LargeCounterSupport));
-    UART::out("\r\n");
-    UART::out("  Supports Legacy Interrupt Mapping: ");
-    UART::out(to_string(LegacyInterruptSupport));
-    UART::out("\r\n");
-    UART::out("  Base Address: 0x");
-    UART::out(to_hexstring(Header->Address.Address));
-    UART::out("\r\n");
-    UART::out("  Address Space ID: ");
-    UART::out(to_string(Header->Address.AddressSpaceID));
-    UART::out("\r\n");
-    UART::out("  Sequence Number: ");
-    UART::out(to_string(Header->Number));
-    UART::out("\r\n");
-    UART::out("  Minimum Tick: ");
-    UART::out(to_string(Header->MinimumTick));
-    UART::out("\r\n");
-    UART::out("  Period: ");
-    UART::out(to_string(Period));
-    UART::out("\r\n");
-    UART::out("  Frequency: ");
-    UART::out(to_string(Frequency));
-    UART::out("\r\n");
-    UART::out("  Number of Comparators: ");
-    UART::out(to_string(NumberOfComparators));
-    UART::out("\r\n");
-    UART::out("  Page Protection: ");
-    UART::out(to_string(Header->PageProtection));
-    UART::out("\r\n");
+    std::print("[HPET]: \033[32mInitialized\033[0m\r\n"
+              "  Revision ID: {:08b}\r\n"
+              "  ID: {:#x}\r\n"
+              "  PCI Vendor ID: {:#x}\r\n"
+              "  Main Counter Enabled: {}\r\n"
+              "  Supports 64-bit Main Counter: {}\r\n"
+              "  Supports Legacy Interrupt Mapping: {}\r\n"
+              "  Base Address: {:#016x}\r\n"
+              "  Address Space ID: {:#x}\r\n"
+              "  Sequence Number: {}\r\n"
+              "  Minimum Tick: {}\r\n"
+              "  Period: {}\r\n"
+              "  Frequency: {}\r\n"
+              "  Number of Comparators: {}\r\n"
+              "  Page Protection: {:08b}\r\n"
+              , Header->RevisionID
+              , Header->ID
+              , Header->PCIvendorID
+              , bool(readl(HPET_REG_GENERAL_CONFIGURATION) & 1)
+              , LargeCounterSupport
+              , LegacyInterruptSupport
+              , Header->Address.Address
+              , Header->Address.AddressSpaceID
+              , Header->Number
+              , Header->MinimumTick
+              , Period
+              , Frequency
+              , NumberOfComparators
+              , Header->PageProtection);
 }

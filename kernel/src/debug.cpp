@@ -18,16 +18,11 @@
  */
 
 #include <format>
-#include <string>
 
-#include <basic_renderer.h>
-#include <cstr.h>
 #include <debug.h>
 #include <integers.h>
-#include <panic.h>
 #include <string.h>
 #include <uart.h>
-#include <va_list.h>
 
 void dbgmsg_buf(const u8* buffer, u64 byteCount) {
     UART::out(buffer, byteCount);

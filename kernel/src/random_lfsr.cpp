@@ -1,21 +1,22 @@
+#include <format>
+
 #include <random_lfsr.h>
 
 #include <cstr.h>
-#include <uart.h>
 
 LFSR gRandomLFSR;
 
 u128 DefaultInitialLFSRState = {(u64)1 << 63, (u64)1};
 
 void LFSR::print_shift_register() {
-    UART::out("[LFSR]: Shift Register Contents: 0b");
+    std::print("[LFSR]: Shift Register Contents: 0b");
     for (u8 i = 128 / 8 - 1; i < 128 / 8; --i) {
         for (u8 j = 8 - 1; j < 8; --j) {
             u8 bitIndex = (i * 8 + j);
-            UART::out(to_string(get_bit_value(bitIndex)));
+            std::print("{}", get_bit_value(bitIndex));
         }
     }
-    UART::out("\r\n");
+    std::print("\r\n");
 }
 
 void LFSR::next() {

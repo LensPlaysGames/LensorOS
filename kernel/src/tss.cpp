@@ -17,6 +17,8 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <format>
+
 #include <tss.h>
 
 #include <debug.h>
@@ -39,12 +41,12 @@ void TSS::initialize() {
     u64 base = V2P((u64)&tssEntry);
     //u64 base = (u64)&tssEntry;
     gGDT.TSS.set_base(base);
-    dbgmsg("[TSS]: Initialized\r\n"
-           "  Base:  %x\r\n"
-           "  Limit: %x\r\n"
-           , gGDT.TSS.base()
-           , gGDT.TSS.limit()
-           );
+    std::print("[TSS]: Initialized\r\n"
+               "  Base:  {:#016x}\r\n"
+               "  Limit: {:#08x}\r\n"
+               , gGDT.TSS.base()
+               , gGDT.TSS.limit()
+               );
     // Store current stack pointer in TSS entry.
     u64 stackPointer { 0 };
     asm("movq %%rsp, %0\r\n\t"

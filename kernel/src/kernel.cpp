@@ -17,6 +17,8 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <format>
+
 #include <kernel.h>
 
 #include <basic_renderer.h>
@@ -86,15 +88,14 @@ void print_now(Vector2<u64>& position) {
 extern "C" void kmain(BootInfo* bInfo) {
     // The heavy lifting is done within the kstage1 function.
     kstage1(bInfo);
-    dbgmsg_s("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
+    std::print("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
     // Clear + swap screen (ensure known state: blank).
     gRend.clear(0x00000000);
     gRend.swap();
     // GPLv3 LICENSE REQUIREMENT (interactive terminal must print copyright notice).
     const char* GPLv3 = "LensorOS  Copyright (C) 2022, Contributors To LensorOS.";
     // TO SERIAL
-    UART::out(GPLv3);
-    UART::out("\r\n\r\n");
+    std::print("{}\r\n\r\n", GPLv3);
     // TO SCREEN
     Vector2<u64> drawPosition = { 0, 0 };
     gRend.BackgroundColor = 0xffffffff;
