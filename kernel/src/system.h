@@ -153,56 +153,34 @@ public:
     void print() {
         CPU.print_debug();
         if (Devices.length() > 0) {
-            UART::out("System Devices:\n");
+            std::print("System Devices:\n");
             Devices.for_each([](auto* it) {
                 SystemDevice& dev = it->value();
-                UART::out("  ");
-                UART::out(dev.major());
-                UART::out(".");
-                UART::out(dev.minor());
-                UART::out(":\n"
-                          "    Flags: ");
-                UART::out(dev.flags());
-                void* d1 = dev.data1();
-                void* d2 = dev.data2();
-                void* d3 = dev.data3();
-                void* d4 = dev.data4();
-                if (d1) {
-                    UART::out("\n"
-                              "    Data1: 0x");
-                    UART::out(to_hexstring(d1));
-                }
-                if (d2) {
-                    UART::out("\n"
-                              "    Data2: 0x");
-                    UART::out(to_hexstring(d2));
-                }
-                if (d3) {
-                    UART::out("\n"
-                              "    Data3: 0x");
-                    UART::out(to_hexstring(d3));
-                }
-                if (d4) {
-                    UART::out("\n"
-                              "    Data4: 0x");
-                    UART::out(to_hexstring(d4));
-                }
-                UART::out("\n");
+                std::print("  {}.{}:\n"
+                           "    Flags: {}"
+                           , dev.major()
+                           , dev.minor()
+                           , dev.flags());
+
+                if (void* d1 = dev.data1()) std::print("\n    Data1: {}", d1);
+                if (void* d2 = dev.data2()) std::print("\n    Data2: {}", d2);
+                if (void* d3 = dev.data3()) std::print("\n    Data3: {}", d3);
+                if (void* d4 = dev.data4()) std::print("\n    Data4: {}", d4);
+
+                std::print("\n");
             });
-            UART::out("\n");
+            std::print("\n");
         }
         if (Filesystems.length() > 0) {
-            UART::out("Filesystems:\n");
+            std::print("Filesystems:\n");
             Filesystems.for_each([](auto* it){
                 Filesystem& fs = it->value();
                 fs.print();
-                UART::out("  First 8 bytes: ");
-                u64 buffer { 0 };
-                fs.storage_device_driver()->read(0, 8, (u8*)&buffer);
-                UART::out((u8*)&buffer, 8);
-                UART::out("\n");
+                u8 buffer[8]{};
+                fs.storage_device_driver()->read(0, sizeof buffer, buffer);
+                std::print("  First 8 bytes: {}\n", __s(buffer));
             });
-            UART::out("\n");
+            std::print("\n");
         }
     }
 
