@@ -150,7 +150,7 @@ namespace PCI {
         std::print("[PCI]: Discovering devices...\r\n");
         int entries = ((mcfg->Length) - sizeof(ACPI::MCFGHeader)) / sizeof(ACPI::DeviceConfig);
         DBGMSG("  Found {} MCFG entries\r\n", entries);
-        u64 systemDeviceLengthBefore = SYSTEM->devices().length();
+        [[maybe_unused]] u64 systemDeviceLengthBefore = SYSTEM->devices().length();
         for (int t = 0; t < entries; ++t) {
             u64 devConAddr = (reinterpret_cast<u64>(mcfg)
                               + sizeof(ACPI::MCFGHeader)

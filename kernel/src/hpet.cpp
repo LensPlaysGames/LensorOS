@@ -230,14 +230,14 @@ void HPET::print_state() {
               "  Page Protection: {:08b}\r\n"
               , Header->RevisionID
               , Header->ID
-              , Header->PCIvendorID
+              , u16(Header->PCIvendorID)
               , bool(readl(HPET_REG_GENERAL_CONFIGURATION) & 1)
               , LargeCounterSupport
               , LegacyInterruptSupport
-              , Header->Address.Address
+              , u64(Header->Address.Address)
               , Header->Address.AddressSpaceID
               , Header->Number
-              , Header->MinimumTick
+              , u16(Header->MinimumTick)
               , Period
               , Frequency
               , NumberOfComparators

@@ -56,7 +56,7 @@ void FileAllocationTableDriver::print_fat(BootRecord* br) {
                , br->total_clusters()
                , br->BPB.NumSectorsPerCluster
                , br->BPB.total_sectors()
-               , br->BPB.NumBytesPerSector
+               , u16(br->BPB.NumBytesPerSector)
                , br->fat_sectors()
                , br->BPB.first_fat_sector()
                , br->first_data_sector()

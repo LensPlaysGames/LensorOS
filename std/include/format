@@ -365,8 +365,8 @@ public:
     requires (std::is_unsigned_v<_Int> and not __char<_Int> and not is_same_v<_Int, bool>)
     constexpr explicit basic_format_arg(_Int __i) : __type(__arg_type::__u64), __value{.__u64 = static_cast<uint64_t>(__i)} {}
 
-    constexpr explicit basic_format_arg(bool __b) : __type(__arg_type::__bool), __value{.__bool = __b} {}
-    constexpr explicit basic_format_arg(_Char __c) : __type(__arg_type::__character), __value{.__character = __c} {}
+    constexpr explicit basic_format_arg(same_as<bool> auto __b) : __type(__arg_type::__bool), __value{.__bool = __b} {}
+    constexpr explicit basic_format_arg(same_as<_Char> auto __c) : __type(__arg_type::__character), __value{.__character = __c} {}
     constexpr explicit basic_format_arg(void* __p) : __type(__arg_type::__vptr), __value{.__vptr = __p} {}
     constexpr explicit basic_format_arg(float __f) : __type(__arg_type::__f32), __value{.__f32 = __f} {}
     constexpr explicit basic_format_arg(double __f) : __type(__arg_type::__f64), __value{.__f64 = __f} {}

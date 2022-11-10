@@ -84,14 +84,14 @@ namespace ACPI {
                    "  Creator ID: {}\r\n"
                    "  Creator Revision: {}\r\n"
                    , __s(header->Signature)
-                   , header->Length
+                   , u32(header->Length)
                    , header->Revision
                    , header->Checksum
                    , __s(header->OEMID)
                    , __s(header->OEMTableID)
-                   , header->OEMRevision
+                   , u32(header->OEMRevision)
                    , __s((u8*)&header->CreatorID)
-                   , header->CreatorRevision);
+                   , u32(header->CreatorRevision));
     }
 
     void* find_table(SDTHeader* header, const char* signature) {

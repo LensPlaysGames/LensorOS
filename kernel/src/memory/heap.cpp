@@ -178,14 +178,18 @@ void* malloc(size_t numBytes) {
                 if (HeapSegmentHeader* split = current->split(numBytes)) {
                     split->free = false;
                     DBGMSG("  Made split.\r\n");
+#ifdef HEAP_DEBUG
                     heap_print_debug();
+#endif
                     return (void*)((u64)split + sizeof(HeapSegmentHeader));
                 }
             }
             else if (current->length == numBytes) {
                 current->free = false;
                 DBGMSG("  Found exact match.\r\n");
+#ifdef HEAP_DEBUG
                 heap_print_debug();
+#endif
                 return (void*)((u64)current + sizeof(HeapSegmentHeader));
             }
         }
@@ -278,14 +282,14 @@ void heap_print_debug() {
                    "      Free:   {}\r\n"
                    "      Length: {} ({}) %{}\r\n"
                    "      Header Address:  {}\r\n"
-                   "      Payload Address: {}\r\n",
-                   i,
-                   to_string(it->free),
-                   it->length,
-                   it->length + sizeof(HeapSegmentHeader),
-                   100.0f * efficiency,
-                   (void*) it,
-                   (u64)(it) + sizeof(HeapSegmentHeader));
+                   "      Payload Address: {}\r\n"
+                   , i
+                   , to_string(it->free)
+                   , u64(it->length)
+                   , it->length + sizeof(HeapSegmentHeader)
+                   , 100.0f * efficiency
+                   , (void*) it
+                   , u64(it) + sizeof(HeapSegmentHeader));
         if (!it->free) {
             usedSpaceEfficiency += efficiency;
             usedCount++;

@@ -30,7 +30,7 @@ void dbgmsg_buf(const u8* buffer, u64 byteCount) {
 
 void dbgrainbow(const String& str, ShouldNewline nl) {
     for (u64 i = 0; i < str.length(); ++i) {
-        std::print("\033[1;3{}m{}", i % 6 + 1, str[i]);
+        std::print("\033[1;3{}m{}", i % 6 + 1, char(str[i]));
     }
     std::print("\033[0m");
     if (nl == ShouldNewline::Yes)

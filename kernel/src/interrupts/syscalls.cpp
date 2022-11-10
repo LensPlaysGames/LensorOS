@@ -90,7 +90,7 @@ void sys$4_poke() {
     DBGMSG("Poke from userland!\r\n");
 }
 
-void sys$5_exit(int status) {
+void sys$5_exit([[maybe_unused]] int status) {
     DBGMSG(sys$_dbgfmt, 5, "exit");
     DBGMSG("  status: {}\r\n"
            "\r\n"

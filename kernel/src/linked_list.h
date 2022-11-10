@@ -22,6 +22,7 @@
 
 #include <debug.h>
 #include <memory/heap.h>
+#include <bits/terminate.h>
 
 template <typename T>
 class SinglyLinkedList;
@@ -68,8 +69,7 @@ public:
             if (Tail == nullptr)
                 Tail = Head;
             Length += 1;
-        }
-        else dbgmsg_s("Failed to allocate memory for linked list.");
+        } else __terminate_with_message("Failed to allocate memory for linked list.");
     }
 
     void add_end(const DataType& value) {
@@ -86,8 +86,7 @@ public:
                 Tail->Next = newTail;
                 Tail = Tail->next();
                 Length += 1;
-            }
-            else dbgmsg_s("Failed to allocate memory for linked list.");
+            } else __terminate_with_message("Failed to allocate memory for linked list.");
         }
     }
 

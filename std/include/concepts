@@ -20,6 +20,7 @@
 #ifndef _LENSOROS_CONCEPTS
 #define _LENSOROS_CONCEPTS
 
+#include <stddef.h>
 #include <type_traits>
 #include <utility>
 
@@ -28,6 +29,9 @@ template <class From, class To>
 concept convertible_to =
     is_convertible_v<From, To> &&
     requires { static_cast<To>(std::declval<From>()); };
+
+template <typename _T, typename _U>
+concept same_as = is_same_v<_T, _U>;
 
 template<typename _T>
 concept integral = is_integral_v<_T>;

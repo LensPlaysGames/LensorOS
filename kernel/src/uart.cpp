@@ -39,8 +39,8 @@ namespace UART {
         _16750,
     } chip { Chip::NONE };
 
-    const char* get_uart_chip_name(Chip chip) {
-        switch (chip) {
+    const char* get_uart_chip_name(Chip ch) {
+        switch (ch) {
         case Chip::NONE:
             return "Invalid UART chip";
         case Chip::_8250:

@@ -19,13 +19,15 @@
 #ifndef _LENSOROS_STRING_
 #define _LENSOROS_STRING_
 
+
 #include <bits/decls.h>
+#include <cmath>
+#include <concepts>
 #include <cstring>
 #include <iterator>
 #include <stddef.h>
 #include <stdio.h>
 #include <utility>
-#include <concepts>
 
 __BEGIN_DECLS__
 void* memcpy(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n);
@@ -227,7 +229,11 @@ public:
         if (__size > __max_chars_small) {
             __large.__data = new _Char[(__size + 1)];
             __large.__sz = __size;
+
+            _PushIgnoreWarning("-Wconversion")
             __large.__cap = __size;
+            _PopWarnings()
+
             __large.__is_large = true;
             memcpy(__large.__data, __cstr, __size * sizeof(_Char));
             __large.__data[__size] = 0;
@@ -235,7 +241,9 @@ public:
 
         else {
             memcpy(&__small, __cstr, __size * sizeof(_Char));
-            __small.__rem_cap = __max_chars_small - __size;
+            _PushIgnoreWarning("-Wconversion")
+            __small.__rem_cap = _Char(__max_chars_small - __size);
+            _PopWarnings()
             __small.__data[__size] = 0;
             __small.__is_large = false;
         }
@@ -549,6 +557,10 @@ template <typename _Char, floating_point _Float>
 __forceinline basic_string<_Char> __to_string(_Float __f) {
     basic_string<_Char> __result;
 
+    /// Handle nan, inf, and -inf.
+    if (isnan(__f)) { return "nan"; }
+    if (isinf(__f)) { return __f < 0 ? "-inf" : "inf"; }
+
     /// Append a '-' if the number is negative.
     if (__f < 0) {
         __result += _Char('-');
@@ -556,14 +568,14 @@ __forceinline basic_string<_Char> __to_string(_Float __f) {
     }
 
     /// Append the integer part.
-    __result += __to_string<_Char>(static_cast<int64_t>(__f));
+    __result += __to_string<_Char>(int64_t(__f));
     __f -= static_cast<int64_t>(__f);
 
     /// Append the fractional part.
     /// TODO: Find a better way to do this.
-    if (__f < -.1e-10 || __f > .1e-10) {
+    if (__f < -1e-7 || __f > 1e-7) {
         __result += _Char('.');
-        while (__f < -.1e-10 || __f > .1e-10) {
+        while (__f < -1e-7 || __f > 1e-7) {
             __f *= 10;
             __result += _Char('0' + static_cast<int64_t>(__f));
             __f -= static_cast<int64_t>(__f);

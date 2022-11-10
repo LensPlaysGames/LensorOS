@@ -31,7 +31,7 @@
 #ifdef DEBUG_AHCI
 #   define DBGMSG(...) std::print(__VA_ARGS__)
 #else
-#   define DBGMSG(...)
+#   define DBGMSG(...) void()
 #endif
 
 namespace AHCI {

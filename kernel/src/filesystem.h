@@ -20,6 +20,8 @@
 #ifndef LENSOR_OS_FILESYSTEM_H
 #define LENSOR_OS_FILESYSTEM_H
 
+#include <format>
+
 #include <debug.h>
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
@@ -56,13 +58,13 @@ public:
     StorageDeviceDriver* storage_device_driver() { return DevDriver; }
 
     void print() {
-        dbgmsg("Filesystem: %s\r\n"
-               "  Filesystem Driver Address: %x\r\n"
-               "  Storage Device Driver Address: %x\r\n"
-               , type2name(Type)
-               , FSDriver
-               , DevDriver
-               );
+        std::print("Filesystem: {}\r\n"
+                   "  Filesystem Driver Address: {}\r\n"
+                   "  Storage Device Driver Address: {}\r\n"
+                   , type2name(Type)
+                   , (void*) FSDriver
+                   , (void*) DevDriver
+                   );
     }
 
 private:
