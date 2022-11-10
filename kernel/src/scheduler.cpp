@@ -131,8 +131,8 @@ namespace Scheduler {
             }
         });
         if (processToRemove) {
-            // TODO: Actually de-allocate memory!!!
             ProcessQueue->remove(processToRemoveIndex);
+            processToRemove->destroy();
             return true;
         }
         return false;
@@ -206,6 +206,11 @@ namespace Scheduler {
     /// A stupid simple round-robin process switcher.
     void switch_process(CPUState* cpu) {
         memcpy(&CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
+
+        // TODO: Check all processes that called `wait(ms)`, and run/
+        // unstop them if the timestamp is greater than the calculated
+        // one.
+
         // Handle single viable process or end of queue.
         if (CurrentProcess->next() == nullptr) {
             // If there is only one viable process,

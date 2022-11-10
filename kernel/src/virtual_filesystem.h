@@ -32,6 +32,7 @@
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
 #include <storage/device_drivers/dbgout.h>
+#include <storage/device_drivers/pipe.h>
 #include <string.h>
 #include <scheduler.h>
 #include <vfs_forward.h>
@@ -87,18 +88,31 @@ struct FileDescriptors {
 };
 
 class VFS {
-    auto procfd_to_fd(ProcFD procfd) const -> SysFD;
-    void free_fd(SysFD fd, ProcFD procfd);
-    auto file(ProcFD fd) -> std::shared_ptr<OpenFileDescription>;
-    auto file(SysFD fd) -> std::shared_ptr<OpenFileDescription>;
-    bool valid(ProcFD procfd) const;
-    bool valid(SysFD fd) const;
 public:
     std::unique_ptr<DbgOutDriver> StdoutDriver;
+    std::unique_ptr<PipeDriver> PipesDriver;
 
     VFS() {}
 
     void mount(const char* path, Filesystem* fs) { Mounts.push_back(MountPoint{path, fs}); }
+
+    /// The second file descriptor given will be associated with the file
+    /// description of the first.
+    bool dup2(ProcFD fd, ProcFD replaced) {
+        if (!valid(fd) || !valid(replaced)) {
+            return false;
+        }
+        SysFD sysfd = procfd_to_fd(replaced);
+        if (sysfd == SysFD::Invalid) {
+            return false;
+        }
+        auto f = file(fd);
+        if (!f) {
+            return false;
+        }
+        *Files[sysfd] = std::move(f);
+        return true;
+    }
 
     FileDescriptors open(const String& path);
     FileDescriptors open(const char* path) {
@@ -118,6 +132,13 @@ public:
 private:
     std::sparse_vector<std::shared_ptr<OpenFileDescription>, nullptr, SysFD> Files;
     std::vector<MountPoint> Mounts;
+
+    auto procfd_to_fd(ProcFD procfd) const -> SysFD;
+    auto file(ProcFD fd) -> std::shared_ptr<OpenFileDescription>;
+    auto file(SysFD fd) -> std::shared_ptr<OpenFileDescription>;
+    void free_fd(SysFD fd, ProcFD procfd);
+    bool valid(ProcFD procfd) const;
+    bool valid(SysFD fd) const;
 };
 
 #endif /* LENSOR_OS_VIRTUAL_FILESYSTEM_H */

@@ -547,6 +547,7 @@ void kstage1(BootInfo* bInfo) {
     /// Initialise the stdout driver.
     VFS& vfs = SYSTEM->virtual_filesystem();
     vfs.StdoutDriver = std::make_unique<DbgOutDriver>();
+    vfs.PipesDriver = std::make_unique<PipeDriver>();
 
     if (!SYSTEM->filesystems().empty()) {
         constexpr const char* filePath = "/fs0/blazeit";

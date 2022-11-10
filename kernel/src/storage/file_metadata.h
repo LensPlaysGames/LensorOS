@@ -56,7 +56,10 @@ public:
 private:
     String Name = { "" };
     bool Invalid { true };
+    // The device driver is used for reading and writing from and to
+    // the file.
     StorageDeviceDriver* DeviceDriver { nullptr };
+    // The filesystem driver is used for opening and closing the file.
     FilesystemDriver* FileDriver { nullptr };
     u64 FileSize   { -1ull };
     u64 ByteOffset { -1ull };
