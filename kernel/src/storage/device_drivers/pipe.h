@@ -60,10 +60,7 @@ public:
             byteCount = pipeBuffer.Offset;
         }
 
-        for (usz i = 0; i < byteCount; ++i) {
-            usz bufferIndex = pipeBuffer.Offset + i;
-            reinterpret_cast<u8*>(buffer)[i] = pipeBuffer.Data[bufferIndex];
-        }
+        memcpy(buffer, pipeBuffer.Data + pipeBuffer.Offset, byteCount);
         return byteCount;
     };
     ssz write(usz byteOffset, usz byteCount, void* buffer) final {
@@ -78,10 +75,8 @@ public:
             // TODO: Support "wait if full". For now, just truncate write.
             byteCount = PIPE_BUFSZ - pipeBuffer.Offset;
         }
-        for (usz i = 0; i < byteCount; ++i) {
-            usz bufferIndex = pipeBuffer.Offset + i;
-            pipeBuffer.Data[bufferIndex] = reinterpret_cast<u8*>(buffer)[i];
-        }
+
+        memcpy(pipeBuffer.Data + pipeBuffer.Offset, buffer, byteCount);
         return byteCount;
     }
 
