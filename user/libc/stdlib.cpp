@@ -213,7 +213,7 @@ __attribute__((alloc_size(2))) void* realloc_impl(void* ptr, size_t size) {
 ///  C Interface
 /// ===========================================================================
 __BEGIN_DECLS__
-bool __stdio_destructed;
+__bool __stdio_destructed;
 
 void __libc_init_malloc() {
     __errno = 0;

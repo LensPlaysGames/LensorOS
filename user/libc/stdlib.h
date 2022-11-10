@@ -21,93 +21,90 @@
 #ifndef _STDLIB_H
 #define _STDLIB_H
 
-#include "sys/types.h"
+#include <bits/decls.h>
+#include <sys/types.h>
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
+__BEGIN_DECLS__
 
-extern bool __stdio_destructed;
+extern __bool __stdio_destructed;
 
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
 
-  /// String conversion
-  double atof(const char*);
-  int atoi(const char*);
-  long atol(const char*);
-  long long atoll(const char*);
-  double strtod(const char*, char** endptr);
-  float strtof(const char*, char** endptr);
-  long strtol(const char*, char** endptr, int base);
-  long double strtold(const char*, char** endptr);
-  long long strtoll(const char*, char** endptr, int base);
-  unsigned long strtoul(const char*, char** endptr, int base);
-  unsigned long long strtoull(const char*, char** endptr, int base);
+/// String conversion
+double atof(const char*);
+int atoi(const char*);
+long atol(const char*);
+long long atoll(const char*);
+double strtod(const char*, char** endptr);
+float strtof(const char*, char** endptr);
+long strtol(const char*, char** endptr, int base);
+long double strtold(const char*, char** endptr);
+long long strtoll(const char*, char** endptr, int base);
+unsigned long strtoul(const char*, char** endptr, int base);
+unsigned long long strtoull(const char*, char** endptr, int base);
 
-  /// Psuedo-random sequence generation
+/// Psuedo-random sequence generation
 #define RAND_MAX 32767
-  int rand(void);
-  void srand(unsigned seed);
+int rand(void);
+void srand(unsigned seed);
 
-  /// Dynamic memory management
-  __attribute__((malloc, alloc_size(1, 2))) void* calloc(size_t nitems, size_t);
-  void free(void*);
-  __attribute__((malloc, alloc_size(1))) void* malloc(size_t);
-  __attribute__((alloc_size(2))) void* realloc(void* ptr, size_t);
+/// Dynamic memory management
+__attribute__((malloc, alloc_size(1, 2))) void* calloc(size_t nitems, size_t);
+void free(void*);
+__attribute__((malloc, alloc_size(1))) void* malloc(size_t);
+__attribute__((alloc_size(2))) void* realloc(void* ptr, size_t);
 
-  /// Like realloc, but does not copy the old data.
-  __attribute__((alloc_size(2))) void* __mextend(void* ptr, size_t);
+/// Like realloc, but does not copy the old data.
+__attribute__((alloc_size(2))) void* __mextend(void* ptr, size_t);
 
-  /// Environment
-  int atexit(void (*function)(void));
-  int at_quick_exit(void (*function)(void));
-  char* getenv(const char* name);
-  int system(const char* command);
+/// Environment
+int atexit(void (*function)(void));
+int at_quick_exit(void (*function)(void));
+char* getenv(const char* name);
+int system(const char* command);
 
-  __attribute__((__noreturn__)) void abort(void);
-  __attribute__((__noreturn__)) void exit(int status);
-  __attribute__((__noreturn__)) void quick_exit(int status);
-  __attribute__((__noreturn__)) void _Exit(int status);
+__attribute__((__noreturn__)) void abort(void);
+__attribute__((__noreturn__)) void exit(int status);
+__attribute__((__noreturn__)) void quick_exit(int status);
+__attribute__((__noreturn__)) void _Exit(int status);
 
-  /// Searching and sorting
-  void* bsearch(const void* key, const void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*));
-  void qsort(void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*));
+/// Searching and sorting
+void* bsearch(const void* key, const void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*));
+void qsort(void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*));
 
   /// Integer arithmetics
-  typedef struct {
+typedef struct {
     int quot;
     int rem;
-  } div_t;
-  typedef struct {
+} div_t;
+typedef struct {
     long quot;
     long rem;
-  } ldiv_t;
-  typedef struct {
+} ldiv_t;
+typedef struct {
     long long quot;
     long long rem;
-  } lldiv_t;
+} lldiv_t;
 
-  int abs(int);
-  div_t div(int, int);
-  long labs(long);
-  ldiv_t ldiv(long, long);
-  long long int llabs(long long int);
-  lldiv_t lldiv(long long, long long);
+int abs(int);
+div_t div(int, int);
+long labs(long);
+ldiv_t ldiv(long, long);
+long long int llabs(long long int);
+lldiv_t lldiv(long long, long long);
 
-  /// Multibyte characters
+/// Multibyte characters
 #define MB_CUR_MAX 4
 #define MB_LEN_MAX 16
-  int mblen(char const*, size_t);
-  int mbtowc(wchar_t*, const char*, size_t);
-  int wctomb(char*, wchar_t);
+int mblen(char const*, size_t);
+int mbtowc(wchar_t*, const char*, size_t);
+int wctomb(char*, wchar_t);
 
-  /// Multibyte strings
-  size_t mbstowcs(wchar_t*, const char*, size_t);
-  size_t wcstombs(char*, const wchar_t*, size_t);
+/// Multibyte strings
+size_t mbstowcs(wchar_t*, const char*, size_t);
+size_t wcstombs(char*, const wchar_t*, size_t);
 
-#if defined (__cplusplus)
-} /* extern "C" */
-#endif
+__END_DECLS__
 
 #endif /* _STDLIB_H */

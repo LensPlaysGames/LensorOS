@@ -38,7 +38,7 @@ extern init_cb __init_array_end[];
 extern init_cb __fini_array_start[];
 extern init_cb __fini_array_end[];
 
-bool __in_quick_exit = false;
+__bool __in_quick_exit = false;
 __END_DECLS__
 
 /// ===========================================================================
