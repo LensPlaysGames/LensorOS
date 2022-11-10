@@ -41,20 +41,20 @@ void TSS::initialize() {
     u64 base = V2P((u64)&tssEntry);
     //u64 base = (u64)&tssEntry;
     gGDT.TSS.set_base(base);
-    std::print("[TSS]: Initialized\r\n"
-               "  Base:  {:#016x}\r\n"
-               "  Limit: {:#08x}\r\n"
+    std::print("[TSS]: Initialized\n"
+               "  Base:  {:#016x}\n"
+               "  Limit: {:#08x}\n"
                , gGDT.TSS.base()
                , gGDT.TSS.limit()
                );
     // Store current stack pointer in TSS entry.
     u64 stackPointer { 0 };
-    asm("movq %%rsp, %0\r\n\t"
+    asm("movq %%rsp, %0\n\t"
         : "=m"(stackPointer)
         );
     tssEntry.set_stack(stackPointer);
-    asm("mov $0x28, %%ax\r\n\t"
-        "ltr %%ax\r\n\t"
+    asm("mov $0x28, %%ax\n\t"
+        "ltr %%ax\n\t"
         ::: "rax"
         );
 }

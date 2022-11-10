@@ -52,34 +52,34 @@ namespace Scheduler {
     SinglyLinkedListNode<Process*>* CurrentProcess { nullptr };
 
     void print_debug() {
-        std::print("[SCHED]: Debug information:\r\n"
-                 "  Process Queue:\r\n");
+        std::print("[SCHED]: Debug information:\n"
+                 "  Process Queue:\n");
         ProcessQueue->for_each([](auto* it) {
             Process& process = *it->value();
-            std::print("    Process {} at {}\r\n"
-                       "      CR3:      {}\r\n"
-                       "      RAX:      {:#016x}\r\n"
-                       "      RBX:      {:#016x}\r\n"
-                       "      RCX:      {:#016x}\r\n"
-                       "      RDX:      {:#016x}\r\n"
-                       "      RSI:      {:#016x}\r\n"
-                       "      RDI:      {:#016x}\r\n"
-                       "      RBP:      {:#016x}\r\n"
-                       "      RSP:      {:#016x}\r\n"
-                       "      R8:       {:#016x}\r\n"
-                       "      R9:       {:#016x}\r\n"
-                       "      R10:      {:#016x}\r\n"
-                       "      R11:      {:#016x}\r\n"
-                       "      R12:      {:#016x}\r\n"
-                       "      R13:      {:#016x}\r\n"
-                       "      R14:      {:#016x}\r\n"
-                       "      R15:      {:#016x}\r\n"
-                       "      Frame:\r\n"
-                       "        RIP:    {:#016x}\r\n"
-                       "        CS:     {:#016x}\r\n"
-                       "        RFLAGS: {:#016x}\r\n"
-                       "        RSP:    {:#016x}\r\n"
-                       "        SS:     {:#016x}\r\n"
+            std::print("    Process {} at {}\n"
+                       "      CR3:      {}\n"
+                       "      RAX:      {:#016x}\n"
+                       "      RBX:      {:#016x}\n"
+                       "      RCX:      {:#016x}\n"
+                       "      RDX:      {:#016x}\n"
+                       "      RSI:      {:#016x}\n"
+                       "      RDI:      {:#016x}\n"
+                       "      RBP:      {:#016x}\n"
+                       "      RSP:      {:#016x}\n"
+                       "      R8:       {:#016x}\n"
+                       "      R9:       {:#016x}\n"
+                       "      R10:      {:#016x}\n"
+                       "      R11:      {:#016x}\n"
+                       "      R12:      {:#016x}\n"
+                       "      R13:      {:#016x}\n"
+                       "      R14:      {:#016x}\n"
+                       "      R15:      {:#016x}\n"
+                       "      Frame:\n"
+                       "        RIP:    {:#016x}\n"
+                       "        CS:     {:#016x}\n"
+                       "        RFLAGS: {:#016x}\n"
+                       "        RSP:    {:#016x}\n"
+                       "        SS:     {:#016x}\n"
                        , process.ProcessID, (void*) &process
                        , (void*) process.CR3
                        , u64(process.CPU.RAX)
@@ -104,18 +104,18 @@ namespace Scheduler {
                        , u64(process.CPU.Frame.sp)
                        , u64(process.CPU.Frame.ss)
                        );
-            std::print("      File Descriptors:\r\n");
+            std::print("      File Descriptors:\n");
             for (const auto& [procfd, fd] : process.FileDescriptors.pairs()) {
-                std::print("        {} -> {}\r\n", procfd, fd);
+                std::print("        {} -> {}\n", procfd, fd);
             }
         });
-        std::print("\r\n");
+        std::print("\n");
     }
 
     void add_process(Process* process) {
         process->ProcessID = request_pid();
         ProcessQueue->add_end(process);
-        std::print("[SCHED]: Added process.\r\n");
+        std::print("[SCHED]: Added process.\n");
         print_debug();
     }
 
@@ -148,7 +148,7 @@ namespace Scheduler {
         // Create the process queue and add the startup process to it.
         ProcessQueue = new SinglyLinkedList<Process*>;
         if (ProcessQueue == nullptr) {
-            std::print("\033[31mScheduler failed to initialize:\033[0m Could not create process list.\r\n");
+            std::print("\033[31mScheduler failed to initialize:\033[0m Could not create process list.\n");
             return false;
         }
         add_process(&StartupProcess);
@@ -156,7 +156,7 @@ namespace Scheduler {
         // Install IRQ0 handler found in `scheduler.asm` (over-write default system timer handler).
         gIDT.install_handler((u64)irq0_handler, PIC_IRQ0);
         gIDT.flush();
-        std::print("Flushed IDT after installing new IRQ0 handler\r\n");
+        std::print("Flushed IDT after installing new IRQ0 handler\n");
         return true;
     }
 
@@ -194,7 +194,7 @@ namespace Scheduler {
                 // Process list has zero viable processes.
                 // FIXME: I honestly don't know how to handle this correctly.
                 // Hang forever.
-                std::print("[SCHED]: I don't know what to do when there are no processes!\r\n");
+                std::print("[SCHED]: I don't know what to do when there are no processes!\n");
                 while (true)
                     asm ("hlt");
             }
@@ -224,10 +224,10 @@ namespace Scheduler {
         // Use new process' page map.
         Memory::flush_page_map(CurrentProcess->value()->CR3);
         // Update ES and DS to SS.
-        asm("xor %%rax, %%rax\r\n\t"
-            "movq %0, %%rax\r\n\t"
-            "movw %%ax, %%es\r\n\t"
-            "movw %%ax, %%ds\r\n\t"
+        asm("xor %%rax, %%rax\n\t"
+            "movq %0, %%rax\n\t"
+            "movw %%ax, %%es\n\t"
+            "movw %%ax, %%ds\n\t"
             :: "r"(cpu->Frame.ss)
             : "rax"
             );

@@ -153,14 +153,14 @@ public:
     void print() {
         CPU.print_debug();
         if (Devices.length() > 0) {
-            UART::out("System Devices:\r\n");
+            UART::out("System Devices:\n");
             Devices.for_each([](auto* it) {
                 SystemDevice& dev = it->value();
                 UART::out("  ");
                 UART::out(dev.major());
                 UART::out(".");
                 UART::out(dev.minor());
-                UART::out(":\r\n"
+                UART::out(":\n"
                           "    Flags: ");
                 UART::out(dev.flags());
                 void* d1 = dev.data1();
@@ -168,31 +168,31 @@ public:
                 void* d3 = dev.data3();
                 void* d4 = dev.data4();
                 if (d1) {
-                    UART::out("\r\n"
+                    UART::out("\n"
                               "    Data1: 0x");
                     UART::out(to_hexstring(d1));
                 }
                 if (d2) {
-                    UART::out("\r\n"
+                    UART::out("\n"
                               "    Data2: 0x");
                     UART::out(to_hexstring(d2));
                 }
                 if (d3) {
-                    UART::out("\r\n"
+                    UART::out("\n"
                               "    Data3: 0x");
                     UART::out(to_hexstring(d3));
                 }
                 if (d4) {
-                    UART::out("\r\n"
+                    UART::out("\n"
                               "    Data4: 0x");
                     UART::out(to_hexstring(d4));
                 }
-                UART::out("\r\n");
+                UART::out("\n");
             });
-            UART::out("\r\n");
+            UART::out("\n");
         }
         if (Filesystems.length() > 0) {
-            UART::out("Filesystems:\r\n");
+            UART::out("Filesystems:\n");
             Filesystems.for_each([](auto* it){
                 Filesystem& fs = it->value();
                 fs.print();
@@ -200,9 +200,9 @@ public:
                 u64 buffer { 0 };
                 fs.storage_device_driver()->read(0, 8, (u8*)&buffer);
                 UART::out((u8*)&buffer, 8);
-                UART::out("\r\n");
+                UART::out("\n");
             });
-            UART::out("\r\n");
+            UART::out("\n");
         }
     }
 

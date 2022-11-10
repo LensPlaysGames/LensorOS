@@ -49,7 +49,7 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
                     | (u64)Memory::PageTableFlag::ReadWrite
                     );
     }
-    std::print("  Active GOP framebuffer mapped to {:#016x} thru {:#016x}\r\n"
+    std::print("  Active GOP framebuffer mapped to {:#016x} thru {:#016x}\n"
                , fbBase
                , fbBase + fbSize
                );
@@ -68,7 +68,7 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
         Target = Render;
     }
     else {
-        std::print("  Deferred GOP framebuffer allocated at {} thru {:#016x}\r\n"
+        std::print("  Deferred GOP framebuffer allocated at {} thru {:#016x}\n"
                    , target.BaseAddress
                    , (u64)target.BaseAddress + fbSize
                    );
@@ -86,7 +86,7 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
         }
         target.BaseAddress = (void*)virtualTargetBaseAddress;
         Target = &target;
-        std::print("  Deferred GOP framebuffer mapped to {:#016x} thru {:#016x}\r\n"
+        std::print("  Deferred GOP framebuffer mapped to {:#016x} thru {:#016x}\n"
                , virtualTargetBaseAddress
                , virtualTargetBaseAddress + fbSize
                );

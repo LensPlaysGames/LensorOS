@@ -96,7 +96,7 @@ private:
         UART::out(to_string(Core));
         UART::outc(':');
         UART::out(to_string(LogicalCore));
-        UART::out("\r\n");
+        UART::out("\n");
     }
 };
 
@@ -123,36 +123,36 @@ public:
     void set_physical_core_bits(u8 bits) { PhysicalCoreBits = bits; }
 
     void print_debug() {
-        UART::out("[CPU]: Description Dump:\r\n"
-                  "  Capabilites:\r\n"
+        UART::out("[CPU]: Description Dump:\n"
+                  "  Capabilites:\n"
                   "    CPUID: ");
         UART::out(to_string(CPUIDCapable));
-        UART::out("\r\n    FXSR: ");
+        UART::out("\n    FXSR: ");
         UART::out(to_string(FXSRCapable));
-        UART::out("\r\n    FPU: ");
+        UART::out("\n    FPU: ");
         UART::out(to_string(FPUCapable));
-        UART::out("\r\n    SSE: ");
+        UART::out("\n    SSE: ");
         UART::out(to_string(SSECapable));
-        UART::out("\r\n    XSAVE: ");
+        UART::out("\n    XSAVE: ");
         UART::out(to_string(XSAVECapable));
-        UART::out("\r\n    AVX: ");
+        UART::out("\n    AVX: ");
         UART::out(to_string(AVXCapable));
-        UART::out("\r\n  Enabled: ");
-        UART::out("\r\n    FXSR: ");
+        UART::out("\n  Enabled: ");
+        UART::out("\n    FXSR: ");
         UART::out(to_string(FXSREnabled));
-        UART::out("\r\n    FPU: ");
+        UART::out("\n    FPU: ");
         UART::out(to_string(FPUEnabled));
-        UART::out("\r\n    SSE: ");
+        UART::out("\n    SSE: ");
         UART::out(to_string(SSEEnabled));
-        UART::out("\r\n    XSAVE: ");
+        UART::out("\n    XSAVE: ");
         UART::out(to_string(XSAVEEnabled));
-        UART::out("\r\n    AVX: ");
+        UART::out("\n    AVX: ");
         UART::out(to_string(AVXEnabled));
-        UART::out("\r\n\r\n");
+        UART::out("\n\n");
         CPUs.for_each([](auto* it){
             it->value().print_debug();
         });
-        UART::out("\r\n");
+        UART::out("\n");
     }
 
     // Feature flag setters

@@ -56,8 +56,8 @@ namespace Memory {
             }
 
             u64 sizeKiB = desc->numPages * PAGE_SIZE / 1024;
-            std::print("\r\n  Physical Address: {}"
-                       "\r\n  Size: {} MiB ({} KiB)\033[0m\r\n"
+            std::print("\n  Physical Address: {}"
+                       "\n  Size: {} MiB ({} KiB)\033[0m\n"
                        , desc->physicalAddress
                        , sizeKiB / 1024
                        , sizeKiB);
@@ -77,7 +77,7 @@ namespace Memory {
         for (u8 i = 0; i < 14; ++i) {
             u64 sizeKiB = typePageSums[i] * PAGE_SIZE / 1024;
             std::print("\033[36m[MEMORY REGION]: {}"
-                       "\r\n  Total Size: {} MiB ({} KiB)\033[0m\r\n"
+                       "\n  Total Size: {} MiB ({} KiB)\033[0m\n"
                        , EFI_MEMORY_TYPE_STRINGS[i]
                        , sizeKiB / 1024
                        , sizeKiB);

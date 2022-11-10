@@ -58,9 +58,9 @@ public:
     StorageDeviceDriver* storage_device_driver() { return DevDriver; }
 
     void print() {
-        std::print("Filesystem: {}\r\n"
-                   "  Filesystem Driver Address: {}\r\n"
-                   "  Storage Device Driver Address: {}\r\n"
+        std::print("Filesystem: {}\n"
+                   "  Filesystem Driver Address: {}\n"
+                   "  Storage Device Driver Address: {}\n"
                    , type2name(Type)
                    , (void*) FSDriver
                    , (void*) DevDriver

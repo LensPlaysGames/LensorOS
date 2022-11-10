@@ -88,27 +88,27 @@ namespace Memory {
     }
 
     void free_pages(void* address, u64 numberOfPages) {
-        DBGMSG("free_pages():\r\n"
-               "  Address:     {}\r\n"
-               "  # of pages:  {}\r\n"
-               "  Free before: {}\r\n"
+        DBGMSG("free_pages():\n"
+               "  Address:     {}\n"
+               "  # of pages:  {}\n"
+               "  Free before: {}\n"
                , address
                , numberOfPages
                , TotalFreePages);
         for (u64 i = 0; i < numberOfPages; ++i)
             free_page((void*)((u64)address + (i * PAGE_SIZE)));
 
-        DBGMSG("  Free after: {}\r\n"
-               "\r\n"
+        DBGMSG("  Free after: {}\n"
+               "\n"
                , TotalFreePages);
     }
 
     u64 FirstFreePage { 0 };
     void* request_page() {
-        DBGMSG("request_page():\r\n"
-               "  Free pages:            {}\r\n"
-               "  Max run of free pages: {}\r\n"
-               "\r\n"
+        DBGMSG("request_page():\n"
+               "  Free pages:            {}\n"
+               "  Max run of free pages: {}\n"
+               "\n"
                , TotalFreePages
                , MaxFreePagesInARow);
         for(; FirstFreePage < TotalPages; FirstFreePage++) {
@@ -116,13 +116,13 @@ namespace Memory {
                 void* addr = (void*)(FirstFreePage * PAGE_SIZE);
                 lock_page(addr);
                 FirstFreePage += 1; // Eat current page.
-                DBGMSG("  Successfully fulfilled memory request: {}\r\n"
-                       "\r\n", addr);
+                DBGMSG("  Successfully fulfilled memory request: {}\n"
+                       "\n", addr);
                 return addr;
             }
         }
         // TODO: Page swap from/to file on disk.
-        panic("\033[31mRan out of memory in request_page() :^<\033[0m\r\n");
+        panic("\033[31mRan out of memory in request_page() :^<\033[0m\n");
         return nullptr;
     }
     
@@ -145,11 +145,11 @@ namespace Memory {
             return nullptr;
         }
         
-        DBGMSG("request_pages():\r\n"
-               "  # of pages requested:  {}\r\n"
-               "  Free pages:            {}\r\n"
-               "  Max run of free pages: {}\r\n"
-               "\r\n"
+        DBGMSG("request_pages():\n"
+               "  # of pages requested:  {}\n"
+               "  Free pages:            {}\n"
+               "  Max run of free pages: {}\n"
+               "\n"
                , numberOfPages
                , TotalFreePages
                , MaxFreePagesInARow);
@@ -170,14 +170,14 @@ namespace Memory {
                 if (index >= PageMap.length()) {
                     // TODO: No memory matching criteria, should
                     //   probably do a page swap from disk or something.
-                    panic("\033[0mRan out of memory in request_pages() :^<\033[0m\r\n");
+                    panic("\033[0mRan out of memory in request_pages() :^<\033[0m\n");
                     return nullptr;
                 }
                 if (run >= numberOfPages) {
                     void* out = (void*)(i * PAGE_SIZE);
                     lock_pages(out, numberOfPages);
-                    DBGMSG("  Successfully fulfilled memory request: {}\r\n"
-                           "\r\n", out);
+                    DBGMSG("  Successfully fulfilled memory request: {}\n"
+                           "\n", out);
                     return out;
                 }
             }
@@ -194,8 +194,8 @@ namespace Memory {
     u8 InitialPageBitmap[InitialPageBitmapSize];
 
     void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
-        DBGMSG("Attempting to initialize physical memory\r\n"
-               "Searching for largest free contiguous memory region under {}\r\n"
+        DBGMSG("Attempting to initialize physical memory\n"
+               "Searching for largest free contiguous memory region under {}\n"
                , InitialPageBitmapMaxAddress);
         // Calculate number of entries within memoryMap array.
         u64 entries = size / entrySize;
@@ -224,7 +224,7 @@ namespace Memory {
             while (true)
                 asm ("hlt");
         }
-        DBGMSG("Found initial free memory segment ({}KiB) at {}\r\n"
+        DBGMSG("Found initial free memory segment ({}KiB) at {}\n"
                , TO_KiB(largestFreeMemorySegmentPageCount * PAGE_SIZE)
                , largestFreeMemorySegment);
         // Use pre-allocated memory region for initial physical page bitmap.
@@ -303,16 +303,16 @@ namespace Memory {
             - reinterpret_cast<u64>(&BLOCK_STARTING_SYMBOLS_START);
         std::print("\033[32m"
                    "Physical memory initialized"
-                   "\033[0m\r\n"
-                   "  Physical memory mapped from {:#016x} thru {:#016x}\r\n"
-                   "  Kernel loaded at {:#016x} ({}MiB)\r\n"
-                   "  Kernel mapped from {:#016x} thru {:#016x} ({}KiB)\r\n"
-                   "    .text:   {:#016x} thru {:#016x} ({} bytes)\r\n"
-                   "    .data:   {:#016x} thru {:#016x} ({} bytes)\r\n"
-                   "    .rodata: {:#016x} thru {:#016x} ({} bytes)\r\n"
-                   "    .bss:    {:#016x} thru {:#016x} ({} bytes)\r\n"
-                   "    Lost to page alignment: {} bytes\r\n"
-                   "\r\n"
+                   "\033[0m\n"
+                   "  Physical memory mapped from {:#016x} thru {:#016x}\n"
+                   "  Kernel loaded at {:#016x} ({}MiB)\n"
+                   "  Kernel mapped from {:#016x} thru {:#016x} ({}KiB)\n"
+                   "    .text:   {:#016x} thru {:#016x} ({} bytes)\n"
+                   "    .data:   {:#016x} thru {:#016x} ({} bytes)\n"
+                   "    .rodata: {:#016x} thru {:#016x} ({} bytes)\n"
+                   "    .bss:    {:#016x} thru {:#016x} ({} bytes)\n"
+                   "    Lost to page alignment: {} bytes\n"
+                   "\n"
                    , 0ULL, total_ram()
                    , u64(&KERNEL_PHYSICAL)
                    , TO_MiB(&KERNEL_PHYSICAL)
@@ -333,11 +333,11 @@ namespace Memory {
     }
 
     void print_debug_kib() {
-        std::print("Memory Manager Debug Information:\r\n"
-                   "  Total Memory: {}KiB\r\n"
-                   "  Free Memory: {}KiB\r\n"
-                   "  Used Memory: {}KiB\r\n"
-                   "\r\n"
+        std::print("Memory Manager Debug Information:\n"
+                   "  Total Memory: {}KiB\n"
+                   "  Free Memory: {}KiB\n"
+                   "  Used Memory: {}KiB\n"
+                   "\n"
                    , TO_KiB(total_ram())
                    , TO_KiB(free_ram())
                    , TO_KiB(used_ram())
@@ -345,11 +345,11 @@ namespace Memory {
     }
 
     void print_debug_mib() {
-        std::print("Memory Manager Debug Information:\r\n"
-                   "  Total Memory: {}MiB\r\n"
-                   "  Free Memory: {}MiB\r\n"
-                   "  Used Memory: {}MiB\r\n"
-                   "\r\n"
+        std::print("Memory Manager Debug Information:\n"
+                   "  Total Memory: {}MiB\n"
+                   "  Free Memory: {}MiB\n"
+                   "  Used Memory: {}MiB\n"
+                   "\n"
                    , TO_MiB(total_ram())
                    , TO_MiB(free_ram())
                    , TO_MiB(used_ram())

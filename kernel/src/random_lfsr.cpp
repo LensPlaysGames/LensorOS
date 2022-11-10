@@ -16,7 +16,7 @@ void LFSR::print_shift_register() {
             std::print("{}", get_bit_value(bitIndex));
         }
     }
-    std::print("\r\n");
+    std::print("\n");
 }
 
 void LFSR::next() {

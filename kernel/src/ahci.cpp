@@ -99,7 +99,7 @@ namespace AHCI {
         }
         start_commands();
 
-        DBGMSG("[AHCI]: Port {} initialized.\r\n", PortNumber);
+        DBGMSG("[AHCI]: Port {} initialized.\n", PortNumber);
     }
 
     bool PortController::read_low_level(u64 sector, u64 sectors) {
@@ -151,7 +151,7 @@ namespace AHCI {
     /// Convert bytes to sectors, then read into and copy from intermediate
     /// `Buffer` to given `buffer` until all data is read and copied.
     ssz PortController::read(usz byteOffset, usz byteCount, u8* buffer) {
-        DBGMSG("[AHCI]: Port {} -- read()  byteOffset={}, byteCount={}, buffer={}\r\n"
+        DBGMSG("[AHCI]: Port {} -- read()  byteOffset={}, byteCount={}, buffer={}\n"
                , PortNumber
                , byteOffset
                , byteCount
@@ -159,18 +159,18 @@ namespace AHCI {
                );
 
         if (Type != PortType::SATA) {
-            std::print("  \033[31mERRROR\033[0m: `read()`  port type not implemented: {}\r\n"
+            std::print("  \033[31mERRROR\033[0m: `read()`  port type not implemented: {}\n"
                        , port_type_string(Type));
             return -1;
         }
         // TODO: Actual error handling!
         if (buffer == nullptr) {
-            std::print("  \033[31mERROR\033[0m: `read()`  buffer can not be nullptr\r\n");
+            std::print("  \033[31mERROR\033[0m: `read()`  buffer can not be nullptr\n");
             return -1;
         }
         // TODO: Don't reject reads over port buffer max size, just do multiple reads and copy as you go.
         if (byteCount > MAX_READ_BYTES) {
-            std::print("  \033[31mERROR\033[0m: `read()`  byteCount can not be larger than maximum readable bytes.\r\n");
+            std::print("  \033[31mERROR\033[0m: `read()`  byteCount can not be larger than maximum readable bytes.\n");
             return -1;
         }
 
@@ -181,28 +181,28 @@ namespace AHCI {
         if (byteOffsetWithinSector + byteCount <= BYTES_PER_SECTOR)
             sectors = 1;
 
-        DBGMSG("  Calculated sector data: sector={}, sectors={}, byteOffsetWithinSector={}\r\n"
+        DBGMSG("  Calculated sector data: sector={}, sectors={}, byteOffsetWithinSector={}\n"
                , sector
                , sectors
                , byteOffsetWithinSector
                );
 
         if (sectors * BYTES_PER_SECTOR > PORT_BUFFER_BYTES) {
-            DBGMSG("  \033[31mERROR\033[0m: `read()`  can not read more bytes than internal buffer size.\r\n");
+            DBGMSG("  \033[31mERROR\033[0m: `read()`  can not read more bytes than internal buffer size.\n");
             return -1;
         }
 
         if (read_low_level(sector, sectors)) {
-            DBGMSG("  \033[32mSUCCESS\033[0m: `read_low_level()` SUCCEEDED\r\n");
+            DBGMSG("  \033[32mSUCCESS\033[0m: `read_low_level()` SUCCEEDED\n");
             void* bufferAddress = (void*)((u64)&Buffer[0] + byteOffsetWithinSector);
             memcpy(buffer, bufferAddress, byteCount);
-        } else DBGMSG("  \033[31mERROR\033[0m: `read_low_level()` FAILED\r\n");
+        } else DBGMSG("  \033[31mERROR\033[0m: `read_low_level()` FAILED\n");
 
         return byteCount;
     }
 
     ssz PortController::write(usz byteOffset, usz byteCount, u8* buffer) {
-        std::print("[AHCI]: TODO: Implement write()  byteOffset={}, byteCount={}, buffer={}\r\n"
+        std::print("[AHCI]: TODO: Implement write()  byteOffset={}, byteCount={}, buffer={}\n"
                    , byteOffset
                    , byteCount
                    , (void*) buffer

@@ -70,13 +70,13 @@ namespace ELF {
             || ElfHeader.e_ident[EI_MAG2] != ELFMAG2
             || ElfHeader.e_ident[EI_MAG3] != ELFMAG3)
         {
-            std::print("[ELF]: Invalid ELF64 header: Magic bytes incorrect.\r\n"
-                       "  Bytes (given, expected):\r\n"
-                       "    0: {:#02x}, {:#02x}\r\n"
-                       "    1: {}, {}\r\n"
-                       "    2: {}, {}\r\n"
-                       "    3: {}, {}\r\n"
-                       "\r\n"
+            std::print("[ELF]: Invalid ELF64 header: Magic bytes incorrect.\n"
+                       "  Bytes (given, expected):\n"
+                       "    0: {:#02x}, {:#02x}\n"
+                       "    1: {}, {}\n"
+                       "    2: {}, {}\n"
+                       "    3: {}, {}\n"
+                       "\n"
                        , ElfHeader.e_ident[EI_MAG0], ELFMAG0
                        , ElfHeader.e_ident[EI_MAG1], ELFMAG1
                        , ElfHeader.e_ident[EI_MAG2], ELFMAG2
@@ -85,23 +85,23 @@ namespace ELF {
             return false;
         }
         if (ElfHeader.e_ident[EI_CLASS] != ELFCLASS64) {
-            std::print("[ELF]: Invalid ELF64 header: Incorrect class.\r\n");
+            std::print("[ELF]: Invalid ELF64 header: Incorrect class.\n");
             return false;
         }
         if (ElfHeader.e_ident[EI_DATA] != ELFDATA2LSB) {
-            std::print("[ELF]: Invalid ELF64 header: Incorrect data type.\r\n");
+            std::print("[ELF]: Invalid ELF64 header: Incorrect data type.\n");
             return false;
         }
         if (ElfHeader.e_type != ET_EXEC) {
-            std::print("[ELF]: Invalid ELF64 header: Type is not executable.\r\n");
+            std::print("[ELF]: Invalid ELF64 header: Type is not executable.\n");
             return false;
         }
         if (ElfHeader.e_machine != EM_X86_64) {
-            std::print("[ELF]: Invalid ELF64 header: Machine is not valid.\r\n");
+            std::print("[ELF]: Invalid ELF64 header: Machine is not valid.\n");
             return false;
         }
         if (ElfHeader.e_version != EV_CURRENT) {
-            std::print("[ELF]: Invalid ELF64 header: ELF version is not expected.\r\n");
+            std::print("[ELF]: Invalid ELF64 header: ELF version is not expected.\n");
             return false;
         }
         return true;
@@ -109,22 +109,22 @@ namespace ELF {
     }
 
     inline bool CreateUserspaceElf64Process(VFS& vfs, ProcessFileDescriptor fd) {
-        DBGMSG("Attempting to add userspace process from file descriptor {}\r\n", fd);
+        DBGMSG("Attempting to add userspace process from file descriptor {}\n", fd);
         Elf64_Ehdr elfHeader;
         bool read = vfs.read(fd, reinterpret_cast<u8*>(&elfHeader), sizeof(Elf64_Ehdr));
         if (read == false) {
-            std::print("Failed to read ELF64 header.\r\n");
+            std::print("Failed to read ELF64 header.\n");
             return false;
         }
         if (VerifyElf64Header(elfHeader) == false) {
-            std::print("Executable did not have valid ELF64 header.\r\n");
+            std::print("Executable did not have valid ELF64 header.\n");
             return false;
         }
 
         // Copy current page table (fork)
         auto* newPageTable = Memory::clone_active_page_map();
         if (newPageTable == nullptr) {
-            std::print("Failed to clone current page map for new process page map.\r\n");
+            std::print("Failed to clone current page map for new process page map.\n");
             return false;
         }
 
@@ -149,8 +149,8 @@ namespace ELF {
              phdr++)
         {
 
-            DBGMSG("Program header: type={}, offset={}\r\n"
-                   "  filesz={:#016x}, memsz={:#016x}\r\n"
+            DBGMSG("Program header: type={}, offset={}\n"
+                   "  filesz={:#016x}, memsz={:#016x}\n"
                    , phdr->p_type
                    , phdr->p_offset
                    , phdr->p_filesz
@@ -167,7 +167,7 @@ namespace ELF {
                 if (read == false)
                     return false;
 
-                DBGMSG("[ELF]: Loaded program header ({} bytes) from file {} at byte offset {}\r\n"
+                DBGMSG("[ELF]: Loaded program header ({} bytes) from file {} at byte offset {}\n"
                        , phdr->p_filesz
                        , fd
                        , phdr->p_offset
@@ -194,21 +194,21 @@ namespace ELF {
                 }
             }
             else if (phdr->p_type == PT_GNU_STACK) {
-                DBGMSG("[ELF]: Stack permissions set by GNU_STACK program header.\r\n");
+                DBGMSG("[ELF]: Stack permissions set by GNU_STACK program header.\n");
                 if (!(phdr->p_flags & PF_X)){
                     stack_flags |= (size_t)Memory::PageTableFlag::NX;}
             }
         }
         auto* process = new Process{};
         if (process == nullptr) {
-            std::print("[ELF]: Couldn't allocate process structure for new userspace process\r\n");
+            std::print("[ELF]: Couldn't allocate process structure for new userspace process\n");
             return false;
         }
         constexpr u64 UserProcessStackSizePages = 4;
         constexpr u64 UserProcessStackSize = UserProcessStackSizePages * PAGE_SIZE;
         u64 newStackBottom = (u64)Memory::request_pages(UserProcessStackSizePages);
         if (newStackBottom == 0) {
-            std::print("[ELF]: Couldn't allocate stack for new userspace process\r\n");
+            std::print("[ELF]: Couldn't allocate stack for new userspace process\n");
             return false;
         }
         u64 newStackTop = newStackBottom + UserProcessStackSize;
@@ -235,10 +235,10 @@ namespace ELF {
         vfs.add_file(std::move(file), process);
         vfs.print_debug();
 
-        std::print("[ELF] ProcFds:\r\n");
+        std::print("[ELF] ProcFds:\n");
         u64 n = 0;
         for (const auto& entry : process->FileDescriptors) {
-            std::print("  {} -> {}\r\n", n, entry);
+            std::print("  {} -> {}\n", n, entry);
             n++;
         }
 

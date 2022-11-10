@@ -178,9 +178,9 @@ void kstage1(BootInfo* bInfo) {
 
     // Setup serial communications chip to allow for debug messages as soon as possible.
     UART::initialize();
-    std::print("\r\n"
-             "!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\r\n"
-             "\r\n");
+    std::print("\n"
+             "!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\n"
+             "\n");
 
     // Setup physical memory allocator from EFI memory map.
     Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
@@ -194,11 +194,11 @@ void kstage1(BootInfo* bInfo) {
     // Initialize the Real Time Clock.
     gRTC = RTC();
     gRTC.set_periodic_int_enabled(true);
-    std::print("[kstage1]: \033[32mReal Time Clock (RTC) initialized\033[0m\r\n"
-               "  Periodic interrupts enabled at \033[33m{}hz\033[0m\r\n"
-               "\r\n\033[1;33m"
+    std::print("[kstage1]: \033[32mReal Time Clock (RTC) initialized\033[0m\n"
+               "  Periodic interrupts enabled at \033[33m{}hz\033[0m\n"
+               "\n\033[1;33m"
                "Now is {}:{}:{} on {}-{}-{}"
-               "\033[0m\r\n\r\n"
+               "\033[0m\n\n"
            , static_cast<double>(RTC_PERIODIC_HERTZ)
            , gRTC.Time.hour
            , gRTC.Time.minute
@@ -207,9 +207,9 @@ void kstage1(BootInfo* bInfo) {
            , gRTC.Time.month
            , gRTC.Time.date);
     // Create basic framebuffer renderer.
-    std::print("[kstage1]: Setting up Graphics Output Protocol Renderer\r\n");
+    std::print("[kstage1]: Setting up Graphics Output Protocol Renderer\n");
     gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
-    std::print("  \033[32mSetup Successful\033[0m\r\n\r\n");
+    std::print("  \033[32mSetup Successful\033[0m\n\n");
     draw_boot_gfx();
     // Create basic text renderer for the keyboard.
     Keyboard::gText = Keyboard::BasicTextRenderer();
@@ -232,10 +232,10 @@ void kstage1(BootInfo* bInfo) {
     bool supportCPUID = static_cast<bool>(cpuid_support());
     if (supportCPUID) {
         SystemCPU->set_cpuid_capable();
-        std::print("[kstage1]: \033[32mCPUID is supported\033[0m\r\n");
+        std::print("[kstage1]: \033[32mCPUID is supported\033[0m\n");
         char* cpuVendorID = cpuid_string(0);
         SystemCPU->set_vendor_id(cpuVendorID);
-        std::print("  CPU Vendor ID: {}\r\n", std::string_view{SystemCPU->get_vendor_id(), 12});
+        std::print("  CPU Vendor ID: {}\n", std::string_view{SystemCPU->get_vendor_id(), 12});
 
         CPUIDRegisters regs;
         cpuid(1, regs);
@@ -339,7 +339,7 @@ void kstage1(BootInfo* bInfo) {
             }
         }
     }
-    std::print("\r\n");
+    std::print("\n");
 
     // TODO: Parse CPUs from ACPI MADT table.
     //       For now we only support single core.
@@ -354,8 +354,8 @@ void kstage1(BootInfo* bInfo) {
     // Storage devices like AHCIs will be detected here.
     auto* mcfg = (ACPI::MCFGHeader*)ACPI::find_table("MCFG");
     if (mcfg) {
-        std::print("[kstage1]: Found Memory-mapped Configuration Space (MCFG) ACPI Table\r\n"
-                   "  Address: {}\r\n\r\n", static_cast<void*>(mcfg));
+        std::print("[kstage1]: Found Memory-mapped Configuration Space (MCFG) ACPI Table\n"
+                   "  Address: {}\n\n", static_cast<void*>(mcfg));
         PCI::enumerate_pci(mcfg);
     }
 
@@ -375,7 +375,7 @@ void kstage1(BootInfo* bInfo) {
             && dev.minor() == SYSDEV_MINOR_AHCI_CONTROLLER
             && dev.flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
         {
-            std::print("[kstage1]: Probing AHCI Controller\r\n");
+            std::print("[kstage1]: Probing AHCI Controller\n");
             AHCI::HBAMemory* ABAR = (AHCI::HBAMemory*)(u64)(((PCI::PCIHeader0*)dev.data2())->BAR5);
             // TODO: Better MMIO!! It should be separate from regular virtual mappings, I think.
             Memory::map(ABAR, ABAR
@@ -418,9 +418,9 @@ void kstage1(BootInfo* bInfo) {
         {
             auto* portCon = static_cast<AHCI::PortController*>((&d)->data1());
             auto* driver = static_cast<StorageDeviceDriver*>(portCon);
-            std::print("[kstage1]: Searching AHCI port {} for a GPT\r\n", portCon->port_number());
+            std::print("[kstage1]: Searching AHCI port {} for a GPT\n", portCon->port_number());
             if(GPT::is_gpt_present(driver)) {
-                std::print("  GPT is present!\r\n");
+                std::print("  GPT is present!\n");
                 auto gptHeader = SmartPtr<GPT::Header>(new GPT::Header);
                 auto sector = SmartPtr<u8[]>(new u8[512], 512);
                 portCon->read(512, sizeof(GPT::Header), (u8*)gptHeader.get());
@@ -439,12 +439,12 @@ void kstage1(BootInfo* bInfo) {
                     if (part->EndLBA < part->StartLBA)
                         continue;
 
-                    std::print("      Partition {}: {}:\r\n"
-                               "        Type GUID: {}\r\n"
-                               "        Unique GUID: {}\r\n"
-                               "        Sector Offset: {}\r\n"
-                               "        Sector Count: {}\r\n"
-                               "        Attributes: {}\r\n",
+                    std::print("      Partition {}: {}:\n"
+                               "        Type GUID: {}\n"
+                               "        Unique GUID: {}\n"
+                               "        Sector Offset: {}\n"
+                               "        Sector Count: {}\n"
+                               "        Attributes: {}\n",
                                i, std::string_view{(const char*) part->Name, 72},
                                static_cast<const GUID>(part->TypeGUID),
                                static_cast<const GUID>(part->UniqueGUID),
@@ -496,13 +496,13 @@ void kstage1(BootInfo* bInfo) {
             if (dev.minor() == SYSDEV_MINOR_GPT_PARTITION) {
                 auto* partDriver = static_cast<GPTPartitionDriver*>(dev.data1());
                 if (partDriver) {
-                    std::print("[kstage1]: GPT Partition:\r\n"
-                               "  Type GUID: {}\r\n"
-                               "  Unique GUID: {}\r\n",
+                    std::print("[kstage1]: GPT Partition:\n"
+                               "  Type GUID: {}\n"
+                               "  Unique GUID: {}\n",
                                partDriver->type_guid(),
                                partDriver->unique_guid());
                     if (FAT->test(partDriver)) {
-                        std::print("  Found valid File Allocation Table filesystem\r\n");
+                        std::print("  Found valid File Allocation Table filesystem\n");
                         SYSTEM->add_fs(Filesystem(FilesystemType::FAT, FAT, partDriver));
                         // Done searching GPT partition, found valid filesystem.
                         dev.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
@@ -512,10 +512,10 @@ void kstage1(BootInfo* bInfo) {
             else if (dev.minor() == SYSDEV_MINOR_AHCI_PORT) {
                 auto* portController = (AHCI::PortController*)dev.data1();
                 if (portController) {
-                    std::print("[kstage1]: AHCI port {}:\r\n", portController->port_number());
-                    std::print("  Checking for valid File Allocation Table filesystem\r\n");
+                    std::print("[kstage1]: AHCI port {}:\n", portController->port_number());
+                    std::print("  Checking for valid File Allocation Table filesystem\n");
                     if (FAT->test(portController)) {
-                        std::print("  Found valid File Allocation Table filesystem\r\n");
+                        std::print("  Found valid File Allocation Table filesystem\n");
                         SYSTEM->add_fs(Filesystem(FilesystemType::FAT, FAT, portController));
                         // Done searching AHCI port, found valid filesystem.
                         dev.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
@@ -538,11 +538,11 @@ void kstage1(BootInfo* bInfo) {
 
     // Initialize the Programmable Interval Timer.
     gPIT = PIT();
-    std::print("[kstage1]: \033[32mProgrammable Interval Timer Initialized\033[0m\r\n"
-           "  Channel 0, H/L Bit Access\r\n"
-           "  Rate Generator, BCD Disabled\r\n"
-           "  Periodic interrupts at \033[33m{}hz\033[0m.\r\n"
-           "\r\n", static_cast<double>(PIT_FREQUENCY));
+    std::print("[kstage1]: \033[32mProgrammable Interval Timer Initialized\033[0m\n"
+           "  Channel 0, H/L Bit Access\n"
+           "  Rate Generator, BCD Disabled\n"
+           "  Periodic interrupts at \033[33m{}hz\033[0m.\n"
+           "\n", static_cast<double>(PIT_FREQUENCY));
 
     // The Task State Segment in x86_64 is used
     // for switches between privilege levels.
@@ -555,31 +555,31 @@ void kstage1(BootInfo* bInfo) {
 
     if (SYSTEM->filesystems().length() > 0) {
         constexpr const char* filePath = "/fs0/blazeit";
-        std::print("Opening {} with VFS\r\n", filePath);
+        std::print("Opening {} with VFS\n", filePath);
         auto fds = vfs.open(filePath);
 
-        std::print("  Got FileDescriptors. {}, {}\r\n", fds.Process, fds.Global);
+        std::print("  Got FileDescriptors. {}, {}\n", fds.Process, fds.Global);
         vfs.print_debug();
 
         std::print("  Reading first few bytes: ");
         char tmpBuffer[11]{};
         vfs.read(fds.Process, reinterpret_cast<u8*>(tmpBuffer), 11);
-        std::print("{}\r\n", std::string_view{tmpBuffer, 11});
+        std::print("{}\n", std::string_view{tmpBuffer, 11});
 
         if (fds.valid() && ELF::CreateUserspaceElf64Process(vfs, fds.Process)) {
-            std::print("Successfully created new process from `/fs0/blazeit`\r\n");
-            std::print("Closing FileDescriptor {}\r\n", fds.Process);
+            std::print("Successfully created new process from `/fs0/blazeit`\n");
+            std::print("Closing FileDescriptor {}\n", fds.Process);
             vfs.close(fds.Process);
-            std::print("FileDescriptor {} closed\r\n", fds.Process);
+            std::print("FileDescriptor {} closed\n", fds.Process);
             vfs.print_debug();
         }
         // Another userspace program
         constexpr const char* programTwoFilePath = "/fs0/stdout";
-        std::print("Opening {} with VFS\r\n", programTwoFilePath);
+        std::print("Opening {} with VFS\n", programTwoFilePath);
         fds = vfs.open(programTwoFilePath);
-        std::print("  Got FileDescriptors. {}, {}\r\n", fds.Process, fds.Global);
+        std::print("  Got FileDescriptors. {}, {}\n", fds.Process, fds.Global);
         if (fds.valid() && ELF::CreateUserspaceElf64Process(vfs, fds.Process)) {
-            std::print("Sucessfully created new process from `/fs0/stdout`\r\n");
+            std::print("Sucessfully created new process from `/fs0/stdout`\n");
             vfs.close(fds.Process);
         }
     }
@@ -607,7 +607,7 @@ void kstage1(BootInfo* bInfo) {
     SYSTEM->print();
 
     // Allow interrupts to trigger.
-    std::print("[kstage1]: Enabling interrupts\r\n");
+    std::print("[kstage1]: Enabling interrupts\n");
     asm ("sti");
-    std::print("[kstage1]: \033[32mInterrupts enabled\033[0m\r\n");
+    std::print("[kstage1]: \033[32mInterrupts enabled\033[0m\n");
 }

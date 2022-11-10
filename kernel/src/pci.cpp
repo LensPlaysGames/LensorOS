@@ -41,19 +41,19 @@ namespace PCI {
         if (pci == nullptr)
             return;
 
-        std::print("[PCI]: Device Header at {}\r\n"
-                   "  Vendor ID:        {}\r\n"
-                   "  Device ID:        {}\r\n"
-                   "  Command:          {}\r\n"
-                   "  Status:           {}\r\n"
-                   "  Revision ID:      {}\r\n"
-                   "  ProgIF:           {}\r\n"
-                   "  Subclass:         {}\r\n"
-                   "  Class:            {}\r\n"
-                   "  Cache Line Size:  {}\r\n"
-                   "  Latency Timer:    {}\r\n"
-                   "  Header Type:      {}\r\n"
-                   "  BIST:             {}\r\n"
+        std::print("[PCI]: Device Header at {}\n"
+                   "  Vendor ID:        {}\n"
+                   "  Device ID:        {}\n"
+                   "  Command:          {}\n"
+                   "  Status:           {}\n"
+                   "  Revision ID:      {}\n"
+                   "  ProgIF:           {}\n"
+                   "  Subclass:         {}\n"
+                   "  Class:            {}\n"
+                   "  Cache Line Size:  {}\n"
+                   "  Latency Timer:    {}\n"
+                   "  Header Type:      {}\n"
+                   "  BIST:             {}\n"
                    , (void*) pci
                    , pci->VendorID
                    , pci->DeviceID
@@ -84,9 +84,9 @@ namespace PCI {
         }
 
         // TODO: Cache human readable information with device in device tree.
-        DBGMSG("\r\n"
-               "      Function at {}: {} / {} / {} / {} / {}\r\n"
-               "\r\n"
+        DBGMSG("\n"
+               "      Function at {}: {} / {} / {} / {} / {}\n"
+               "\n"
                , (void*) functionAddress
                , get_vendor_name(pciDevHdr->VendorID)
                , get_device_name(pciDevHdr->VendorID, pciDevHdr->DeviceID)
@@ -124,8 +124,8 @@ namespace PCI {
             Memory::unmap((void*)deviceAddress);
             return;
         }
-        DBGMSG("    Device {}:\r\n"
-               "      Address: {}\r\n"
+        DBGMSG("    Device {}:\n"
+               "      Address: {}\n"
                , deviceNumber
                , (void*) deviceAddress
                );
@@ -137,8 +137,8 @@ namespace PCI {
         u64 offset = busNumber << 20;
         u64 busAddress = baseAddress + offset;
         // Memory::map((void*)bus_address, (void*)bus_address);
-        DBGMSG("[PCI]: Bus {}\r\n"
-               "  Address: {}\r\n"
+        DBGMSG("[PCI]: Bus {}\n"
+               "  Address: {}\n"
                , busNumber
                , (void*) busAddress
                );
@@ -147,9 +147,9 @@ namespace PCI {
     }
     
     void enumerate_pci(ACPI::MCFGHeader* mcfg) {
-        std::print("[PCI]: Discovering devices...\r\n");
+        std::print("[PCI]: Discovering devices...\n");
         int entries = ((mcfg->Length) - sizeof(ACPI::MCFGHeader)) / sizeof(ACPI::DeviceConfig);
-        DBGMSG("  Found {} MCFG entries\r\n", entries);
+        DBGMSG("  Found {} MCFG entries\n", entries);
         [[maybe_unused]] u64 systemDeviceLengthBefore = SYSTEM->devices().length();
         for (int t = 0; t < entries; ++t) {
             u64 devConAddr = (reinterpret_cast<u64>(mcfg)
@@ -157,10 +157,10 @@ namespace PCI {
                               + (sizeof(ACPI::DeviceConfig) * t));
             auto* devCon = reinterpret_cast<ACPI::DeviceConfig*>(devConAddr);
 
-            DBGMSG("    Entry {}\r\n"
-                   "      Base Address: {}\r\n"
-                   "      Start Bus:    {}\r\n"
-                   "      End Bus:      {}\r\n"
+            DBGMSG("    Entry {}\n"
+                   "      Base Address: {}\n"
+                   "      Start Bus:    {}\n"
+                   "      End Bus:      {}\n"
                    , t
                    , (void*) devCon->BaseAddress
                    , devCon->StartBus
@@ -172,10 +172,10 @@ namespace PCI {
             }
         }
 
-        DBGMSG("[PCI]: Found {} device(s)\r\n"
+        DBGMSG("[PCI]: Found {} device(s)\n"
                , SYSTEM->devices().length() - systemDeviceLengthBefore
                );
 
-        std::print("  \033[32mDone\033[0m\r\n\r\n");
+        std::print("  \033[32mDone\033[0m\n\n");
     }
 }

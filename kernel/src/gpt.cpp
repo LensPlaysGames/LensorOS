@@ -36,24 +36,24 @@ namespace GPT {
     constexpr const char* HEADER_SIGNATURE = "EFI PART";
     bool is_gpt_present(StorageDeviceDriver* driver) {
         if (driver == nullptr) {
-            std::print("[GPT]: GPT can not be present on driver that is nullptr!\r\n");
+            std::print("[GPT]: GPT can not be present on driver that is nullptr!\n");
             return false;
         }
-        DBGMSG("[GPT]: Checking for valid GPT\r\n");
+        DBGMSG("[GPT]: Checking for valid GPT\n");
         SmartPtr<Header> hdr = SmartPtr<Header>(new Header);
         driver->read(512, sizeof(Header), (u8*)hdr.get());
         // Validate GPT Header
         if (hdr->Revision == 0) {
-            DBGMSG("  ERROR: Revision is not zero\r\n");
+            DBGMSG("  ERROR: Revision is not zero\n");
             return false;
         }
         for (u8 i = 0; i < 8; ++i) {
             if (hdr->Signature[i] != HEADER_SIGNATURE[i]) {
-                DBGMSG("  ERROR: Signature doesn't match\r\n");
+                DBGMSG("  ERROR: Signature doesn't match\n");
                 return false;
             }
         }
-        DBGMSG("  Valid GPT\r\n");
+        DBGMSG("  Valid GPT\n");
         return true;
     }
 }

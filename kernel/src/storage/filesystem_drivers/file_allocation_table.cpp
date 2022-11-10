@@ -42,17 +42,17 @@ void FileAllocationTableDriver::print_fat(BootRecord* br) {
     if (br == nullptr)
         return;
 
-    std::print("File Allocation Table Boot Record:\r\n"
-               "  Total Clusters:      {}\r\n"
-               "  Sectors / Cluster:   {}\r\n"
-               "  Total Sectors:       {}\r\n"
-               "  Bytes / Sector:      {}\r\n"
-               "  Sectors / FAT:       {}\r\n"
-               "  Sector Offsets:\r\n"
-               "    FATs:      {}\r\n"
-               "    Data:      {}\r\n"
-               "    Root Dir.: {}\r\n"
-               "\r\n"
+    std::print("File Allocation Table Boot Record:\n"
+               "  Total Clusters:      {}\n"
+               "  Sectors / Cluster:   {}\n"
+               "  Total Sectors:       {}\n"
+               "  Bytes / Sector:      {}\n"
+               "  Sectors / FAT:       {}\n"
+               "  Sector Offsets:\n"
+               "    FATs:      {}\n"
+               "    Data:      {}\n"
+               "    Root Dir.: {}\n"
+               "\n"
                , br->total_clusters()
                , br->BPB.NumSectorsPerCluster
                , br->BPB.total_sectors()
@@ -146,8 +146,8 @@ FileMetadata FileAllocationTableDriver::file(StorageDeviceDriver* driver, const 
 
         currentCharacter++;
     }
-    DBGMSG("[FAT]: Looking for file at {}\r\n"
-           "  Translated path: {}\r\n"
+    DBGMSG("[FAT]: Looking for file at {}\n"
+           "  Translated path: {}\n"
            , std::string_view{givenPath.data(), givenPath.length()}
            , std::string_view{path.data(), path.length()}
            );
@@ -212,11 +212,11 @@ FileMetadata FileAllocationTableDriver::file(StorageDeviceDriver* driver, const 
             else if (entry->volume_id())
                 fileType += "volume identifier ";
             else fileType += "file ";
-            DBGMSG("    Found {}named {}\r\n",
+            DBGMSG("    Found {}named {}\n",
                    std::string_view { fileType.data(), fileType.length() },
                    std::string_view { fileName.data(), fileName.length() });
             if (fileName == path) {
-                DBGMSG("  Found file!\r\n");
+                DBGMSG("  Found file!\n");
                 // TODO: directory vs. file metadata
                 u64 byteOffset = br->cluster_to_sector(entry->get_cluster_number())
                     * br->BPB.NumBytesPerSector;

@@ -34,7 +34,7 @@ void dbgrainbow(const String& str, ShouldNewline nl) {
     }
     std::print("\033[0m");
     if (nl == ShouldNewline::Yes)
-        std::print("\r\n");
+        std::print("\n");
 }
 
 void dbgrainbow(const char* str, ShouldNewline nl) {

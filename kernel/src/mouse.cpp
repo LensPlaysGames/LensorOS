@@ -87,7 +87,7 @@ void init_ps2_mouse() {
     mouse_read(); // ACK
     gMouseID = mouse_read();
 
-    std::print("[Mouse]: Successfully initialized PS2 mouse using serial port (ID: {})\r\n", gMouseID);
+    std::print("[Mouse]: Successfully initialized PS2 mouse using serial port (ID: {})\n", gMouseID);
 }
 
 u8 mouse_cycle {0};

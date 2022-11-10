@@ -44,7 +44,7 @@ u32 HPET::readl(u16 offset) {
 }
 
 void hpet_init_failed(const char* msg) {
-    std::print("[HPET]: \033[31mFailed to initialize:\033[0m {}\r\n", msg);
+    std::print("[HPET]: \033[31mFailed to initialize:\033[0m {}\n", msg);
 }
 
 bool HPET::initialize() {
@@ -113,7 +113,7 @@ bool HPET::initialize() {
     if (NumberOfComparators < HPET_MIN_COMPARATORS
         || NumberOfComparators > HPET_MAX_COMPARATORS)
     {
-        std::print("  Number of Comparators: {}\r\n", NumberOfComparators);
+        std::print("  Number of Comparators: {}\n", NumberOfComparators);
         hpet_init_failed("Number of comparators is invalid.");
         return false;
     }
@@ -213,21 +213,21 @@ void HPET::print_state() {
     if (Initialized == false)
         return;
 
-    std::print("[HPET]: \033[32mInitialized\033[0m\r\n"
-              "  Revision ID: {:08b}\r\n"
-              "  ID: {:#x}\r\n"
-              "  PCI Vendor ID: {:#x}\r\n"
-              "  Main Counter Enabled: {}\r\n"
-              "  Supports 64-bit Main Counter: {}\r\n"
-              "  Supports Legacy Interrupt Mapping: {}\r\n"
-              "  Base Address: {:#016x}\r\n"
-              "  Address Space ID: {:#x}\r\n"
-              "  Sequence Number: {}\r\n"
-              "  Minimum Tick: {}\r\n"
-              "  Period: {}\r\n"
-              "  Frequency: {}\r\n"
-              "  Number of Comparators: {}\r\n"
-              "  Page Protection: {:08b}\r\n"
+    std::print("[HPET]: \033[32mInitialized\033[0m\n"
+              "  Revision ID: {:08b}\n"
+              "  ID: {:#x}\n"
+              "  PCI Vendor ID: {:#x}\n"
+              "  Main Counter Enabled: {}\n"
+              "  Supports 64-bit Main Counter: {}\n"
+              "  Supports Legacy Interrupt Mapping: {}\n"
+              "  Base Address: {:#016x}\n"
+              "  Address Space ID: {:#x}\n"
+              "  Sequence Number: {}\n"
+              "  Minimum Tick: {}\n"
+              "  Period: {}\n"
+              "  Frequency: {}\n"
+              "  Number of Comparators: {}\n"
+              "  Page Protection: {:08b}\n"
               , Header->RevisionID
               , Header->ID
               , u16(Header->PCIvendorID)

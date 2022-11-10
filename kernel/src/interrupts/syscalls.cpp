@@ -45,7 +45,7 @@
 /// "sys$" + number + "_" + descriptive name
 
 [[maybe_unused]]
-constexpr const char* sys$_dbgfmt = "[SYS$]: {} -- {}\r\n";
+constexpr const char* sys$_dbgfmt = "[SYS$]: {} -- {}\n";
 
 ProcessFileDescriptor sys$0_open(const char* path) {
     DBGMSG(sys$_dbgfmt, 0, "open");
@@ -60,10 +60,10 @@ void sys$1_close(ProcessFileDescriptor fd) {
 // TODO: This should return the amount of bytes read.
 int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
     DBGMSG(sys$_dbgfmt, 2, "read");
-    DBGMSG("  file descriptor: {}\r\n"
-           "  buffer address:  {}\r\n"
-           "  byte count:      {}\r\n"
-           "\r\n"
+    DBGMSG("  file descriptor: {}\n"
+           "  buffer address:  {}\n"
+           "  byte count:      {}\n"
+           "\n"
            , fd
            , (void*) buffer
            , byteCount
@@ -74,10 +74,10 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
 // TODO: This should return the amount of bytes written.
 int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
     DBGMSG(sys$_dbgfmt, 3, "write");
-    DBGMSG("  file descriptor: {}\r\n"
-           "  buffer address:  {}\r\n"
-           "  byte count:      {}\r\n"
-           "\r\n"
+    DBGMSG("  file descriptor: {}\n"
+           "  buffer address:  {}\n"
+           "  byte count:      {}\n"
+           "\n"
            , fd
            , (void*) buffer
            , byteCount
@@ -87,26 +87,26 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
 
 void sys$4_poke() {
     DBGMSG(sys$_dbgfmt, 4, "poke");
-    DBGMSG("Poke from userland!\r\n");
+    DBGMSG("Poke from userland!\n");
 }
 
 void sys$5_exit([[maybe_unused]] int status) {
     DBGMSG(sys$_dbgfmt, 5, "exit");
-    DBGMSG("  status: {}\r\n"
-           "\r\n"
+    DBGMSG("  status: {}\n"
+           "\n"
            , status
            );
     pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
     Scheduler::remove_process(pid);
-    DBGMSG("[SYS$]: exit({}) -- Removed process {}\r\n", status, pid);
+    DBGMSG("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
 }
 
 void* sys$6_map(void* address, usz size, u64 flags) {
     DBGMSG(sys$_dbgfmt, 6, "map");
-    DBGMSG("  address: {}\r\n"
-           "  size:    {}\r\n" // TODO: %ull is wrong, we need a size type format
-           "  flags:   {}\r\n"
-           "\r\n"
+    DBGMSG("  address: {}\n"
+           "  size:    {}\n" // TODO: %ull is wrong, we need a size type format
+           "  flags:   {}\n"
+           "\n"
            , address
            , size
            , flags
@@ -148,8 +148,8 @@ void* sys$6_map(void* address, usz size, u64 flags) {
 
 void sys$7_unmap(void* address) {
     DBGMSG(sys$_dbgfmt, 7, "unmap");
-    DBGMSG("  address: {}\r\n"
-           "\r\n"
+    DBGMSG("  address: {}\n"
+           "\n"
            , address
            );
 
@@ -187,8 +187,8 @@ void sys$7_unmap(void* address) {
 
 void sys$8_time(Time::tm* time) {
     DBGMSG(sys$_dbgfmt, 8, "time");
-    DBGMSG("  tm: {}\r\n"
-           "\r\n"
+    DBGMSG("  tm: {}\n"
+           "\n"
            , (void*) time
            );
     if (!time) { return; }
