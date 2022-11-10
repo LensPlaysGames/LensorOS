@@ -106,7 +106,7 @@ namespace PCI {
                                                , nullptr, pciDevHdr
                                                , nullptr, nullptr);
                     storageDevice.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, true);
-                    SYSTEM->add_device(storageDevice);
+                    SYSTEM->add_device(std::move(storageDevice));
                 }
             }
         }
@@ -150,7 +150,7 @@ namespace PCI {
         std::print("[PCI]: Discovering devices...\n");
         int entries = ((mcfg->Length) - sizeof(ACPI::MCFGHeader)) / sizeof(ACPI::DeviceConfig);
         DBGMSG("  Found {} MCFG entries\n", entries);
-        [[maybe_unused]] u64 systemDeviceLengthBefore = SYSTEM->devices().length();
+        [[maybe_unused]] u64 systemDeviceLengthBefore = SYSTEM->devices().size();
         for (int t = 0; t < entries; ++t) {
             u64 devConAddr = (reinterpret_cast<u64>(mcfg)
                               + sizeof(ACPI::MCFGHeader)

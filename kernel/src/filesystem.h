@@ -21,6 +21,7 @@
 #define LENSOR_OS_FILESYSTEM_H
 
 #include <format>
+#include <vector>
 
 #include <debug.h>
 #include <storage/filesystem_driver.h>
@@ -36,7 +37,11 @@ class Filesystem {
      * `-- The public API is not what is required of this class.
      *     Needs to better support open, then read/write, then close.
      */
+    /// Required by std::vector.
+    Filesystem() = default;
+    friend std::vector<Filesystem>;
 public:
+
     Filesystem(FilesystemType t
                , FilesystemDriver* fs
                , StorageDeviceDriver* dev)

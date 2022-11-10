@@ -33,7 +33,7 @@
 #include <virtual_filesystem.h>
 
 // Uncomment the following directive for extra debug information output.
-#define DEBUG_VFS
+//#define DEBUG_VFS
 
 #ifdef DEBUG_VFS
 #   define DBGMSG(...) std::print(__VA_ARGS__)

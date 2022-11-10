@@ -57,11 +57,16 @@ constexpr u64 SYSDEV_MINOR_AHCI_CONTROLLER = 0;
 constexpr u64 SYSDEV_MINOR_AHCI_PORT       = 1;
 constexpr u64 SYSDEV_MINOR_GPT_PARTITION   = 10;
 
+class System;
 
 /// A system device refers to a hardware device that has been detected
 /// during boot, and is saved for later use in the system structure.
 class SystemDevice {
+    /// Default constructor required by std::vector.
+    SystemDevice() = default;
+    friend std::vector<SystemDevice>;
 public:
+
     SystemDevice(u64 major, u64 minor)
         : Major(major), Minor(minor)
     {
@@ -127,35 +132,27 @@ public:
         CPU = cpu;
     }
 
-    void add_device(const SystemDevice& d) {
-        Devices.add(d);
-    };
-
-    void add_fs(const Filesystem& fs) {
-        Filesystems.add(fs);
-    }
+    void add_device(SystemDevice&& d) { Devices.push_back(std::move(d)); }
+    void add_fs(Filesystem&& fs) { Filesystems.push_back(fs); }
 
     CPUDescription& cpu() { return CPU; }
     VFS& virtual_filesystem() { return VirtualFilesystem; }
 
-    SinglyLinkedList<Filesystem>& filesystems() { return Filesystems; }
+    std::vector<Filesystem>& filesystems() { return Filesystems; }
 
-    SinglyLinkedList<SystemDevice>& devices() { return Devices; }
+    std::vector<SystemDevice>& devices() { return Devices; }
     SystemDevice* device(u64 major, u64 minor) {
-        Devices.for_each([major, minor](auto* it) {
-            SystemDevice& dev = it->value();
+        for (auto& dev : Devices)
             if (dev.major() == major && dev.minor() == minor)
-                return dev;
-        });
+                return &dev;
         return nullptr;
     }
 
     void print() {
         CPU.print_debug();
-        if (Devices.length() > 0) {
+        if (!Devices.empty()) {
             std::print("System Devices:\n");
-            Devices.for_each([](auto* it) {
-                SystemDevice& dev = it->value();
+             for (auto& dev : Devices) {
                 std::print("  {}.{}:\n"
                            "    Flags: {}"
                            , dev.major()
@@ -168,26 +165,25 @@ public:
                 if (void* d4 = dev.data4()) std::print("\n    Data4: {}", d4);
 
                 std::print("\n");
-            });
+            }
             std::print("\n");
         }
-        if (Filesystems.length() > 0) {
+        if (!Filesystems.empty()) {
             std::print("Filesystems:\n");
-            Filesystems.for_each([](auto* it){
-                Filesystem& fs = it->value();
+            for (auto& fs : Filesystems) {
                 fs.print();
                 u8 buffer[8]{};
                 fs.storage_device_driver()->read(0, sizeof buffer, buffer);
                 std::print("  First 8 bytes: {}\n", __s(buffer));
-            });
+            }
             std::print("\n");
         }
     }
 
 private:
     CPUDescription CPU;
-    SinglyLinkedList<SystemDevice> Devices;
-    SinglyLinkedList<Filesystem> Filesystems;
+    std::vector<SystemDevice> Devices;
+    std::vector<Filesystem> Filesystems;
     VFS VirtualFilesystem;
 };
 

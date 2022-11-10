@@ -369,14 +369,13 @@ void kstage1(BootInfo* bInfo) {
      * TODO: Write more efficient container types.
      * FIXME: Don't use singly linked lists for everything.
      */
-    SYSTEM->devices().for_each([](auto* it){
-        SystemDevice& dev = it->value();
+    for (auto& dev : SYSTEM->devices()){
         if (dev.major() == SYSDEV_MAJOR_STORAGE
             && dev.minor() == SYSDEV_MINOR_AHCI_CONTROLLER
             && dev.flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
         {
             std::print("[kstage1]: Probing AHCI Controller\n");
-            AHCI::HBAMemory* ABAR = (AHCI::HBAMemory*)(u64)(((PCI::PCIHeader0*)dev.data2())->BAR5);
+            auto* ABAR = (AHCI::HBAMemory*)(u64)(((PCI::PCIHeader0*)dev.data2())->BAR5);
             // TODO: Better MMIO!! It should be separate from regular virtual mappings, I think.
             Memory::map(ABAR, ABAR
                         , (u64)Memory::PageTableFlag::Present
@@ -397,21 +396,20 @@ void kstage1(BootInfo* bInfo) {
                         if (type == AHCI::PortType::SATA)
                             ahciPort.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, true);
 
-                        SYSTEM->add_device(ahciPort);
+                        SYSTEM->add_device(std::move(ahciPort));
                     }
                 }
             }
             // Don't search AHCI controller any further, already found all ports.
             dev.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
         }
-    });
+    }
 
     /* Find partitions
      * A storage device may be partitioned (i.e. GUID Partition Table).
      * These partitions are to be detected and new system devices created.
      */
-    SYSTEM->devices().for_each([](auto* it) {
-        SystemDevice& d = it->value();
+    for (auto& d : SYSTEM->devices()) {
         if (d.major() == SYSDEV_MAJOR_STORAGE
             && d.minor() == SYSDEV_MINOR_AHCI_PORT
             && d.flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
@@ -457,7 +455,7 @@ void kstage1(BootInfo* bInfo) {
                     SystemDevice gptPartition(SYSDEV_MAJOR_STORAGE
                                               , SYSDEV_MINOR_GPT_PARTITION
                                               , partDriver, nullptr
-                                              , nullptr, &it->value());
+                                              , nullptr, &d);
                     gptPartition.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, true);
                     // Don't touch partitions with ANY known GUIDs (for now).
                     const GUID* knownGUID = &GPT::ReservedPartitionGUIDs[0];
@@ -468,7 +466,7 @@ void kstage1(BootInfo* bInfo) {
                         knownGUID++;
                     }
                     if (gptPartition.flag(SYSDEV_MAJOR_STORAGE_SEARCH))
-                        SYSTEM->add_device(gptPartition);
+                        SYSTEM->add_device(std::move(gptPartition));
                     else delete partDriver;
                 }
                 /* Don't search port any further, we figured
@@ -479,7 +477,7 @@ void kstage1(BootInfo* bInfo) {
                 d.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
             }
         }
-    });
+    }
 
     // Prepare filesystem drivers.
     auto* FAT = new FileAllocationTableDriver;
@@ -488,8 +486,7 @@ void kstage1(BootInfo* bInfo) {
      * For every storage device we know how to read/write from,
      * check if a recognized filesystem resides on it.
      */
-    SYSTEM->devices().for_each([FAT](auto* it) {
-        SystemDevice& dev = it->value();
+    for (auto& dev : SYSTEM->devices()) {
         if (dev.major() == SYSDEV_MAJOR_STORAGE
             && dev.flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
         {
@@ -523,18 +520,17 @@ void kstage1(BootInfo* bInfo) {
                 }
             }
         }
-    });
+    }
 
     SYSTEM->virtual_filesystem().print_debug();
 
     u64 i = 0;
-    SYSTEM->filesystems().for_each([&i](auto* it) {
-        Filesystem& fs = it->value();
+    for (auto& fs : SYSTEM->filesystems()) {
         String name("/fs");
         name += to_string(i);
         SYSTEM->virtual_filesystem().mount(name.data_copy(), &fs);
         i++;
-    });
+    }
 
     // Initialize the Programmable Interval Timer.
     gPIT = PIT();
@@ -553,7 +549,7 @@ void kstage1(BootInfo* bInfo) {
     VFS& vfs = SYSTEM->virtual_filesystem();
     vfs.StdoutDriver = std::make_unique<DbgOutDriver>();
 
-    if (SYSTEM->filesystems().length() > 0) {
+    if (!SYSTEM->filesystems().empty()) {
         constexpr const char* filePath = "/fs0/blazeit";
         std::print("Opening {} with VFS\n", filePath);
         auto fds = vfs.open(filePath);
