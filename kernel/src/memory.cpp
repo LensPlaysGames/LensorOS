@@ -23,7 +23,7 @@
 #include <integers.h>
 #include <large_integers.h>
 
-int memcmp(void* aPtr, void* bPtr, u64 numBytes) {
+extern "C" int memcmp(void* aPtr, void* bPtr, size_t numBytes) {
     if (aPtr == bPtr)
         return 0;
 

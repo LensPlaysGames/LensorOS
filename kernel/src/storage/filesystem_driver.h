@@ -23,9 +23,16 @@
 #include <storage/storage_device_driver.h>
 #include <string.h>
 
-class FileMetadata;
+/*struct FileMetadata;*/
 
-/// An abstraction on top of StorageDeviceDriver that returns metadata
+
+struct FilesystemDriver : StorageDeviceDriver {
+    virtual auto name() -> const char* = 0;
+    virtual auto try_create(StorageDeviceDriver* driver) -> std::unique_ptr<FilesystemDriver> = 0;
+};
+
+
+/*/// An abstraction on top of StorageDeviceDriver that returns metadata
 /// and byte offset of a given file path to the VFS.
 class FilesystemDriver {
 public:
@@ -37,6 +44,6 @@ public:
 
     /// Get the metadata for the file at path, if it exists.
     virtual FileMetadata file(StorageDeviceDriver* driver, const String& path) = 0;
-};
+};*/
 
 #endif /* LENSOR_OS_FILESYSTEM_DRIVER_H */

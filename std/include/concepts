@@ -39,6 +39,13 @@ concept integral = is_integral_v<_T>;
 template<typename _T>
 concept floating_point = is_floating_point_v<_T>;
 
+/// Check if something behaves like a pointer.
+template <typename _T>
+concept __pointer_like = requires(_T __t) {
+    typename _T::element_type;
+    { *__t } -> same_as<typename _T::element_type&>;
+};
+
 /// void* or null.
 template <typename _T>
 concept __abstract_pointer = is_same_v<_T, nullptr_t> or is_same_v<_T, void*> or is_same_v<_T, const void*>;

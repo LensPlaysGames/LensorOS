@@ -276,13 +276,9 @@ void sys$13_pipe(ProcessFileDescriptor fds[2]) {
     VFS& vfs = SYSTEM->virtual_filesystem();
 
     // Get valid pipe index from pipe driver.
-    ssz byteOffset = vfs.PipesDriver->lay_pipe();
-    // TODO: Pick suitable file name for file metadata.
-    FileMetadata meta = FileMetadata
-        ("", false, vfs.PipesDriver.get(), nullptr, PIPE_BUFSZ, byteOffset);
-    auto file = std::make_shared<OpenFileDescription>(vfs.PipesDriver.get(), meta);
+    auto file = vfs.PipesDriver->lay_pipe();
     FileDescriptors readFDs = vfs.add_file(file, process);
-    FileDescriptors writeFDs = vfs.add_file(file, process);
+    FileDescriptors writeFDs = vfs.add_file(std::move(file), process);
     // Write fds.
     fds[0] = readFDs.Process;
     fds[1] = writeFDs.Process;

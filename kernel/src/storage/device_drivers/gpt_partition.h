@@ -24,8 +24,9 @@
 #include <guid.h>
 #include <storage/storage_device_driver.h>
 
-class GPTPartitionDriver final : public StorageDeviceDriver {
-public:
+/// TODO: This should probably be replaced with a FileMetadata that stores
+///       the offset and is passed directly to the underlying driver.
+struct GPTPartitionDriver final : StorageDeviceDriver {
     GPTPartitionDriver(StorageDeviceDriver* driver
                        , GUID type, GUID unique
                        , u64 startSector, u64 sectorSize)
@@ -33,12 +34,15 @@ public:
         , Type(type), Unique(unique)
         , Offset(startSector * sectorSize) {}
 
-    ssz read(usz byteOffset, usz byteCount, void* buffer) final {
-        return Driver->read(byteOffset + Offset, byteCount, buffer);
+    void close(FileMetadata* file) final { Driver->close(file); }
+    auto open(std::string_view name) -> std::shared_ptr<FileMetadata> final { return Driver->open(name); }
+
+    ssz read(FileMetadata* file, usz offs, usz byteCount, void* buffer) final {
+        return Driver->read(file, offs + Offset, byteCount, buffer);
     };
 
-    ssz write(usz byteOffset, usz byteCount, void* buffer) final {
-        return Driver->read(byteOffset + Offset, byteCount, buffer);
+    ssz write(FileMetadata* file, usz offs, usz byteCount, void* buffer) final {
+        return Driver->read(file, offs + Offset, byteCount, buffer);
     };
 
     GUID type_guid() { return Type; }

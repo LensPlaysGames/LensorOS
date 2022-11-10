@@ -31,6 +31,7 @@
 
 __BEGIN_DECLS__
 void* memcpy(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n);
+int memcmp(void* src, void* dest, size_t bytes);
 __END_DECLS__
 
 namespace std {
@@ -115,12 +116,12 @@ public:
 
     _Nodiscard bool starts_with(_View __sv) const {
         if (__sv.size() > __size) return false;
-        return memcmp(__data, __sv.__data, __sv.size()) == 0;
+        return memcmp((void*)__data, (void*)__sv.__data, __sv.size() * sizeof(_Char)) == 0;
     }
 
     _Nodiscard bool ends_with(_View __sv) const {
         if (__sv.size() > __size) return false;
-        return memcmp(__data + __size - __sv.size(), __sv.__data, __sv.size()) == 0;
+        return memcmp((void*)(__data + __size - __sv.size()), (void*)__sv.__data, __sv.size() * sizeof(_Char)) == 0;
     }
 
     _Nodiscard bool contains(_View __sv) const {
@@ -260,6 +261,21 @@ public:
 
     constexpr ~basic_string() {
         if (__is_large()) { delete[] __large.__data; }
+    }
+
+    constexpr basic_string& operator=(const _Str& __other) {
+        if (__is_large()) { delete[] __large.__data; }
+        __small = __other.__small;
+        return *this;
+    }
+
+    constexpr basic_string& operator=(_Str&& __other)  noexcept {
+        if (__is_large()) { delete[] __large.__data; }
+        __small = __other.__small;
+        __other.__small.__data[0] = 0;
+        __other.__small.__rem_cap = __max_chars_small;
+        __other.__small.__is_large = false;
+        return *this;
     }
 
     /// =======================================================================

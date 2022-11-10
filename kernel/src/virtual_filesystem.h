@@ -61,21 +61,13 @@ struct formatter<SysFD> : formatter<FileDescriptor> {
 };
 } // namespace std
 
-struct OpenFileDescription {
-    OpenFileDescription(StorageDeviceDriver* driver, const FileMetadata& md)
-        : DeviceDriver(driver), Metadata(md) {}
-
-    StorageDeviceDriver* DeviceDriver { nullptr };
-    FileMetadata Metadata;
-};
-
 struct MountPoint {
     MountPoint() = default;
-    MountPoint(const char* path, Filesystem* fs)
-        : Path(path), FS(fs) {}
+    MountPoint(std::string path, std::unique_ptr<FilesystemDriver>&& fs)
+        : Path(std::move(path)), FS(std::move(fs)) {}
 
-    const char* Path { nullptr };
-    Filesystem* FS { nullptr };
+    std::string Path;
+    std::unique_ptr<FilesystemDriver> FS;
 };
 
 struct FileDescriptors {
@@ -94,7 +86,9 @@ public:
 
     VFS() {}
 
-    void mount(const char* path, Filesystem* fs) { Mounts.push_back(MountPoint{path, fs}); }
+    void mount(std::string path, std::unique_ptr<FilesystemDriver>&& fs) {
+        Mounts.push_back(MountPoint{std::move(path), std::move(fs)});
+    }
 
     /// The second file descriptor given will be associated with the file
     /// description of the first.
@@ -110,14 +104,11 @@ public:
         if (!f) {
             return false;
         }
-        *Files[sysfd] = std::move(f);
+        Files[sysfd] = std::move(f);
         return true;
     }
 
-    FileDescriptors open(const String& path);
-    FileDescriptors open(const char* path) {
-        return open(String(path));
-    }
+    FileDescriptors open(std::string_view);
 
     bool close(ProcFD procfd);
 
@@ -127,15 +118,15 @@ public:
     void print_debug();
 
     /// Files are stored as shared_ptrs to support dup() more easily.
-    FileDescriptors add_file(std::shared_ptr<OpenFileDescription>, Process* proc = nullptr);
+    FileDescriptors add_file(std::shared_ptr<FileMetadata>, Process* proc = nullptr);
 
 private:
-    std::sparse_vector<std::shared_ptr<OpenFileDescription>, nullptr, SysFD> Files;
+    std::sparse_vector<std::shared_ptr<FileMetadata>, nullptr, SysFD> Files;
     std::vector<MountPoint> Mounts;
 
     auto procfd_to_fd(ProcFD procfd) const -> SysFD;
-    auto file(ProcFD fd) -> std::shared_ptr<OpenFileDescription>;
-    auto file(SysFD fd) -> std::shared_ptr<OpenFileDescription>;
+    auto file(ProcFD fd) -> std::shared_ptr<FileMetadata>;
+    auto file(SysFD fd) -> std::shared_ptr<FileMetadata>;
     void free_fd(SysFD fd, ProcFD procfd);
     bool valid(ProcFD procfd) const;
     bool valid(SysFD fd) const;

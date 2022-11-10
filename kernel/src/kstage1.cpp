@@ -17,7 +17,6 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include "format"
 
 #include <acpi.h>
 #include <ahci.h>
@@ -31,6 +30,7 @@
 #include <efi_memory.h>
 #include <elf_loader.h>
 #include <fat_definitions.h>
+#include <format>
 #include <gdt.h>
 #include <gpt.h>
 #include <guid.h>
@@ -57,6 +57,7 @@
 #include <scheduler.h>
 #include <storage/device_drivers/dbgout.h>
 #include <storage/device_drivers/gpt_partition.h>
+#include <storage/device_drivers/port_controller.h>
 #include <storage/file_metadata.h>
 #include <storage/filesystem_driver.h>
 #include <storage/filesystem_drivers/file_allocation_table.h>
@@ -364,9 +365,6 @@ void kstage1(BootInfo* bInfo) {
      * storage media hardware devices; for example,
      * a single AHCI controller has multiple ports,
      * each one referring to its own device.
-     *
-     * TODO: Write more efficient container types.
-     * FIXME: Don't use singly linked lists for everything.
      */
     for (auto& dev : SYSTEM->devices()){
         if (dev.major() == SYSDEV_MAJOR_STORAGE

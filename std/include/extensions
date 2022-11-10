@@ -30,7 +30,8 @@
 namespace std {
 /// Like std::vector, but erasing is O(1) and doesn't invalidate indices.
 template <typename _T, auto __invalid, typename index_type = size_t>
-class sparse_vector {
+class __sparse_vector_base {
+protected:
     /// For now, we only allow __invalid to be something we can easily store.
     static_assert(sizeof(__invalid) <= sizeof(void*));
     static_assert(alignof(decltype(__invalid)) <= alignof(void*));
@@ -107,50 +108,14 @@ class sparse_vector {
     };
 
     struct __kv_iterator_helper {
-        sparse_vector& __sv;
-        __kv_iterator_helper(sparse_vector& __sv) : __sv(__sv) {}
+        __sparse_vector_base& __sv;
+        __kv_iterator_helper(__sparse_vector_base& __sv) : __sv(__sv) {}
 
-        __kv_iterator<decltype(__sv.__els.begin())> begin() { return __kv_iterator<decltype(__sv.__els.begin())>{__sv.__els.begin(), __sv.__els.end()}; }
+        __kv_iterator<decltype(__sv.__els.begin())> begin() {
+            return __kv_iterator<decltype(__sv.__els.begin())>{__sv.__els.begin(), __sv.__els.end()};
+        }
         __sentinel end() { return {}; }
     };
-
-    template <typename _P>
-    class __reference {
-        _P* __ptr{};
-
-    public:
-        using type = _P;
-
-        constexpr __reference() noexcept {}
-        constexpr __reference(_P& __t) noexcept : __ptr(addressof(__t)) {}
-        constexpr __reference(_P* __ptr) noexcept : __ptr(__ptr) {}
-
-        constexpr __reference(const __reference&) noexcept = default;
-        constexpr __reference& operator=(const __reference&) noexcept = default;
-
-        constexpr __reference(__reference&& __other) noexcept : __ptr(__other.__ptr) { __other.__ptr = nullptr; }
-        constexpr __reference& operator=(__reference&& __other) noexcept {
-            __ptr = __other.__ptr;
-            __other.__ptr = nullptr;
-            return *this;
-        }
-
-        explicit constexpr operator bool() const noexcept { return __ptr; }
-        constexpr _P& operator*() const noexcept { return *__ptr; }
-        constexpr _P* operator->() const noexcept { return __ptr; }
-    };
-
-    /// Allocate space for a new element.
-    size_t __allocate() {
-        if (!__idxs.empty()) {
-            auto __idx = __idxs.back();
-            __idxs.pop_back();
-            return __idx;
-        } else {
-            __els.push_back(static_cast<_T>(__invalid));
-            return __els.size() - 1;
-        }
-    }
 
 public:
     /// =======================================================================
@@ -174,9 +139,27 @@ public:
     template <typename _U>
     std::pair<index_type, bool> push_back(_U&& __el) {
         if (__el == static_cast<_T>(__invalid)) { return {static_cast<index_type>(0), false}; }
-        auto __idx = __allocate();
-        __els[__idx] = std::forward<_U>(__el);
+        auto [__idx, _] = allocate();
+        __els[size_t(__idx)] = std::forward<_U>(__el);
         return {static_cast<index_type>(__idx), true};
+    }
+
+    /// Allocate a new element in the vector.
+    ///
+    /// This default-constructs a free position if it is unused, or allocates a new
+    /// element at the end of the vector if all positions are used.
+    ///
+    /// \return A pair containing the index of the allocated element, and a bool that
+    ///         is true iff an element was allocated.
+    std::pair<index_type, bool> allocate() {
+        if (!__idxs.empty()) {
+            auto __idx = __idxs.back();
+            __idxs.pop_back();
+            return {index_type(__idx), false};
+        } else {
+            __els.push_back(static_cast<_T>(__invalid));
+            return {index_type(__els.size() - 1), true};
+        }
     }
 
     bool erase(index_type __idx) {
@@ -199,21 +182,6 @@ public:
         __els.clear();
         __idxs.clear();
         __els.shrink_to_fit();
-    }
-
-    /// =======================================================================
-    ///  Accessing elements.
-    /// =======================================================================
-    __reference<_T> operator[](index_type __idx) noexcept {
-        const auto __i = static_cast<size_t>(__idx);
-        if (__i >= __els.size()) { return __reference<_T>{nullptr}; }
-        return __reference<_T>{__els[__i]};
-    }
-
-    __reference<const _T> operator[](index_type __idx) const noexcept {
-        const auto __i = static_cast<size_t>(__idx);
-        if (__i >= __els.size()) { return __reference<const _T>{nullptr}; }
-        return __reference<const _T>{__els[__i]};
     }
 
     __kv_iterator_helper pairs() noexcept { return __kv_iterator_helper{*this}; }
@@ -259,6 +227,68 @@ public:
 
         /// Shrink the vector.
         goto __shrink;
+    }
+};
+
+template <typename _T, auto __invalid, typename index_type = size_t>
+struct sparse_vector : __sparse_vector_base<_T, __invalid, index_type> {
+    using __base = __sparse_vector_base<_T, __invalid, index_type>;
+    using __base::__els;
+
+
+    /// =======================================================================
+    ///  Accessing elements.
+    /// =======================================================================
+    _T* operator[](index_type __idx) noexcept {
+        const auto __i = static_cast<size_t>(__idx);
+        if (__i >= __els.size()) { return nullptr; }
+        return __els.data() + __i;
+    }
+
+    const _T* operator[](index_type __idx) const noexcept {
+        const auto __i = static_cast<size_t>(__idx);
+        if (__i >= __els.size()) { return nullptr; }
+        return __els.data() + __i;
+    }
+};
+
+template <typename _T, typename index_type>
+struct sparse_vector<std::unique_ptr<_T>, nullptr, index_type>
+    : __sparse_vector_base<std::unique_ptr<_T>, nullptr, index_type> {
+    using __base = __sparse_vector_base<std::unique_ptr<_T>, nullptr, index_type>;
+    using __base::__els;
+
+    static std::unique_ptr<_T> __invalid_value;
+
+    /// =======================================================================
+    ///  Accessing elements.
+    /// =======================================================================
+    std::unique_ptr<_T>& operator[](index_type __idx) noexcept {
+        const auto __i = static_cast<size_t>(__idx);
+        if (__i >= __els.size()) { return __invalid_value; }
+        return __els[__i];
+    }
+
+    const std::unique_ptr<_T>& operator[](index_type __idx) const noexcept {
+        const auto __i = static_cast<size_t>(__idx);
+        if (__i >= __els.size()) { return __invalid_value; }
+        return __els[__i];
+    }
+};
+
+template <typename _T, typename index_type>
+struct sparse_vector<std::shared_ptr<_T>, nullptr, index_type>
+    : __sparse_vector_base<std::shared_ptr<_T>, nullptr, index_type> {
+    using __base = __sparse_vector_base<std::shared_ptr<_T>, nullptr, index_type>;
+    using __base::__els;
+
+    /// =======================================================================
+    ///  Accessing elements.
+    /// =======================================================================
+    std::shared_ptr<_T> operator[](index_type __idx) const noexcept {
+        const auto __i = static_cast<size_t>(__idx);
+        if (__i >= __els.size()) { return std::shared_ptr<_T>{nullptr}; }
+        return __els[__i];
     }
 };
 

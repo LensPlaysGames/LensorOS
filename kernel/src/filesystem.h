@@ -27,55 +27,43 @@
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
 
+/*
+
 enum class FilesystemType {
     INVALID = 0,
     FAT = 1,
 };
+*/
 
-class Filesystem {
-    /* TODO:
+/*class Filesystem {
+    *//* TODO:
      * `-- The public API is not what is required of this class.
      *     Needs to better support open, then read/write, then close.
-     */
+     *//*
     /// Required by std::vector.
     Filesystem() = default;
     friend std::vector<Filesystem>;
 public:
 
-    Filesystem(FilesystemType t
-               , FilesystemDriver* fs
-               , StorageDeviceDriver* dev)
-        : Type(t), FSDriver(fs), DevDriver(dev) {}
+    Filesystem(FilesystemType t, StorageDeviceDriver* dev)
+        : Type(t), DevDriver(dev) {}
 
-    static const char* type2name(FilesystemType t) {
-        switch (t) {
-        case FilesystemType::INVALID:
-            return "Invalid";
-        case FilesystemType::FAT:
-            return "File Allocation Table";
-        default:
-            return "Unkown Filesystem Type";
-        }
-    }
+
 
     FilesystemType type() { return Type; }
-    FilesystemDriver* filesystem_driver() { return FSDriver; }
     StorageDeviceDriver* storage_device_driver() { return DevDriver; }
 
     void print() {
         std::print("Filesystem: {}\n"
-                   "  Filesystem Driver Address: {}\n"
                    "  Storage Device Driver Address: {}\n"
                    , type2name(Type)
-                   , (void*) FSDriver
                    , (void*) DevDriver
                    );
     }
 
 private:
     FilesystemType Type { FilesystemType::INVALID };
-    FilesystemDriver* FSDriver { nullptr };
     StorageDeviceDriver* DevDriver { nullptr };
-};
+};*/
 
 #endif /* LENSOR_OS_FILESYSTEM_H */

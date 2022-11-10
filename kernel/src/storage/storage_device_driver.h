@@ -23,11 +23,14 @@
 #include <integers.h>
 #include <pure_virtuals.h>
 
-class StorageDeviceDriver {
-public:
+struct FileMetadata;
+
+struct StorageDeviceDriver {
     virtual ~StorageDeviceDriver() = default;
-    virtual ssz read(usz byteOffset, usz byteCount, void* buffer) = 0;
-    virtual ssz write(usz byteOffset, usz byteCount, void* buffer) = 0;
+    virtual void close(FileMetadata* file) = 0;
+    virtual auto open(std::string_view path) -> std::shared_ptr<FileMetadata> = 0;
+    virtual auto read(FileMetadata* file, usz offs, usz bytes, void* buffer) -> ssz = 0;
+    virtual auto write(FileMetadata* file, usz offs, usz bytes, void* buffer) -> ssz = 0;
 };
 
 #endif /* LENSOR_OS_STORAGE_DEVICE_DRIVER_H */

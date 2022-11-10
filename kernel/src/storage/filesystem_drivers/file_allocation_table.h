@@ -25,14 +25,18 @@
 #include <storage/storage_device_driver.h>
 #include <string.h>
 
-class FileAllocationTableDriver final : public FilesystemDriver {
+class FileAllocationTableDriver final : FilesystemDriver {
+    FileAllocationTableDriver() {}
+
 public:
     void print_fat(BootRecord&);
 
     // ^FilesystemDriver
 
-    /// Return true if the storage device has a valid FAT filesystem.
-    bool test (StorageDeviceDriver* driver) final;
+    const char* name() final { return "File Allocation Table"; }
+
+    /// Try to create a FileAllocationTableDriver from the given storage device.
+    auto try_create(StorageDeviceDriver* driver) -> std::unique_ptr<FilesystemDriver> final;
 
     /// Return the byte offset of the contents of a file at a given path.
     FileMetadata file(StorageDeviceDriver* driver, const String& path) final;

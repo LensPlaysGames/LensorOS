@@ -52,7 +52,7 @@ SysFD VFS::procfd_to_fd(ProcFD procfd) const {
     return *sysfd;
 }
 
-auto VFS::file(ProcFD procfd) -> std::shared_ptr<OpenFileDescription> {
+auto VFS::file(ProcFD procfd) -> std::shared_ptr<FileMetadata> {
     const auto& proc = Scheduler::CurrentProcess->value();
 
 #ifdef DEBUG_VFS
@@ -74,13 +74,13 @@ auto VFS::file(ProcFD procfd) -> std::shared_ptr<OpenFileDescription> {
     return file(static_cast<SysFD>(*sysfd));
 }
 
-auto VFS::file(SysFD fd) -> std::shared_ptr<OpenFileDescription> {
+auto VFS::file(SysFD fd) -> std::shared_ptr<FileMetadata> {
     auto f = Files[fd];
     if (!f) {
         DBGMSG("[VFS]: ERROR: {} is unmapped.\n", fd);
         return {};
     }
-    return *f;
+    return f;
 }
 
 bool VFS::valid(ProcFD procfd) const {
@@ -99,53 +99,49 @@ bool VFS::valid(SysFD fd) const {
 void VFS::free_fd(SysFD fd, ProcFD procfd) {
     const auto& proc = Scheduler::CurrentProcess->value();
     proc->FileDescriptors.erase(procfd);
+
+    /// Erasing the last shared_ptr holding the file metadata will call
+    /// the destructor of FileMetadata, which will then close the file.
     Files.erase(fd);
 }
 
-FileDescriptors VFS::open(const String& path) {
-    u64 fullPathLength = path.length();
+FileDescriptors VFS::open(std::string_view path) {
+    u64 fullPathLength = path.size();
+
     if (fullPathLength <= 1) {
         std::print("[VFS]: path is not long enough.\n");
         return {};
     }
+
     if (path[0] != '/') {
         std::print("[VFS]: path does not start with slash, {}\n", fullPathLength);
         return {};
     }
 
     for (const auto& mount : Mounts) {
-        StorageDeviceDriver* dev = mount.FS->storage_device_driver();
-        FilesystemDriver* fileDriver = mount.FS->filesystem_driver();
-        u64 mountPathLength = strlen(mount.Path) - 1;
-        if (mountPathLength <= fullPathLength) {
-            if (strcmp(path.data(), mount.Path, mountPathLength)) {
-                String prefixlessPath = path;
-                prefixlessPath.chop(mountPathLength, String::Side::Right);
-                if (prefixlessPath == path) {
-                    // TODO: path matches a mount path exactly.
-                    // How do we open a mount? Should we? NO!!
-                }
-                else {
-                    FileMetadata metadata = fileDriver->file(dev, prefixlessPath.data());
-                    DBGMSG("  Metadata:\n"
-                           "    Name: {}\n"
-                           "    File Size: {}\n"
-                           "    Byte Offset: {}\n"
-                           "    Filesystem Driver: {}\n"
-                           "    Device Driver: {}\n"
-                           "    Invalid: {}\n"
-                           , std::string_view { metadata.name().data(), metadata.name().length() }
-                           , metadata.file_size()
-                           , metadata.byte_offset()
-                           , (void*) metadata.file_driver()
-                           , (void*) metadata.device_driver()
-                           , metadata.invalid()
-                           );
-                    if (!metadata.invalid()) {
-                        return add_file(std::make_shared<OpenFileDescription>(dev, metadata));
-                    }
-                }
-            }
+        /// It makes no sense to search file systems whose mount point does not
+        /// match the beginning of the path. And even if they’re mounted twice,
+        /// we’ll still find the second mount.
+        if (!path.starts_with(mount.Path)) continue;
+        auto fs_path = path.substr(mount.Path.size());
+
+        /// Try to open the file.
+        if (auto meta = mount.FS->open(fs_path)) {
+            DBGMSG("  Metadata:\n"
+                   "    Name: {}\n"
+                   "    File Size: {}\n"
+                   "    Byte Offset: {}\n"
+                   "    Filesystem Driver: {}\n"
+                   "    Device Driver: {}\n"
+                   "    Invalid: {}\n"
+                   , std::string_view { meta->name().data(), meta->name().length() }
+                   , meta->file_size()
+                   , meta->byte_offset()
+                   , (void*) meta->file_driver()
+                   , (void*) meta->device_driver()
+                   , meta->invalid()
+            );
+            return add_file(std::move(meta));
         }
     }
 
@@ -187,7 +183,7 @@ ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
     auto f = file(fd);
     if (!f) { return -1; }
 
-    return f->DeviceDriver->read(f->Metadata.byte_offset() + byteOffset, byteCount, buffer);
+    return f->device_driver()->read(f.get(), byteOffset, byteCount, buffer);
 }
 
 ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
@@ -204,7 +200,7 @@ ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
            , byteOffset
            );
 
-    return f->DeviceDriver->write(f->Metadata.byte_offset() + byteOffset, byteCount, buffer);
+    return f->device_driver()->write(f.get(), byteOffset, byteCount, buffer);
 }
 
 void VFS::print_debug() {
@@ -215,13 +211,11 @@ void VFS::print_debug() {
         std::print("    Mount {}:\n"
                    "      Path: {}\n"
                    "      Filesystem: {}\n"
-                   "        Filesystem Driver Address: {}\n"
-                   "        Storage Device Driver Address: {}\n"
+                   "      Driver Address: {}\n"
                    , i
                    , mp.Path
-                   , Filesystem::type2name(mp.FS->type())
-                   , (void*) mp.FS->filesystem_driver()
-                   , (void*) mp.FS->storage_device_driver()
+                   , mp.FS->name()
+                   , (void*) mp.FS.get()
                    );
         i += 1;
     }
@@ -229,18 +223,16 @@ void VFS::print_debug() {
     i = 0;
     for (const auto& f : Files) {
         std::print("    Open File {}:\n"
-                   "      Storage Device Driver Address: {}\n"
-                   "      Byte Offset: {}\n"
+                   "      Driver Address: {}\n"
                    , i
-                   , (void*) f->DeviceDriver
-                   , f->Metadata.byte_offset()
+                   , (void*) f->device_driver()
         );
         i++;
     }
     std::print("\n");
 }
 
-FileDescriptors VFS::add_file(std::shared_ptr<OpenFileDescription> file, Process* proc) {
+FileDescriptors VFS::add_file(std::shared_ptr<FileMetadata> file, Process* proc) {
     if (!proc) proc = Scheduler::CurrentProcess->value();
     DBGMSG("[VFS]: Creating file descriptor mapping\n");
 

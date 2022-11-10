@@ -27,68 +27,83 @@
 #define PIPE_BUFSZ 512
 
 struct PipeBuffer {
-    u8* Data;
-    usz Offset = 0;
+    u8 Data[PIPE_BUFSZ]{};
+    usz Offset{};
 
-    PipeBuffer() {
-        Data = new u8[PIPE_BUFSZ];
-    }
+    constexpr PipeBuffer() = default;
+    ~PipeBuffer() = default;
 
+    /// Copying a pipe buffer is nonsense.
     PipeBuffer(const PipeBuffer&) = delete;
 
-    ~PipeBuffer() {
-        delete[] Data;
-    }
+    /// We don’t allow moving either so we don’t accidentally move
+    /// a pipe buffer while someone is reading from or writing to it.
+    PipeBuffer(PipeBuffer&&) = delete;
 };
 
-class PipeDriver final : public StorageDeviceDriver {
-public:
-    ssz read(usz byteOffset, usz byteCount, void* buffer) final {
-        // Find which pipe by using byte offset.
-        if (byteOffset >= PipeBuffers.size()) {
-            return -1;
+struct PipeDriver final : StorageDeviceDriver {
+    void close(FileMetadata* meta) final {
+        if (!meta) return;
+        auto* pipe = static_cast<PipeBuffer*>(meta->driver_data());
+        FreePipeBuffers.push_back(pipe);
+    }
+
+    auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final {
+        PipeBuffer* pipe = nullptr;
+        if (FreePipeBuffers.empty()) {
+            pipe = new PipeBuffer();
+        } else {
+            pipe = FreePipeBuffers.back();
+            FreePipeBuffers.pop_back();
         }
-        PipeBuffer& pipeBuffer = PipeBuffers[byteOffset];
+        return std::make_shared<FileMetadata>(path, false, this, PIPE_BUFSZ, pipe);
+    }
+
+    ssz read(FileMetadata* file, usz, usz byteCount, void* buffer) final {
+        // Find which pipe by using byte offset.
+        if (!file) return -1;
+        auto* pipe = static_cast<PipeBuffer*>(file->driver_data());
+        if (!pipe) return -1;
 
         // TODO: Support "wait until there is something to read".
-        if (pipeBuffer.Offset == 0) {
+        if (pipe->Offset == 0) {
             return -1;
         }
 
         // TODO: Read in a loop to fill buffers larger than what is currently written.
-        if (byteCount > pipeBuffer.Offset) {
-            byteCount = pipeBuffer.Offset;
+        if (byteCount > pipe->Offset) {
+            byteCount = pipe->Offset;
         }
 
-        memcpy(buffer, pipeBuffer.Data + pipeBuffer.Offset, byteCount);
-        return byteCount;
+        memcpy(buffer, pipe->Data + pipe->Offset, byteCount);
+        return ssz(byteCount);
     };
-    ssz write(usz byteOffset, usz byteCount, void* buffer) final {
+
+    ssz write(FileMetadata* file, usz, usz byteCount, void* buffer) final {
         // Find which pipe by using byte offset. There is no filesystem
         // backing, so we can just use that as an index/key to find
         // which buffer to write to.
-        if (byteOffset >= PipeBuffers.size()) {
-            return -1;
-        }
-        PipeBuffer& pipeBuffer = PipeBuffers[byteOffset];
-        if (pipeBuffer.Offset + byteCount > PIPE_BUFSZ) {
+        if (!file) return -1;
+        auto* pipe = static_cast<PipeBuffer*>(file->driver_data());
+        if (!pipe) return -1;
+        if (pipe->Offset + byteCount > PIPE_BUFSZ) {
             // TODO: Support "wait if full". For now, just truncate write.
-            byteCount = PIPE_BUFSZ - pipeBuffer.Offset;
+            byteCount = PIPE_BUFSZ - pipe->Offset;
         }
 
-        memcpy(pipeBuffer.Data + pipeBuffer.Offset, buffer, byteCount);
-        return byteCount;
+        memcpy(pipe->Data + pipe->Offset, buffer, byteCount);
+        return ssz(byteCount);
     }
 
     /// Return a byte offset that can be used later to find a unique
     /// buffer, allocated by this function.
-    ssz lay_pipe() {
-        PipeBuffers.push_back({});
-        return PipeBuffers.size() - 1;
+    auto lay_pipe() -> std::shared_ptr<FileMetadata> {
+        // TODO: Pick suitable file name for file metadata.
+        return open("");
     }
 
 private:
-    std::vector<PipeBuffer> PipeBuffers;
+    std::vector<PipeBuffer*> FreePipeBuffers;
 };
 
 #endif /* LENSOR_OS_PIPE_DRIVER_H */

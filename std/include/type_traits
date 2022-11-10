@@ -61,6 +61,9 @@ struct conditional<false, _True, _Else> { using type = _Else; };
 template <bool _Cond, typename _True, typename _Else>
 struct _If : conditional<_Cond, _True, _Else> {};
 
+template <bool _Cond, typename _True, typename _Else>
+using _If_t = typename _If<_Cond, _True, _Else>::type;
+
 /// True if multiple conditions are true.
 template <typename...> struct _And;
 template <> struct _And<> : true_type {};
