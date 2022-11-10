@@ -43,7 +43,7 @@ struct PipeBuffer {
 
 class PipeDriver final : public StorageDeviceDriver {
 public:
-    ssz read(usz byteOffset, usz byteCount, u8* buffer) {
+    ssz read(usz byteOffset, usz byteCount, void* buffer) final {
         // Find which pipe by using byte offset.
         if (byteOffset >= PipeBuffers.size()) {
             return -1;
@@ -62,11 +62,11 @@ public:
 
         for (usz i = 0; i < byteCount; ++i) {
             usz bufferIndex = pipeBuffer.Offset + i;
-            buffer[i] = pipeBuffer.Data[bufferIndex];
+            reinterpret_cast<u8*>(buffer)[i] = pipeBuffer.Data[bufferIndex];
         }
         return byteCount;
     };
-    ssz write(usz byteOffset, usz byteCount, u8* buffer) {
+    ssz write(usz byteOffset, usz byteCount, void* buffer) final {
         // Find which pipe by using byte offset. There is no filesystem
         // backing, so we can just use that as an index/key to find
         // which buffer to write to.
@@ -80,7 +80,7 @@ public:
         }
         for (usz i = 0; i < byteCount; ++i) {
             usz bufferIndex = pipeBuffer.Offset + i;
-            pipeBuffer.Data[bufferIndex] = buffer[i];
+            pipeBuffer.Data[bufferIndex] = reinterpret_cast<u8*>(buffer)[i];
         }
         return byteCount;
     }
