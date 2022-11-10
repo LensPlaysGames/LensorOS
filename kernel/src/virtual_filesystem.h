@@ -25,7 +25,6 @@
 #include <filesystem.h>
 #include <linked_list.h>
 #include <memory>
-#include <smart_pointer.h>
 #include <extensions>
 #include <vector>
 #include <format>

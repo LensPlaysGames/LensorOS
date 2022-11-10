@@ -26,14 +26,9 @@
 
 class DbgOutDriver final : public StorageDeviceDriver {
 public:
-    ssz read(usz byteOffset, usz byteCount, u8* buffer) {
-        (void)byteOffset;
-        (void)byteCount;
-        (void)buffer;
-        return -1;
-    };
-    ssz write(usz byteOffset, usz byteCount, u8* buffer) {
-        dbgmsg_buf(buffer + byteOffset, byteCount);
+    ssz read(usz, usz, void*) { return -1; };
+    ssz write(usz byteOffset, usz byteCount, void* buffer) {
+        dbgmsg_buf(reinterpret_cast<u8*>(buffer) + byteOffset, byteCount);
         return byteCount;
     };
 };

@@ -33,11 +33,11 @@ public:
         , Type(type), Unique(unique)
         , Offset(startSector * sectorSize) {}
 
-    ssz read(usz byteOffset, usz byteCount, u8* buffer) final {
+    ssz read(usz byteOffset, usz byteCount, void* buffer) final {
         return Driver->read(byteOffset + Offset, byteCount, buffer);
     };
 
-    ssz write(usz byteOffset, usz byteCount, u8* buffer) final {
+    ssz write(usz byteOffset, usz byteCount, void* buffer) final {
         return Driver->read(byteOffset + Offset, byteCount, buffer);
     };
 

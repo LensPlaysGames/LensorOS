@@ -21,7 +21,6 @@
 
 #include <ahci.h>
 #include <debug.h>
-#include <smart_pointer.h>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_GPT
@@ -40,15 +39,15 @@ namespace GPT {
             return false;
         }
         DBGMSG("[GPT]: Checking for valid GPT\n");
-        SmartPtr<Header> hdr = SmartPtr<Header>(new Header);
-        driver->read(512, sizeof(Header), (u8*)hdr.get());
+        Header hdr;
+        driver->read(512, sizeof hdr, (u8*)&hdr);
         // Validate GPT Header
-        if (hdr->Revision == 0) {
+        if (hdr.Revision == 0) {
             DBGMSG("  ERROR: Revision is not zero\n");
             return false;
         }
         for (u8 i = 0; i < 8; ++i) {
-            if (hdr->Signature[i] != HEADER_SIGNATURE[i]) {
+            if (hdr.Signature[i] != HEADER_SIGNATURE[i]) {
                 DBGMSG("  ERROR: Signature doesn't match\n");
                 return false;
             }

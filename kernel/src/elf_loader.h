@@ -34,7 +34,6 @@
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 #include <scheduler.h>
-#include <smart_pointer.h>
 #include <tss.h>
 #include <virtual_filesystem.h>
 
@@ -141,11 +140,11 @@ namespace ELF {
         // TODO: Keep track of allocated memory regions for process.
         // Load PT_LOAD program headers, mapping to vaddr as necessary.
         u64 programHeadersTableSize = elfHeader.e_phnum * elfHeader.e_phentsize;
-        SmartPtr<Elf64_Phdr[]> programHeaders(new Elf64_Phdr[elfHeader.e_phnum], elfHeader.e_phnum);
-        vfs.read(fd, (u8*)(programHeaders.get()), programHeadersTableSize, elfHeader.e_phoff);
+        std::vector<Elf64_Phdr> programHeaders(elfHeader.e_phnum);
+        vfs.read(fd, (u8*)(programHeaders.data()), programHeadersTableSize, elfHeader.e_phoff);
         for (
-             Elf64_Phdr* phdr = programHeaders.get();
-             (u64)phdr < (u64)programHeaders.get() + programHeadersTableSize;
+             Elf64_Phdr* phdr = programHeaders.data();
+             (u64)phdr < (u64)programHeaders.data() + programHeadersTableSize;
              phdr++)
         {
 
@@ -163,9 +162,11 @@ namespace ELF {
                 // Should I just use the kernel heap for this? It could grow very large...
                 u8* loadedProgram = reinterpret_cast<u8*>(Memory::request_pages(pages));
                 memset(loadedProgram, 0, phdr->p_memsz);
-                bool read = vfs.read(fd, loadedProgram, phdr->p_filesz, phdr->p_offset);
-                if (read == false)
+                auto n_read = vfs.read(fd, loadedProgram, phdr->p_filesz, phdr->p_offset);
+                if (n_read < 0 || size_t(n_read) != phdr->p_filesz) {
+                    std::print("[ELF] Could not read program data from file {}\n" , fd);
                     return false;
+                }
 
                 DBGMSG("[ELF]: Loaded program header ({} bytes) from file {} at byte offset {}\n"
                        , phdr->p_filesz
@@ -199,7 +200,10 @@ namespace ELF {
                     stack_flags |= (size_t)Memory::PageTableFlag::NX;}
             }
         }
+
         auto* process = new Process{};
+
+        /// TODO: `new` should *never* return nullptr. This check shouldn’t be necessary.
         if (process == nullptr) {
             std::print("[ELF]: Couldn't allocate process structure for new userspace process\n");
             return false;

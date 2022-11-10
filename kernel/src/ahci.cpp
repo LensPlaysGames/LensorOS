@@ -150,7 +150,7 @@ namespace AHCI {
 
     /// Convert bytes to sectors, then read into and copy from intermediate
     /// `Buffer` to given `buffer` until all data is read and copied.
-    ssz PortController::read(usz byteOffset, usz byteCount, u8* buffer) {
+    ssz PortController::read(usz byteOffset, usz byteCount, void* buffer) {
         DBGMSG("[AHCI]: Port {} -- read()  byteOffset={}, byteCount={}, buffer={}\n"
                , PortNumber
                , byteOffset
@@ -201,7 +201,7 @@ namespace AHCI {
         return byteCount;
     }
 
-    ssz PortController::write(usz byteOffset, usz byteCount, u8* buffer) {
+    ssz PortController::write(usz byteOffset, usz byteCount, void* buffer) {
         std::print("[AHCI]: TODO: Implement write()  byteOffset={}, byteCount={}, buffer={}\n"
                    , byteOffset
                    , byteCount

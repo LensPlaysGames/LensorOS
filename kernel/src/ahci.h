@@ -405,8 +405,8 @@ namespace AHCI {
 
         /// Convert bytes to sectors, then read into and copy from intermediate
         /// `Buffer` to given `buffer` until all data is read and copied.
-        ssz read(usz byteOffset, usz byteCount, u8* buffer) final;
-        ssz write(usz byteOffset, usz byteCount, u8* buffer) final;
+        ssz read(usz byteOffset, usz byteCount, void* buffer) final;
+        ssz write(usz byteOffset, usz byteCount, void* buffer) final;
 
         // FIXME: I think there are a max of 32 ports, no? We can
         // probably use something smaller than a u64 here.

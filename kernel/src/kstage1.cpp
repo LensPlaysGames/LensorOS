@@ -55,7 +55,6 @@
 #include <random_lfsr.h>
 #include <rtc.h>
 #include <scheduler.h>
-#include <smart_pointer.h>
 #include <storage/device_drivers/dbgout.h>
 #include <storage/device_drivers/gpt_partition.h>
 #include <storage/file_metadata.h>
@@ -419,15 +418,15 @@ void kstage1(BootInfo* bInfo) {
             std::print("[kstage1]: Searching AHCI port {} for a GPT\n", portCon->port_number());
             if(GPT::is_gpt_present(driver)) {
                 std::print("  GPT is present!\n");
-                auto gptHeader = SmartPtr<GPT::Header>(new GPT::Header);
-                auto sector = SmartPtr<u8[]>(new u8[512], 512);
-                portCon->read(512, sizeof(GPT::Header), (u8*)gptHeader.get());
-                for (u32 i = 0; i < gptHeader->NumberOfPartitionsTableEntries; ++i) {
-                    u64 byteOffset = gptHeader->PartitionsTableEntrySize * i;
-                    u32 partSector = gptHeader->PartitionsTableLBA + (byteOffset / 512);
+                GPT::Header gptHeader;
+                u8 sector[512];
+                portCon->read(512, sizeof gptHeader, &gptHeader);
+                for (u32 i = 0; i < gptHeader.NumberOfPartitionsTableEntries; ++i) {
+                    u64 byteOffset = gptHeader.PartitionsTableEntrySize * i;
+                    u32 partSector = gptHeader.PartitionsTableLBA + (byteOffset / 512);
                     byteOffset %= 512;
-                    portCon->read(partSector * 512, 512, sector.get());
-                    auto* part = (GPT::PartitionEntry*)((u64)sector.get() + byteOffset);
+                    portCon->read(partSector * 512, 512, sector);
+                    auto* part = reinterpret_cast<GPT::PartitionEntry*>(sector + byteOffset);
                     if (part->should_ignore())
                         continue;
 
@@ -443,12 +442,12 @@ void kstage1(BootInfo* bInfo) {
                                "        Sector Offset: {}\n"
                                "        Sector Count: {}\n"
                                "        Attributes: {}\n",
-                               i, std::string_view{(const char*) part->Name, 72},
-                               static_cast<const GUID>(part->TypeGUID),
-                               static_cast<const GUID>(part->UniqueGUID),
-                               static_cast<u64>(part->StartLBA),
+                               i, __s(part->Name),
+                               GUID(part->TypeGUID),
+                               GUID(part->UniqueGUID),
+                               u64(part->StartLBA),
                                part->size_in_sectors(),
-                               static_cast<u64>(part->Attributes));
+                               u64(part->Attributes));
                     auto* partDriver = new GPTPartitionDriver(driver, part->TypeGUID
                                                               , part->UniqueGUID
                                                               , part->StartLBA, 512);

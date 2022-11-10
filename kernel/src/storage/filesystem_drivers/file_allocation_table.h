@@ -27,7 +27,7 @@
 
 class FileAllocationTableDriver final : public FilesystemDriver {
 public:
-    void print_fat(BootRecord*);
+    void print_fat(BootRecord&);
 
     // ^FilesystemDriver
 

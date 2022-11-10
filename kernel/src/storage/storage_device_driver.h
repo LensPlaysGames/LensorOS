@@ -26,8 +26,8 @@
 class StorageDeviceDriver {
 public:
     virtual ~StorageDeviceDriver() = default;
-    virtual ssz read(usz byteOffset, usz byteCount, u8* buffer) = 0;
-    virtual ssz write(usz byteOffset, usz byteCount, u8* buffer) = 0;
+    virtual ssz read(usz byteOffset, usz byteCount, void* buffer) = 0;
+    virtual ssz write(usz byteOffset, usz byteCount, void* buffer) = 0;
 };
 
 #endif /* LENSOR_OS_STORAGE_DEVICE_DRIVER_H */
