@@ -20,8 +20,6 @@
 #ifndef LENSOROS_MEMORY_HH
 #define LENSOROS_MEMORY_HH
 
-#include "atomic"
-
 #include <atomic>
 #include <new>
 #include <type_traits>
@@ -439,7 +437,7 @@ public:
 
         /// Try to increment it. If we fail, then we try again. If we succeed,
         /// then we can create a new shared_ptr.
-        while (atomic_compare_exchange_weak(&__ctrl->__ref_count, &__ref_count, __ref_count + 1));
+        while (!atomic_compare_exchange_weak(&__ctrl->__ref_count, &__ref_count, __ref_count + 1));
 
         /// Don’t forget to add another weak reference for the new shared_ptr.
         /// This is safe because if we get here, then we hold a weak reference
