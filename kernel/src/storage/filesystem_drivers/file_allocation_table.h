@@ -64,13 +64,13 @@ class FileAllocationTableDriver final : public FilesystemDriver {
     static auto fat_type(BootRecord& br) -> FATType;
 
 public:
-    void print_fat(BootRecord&);
+    static void print_fat(BootRecord&);
 
     auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
     void close(FileMetadata* file) final { Device->close(file); }
 
     ssz read(FileMetadata* file, usz offs, usz size, void* buffer) final {
-        return Device->read(file, offs, size, buffer);
+        return Device->read_raw(usz(file->driver_data()) + offs, size, buffer);
     }
 
     ssz read_raw(usz offs, usz bytes, void* buffer) final {
@@ -78,7 +78,7 @@ public:
     }
 
     ssz write(FileMetadata* file, usz offs, usz size, void* buffer) final {
-        return Device->write(file, offs, size, buffer);
+        return Device->write(file, usz(file->driver_data()) + offs, size, buffer);
     }
 
     const char* name() final { return "File Allocation Table"; }

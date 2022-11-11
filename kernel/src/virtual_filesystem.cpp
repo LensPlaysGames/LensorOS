@@ -118,6 +118,7 @@ FileDescriptors VFS::open(std::string_view path) {
         return {};
     }
 
+    DBGMSG("[VFS]: Attempting to open file at path {}\n", path);
     for (const auto& mount : Mounts) {
         /// It makes no sense to search file systems whose mount point does not
         /// match the beginning of the path. And even if they’re mounted twice,
@@ -126,19 +127,18 @@ FileDescriptors VFS::open(std::string_view path) {
         auto fs_path = path.substr(mount.Path.size());
 
         /// Try to open the file.
+        DBGMSG("[VFS]: Attempting to open file at path {} on mount {}\n", fs_path, mount.Path);
         if (auto meta = mount.FS->open(fs_path)) {
             DBGMSG("  Metadata:\n"
                    "    Name: {}\n"
                    "    File Size: {}\n"
-                   "    Byte Offset: {}\n"
-                   "    Filesystem Driver: {}\n"
+                   "    Driver Data: {}\n"
                    "    Device Driver: {}\n"
                    "    Invalid: {}\n"
-                   , std::string_view { meta->name().data(), meta->name().length() }
+                   , meta->name()
                    , meta->file_size()
-                   , meta->byte_offset()
-                   , (void*) meta->file_driver()
-                   , (void*) meta->device_driver()
+                   , meta->driver_data()
+                   , (void*) meta->device_driver().get()
                    , meta->invalid()
             );
             return add_file(std::move(meta));

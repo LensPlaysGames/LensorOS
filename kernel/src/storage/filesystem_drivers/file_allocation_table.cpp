@@ -124,7 +124,7 @@ auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> 
 
 auto FileAllocationTableDriver::translate_path(std::string_view raw_path) -> std::string {
     std::string path = raw_path;
-    for (usz i = raw_path.size(); i < 11; i++) path += " ";
+    for (usz i = raw_path.size(); i < 11; i++) { path += " "; }
 
     for (usz i = 0; i < raw_path.size(); i++) {
         if (path[i] >= 97 && path[i] <= 122) path[i] -= 32;
@@ -139,6 +139,7 @@ auto FileAllocationTableDriver::translate_path(std::string_view raw_path) -> std
 }
 
 auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_ptr<FileMetadata> {
+    DBGMSG("[FAT]: Attempting to open file {}\n", raw_path);
     if (Device == nullptr) {
         /// Should never get here.
         std::print("FileAllocationTableDriver::open(): Device is null!\n");
@@ -154,6 +155,8 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
     }
 #endif
 
+    /// Strip leading slash.
+    if (raw_path.starts_with("/")) raw_path = raw_path.substr(1);
     if (raw_path.size() < 1) {
         DBGMSG("FileAllocationTableDriver::open(): Invalid path: {}\n", raw_path);
         return {};
@@ -211,9 +214,7 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
             else if (entry->volume_id()) fileType += "volume identifier ";
             else fileType += "file ";
 
-            DBGMSG("    Found {}named {}\n",
-                   std::string_view { fileType.data(), fileType.length() },
-                   std::string_view { fileName.data(), fileName.length() });
+            DBGMSG("    Found {}named {}\n", fileType , fileName);
 
             if (fileName == path) {
                 DBGMSG("  Found file!\n");
