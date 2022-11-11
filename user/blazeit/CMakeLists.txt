@@ -41,3 +41,5 @@ set( CMAKE_TOOLCHAIN_FILE "${REPO_DIR}/kernel/lensor_gnu_toolchain.cmake" )
 project( LensorOS VERSION ${blazeit_VERSION} LANGUAGES ${blazeit_LANGUAGES} )
 
 add_executable( blazeit main.c )
+
+target_compile_options(blazeit PRIVATE -mno-sse)

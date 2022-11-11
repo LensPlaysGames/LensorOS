@@ -87,7 +87,7 @@ target_compile_options(
   c
   PRIVATE
   -fPIE
-#  -msse2
+  -mno-sse
   -Wall
   -Wextra
   -Wconversion
