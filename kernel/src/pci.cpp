@@ -17,14 +17,15 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <pci.h>
+#include "devices/devices.h"
 
-#include <ahci.h>
 #include <acpi.h>
+#include <ahci.h>
 #include <debug.h>
 #include <memory/heap.h>
 #include <memory/paging.h>
 #include <memory/virtual_memory_manager.h>
+#include <pci.h>
 #include <system.h>
 
 // Uncomment the following directive for extra debug information output.
@@ -101,12 +102,8 @@ namespace PCI {
             if (pciDevHdr->Subclass == 0x06) {
                 // ProgIF 0x01 = AHCI 1.0 Device
                 if (pciDevHdr->ProgIF == 0x01) {
-                    SystemDevice storageDevice(SYSDEV_MAJOR_STORAGE
-                                               , SYSDEV_MINOR_AHCI_CONTROLLER
-                                               , nullptr, pciDevHdr
-                                               , nullptr, nullptr);
-                    storageDevice.set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, true);
-                    SYSTEM->add_device(std::move(storageDevice));
+                    SYSTEM->create_device<Devices::AHCIController>(*reinterpret_cast<PCIHeader0*>(pciDevHdr));
+                    Memory::unmap((void*)functionAddress);
                 }
             }
         }
@@ -150,7 +147,7 @@ namespace PCI {
         std::print("[PCI]: Discovering devices...\n");
         int entries = ((mcfg->Length) - sizeof(ACPI::MCFGHeader)) / sizeof(ACPI::DeviceConfig);
         DBGMSG("  Found {} MCFG entries\n", entries);
-        [[maybe_unused]] u64 systemDeviceLengthBefore = SYSTEM->devices().size();
+        [[maybe_unused]] u64 systemDeviceLengthBefore = SYSTEM->Devices.size();
         for (int t = 0; t < entries; ++t) {
             u64 devConAddr = (reinterpret_cast<u64>(mcfg)
                               + sizeof(ACPI::MCFGHeader)
@@ -173,7 +170,7 @@ namespace PCI {
         }
 
         DBGMSG("[PCI]: Found {} device(s)\n"
-               , SYSTEM->devices().length() - systemDeviceLengthBefore
+               , SYSTEM->Devices.length() - systemDeviceLengthBefore
                );
 
         std::print("  \033[32mDone\033[0m\n\n");

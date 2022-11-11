@@ -110,7 +110,7 @@ public:
     __str_insert_iterator& operator=(basic_string_view<_Char> __sv) { return append(__sv); }
     __str_insert_iterator& append(const _Char* __s, size_t __n) { return append({__s, __n}); }
     __str_insert_iterator& append(basic_string_view<_Char> __sv) {
-        __str += __sv;
+        *__str += __sv;
         return *this;
     }
 
@@ -784,16 +784,18 @@ public:
 };
 
 /// Format to a string.
-template <typename _Char, typename... _Args>
-auto vformat(basic_string_view<_Char> __fmt, _Args&&... __args) {
-    basic_string<_Char> __ret;
-    __detail::__format_to<__detail::__str_insert_iterator>(__ret, __fmt, std::forward<_Args>(__args)...);
+template <typename... _Args>
+auto vformat(string_view __fmt, _Args&&... __args) -> string {
+    using _Output = __detail::__str_insert_iterator<char>;
+    string __ret;
+    basic_format_context<_Output, char> __ctx(_Output{__ret}, __detail::__make_args<_Output, char, _Args...>(std::forward<_Args>(__args)...));
+    __detail::__format(std::move(__ctx), __fmt);
     return __ret;
 }
 
 /// Format to a string. The format string is checked at compile time.
-template <typename _Char, typename... _Args>
-auto format(std::basic_format_string<_Char, _Args...> __str, _Args&&... __args) -> basic_string<_Char> {
+template < typename... _Args>
+auto format(format_string<_Args...> __str, _Args&&... __args) -> string {
     return vformat(__str.get(), std::forward<_Args>(__args)...);
 }
 

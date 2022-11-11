@@ -27,10 +27,10 @@
 /// TODO: This should probably be replaced with a FileMetadata that stores
 ///       the offset and is passed directly to the underlying driver.
 struct GPTPartitionDriver final : StorageDeviceDriver {
-    GPTPartitionDriver(StorageDeviceDriver* driver
+    GPTPartitionDriver(std::shared_ptr<StorageDeviceDriver> driver
                        , GUID type, GUID unique
                        , u64 startSector, u64 sectorSize)
-        : Driver(driver)
+        : Driver(std::move(driver))
         , Type(type), Unique(unique)
         , Offset(startSector * sectorSize) {}
 
@@ -40,6 +40,10 @@ struct GPTPartitionDriver final : StorageDeviceDriver {
     ssz read(FileMetadata* file, usz offs, usz byteCount, void* buffer) final {
         return Driver->read(file, offs + Offset, byteCount, buffer);
     };
+    ssz read_raw(usz offs, usz byteCount, void* buffer) final {
+        return Driver->read_raw(offs + Offset, byteCount, buffer);
+    };
+
 
     ssz write(FileMetadata* file, usz offs, usz byteCount, void* buffer) final {
         return Driver->read(file, offs + Offset, byteCount, buffer);
@@ -49,7 +53,7 @@ struct GPTPartitionDriver final : StorageDeviceDriver {
     GUID unique_guid() { return Unique; }
 
 private:
-    StorageDeviceDriver* Driver { nullptr };
+    std::shared_ptr<StorageDeviceDriver> Driver { nullptr };
     GUID Type;
     GUID Unique;
     /// Number of bytes to offset within storage device for start of partition.

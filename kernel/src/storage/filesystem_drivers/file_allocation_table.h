@@ -25,21 +25,70 @@
 #include <storage/storage_device_driver.h>
 #include <string.h>
 
-class FileAllocationTableDriver final : FilesystemDriver {
-    FileAllocationTableDriver() {}
+class FileAllocationTableDriver final : public FilesystemDriver {
+    /// This constructor is only used internally in try_create() and is always
+    /// invoked via std::make_shared().
+    explicit FileAllocationTableDriver(std::shared_ptr<StorageDeviceDriver>&& device, BootRecord&& br)
+        : Device(std::move(device))
+        , BR(std::move(br))
+        , Type(fat_type(BR)) {}
+
+    /// Weak reference to ourselves. Every FileAllocationTableDriver is created
+    /// as a shared_ptr. Upon creation, this is set to a weak_ptr to that
+    /// shared_ptr.
+    ///
+    /// We do this because any files we open need to receive a copy of the
+    /// shared_ptr, so we need to store it *somewhere*. We can’t store it as
+    /// a shared_ptr since that would mean that it would never be destroyed.
+    ///
+    /// Instead, we can just use a weak_ptr here. This works because the lifetime
+    /// of the shared_ptr control block is always longer than the lifetime of this
+    /// object, and if we’re still alive, then so is the shared_ptr.
+    ///
+    /// When the last shared_ptr to us is destroyed, the destructor of the
+    /// shared_ptr will invoke our destructor, which will destroy this weak_ptr.
+    std::weak_ptr<FileAllocationTableDriver> This{};
+
+    /// Strong reference to the underlying storage device.
+    std::shared_ptr<StorageDeviceDriver> Device{};
+
+    /// FAT boot record.
+    BootRecord BR{};
+
+    /// FAT type.
+    FATType Type{};
+
+    friend std::shared_ptr<FileAllocationTableDriver>
+        std::make_shared(std::shared_ptr<StorageDeviceDriver>&& device, BootRecord&& br);
+
+    static auto fat_type(BootRecord& br) -> FATType;
 
 public:
     void print_fat(BootRecord&);
 
-    // ^FilesystemDriver
+    auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
+    void close(FileMetadata* file) final { Device->close(file); }
+
+    ssz read(FileMetadata* file, usz offs, usz size, void* buffer) final {
+        return Device->read(file, offs, size, buffer);
+    }
+
+    ssz read_raw(usz offs, usz bytes, void* buffer) final {
+        return Device->read_raw(offs, bytes, buffer);
+    }
+
+    ssz write(FileMetadata* file, usz offs, usz size, void* buffer) final {
+        return Device->write(file, offs, size, buffer);
+    }
 
     const char* name() final { return "File Allocation Table"; }
 
-    /// Try to create a FileAllocationTableDriver from the given storage device.
-    auto try_create(StorageDeviceDriver* driver) -> std::unique_ptr<FilesystemDriver> final;
+    auto device() -> std::shared_ptr<StorageDeviceDriver> final { return Device; }
 
-    /// Return the byte offset of the contents of a file at a given path.
-    FileMetadata file(StorageDeviceDriver* driver, const String& path) final;
+    /// Try to create a FileAllocationTableDriver from the given storage device.
+    static auto try_create(std::shared_ptr<StorageDeviceDriver>) -> std::shared_ptr<FilesystemDriver>;
+
+    static auto translate_path(std::string_view path) -> std::string;
 };
 
 #endif /* LENSOR_OS_FILE_ALLOCATION_TABLE_DRIVER_H */

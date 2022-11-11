@@ -107,9 +107,13 @@ bool PortController::read_low_level(u64 sector, u64 sectors) {
     return true;
 }
 
+ssz PortController::read(FileMetadata*, usz byteOffset, usz byteCount, void* buffer) {
+    return read_raw(byteOffset, byteCount, buffer);
+}
+
 /// Convert bytes to sectors, then read into and copy from intermediate
 /// `Buffer` to given `buffer` until all data is read and copied.
-ssz PortController::read(FileMetadata*, usz byteOffset, usz byteCount, void* buffer) {
+ssz PortController::read_raw(usz byteOffset, usz byteCount, void* buffer) {
     DBGMSG("[AHCI]: Port {} -- read()  byteOffset={}, byteCount={}, buffer={}\n"
            , PortNumber
            , byteOffset

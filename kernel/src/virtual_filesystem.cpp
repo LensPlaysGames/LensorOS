@@ -225,7 +225,7 @@ void VFS::print_debug() {
         std::print("    Open File {}:\n"
                    "      Driver Address: {}\n"
                    , i
-                   , (void*) f->device_driver()
+                   , (void*) f->device_driver().get()
         );
         i++;
     }

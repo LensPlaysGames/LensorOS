@@ -31,6 +31,7 @@ struct DbgOutDriver final : StorageDeviceDriver {
         { return std::shared_ptr<FileMetadata>{nullptr}; }
 
     ssz read(FileMetadata*, usz, usz, void*) final { return -1; };
+    ssz read_raw(usz, usz, void*) final { return -1; };
     ssz write(FileMetadata*, usz offs, usz bytes, void* buffer) final {
         dbgmsg_buf(reinterpret_cast<u8*>(buffer) + offs, bytes);
         return ssz(bytes);

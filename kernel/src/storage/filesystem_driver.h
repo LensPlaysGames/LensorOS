@@ -27,10 +27,9 @@
 
 
 struct FilesystemDriver : StorageDeviceDriver {
+    virtual auto device() -> std::shared_ptr<StorageDeviceDriver> = 0;
     virtual auto name() -> const char* = 0;
-    virtual auto try_create(StorageDeviceDriver* driver) -> std::unique_ptr<FilesystemDriver> = 0;
 };
-
 
 /*/// An abstraction on top of StorageDeviceDriver that returns metadata
 /// and byte offset of a given file path to the VFS.

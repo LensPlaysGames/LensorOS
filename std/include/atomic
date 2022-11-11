@@ -25,17 +25,40 @@
 namespace std {
 template <typename _T>
 struct atomic {
+    using value_type = _T;
+
     _T __value;
     constexpr atomic() noexcept {}
-    constexpr atomic(_T value) noexcept : __value(value) {}
+    constexpr atomic(_T __value) noexcept : __value(__value) {}
 };
 
+/// Compare and exchange an atomic value.
+///
+/// This atomically compares the contents of `__ptr` to `__expected` and, iff
+/// they are equal, replaces the contents of `__ptr` with `__desired`. If the
+/// are not equal, the actual value of `__ptr` is stored into `__expected`.
+///
+/// This operation is allowed to fail spuriously and should be called in a loop
+/// until it succeeds, or until it is sure that it will never succeed.
+///
+/// The compare-and-exchange operation is performed using a sequentially
+/// consistent memory order.
+///
+/// \tparam _T The type of the atomic value.
+/// \param __ptr The atomic value to compare and exchange.
+/// \param __expected A pointer to the expected value of `__ptr`.
+/// \param __desired The value to store in `__ptr` if its value is equal to that of `__expected`.
+/// \return true if the exchange was successful, false otherwise.
 template <typename _T>
-bool atomic_compare_exchange_weak(volatile atomic<_T>* ptr, _T* expected, _T desired) noexcept {
-    return __atomic_compare_exchange(
-        &ptr->__value,
-        expected,
-        desired,
+bool atomic_compare_exchange_weak(
+    volatile atomic<_T>* __ptr,
+    typename atomic<_T>::value_type* __expected,
+    typename atomic<_T>::value_type __desired
+) noexcept {
+    return __atomic_compare_exchange_n(
+        &__ptr->__value,
+        __expected,
+        __desired,
         true,
         __ATOMIC_SEQ_CST,
         __ATOMIC_SEQ_CST
@@ -43,13 +66,18 @@ bool atomic_compare_exchange_weak(volatile atomic<_T>* ptr, _T* expected, _T des
 }
 
 template <typename _T>
-_T atomic_fetch_add(volatile atomic<_T>* ptr, _T value) noexcept {
-    return __atomic_fetch_add(&ptr->__value, value, __ATOMIC_SEQ_CST);
+_T atomic_fetch_add(volatile atomic<_T>* __ptr, _T __value) noexcept {
+    return __atomic_fetch_add(&__ptr->__value, __value, __ATOMIC_SEQ_CST);
 }
 
 template <typename _T>
-_T atomic_load(volatile atomic<_T>* ptr) noexcept {
-    return __atomic_load_n(&ptr->__value, __ATOMIC_SEQ_CST);
+_T atomic_fetch_sub(volatile atomic<_T>* __ptr, _T __value) noexcept {
+    return __atomic_fetch_sub(&__ptr->__value, __value, __ATOMIC_SEQ_CST);
+}
+
+template <typename _T>
+_T atomic_load(const volatile atomic<_T>* __ptr) noexcept {
+    return __atomic_load_n(&__ptr->__value, __ATOMIC_SEQ_CST);
 }
 
 } // namespace std

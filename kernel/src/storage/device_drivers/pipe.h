@@ -48,16 +48,7 @@ struct PipeDriver final : StorageDeviceDriver {
         FreePipeBuffers.push_back(pipe);
     }
 
-    auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final {
-        PipeBuffer* pipe = nullptr;
-        if (FreePipeBuffers.empty()) {
-            pipe = new PipeBuffer();
-        } else {
-            pipe = FreePipeBuffers.back();
-            FreePipeBuffers.pop_back();
-        }
-        return std::make_shared<FileMetadata>(path, false, this, PIPE_BUFSZ, pipe);
-    }
+    auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
 
     ssz read(FileMetadata* file, usz, usz byteCount, void* buffer) final {
         // Find which pipe by using byte offset.
@@ -78,6 +69,8 @@ struct PipeDriver final : StorageDeviceDriver {
         memcpy(buffer, pipe->Data + pipe->Offset, byteCount);
         return ssz(byteCount);
     };
+
+    ssz read_raw(usz, usz, void*) final { return -1; };
 
     ssz write(FileMetadata* file, usz, usz byteCount, void* buffer) final {
         // Find which pipe by using byte offset. There is no filesystem

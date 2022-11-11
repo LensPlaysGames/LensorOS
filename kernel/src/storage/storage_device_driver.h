@@ -29,8 +29,16 @@ struct StorageDeviceDriver {
     virtual ~StorageDeviceDriver() = default;
     virtual void close(FileMetadata* file) = 0;
     virtual auto open(std::string_view path) -> std::shared_ptr<FileMetadata> = 0;
-    virtual auto read(FileMetadata* file, usz offs, usz bytes, void* buffer) -> ssz = 0;
+    [[gnu::nonnull(2)]] virtual auto read(FileMetadata* file, usz offs, usz bytes, void* buffer) -> ssz = 0;
+    virtual auto read_raw(usz offs, usz bytes, void* buffer) -> ssz = 0;
     virtual auto write(FileMetadata* file, usz offs, usz bytes, void* buffer) -> ssz = 0;
 };
+
+/// Helper function to convert a Driver to a StorageDeviceDriver.
+template <typename Derived>
+auto sdd(Derived&& der) -> std::shared_ptr<StorageDeviceDriver> {
+    if constexpr (std::is_same_v<std::remove_cvref_t<Derived>, std::shared_ptr<StorageDeviceDriver>>) return der;
+    else return std::static_pointer_cast<StorageDeviceDriver>(std::forward<Derived>(der));
+}
 
 #endif /* LENSOR_OS_STORAGE_DEVICE_DRIVER_H */

@@ -34,6 +34,7 @@ struct PortController final : StorageDeviceDriver {
     /// Convert bytes to sectors, then read into and copy from intermediate
     /// `Buffer` to given `buffer` until all data is read and copied.
     ssz read(FileMetadata*,usz byteOffset, usz byteCount, void* buffer) final;
+    ssz read_raw(usz byteOffset, usz byteCount, void* buffer) final;
     ssz write(FileMetadata*,usz byteOffset, usz byteCount, void* buffer) final;
 
     // FIXME: I think there are a max of 32 ports, no? We can

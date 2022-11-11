@@ -57,7 +57,7 @@ constexpr u64 SYSDEV_MINOR_AHCI_CONTROLLER = 0;
 constexpr u64 SYSDEV_MINOR_AHCI_PORT       = 1;
 constexpr u64 SYSDEV_MINOR_GPT_PARTITION   = 10;
 
-class System;
+struct System;
 
 /// A system device refers to a hardware device that has been detected
 /// during boot, and is saved for later use in the system structure.
@@ -68,33 +68,16 @@ class SystemDevice {
 public:
 
     SystemDevice(u64 major, u64 minor)
-        : Major(major), Minor(minor)
-    {
-        Data1 = nullptr;
-        Data2 = nullptr;
-        Data3 = nullptr;
-        Data4 = nullptr;
-        Flags = 0;
-    };
+        : Major(major), Minor(minor) {}
 
-    SystemDevice(u64 major, u64 minor, void* data)
-        : Major(major), Minor(minor), Data1(data)
-    {
-        Data2 = nullptr;
-        Data3 = nullptr;
-        Data4 = nullptr;
-        Flags = 0;
-    };
+    SystemDevice(u64 major, u64 minor, std::shared_ptr<StorageDeviceDriver> driver)
+        : Major(major), Minor(minor), Driver(std::move(driver)) {}
 
     SystemDevice(u64 major, u64 minor
-                 , void* data1, void* data2
-                 , void* data3, void* data4)
+                 , std::shared_ptr<StorageDeviceDriver> driver
+                 , void* data2)
         : Major(major), Minor(minor)
-        , Data1(data1), Data2(data2)
-        , Data3(data3), Data4(data4)
-    {
-        Flags = 0;
-    };
+        , Driver(std::move(driver)), Data2(data2) {}
 
     void set_flag(u64 bitNumber, bool state) {
         Flags &= ~(1 << bitNumber);
@@ -109,42 +92,42 @@ public:
     u64 flags() { return Flags; }
     u64 major() { return Major; }
     u64 minor() { return Minor; }
-    void* data1() { return Data1; }
+    auto driver() -> std::shared_ptr<StorageDeviceDriver> { return Driver; }
     void* data2() { return Data2; }
-    void* data3() { return Data3; }
-    void* data4() { return Data4; }
 
 private:
     u64 Flags { 0 };
     u64 Major { 0 };
     u64 Minor { 0 };
-    void* Data1 { nullptr };
+    std::shared_ptr<StorageDeviceDriver> Driver { nullptr };
+
+    /// AHCI Controller: PCI Device Header
     void* Data2 { nullptr };
-    void* Data3 { nullptr };
-    void* Data4 { nullptr };
 };
 
-class System {
-public:
+struct System {
+    std::vector<std::shared_ptr<SystemDevice>> Devices;
+
     System() {}
 
     void set_cpu(const CPUDescription& cpu) {
         CPU = cpu;
     }
 
-    void add_device(SystemDevice&& d) { Devices.push_back(std::move(d)); }
-    void add_fs(Filesystem&& fs) { Filesystems.push_back(fs); }
+    void add_device(std::shared_ptr<SystemDevice>&& d) { Devices.push_back(std::move(d)); }
+
+    template <typename DeviceType, typename ...Args>
+    void create_device(Args&& ...args) {
+        Devices.push_back(std::static_pointer_cast<SystemDevice>(std::make_shared<DeviceType>(std::forward<Args>(args)...)));
+    }
 
     CPUDescription& cpu() { return CPU; }
     VFS& virtual_filesystem() { return VirtualFilesystem; }
 
-    std::vector<Filesystem>& filesystems() { return Filesystems; }
-
-    std::vector<SystemDevice>& devices() { return Devices; }
-    SystemDevice* device(u64 major, u64 minor) {
+    std::shared_ptr<SystemDevice> device(u64 major, u64 minor) {
         for (auto& dev : Devices)
-            if (dev.major() == major && dev.minor() == minor)
-                return &dev;
+            if (dev->major() == major && dev->minor() == minor)
+                return dev;
         return nullptr;
     }
 
@@ -155,26 +138,30 @@ public:
              for (auto& dev : Devices) {
                 std::print("  {}.{}:\n"
                            "    Flags: {}"
-                           , dev.major()
-                           , dev.minor()
-                           , dev.flags());
+                           , dev->major()
+                           , dev->minor()
+                           , dev->flags());
 
-                if (void* d1 = dev.data1()) std::print("\n    Data1: {}", d1);
-                if (void* d2 = dev.data2()) std::print("\n    Data2: {}", d2);
-                if (void* d3 = dev.data3()) std::print("\n    Data3: {}", d3);
-                if (void* d4 = dev.data4()) std::print("\n    Data4: {}", d4);
+                if (auto d1 = dev->driver()) std::print("\n    Driver: {}", (void*) d1.get());
+                if (auto d2 = dev->data2()) std::print("\n    Data2:  {}", d2);
 
                 std::print("\n");
             }
             std::print("\n");
         }
-        if (!Filesystems.empty()) {
+        if (!VirtualFilesystem.mounts().empty()) {
             std::print("Filesystems:\n");
-            for (auto& fs : Filesystems) {
-                fs.print();
+            for (auto& fs : VirtualFilesystem.mounts()) {
+                std::print("  Filesystem: {}\n"
+                           "    Mount Point: {}\n"
+                           "    Driver: {}\n"
+                           , fs.FS->name()
+                           , fs.Path
+                           , (void*) fs.FS.get());
+
                 u8 buffer[8]{};
-                fs.storage_device_driver()->read(0, sizeof buffer, buffer);
-                std::print("  First 8 bytes: {}\n", __s(buffer));
+                fs.FS->device()->read_raw(0, sizeof buffer, buffer);
+                std::print("    First 8 bytes: {}\n", __s(buffer));
             }
             std::print("\n");
         }
@@ -182,8 +169,6 @@ public:
 
 private:
     CPUDescription CPU;
-    std::vector<SystemDevice> Devices;
-    std::vector<Filesystem> Filesystems;
     VFS VirtualFilesystem;
 };
 

@@ -31,7 +31,7 @@
 
 __BEGIN_DECLS__
 void* memcpy(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n);
-int memcmp(void* src, void* dest, size_t bytes);
+int memcmp(const void* src, const void* dest, size_t bytes);
 __END_DECLS__
 
 namespace std {
@@ -76,19 +76,7 @@ public:
         return __cmp;
     }
 
-    _Nodiscard bool operator==(_View __sv) const {
-        if (__size != __sv.__size) return false;
-        return memcmp(__data, __sv.__data, __size) == 0;
-    }
-
     constexpr _Char operator[](size_t __i) const { return __data[__i]; }
-
-    /// TODO: Use operator<=>.
-    _Nodiscard bool operator!=(_View __sv) const { return !(*this == __sv); }
-    _Nodiscard bool operator<(_View __sv) const { return compare(__sv) < 0; }
-    _Nodiscard bool operator>(_View __sv) const { return compare(__sv) > 0; }
-    _Nodiscard bool operator<=(_View __sv) const { return compare(__sv) <= 0; }
-    _Nodiscard bool operator>=(_View __sv) const { return compare(__sv) >= 0; }
 
     _Nodiscard constexpr const char* begin() const { return __data; }
     _Nodiscard constexpr const char* end() const { return __data + __size; }
@@ -133,6 +121,39 @@ public:
         return find(__c) != npos;
     }
 };
+
+template <typename _Char>
+_Nodiscard bool operator==(basic_string_view<_Char> __a, basic_string_view<_Char> __b) {
+    if (__a.size() != __b.size()) return false;
+    return memcmp((void*) __a.data(), (void*) __b.data(), __a.size()) == 0;
+}
+
+/// TODO: Use operator<=>.
+template <typename _Char>
+_Nodiscard bool operator!=(basic_string_view<_Char> __a, basic_string_view<_Char> __b) {
+    return !(__a == __b);
+}
+
+template <typename _Char>
+_Nodiscard bool operator<(basic_string_view<_Char> __a, basic_string_view<_Char> __b) {
+    return __a.compare(__b) < 0;
+}
+
+template <typename _Char>
+_Nodiscard bool operator>(basic_string_view<_Char> __a, basic_string_view<_Char> __b) {
+    return __a.compare(__b) > 0;
+}
+
+template <typename _Char>
+_Nodiscard bool operator<=(basic_string_view<_Char> __a, basic_string_view<_Char> __b) {
+    return __a.compare(__b) <= 0;
+}
+
+template <typename _Char>
+_Nodiscard bool operator>=(basic_string_view<_Char> __a, basic_string_view<_Char> __b) {
+    return __a.compare(__b) >= 0;
+}
+
 
 /// Dynamically resiseable string with small string optimisation. Small strings
 /// are stored directly in the string object and are not heap allocated.
@@ -251,6 +272,8 @@ public:
     }
 
     constexpr basic_string(const _Char* __cstr) : basic_string(_View(__cstr)) {}
+
+    constexpr basic_string(const _Char* __cstr, size_t __sz) : basic_string(_View{__cstr, __sz}) {}
 
     constexpr basic_string(_Str&& __other) {
         __small = __other.__small;
@@ -387,6 +410,8 @@ public:
         }
     }
 
+    void append(const _Char* __chars, size_t __n) { append(basic_string_view<_Char>(__chars, __n)); }
+
     void reserve(size_t __n) {
         if (__n <= capacity()) return;
 
@@ -502,14 +527,6 @@ public:
     ///  Comparisons, searches, and checks.
     /// =======================================================================
     _Nodiscard int compare(basic_string_view<_Char> __sv) const { return __sv.compare(__view()); }
-    _Nodiscard bool operator==(_View __sv) const { return __sv == *this; }
-
-    /// TODO: Use operator<=>.
-    _Nodiscard bool operator!=(_View __sv) const { return !(*this == __sv); }
-    _Nodiscard bool operator<(_View __sv) const { return __sv > *this; }
-    _Nodiscard bool operator>(_View __sv) const { return __sv < *this; }
-    _Nodiscard bool operator<=(_View __sv) const { return !(*this > __sv); }
-    _Nodiscard bool operator>=(_View __sv) const { return !(*this < __sv); }
 
     _Nodiscard size_t find(_Char __c, size_t __pos = 0) const { return __view().find(__c, __pos); }
     _Nodiscard size_t find(_View __sv, size_t __pos = 0) const { return __view().find(__sv, __pos); }
@@ -520,6 +537,32 @@ public:
     _Nodiscard bool contains(_View __sv) const { return __view().contains(__sv); }
     _Nodiscard bool contains(_Char __c) const { return __view().contains(__c); }
 };
+
+template <typename _Char>
+_Nodiscard bool operator==(const basic_string<_Char>& __a, const basic_string<_Char>& __b) {
+    return basic_string_view<_Char>(__a) == basic_string_view<_Char>(__b);
+}
+
+/// TODO: Use operator<=>.
+template <typename _Char>
+_Nodiscard bool operator!=(const basic_string<_Char>& __a, const basic_string<_Char>& __b) {
+    return basic_string_view<_Char>(__a) != basic_string_view<_Char>(__b);
+}
+
+template <typename _Char>
+_Nodiscard bool operator<(const basic_string<_Char>& __a, const basic_string<_Char>& __b) {
+    return basic_string_view<_Char>(__a) < basic_string_view<_Char>(__b);
+}
+
+template <typename _Char>
+_Nodiscard bool operator>(const basic_string<_Char>& __a, const basic_string<_Char>& __b) {
+    return basic_string_view<_Char>(__a) > basic_string_view<_Char>(__b);
+}
+
+template <typename _Char>
+_Nodiscard bool operator<=(const basic_string<_Char>& __a, const basic_string<_Char>& __b) {
+    return basic_string_view<_Char>(__a) <= basic_string_view<_Char>(__b);
+}
 
 using string_view = basic_string_view<char>;
 using wstring_view = basic_string_view<wchar_t>;

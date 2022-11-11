@@ -63,11 +63,11 @@ struct formatter<SysFD> : formatter<FileDescriptor> {
 
 struct MountPoint {
     MountPoint() = default;
-    MountPoint(std::string path, std::unique_ptr<FilesystemDriver>&& fs)
+    MountPoint(std::string path, std::shared_ptr<FilesystemDriver>&& fs)
         : Path(std::move(path)), FS(std::move(fs)) {}
 
     std::string Path;
-    std::unique_ptr<FilesystemDriver> FS;
+    std::shared_ptr<FilesystemDriver> FS;
 };
 
 struct FileDescriptors {
@@ -79,16 +79,20 @@ struct FileDescriptors {
     }
 };
 
-class VFS {
-public:
-    std::unique_ptr<DbgOutDriver> StdoutDriver;
-    std::unique_ptr<PipeDriver> PipesDriver;
+struct VFS {
+    std::shared_ptr<DbgOutDriver> StdoutDriver;
+    std::shared_ptr<PipeDriver> PipesDriver;
 
-    VFS() {}
+    VFS() {
+        StdoutDriver = std::make_shared<DbgOutDriver>();
+        PipesDriver = std::make_shared<PipeDriver>();
+    }
 
-    void mount(std::string path, std::unique_ptr<FilesystemDriver>&& fs) {
+    void mount(std::string path, std::shared_ptr<FilesystemDriver>&& fs) {
         Mounts.push_back(MountPoint{std::move(path), std::move(fs)});
     }
+
+    const std::vector<MountPoint>& mounts() const { return Mounts; }
 
     /// The second file descriptor given will be associated with the file
     /// description of the first.

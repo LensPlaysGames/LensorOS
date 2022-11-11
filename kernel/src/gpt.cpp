@@ -40,7 +40,7 @@ namespace GPT {
         }
         DBGMSG("[GPT]: Checking for valid GPT\n");
         Header hdr;
-        driver->read(512, sizeof hdr, (u8*)&hdr);
+        driver->read_raw(512, sizeof hdr, (u8*)&hdr);
         // Validate GPT Header
         if (hdr.Revision == 0) {
             DBGMSG("  ERROR: Revision is not zero\n");
