@@ -200,13 +200,8 @@ void sys$8_time(Time::tm* time) {
 /// Wait for process with PID to terminate. If process with PID is
 /// invalid, return immediately.
 void sys$9_waitpid(pid_t pid) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 9, "waitpid");
-    dbgmsg("  pid: %ull\r\n"
-           "\r\n"
-           , pid
-           );
-#endif /* #ifdef DEBUG_SYSCALLS */
+    DBGMSG(sys$_dbgfmt, 9, "waitpid");
+    DBGMSG("  pid: {}\n\n", pid);
     (void)pid;
     // TODO: Return immediately if PID isn't valid.
     // TODO: Add to WAITING list of process that we are waiting for,
@@ -219,9 +214,7 @@ void sys$9_waitpid(pid_t pid) {
 /// fork call, but with the return value to each different (child gets
 /// zero, parent gets child's PID).
 void sys$10_fork() {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 10, "fork");
-#endif /* #ifdef DEBUG_SYSCALLS */
+    DBGMSG(sys$_dbgfmt, 10, "fork");
     // TODO: Copy current process
     // TODO: Set return value of each process (this one and the new
     // child).
@@ -230,13 +223,8 @@ void sys$10_fork() {
 /// Replace the current process with a new process, specified by an
 /// executable found at PATH.
 void sys$11_exec(char *path) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 11, "exec");
-    dbgmsg("  path: %s\r\n"
-           "\r\n"
-           , path
-           );
-#endif /* #ifdef DEBUG_SYSCALLS */
+    DBGMSG(sys$_dbgfmt, 11, "exec");
+    DBGMSG("  path: {}\n\n", (const char*) path);
     (void)path;
     // TODO: Ensure valid arguments
 
@@ -251,14 +239,8 @@ void sys$11_exec(char *path) {
 /// The second file descriptor given will be associated with the file
 /// description of the first.
 void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 12, "repfd");
-    dbgmsg("  fd: %ull, replaced: %ull\r\n"
-           "\r\n"
-           , fd
-           , replaced
-           );
-#endif /* #ifdef DEBUG_SYSCALLS */
+    DBGMSG(sys$_dbgfmt, 12, "repfd");
+    DBGMSG("  fd: {}, replaced: {}\n\n", fd, replaced);
     bool result = SYSTEM->virtual_filesystem().dup2(fd, replaced);
     // TODO: Use result/handle error in some way.
     (void)result;
@@ -267,11 +249,8 @@ void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
 /// Create two file descriptors. One of which can be read from, and the
 /// other which can be written to.
 void sys$13_pipe(ProcessFileDescriptor fds[2]) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 13, "pipe");
-#endif /* #ifdef DEBUG_SYSCALLS */
+    DBGMSG(sys$_dbgfmt, 13, "pipe");
     Process* process = Scheduler::CurrentProcess->value();
-
 
     VFS& vfs = SYSTEM->virtual_filesystem();
 
