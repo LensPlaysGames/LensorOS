@@ -456,15 +456,33 @@ shared_ptr<_T> static_pointer_cast(const shared_ptr<_U>& __other) noexcept {
 }
 
 template <typename _T, typename _U>
+shared_ptr<_T> static_pointer_cast(shared_ptr<_U>&& __other) noexcept {
+    auto ptr = static_cast<typename shared_ptr<_T>::element_type*>(__other.get());
+    return shared_ptr<_T>(std::move(__other), ptr);
+}
+
+template <typename _T, typename _U>
 shared_ptr<_T> dynamic_pointer_cast(const shared_ptr<_U>& __other) noexcept {
     auto ptr = dynamic_cast<typename shared_ptr<_T>::element_type*>(__other.get());
     return shared_ptr<_T>(__other, ptr);
 }
 
 template <typename _T, typename _U>
+shared_ptr<_T> dynamic_pointer_cast(shared_ptr<_U>&& __other) noexcept {
+    auto ptr = dynamic_cast<typename shared_ptr<_T>::element_type*>(__other.get());
+    return shared_ptr<_T>(std::move(__other), ptr);
+}
+
+template <typename _T, typename _U>
 shared_ptr<_T> reinterpret_pointer_cast(const shared_ptr<_U>& __other) noexcept {
     auto ptr = reinterpret_cast<typename shared_ptr<_T>::element_type*>(__other.get());
     return shared_ptr<_T>(__other, ptr);
+}
+
+template <typename _T, typename _U>
+shared_ptr<_T> reinterpret_pointer_cast(shared_ptr<_U>&& __other) noexcept {
+    auto ptr = reinterpret_cast<typename shared_ptr<_T>::element_type*>(__other.get());
+    return shared_ptr<_T>(std::move(__other), ptr);
 }
 
 } // namespace std
