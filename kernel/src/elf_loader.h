@@ -156,13 +156,26 @@ namespace ELF {
                    , phdr->p_memsz
                    );
 
+            /// Warn if the size is zero.
+            if (phdr->p_memsz == 0) std::print("[ELF]: Warning: program header has zero size.\n");
             if (phdr->p_type == PT_LOAD) {
+                // The program header may not be aligned to a page boundary, in which
+                // case we need to take the offset and round *down* to the nearest page.
+                u64 size_to_load = phdr->p_memsz + phdr->p_vaddr % PAGE_SIZE;
+
                 // Allocate pages for program.
-                u64 pages = (phdr->p_memsz + PAGE_SIZE - 1) / PAGE_SIZE;
+                u64 pages = (size_to_load + PAGE_SIZE - 1) / PAGE_SIZE;
+
                 // Should I just use the kernel heap for this? It could grow very large...
+                // Zero out the allocated memory.
                 u8* loadedProgram = reinterpret_cast<u8*>(Memory::request_pages(pages));
-                memset(loadedProgram, 0, phdr->p_memsz);
-                auto n_read = vfs.read(fd, loadedProgram, phdr->p_filesz, phdr->p_offset);
+                memset(loadedProgram, 0, size_to_load);
+
+                // Read the program into memory. If the program header does not start
+                // at a page boundary, then we need to offset the read by the offset
+                // into the page.
+                u64 offset = phdr->p_vaddr % PAGE_SIZE;
+                auto n_read = vfs.read(fd, loadedProgram + offset, phdr->p_filesz, phdr->p_offset);
                 if (n_read < 0 || size_t(n_read) != phdr->p_filesz) {
                     std::print("[ELF] Could not read program data from file {}\n" , fd);
                     return false;
