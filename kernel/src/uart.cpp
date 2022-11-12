@@ -165,12 +165,12 @@ void out(u8 byte) {
     out_raw(byte);
 }
 
-void out(const char* str) {
+void out(std::string_view str) {
     if (Initialized == false)
         return;
 
     // Set current character to beginning of string.
-    char* c = (char*)str;
+    const char* c = str.data();
     // Check for null-terminator at current character.
     while (*c != '\0') {
 #ifdef LENSOR_OS_UART_HIDE_COLOR_CODES
@@ -226,12 +226,12 @@ void out(const u8* str, u64 numberOfBytes) {
 }
 
 void out(u64 number) {
-    out(to_string(number));
+    out(std::to_string(number));
 }
 void out(u32 number) {
-    out(to_string(number));
+    out(std::to_string(number));
 }
 void out(u16 number) {
-    out(to_string(number));
+    out(std::to_string(number));
 }
 }

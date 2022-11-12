@@ -284,7 +284,7 @@ void heap_print_debug() {
                    "      Header Address:  {}\n"
                    "      Payload Address: {}\n"
                    , i
-                   , to_string(it->free)
+                   , it->free
                    , u64(it->length)
                    , it->length + sizeof(HeapSegmentHeader)
                    , 100.0f * efficiency

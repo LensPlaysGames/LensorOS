@@ -21,6 +21,7 @@
 
 #include <basic_renderer.h>
 #include <cstr.h>
+#include <format>
 #include <io.h>
 #include <keyboard.h>
 #include <mouse.h>
@@ -203,20 +204,17 @@ void page_fault_handler(InterruptFrameError* frame) {
         }
     }
     if ((frame->error & (u64)PageFaultErrorCode::InstructionFetch) > 0)
-        UART::out("  Instruction fetch\n");
+        std::print("  Instruction fetch\n");
     if ((frame->error & (u64)PageFaultErrorCode::ShadowStackAccess) > 0)
-        UART::out("  Shadow stack access\n");
+        std::print("  Shadow stack access\n");
     if ((frame->error & (u64)PageFaultErrorCode::HypervisorManagedLinearAddressTranslation) > 0)
-        UART::out("  Hypvervisor-managed linear address translation\n");
+        std::print("  Hypvervisor-managed linear address translation\n");
     if ((frame->error & (u64)PageFaultErrorCode::SoftwareGaurdExtensions) > 0)
-        UART::out("  Software gaurd extensions\n");
+        std::print("  Software gaurd extensions\n");
 
-    UART::out("  Faulty Address: 0x");
-    UART::out(to_hexstring(address));
-    UART::out("\n");
+    std::print("  Faulty Address: {:#016x}\n", address);
     Vector2<u64> drawPosition = { PanicStartX, PanicStartY };
-    gRend.puts(drawPosition, "Faulty Address: 0x", 0x00000000);
-    gRend.puts(drawPosition, to_hexstring(address), 0x00000000);
+    gRend.puts(drawPosition, std::format("Faulty Address: {:#016x}", address), 0x00000000);
     gRend.swap({ PanicStartX, PanicStartY }, { 1024, 128 } );
     while (true)
         asm ("hlt");
@@ -237,19 +235,17 @@ void stack_segment_fault_handler(InterruptFrameError* frame) {
     else panic(frame, "Stack segment fault detected (selector)!");
 
     if (frame->error & 0b1)
-        UART::out("  External\n");
+        std::print("  External\n");
 
     u8 table = (frame->error & 0b110) >> 1;
     if (table == 0b00)
-        UART::out("  GDT");
+        std::print("  GDT");
     else if (table == 0b01 || table == 0b11)
-        UART::out("  IDT");
+        std::print("  IDT");
     else if (table == 0b10)
-        UART::out("  LDT");
+        std::print("  LDT");
     
-    UART::out(" Selector Index: ");
-    UART::out(to_hexstring(((frame->error & 0b1111111111111000) >> 3)));
-    UART::out("\n");
+    std::print(" Selector Index: {:x}\n", (frame->error & 0b1111'1111'1111'1000) >> 3);
 }
 
 __attribute__((interrupt))
@@ -259,19 +255,17 @@ void general_protection_fault_handler(InterruptFrameError* frame) {
     else panic(frame, "General protection fault detected (selector)!");
 
     if (frame->error & 0b1)
-        UART::out("  External\n");
+        std::print("  External\n");
     
     u8 table = (frame->error & 0b110) >> 1;
     if (table == 0b00)
-        UART::out("  GDT");
+        std::print("  GDT");
     else if (table == 0b01 || table == 0b11)
-        UART::out("  IDT");
+        std::print("  IDT");
     else if (table == 0b10)
-        UART::out("  LDT");
+        std::print("  LDT");
     
-    UART::out(" Selector Index: ");
-    UART::out(to_hexstring(((frame->error & 0b1111111111111000) >> 3)));
-    UART::out("\n");
+    std::print(" Selector Index: {:x}\n", (frame->error & 0b1111'1111'1111'1000) >> 3);
     while (true)
         asm ("hlt");
 }

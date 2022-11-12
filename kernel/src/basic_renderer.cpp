@@ -280,6 +280,11 @@ void BasicRenderer::drawcharover(Vector2<u64>& position, char c, u32 color) {
 /// Draw a character using the renderer's bitmap font, then increment `DrawPos`
 ///   as such that another character would not overlap with the previous (ie. typing).
 void BasicRenderer::putchar(Vector2<u64>& position, char c, u32 color) {
+    if (c == '\n') {
+        crlf(position);
+        return;
+    }
+
     gRend.drawchar(position, c, color);
     // Increment pixel position horizontally by one character.
     position.x += 8;
@@ -332,13 +337,6 @@ void BasicRenderer::clearchar(Vector2<u64>& position) {
 
 /// Put a string of characters `str` (null terminated) to the screen
 /// with color `color` at `position`.
-void BasicRenderer::puts(Vector2<u64>& position, const char* str, u32 color) {
-    // Set current character to first character in string.
-    char* c = (char*)str;
-    // Loop over string until null-terminator.
-    while (*c != 0) {
-        // put current character of string at current pixel position.
-        putchar(position, *c, color);
-        c++;
-    }
+void BasicRenderer::puts(Vector2<u64>& position, std::string_view str, u32 color) {
+    for (char c : str) { putchar(position, c, color); }
 }

@@ -22,6 +22,7 @@
 
 #include <io.h>
 #include <integers.h>
+#include <string>
 
 #define BAUD_FREQ 115200
 #define BAUD_RATE 9600
@@ -158,7 +159,7 @@ namespace UART {
     }
 
     // Write a c-style null-terminated string to serial output.
-    void out(const char* string);
+    void out(std::string_view str);
     // Write a number of bytes from a given buffer to serial output.
     void out(const u8* buffer, u64 numberOfBytes);
     // Write the given number as a string to serial output.

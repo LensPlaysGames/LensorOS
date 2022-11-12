@@ -182,12 +182,9 @@ void kstage1(BootInfo* bInfo) {
     // Initialize the Real Time Clock.
     gRTC = RTC();
     gRTC.set_periodic_int_enabled(true);
-    std::print("[kstage1]: \033[32mReal Time Clock (RTC) initialized\033[0m\n"
-               "  Periodic interrupts enabled at \033[33m{}hz\033[0m\n"
-               "\n\033[1;33m"
+    std::print("[kstage1]: \033[32mReal Time Clock (RTC) initialized\033[0m\n\033[1;33m"
                "Now is {}:{}:{} on {}-{}-{}"
                "\033[0m\n\n"
-           , static_cast<double>(RTC_PERIODIC_HERTZ)
            , gRTC.Time.hour
            , gRTC.Time.minute
            , gRTC.Time.second
@@ -328,6 +325,15 @@ void kstage1(BootInfo* bInfo) {
         }
     }
     std::print("\n");
+
+    // Make sure SSE is enabled.
+#ifdef __SSE__
+    if (!SystemCPU->sse_enabled()) {
+        std::print("[kstage1]: \033[31mSSE is not enabled!\033[0m\n");
+        std::print("[kstage1]: \033[31mYour CPU doesn’t support SSE. Please recompile the kernel without SSE support.\033[0m\n");
+        for (;;) asm volatile ("hlt");
+    }
+#endif
 
     // TODO: Parse CPUs from ACPI MADT table.
     //       For now we only support single core.

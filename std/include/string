@@ -647,6 +647,7 @@ __forceinline basic_string<_Char> __to_string(_Int __i, uint8_t __base = 10, boo
 
 template <typename _Char, floating_point _Float>
 __forceinline basic_string<_Char> __to_string(_Float __f) {
+#ifdef __SSE__
     basic_string<_Char> __result;
 
     /// Handle nan, inf, and -inf.
@@ -675,6 +676,9 @@ __forceinline basic_string<_Char> __to_string(_Float __f) {
     }
 
     return __result;
+#else
+    return "(FLOAT)";
+#endif
 }
 
 inline string to_string(int __i) { return __to_string<char>(__i); }

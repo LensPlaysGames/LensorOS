@@ -25,7 +25,7 @@
 namespace std {
 template <typename _T, size_t _Sz>
 class array {
-    _T __elems[_Sz ?: 1];
+    _T __elems[_Sz ? _Sz : 1];
 
 public:
     using value_type = _T;
