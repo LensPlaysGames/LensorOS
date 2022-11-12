@@ -31,7 +31,14 @@ void memset(void* src, u8 value  , u64 numBytes);
 extern "C" int memcmp(const void* src, const void* dest, size_t numBytes);
 extern "C" void* memcpy(void* __restrict__ dest, const void* __restrict__ src, size_t numBytes);
 
-void volatile_read(const volatile void* ptr, volatile void* out, u64 length);
-void volatile_write(void* data, volatile void* ptr, u64 length);
+template <typename T>
+T volatile_read(const volatile T* ptr) {
+    return *ptr;
+}
+
+template <typename T>
+void volatile_write(volatile T* dest, const T& value) {
+    *dest = value;
+}
 
 #endif

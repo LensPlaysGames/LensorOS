@@ -79,36 +79,3 @@ void memset(void* start, u8 value, u64 numBytes) {
         *(u8*)((u64)start + i) = value;
 }
 
-void volatile_read(const volatile void* ptr, volatile void* out, u64 length) {
-    if (ptr == nullptr || out == nullptr || length == 0)
-        return;
-    // FIXME: Are memory barries necessary for the memcpy call?
-    if (length == 1)
-        *(u8*)out = *(volatile u8*)ptr;
-    else if (length == 2)
-        *(u16*)out = *(volatile u16*)ptr;
-    else if (length == 4)
-        *(u32*)out = *(volatile u32*)ptr;
-    else if (length == 8)
-        *(u64*)out = *(volatile u64*)ptr;
-
-    /// FIXME: this is horribly broken because that’s *not* how volatile works...
-    else memcpy((void*)out, (void*)ptr, length);
-}
-
-void volatile_write(void* data, volatile void* ptr, u64 length) {
-    if (data == nullptr || ptr == nullptr || length == 0)
-        return;
-    // FIXME: Are memory barriers necessary for the memcpy call?
-    if (length == 1)
-        *(volatile u8*)ptr = *(u8*)data;
-    if (length == 2)
-        *(volatile u16*)ptr = *(u16*)data;
-    if (length == 4)
-        *(volatile u32*)ptr = *(u32*)data;
-    if (length == 8)
-        *(volatile u64*)ptr = *(u64*)data;
-
-    /// FIXME: This is horribly broken because that’s not how volatile works...
-    else memcpy((void*)ptr, data, length);
-}
