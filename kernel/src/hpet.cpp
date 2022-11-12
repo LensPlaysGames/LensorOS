@@ -18,13 +18,10 @@
  */
 
 #include <hpet.h>
-
-#include <cstr.h>
+#include <format>
 #include <integers.h>
-#include <io.h>
 #include <memory.h>
 #include <memory/virtual_memory_manager.h>
-#include <uart.h>
 
 HPET gHPET;
 
@@ -32,23 +29,19 @@ HPET gHPET;
  *   registers, so they must be marked as volatile!
  */
 void HPET::writel(u16 offset, u32 value) {
-    volatile_write(&value, (volatile void*)(Header->Address.Address + (offset)), 4);
+    volatile_write((u32*)(Header->Address.Address + offset), value);
 }
 
 u32 HPET::readl(u16 offset) {
-    u32 ret { 0 };
-    volatile_read((const volatile void*)(Header->Address.Address + (offset)), &ret, 4);
-    return ret;
+    return volatile_read((u32*)(Header->Address.Address + offset));
 }
 
 void hpet_init_failed(const char* msg) {
-    UART::out("[HPET]: \033[31mFailed to initialize:\033[0m ");
-    UART::out(msg);
-    UART::out("\r\n");
+    std::print("[HPET]: \033[31mFailed to initialize:\033[0m {}\n", msg);
 }
 
 bool HPET::initialize() {
-#ifdef VBOX
+#if defined(VBOX)
     // I can not get the HPET to work in VBOX for the life of me.
     // It causes a strange crash that shuts down the virtualbox VM.
     // Luckily, I know exactly what causes it, but (unluckily) not how to fix it.
@@ -69,9 +62,9 @@ bool HPET::initialize() {
     }
 
     if (Header->Address.AddressSpaceID == 0) {
-        Memory::map((void*)Header->Address.Address, (void*)Header->Address.Address);
-    }
-    else {
+        Memory::map((void*)Header->Address.Address, (void*)Header->Address.Address,
+                    (u64) Memory::PageTableFlag::Present | (u64) Memory::PageTableFlag::ReadWrite);
+    } else {
         hpet_init_failed("Invalid Address Space ID");
         return false;
     }
@@ -113,9 +106,7 @@ bool HPET::initialize() {
     if (NumberOfComparators < HPET_MIN_COMPARATORS
         || NumberOfComparators > HPET_MAX_COMPARATORS)
     {
-        UART::out("  Number of Comparators: ");
-        UART::out(to_string(NumberOfComparators));
-        UART::out("\r\n");
+        std::print("  Number of Comparators: {}\n", NumberOfComparators);
         hpet_init_failed("Number of comparators is invalid.");
         return false;
     }
@@ -215,47 +206,33 @@ void HPET::print_state() {
     if (Initialized == false)
         return;
 
-    UART::out("[HPET]: \033[32mInitialized\033[0m\r\n");
-    UART::out("  Revision ID: 0x");
-    UART::out(to_hexstring(Header->RevisionID));
-    UART::out("\r\n");
-    UART::out("  ID: 0x");
-    UART::out(to_hexstring(Header->ID));
-    UART::out("\r\n");
-    UART::out("  PCI Vendor ID: 0x");
-    UART::out(to_hexstring(Header->PCIvendorID));
-    UART::out("\r\n");
-    UART::out("  Main Counter Enabled: ");
-    UART::out(to_string(readl(HPET_REG_GENERAL_CONFIGURATION) & 1));
-    UART::out("\r\n");
-    UART::out("  Supports 64-bit Main Counter: ");
-    UART::out(to_string(LargeCounterSupport));
-    UART::out("\r\n");
-    UART::out("  Supports Legacy Interrupt Mapping: ");
-    UART::out(to_string(LegacyInterruptSupport));
-    UART::out("\r\n");
-    UART::out("  Base Address: 0x");
-    UART::out(to_hexstring(Header->Address.Address));
-    UART::out("\r\n");
-    UART::out("  Address Space ID: ");
-    UART::out(to_string(Header->Address.AddressSpaceID));
-    UART::out("\r\n");
-    UART::out("  Sequence Number: ");
-    UART::out(to_string(Header->Number));
-    UART::out("\r\n");
-    UART::out("  Minimum Tick: ");
-    UART::out(to_string(Header->MinimumTick));
-    UART::out("\r\n");
-    UART::out("  Period: ");
-    UART::out(to_string(Period));
-    UART::out("\r\n");
-    UART::out("  Frequency: ");
-    UART::out(to_string(Frequency));
-    UART::out("\r\n");
-    UART::out("  Number of Comparators: ");
-    UART::out(to_string(NumberOfComparators));
-    UART::out("\r\n");
-    UART::out("  Page Protection: ");
-    UART::out(to_string(Header->PageProtection));
-    UART::out("\r\n");
+    std::print("[HPET]: \033[32mInitialized\033[0m\n"
+              "  Revision ID: {:08b}\n"
+              "  ID: {:#x}\n"
+              "  PCI Vendor ID: {:#x}\n"
+              "  Main Counter Enabled: {}\n"
+              "  Supports 64-bit Main Counter: {}\n"
+              "  Supports Legacy Interrupt Mapping: {}\n"
+              "  Base Address: {:#016x}\n"
+              "  Address Space ID: {:#x}\n"
+              "  Sequence Number: {}\n"
+              "  Minimum Tick: {}\n"
+              "  Period: {}\n"
+              "  Frequency: {}\n"
+              "  Number of Comparators: {}\n"
+              "  Page Protection: {:08b}\n"
+              , Header->RevisionID
+              , Header->ID
+              , u16(Header->PCIvendorID)
+              , bool(readl(HPET_REG_GENERAL_CONFIGURATION) & 1)
+              , LargeCounterSupport
+              , LegacyInterruptSupport
+              , u64(Header->Address.Address)
+              , Header->Address.AddressSpaceID
+              , Header->Number
+              , u16(Header->MinimumTick)
+              , Period
+              , Frequency
+              , NumberOfComparators
+              , Header->PageProtection);
 }

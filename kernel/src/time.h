@@ -21,6 +21,7 @@
 #define LENSOR_OS_TIME_H
 
 #include <rtc.h>
+#include <format>
 
 namespace Time {
     struct tm {
@@ -102,6 +103,20 @@ namespace Time {
         time->is_daylight_savings_time = -1;
 
     }
+}
+
+namespace std {
+template <>
+struct formatter<Time::tm> {
+    constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
+
+    template <typename FormatContext>
+    auto format(const Time::tm& t, FormatContext& ctx) {
+        return format_to(ctx.out(), "{:02d}:{:02d}:{:02d} {:02d}/{:02d}/{:04d}",
+            t.hours, t.minutes, t.seconds,
+            t.day_of_month, t.month, t.years_since_1900);
+    }
+};
 }
 
 #endif /* LENSOR_OS_TIME_H */

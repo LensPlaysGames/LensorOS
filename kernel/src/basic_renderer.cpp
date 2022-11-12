@@ -18,9 +18,7 @@
  */
 
 #include <basic_renderer.h>
-
-#include <cstr.h>
-#include <debug.h>
+#include <format>
 #include <integers.h>
 #include <math.h>
 #include <memory/physical_memory_manager.h>
@@ -47,10 +45,10 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
                     | (u64)Memory::PageTableFlag::ReadWrite
                     );
     }
-    dbgmsg("  Active GOP framebuffer mapped to %x thru %x\r\n"
-           , fbBase
-           , fbBase + fbSize
-           );
+    std::print("  Active GOP framebuffer mapped to {:#016x} thru {:#016x}\n"
+               , fbBase
+               , fbBase + fbSize
+               );
     // Create a new framebuffer. This memory is what will be drawn to.
     // When the screen should be updated, this new framebuffer is copied
     // into the active one. This helps performance as the active framebuffer
@@ -66,10 +64,10 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
         Target = Render;
     }
     else {
-        dbgmsg("  Deferred GOP framebuffer allocated at %x thru %x\r\n"
-               , target.BaseAddress
-               , (u64)target.BaseAddress + fbSize
-               );
+        std::print("  Deferred GOP framebuffer allocated at {} thru {:#016x}\n"
+                   , target.BaseAddress
+                   , (u64)target.BaseAddress + fbSize
+                   );
         // If memory allocation succeeds, map memory somewhere
         // out of the way in the virtual address range.
         // FIXME: Don't hard code this address.
@@ -84,7 +82,7 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
         }
         target.BaseAddress = (void*)virtualTargetBaseAddress;
         Target = &target;
-        dbgmsg("  Deferred GOP framebuffer mapped to %x thru %x\r\n"
+        std::print("  Deferred GOP framebuffer mapped to {:#016x} thru {:#016x}\n"
                , virtualTargetBaseAddress
                , virtualTargetBaseAddress + fbSize
                );
@@ -122,7 +120,7 @@ void BasicRenderer::swap(Vector2<u64> position, Vector2<u64> size) {
     // Copy rectangle line-by-line.
     u64 bytesPerLine = BytesPerPixel * size.x;
     for (u64 y = 0; y < size.y; ++y) {
-        memcpy(targetBaseAddress, renderBaseAddress, bytesPerLine);
+        memcpy(renderBaseAddress, targetBaseAddress, bytesPerLine);
         targetBaseAddress += Target->PixelsPerScanLine;
         renderBaseAddress += Render->PixelsPerScanLine;
     }
@@ -282,6 +280,11 @@ void BasicRenderer::drawcharover(Vector2<u64>& position, char c, u32 color) {
 /// Draw a character using the renderer's bitmap font, then increment `DrawPos`
 ///   as such that another character would not overlap with the previous (ie. typing).
 void BasicRenderer::putchar(Vector2<u64>& position, char c, u32 color) {
+    if (c == '\n') {
+        crlf(position);
+        return;
+    }
+
     gRend.drawchar(position, c, color);
     // Increment pixel position horizontally by one character.
     position.x += 8;
@@ -334,13 +337,6 @@ void BasicRenderer::clearchar(Vector2<u64>& position) {
 
 /// Put a string of characters `str` (null terminated) to the screen
 /// with color `color` at `position`.
-void BasicRenderer::puts(Vector2<u64>& position, const char* str, u32 color) {
-    // Set current character to first character in string.
-    char* c = (char*)str;
-    // Loop over string until null-terminator.
-    while (*c != 0) {
-        // put current character of string at current pixel position.
-        putchar(position, *c, color);
-        c++;
-    }
+void BasicRenderer::puts(Vector2<u64>& position, std::string_view str, u32 color) {
+    for (char c : str) { putchar(position, c, color); }
 }

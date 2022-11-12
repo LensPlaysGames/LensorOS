@@ -96,15 +96,26 @@ __attribute__((malloc)) void* heap_alloc(size_t size) {
 
 /// Allocate a new alloc_header.
 __attribute__((malloc)) alloc_header* allocate_header() {
+    alloc_header* header;
+
     /// Return the next free header if there is one.
     if (free_headers) {
-        alloc_header* header = free_headers;
+        header = free_headers;
         free_headers = header->next;
         return header;
     }
 
     /// Otherwise, allocate a new one.
-    return reinterpret_cast<alloc_header*>(heap_alloc(sizeof(alloc_header)));
+    header = reinterpret_cast<alloc_header*>(heap_alloc(sizeof(alloc_header)));
+
+    /// Make sure to zero out the previous and next pointers.
+    if (header) {
+        header->next = nullptr;
+        header->prev = nullptr;
+    }
+
+    /// Return the new header.
+    return header;
 }
 
 /// Free an alloc_header.
@@ -202,7 +213,7 @@ __attribute__((alloc_size(2))) void* realloc_impl(void* ptr, size_t size) {
 ///  C Interface
 /// ===========================================================================
 __BEGIN_DECLS__
-bool __stdio_destructed;
+__bool __stdio_destructed;
 
 void __libc_init_malloc() {
     __errno = 0;

@@ -17,24 +17,19 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <format>
+
 #include "scheduler.h"
 
 #include <cstr.h>
-#include <debug.h>
-#include <file.h>
-#include <filesystem.h>
-#include <linked_list.h>
 #include <storage/file_metadata.h>
-#include <storage/filesystem_driver.h>
-#include <storage/storage_device_driver.h>
-#include <string.h>
 #include <virtual_filesystem.h>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_VFS
 
 #ifdef DEBUG_VFS
-#   define DBGMSG(...) dbgmsg(__VA_ARGS__)
+#   define DBGMSG(...) std::print(__VA_ARGS__)
 #else
 #   define DBGMSG(...)
 #endif
@@ -43,42 +38,42 @@ SysFD VFS::procfd_to_fd(ProcFD procfd) const {
     const auto& proc = Scheduler::CurrentProcess->value();
     auto sysfd = proc->FileDescriptors[procfd];
     if (!sysfd) {
-        DBGMSG("[VFS]: ERROR: ProcFD %x:%ull is unmapped.\r\n", &proc, u64(procfd));
+        DBGMSG("[VFS]: ERROR {} (pid {}) is unmapped.\n", procfd, proc->ProcessID);
         return SysFD::Invalid;
     }
 
     return *sysfd;
 }
 
-auto VFS::file(ProcFD procfd) -> std::shared_ptr<OpenFileDescription> {
+auto VFS::file(ProcFD procfd) -> std::shared_ptr<FileMetadata> {
     const auto& proc = Scheduler::CurrentProcess->value();
 
 #ifdef DEBUG_VFS
-    dbgmsg("[VFS]: ProcFds for process %x:\r\n", &proc);
+    std::print("[VFS]: ProcFds for process {}:\n", proc->ProcessID);
     u64 n = 0;
     for (const auto& entry : proc->FileDescriptors) {
-        dbgmsg("  %ull -> Sys %ull\r\n", n, entry);
+        std::print("  {} -> {}\n", n, entry);
         n++;
     }
 #endif
 
     auto sysfd = proc->FileDescriptors[procfd];
     if (!sysfd) {
-        DBGMSG("[VFS]: ERROR: ProcFD %x:%ull is unmapped.\r\n", &proc, u64(procfd));
+        DBGMSG("[VFS]: ERROR: {} (pid {}) is unmapped.\n", procfd, proc->ProcessID);
         return {};
     }
 
-    DBGMSG("[VFS]: file: ProcFD %x:%ull is mapped to SysFD %ull.\r\n", &proc, u64(procfd), *sysfd);
+    DBGMSG("[VFS]: file: {} ({}) is mapped to SysFD {}.\n", procfd, proc->ProcessID, *sysfd);
     return file(static_cast<SysFD>(*sysfd));
 }
 
-auto VFS::file(SysFD fd) -> std::shared_ptr<OpenFileDescription> {
+auto VFS::file(SysFD fd) -> std::shared_ptr<FileMetadata> {
     auto f = Files[fd];
     if (!f) {
-        DBGMSG("[VFS]: ERROR: SysFD %ull is unmapped.\r\n", fd);
+        DBGMSG("[VFS]: ERROR: {} is unmapped.\n", fd);
         return {};
     }
-    return *f;
+    return f;
 }
 
 bool VFS::valid(ProcFD procfd) const {
@@ -88,7 +83,7 @@ bool VFS::valid(ProcFD procfd) const {
 bool VFS::valid(SysFD fd) const {
     auto f = Files[fd];
     if (!f) {
-        DBGMSG("[VFS]: ERROR: SysFD %ull is unmapped.\r\n", u64(fd));
+        DBGMSG("[VFS]: ERROR: {} is unmapped.\n", fd);
         return false;
     }
     return true;
@@ -97,53 +92,49 @@ bool VFS::valid(SysFD fd) const {
 void VFS::free_fd(SysFD fd, ProcFD procfd) {
     const auto& proc = Scheduler::CurrentProcess->value();
     proc->FileDescriptors.erase(procfd);
+
+    /// Erasing the last shared_ptr holding the file metadata will call
+    /// the destructor of FileMetadata, which will then close the file.
     Files.erase(fd);
 }
 
-FileDescriptors VFS::open(const String& path) {
-    u64 fullPathLength = path.length();
+FileDescriptors VFS::open(std::string_view path) {
+    u64 fullPathLength = path.size();
+
     if (fullPathLength <= 1) {
-        dbgmsg_s("[VFS]: path is not long enough.\r\n");
-        return {};
-    }
-    if (path[0] != '/') {
-        dbgmsg("[VFS]: path does not start with slash, %s\r\n", fullPathLength);
+        std::print("[VFS]: path is not long enough.\n");
         return {};
     }
 
+    if (path[0] != '/') {
+        std::print("[VFS]: path does not start with slash, {}\n", fullPathLength);
+        return {};
+    }
+
+    DBGMSG("[VFS]: Attempting to open file at path {}\n", path);
     for (const auto& mount : Mounts) {
-        StorageDeviceDriver* dev = mount.FS->storage_device_driver();
-        FilesystemDriver* fileDriver = mount.FS->filesystem_driver();
-        u64 mountPathLength = strlen(mount.Path) - 1;
-        if (mountPathLength <= fullPathLength) {
-            if (strcmp(path.data(), mount.Path, mountPathLength)) {
-                String prefixlessPath = path;
-                prefixlessPath.chop(mountPathLength, String::Side::Right);
-                if (prefixlessPath == path) {
-                    // TODO: path matches a mount path exactly.
-                    // How do we open a mount? Should we? NO!!
-                }
-                else {
-                    FileMetadata metadata = fileDriver->file(dev, prefixlessPath.data());
-                    DBGMSG("  Metadata:\r\n"
-                           "    Name: %sl\r\n"
-                           "    File Size: %ull\r\n"
-                           "    Byte Offset: %ull\r\n"
-                           "    Filesystem Driver: %x\r\n"
-                           "    Device Driver: %x\r\n"
-                           "    Invalid: %b\r\n"
-                           , metadata.name()
-                           , metadata.file_size()
-                           , metadata.byte_offset()
-                           , metadata.file_driver()
-                           , metadata.device_driver()
-                           , metadata.invalid()
-                           );
-                    if (!metadata.invalid()) {
-                        return add_file(std::make_shared<OpenFileDescription>(dev, metadata));
-                    }
-                }
-            }
+        /// It makes no sense to search file systems whose mount point does not
+        /// match the beginning of the path. And even if they’re mounted twice,
+        /// we’ll still find the second mount.
+        if (!path.starts_with(mount.Path)) continue;
+        auto fs_path = path.substr(mount.Path.size());
+
+        /// Try to open the file.
+        DBGMSG("[VFS]: Attempting to open file at path {} on mount {}\n", fs_path, mount.Path);
+        if (auto meta = mount.FS->open(fs_path)) {
+            DBGMSG("  Metadata:\n"
+                   "    Name: {}\n"
+                   "    File Size: {}\n"
+                   "    Driver Data: {}\n"
+                   "    Device Driver: {}\n"
+                   "    Invalid: {}\n"
+                   , meta->name()
+                   , meta->file_size()
+                   , meta->driver_data()
+                   , (void*) meta->device_driver().get()
+                   , meta->invalid()
+            );
+            return add_file(std::move(meta));
         }
     }
 
@@ -154,106 +145,99 @@ bool VFS::close(ProcFD procfd) {
     auto fd = procfd_to_fd(procfd);
     [[maybe_unused]] auto& proc = Scheduler::CurrentProcess->value();
     if (fd == SysFD::Invalid) {
-        DBGMSG("[VFS]: Cannot close invalid ProcFD %x:%ull.\r\n", &proc, u64(procfd));
+        DBGMSG("[VFS]: Cannot close invalid {} (pid {}).\n", procfd, proc->ProcessID);
         return false;
     }
 
     auto f = file(fd);
     if (!f) {
-        DBGMSG("[VFS]: Cannot close invalid SysFD %ull.\r\n", u64(fd));
+        DBGMSG("[VFS]: Cannot close invalid {}.\n", fd);
         return false;
     }
 
-    DBGMSG("[VFS]: Unmapping ProcFD %x:%ull.\r\n", &proc, u64(procfd));
-    DBGMSG("[VFS]: Closing SysFD %ull.\r\n", u64(fd));
+    DBGMSG("[VFS]: Unmapping {} (pid {}).\n", procfd, proc->ProcessID);
+    DBGMSG("[VFS]: Closing {}.\n", fd);
     free_fd(fd, procfd);
     return true;
 }
 
 ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
-#ifdef DEBUG_VFS
-    dbgmsg("[VFS]: read\r\n"
-           "  file descriptor: %ull\r\n"
-           "  buffer address:  %x\r\n"
-           "  byte count:      %ull\r\n"
-           "  byte offset:     %ull\r\n"
+    DBGMSG("[VFS]: read\n"
+           "  file descriptor: {}\n"
+           "  buffer address:  {}\n"
+           "  byte count:      {}\n"
+           "  byte offset:     {}\n"
            , fd
-           , buffer
+           , (void*) buffer
            , byteCount
            , byteOffset
            );
-#endif /* #ifdef DEBUG_VFS */
 
     auto f = file(fd);
     if (!f) { return -1; }
 
-    return f->DeviceDriver->read(f->Metadata.byte_offset() + byteOffset, byteCount, buffer);
+    return f->device_driver()->read(f.get(), byteOffset, byteCount, buffer);
 }
 
 ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
     auto f = file(fd);
 
-    DBGMSG("[VFS]: write\r\n"
-           "  file descriptor: %ull\r\n"
-           "  buffer address:  %x\r\n"
-           "  byte count:      %ull\r\n"
-           "  byte offset:     %ull\r\n"
+    DBGMSG("[VFS]: write\n"
+           "  file descriptor: {}\n"
+           "  buffer address:  {}\n"
+           "  byte count:      {}\n"
+           "  byte offset:     {}\n"
            , fd
-           , buffer
+           , (void*) buffer
            , byteCount
            , byteOffset
            );
 
-    return f->DeviceDriver->write(f->Metadata.byte_offset() + byteOffset, byteCount, buffer);
+    return f->device_driver()->write(f.get(), byteOffset, byteCount, buffer);
 }
 
 void VFS::print_debug() {
-    dbgmsg("[VFS]: Debug Info\r\n"
-           "  Mounts:\r\n");
+    std::print("[VFS]: Debug Info\n"
+           "  Mounts:\n");
     u64 i = 0;
     for (const auto& mp : Mounts) {
-        dbgmsg("    Mount %ull:\r\n"
-               "      Path: %s\r\n"
-               "      Filesystem: %s\r\n"
-               "        Filesystem Driver Address: %x\r\n"
-               "        Storage Device Driver Address: %x\r\n"
-               , i
-               , mp.Path
-               , Filesystem::type2name(mp.FS->type())
-               , mp.FS->filesystem_driver()
-               , mp.FS->storage_device_driver()
-               );
+        std::print("    Mount {}:\n"
+                   "      Path: {}\n"
+                   "      Filesystem: {}\n"
+                   "      Driver Address: {}\n"
+                   , i
+                   , mp.Path
+                   , mp.FS->name()
+                   , (void*) mp.FS.get()
+                   );
         i += 1;
     }
-    dbgmsg("\r\n"
-           "  Opened files:\r\n");
+    std::print("\n  Opened files:\n");
     i = 0;
     for (const auto& f : Files) {
-        dbgmsg("    Open File %ull:\r\n"
-               "      Storage Device Driver Address: %x\r\n"
-               "      Byte Offset: %ull\r\n"
-               , i
-               , f->DeviceDriver
-               , f->Metadata.byte_offset()
+        std::print("    Open File {}:\n"
+                   "      Driver Address: {}\n"
+                   , i
+                   , (void*) f->device_driver().get()
         );
         i++;
     }
-    dbgmsg("\r\n");
+    std::print("\n");
 }
 
-FileDescriptors VFS::add_file(std::shared_ptr<OpenFileDescription> file, Process* proc) {
+FileDescriptors VFS::add_file(std::shared_ptr<FileMetadata> file, Process* proc) {
     if (!proc) proc = Scheduler::CurrentProcess->value();
-    DBGMSG("[VFS]: Creating file descriptor mapping\r\n");
+    DBGMSG("[VFS]: Creating file descriptor mapping\n");
 
     /// Add the file descriptor to the global file table.
     auto [fd, _] = Files.push_back(std::move(file));
-    DBGMSG("[VFS]: Allocated new SysFD %ull\r\n", fd);
+    DBGMSG("[VFS]: Allocated new {}\n", fd);
 
     /// Add the file descriptor to the local process table.
     auto [procfd, __] = proc->FileDescriptors.push_back(fd);
-    DBGMSG("[VFS]: Allocated new ProcFD %x:%ull\r\n", &proc, procfd);
+    DBGMSG("[VFS]: Allocated new {} (pid {})\n", procfd, proc->ProcessID);
 
     /// Return the fds.
-    DBGMSG("[VFS]: Mapped ProcFD %x:%ull to SysFD %ull\r\n", &proc, procfd, fd);
+    DBGMSG("[VFS]: Mapped {} (pid {}) to {}\n", procfd, proc->ProcessID, fd);
     return {static_cast<ProcFD>(procfd), static_cast<SysFD>(fd)};
 }

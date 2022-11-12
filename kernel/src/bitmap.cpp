@@ -18,7 +18,6 @@
  */
 
 #include <bitmap.h>
-
 #include <integers.h>
 #include <memory.h>
 

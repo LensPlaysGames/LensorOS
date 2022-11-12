@@ -19,11 +19,10 @@
 
 #include <memory.h>
 
-#include <efi_memory.h>
 #include <integers.h>
 #include <large_integers.h>
 
-int memcmp(void* aPtr, void* bPtr, u64 numBytes) {
+extern "C" int memcmp(const void* aPtr, const void* bPtr, size_t numBytes) {
     if (aPtr == bPtr)
         return 0;
 
@@ -41,9 +40,9 @@ int memcmp(void* aPtr, void* bPtr, u64 numBytes) {
 // The signed comparison does limit `numBytes` to ~9 billion.
 // I think I'm okay with that, as nobody will be moving 8192 pebibytes
 //   around in memory any time soon. If you are, rewrite this, nerd :^)
-void memcpy(void* src, void* dest, u64 numBytes) {
+extern "C" void* memcpy(void* __restrict__ dest, const void* __restrict__ src, size_t numBytes) {
     if (src == dest)
-        return;
+        return dest;
 
     s64 i = 0;
     for (; i <= (s64)numBytes - 2048; i += 2048)
@@ -56,9 +55,11 @@ void memcpy(void* src, void* dest, u64 numBytes) {
         *(u64*)((u64)dest + i) = *(u64*)((u64)src + i);
     for (; i < (s64)numBytes; ++i)
         *(u8*)((u64)dest + i) = *(u8*)((u64)src + i);
+
+    return dest;
 }
 
-void memset(void* start, u8 value, u64 numBytes) {
+extern "C" void memset(void* start, u8 value, u64 numBytes) {
     if (numBytes >= 256) {
         u64 qWordValue = 0;
         qWordValue |= (u64)value << 0;
@@ -77,32 +78,3 @@ void memset(void* start, u8 value, u64 numBytes) {
         *(u8*)((u64)start + i) = value;
 }
 
-void volatile_read(const volatile void* ptr, volatile void* out, u64 length) {
-    if (ptr == nullptr || out == nullptr || length == 0)
-        return;
-    // FIXME: Are memory barries necessary for the memcpy call?
-    if (length == 1)
-        *(u8*)out = *(volatile u8*)ptr;
-    else if (length == 2)
-        *(u16*)out = *(volatile u16*)ptr;
-    else if (length == 4)
-        *(u32*)out = *(volatile u32*)ptr;
-    else if (length == 8)
-        *(u64*)out = *(volatile u64*)ptr;
-    else memcpy((void*)ptr, (void*)out, length);
-}
-
-void volatile_write(void* data, volatile void* ptr, u64 length) {
-    if (data == nullptr || ptr == nullptr || length == 0)
-        return;
-    // FIXME: Are memory barriers necessary for the memcpy call?
-    if (length == 1)
-        *(volatile u8*)ptr = *(u8*)data;
-    if (length == 2)
-        *(volatile u16*)ptr = *(u16*)data;
-    if (length == 4)
-        *(volatile u32*)ptr = *(u32*)data;
-    if (length == 8)
-        *(volatile u64*)ptr = *(u64*)data;
-    else memcpy(data, (void*)ptr, length);
-}

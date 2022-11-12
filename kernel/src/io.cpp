@@ -18,7 +18,6 @@
  */
 
 #include <io.h>
-
 #include <integers.h>
 
 void out8(u16 port, u8 value) {

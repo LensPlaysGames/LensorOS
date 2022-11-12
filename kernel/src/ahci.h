@@ -396,37 +396,6 @@ namespace AHCI {
     const char* port_type_string(PortType);
 
     PortType get_port_type(HBAPort* port);
-
-    // TODO: Move PortController definition to storage/device_drivers/
-
-    class PortController final : public StorageDeviceDriver {
-    public:
-        PortController(PortType type, u64 portNumber, HBAPort* portAddress);
-
-        /// Convert bytes to sectors, then read into and copy from intermediate
-        /// `Buffer` to given `buffer` until all data is read and copied.
-        ssz read(usz byteOffset, usz byteCount, u8* buffer) final;
-        ssz write(usz byteOffset, usz byteCount, u8* buffer) final;
-
-        // FIXME: I think there are a max of 32 ports, no? We can
-        // probably use something smaller than a u64 here.
-        u64 port_number() { return PortNumber; }
-
-    private:
-        PortType Type { PortType::None };
-        u64 PortNumber { 99 };
-        volatile HBAPort* Port { nullptr };
-        u8* Buffer { nullptr };
-        const u64 BYTES_PER_SECTOR = 512;
-        const u64 PORT_BUFFER_PAGES = 0x100;
-        const u64 PORT_BUFFER_BYTES = PORT_BUFFER_PAGES * 0x1000;
-
-        /// Populate `Buffer` with `sectors` amount of data starting at `sector`.
-        bool read_low_level(u64 sector, u64 sectors);
-
-        void start_commands();
-        void stop_commands();
-    };
 }
 
 #endif /* LENSOR_OS_AHCI_H */

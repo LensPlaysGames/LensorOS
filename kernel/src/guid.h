@@ -22,6 +22,7 @@
 
 #include <integers.h>
 #include <memory.h>
+#include <format>
 
 struct GUID {
     u32 Data1;
@@ -38,28 +39,22 @@ struct GUID {
     }
 };
 
-// Debug purposes only!
-#include "cstr.h"
-#include "uart.h"
-static inline void print_guid(const GUID& id) {
-    UART::out(to_hexstring(id.Data1));
-    UART::outc('-');
-    UART::out(to_hexstring(id.Data2));
-    UART::outc('-');
-    UART::out(to_hexstring(id.Data3));
-    UART::outc('-');
-    u64 data4 { 0 };
-    for (int i = 0, j = 1; i < 2; ++i, --j)
-        data4 |= id.Data4[i] << (j * 8);
+namespace std {
+template <>
+struct formatter<GUID, char> {
+    constexpr auto parse(basic_format_parse_context<char>& ctx) {
+        if (*ctx.begin() != '}') { __detail::__invalid_format_string(); }
+        return ctx.begin();
+    }
 
-    UART::out(to_hexstring(data4));
-    UART::outc('-');
-
-    data4 = 0;
-    for (int i = 2, j = 5; i < 8; ++i, --j)
-        data4 |= (u64)id.Data4[i] << (j * 8);
-
-    UART::out(to_hexstring(data4));
+    template <typename FormatContext>
+    auto format(const GUID& guid, FormatContext& ctx) {
+        return format_to(ctx.out(), "{:08x}-{:04x}-{:04x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
+            guid.Data1, guid.Data2, guid.Data3,
+            guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
+            guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
+    }
+};
 }
 
 #endif /* LENSOR_OS_GUID_H */

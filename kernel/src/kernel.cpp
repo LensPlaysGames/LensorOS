@@ -17,84 +17,60 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <kernel.h>
 
 #include <basic_renderer.h>
 #include <boot.h>
 #include <cstr.h>
-#include <debug.h>
+#include <format>
 #include <hpet.h>
-#include <interrupts/interrupts.h>
+#include <kernel.h>
 #include <keyboard.h>
 #include <kstage1.h>
 #include <math.h>
 #include <memory/common.h>
-#include <memory/heap.h>
-#include <memory/virtual_memory_manager.h>
 #include <memory/physical_memory_manager.h>
 #include <pit.h>
 #include <rtc.h>
-#include <string.h>
-#include <tss.h>
-#include <uart.h>
 
 void print_memory_info(Vector2<u64>& position) {
     u32 startOffset = position.x;
     u64 totalRAM = Memory::total_ram();
     u64 freeRAM = Memory::free_ram();
     u64 usedRAM = Memory::used_ram();
-    gRend.puts(position, "Memory Info:");
+    gRend.puts(position, std::format("Memory Info: {}", startOffset));
     gRend.crlf(position, startOffset);
-    gRend.puts(position, "|- Total RAM: ");
-    gRend.puts(position, to_string(TO_MiB(totalRAM)));
-    gRend.puts(position, " MiB (");
-    gRend.puts(position, to_string(TO_KiB(totalRAM)));
-    gRend.puts(position, " KiB)");
+    gRend.puts(position, std::format("|- Total RAM: {} MiB ({} KiB)", TO_MiB(totalRAM), TO_KiB(totalRAM)));
     gRend.crlf(position, startOffset);
-    gRend.puts(position, "|- Free RAM: ");
-    gRend.puts(position, to_string(TO_MiB(freeRAM)));
-    gRend.puts(position, " MiB (");
-    gRend.puts(position, to_string(TO_KiB(freeRAM)));
-    gRend.puts(position, " KiB)");
+    gRend.puts(position, std::format("|- Free RAM: {} MiB ({} KiB)", TO_MiB(freeRAM), TO_KiB(freeRAM)));
     gRend.crlf(position, startOffset);
-    gRend.puts(position, "`- Used RAM: ");
-    gRend.puts(position, to_string(TO_MiB(usedRAM)));
-    gRend.puts(position, " MiB (");
-    gRend.puts(position, to_string(TO_KiB(usedRAM)));
-    gRend.puts(position, " KiB)");
+    gRend.puts(position, std::format("`- Used RAM: {} MiB ({} KiB)", TO_MiB(usedRAM), TO_KiB(usedRAM)));
     gRend.crlf(position, startOffset);
 }
 
 void print_now(Vector2<u64>& position) {
     const RTCData& tm = gRTC.Time;
     u32 startOffset = position.x;
-    gRend.puts(position, "Now is ");
-    gRend.puts(position, to_string(tm.hour));
-    gRend.putchar(position, ':');
-    gRend.puts(position, to_string(tm.minute));
-    gRend.putchar(position, ':');
-    gRend.puts(position, to_string(tm.second));
-    gRend.puts(position, " on ");
-    gRend.puts(position, to_string(tm.year));
-    gRend.putchar(position, '-');
-    gRend.puts(position, to_string(tm.month));
-    gRend.putchar(position, '-');
-    gRend.puts(position, to_string(tm.date));
+    gRend.puts(position, std::format("Now is {}:{}:{} on {}/{}/{}",
+        tm.hour,
+        tm.minute,
+        tm.second,
+        tm.date,
+        tm.month,
+        tm.year));
     gRend.crlf(position, startOffset);
 }
 
 extern "C" void kmain(BootInfo* bInfo) {
     // The heavy lifting is done within the kstage1 function.
     kstage1(bInfo);
-    dbgmsg_s("\r\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\r\n");
+    std::print("\n\033[1;33m!===--- You have now booted into LensorOS ---===!\033[0m\n");
     // Clear + swap screen (ensure known state: blank).
     gRend.clear(0x00000000);
     gRend.swap();
     // GPLv3 LICENSE REQUIREMENT (interactive terminal must print copyright notice).
     const char* GPLv3 = "LensorOS  Copyright (C) 2022, Contributors To LensorOS.";
     // TO SERIAL
-    UART::out(GPLv3);
-    UART::out("\r\n\r\n");
+    std::print("{}\n\n", GPLv3);
     // TO SCREEN
     Vector2<u64> drawPosition = { 0, 0 };
     gRend.BackgroundColor = 0xffffffff;
@@ -122,31 +98,33 @@ extern "C" void kmain(BootInfo* bInfo) {
     Keyboard::gText.set_cursor_from_pixel_position(drawPosition);
 
     u32 debugInfoX = gRend.Target->PixelWidth - 300;
-    while (true) {
+    for (;;) {
+        //std::print("DRAWING\n");
         drawPosition = {debugInfoX, 0};
         // PRINT REAL TIME
         gRTC.update_data();
         print_now(drawPosition);
         gRend.crlf(drawPosition, debugInfoX);
         // PRINT PIT ELAPSED TIME.
-        gRend.puts(drawPosition, "PIT Elapsed: ");
-        gRend.puts(drawPosition, to_string(gPIT.seconds_since_boot()));
+        gRend.puts(drawPosition, std::format("PIT Elapsed: {:.3}", gPIT.seconds_since_boot()));
         gRend.crlf(drawPosition, debugInfoX);
         // PRINT RTC ELAPSED TIME.
-        gRend.puts(drawPosition, "RTC Elapsed: ");
-        gRend.puts(drawPosition, to_string(gRTC.seconds_since_boot()));
+        gRend.puts(drawPosition, std::format("RTC Elapsed: {:.3}", gRTC.seconds_since_boot()));
         gRend.crlf(drawPosition, debugInfoX);
         // PRINT HPET ELAPSED TIME.
-        gRend.puts(drawPosition, "HPET Elapsed: ");
-        gRend.puts(drawPosition, to_string(gHPET.seconds()));
+        gRend.puts(drawPosition, std::format("HPET Elapsed: {:.3}", gHPET.seconds()));
         gRend.crlf(drawPosition, debugInfoX);
         // PRINT MEMORY INFO.
         gRend.crlf(drawPosition, debugInfoX);
         print_memory_info(drawPosition);
         // UPDATE TOP RIGHT CORNER OF SCREEN.
         gRend.swap({debugInfoX, 0}, {80000, 400});
+
+        // Idle until next interrupt.
+        // FIXME: This doesn’t work because it causes the keyboard to become unresponsive.
+        //asm volatile ("hlt");
     }
+
     // HALT LOOP (KERNEL INACTIVE).
-    while (true)
-        asm ("hlt");
+    for (;;) asm volatile ("hlt");
 }

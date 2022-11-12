@@ -24,17 +24,17 @@
 #include <integers.h>
 #include <storage/storage_device_driver.h>
 
-class DbgOutDriver final : public StorageDeviceDriver {
-public:
-    ssz read(usz byteOffset, usz byteCount, u8* buffer) {
-        (void)byteOffset;
-        (void)byteCount;
-        (void)buffer;
-        return -1;
-    };
-    ssz write(usz byteOffset, usz byteCount, u8* buffer) {
-        dbgmsg_buf(buffer + byteOffset, byteCount);
-        return byteCount;
+struct DbgOutDriver final : StorageDeviceDriver {
+    /// Required by the interface but not valid for this driver.
+    void close(FileMetadata*) final { }
+    auto open(std::string_view) -> std::shared_ptr<FileMetadata> final
+        { return std::shared_ptr<FileMetadata>{nullptr}; }
+
+    ssz read(FileMetadata*, usz, usz, void*) final { return -1; };
+    ssz read_raw(usz, usz, void*) final { return -1; };
+    ssz write(FileMetadata*, usz offs, usz bytes, void* buffer) final {
+        dbgmsg_buf(reinterpret_cast<u8*>(buffer) + offs, bytes);
+        return ssz(bytes);
     };
 };
 

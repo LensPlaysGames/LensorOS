@@ -17,19 +17,17 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <scheduler.h>
+#include <format>
 
-#include <debug.h>
 #include <integers.h>
 #include <interrupts/idt.h>
 #include <interrupts/interrupts.h>
 #include <linked_list.h>
 #include <memory.h>
-#include <memory/paging.h>
 #include <memory/virtual_memory_manager.h>
 #include <pit.h>
-#include <tss.h>
-#include <uart.h>
+#include <scheduler.h>
+#include <virtual_filesystem.h>
 
 /// External symbol definitions for `scheduler.asm`
 void(*scheduler_switch_process)(CPUState*)
@@ -50,71 +48,70 @@ namespace Scheduler {
     SinglyLinkedListNode<Process*>* CurrentProcess { nullptr };
 
     void print_debug() {
-        dbgmsg_s("[SCHED]: Debug information:\r\n"
-                 "  Process Queue:\r\n");
+        std::print("[SCHED]: Debug information:\n"
+                 "  Process Queue:\n");
         ProcessQueue->for_each([](auto* it) {
             Process& process = *it->value();
-            dbgmsg("    Process %ull at %x\r\n"
-                   "      CR3:      %x\r\n"
-                   "      RAX:      %x\r\n"
-                   "      RBX:      %x\r\n"
-                   "      RCX:      %x\r\n"
-                   "      RDX:      %x\r\n"
-                   "      RSI:      %x\r\n"
-                   "      RDI:      %x\r\n"
-                   "      RBP:      %x\r\n"
-                   "      RSP:      %x\r\n"
-                   "      R8:       %x\r\n"
-                   "      R9:       %x\r\n"
-                   "      R10:      %x\r\n"
-                   "      R11:      %x\r\n"
-                   "      R12:      %x\r\n"
-                   "      R13:      %x\r\n"
-                   "      R14:      %x\r\n"
-                   "      R15:      %x\r\n"
-                   "      Frame:\r\n"
-                   "        RIP:    %x\r\n"
-                   "        CS:     %x\r\n"
-                   "        RFLAGS: %x\r\n"
-                   "        RSP:    %x\r\n"
-                   "        SS:     %x\r\n"
-                   , process.ProcessID
-                   , &process
-                   , process.CR3
-                   , process.CPU.RAX
-                   , process.CPU.RBX
-                   , process.CPU.RCX
-                   , process.CPU.RDX
-                   , process.CPU.RSI
-                   , process.CPU.RDI
-                   , process.CPU.RBP
-                   , process.CPU.RSP
-                   , process.CPU.R8
-                   , process.CPU.R9
-                   , process.CPU.R10
-                   , process.CPU.R11
-                   , process.CPU.R12
-                   , process.CPU.R13
-                   , process.CPU.R14
-                   , process.CPU.R15
-                   , process.CPU.Frame.ip
-                   , process.CPU.Frame.cs
-                   , process.CPU.Frame.flags
-                   , process.CPU.Frame.sp
-                   , process.CPU.Frame.ss
-                   );
-            dbgmsg("      File Descriptors:\r\n");
+            std::print("    Process {} at {}\n"
+                       "      CR3:      {}\n"
+                       "      RAX:      {:#016x}\n"
+                       "      RBX:      {:#016x}\n"
+                       "      RCX:      {:#016x}\n"
+                       "      RDX:      {:#016x}\n"
+                       "      RSI:      {:#016x}\n"
+                       "      RDI:      {:#016x}\n"
+                       "      RBP:      {:#016x}\n"
+                       "      RSP:      {:#016x}\n"
+                       "      R8:       {:#016x}\n"
+                       "      R9:       {:#016x}\n"
+                       "      R10:      {:#016x}\n"
+                       "      R11:      {:#016x}\n"
+                       "      R12:      {:#016x}\n"
+                       "      R13:      {:#016x}\n"
+                       "      R14:      {:#016x}\n"
+                       "      R15:      {:#016x}\n"
+                       "      Frame:\n"
+                       "        RIP:    {:#016x}\n"
+                       "        CS:     {:#016x}\n"
+                       "        RFLAGS: {:#016x}\n"
+                       "        RSP:    {:#016x}\n"
+                       "        SS:     {:#016x}\n"
+                       , process.ProcessID, (void*) &process
+                       , (void*) process.CR3
+                       , u64(process.CPU.RAX)
+                       , u64(process.CPU.RBX)
+                       , u64(process.CPU.RCX)
+                       , u64(process.CPU.RDX)
+                       , u64(process.CPU.RSI)
+                       , u64(process.CPU.RDI)
+                       , u64(process.CPU.RBP)
+                       , u64(process.CPU.RSP)
+                       , u64(process.CPU.R8)
+                       , u64(process.CPU.R9)
+                       , u64(process.CPU.R10)
+                       , u64(process.CPU.R11)
+                       , u64(process.CPU.R12)
+                       , u64(process.CPU.R13)
+                       , u64(process.CPU.R14)
+                       , u64(process.CPU.R15)
+                       , u64(process.CPU.Frame.ip)
+                       , u64(process.CPU.Frame.cs)
+                       , u64(process.CPU.Frame.flags)
+                       , u64(process.CPU.Frame.sp)
+                       , u64(process.CPU.Frame.ss)
+                       );
+            std::print("      File Descriptors:\n");
             for (const auto& [procfd, fd] : process.FileDescriptors.pairs()) {
-                dbgmsg("        %ull -> SysFD %ull\r\n", u64(procfd), u64(fd));
+                std::print("        {} -> {}\n", procfd, fd);
             }
         });
-        dbgmsg_s("\r\n");
+        std::print("\n");
     }
 
     void add_process(Process* process) {
         process->ProcessID = request_pid();
         ProcessQueue->add_end(process);
-        dbgmsg_s("[SCHED]: Added process.\r\n");
+        std::print("[SCHED]: Added process.\n");
         print_debug();
     }
 
@@ -147,7 +144,7 @@ namespace Scheduler {
         // Create the process queue and add the startup process to it.
         ProcessQueue = new SinglyLinkedList<Process*>;
         if (ProcessQueue == nullptr) {
-            dbgmsg_s("\033[31mScheduler failed to initialize:\033[0m Could not create process list.\r\n");
+            std::print("\033[31mScheduler failed to initialize:\033[0m Could not create process list.\n");
             return false;
         }
         add_process(&StartupProcess);
@@ -155,7 +152,7 @@ namespace Scheduler {
         // Install IRQ0 handler found in `scheduler.asm` (over-write default system timer handler).
         gIDT.install_handler((u64)irq0_handler, PIC_IRQ0);
         gIDT.flush();
-        dbgmsg_s("Flushed IDT after installing new IRQ0 handler\r\n");
+        std::print("Flushed IDT after installing new IRQ0 handler\n");
         return true;
     }
 
@@ -193,7 +190,7 @@ namespace Scheduler {
                 // Process list has zero viable processes.
                 // FIXME: I honestly don't know how to handle this correctly.
                 // Hang forever.
-                dbgmsg("[SCHED]: I don't know what to do when there are no processes!\r\n");
+                std::print("[SCHED]: I don't know what to do when there are no processes!\n");
                 while (true)
                     asm ("hlt");
             }
@@ -204,7 +201,7 @@ namespace Scheduler {
     /// Called from `irq0_handler` in `scheduler.asm`
     /// A stupid simple round-robin process switcher.
     void switch_process(CPUState* cpu) {
-        memcpy(cpu, &CurrentProcess->value()->CPU, sizeof(CPUState));
+        memcpy(&CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
 
         // TODO: Check all processes that called `wait(ms)`, and run/
         // unstop them if the timestamp is greater than the calculated
@@ -224,14 +221,14 @@ namespace Scheduler {
         }
         else CurrentProcess = next_viable_process(CurrentProcess);
         // Update state of CPU that will be restored.
-        memcpy(&CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
+        memcpy(cpu, &CurrentProcess->value()->CPU, sizeof(CPUState));
         // Use new process' page map.
         Memory::flush_page_map(CurrentProcess->value()->CR3);
         // Update ES and DS to SS.
-        asm("xor %%rax, %%rax\r\n\t"
-            "movq %0, %%rax\r\n\t"
-            "movw %%ax, %%es\r\n\t"
-            "movw %%ax, %%ds\r\n\t"
+        asm("xor %%rax, %%rax\n\t"
+            "movq %0, %%rax\n\t"
+            "movw %%ax, %%es\n\t"
+            "movw %%ax, %%ds\n\t"
             :: "r"(cpu->Frame.ss)
             : "rax"
             );

@@ -36,91 +36,82 @@
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_SYSCALLS
 
+#ifdef DEBUG_SYSCALLS
+#   define DBGMSG(...) std::print(__VA_ARGS__)
+#else
+#   define DBGMSG(...)
+#endif
+
 /// SYSCALL NAMING SCHEME:
 /// "sys$" + number + "_" + descriptive name
 
-constexpr const char* sys$_dbgfmt = "[SYS$]: %d -- %s\r\n";
+[[maybe_unused]]
+constexpr const char* sys$_dbgfmt = "[SYS$]: {} -- {}\n";
 
 ProcessFileDescriptor sys$0_open(const char* path) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 0, "open");
-#endif /* #ifdef DEBUG_SYSCALLS */
+    DBGMSG(sys$_dbgfmt, 0, "open");
     return static_cast<ProcessFileDescriptor>(SYSTEM->virtual_filesystem().open(path).Process);
 }
 
 void sys$1_close(ProcessFileDescriptor fd) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 1, "close");
-#endif /* #ifdef DEBUG_SYSCALLS */
+    DBGMSG(sys$_dbgfmt, 1, "close");
     SYSTEM->virtual_filesystem().close(static_cast<ProcessFileDescriptor>(fd));
 }
 
 // TODO: This should return the amount of bytes read.
 int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 2, "read");
-    dbgmsg("  file descriptor: %d\r\n"
-           "  buffer address:  %x\r\n"
-           "  byte count:      %ull\r\n"
-           "\r\n"
+    DBGMSG(sys$_dbgfmt, 2, "read");
+    DBGMSG("  file descriptor: {}\n"
+           "  buffer address:  {}\n"
+           "  byte count:      {}\n"
+           "\n"
            , fd
-           , buffer
+           , (void*) buffer
            , byteCount
            );
-#endif /* #ifdef DEBUG_SYSCALLS */
     return SYSTEM->virtual_filesystem().read(static_cast<ProcessFileDescriptor>(fd), buffer, byteCount, 0);
 }
 
 // TODO: This should return the amount of bytes written.
 int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 3, "write");
-    dbgmsg("  file descriptor: %d\r\n"
-           "  buffer address:  %x\r\n"
-           "  byte count:      %ull\r\n"
-           "\r\n"
+    DBGMSG(sys$_dbgfmt, 3, "write");
+    DBGMSG("  file descriptor: {}\n"
+           "  buffer address:  {}\n"
+           "  byte count:      {}\n"
+           "\n"
            , fd
-           , buffer
+           , (void*) buffer
            , byteCount
            );
-#endif /* #ifdef DEBUG_SYSCALLS */
     return SYSTEM->virtual_filesystem().write(static_cast<ProcessFileDescriptor>(fd), buffer, byteCount, 0);
 }
 
 void sys$4_poke() {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 4, "poke");
-#endif /* #ifdef DEBUG_SYSCALLS */
-    // Prevent unused warning
-    (void)sys$_dbgfmt;
-    dbgmsg_s("Poke from userland!\r\n");
+    DBGMSG(sys$_dbgfmt, 4, "poke");
+    DBGMSG("Poke from userland!\n");
 }
 
-void sys$5_exit(int status) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 5, "exit");
-    dbgmsg("  status: %i\r\n"
-           "\r\n"
+void sys$5_exit([[maybe_unused]] int status) {
+    DBGMSG(sys$_dbgfmt, 5, "exit");
+    DBGMSG("  status: {}\n"
+           "\n"
            , status
            );
-#endif /* #ifdef DEBUG_SYSCALLS */
     pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
     Scheduler::remove_process(pid);
-    dbgmsg("[SYS$]: exit(%i) -- Removed process %ull\r\n", status, pid);
+    DBGMSG("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
 }
 
 void* sys$6_map(void* address, usz size, u64 flags) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 6, "map");
-    dbgmsg("  address: %p\r\n"
-           "  size:    %ull\r\n" // TODO: %ull is wrong, we need a size type format
-           "  flags:   %ull\r\n"
-           "\r\n"
+    DBGMSG(sys$_dbgfmt, 6, "map");
+    DBGMSG("  address: {}\n"
+           "  size:    {}\n" // TODO: %ull is wrong, we need a size type format
+           "  flags:   {}\n"
+           "\n"
            , address
            , size
            , flags
            );
-#endif /* #ifdef DEBUG_SYSCALLS */
 
     Process* process = Scheduler::CurrentProcess->value();
 
@@ -157,13 +148,11 @@ void* sys$6_map(void* address, usz size, u64 flags) {
 }
 
 void sys$7_unmap(void* address) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 7, "unmap");
-    dbgmsg("  address: %p\r\n"
-           "\r\n"
+    DBGMSG(sys$_dbgfmt, 7, "unmap");
+    DBGMSG("  address: {}\n"
+           "\n"
            , address
            );
-#endif /* #ifdef DEBUG_SYSCALLS */
 
     Process* process = Scheduler::CurrentProcess->value();
 
@@ -198,13 +187,11 @@ void sys$7_unmap(void* address) {
 }
 
 void sys$8_time(Time::tm* time) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 8, "time");
-    dbgmsg("  tm: %p\r\n"
-           "\r\n"
-           , time
+    DBGMSG(sys$_dbgfmt, 8, "time");
+    DBGMSG("  tm: {}\n"
+           "\n"
+           , (void*) time
            );
-#endif /* #ifdef DEBUG_SYSCALLS */
     if (!time) { return; }
     Time::fill_tm(time);
 }
@@ -213,13 +200,8 @@ void sys$8_time(Time::tm* time) {
 /// Wait for process with PID to terminate. If process with PID is
 /// invalid, return immediately.
 void sys$9_waitpid(pid_t pid) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 9, "waitpid");
-    dbgmsg("  pid: %ull\r\n"
-           "\r\n"
-           , pid
-           );
-#endif /* #ifdef DEBUG_SYSCALLS */
+    DBGMSG(sys$_dbgfmt, 9, "waitpid");
+    DBGMSG("  pid: {}\n\n", pid);
     (void)pid;
     // TODO: Return immediately if PID isn't valid.
     // TODO: Add to WAITING list of process that we are waiting for,
@@ -232,9 +214,7 @@ void sys$9_waitpid(pid_t pid) {
 /// fork call, but with the return value to each different (child gets
 /// zero, parent gets child's PID).
 void sys$10_fork() {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 10, "fork");
-#endif /* #ifdef DEBUG_SYSCALLS */
+    DBGMSG(sys$_dbgfmt, 10, "fork");
     // TODO: Copy current process
     // TODO: Set return value of each process (this one and the new
     // child).
@@ -243,13 +223,8 @@ void sys$10_fork() {
 /// Replace the current process with a new process, specified by an
 /// executable found at PATH.
 void sys$11_exec(char *path) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 11, "exec");
-    dbgmsg("  path: %s\r\n"
-           "\r\n"
-           , path
-           );
-#endif /* #ifdef DEBUG_SYSCALLS */
+    DBGMSG(sys$_dbgfmt, 11, "exec");
+    DBGMSG("  path: {}\n\n", (const char*) path);
     (void)path;
     // TODO: Ensure valid arguments
 
@@ -264,14 +239,8 @@ void sys$11_exec(char *path) {
 /// The second file descriptor given will be associated with the file
 /// description of the first.
 void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 12, "repfd");
-    dbgmsg("  fd: %ull, replaced: %ull\r\n"
-           "\r\n"
-           , fd
-           , replaced
-           );
-#endif /* #ifdef DEBUG_SYSCALLS */
+    DBGMSG(sys$_dbgfmt, 12, "repfd");
+    DBGMSG("  fd: {}, replaced: {}\n\n", fd, replaced);
     bool result = SYSTEM->virtual_filesystem().dup2(fd, replaced);
     // TODO: Use result/handle error in some way.
     (void)result;
@@ -280,22 +249,15 @@ void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
 /// Create two file descriptors. One of which can be read from, and the
 /// other which can be written to.
 void sys$13_pipe(ProcessFileDescriptor fds[2]) {
-#ifdef DEBUG_SYSCALLS
-    dbgmsg(sys$_dbgfmt, 13, "pipe");
-#endif /* #ifdef DEBUG_SYSCALLS */
+    DBGMSG(sys$_dbgfmt, 13, "pipe");
     Process* process = Scheduler::CurrentProcess->value();
-
 
     VFS& vfs = SYSTEM->virtual_filesystem();
 
     // Get valid pipe index from pipe driver.
-    ssz byteOffset = vfs.PipesDriver->lay_pipe();
-    // TODO: Pick suitable file name for file metadata.
-    FileMetadata meta = FileMetadata
-        ("", false, vfs.PipesDriver.get(), nullptr, PIPE_BUFSZ, byteOffset);
-    auto file = std::make_shared<OpenFileDescription>(vfs.PipesDriver.get(), meta);
+    auto file = vfs.PipesDriver->lay_pipe();
     FileDescriptors readFDs = vfs.add_file(file, process);
-    FileDescriptors writeFDs = vfs.add_file(file, process);
+    FileDescriptors writeFDs = vfs.add_file(std::move(file), process);
     // Write fds.
     fds[0] = readFDs.Process;
     fds[1] = writeFDs.Process;

@@ -23,46 +23,46 @@
 #include <integers.h>
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
-#include <string.h>
+#include <string>
 
-class FileMetadata {
-public:
+struct FileMetadata {
     FileMetadata()
         : Name(""), Invalid(true)
         , DeviceDriver(nullptr)
-        , FileDriver(nullptr)
         , FileSize(-1ull)
-        , ByteOffset(-1ull) {}
+        , DriverData(nullptr) {}
 
-    FileMetadata(const String& name, bool invalid
-                 , StorageDeviceDriver* deviceDriver
-                 , FilesystemDriver* filesystemDriver
-                 , u64 fileSize
-                 , u64 byteOffset
+    FileMetadata(std::string name
+                 , std::shared_ptr<StorageDeviceDriver> dev_driver
+                 , u64 file_size
+                 , void* driver_data
                  )
-        : Name(name), Invalid(invalid)
-        , DeviceDriver(deviceDriver)
-        , FileDriver(filesystemDriver)
-        , FileSize(fileSize)
-        , ByteOffset(byteOffset) {}
+        : Name(std::move(name)), Invalid(false)
+        , DeviceDriver(std::move(dev_driver))
+        , FileSize(file_size)
+        , DriverData(driver_data) {}
 
-    String name()                        { return Name;         }
-    bool invalid()                       { return Invalid;      }
-    StorageDeviceDriver* device_driver() { return DeviceDriver; }
-    FilesystemDriver* file_driver()      { return FileDriver;   }
-    u64 file_size()                      { return FileSize;     }
-    u64 byte_offset()                    { return ByteOffset;   }
+    ~FileMetadata() {
+        if (DriverData) {
+            DeviceDriver->close(this);
+        }
+    }
+
+    auto name() -> std::string_view { return Name; }
+    auto invalid() -> bool { return Invalid; }
+    auto device_driver() -> std::shared_ptr<StorageDeviceDriver>  { return DeviceDriver; }
+    auto file_size() -> u64 { return FileSize; }
+    auto driver_data() -> void* { return DriverData; }
 
 private:
-    String Name = { "" };
-    bool Invalid { true };
+    std::string Name;
+    bool Invalid = true;
     // The device driver is used for reading and writing from and to
     // the file.
-    StorageDeviceDriver* DeviceDriver { nullptr };
-    // The filesystem driver is used for opening and closing the file.
-    FilesystemDriver* FileDriver { nullptr };
+    std::shared_ptr<StorageDeviceDriver> DeviceDriver { nullptr };
     u64 FileSize   { -1ull };
-    u64 ByteOffset { -1ull };
+    // Driver-specific data.
+    void* DriverData { nullptr };
 };
 
 #endif /* LENSOR_OS_FILE_METADATA_H */

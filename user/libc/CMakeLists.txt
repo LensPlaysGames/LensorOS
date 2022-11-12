@@ -87,7 +87,7 @@ target_compile_options(
   c
   PRIVATE
   -fPIE
-#  -msse2
+  -mno-sse2
   -Wall
   -Wextra
   -Wconversion
@@ -133,35 +133,12 @@ if (NOT LENSOR_OS_LIBC_BUILD_HOST)
 add_custom_target(
   install-libc ALL
 
-  # Archive and object files.
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:c> "${ROOT}/lib"
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crt0.s.obj" "${ROOT}/lib/crt0.o"
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crti.s.obj" "${ROOT}/lib/crti.o"
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crtn.s.obj" "${ROOT}/lib/crtn.o"
-
-  # LibC standard headers.
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/assert.h" "${ROOT}/inc/assert.h"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/errno.h" "${ROOT}/inc/errno.h"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/float.h" "${ROOT}/inc/float.h"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/limits.h" "${ROOT}/inc/limits.h"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/stdalign.h" "${ROOT}/inc/stdalign.h"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/stdarg.h" "${ROOT}/inc/stdarg.h"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/stdbool.h" "${ROOT}/inc/stdbool.h"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/stdio.h" "${ROOT}/inc/stdio.h"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/stdlib.h" "${ROOT}/inc/stdlib.h"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/stdnoreturn.h" "${ROOT}/inc/stdnoreturn.h"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/string.h" "${ROOT}/inc/string.h"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/time.h" "${ROOT}/inc/time.h"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/unistd.h" "${ROOT}/inc/unistd.h"
-
-  # LibC standard headers in nested directories.
-  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/sys" "${ROOT}/inc/sys"
-  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/bits" "${ROOT}/inc/bits"
-
-  # Standard headers shared with the kernel.
-  COMMAND ${CMAKE_COMMAND} -E copy "${STD}/include/stddef.h" "${ROOT}/inc/stddef.h"
-  COMMAND ${CMAKE_COMMAND} -E copy "${STD}/include/stdint.h" "${ROOT}/inc/stdint.h"
-  COMMAND ${CMAKE_COMMAND} -E copy "${STD}/include/bits/decls.h" "${ROOT}/inc/bits/decls.h"
+  COMMAND ${CMAKE_COMMAND} -P "${PROJECT_SOURCE_DIR}/install-headers.cmake"
+  COMMENT "Installing LibC headers"
 
   DEPENDS c
 )

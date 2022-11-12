@@ -17,15 +17,15 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <format>
+
 #include <mouse.h>
 
 #include <random_lfsr.h>
 #include <basic_renderer.h>
-#include <cstr.h>
 #include <integers.h>
 #include <io.h>
 #include <math.h>
-#include <uart.h>
 
 // globally accessible mouse information
 u8 gMouseID;
@@ -85,9 +85,7 @@ void init_ps2_mouse() {
     mouse_read(); // ACK
     gMouseID = mouse_read();
 
-    UART::out("[Mouse]: Successfully initialized PS2 mouse using serial port (ID: ");
-    UART::out(to_string(gMouseID));
-    UART::out(")\r\n");
+    std::print("[Mouse]: Successfully initialized PS2 mouse using serial port (ID: {})\n", gMouseID);
 }
 
 u8 mouse_cycle {0};

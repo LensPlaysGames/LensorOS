@@ -160,6 +160,8 @@ struct BootRecord {
     }
 } __attribute__((packed));
 
+static_assert(sizeof(BootRecord) == 512, "Boot record must be 512 bytes.");
+
 enum class FATType {
     INVALID = 0,
     FAT12 = 1,

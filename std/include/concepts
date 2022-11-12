@@ -20,6 +20,7 @@
 #ifndef _LENSOROS_CONCEPTS
 #define _LENSOROS_CONCEPTS
 
+#include <stddef.h>
 #include <type_traits>
 #include <utility>
 
@@ -29,8 +30,34 @@ concept convertible_to =
     is_convertible_v<From, To> &&
     requires { static_cast<To>(std::declval<From>()); };
 
+template <typename _T, typename _U>
+concept same_as = is_same_v<_T, _U>;
+
 template<typename _T>
-concept integral = std::is_integral_v<_T>;
+concept integral = is_integral_v<_T>;
+
+template<typename _T>
+concept floating_point = is_floating_point_v<_T>;
+
+/// Check if something behaves like a pointer.
+template <typename _T>
+concept __pointer_like = requires(_T __t) {
+    typename _T::element_type;
+    { *__t } -> same_as<typename _T::element_type&>;
+};
+
+/// void* or null.
+template <typename _T>
+concept __abstract_pointer = is_same_v<_T, nullptr_t> or is_same_v<_T, void*> or is_same_v<_T, const void*>;
+
+/// Any character type.
+template <typename _T>
+concept __char = _Or<_Is<_T, char>,
+                     _Is<_T, wchar_t>,
+                     _Is<_T, char8_t>,
+                     _Is<_T, char16_t>,
+                     _Is<_T, char32_t>>::type::value;
+
 }
 
 #endif // _LENSOROS_CONCEPTS

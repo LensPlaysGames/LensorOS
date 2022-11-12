@@ -17,69 +17,68 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <storage/filesystem_drivers/file_allocation_table.h>
-
-#include <debug.h>
 #include <fat_definitions.h>
-#include <storage/file_metadata.h>
+#include <format>
 #include <integers.h>
-#include <linked_list.h>
-#include <smart_pointer.h>
-#include <string.h>
+#include <storage/file_metadata.h>
+#include <storage/filesystem_drivers/file_allocation_table.h>
+#include <vector>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_FAT
 
-void FileAllocationTableDriver::print_fat(BootRecord* br) {
-    if (br == nullptr)
-        return;
+#ifdef DEBUG_FAT
+#   define DBGMSG(...) std::print(__VA_ARGS__)
+#else
+#   define DBGMSG(...)
+#endif
 
-    dbgmsg("File Allocation Table Boot Record:\r\n"
-           "  Total Clusters:      %ull\r\n"
-           "  Sectors / Cluster:   %hhu\r\n"
-           "  Total Sectors:       %ull\r\n"
-           "  Bytes / Sector:      %hu\r\n"
-           "  Sectors / FAT:       %ull\r\n"
-           "  Sector Offsets:\r\n"
-           "    FATs:      %ull\r\n"
-           "    Data:      %ull\r\n"
-           "    Root Dir.: %ull\r\n"
-           "\r\n"
-           , br->total_clusters()
-           , br->BPB.NumSectorsPerCluster
-           , br->BPB.total_sectors()
-           , br->BPB.NumBytesPerSector
-           , br->fat_sectors()
-           , br->BPB.first_fat_sector()
-           , br->first_data_sector()
-           , br->first_root_directory_sector()
-           );
+void FileAllocationTableDriver::print_fat(BootRecord& br) {
+    std::print("File Allocation Table Boot Record:\n"
+               "  Total Clusters:      {}\n"
+               "  Sectors / Cluster:   {}\n"
+               "  Total Sectors:       {}\n"
+               "  Bytes / Sector:      {}\n"
+               "  Sectors / FAT:       {}\n"
+               "  Sector Offsets:\n"
+               "    FATs:      {}\n"
+               "    Data:      {}\n"
+               "    Root Dir.: {}\n"
+               "\n"
+               , br.total_clusters()
+               , br.BPB.NumSectorsPerCluster
+               , br.BPB.total_sectors()
+               , u16(br.BPB.NumBytesPerSector)
+               , br.fat_sectors()
+               , br.BPB.first_fat_sector()
+               , br.first_data_sector()
+               , br.first_root_directory_sector()
+               );
 }
 
-FATType fat_type(BootRecord* br) {
-    u64 totalClusters = br->total_clusters();
-    if (totalClusters == 0)
-        return FATType::ExFAT;
-    else if (totalClusters < 4085)
-        return FATType::FAT12;
-    else if (totalClusters < 65525)
-        return FATType::FAT16;
+FATType FileAllocationTableDriver::fat_type(BootRecord& br) {
+    u64 totalClusters = br.total_clusters();
+    if (totalClusters == 0) return FATType::ExFAT;
+    else if (totalClusters < 4085) return FATType::FAT12;
+    else if (totalClusters < 65525) return FATType::FAT16;
     else return FATType::FAT32;
 }
 
-bool FileAllocationTableDriver::test(StorageDeviceDriver* driver) {
-    if (driver == nullptr)
-        return false;
+auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> driver)
+    -> std::shared_ptr<FilesystemDriver> {
+    if (!driver) return nullptr;
 
-    auto buffer = SmartPtr<u8[]>(new u8[512], 512);
-    if (buffer.get() == nullptr)
-        return false;
+    BootRecord br;
+    auto n_read = driver->read_raw(0, sizeof br, &br);
+    if (n_read != sizeof br) {
+        std::print("Failed to read boot record from device\n");
+        return nullptr;
+    }
 
-    bool out { false };
-    driver->read(0, 512, buffer.get());
-    auto* br = reinterpret_cast<BootRecord*>(buffer.get());
-    u64 totalSectors = br->BPB.TotalSectors16 == 0
-        ? br->BPB.TotalSectors32 : br->BPB.TotalSectors16;
+    u64 totalSectors = br.BPB.TotalSectors16 == 0
+        ? br.BPB.TotalSectors32
+        : br.BPB.TotalSectors16;
+
     /* Validate boot sector is of FAT format.
      * TODO: Use more of these confidence checks before
      *       assuming it is valid FAT filesystem.
@@ -99,132 +98,141 @@ bool FileAllocationTableDriver::test(StorageDeviceDriver* driver) {
      * [ ] (FAT32) File system version is zero
      * [x] NumFATsPresent greater than zero
      */
-    out = (br->Magic == 0xaa55
+    bool out = (br.Magic == 0xaa55
            && totalSectors != 0
-           && br->BPB.NumBytesPerSector >= 512
-           && br->BPB.NumBytesPerSector <= 4096
-           && (br->BPB.NumBytesPerSector
-               & (br->BPB.NumBytesPerSector - 1)) == 0
-           && (br->BPB.NumSectorsPerCluster
-               & (br->BPB.NumSectorsPerCluster - 1)) == 0
-           && br->BPB.NumFATsPresent > 0);
+           && br.BPB.NumBytesPerSector >= 512
+           && br.BPB.NumBytesPerSector <= 4096
+           && (br.BPB.NumBytesPerSector
+               & (br.BPB.NumBytesPerSector - 1)) == 0
+           && (br.BPB.NumSectorsPerCluster
+               & (br.BPB.NumSectorsPerCluster - 1)) == 0
+           && br.BPB.NumFATsPresent > 0);
+
+   if (!out) return nullptr;
 
 #ifdef DEBUG_FAT
     print_fat(br);
 #endif /* DEBUG_FAT */
 
-    return out;
+    auto fs = std::make_shared<FileAllocationTableDriver>(std::move(driver), std::move(br));
+    fs->This = fs;
+    return std::static_pointer_cast<FilesystemDriver>(fs);
 }
 
-FileMetadata FileAllocationTableDriver::file(StorageDeviceDriver* driver, const String& givenPath) {
-    if (driver == nullptr) {
+auto FileAllocationTableDriver::translate_path(std::string_view raw_path) -> std::string {
+    std::string path = raw_path;
+    for (usz i = raw_path.size(); i < 11; i++) { path += " "; }
+
+    for (usz i = 0; i < raw_path.size(); i++) {
+        if (path[i] >= 97 && path[i] <= 122) path[i] -= 32;
+        else if (path[i] == '.') path[i] = ' ';
+    }
+
+    DBGMSG("[FAT]: Looking for file at {}\n"
+           "  Translated path: {}\n"
+           , raw_path, path);
+
+    return path;
+}
+
+auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_ptr<FileMetadata> {
+    DBGMSG("[FAT]: Attempting to open file {}\n", raw_path);
+    if (Device == nullptr) {
+        /// Should never get here.
+        std::print("FileAllocationTableDriver::open(): Device is null!\n");
         return {};
     }
-    u64 givenPathLength = givenPath.length();
-    if (givenPathLength <= 1) {
-        return {};
-    }
-    // Translate path (FAT has very limited file names).
-    String path = String((const char*)&givenPath.bytes()[1]);
-    for (u8 i = path.length(); i < 11; ++i)
-        path += " ";
 
-    u8* currentCharacter = path.bytes();
-    for (u64 i = 0; i < path.length(); ++i) {
-        if (*currentCharacter >= 97 && *currentCharacter <= 122)
-            *currentCharacter -= 32;
-        else if (*currentCharacter == '.')
-            *currentCharacter = ' ';
-
-        currentCharacter++;
-    }
 #ifdef DEBUG_FAT
-    dbgmsg("[FAT]: Looking for file at %sl\r\n"
-           "  Translated path: %sl\r\n"
-           , &givenPath
-           , &path
-           );
-#endif /* #ifdef DEBUG_FAT */
-    // TODO: Take in cached Boot Record from filesystem.
-    SmartPtr<u8[]> sector(new u8[sizeof(BootRecord)], sizeof(BootRecord));
-    if (sector.get() == nullptr) {
+    auto __this = This.lock();
+    if (!__this) {
+        /// Should never get here.
+        std::print("FileAllocationTableDriver::open(): This is null!\n");
         return {};
     }
-    driver->read(0, sizeof(BootRecord), sector.get());
-    auto* br = reinterpret_cast<BootRecord*>(sector.get());
-    FATType type = fat_type(br);
+#endif
+
+    /// Strip leading slash.
+    if (raw_path.starts_with("/")) raw_path = raw_path.substr(1);
+    if (raw_path.size() < 1) {
+        DBGMSG("FileAllocationTableDriver::open(): Invalid path: {}\n", raw_path);
+        return {};
+    }
+
+    // Translate path (FAT has very limited file names).
+    auto path = translate_path(raw_path);
 
     // TODO: Take in cached FAT from filesystem.
-    SmartPtr<u8[]> FAT(new u8[br->BPB.NumBytesPerSector], br->BPB.NumBytesPerSector);
+    std::vector<u8> FAT(BR.BPB.NumBytesPerSector);
     u64 lastFATsector { 0 };
 
     constexpr u64 lfnBufferSize = 27;
-    SmartPtr<u8[]> lfnBuffer(new u8[lfnBufferSize], lfnBufferSize);
-    u32 clusterIndex = br->sector_to_cluster(br->first_root_directory_sector());
-    bool moreClusters = { true };
+    u8 lfnBuffer[lfnBufferSize];
+    u32 clusterIndex = BR.sector_to_cluster(BR.first_root_directory_sector());
+    bool moreClusters = true;
     while (moreClusters) {
-        u64 clusterSize = br->BPB.NumSectorsPerCluster * br->BPB.NumBytesPerSector;
-        SmartPtr<u8[]> clusterContents(new u8[clusterSize], clusterSize);
-        u64 clusterSector = br->cluster_to_sector(clusterIndex);
-        driver->read(clusterSector * br->BPB.NumBytesPerSector
-                     , clusterSize
-                     , clusterContents.get());
-        ClusterEntry* entry = reinterpret_cast<ClusterEntry*>(clusterContents.get());
-        bool lfnBufferFull { false };
+        u64 clusterSize = BR.BPB.NumSectorsPerCluster * BR.BPB.NumBytesPerSector;
+        std::vector<u8> clusterContents(clusterSize);
+        u64 clusterSector = BR.cluster_to_sector(clusterIndex);
+        Device->read_raw(clusterSector * BR.BPB.NumBytesPerSector
+                         , clusterSize
+                         , clusterContents.data());
+        auto* entry = reinterpret_cast<ClusterEntry*>(clusterContents.data());
+        bool lfnBufferFull{};
         while (entry->FileName[0] != 0) {
             if (entry->FileName[0] == 0xe5)
                 continue;
 
             if (entry->long_file_name()) {
-                LFNClusterEntry* lfn = reinterpret_cast<LFNClusterEntry*>(entry);
+                auto* lfn = reinterpret_cast<LFNClusterEntry*>(entry);
                 u8 offset = 0;
-                memcpy(&lfn->Characters1[0], &lfnBuffer[offset], sizeof(u16) * 5);
+                memcpy(&lfnBuffer[offset], &lfn->Characters1[0], sizeof(u16) * 5);
                 offset += 5;
-                memcpy(&lfn->Characters1[0], &lfnBuffer[offset], sizeof(u16) * 6);
+                memcpy(&lfnBuffer[offset], &lfn->Characters1[0], sizeof(u16) * 6);
                 offset += 6;
-                memcpy(&lfn->Characters3[0], &lfnBuffer[offset], sizeof(u16) * 2);
+                memcpy(&lfnBuffer[offset], &lfn->Characters3[0], sizeof(u16) * 2);
                 lfnBufferFull = true;
                 entry++;
                 continue;
             }
-            String fileName(reinterpret_cast<const char*>(&entry->FileName[0]), 11);
+            std::string fileName(reinterpret_cast<const char*>(&entry->FileName[0]), 11);
             if (lfnBufferFull) {
-               fileName += String((const char*)&lfnBuffer[0], lfnBufferSize);
+               fileName.append((const char*)lfnBuffer, lfnBufferSize);
                lfnBufferFull = false;
             }
-            String fileType("");
-            if (entry->read_only())
-                fileType += "read-only ";
-            if (entry->hidden())
-                fileType += "hidden ";
-            if (entry->system())
-                fileType += "system ";
-            if (entry->archive())
-                fileType += "archive ";
-            if (entry->directory())
-                fileType += "directory ";
-            else if (entry->volume_id())
-                fileType += "volume identifier ";
+            std::string fileType;
+
+            if (entry->read_only()) fileType += "read-only ";
+            if (entry->hidden()) fileType += "hidden ";
+            if (entry->system()) fileType += "system ";
+            if (entry->archive()) fileType += "archive ";
+
+            if (entry->directory()) fileType += "directory ";
+            else if (entry->volume_id()) fileType += "volume identifier ";
             else fileType += "file ";
-#ifdef DEBUG_FAT
-            dbgmsg("    Found %slnamed %sl\r\n", &fileType, &fileName);
-#endif /* #ifdef DEBUG_FAT */
+
+            DBGMSG("    Found {}named {}\n", fileType , fileName);
+
             if (fileName == path) {
-#ifdef DEBUG_FAT
-                dbgmsg_s("  Found file!\r\n");
-#endif /* #ifdef DEBUG_FAT */
+                DBGMSG("  Found file!\n");
                 // TODO: directory vs. file metadata
-                u64 byteOffset = br->cluster_to_sector(entry->get_cluster_number())
-                    * br->BPB.NumBytesPerSector;
-                return { fileName, false, driver, this, entry->FileSizeInBytes, byteOffset };
+                u64 byteOffset = BR.cluster_to_sector(entry->get_cluster_number())
+                    * BR.BPB.NumBytesPerSector;
+                return std::make_shared<FileMetadata> (
+                    std::move(fileName),
+                    std::static_pointer_cast<StorageDeviceDriver>(This.lock()),
+                    u32(entry->FileSizeInBytes),
+                    (void*) byteOffset
+                );
             }
+
             entry++;
         }
         // Check if this is the last cluster in the chain.
         u64 clusterNumber = entry->get_cluster_number();
         // FIXME: This assumes FAT32, but we should really determine type dynamically.
         u64 FAToffset = 0;
-        switch (type) {
+        switch (Type) {
         case FATType::FAT12:
             FAToffset = clusterNumber + (clusterNumber / 2);
             break;
@@ -237,17 +245,17 @@ FileMetadata FileAllocationTableDriver::file(StorageDeviceDriver* driver, const 
             FAToffset = clusterNumber * 4;
             break;
         }
-        u64 FATsector = br->BPB.first_fat_sector() + (FAToffset / br->BPB.NumBytesPerSector);
-        u64 entryOffset = FAToffset % br->BPB.NumBytesPerSector;
+        u64 FATsector = BR.BPB.first_fat_sector() + (FAToffset / BR.BPB.NumBytesPerSector);
+        u64 entryOffset = FAToffset % BR.BPB.NumBytesPerSector;
         if (entryOffset <= 1 || FATsector == lastFATsector)
             break;
 
         lastFATsector = FATsector;
-        driver->read(FATsector * br->BPB.NumBytesPerSector
-                     , br->fat_sectors() * br->BPB.NumBytesPerSector
-                     , FAT.get());
+        Device->read_raw(FATsector * BR.BPB.NumBytesPerSector
+                         , BR.fat_sectors() * BR.BPB.NumBytesPerSector
+                         , FAT.data());
         u64 tableValue = 0;
-        switch (type) {
+        switch (Type) {
         case FATType::FAT12:
             tableValue = *(reinterpret_cast<u16*>(&FAT[entryOffset]));
             if (clusterNumber & 0b1)

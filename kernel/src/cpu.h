@@ -21,6 +21,7 @@
 #define LENSOR_OS_CPU_H
 
 #include <cstr.h>
+#include <format>
 #include <integers.h>
 #include <linked_list.h>
 #include <memory.h>
@@ -88,15 +89,8 @@ private:
      * CPU <NUMA domain>:<NUMA chip>:<Physical core>:<Logical core>
      */
     void print_debug() {
-        UART::out("  CPU ");
-        UART::out(to_string(NUMADomain));
-        UART::outc(':');
-        UART::out(to_string(NUMAChip));
-        UART::outc(':');
-        UART::out(to_string(Core));
-        UART::outc(':');
-        UART::out(to_string(LogicalCore));
-        UART::out("\r\n");
+        std::print("  CPU {}:{}:{}:{}\n",
+            NUMADomain, NUMAChip, Core, LogicalCore);
     }
 };
 
@@ -114,7 +108,7 @@ public:
     }
 
     void set_vendor_id(char id[12]) {
-        memcpy(&id[0], &VendorID[0], 12 * sizeof(char));
+        memcpy(&VendorID[0], &id[0], 12 * sizeof(char));
     }
 
     void add_cpu(const CPU& cpu) { CPUs.add(cpu); }
@@ -123,36 +117,34 @@ public:
     void set_physical_core_bits(u8 bits) { PhysicalCoreBits = bits; }
 
     void print_debug() {
-        UART::out("[CPU]: Description Dump:\r\n"
-                  "  Capabilites:\r\n"
-                  "    CPUID: ");
-        UART::out(to_string(CPUIDCapable));
-        UART::out("\r\n    FXSR: ");
-        UART::out(to_string(FXSRCapable));
-        UART::out("\r\n    FPU: ");
-        UART::out(to_string(FPUCapable));
-        UART::out("\r\n    SSE: ");
-        UART::out(to_string(SSECapable));
-        UART::out("\r\n    XSAVE: ");
-        UART::out(to_string(XSAVECapable));
-        UART::out("\r\n    AVX: ");
-        UART::out(to_string(AVXCapable));
-        UART::out("\r\n  Enabled: ");
-        UART::out("\r\n    FXSR: ");
-        UART::out(to_string(FXSREnabled));
-        UART::out("\r\n    FPU: ");
-        UART::out(to_string(FPUEnabled));
-        UART::out("\r\n    SSE: ");
-        UART::out(to_string(SSEEnabled));
-        UART::out("\r\n    XSAVE: ");
-        UART::out(to_string(XSAVEEnabled));
-        UART::out("\r\n    AVX: ");
-        UART::out(to_string(AVXEnabled));
-        UART::out("\r\n\r\n");
-        CPUs.for_each([](auto* it){
-            it->value().print_debug();
-        });
-        UART::out("\r\n");
+        std::print("[CPU]: Description Dump:\n"
+                   "  Capabilites:\n"
+                   "    CPUID: {}\n"
+                   "    FXSR:  {}\n"
+                   "    FPU:   {}\n"
+                   "    SSE:   {}\n"
+                   "    XSAVE: {}\n"
+                   "    AVX:   {}\n"
+                   "  Enabled:\n"
+                   "    FXSR:  {}\n"
+                   "    FPU:   {}\n"
+                   "    SSE:   {}\n"
+                   "    XSAVE: {}\n"
+                   "    AVX:   {}\n\n"
+                   , CPUIDCapable
+                   , FXSRCapable
+                   , FPUCapable
+                   , SSECapable
+                   , XSAVECapable
+                   , AVXCapable
+                   , FXSREnabled
+                   , FPUEnabled
+                   , SSEEnabled
+                   , XSAVEEnabled
+                   , AVXEnabled);
+
+        CPUs.for_each([](auto* it){ it->value().print_debug(); });
+        std::print("\n");
     }
 
     // Feature flag setters

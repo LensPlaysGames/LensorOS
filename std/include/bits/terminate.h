@@ -22,13 +22,23 @@
 
 #ifndef __kernel__
 #   include <assert.h>
-[[noreturn]] void terminate() noexcept {
+[[noreturn]] inline void terminate() noexcept {
     __libc_assert(false, "terminate() called");
+}
+
+[[noreturn]] inline void __terminate_with_message(const char* __msg) noexcept {
+    __libc_assert(false, __msg ?: "terminate() called");
 }
 #else
 #   include <panic.h>
-[[noreturn]] void terminate() noexcept {
+[[noreturn]] inline void terminate() noexcept {
     panic("terminate() called");
+    for (;;) __asm__ __volatile__("hlt");
+}
+
+[[noreturn]] inline void __terminate_with_message(const char* __msg) noexcept {
+    panic(__msg ?: "terminate() called");
+    for (;;) __asm__ __volatile__("hlt");
 }
 #endif
 

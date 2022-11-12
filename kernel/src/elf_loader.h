@@ -22,6 +22,8 @@
 
 #include "storage/device_drivers/dbgout.h"
 
+#include <format>
+
 #include <elf.h>
 #include <file.h>
 #include <integers.h>
@@ -32,12 +34,17 @@
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 #include <scheduler.h>
-#include <smart_pointer.h>
 #include <tss.h>
 #include <virtual_filesystem.h>
 
 // Uncomment the following directive for extra debug output.
 #define DEBUG_ELF
+
+#ifdef DEBUG_ELF
+#   define DBGMSG(...) std::print(__VA_ARGS__)
+#else
+#   define DBGMSG(...) void()
+#endif
 
 namespace ELF {
     /// Return zero when ELF header is of expected format.
@@ -62,38 +69,38 @@ namespace ELF {
             || ElfHeader.e_ident[EI_MAG2] != ELFMAG2
             || ElfHeader.e_ident[EI_MAG3] != ELFMAG3)
         {
-            dbgmsg("[ELF]: Invalid ELF64 header: Magic bytes incorrect.\r\n"
-                   "  Bytes (given, expected):\r\n"
-                   "    0: %d, %d\r\n"
-                   "    1: %d, %d\r\n"
-                   "    2: %d, %d\r\n"
-                   "    3: %d, %d\r\n"
-                   "\r\n"
-                   , ElfHeader.e_ident[EI_MAG0], ELFMAG0
-                   , ElfHeader.e_ident[EI_MAG1], ELFMAG1
-                   , ElfHeader.e_ident[EI_MAG2], ELFMAG2
-                   , ElfHeader.e_ident[EI_MAG3], ELFMAG3
-                   );
+            std::print("[ELF]: Invalid ELF64 header: Magic bytes incorrect.\n"
+                       "  Bytes (given, expected):\n"
+                       "    0: {:#02x}, {:#02x}\n"
+                       "    1: {}, {}\n"
+                       "    2: {}, {}\n"
+                       "    3: {}, {}\n"
+                       "\n"
+                       , ElfHeader.e_ident[EI_MAG0], ELFMAG0
+                       , ElfHeader.e_ident[EI_MAG1], ELFMAG1
+                       , ElfHeader.e_ident[EI_MAG2], ELFMAG2
+                       , ElfHeader.e_ident[EI_MAG3], ELFMAG3
+                       );
             return false;
         }
         if (ElfHeader.e_ident[EI_CLASS] != ELFCLASS64) {
-            dbgmsg_s("[ELF]: Invalid ELF64 header: Incorrect class.\r\n");
+            std::print("[ELF]: Invalid ELF64 header: Incorrect class.\n");
             return false;
         }
         if (ElfHeader.e_ident[EI_DATA] != ELFDATA2LSB) {
-            dbgmsg_s("[ELF]: Invalid ELF64 header: Incorrect data type.\r\n");
+            std::print("[ELF]: Invalid ELF64 header: Incorrect data type.\n");
             return false;
         }
         if (ElfHeader.e_type != ET_EXEC) {
-            dbgmsg_s("[ELF]: Invalid ELF64 header: Type is not executable.\r\n");
+            std::print("[ELF]: Invalid ELF64 header: Type is not executable.\n");
             return false;
         }
         if (ElfHeader.e_machine != EM_X86_64) {
-            dbgmsg_s("[ELF]: Invalid ELF64 header: Machine is not valid.\r\n");
+            std::print("[ELF]: Invalid ELF64 header: Machine is not valid.\n");
             return false;
         }
         if (ElfHeader.e_version != EV_CURRENT) {
-            dbgmsg_s("[ELF]: Invalid ELF64 header: ELF version is not expected.\r\n");
+            std::print("[ELF]: Invalid ELF64 header: ELF version is not expected.\n");
             return false;
         }
         return true;
@@ -101,25 +108,22 @@ namespace ELF {
     }
 
     inline bool CreateUserspaceElf64Process(VFS& vfs, ProcessFileDescriptor fd) {
-#ifdef DEBUG_ELF
-        dbgmsg("Attempting to add userspace process from file descriptor %d\r\n"
-               , fd);
-#endif /* #ifdef DEBUG_ELF */
+        DBGMSG("Attempting to add userspace process from file descriptor {}\n", fd);
         Elf64_Ehdr elfHeader;
         bool read = vfs.read(fd, reinterpret_cast<u8*>(&elfHeader), sizeof(Elf64_Ehdr));
         if (read == false) {
-            dbgmsg_s("Failed to read ELF64 header.\r\n");
+            std::print("Failed to read ELF64 header.\n");
             return false;
         }
         if (VerifyElf64Header(elfHeader) == false) {
-            dbgmsg_s("Executable did not have valid ELF64 header.\r\n");
+            std::print("Executable did not have valid ELF64 header.\n");
             return false;
         }
 
         // Copy current page table (fork)
         auto* newPageTable = Memory::clone_active_page_map();
         if (newPageTable == nullptr) {
-            dbgmsg_s("Failed to clone current page map for new process page map.\r\n");
+            std::print("Failed to clone current page map for new process page map.\n");
             return false;
         }
 
@@ -136,41 +140,52 @@ namespace ELF {
         // TODO: Keep track of allocated memory regions for process.
         // Load PT_LOAD program headers, mapping to vaddr as necessary.
         u64 programHeadersTableSize = elfHeader.e_phnum * elfHeader.e_phentsize;
-        SmartPtr<Elf64_Phdr[]> programHeaders(new Elf64_Phdr[elfHeader.e_phnum], elfHeader.e_phnum);
-        vfs.read(fd, (u8*)(programHeaders.get()), programHeadersTableSize, elfHeader.e_phoff);
+        std::vector<Elf64_Phdr> programHeaders(elfHeader.e_phnum);
+        vfs.read(fd, (u8*)(programHeaders.data()), programHeadersTableSize, elfHeader.e_phoff);
         for (
-             Elf64_Phdr* phdr = programHeaders.get();
-             (u64)phdr < (u64)programHeaders.get() + programHeadersTableSize;
+             Elf64_Phdr* phdr = programHeaders.data();
+             (u64)phdr < (u64)programHeaders.data() + programHeadersTableSize;
              phdr++)
         {
 
-#ifdef DEBUG_ELF
-            dbgmsg("Program header: type=%ul, offset=%ull\r\n"
-                   "  filesz=%x, memsz=%x\r\n"
+            DBGMSG("Program header: type={}, offset={}\n"
+                   "  filesz={:#016x}, memsz={:#016x}\n"
                    , phdr->p_type
                    , phdr->p_offset
                    , phdr->p_filesz
                    , phdr->p_memsz
                    );
-#endif /* #ifdef DEBUG_ELF */
 
+            /// Warn if the size is zero.
+            if (phdr->p_memsz == 0) std::print("[ELF]: Warning: program header has zero size.\n");
             if (phdr->p_type == PT_LOAD) {
-                // Allocate pages for program.
-                u64 pages = (phdr->p_memsz + PAGE_SIZE - 1) / PAGE_SIZE;
-                // Should I just use the kernel heap for this? It could grow very large...
-                u8* loadedProgram = reinterpret_cast<u8*>(Memory::request_pages(pages));
-                memset(loadedProgram, 0, phdr->p_memsz);
-                bool read = vfs.read(fd, loadedProgram, phdr->p_filesz, phdr->p_offset);
-                if (read == false)
-                    return false;
+                // The program header may not be aligned to a page boundary, in which
+                // case we need to take the offset and round *down* to the nearest page.
+                u64 size_to_load = phdr->p_memsz + phdr->p_vaddr % PAGE_SIZE;
 
-#ifdef DEBUG_ELF
-                dbgmsg("[ELF]: Loaded program header (%ull bytes) from file %ull at byte offset %ull\r\n"
+                // Allocate pages for program.
+                u64 pages = (size_to_load + PAGE_SIZE - 1) / PAGE_SIZE;
+
+                // Should I just use the kernel heap for this? It could grow very large...
+                // Zero out the allocated memory.
+                u8* loadedProgram = reinterpret_cast<u8*>(Memory::request_pages(pages));
+                memset(loadedProgram, 0, size_to_load);
+
+                // Read the program into memory. If the program header does not start
+                // at a page boundary, then we need to offset the read by the offset
+                // into the page.
+                u64 offset = phdr->p_vaddr % PAGE_SIZE;
+                auto n_read = vfs.read(fd, loadedProgram + offset, phdr->p_filesz, phdr->p_offset);
+                if (n_read < 0 || size_t(n_read) != phdr->p_filesz) {
+                    std::print("[ELF] Could not read program data from file {}\n" , fd);
+                    return false;
+                }
+
+                DBGMSG("[ELF]: Loaded program header ({} bytes) from file {} at byte offset {}\n"
                        , phdr->p_filesz
                        , fd
                        , phdr->p_offset
                        );
-#endif /* #ifdef DEBUG_ELF */
 
                 // Virtually map allocated pages.
                 u64 virtAddress = phdr->p_vaddr;
@@ -193,23 +208,24 @@ namespace ELF {
                 }
             }
             else if (phdr->p_type == PT_GNU_STACK) {
-#ifdef DEBUG_ELF
-                dbgmsg_s("[ELF]: Stack permissions set by GNU_STACK program header.\r\n");
-#endif /* #ifdef DEBUG_ELF */
+                DBGMSG("[ELF]: Stack permissions set by GNU_STACK program header.\n");
                 if (!(phdr->p_flags & PF_X)){
                     stack_flags |= (size_t)Memory::PageTableFlag::NX;}
             }
         }
+
         auto* process = new Process{};
+
+        /// TODO: `new` should *never* return nullptr. This check shouldn’t be necessary.
         if (process == nullptr) {
-            dbgmsg_s("[ELF]: Couldn't allocate process structure for new userspace process\r\n");
+            std::print("[ELF]: Couldn't allocate process structure for new userspace process\n");
             return false;
         }
         constexpr u64 UserProcessStackSizePages = 4;
         constexpr u64 UserProcessStackSize = UserProcessStackSizePages * PAGE_SIZE;
         u64 newStackBottom = (u64)Memory::request_pages(UserProcessStackSizePages);
         if (newStackBottom == 0) {
-            dbgmsg_s("[ELF]: Couldn't allocate stack for new userspace process\r\n");
+            std::print("[ELF]: Couldn't allocate stack for new userspace process\n");
             return false;
         }
         u64 newStackTop = newStackBottom + UserProcessStackSize;
@@ -224,19 +240,17 @@ namespace ELF {
                                    UserProcessStackSize);
 
         // Open stdin, stdout, and stderr.
-        auto meta = FileMetadata
-            ("stdout", false, vfs.StdoutDriver.get(), nullptr, 0, 0);
 
-        auto file = std::make_shared<OpenFileDescription>(vfs.StdoutDriver.get(), meta);
-        vfs.add_file(file, process);
-        vfs.add_file(file, process);
-        vfs.add_file(std::move(file), process);
+        auto meta = std::make_shared<FileMetadata>("stdout", sdd(vfs.StdoutDriver), 0, nullptr);
+        vfs.add_file(meta, process);
+        vfs.add_file(meta, process);
+        vfs.add_file(std::move(meta), process);
         vfs.print_debug();
 
-        dbgmsg("[ELF] ProcFds:\r\n");
+        std::print("[ELF] ProcFds:\n");
         u64 n = 0;
         for (const auto& entry : process->FileDescriptors) {
-            dbgmsg("  %ull -> Sys %ull\r\n", n, entry);
+            std::print("  {} -> {}\n", n, entry);
             n++;
         }
 

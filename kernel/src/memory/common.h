@@ -22,6 +22,14 @@
 
 #include <integers.h>
 
+/// Get the compiler to shut up about the missing `_` somehow.
+/// Might just be clangd tho.
+/*
+size_t operator "" KiB(unsigned long long sz) {
+    return sz << 10;
+}
+*/
+
 #define KiB(x) ((u64)(x) << 10)
 #define MiB(x) ((u64)(x) << 20)
 #define GiB(x) ((u64)(x) << 30)

@@ -23,6 +23,7 @@
 #include <integers.h>
 #include <math.h>
 #include <memory.h>
+#include <string>
 
 struct PSF1_HEADER {
     // Magic bytes to indicate PSF1 font type
@@ -71,7 +72,7 @@ public:
 
     /// UPDATE MEMORY CONTENTS OF RENDER FROM TARGET
     void swap() {
-        memcpy(Target->BaseAddress, Render->BaseAddress, Target->BufferSize);
+        memcpy(Render->BaseAddress, Target->BaseAddress, Target->BufferSize);
     }
 
     /// UPDATE SIZE of MEMORY CONTENTS OF RENDER FROM TARGET AT POSITION
@@ -126,7 +127,7 @@ public:
     // Use font to put a character to the screen (advance draw position).
     void putchar(Vector2<u64>& position, char c, u32 color = 0xffffffff);
     // Put a null-terminated string of characters to the screen, wrapping if necessary.
-    void puts(Vector2<u64>& position, const char* str, u32 color = 0xffffffff);
+    void puts(Vector2<u64>& position, std::string_view str, u32 color = 0xffffffff);
 };
 
 extern BasicRenderer gRend;

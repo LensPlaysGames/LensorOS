@@ -17,7 +17,7 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <memory/virtual_memory_manager.h>
+#include <format>
 
 #include <debug.h>
 #include <integers.h>
@@ -26,6 +26,7 @@
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
+#include <memory/virtual_memory_manager.h>
 
 namespace Memory {
     PageTable* ActivePageMap;
@@ -49,31 +50,31 @@ namespace Memory {
         bool noExecute     = mappingFlags & static_cast<u64>(PageTableFlag::NX);
 
         if (debug == ShowDebug::Yes) {
-            dbgmsg("Attempting to map virtual %x to physical %x in page table at %x\r\n"
-                   "  Flags:\r\n"
-                   "    Present:         %b\r\n"
-                   "    Write:           %b\r\n"
-                   "    User-accessible: %b\r\n"
-                   "    Write-through:   %b\r\n"
-                   "    Cache Disabled:  %b\r\n"
-                   "    Accessed:        %b\r\n"
-                   "    Dirty:           %b\r\n"
-                   "    Larger Pages:    %b\r\n"
-                   "    Global:          %b\r\n"
-                   "\r\n"
-                   , virtualAddress
-                   , physicalAddress
-                   , pageMapLevelFour
-                   , present
-                   , write
-                   , user
-                   , writeThrough
-                   , cacheDisabled
-                   , accessed
-                   , dirty
-                   , largerPages
-                   , global
-                   );
+            std::print("Attempting to map virtual {} to physical {} in page table at {}\n"
+                       "  Flags:\n"
+                       "    Present:         {}\n"
+                       "    Write:           {}\n"
+                       "    User-accessible: {}\n"
+                       "    Write-through:   {}\n"
+                       "    Cache Disabled:  {}\n"
+                       "    Accessed:        {}\n"
+                       "    Dirty:           {}\n"
+                       "    Larger Pages:    {}\n"
+                       "    Global:          {}\n"
+                       "\n"
+                       , virtualAddress
+                       , physicalAddress
+                       , (void*) pageMapLevelFour
+                       , present
+                       , write
+                       , user
+                       , writeThrough
+                       , cacheDisabled
+                       , accessed
+                       , dirty
+                       , largerPages
+                       , global
+                       );
         }
 
         PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
@@ -151,9 +152,7 @@ namespace Memory {
         PDE.set_flag(PageTableFlag::Global,        noExecute);
         PT->entries[indexer.page()] = PDE;
         if (debug == ShowDebug::Yes) {
-            dbgmsg_s("  \033[32mMapped\033[0m\r\n"
-                     "\r\n"
-                     );
+            std::print("  \033[32mMapped\033[0m\n\n");
         }
     }
 
@@ -166,26 +165,24 @@ namespace Memory {
                , ShowDebug debug)
     {
         if (debug == ShowDebug::Yes) {
-            dbgmsg("Attempting to unmap virtual %p in page table at %p\r\n"
-                   , virtualAddress
-                   , pageMapLevelFour
-                   );
+            std::print("Attempting to unmap virtual {} in page table at {}\n"
+                       , virtualAddress
+                       , (void*) pageMapLevelFour
+                       );
         }
         PageMapIndexer indexer((u64)virtualAddress);
         PageDirectoryEntry PDE;
         PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
-        PageTable* PDP = (PageTable*)((u64)PDE.address() << 12);
+        auto* PDP = (PageTable*)((u64)PDE.address() << 12);
         PDE = PDP->entries[indexer.page_directory()];
-        PageTable* PD = (PageTable*)((u64)PDE.address() << 12);
+        auto* PD = (PageTable*)((u64)PDE.address() << 12);
         PDE = PD->entries[indexer.page_table()];
-        PageTable* PT = (PageTable*)((u64)PDE.address() << 12);
+        auto* PT = (PageTable*)((u64)PDE.address() << 12);
         PDE = PT->entries[indexer.page()];
         PDE.set_flag(PageTableFlag::Present, false);
         PT->entries[indexer.page()] = PDE;
         if (debug == ShowDebug::Yes) {
-            dbgmsg_s("  \033[32mUnmapped\033[0m\r\n"
-                     "\r\n"
-                     );
+            std::print("  \033[32mUnmapped\033[0m\n\n");
         }
     }
 
@@ -206,7 +203,7 @@ namespace Memory {
         Memory::PageTable* oldPageTable = Memory::active_page_map();
         auto* newPageTable = reinterpret_cast<Memory::PageTable*>(Memory::request_page());
         if (newPageTable == nullptr) {
-            dbgmsg_s("Failed to allocate memory for new process page map level four.\r\n");
+            std::print("Failed to allocate memory for new process page map level four.\n");
             return nullptr;
         }
         memset(newPageTable, 0, PAGE_SIZE);
@@ -217,7 +214,7 @@ namespace Memory {
 
             auto* newPDP = (Memory::PageTable*)Memory::request_page();
             if (newPDP == nullptr) {
-                dbgmsg_s("Failed to allocate memory for new process page directory pointer table.\r\n");
+                std::print("Failed to allocate memory for new process page directory pointer table.\n");
                 return nullptr;
             }
             auto* oldTable = (Memory::PageTable*)((u64)PDE.address() << 12);
@@ -228,7 +225,7 @@ namespace Memory {
 
                 auto* newPD = (Memory::PageTable*)Memory::request_page();
                 if (newPD == nullptr) {
-                    dbgmsg_s("Failed to allocate memory for new process page directory table.\r\n");
+                    std::print("Failed to allocate memory for new process page directory table.\n");
                     return nullptr;
                 }
                 auto* oldPD = (Memory::PageTable*)((u64)PDE.address() << 12);
@@ -239,11 +236,11 @@ namespace Memory {
 
                     auto* newPT = (Memory::PageTable*)Memory::request_page();
                     if (newPT == nullptr) {
-                        dbgmsg_s("Failed to allocate memory for new process page table.\r\n");
+                        std::print("Failed to allocate memory for new process page table.\n");
                         return nullptr;
                     }
                     auto* oldPT = (Memory::PageTable*)((u64)PDE.address() << 12);
-                    memcpy(oldPT, newPT, PAGE_SIZE);
+                    memcpy(newPT, oldPT, PAGE_SIZE);
 
                     PDE = oldPD->entries[k];
                     PDE.set_address((u64)newPT >> 12);

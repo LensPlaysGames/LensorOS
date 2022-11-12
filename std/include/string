@@ -19,7 +19,11 @@
 #ifndef _LENSOROS_STRING_
 #define _LENSOROS_STRING_
 
+#include "algorithm"
+
 #include <bits/decls.h>
+#include <cmath>
+#include <concepts>
 #include <cstring>
 #include <iterator>
 #include <stddef.h>
@@ -28,6 +32,7 @@
 
 __BEGIN_DECLS__
 void* memcpy(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n);
+int memcmp(const void* src, const void* dest, size_t bytes);
 __END_DECLS__
 
 namespace std {
@@ -42,12 +47,23 @@ class basic_string_view {
     const _Char* __data{};
     size_t __size{};
 
+    static constexpr size_t __constexpr_strlen(const _Char* __str) {
+        size_t __len = 0;
+        while (*__str++) __len++;
+        return __len;
+    }
+
 public:
+    using const_iterator = const _Char*;
+
     static constexpr size_t npos = static_cast<size_t>(-1);
 
-    constexpr basic_string_view() = default;
+    constexpr basic_string_view() {}
     constexpr basic_string_view(const _Char* __data, size_t __size) : __data(__data), __size(__size) {}
-    constexpr basic_string_view(const _Char* __data) : __data(__data), __size(__builtin_strlen(__data)) {}
+    constexpr basic_string_view(const _Char* __data) : __data(__data), __size(__constexpr_strlen(__data)) {}
+
+    template <size_t __N>
+    constexpr basic_string_view(const _Char (&__data)[__N]) : __data(__data), __size(__N - 1) {}
 
     constexpr const _Char* data() const { return __data; }
     constexpr size_t size() const { return __size; }
@@ -61,27 +77,15 @@ public:
         return __cmp;
     }
 
-    _Nodiscard bool operator==(_View __sv) const {
-        if (__size != __sv.__size) return false;
-        return memcmp(__data, __sv.__data, __size) == 0;
-    }
-
     constexpr _Char operator[](size_t __i) const { return __data[__i]; }
 
-    /// TODO: Use operator<=>.
-    _Nodiscard bool operator!=(_View __sv) const { return !(*this == __sv); }
-    _Nodiscard bool operator<(_View __sv) const { return compare(__sv) < 0; }
-    _Nodiscard bool operator>(_View __sv) const { return compare(__sv) > 0; }
-    _Nodiscard bool operator<=(_View __sv) const { return compare(__sv) <= 0; }
-    _Nodiscard bool operator>=(_View __sv) const { return compare(__sv) >= 0; }
+    _Nodiscard constexpr const char* begin() const { return __data; }
+    _Nodiscard constexpr const char* end() const { return __data + __size; }
 
-    _Nodiscard const char* begin() const { return __data; }
-    _Nodiscard const char* end() const { return __data + __size; }
+    _Nodiscard constexpr _ReverseIterator<const char*> rbegin() const { return _ReverseIterator<const char*>(data() + size() - 1); }
+    _Nodiscard constexpr _ReverseIterator<const char*> rend() const { return _ReverseIterator<const char*>(data() - 1); }
 
-    _Nodiscard _ReverseIterator<const char*> rbegin() const { return _ReverseIterator<const char*>(data() + size() - 1); }
-    _Nodiscard _ReverseIterator<const char*> rend() const { return _ReverseIterator<const char*>(data() - 1); }
-
-    _Nodiscard _View substr(size_t __pos, size_t __len = npos) const {
+    _Nodiscard constexpr _View substr(size_t __pos = 0, size_t __len = npos) const {
         if (__pos > __size) return {};
         if (__len > __size - __pos) __len = __size - __pos;
         return {data() + __pos, __len};
@@ -101,12 +105,12 @@ public:
 
     _Nodiscard bool starts_with(_View __sv) const {
         if (__sv.size() > __size) return false;
-        return memcmp(__data, __sv.__data, __sv.size()) == 0;
+        return memcmp((void*)__data, (void*)__sv.__data, __sv.size() * sizeof(_Char)) == 0;
     }
 
     _Nodiscard bool ends_with(_View __sv) const {
         if (__sv.size() > __size) return false;
-        return memcmp(__data + __size - __sv.size(), __sv.__data, __sv.size()) == 0;
+        return memcmp((void*)(__data + __size - __sv.size()), (void*)__sv.__data, __sv.size() * sizeof(_Char)) == 0;
     }
 
     _Nodiscard bool contains(_View __sv) const {
@@ -118,6 +122,39 @@ public:
         return find(__c) != npos;
     }
 };
+
+template <typename _Char>
+_Nodiscard bool operator==(basic_string_view<_Char> __a, basic_string_view<_Char> __b) {
+    if (__a.size() != __b.size()) return false;
+    return memcmp((void*) __a.data(), (void*) __b.data(), __a.size()) == 0;
+}
+
+/// TODO: Use operator<=>.
+template <typename _Char>
+_Nodiscard bool operator!=(basic_string_view<_Char> __a, basic_string_view<_Char> __b) {
+    return !(__a == __b);
+}
+
+template <typename _Char>
+_Nodiscard bool operator<(basic_string_view<_Char> __a, basic_string_view<_Char> __b) {
+    return __a.compare(__b) < 0;
+}
+
+template <typename _Char>
+_Nodiscard bool operator>(basic_string_view<_Char> __a, basic_string_view<_Char> __b) {
+    return __a.compare(__b) > 0;
+}
+
+template <typename _Char>
+_Nodiscard bool operator<=(basic_string_view<_Char> __a, basic_string_view<_Char> __b) {
+    return __a.compare(__b) <= 0;
+}
+
+template <typename _Char>
+_Nodiscard bool operator>=(basic_string_view<_Char> __a, basic_string_view<_Char> __b) {
+    return __a.compare(__b) >= 0;
+}
+
 
 /// Dynamically resiseable string with small string optimisation. Small strings
 /// are stored directly in the string object and are not heap allocated.
@@ -158,7 +195,7 @@ class basic_string {
     static constexpr size_t __max_chars_small = (sizeof(__small) / sizeof(_Char)) - 1;
 
     /// Check if a string is large.
-    _Nodiscard bool __is_large() const { return __small.__is_large; }
+    _Nodiscard constexpr bool __is_large() const { return __small.__is_large; }
 
     /// Get a string view of the string.
     _Nodiscard _View __view() const { return _View(data(), size()); };
@@ -174,6 +211,8 @@ class basic_string {
     }
 
 public:
+    using iterator = const char*;
+
     /// Invalid index.
     static constexpr size_t npos = static_cast<size_t>(-1);
 
@@ -201,7 +240,7 @@ public:
             __large.__sz = __other.__large.__sz;
             __large.__cap = __other.__large.__cap;
             __large.__is_large = true;
-            memcpy(__large.__data, __other.__large.__data, __other.__large.__sz * sizeof(_Char));
+            memcpy(__large.__data, __other.__large.__data, (__other.__large.__sz + 1) * sizeof(_Char));
         }
 
         /// The other string is small. Shallow-copy it.
@@ -215,18 +254,29 @@ public:
         if (__size > __max_chars_small) {
             __large.__data = new _Char[(__size + 1)];
             __large.__sz = __size;
+
+            _PushIgnoreWarning("-Wconversion")
             __large.__cap = __size;
+            _PopWarnings()
+
             __large.__is_large = true;
-            memcpy(__large.__data, __cstr, (__size + 1) * sizeof(_Char));
+            memcpy(__large.__data, __cstr, __size * sizeof(_Char));
             __large.__data[__size] = 0;
         }
 
         else {
-            memcpy(&__small, __cstr, (__size + 1) * sizeof(_Char));
-            __small.__rem_cap = __max_chars_small - __size;
+            memcpy(&__small, __cstr, __size * sizeof(_Char));
+            _PushIgnoreWarning("-Wconversion")
+            __small.__rem_cap = _Char(__max_chars_small - __size);
+            _PopWarnings()
+            __small.__data[__size] = 0;
             __small.__is_large = false;
         }
     }
+
+    constexpr basic_string(const _Char* __cstr) : basic_string(_View(__cstr)) {}
+
+    constexpr basic_string(const _Char* __cstr, size_t __sz) : basic_string(_View{__cstr, __sz}) {}
 
     constexpr basic_string(_Str&& __other) {
         __small = __other.__small;
@@ -239,6 +289,28 @@ public:
         if (__is_large()) { delete[] __large.__data; }
     }
 
+    constexpr basic_string& operator=(const _Str& __other) {
+        if (__is_large()) { delete[] __large.__data; }
+        __small = __other.__small;
+        return *this;
+    }
+
+    constexpr basic_string& operator=(_Str&& __other)  noexcept {
+        if (__is_large()) { delete[] __large.__data; }
+        __small = __other.__small;
+        __other.__small.__data[0] = 0;
+        __other.__small.__rem_cap = __max_chars_small;
+        __other.__small.__is_large = false;
+        return *this;
+    }
+
+    _Nodiscard constexpr basic_string substr(size_t __pos = 0, size_t __len = npos) const {
+        auto __size = size();
+        if (__pos > __size) return {};
+        if (__len > __size - __pos) __len = __size - __pos;
+        return {data() + __pos, __len};
+    }
+
     /// =======================================================================
     ///  Accessing elements.
     /// =======================================================================
@@ -249,7 +321,7 @@ public:
     _Nodiscard constexpr const _Char* c_str() const { return data(); }
 
     _Nodiscard constexpr size_t size() const {
-        return __is_large() ? __large.__sz : __max_chars_small - __small.__rem_cap;
+        return __is_large() ? __large.__sz : __max_chars_small - size_t(__small.__rem_cap);
     }
 
     _Nodiscard constexpr size_t capacity() const {
@@ -348,6 +420,8 @@ public:
         }
     }
 
+    void append(const _Char* __chars, size_t __n) { append(basic_string_view<_Char>(__chars, __n)); }
+
     void reserve(size_t __n) {
         if (__n <= capacity()) return;
 
@@ -432,10 +506,10 @@ public:
         }
     }
 
-    void erase(size_t __pos, size_t __n) {
+    void erase(size_t __pos = 0, size_t __n = npos) {
         const auto __size = size();
         if (__pos >= __size) { return; }
-        if (__pos + __n >= __size) { __n = __size - __pos; }
+        if (__n >= __size || __pos + __n >= __size) { __n = __size - __pos; }
 
         /// Truncate if we're erasing up to the end of the string.
         if (__pos + __n == __size) {
@@ -450,7 +524,7 @@ public:
         }
 
         /// Otherwise, we need to move the remaining characters to the left.
-        if (__small()) {
+        if (!__is_large()) {
             memmove(__small.__data + __pos, __small.__data + __pos + __n, (__size - __pos - __n + 1) * sizeof(_Char));
             __small.__rem_cap += __n;
         } else {
@@ -459,18 +533,24 @@ public:
         }
     }
 
+    void erase(iterator __first, iterator __last) {
+        auto __begin = begin();
+        auto __end = end();
+
+        /// FIXME: Should throw or something.
+        if (__first < __begin) { __first = __begin; }
+        if (__last < __begin) { __last = __begin; }
+        else if (__last > __end) { __last = __end; }
+
+        erase(size_t(__first - __begin), size_t(__last - __first));
+    }
+
+    void erase(iterator __first) { erase(__first, __first + 1); }
+
     /// =======================================================================
     ///  Comparisons, searches, and checks.
     /// =======================================================================
     _Nodiscard int compare(basic_string_view<_Char> __sv) const { return __sv.compare(__view()); }
-    _Nodiscard bool operator==(_View __sv) const { return __sv == *this; }
-
-    /// TODO: Use operator<=>.
-    _Nodiscard bool operator!=(_View __sv) const { return !(*this == __sv); }
-    _Nodiscard bool operator<(_View __sv) const { return __sv > *this; }
-    _Nodiscard bool operator>(_View __sv) const { return __sv < *this; }
-    _Nodiscard bool operator<=(_View __sv) const { return !(*this > __sv); }
-    _Nodiscard bool operator>=(_View __sv) const { return !(*this < __sv); }
 
     _Nodiscard size_t find(_Char __c, size_t __pos = 0) const { return __view().find(__c, __pos); }
     _Nodiscard size_t find(_View __sv, size_t __pos = 0) const { return __view().find(__sv, __pos); }
@@ -482,6 +562,42 @@ public:
     _Nodiscard bool contains(_Char __c) const { return __view().contains(__c); }
 };
 
+template <typename _Char>
+_Nodiscard bool operator==(const basic_string<_Char>& __a, const basic_string<_Char>& __b) {
+    return basic_string_view<_Char>(__a) == basic_string_view<_Char>(__b);
+}
+
+template <typename _Char>
+_Nodiscard bool operator==(const basic_string<_Char>& __a, const _Char* __b) {
+    return basic_string_view<_Char>(__a) == basic_string_view<_Char>(__b);
+}
+
+/// TODO: Use operator<=>.
+template <typename _Char>
+_Nodiscard bool operator!=(const basic_string<_Char>& __a, const basic_string<_Char>& __b) {
+    return basic_string_view<_Char>(__a) != basic_string_view<_Char>(__b);
+}
+
+template <typename _Char>
+_Nodiscard bool operator<(const basic_string<_Char>& __a, const basic_string<_Char>& __b) {
+    return basic_string_view<_Char>(__a) < basic_string_view<_Char>(__b);
+}
+
+template <typename _Char>
+_Nodiscard bool operator>(const basic_string<_Char>& __a, const basic_string<_Char>& __b) {
+    return basic_string_view<_Char>(__a) > basic_string_view<_Char>(__b);
+}
+
+template <typename _Char>
+_Nodiscard bool operator<=(const basic_string<_Char>& __a, const basic_string<_Char>& __b) {
+    return basic_string_view<_Char>(__a) <= basic_string_view<_Char>(__b);
+}
+
+template <typename _Char>
+_Nodiscard bool operator>=(const basic_string<_Char>& __a, const basic_string<_Char>& __b) {
+    return basic_string_view<_Char>(__a) >= basic_string_view<_Char>(__b);
+}
+
 using string_view = basic_string_view<char>;
 using wstring_view = basic_string_view<wchar_t>;
 using u16string_view = basic_string_view<char16_t>;
@@ -492,28 +608,31 @@ using wstring = basic_string<wchar_t>;
 using u16string = basic_string<char16_t>;
 using u32string = basic_string<char32_t>;
 
-template <typename _Int>
-string __to_string(_Int __i) {
-    string __result;
+template <typename _Char, integral _Int>
+__forceinline basic_string<_Char> __to_string(_Int __i, uint8_t __base = 10, bool __uppercase = false) {
+    basic_string<_Char> __result;
 
     /// Append a '-' if the number is negative.
     if constexpr (std::is_signed_v<_Int>) {
         if (__i < 0) {
-            __result += '-';
+            __result += _Char('-');
             __i = -__i;
         }
     }
 
     /// If the number is 0, we're done.
     if (__i == 0) {
-        __result += '0';
+        __result += _Char('0');
         return __result;
     }
 
     /// Otherwise, append the digits.
-    while (__i > 0) {
-        __result += char('0' + (__i % 10));
-        __i /= 10;
+    while (__i) {
+        auto __digit = __i % __base;
+        __i /= __base;
+
+        if (__digit > 9) { __result += _Char((__uppercase ? 'A' : 'a') + __digit - 10); }
+        else { __result += _Char('0' + __digit); }
     }
 
     /// Reverse the string manually.
@@ -527,12 +646,53 @@ string __to_string(_Int __i) {
     return __result;
 }
 
-inline string to_string(int __i) { return __to_string(__i); }
-inline string to_string(long __i) { return __to_string(__i); }
-inline string to_string(long long __i) { return __to_string(__i); }
-inline string to_string(unsigned __i) { return __to_string(__i); }
-inline string to_string(unsigned long __i) { return __to_string(__i); }
-inline string to_string(unsigned long long __i) { return __to_string(__i); }
+template <typename _Char, floating_point _Float>
+__forceinline basic_string<_Char> __to_string(_Float __f, size_t __prec = 16) {
+#ifdef __SSE__
+    basic_string<_Char> __result;
+
+    /// Handle nan, inf, and -inf.
+    if (isnan(__f)) { return "nan"; }
+    if (isinf(__f)) { return __f < 0 ? "-inf" : "inf"; }
+
+    /// Append a '-' if the number is negative.
+    if (__f < 0) {
+        __result += _Char('-');
+        __f = -__f;
+    }
+
+    /// Append the integer part.
+    __result += __to_string<_Char>(int64_t(__f));
+    __f -= static_cast<int64_t>(__f);
+    __prec = std::min(__prec, size_t(16));
+
+    /// Append the fractional part.
+    /// TODO: Find a better way to do this.
+    if (__prec && (__f < -1e-7 || __f > 1e-7)) {
+        __result += _Char('.');
+
+        while (__prec-- && (__f < -1e-7 || __f > 1e-7)) {
+            __f *= 10;
+            __result += _Char('0' + static_cast<int64_t>(__f));
+            __f -= static_cast<int64_t>(__f);
+        }
+    }
+
+    return __result;
+#else
+    return "(FLOAT)";
+#endif
+}
+
+inline string to_string(int __i) { return __to_string<char>(__i); }
+inline string to_string(long __i) { return __to_string<char>(__i); }
+inline string to_string(long long __i) { return __to_string<char>(__i); }
+inline string to_string(unsigned __i) { return __to_string<char>(__i); }
+inline string to_string(unsigned long __i) { return __to_string<char>(__i); }
+inline string to_string(unsigned long long __i) { return __to_string<char>(__i); }
+inline string to_string(float __f) { return __to_string<char>(__f); }
+inline string to_string(double __f) { return __to_string<char>(__f); }
+inline string to_string(long double __f) { return __to_string<char>(__f); }
 
 } // namespace std
 #endif // _LENSOROS_STRING_

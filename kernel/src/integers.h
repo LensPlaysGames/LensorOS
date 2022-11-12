@@ -20,8 +20,6 @@
 #ifndef LENSOR_OS_INTEGERS_H
 #define LENSOR_OS_INTEGERS_H
 
-// Included with compiler, not std library
-//   (which makes the name very confusing).
 #include <stddef.h>
 #include <stdint.h>
 
@@ -34,6 +32,7 @@ using u16 = uint16_t;
 using u32 = uint32_t;
 using u64 = uint64_t;
 using usz = uintptr_t;
+
 /// Fixed-Width Signed Integer Alias Declarations
 using s8 = int8_t;
 using s16 = int16_t;

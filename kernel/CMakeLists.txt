@@ -83,6 +83,7 @@ add_executable(
   src/cpuid.cpp
   src/cstr.cpp
   src/debug.cpp
+  src/devices/devices.cpp
   src/efi_memory.cpp
   src/gdt.cpp
   src/gpt.cpp
@@ -108,6 +109,8 @@ add_executable(
   src/rtc.cpp
   src/scheduler.cpp
   src/spinlock.cpp
+  src/storage/device_drivers/pipe.cpp
+  src/storage/device_drivers/port_controller.cpp
   src/storage/filesystem_drivers/file_allocation_table.cpp
   src/system.cpp
   src/tss.cpp

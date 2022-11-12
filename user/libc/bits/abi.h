@@ -27,7 +27,7 @@ using __dso_cb = void (*)(void*);
 using __dso_cb_arg = void*;
 using __dso_handle_t = void*;
 
-extern bool __in_quick_exit;
+extern __bool __in_quick_exit;
 
 void __cxa_atexit(__dso_cb func, __dso_cb_arg arg, __dso_handle_t dso);
 __END_DECLS__
