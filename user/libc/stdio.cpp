@@ -910,6 +910,7 @@ void perror(const char* str) {
 /// ===========================================================================
 ///  POSIX extensions.
 /// ===========================================================================
+_PushIgnoreWarning("-Wunused-parameter")
 char *ctermid(char *s) {
     static char empty_string = 0;
     if (!s) return &empty_string;
@@ -967,7 +968,7 @@ int putc_unlocked(int c, FILE *stream) {
 int putchar_unlocked(int c) {
     return putc_unlocked(c, stdout);
 }
-
+_PopWarnings()
 /// ===========================================================================
 ///  Internal
 /// ===========================================================================

@@ -28,6 +28,8 @@ bool __libc_have_erms = true;
 bool __libc_have_erms = false;
 #endif
 
+_PushIgnoreWarning("-Wunused-parameter")
+
 /// Copying
 void* memmove(void* dst, const void* src, size_t n) {
     __extension__ unsigned char tmp[n];
@@ -327,3 +329,5 @@ size_t strnlen(const char* str, size_t maxlen) {
         len++;
     return len;
 }
+
+_PopWarnings()

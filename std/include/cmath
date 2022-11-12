@@ -26,10 +26,10 @@
 namespace std {
 
 template <typename _Ty>
-constexpr _Ty isnan(_Ty value) noexcept { return value != value; }
+constexpr bool isnan(_Ty value) noexcept { return value != value; }
 
 template <typename _Ty>
-constexpr _Ty isinf(_Ty value) noexcept { return value == INFINITY || value == -INFINITY; }
+constexpr bool isinf(_Ty value) noexcept { return value == INFINITY || value == -INFINITY; }
 
 }
 

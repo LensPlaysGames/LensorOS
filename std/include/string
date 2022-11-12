@@ -84,7 +84,7 @@ public:
     _Nodiscard constexpr _ReverseIterator<const char*> rbegin() const { return _ReverseIterator<const char*>(data() + size() - 1); }
     _Nodiscard constexpr _ReverseIterator<const char*> rend() const { return _ReverseIterator<const char*>(data() - 1); }
 
-    _Nodiscard constexpr _View substr(size_t __pos, size_t __len = npos) const {
+    _Nodiscard constexpr _View substr(size_t __pos = 0, size_t __len = npos) const {
         if (__pos > __size) return {};
         if (__len > __size - __pos) __len = __size - __pos;
         return {data() + __pos, __len};
@@ -210,6 +210,8 @@ class basic_string {
     }
 
 public:
+    using iterator = const char*;
+
     /// Invalid index.
     static constexpr size_t npos = static_cast<size_t>(-1);
 
@@ -301,6 +303,13 @@ public:
         return *this;
     }
 
+    _Nodiscard constexpr basic_string substr(size_t __pos = 0, size_t __len = npos) const {
+        auto __size = size();
+        if (__pos > __size) return {};
+        if (__len > __size - __pos) __len = __size - __pos;
+        return {data() + __pos, __len};
+    }
+
     /// =======================================================================
     ///  Accessing elements.
     /// =======================================================================
@@ -311,7 +320,7 @@ public:
     _Nodiscard constexpr const _Char* c_str() const { return data(); }
 
     _Nodiscard constexpr size_t size() const {
-        return __is_large() ? __large.__sz : __max_chars_small - __small.__rem_cap;
+        return __is_large() ? __large.__sz : __max_chars_small - size_t(__small.__rem_cap);
     }
 
     _Nodiscard constexpr size_t capacity() const {
@@ -496,10 +505,10 @@ public:
         }
     }
 
-    void erase(size_t __pos, size_t __n) {
+    void erase(size_t __pos = 0, size_t __n = npos) {
         const auto __size = size();
         if (__pos >= __size) { return; }
-        if (__pos + __n >= __size) { __n = __size - __pos; }
+        if (__n >= __size || __pos + __n >= __size) { __n = __size - __pos; }
 
         /// Truncate if we're erasing up to the end of the string.
         if (__pos + __n == __size) {
@@ -514,7 +523,7 @@ public:
         }
 
         /// Otherwise, we need to move the remaining characters to the left.
-        if (__small()) {
+        if (!__is_large()) {
             memmove(__small.__data + __pos, __small.__data + __pos + __n, (__size - __pos - __n + 1) * sizeof(_Char));
             __small.__rem_cap += __n;
         } else {
@@ -522,6 +531,20 @@ public:
             __large.__sz -= __n;
         }
     }
+
+    void erase(iterator __first, iterator __last) {
+        auto __begin = begin();
+        auto __end = end();
+
+        /// FIXME: Should throw or something.
+        if (__first < __begin) { __first = __begin; }
+        if (__last < __begin) { __last = __begin; }
+        else if (__last > __end) { __last = __end; }
+
+        erase(size_t(__first - __begin), size_t(__last - __first));
+    }
+
+    void erase(iterator __first) { erase(__first, __first + 1); }
 
     /// =======================================================================
     ///  Comparisons, searches, and checks.
@@ -540,6 +563,11 @@ public:
 
 template <typename _Char>
 _Nodiscard bool operator==(const basic_string<_Char>& __a, const basic_string<_Char>& __b) {
+    return basic_string_view<_Char>(__a) == basic_string_view<_Char>(__b);
+}
+
+template <typename _Char>
+_Nodiscard bool operator==(const basic_string<_Char>& __a, const _Char* __b) {
     return basic_string_view<_Char>(__a) == basic_string_view<_Char>(__b);
 }
 
@@ -562,6 +590,11 @@ _Nodiscard bool operator>(const basic_string<_Char>& __a, const basic_string<_Ch
 template <typename _Char>
 _Nodiscard bool operator<=(const basic_string<_Char>& __a, const basic_string<_Char>& __b) {
     return basic_string_view<_Char>(__a) <= basic_string_view<_Char>(__b);
+}
+
+template <typename _Char>
+_Nodiscard bool operator>=(const basic_string<_Char>& __a, const basic_string<_Char>& __b) {
+    return basic_string_view<_Char>(__a) >= basic_string_view<_Char>(__b);
 }
 
 using string_view = basic_string_view<char>;
