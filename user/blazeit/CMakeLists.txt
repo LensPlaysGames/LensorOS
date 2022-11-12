@@ -42,4 +42,5 @@ project( LensorOS VERSION ${blazeit_VERSION} LANGUAGES ${blazeit_LANGUAGES} )
 
 add_executable( blazeit main.c )
 
-target_compile_options(blazeit PRIVATE -mno-sse)
+target_compile_options(blazeit PRIVATE -mno-sse2)
+#target_link_options(blazeit PRIVATE -T "${PROJECT_SOURCE_DIR}/../libc/ldscript")
