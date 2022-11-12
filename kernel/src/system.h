@@ -23,7 +23,6 @@
 #include <cpu.h>
 #include <fat_definitions.h>
 #include <file.h>
-#include <filesystem.h>
 #include <guid.h>
 #include <integers.h>
 #include <linked_list.h>

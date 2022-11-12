@@ -17,14 +17,11 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <debug.h>
 #include <fat_definitions.h>
 #include <format>
 #include <integers.h>
-#include <linked_list.h>
 #include <storage/file_metadata.h>
 #include <storage/filesystem_drivers/file_allocation_table.h>
-#include <string.h>
 #include <vector>
 
 // Uncomment the following directive for extra debug information output.

@@ -17,8 +17,7 @@
 * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include "ahci.h"
-
+#include <ahci.h>
 #include <devices/devices.h>
 #include <pci.h>
 

@@ -17,16 +17,11 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <format>
-
 #include <hpet.h>
-
-#include <cstr.h>
+#include <format>
 #include <integers.h>
-#include <io.h>
 #include <memory.h>
 #include <memory/virtual_memory_manager.h>
-#include <uart.h>
 
 HPET gHPET;
 

@@ -20,9 +20,6 @@
 #include "devices/devices.h"
 
 #include <acpi.h>
-#include <ahci.h>
-#include <debug.h>
-#include <memory/heap.h>
 #include <memory/paging.h>
 #include <memory/virtual_memory_manager.h>
 #include <pci.h>
@@ -170,7 +167,7 @@ namespace PCI {
         }
 
         DBGMSG("[PCI]: Found {} device(s)\n"
-               , SYSTEM->Devices.length() - systemDeviceLengthBefore
+               , SYSTEM->Devices.size() - systemDeviceLengthBefore
                );
 
         std::print("  \033[32mDone\033[0m\n\n");

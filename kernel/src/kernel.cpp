@@ -21,23 +21,16 @@
 #include <basic_renderer.h>
 #include <boot.h>
 #include <cstr.h>
-#include <debug.h>
 #include <format>
 #include <hpet.h>
-#include <interrupts/interrupts.h>
 #include <kernel.h>
 #include <keyboard.h>
 #include <kstage1.h>
 #include <math.h>
 #include <memory/common.h>
-#include <memory/heap.h>
 #include <memory/physical_memory_manager.h>
-#include <memory/virtual_memory_manager.h>
 #include <pit.h>
 #include <rtc.h>
-#include <string.h>
-#include <tss.h>
-#include <uart.h>
 
 void print_memory_info(Vector2<u64>& position) {
     u32 startOffset = position.x;

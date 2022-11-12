@@ -21,7 +21,6 @@
 
 #include <tss.h>
 
-#include <debug.h>
 #include <link_definitions.h>
 #include <memory.h>
 #include <gdt.h>

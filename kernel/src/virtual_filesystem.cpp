@@ -22,14 +22,7 @@
 #include "scheduler.h"
 
 #include <cstr.h>
-#include <debug.h>
-#include <file.h>
-#include <filesystem.h>
-#include <linked_list.h>
 #include <storage/file_metadata.h>
-#include <storage/filesystem_driver.h>
-#include <storage/storage_device_driver.h>
-#include <string.h>
 #include <virtual_filesystem.h>
 
 // Uncomment the following directive for extra debug information output.

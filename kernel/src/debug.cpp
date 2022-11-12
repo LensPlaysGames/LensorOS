@@ -17,9 +17,8 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <format>
-
 #include <debug.h>
+#include <format>
 #include <integers.h>
 #include <string.h>
 #include <uart.h>

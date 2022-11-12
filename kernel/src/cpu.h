@@ -20,9 +20,8 @@
 #ifndef LENSOR_OS_CPU_H
 #define LENSOR_OS_CPU_H
 
-#include <format>
-
 #include <cstr.h>
+#include <format>
 #include <integers.h>
 #include <linked_list.h>
 #include <memory.h>

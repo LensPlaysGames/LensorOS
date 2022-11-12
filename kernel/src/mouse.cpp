@@ -23,11 +23,9 @@
 
 #include <random_lfsr.h>
 #include <basic_renderer.h>
-#include <cstr.h>
 #include <integers.h>
 #include <io.h>
 #include <math.h>
-#include <uart.h>
 
 // globally accessible mouse information
 u8 gMouseID;

@@ -17,12 +17,8 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <format>
-
 #include <basic_renderer.h>
-
-#include <cstr.h>
-#include <debug.h>
+#include <format>
 #include <integers.h>
 #include <math.h>
 #include <memory/physical_memory_manager.h>

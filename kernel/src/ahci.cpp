@@ -17,12 +17,8 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <format>
-
 #include <ahci.h>
-
-#include <cstr.h>
-#include <debug.h>
+#include <format>
 #include <integers.h>
 
 // Uncomment the following directive for extra debug information output.

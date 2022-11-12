@@ -18,7 +18,6 @@
  */
 
 #include <cstr.h>
-#include <uart.h>
 
 const char to_hex_not_supported[] = "TYPE_NOT_SUPPORTED";
 

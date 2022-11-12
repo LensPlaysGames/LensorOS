@@ -19,7 +19,6 @@
 
 #include <memory.h>
 
-#include <efi_memory.h>
 #include <integers.h>
 #include <large_integers.h>
 
