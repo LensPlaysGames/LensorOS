@@ -34,13 +34,11 @@ HPET gHPET;
  *   registers, so they must be marked as volatile!
  */
 void HPET::writel(u16 offset, u32 value) {
-    volatile_write(&value, (volatile void*)(Header->Address.Address + (offset)), 4);
+    volatile_write((u32*)(Header->Address.Address + offset), value);
 }
 
 u32 HPET::readl(u16 offset) {
-    u32 ret { 0 };
-    volatile_read((const volatile void*)(Header->Address.Address + (offset)), &ret, 4);
-    return ret;
+    return volatile_read((u32*)(Header->Address.Address + offset));
 }
 
 void hpet_init_failed(const char* msg) {
@@ -48,7 +46,7 @@ void hpet_init_failed(const char* msg) {
 }
 
 bool HPET::initialize() {
-#ifdef VBOX
+#if defined(VBOX)
     // I can not get the HPET to work in VBOX for the life of me.
     // It causes a strange crash that shuts down the virtualbox VM.
     // Luckily, I know exactly what causes it, but (unluckily) not how to fix it.
@@ -69,9 +67,9 @@ bool HPET::initialize() {
     }
 
     if (Header->Address.AddressSpaceID == 0) {
-        Memory::map((void*)Header->Address.Address, (void*)Header->Address.Address);
-    }
-    else {
+        Memory::map((void*)Header->Address.Address, (void*)Header->Address.Address,
+                    (u64) Memory::PageTableFlag::Present | (u64) Memory::PageTableFlag::ReadWrite);
+    } else {
         hpet_init_failed("Invalid Address Space ID");
         return false;
     }
