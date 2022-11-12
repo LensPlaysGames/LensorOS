@@ -21,8 +21,8 @@
 
 const char to_hex_not_supported[] = "TYPE_NOT_SUPPORTED";
 
-u64 strlen(const char* a) {
-    u64 out = 0;
+extern "C" size_t strlen(const char* a) {
+    size_t out = 0;
     while (true) {
         if (*a == '\0')
             return out + 1;

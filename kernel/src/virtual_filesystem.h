@@ -32,7 +32,7 @@
 #include <storage/storage_device_driver.h>
 #include <storage/device_drivers/dbgout.h>
 #include <storage/device_drivers/pipe.h>
-#include <string.h>
+#include <string>
 #include <scheduler.h>
 #include <vfs_forward.h>
 

@@ -21,12 +21,13 @@
 
 #include <cstr.h>
 #include <debug.h>
+#include <memory.h>
 #include <memory/common.h>
 #include <memory/heap.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
-#include <string.h>
+#include <string>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_HEAP
@@ -256,9 +257,8 @@ void heap_print_debug_starchart() {
         offset += numChars;
         it = it->next;
     } while (it != nullptr);
-    String heap_visualization((const char*)out);
     std::print("Heap (64b per char): ");
-    dbgrainbow(heap_visualization, ShouldNewline::Yes);
+    dbgrainbow(__s(out), ShouldNewline::Yes);
     std::print("\n");
 }
 

@@ -21,7 +21,7 @@
 #define LENSOR_OS_FILESYSTEM_DRIVER_H
 
 #include <storage/storage_device_driver.h>
-#include <string.h>
+#include <string>
 
 struct FilesystemDriver : StorageDeviceDriver {
     virtual auto device() -> std::shared_ptr<StorageDeviceDriver> = 0;

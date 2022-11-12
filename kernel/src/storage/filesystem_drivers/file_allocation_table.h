@@ -23,7 +23,7 @@
 #include <fat_definitions.h>
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
-#include <string.h>
+#include <string>
 
 class FileAllocationTableDriver final : public FilesystemDriver {
     /// This constructor is only used internally in try_create() and is always

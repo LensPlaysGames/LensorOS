@@ -23,11 +23,7 @@
 
 #include <integers.h>
 
-// Yes, I know these are "backwards" parameters, it's just how
-// I started and I don't want to go back and change everything.
-void memset(void* src, u8 value  , u64 numBytes);
-
-// This is now no longer backwards.
+extern "C" void memset(void* src, u8 value  , u64 numBytes);
 extern "C" int memcmp(const void* src, const void* dest, size_t numBytes);
 extern "C" void* memcpy(void* __restrict__ dest, const void* __restrict__ src, size_t numBytes);
 

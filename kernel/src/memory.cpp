@@ -59,7 +59,7 @@ extern "C" void* memcpy(void* __restrict__ dest, const void* __restrict__ src, s
     return dest;
 }
 
-void memset(void* start, u8 value, u64 numBytes) {
+extern "C" void memset(void* start, u8 value, u64 numBytes) {
     if (numBytes >= 256) {
         u64 qWordValue = 0;
         qWordValue |= (u64)value << 0;

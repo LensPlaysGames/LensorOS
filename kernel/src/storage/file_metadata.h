@@ -23,7 +23,7 @@
 #include <integers.h>
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
-#include <string.h>
+#include <string>
 
 struct FileMetadata {
     FileMetadata()

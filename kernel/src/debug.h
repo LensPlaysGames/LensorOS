@@ -21,7 +21,7 @@
 #define LENSOR_OS_DEBUG_H
 
 #include <integers.h>
-#include <string.h>
+#include <string>
 #include <va_list.h>
 
 enum class ShouldNewline {
@@ -33,7 +33,7 @@ enum class ShouldNewline {
 void dbgmsg_buf(const u8* buffer, u64 byteCount);
 
 /// Print a string with lots of colors (and no formatting)! Nyan debug :^)
-void dbgrainbow(const String&, ShouldNewline nl = ShouldNewline::No);
+void dbgrainbow(std::string_view, ShouldNewline nl = ShouldNewline::No);
 
 /// Print a C-style null-terminated string in lots
 /// of colors (and no formatting)! Nyan debug :^)

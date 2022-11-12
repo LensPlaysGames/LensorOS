@@ -20,15 +20,14 @@
 #include <debug.h>
 #include <format>
 #include <integers.h>
-#include <string.h>
 #include <uart.h>
 
 void dbgmsg_buf(const u8* buffer, u64 byteCount) {
     UART::out(buffer, byteCount);
 }
 
-void dbgrainbow(const String& str, ShouldNewline nl) {
-    for (u64 i = 0; i < str.length(); ++i) {
+void dbgrainbow(std::string_view str, ShouldNewline nl) {
+    for (u64 i = 0; i < str.size(); ++i) {
         std::print("\033[1;3{}m{}", i % 6 + 1, char(str[i]));
     }
     std::print("\033[0m");
@@ -37,5 +36,5 @@ void dbgrainbow(const String& str, ShouldNewline nl) {
 }
 
 void dbgrainbow(const char* str, ShouldNewline nl) {
-    dbgrainbow(String(str), nl);
+    dbgrainbow(std::string_view{str}, nl);
 }

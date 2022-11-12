@@ -33,7 +33,7 @@ constexpr const char* falseString = "False";
 /* String Length
  *   Returns the number of characters including null terminator.
  */
-u64 strlen(const char* a);
+extern "C" size_t strlen(const char* a);
 
 /* String Compare
  *   Returns `true` only if all characters within
