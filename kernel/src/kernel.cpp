@@ -17,23 +17,22 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <format>
-
-#include <kernel.h>
 
 #include <basic_renderer.h>
 #include <boot.h>
 #include <cstr.h>
 #include <debug.h>
+#include <format>
 #include <hpet.h>
 #include <interrupts/interrupts.h>
+#include <kernel.h>
 #include <keyboard.h>
 #include <kstage1.h>
 #include <math.h>
 #include <memory/common.h>
 #include <memory/heap.h>
-#include <memory/virtual_memory_manager.h>
 #include <memory/physical_memory_manager.h>
+#include <memory/virtual_memory_manager.h>
 #include <pit.h>
 #include <rtc.h>
 #include <string.h>
@@ -123,7 +122,7 @@ extern "C" void kmain(BootInfo* bInfo) {
     Keyboard::gText.set_cursor_from_pixel_position(drawPosition);
 
     u32 debugInfoX = gRend.Target->PixelWidth - 300;
-    while (true) {
+    for (;;) {
         drawPosition = {debugInfoX, 0};
         // PRINT REAL TIME
         gRTC.update_data();
@@ -146,8 +145,11 @@ extern "C" void kmain(BootInfo* bInfo) {
         print_memory_info(drawPosition);
         // UPDATE TOP RIGHT CORNER OF SCREEN.
         gRend.swap({debugInfoX, 0}, {80000, 400});
+
+        // Idle until next interrupt.
+        asm volatile ("hlt");
     }
+
     // HALT LOOP (KERNEL INACTIVE).
-    while (true)
-        asm ("hlt");
+    for (;;) asm volatile ("hlt");
 }
