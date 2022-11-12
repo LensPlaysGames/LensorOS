@@ -99,19 +99,20 @@ extern "C" void kmain(BootInfo* bInfo) {
 
     u32 debugInfoX = gRend.Target->PixelWidth - 300;
     for (;;) {
+        //std::print("DRAWING\n");
         drawPosition = {debugInfoX, 0};
         // PRINT REAL TIME
         gRTC.update_data();
         print_now(drawPosition);
         gRend.crlf(drawPosition, debugInfoX);
         // PRINT PIT ELAPSED TIME.
-        gRend.puts(drawPosition, std::format("PIT Elapsed: {}", gPIT.seconds_since_boot()));
+        gRend.puts(drawPosition, std::format("PIT Elapsed: {:.3}", gPIT.seconds_since_boot()));
         gRend.crlf(drawPosition, debugInfoX);
         // PRINT RTC ELAPSED TIME.
-        gRend.puts(drawPosition, std::format("RTC Elapsed: {}", gRTC.seconds_since_boot()));
+        gRend.puts(drawPosition, std::format("RTC Elapsed: {:.3}", gRTC.seconds_since_boot()));
         gRend.crlf(drawPosition, debugInfoX);
         // PRINT HPET ELAPSED TIME.
-        gRend.puts(drawPosition, std::format("HPET Elapsed: {}", gHPET.seconds()));
+        gRend.puts(drawPosition, std::format("HPET Elapsed: {:.3}", gHPET.seconds()));
         gRend.crlf(drawPosition, debugInfoX);
         // PRINT MEMORY INFO.
         gRend.crlf(drawPosition, debugInfoX);
@@ -120,7 +121,8 @@ extern "C" void kmain(BootInfo* bInfo) {
         gRend.swap({debugInfoX, 0}, {80000, 400});
 
         // Idle until next interrupt.
-        asm volatile ("hlt");
+        // FIXME: This doesn’t work because it causes the keyboard to become unresponsive.
+        //asm volatile ("hlt");
     }
 
     // HALT LOOP (KERNEL INACTIVE).

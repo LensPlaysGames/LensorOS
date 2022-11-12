@@ -19,6 +19,7 @@
 #ifndef _LENSOROS_STRING_
 #define _LENSOROS_STRING_
 
+#include "algorithm"
 
 #include <bits/decls.h>
 #include <cmath>
@@ -646,7 +647,7 @@ __forceinline basic_string<_Char> __to_string(_Int __i, uint8_t __base = 10, boo
 }
 
 template <typename _Char, floating_point _Float>
-__forceinline basic_string<_Char> __to_string(_Float __f) {
+__forceinline basic_string<_Char> __to_string(_Float __f, size_t __prec = 16) {
 #ifdef __SSE__
     basic_string<_Char> __result;
 
@@ -663,12 +664,14 @@ __forceinline basic_string<_Char> __to_string(_Float __f) {
     /// Append the integer part.
     __result += __to_string<_Char>(int64_t(__f));
     __f -= static_cast<int64_t>(__f);
+    __prec = std::min(__prec, size_t(16));
 
     /// Append the fractional part.
     /// TODO: Find a better way to do this.
-    if (__f < -1e-7 || __f > 1e-7) {
+    if (__prec && (__f < -1e-7 || __f > 1e-7)) {
         __result += _Char('.');
-        while (__f < -1e-7 || __f > 1e-7) {
+
+        while (__prec-- && (__f < -1e-7 || __f > 1e-7)) {
             __f *= 10;
             __result += _Char('0' + static_cast<int64_t>(__f));
             __f -= static_cast<int64_t>(__f);

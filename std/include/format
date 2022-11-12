@@ -610,15 +610,23 @@ struct formatter<_Type, _Char> {
 /// Floating-point formatter.
 template <floating_point _Type, typename _Char>
 struct formatter<_Type, _Char> {
+    size_t precision;
+
     constexpr auto parse(basic_format_parse_context<_Char>& __ctx) {
-        if (*__ctx.begin() != '}') { __detail::__invalid_format_string(); }
-        return __ctx.begin();
+        auto __beg = __ctx.begin();
+        if (*__beg == '.') {
+            __beg++;
+            if (isdigit(*__beg)) precision = __detail::__parse_number(__beg);
+            else __detail::__throw_format_error("Invalid precision in floating-point formatter.");
+        }
+        if (*__beg != '}') __detail::__invalid_format_string();
+        return __beg;
     }
 
     template <typename _Ctx>
     auto format(_Type __val, _Ctx& __ctx) {
         auto __out = __ctx.out();
-        __out.append(__to_string<_Char>(__val));
+        __out.append(__to_string<_Char>(__val, precision));
         return __out;
     }
 };
