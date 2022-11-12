@@ -137,7 +137,7 @@ add_custom_target(
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crt0.s.obj" "${ROOT}/lib/crt0.o"
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crti.s.obj" "${ROOT}/lib/crti.o"
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crtn.s.obj" "${ROOT}/lib/crtn.o"
-  COMMAND ${CMAKE_COMMAND} -P "${PROJECT_SOURCE_DIR}/install-headers.cmake"
+  COMMAND "SOURCE_DIR=${PROJECT_SOURCE_DIR}" ${CMAKE_COMMAND} -P "${PROJECT_SOURCE_DIR}/install-headers.cmake"
   COMMENT "Installing LibC headers"
 
   DEPENDS c
