@@ -23,6 +23,7 @@
 #include "storage/device_drivers/dbgout.h"
 
 #include <format>
+#include <string>
 
 #include <elf.h>
 #include <file.h>
@@ -107,7 +108,8 @@ namespace ELF {
 #endif /* #ifndef DEBUG_ELF */
     }
 
-    inline bool CreateUserspaceElf64Process(VFS& vfs, ProcessFileDescriptor fd) {
+    inline bool CreateUserspaceElf64Process(ProcessFileDescriptor fd) {
+        VFS& vfs = SYSTEM->virtual_filesystem();
         DBGMSG("Attempting to add userspace process from file descriptor {}\n", fd);
         Elf64_Ehdr elfHeader;
         bool read = vfs.read(fd, reinterpret_cast<u8*>(&elfHeader), sizeof(Elf64_Ehdr));
@@ -230,7 +232,7 @@ namespace ELF {
         }
         u64 newStackTop = newStackBottom + UserProcessStackSize;
         for (u64 t = newStackBottom; t < newStackTop; t += PAGE_SIZE)
-            map(newPageTable, (void*)t, (void*)t, stack_flags);
+            Memory::map(newPageTable, (void*)t, (void*)t, stack_flags);
 
         // Keep track of stack, as it is a memory region that remains
         // for the duration of the process, and should only be freed
@@ -238,6 +240,53 @@ namespace ELF {
         process->add_memory_region((void*)newStackBottom,
                                    (void*)newStackBottom,
                                    UserProcessStackSize);
+
+        int argc = 1;
+        std::vector<std::string_view> argv;
+        argv.push_back("test");
+        std::vector<char*> argv_addresses;
+
+        // Copy arguments contents to the stack, keeping track of addresses.
+        // TODO: Max argument length?
+        char* stackIt = (char*)(newStackTop);
+        for (auto str : argv) {
+            usz size = str.size() + 1;
+            char *address = stackIt - size;
+            argv_addresses.push_back(address);
+            memcpy((void*)address, str.data(), str.size());
+            *(stackIt - 1) = '\0';
+            stackIt = address;
+        }
+
+        // Write addresses of arguments into argv, keep track of address
+        stackIt -= sizeof(char*);
+        memset(stackIt, 0, sizeof(char*));
+
+        stackIt -= (1 + argv_addresses.size()) * sizeof(char*);
+        char *argvAddress = stackIt;
+        char *argvAddressIt = stackIt;
+
+        for (auto address : argv_addresses) {
+            memcpy(argvAddressIt, address, sizeof(char*));
+            argvAddressIt += sizeof(char*);
+        }
+        memset(argvAddressIt, 0, sizeof(char*));
+
+
+        std::print("[ELF] argvAddress={}\n", (void*)argvAddress);
+        for (auto arg : argv_addresses) {
+            std::print("    {}\n", (void*)arg);
+            std::print("    {}\n", (const char*)arg);
+        }
+
+
+        // Push argv
+        stackIt -= sizeof(char *);
+        memcpy(stackIt, argvAddress, sizeof(char *));
+        // Push argc
+        stackIt -= sizeof(int);
+        memcpy(stackIt, &argc, sizeof(int));
+
 
         // Open stdin, stdout, and stderr.
 
@@ -257,9 +306,9 @@ namespace ELF {
         // New page map.
         process->CR3 = newPageTable;
         // New stack.
-        process->CPU.RBP = newStackTop;
-        process->CPU.RSP = newStackTop;
-        process->CPU.Frame.sp = newStackTop;
+        process->CPU.RBP = (u64)(stackIt);
+        process->CPU.RSP = (u64)(stackIt);
+        process->CPU.Frame.sp = (u64)(stackIt);
         // Entry point.
         process->CPU.Frame.ip = elfHeader.e_entry;
         // Ring 3 GDT segment selectors.

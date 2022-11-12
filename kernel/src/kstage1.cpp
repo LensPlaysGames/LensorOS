@@ -527,7 +527,7 @@ void kstage1(BootInfo* bInfo) {
         vfs.read(fds.Process, reinterpret_cast<u8*>(tmpBuffer), 11);
         std::print("{}\n", std::string_view{tmpBuffer, 11});
 
-        if (fds.valid() && ELF::CreateUserspaceElf64Process(vfs, fds.Process)) {
+        if (fds.valid() && ELF::CreateUserspaceElf64Process(fds.Process)) {
             std::print("Successfully created new process from `/fs0/blazeit`\n");
             std::print("Closing FileDescriptor {}\n", fds.Process);
             vfs.close(fds.Process);
@@ -539,7 +539,7 @@ void kstage1(BootInfo* bInfo) {
         std::print("Opening {} with VFS\n", programTwoFilePath);
         fds = vfs.open(programTwoFilePath);
         std::print("  Got FileDescriptors. {}, {}\n", fds.Process, fds.Global);
-        if (fds.valid() && ELF::CreateUserspaceElf64Process(vfs, fds.Process)) {
+        if (fds.valid() && ELF::CreateUserspaceElf64Process(fds.Process)) {
             std::print("Sucessfully created new process from `/fs0/stdout`\n");
             vfs.close(fds.Process);
         }

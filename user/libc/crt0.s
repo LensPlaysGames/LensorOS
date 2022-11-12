@@ -25,6 +25,9 @@ _start:
     pushq %rbp
     movq %rsp, %rbp
 
+    movl 16(%rbp), %edi
+    movq 20(%rbp), %rsi
+    movq $0, %rdx
     call __libc_run_main
 
     ;;# Call exit with return status from main as argument

@@ -20,8 +20,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
-int main() {
-  const char *message = "Hello, friends :^)\r";
-  puts(message);
+int main(int argc, const char **argv) {
+  //const char *message = "Hello, friends :^)\r";
+  //puts(message);
+  puts(argv[0]);
   return 0;
 }
