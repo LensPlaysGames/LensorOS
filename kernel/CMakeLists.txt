@@ -378,8 +378,8 @@ if ( QEMU_PROGRAM )
     -cpu qemu64
     # Multiple processors (commented until utilized).
     #-smp 8,sockets=2,cores=2,threads=2,maxcpus=8
-    # One thousand megabytes of RAM.
-    -m 1000M
+    # One hundred megabytes of RAM.
+    -m 100M
     # Use local time as real time clock base.
     -rtc base=localtime,clock=host,driftfix=none
     # This is deprecated, but we'll use it,
