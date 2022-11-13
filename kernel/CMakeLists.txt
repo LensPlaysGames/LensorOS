@@ -382,9 +382,6 @@ if ( QEMU_PROGRAM )
     -m 100M
     # Use local time as real time clock base.
     -rtc base=localtime,clock=host,driftfix=none
-    # This is deprecated, but we'll use it,
-    # until we write an actual sound driver.
-#    -soundhw pcspk
     # No networking drivers yet.
     -net none
     # Show extra information regarding triple faults.
@@ -393,6 +390,17 @@ if ( QEMU_PROGRAM )
     # This allows debug messages to reach the terminal.
     -serial stdio
   )
+  if ( CMAKE_HOST_WIN32 )
+    list( APPEND QEMU_FLAGS
+      -audiodev dsound,id=audio_device
+      -machine pcspk-audiodev=audio_device
+    )
+  else()
+    list( APPEND QEMU_FLAGS
+      -audiodev oss,id=audio_device
+      -machine pcspk-audiodev=audio_device
+    )
+  endif()
   if( QEMU_DEBUG )
     list( APPEND QEMU_FLAGS -S -s )
   endif()

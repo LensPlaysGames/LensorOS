@@ -17,8 +17,8 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "format"
-#include "string_view"
+#include <format>
+#include <string_view>
 
 #include <assert.h>
 #include <bits/abi.h>
@@ -39,6 +39,7 @@
 ///  Extern symbols.
 /// ===========================================================================
 __BEGIN_DECLS__
+
 using init_cb = void (*)();
 
 /// Global constructors and destructors. These symbols are provided by the linker.
@@ -50,6 +51,7 @@ extern init_cb __fini_array_start[];
 extern init_cb __fini_array_end[];
 
 __bool __in_quick_exit = false;
+
 __END_DECLS__
 
 /// ===========================================================================

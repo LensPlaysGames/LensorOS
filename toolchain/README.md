@@ -173,10 +173,10 @@ Next, from within the Binutils build directory, run the configure script supplie
 cd build-binutils
 ../binutils-2.38/configure \
     --target=$TARGET \
-	--prefix="$PREFIX" \
-	--with-sysroot="$SYSROOT" \
-	--disable-nls \
-	--disable-werror
+    --prefix="$PREFIX" \
+    --with-sysroot="$SYSROOT" \
+    --disable-nls \
+    --disable-werror
 ```
 
 Flags:
@@ -203,10 +203,10 @@ mkdir -p build-gcc
 cd build-gcc
 ../gcc-11.2.0/configure \
     --target=$TARGET \
-	--prefix="$PREFIX" \
-	--disable-nls \
-	--enable-languages=c,c++ \
-	--with-sysroot="$SYSROOT"
+    --prefix="$PREFIX" \
+    --disable-nls \
+    --enable-languages=c,c++ \
+    --with-sysroot="$SYSROOT"
 ```
 
 This should generate a Makefile, among other things, that will be used to build GCC in the next step.
@@ -234,3 +234,26 @@ Next, we build `libgcc` for our target. `libgcc` is a very stripped standard C l
 Finally, we install both the new GCC for our host and `libgcc` for our target. With this complete, you should have a working cross compiler that will generate ELF executables for LensorOS.
 
 If you run into any issues, please let me know/make an issue on GitHub. I'll do my best to help you out.
+
+## Errors Encountered
+
+- `multiple definition of 'memcpy'`
+
+Build Platform: Linux
+Host Platform: Windows 10
+Target Platform: LensorOS
+
+``` shell
+FAILED: blazeit
+cmd.exe /C "cd . && D:\Programming\strema\2022\LensorOS\toolchain\wincross\bin\x86_64-lensor-gcc.exe --sysroot=D:/Programming/strema/2022/LensorOS/kernel/../root   CMakeFiles/blazeit.dir/main.c.obj -o blazeit   && cd ."
+d:/programming/strema/2022/lensoros/toolchain/wincross/bin/../lib/gcc/x86_64-lensor/12.1.0/../../../../x86_64-lensor/bin/ld.exe: d:/programming/strema/2022/lensoros/toolchain/wincross/bin/../lib/gcc/x86_64-lensor/12.1.0/crtend.o: in function `memcpy':
+crtstuff.c:(.text+0x0): multiple definition of `memcpy'; d:/programming/strema/2022/lensoros/toolchain/wincross/bin/../lib/gcc/x86_64-lensor/12.1.0/crtbegin.o:crtstuff.c:(.text+0x0): first defined here
+```
+
+The problem appears to be that the windows version of `crtbegin.o` provided by the compiler has it's own `memcpy` defined, and it also inserts this object file automatically into every program compiled, because Windows is Windows and of course it does. To fix this, you must manually remove the `memcpy` definition from the object file using `objcopy`, shown just below.
+
+Solution (from toolchain directory):
+
+``` shell
+wincross\bin\x86_64-lensor-objcopy.exe -N memcpy wincross/lib/gcc/12.1.0/crtbegin.o
+```
