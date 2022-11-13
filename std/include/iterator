@@ -54,8 +54,8 @@ public:
     constexpr _ReverseIterator& operator+=(size_t __n) { __it -= __n; return *this; }
     constexpr _ReverseIterator& operator-=(size_t __n) { __it += __n; return *this; }
 
-    constexpr _T operator->() { return __it; }
-    constexpr _T operator*() { return *__it; }
+    constexpr std::remove_pointer_t<_T> operator->() { return __it; }
+    constexpr std::remove_pointer_t<_T> operator*() { return *__it; }
 
     constexpr bool operator==(const _ReverseIterator& __other) const { return __it == __other.__it; }
     constexpr bool operator!=(const _ReverseIterator& __other) const { return __it != __other.__it; }
