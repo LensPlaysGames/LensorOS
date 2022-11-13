@@ -38,21 +38,6 @@ project(LensorOS_libc VERSION 0.0.1 LANGUAGES ASM CXX)
 # This gives language servers like `clangd` all the info they need.
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
-# Check if Enhanced REP MOVSB is supported using asm.
-# TODO: Figure out how to check this on Windows.
-if(NOT WIN32)
-    message(STATUS "Checking if Enhanced REP MOVSB is supported...")
-    execute_process(
-        COMMAND grep -q "erms" /proc/cpuinfo
-        RESULT_VARIABLE ERMS_SUPPORTED
-    )
-
-    if(ERMS_SUPPORTED EQUAL 0)
-        message(STATUS "Enhanced REP MOVSB is supported.")
-        add_compile_definitions(_LIBC_HAVE_ERMS)
-    endif()
-endif()
-
 add_library(c)
 
 target_include_directories(
@@ -130,16 +115,16 @@ set(ROOT "${PROJECT_SOURCE_DIR}/../../root")
 set(STD "${PROJECT_SOURCE_DIR}/../../std")
 
 if (NOT LENSOR_OS_LIBC_BUILD_HOST)
-add_custom_target(
-  install-libc ALL
+  add_custom_target(
+    install-libc ALL
 
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:c> "${ROOT}/lib"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crt0.s.obj" "${ROOT}/lib/crt0.o"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crti.s.obj" "${ROOT}/lib/crti.o"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crtn.s.obj" "${ROOT}/lib/crtn.o"
-  COMMAND "SOURCE_DIR=${PROJECT_SOURCE_DIR}" ${CMAKE_COMMAND} -P "${PROJECT_SOURCE_DIR}/install-headers.cmake"
-  COMMENT "Installing LibC headers"
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:c> "${ROOT}/lib"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crt0.s.obj" "${ROOT}/lib/crt0.o"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crti.s.obj" "${ROOT}/lib/crti.o"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crtn.s.obj" "${ROOT}/lib/crtn.o"
+    COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}" -P "${PROJECT_SOURCE_DIR}/install-headers.cmake"
+    COMMENT "Installing LibC headers"
 
-  DEPENDS c
-)
+    DEPENDS c
+  )
 endif()

@@ -22,11 +22,10 @@
 
 #include "errno.h"
 
-#ifdef _LIBC_HAVE_ERMS
-bool __libc_have_erms = true;
-#else
+
+// TODO: Set this at runtime initialization based on cpuid bits or some
+// other way of accessing the kernel CPU data.
 bool __libc_have_erms = false;
-#endif
 
 _PushIgnoreWarning("-Wunused-parameter")
 
