@@ -108,7 +108,7 @@ namespace ELF {
 #endif /* #ifndef DEBUG_ELF */
     }
 
-    inline bool CreateUserspaceElf64Process(ProcessFileDescriptor fd, std::vector<std::string_view> args = {}) {
+    inline bool CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::string_view>& args = {}) {
         VFS& vfs = SYSTEM->virtual_filesystem();
         DBGMSG("Attempting to add userspace process from file descriptor {}\n", fd);
         Elf64_Ehdr elfHeader;
