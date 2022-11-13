@@ -475,6 +475,10 @@ struct formatter<const _Char*, _Char> : formatter<basic_string_view<_Char>, _Cha
     }
 };
 
+/// char* formatter.
+template <typename _Char>
+struct formatter<_Char*, _Char> : formatter<const _Char*, _Char> {};
+
 /// Char formatter.
 template <typename _Char>
 struct formatter<_Char, _Char> {

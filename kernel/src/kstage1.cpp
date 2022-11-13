@@ -535,11 +535,17 @@ void kstage1(BootInfo* bInfo) {
             vfs.print_debug();
         }
         // Another userspace program
+        std::vector<std::string_view> argv;
+        argv.push_back("test");
+        argv.push_back("test2");
+        argv.push_back("test3");
+        argv.push_back("test4");
+
         constexpr const char* programTwoFilePath = "/fs0/stdout";
         std::print("Opening {} with VFS\n", programTwoFilePath);
         fds = vfs.open(programTwoFilePath);
         std::print("  Got FileDescriptors. {}, {}\n", fds.Process, fds.Global);
-        if (fds.valid() && ELF::CreateUserspaceElf64Process(fds.Process)) {
+        if (fds.valid() && ELF::CreateUserspaceElf64Process(fds.Process, argv)) {
             std::print("Sucessfully created new process from `/fs0/stdout`\n");
             vfs.close(fds.Process);
         }

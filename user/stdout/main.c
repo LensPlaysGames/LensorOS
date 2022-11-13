@@ -23,6 +23,6 @@
 int main(int argc, const char **argv) {
   //const char *message = "Hello, friends :^)\r";
   //puts(message);
-  puts(argv[0]);
+  for (int i = 0; i < argc; i++) puts(argv[i]);
   return 0;
 }

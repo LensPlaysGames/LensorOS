@@ -39,7 +39,7 @@
 #include <virtual_filesystem.h>
 
 // Uncomment the following directive for extra debug output.
-#define DEBUG_ELF
+//#define DEBUG_ELF
 
 #ifdef DEBUG_ELF
 #   define DBGMSG(...) std::print(__VA_ARGS__)
@@ -108,7 +108,7 @@ namespace ELF {
 #endif /* #ifndef DEBUG_ELF */
     }
 
-    inline bool CreateUserspaceElf64Process(ProcessFileDescriptor fd) {
+    inline bool CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::string_view>& args = {}) {
         VFS& vfs = SYSTEM->virtual_filesystem();
         DBGMSG("Attempting to add userspace process from file descriptor {}\n", fd);
         Elf64_Ehdr elfHeader;
@@ -230,8 +230,8 @@ namespace ELF {
             std::print("[ELF]: Couldn't allocate stack for new userspace process\n");
             return false;
         }
-        u64 newStackTop = newStackBottom + UserProcessStackSize;
-        for (u64 t = newStackBottom; t < newStackTop; t += PAGE_SIZE)
+        u64 stack_top_address = newStackBottom + UserProcessStackSize;
+        for (u64 t = newStackBottom; t < stack_top_address; t += PAGE_SIZE)
             Memory::map(newPageTable, (void*)t, (void*)t, stack_flags);
 
         // Keep track of stack, as it is a memory region that remains
@@ -241,55 +241,53 @@ namespace ELF {
                                    (void*)newStackBottom,
                                    UserProcessStackSize);
 
-        int argc = 1;
-        std::vector<std::string_view> argv;
-        argv.push_back("test");
-        std::vector<char*> argv_addresses;
+        // TODO: Max argument length?
 
         // Copy arguments contents to the stack, keeping track of addresses.
-        // TODO: Max argument length?
-        char* stackIt = (char*)(newStackTop);
-        for (auto str : argv) {
+        std::vector<u64> argv_addresses;
+        for (auto str : args) {
             usz size = str.size() + 1;
-            char *address = stackIt - size;
-            argv_addresses.push_back(address);
-            memcpy((void*)address, str.data(), str.size());
-            *(stackIt - 1) = '\0';
-            stackIt = address;
+            stack_top_address -= size;
+            argv_addresses.push_back(stack_top_address);
+            memcpy(reinterpret_cast<void*>(stack_top_address), str.data(), str.size());
+            reinterpret_cast<char*>(stack_top_address)[str.size()] = 0;
         }
 
-        // Write addresses of arguments into argv, keep track of address
-        stackIt -= sizeof(char*);
-        memset(stackIt, 0, sizeof(char*));
+        // Write null pointer to end of argv.
+        stack_top_address -= sizeof(char*);
+        *reinterpret_cast<char**>(stack_top_address) = nullptr;
 
-        stackIt -= (1 + argv_addresses.size()) * sizeof(char*);
-        char *argvAddress = stackIt;
-        char *argvAddressIt = stackIt;
-
-        for (auto address : argv_addresses) {
-            memcpy(argvAddressIt, address, sizeof(char*));
-            argvAddressIt += sizeof(char*);
-        }
-        memset(argvAddressIt, 0, sizeof(char*));
-
-
-        std::print("[ELF] argvAddress={}\n", (void*)argvAddress);
-        for (auto arg : argv_addresses) {
-            std::print("    {}\n", (void*)arg);
-            std::print("    {}\n", (const char*)arg);
+        // Write argv addresses to the stack.
+        for (auto it = argv_addresses.rbegin(); it != argv_addresses.rend(); ++it) {
+            stack_top_address -= sizeof(char*);
+            *reinterpret_cast<u64*>(stack_top_address) = *it;
         }
 
+        // Write argc to the stack.
+        //
+        // Even though argc is an int in C, the ABI requires that it be
+        // pushed as a 64-bit value.
+        stack_top_address -= sizeof(size_t);
+        *reinterpret_cast<size_t*>(stack_top_address) = args.size();
 
-        // Push argv
-        stackIt -= sizeof(char *);
-        memcpy(stackIt, argvAddress, sizeof(char *));
-        // Push argc
-        stackIt -= sizeof(int);
-        memcpy(stackIt, &argc, sizeof(int));
+#ifdef DEBUG_ELF
+        auto _argc = *reinterpret_cast<int*>(stack_top_address);
+        auto _argv = reinterpret_cast<char**>(stack_top_address + sizeof(size_t));
 
+        std::print("[ELF] Program Arguments \n"
+                   "          stack: {:#016x}\n"
+                   "          argc: {}\n"
+                   "          argv: {}\n"
+                   , stack_top_address
+                   , _argc
+                   , (void*)_argv);
+
+        for (int i = 0; i < _argc; ++i) {
+            std::print("argv[{}]: {}\n", i, _argv[i]);
+        }
+#endif
 
         // Open stdin, stdout, and stderr.
-
         auto meta = std::make_shared<FileMetadata>("stdout", sdd(vfs.StdoutDriver), 0, nullptr);
         vfs.add_file(meta, process);
         vfs.add_file(meta, process);
@@ -306,9 +304,9 @@ namespace ELF {
         // New page map.
         process->CR3 = newPageTable;
         // New stack.
-        process->CPU.RBP = (u64)(stackIt);
-        process->CPU.RSP = (u64)(stackIt);
-        process->CPU.Frame.sp = (u64)(stackIt);
+        process->CPU.RBP = (u64)(stack_top_address);
+        process->CPU.RSP = (u64)(stack_top_address);
+        process->CPU.Frame.sp = (u64)(stack_top_address);
         // Entry point.
         process->CPU.Frame.ip = elfHeader.e_entry;
         // Ring 3 GDT segment selectors.
