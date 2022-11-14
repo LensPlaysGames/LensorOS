@@ -27,7 +27,7 @@
 #include <memory/virtual_memory_manager.h>
 #include <pit.h>
 #include <scheduler.h>
-#include <virtual_filesystem.h>
+#include <vfs_forward.h>
 
 /// External symbol definitions for `scheduler.asm`
 void(*scheduler_switch_process)(CPUState*)
@@ -102,10 +102,14 @@ namespace Scheduler {
                        );
             std::print("      File Descriptors:\n");
             for (const auto& [procfd, fd] : process.FileDescriptors.pairs()) {
-                std::print("        {} -> {}\n", procfd, fd);
+                std::print("        {} -> {}\n", s64(procfd), s64(fd));
             }
         });
         std::print("\n");
+    }
+
+    Process* last_process() {
+        return ProcessQueue->tail()->value();
     }
 
     void add_process(Process* process) {

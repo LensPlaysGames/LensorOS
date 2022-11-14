@@ -24,11 +24,14 @@
 #include <format>
 #include <io.h>
 #include <keyboard.h>
+#include <keyboard_scancode_translation.h>
 #include <mouse.h>
 #include <panic.h>
 #include <pit.h>
 #include <rtc.h>
 #include <uart.h>
+#include <system.h>
+#include <vfs_forward.h>
 
 void enable_interrupt(u8 irq) {
     if (irq > 15)
@@ -102,9 +105,29 @@ void system_timer_handler(InterruptFrame* frame) {
 /// IRQ1: PS/2 KEYBOARD
 __attribute__((interrupt))
 void keyboard_handler(InterruptFrame* frame) {
-    // TODO: Write key input to stdin of SHELL process.
-    // TODO: Register a key input in the event system...
-    Keyboard::gText.handle_scancode(in8(0x60));
+    u8 scancode = in8(0x60);
+    // Kernel text renderer silliness.
+    Keyboard::gText.handle_scancode(scancode);
+    // Send user input to userspace!
+    Process* init = SYSTEM->init_process();
+    if (init) {
+        // TODO: Support other keyboard scancode translation layouts.
+        unsigned char character = Keyboard::QWERTY::Translate
+            (scancode,
+             Keyboard::gText.State.LeftShift
+             || Keyboard::gText.State.RightShift
+             || Keyboard::gText.State.CapsLock
+             );
+        if (character) {
+            // Write translated character to stdin of non-current process.
+            auto fd = static_cast<ProcFD>(0);
+            auto sysfd = init->FileDescriptors[fd];
+            auto f = SYSTEM->virtual_filesystem().file(*sysfd);
+            if (f) {
+                f->device_driver()->write(f.get(), 0, sizeof(char), &character);
+            }
+        }
+    }
     end_of_interrupt(1);
 }
 
@@ -244,7 +267,7 @@ void stack_segment_fault_handler(InterruptFrameError* frame) {
         std::print("  IDT");
     else if (table == 0b10)
         std::print("  LDT");
-    
+
     std::print(" Selector Index: {:x}\n", (frame->error & 0b1111'1111'1111'1000) >> 3);
 }
 
@@ -256,7 +279,7 @@ void general_protection_fault_handler(InterruptFrameError* frame) {
 
     if (frame->error & 0b1)
         std::print("  External\n");
-    
+
     u8 table = (frame->error & 0b110) >> 1;
     if (table == 0b00)
         std::print("  GDT");
@@ -264,7 +287,7 @@ void general_protection_fault_handler(InterruptFrameError* frame) {
         std::print("  IDT");
     else if (table == 0b10)
         std::print("  LDT");
-    
+
     std::print(" Selector Index: {:x}\n", (frame->error & 0b1111'1111'1111'1000) >> 3);
     while (true)
         asm ("hlt");

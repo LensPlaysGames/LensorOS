@@ -27,6 +27,7 @@
 #include <integers.h>
 #include <linked_list.h>
 #include <memory/physical_memory_manager.h>
+#include <scheduler.h>
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
 #include <virtual_filesystem.h>
@@ -113,6 +114,16 @@ struct System {
         CPU = cpu;
     }
 
+    /// NOTE: The INIT process, when set, is expected to NEVER CLOSE.
+    /// If closing the init process, set this to NULL!
+    void set_init(Process* process) {
+        InitProcess = process;
+    }
+
+    Process* init_process() {
+        return InitProcess;
+    }
+
     void add_device(std::shared_ptr<SystemDevice>&& d) { Devices.push_back(std::move(d)); }
 
     template <typename DeviceType, typename ...Args>
@@ -127,7 +138,7 @@ struct System {
         for (auto& dev : Devices)
             if (dev->major() == major && dev->minor() == minor)
                 return dev;
-        return nullptr;
+        return {};
     }
 
     void print() {
@@ -169,6 +180,7 @@ struct System {
 private:
     CPUDescription CPU;
     VFS VirtualFilesystem;
+    Process* InitProcess = nullptr;
 };
 
 extern System* SYSTEM;

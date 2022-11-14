@@ -17,30 +17,22 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <stdio.h>
-#include <unistd.h>
+#include <storage/device_drivers/input.h>
 
-int main(int argc, const char **argv) {
-  //const char *message = "Hello, friends :^)";
-  //puts(message);
-  for (int i = 0; i < argc; i++) puts(argv[i]);
+#include <storage/file_metadata.h>
+#include <system.h>
+#include <virtual_filesystem.h>
 
-  for (;;) {
-    // Get character from standard input.
-    int c = getchar();
-    // Skip error return value.
-    if (c == EOF) {
-      // TODO: Wait/waste some time so we don't choke the system just
-      // spinning.
-      continue;
-    } else if (c == 'q') {
-      puts("Quitting.");
-      break;
+#include <string_view>
+#include <memory>
+
+std::shared_ptr<FileMetadata> InputDriver::open(std::string_view path) {
+    InputBuffer* input = nullptr;
+    if (FreeInputBuffers.empty()) {
+        input = new InputBuffer();
+    } else {
+        input = FreeInputBuffers.back();
+        FreeInputBuffers.pop_back();
     }
-    // Echo character to standard out.
-    putc((char)c, stdout);
-    fflush(stdout);
-  }
-
-  return 0;
+    return std::make_shared<FileMetadata>(path, sdd(SYSTEM->virtual_filesystem().StdinDriver), INPUT_BUFSZ, input);
 }

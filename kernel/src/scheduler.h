@@ -146,6 +146,8 @@ namespace Scheduler {
     /// Add an existing process to the list of processes.
     void add_process(Process*);
 
+    Process* last_process();
+
     /// remove the process with PID list of processes.
     bool remove_process(pid_t);
 

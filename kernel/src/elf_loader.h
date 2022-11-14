@@ -20,8 +20,6 @@
 #ifndef LENSOR_OS_ELF_LOADER_H
 #define LENSOR_OS_ELF_LOADER_H
 
-#include "storage/device_drivers/dbgout.h"
-
 #include <format>
 #include <string>
 
@@ -35,6 +33,7 @@
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 #include <scheduler.h>
+#include <system.h>
 #include <tss.h>
 #include <virtual_filesystem.h>
 
@@ -287,11 +286,12 @@ namespace ELF {
         }
 #endif
 
-        // Open stdin, stdout, and stderr.
-        auto meta = std::make_shared<FileMetadata>("stdout", sdd(vfs.StdoutDriver), 0, nullptr);
-        vfs.add_file(meta, process);
-        vfs.add_file(meta, process);
-        vfs.add_file(std::move(meta), process);
+        // Open stdin.
+        vfs.add_file(vfs.StdinDriver->open("stdin"), process);
+        // Open stdout and stderr
+        auto outmeta = std::make_shared<FileMetadata>("stdout", sdd(vfs.StdoutDriver), 0, nullptr);
+        vfs.add_file(outmeta, process);
+        vfs.add_file(std::move(outmeta), process);
         vfs.print_debug();
 
         std::print("[ELF] ProcFds:\n");

@@ -23,18 +23,20 @@
 
 #include <file.h>
 #include <linked_list.h>
-#include <memory>
-#include <extensions>
-#include <vector>
-#include <format>
 #include <storage/file_metadata.h>
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
 #include <storage/device_drivers/dbgout.h>
+#include <storage/device_drivers/input.h>
 #include <storage/device_drivers/pipe.h>
-#include <string>
 #include <scheduler.h>
 #include <vfs_forward.h>
+
+#include <memory>
+#include <extensions>
+#include <vector>
+#include <format>
+#include <string>
 
 namespace std {
 template <>
@@ -79,12 +81,14 @@ struct FileDescriptors {
 };
 
 struct VFS {
+    std::shared_ptr<InputDriver> StdinDriver;
     std::shared_ptr<DbgOutDriver> StdoutDriver;
     std::shared_ptr<PipeDriver> PipesDriver;
 
     VFS() {
-        StdoutDriver = std::make_shared<DbgOutDriver>();
-        PipesDriver = std::make_shared<PipeDriver>();
+        StdinDriver    = std::make_shared<InputDriver>();
+        StdoutDriver   = std::make_shared<DbgOutDriver>();
+        PipesDriver    = std::make_shared<PipeDriver>();
     }
 
     void mount(std::string path, std::shared_ptr<FilesystemDriver>&& fs) {
@@ -123,13 +127,14 @@ struct VFS {
     /// Files are stored as shared_ptrs to support dup() more easily.
     FileDescriptors add_file(std::shared_ptr<FileMetadata>, Process* proc = nullptr);
 
+    auto procfd_to_fd(ProcFD procfd) const -> SysFD;
+    auto file(ProcFD fd) -> std::shared_ptr<FileMetadata>;
+    auto file(SysFD fd) -> std::shared_ptr<FileMetadata>;
+
 private:
     std::sparse_vector<std::shared_ptr<FileMetadata>, nullptr, SysFD> Files;
     std::vector<MountPoint> Mounts;
 
-    auto procfd_to_fd(ProcFD procfd) const -> SysFD;
-    auto file(ProcFD fd) -> std::shared_ptr<FileMetadata>;
-    auto file(SysFD fd) -> std::shared_ptr<FileMetadata>;
     void free_fd(SysFD fd, ProcFD procfd);
     bool valid(ProcFD procfd) const;
     bool valid(SysFD fd) const;

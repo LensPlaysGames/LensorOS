@@ -54,6 +54,8 @@
 #include <tss.h>
 #include <uart.h>
 
+#include <format>
+
 u8 idt_storage[0x1000];
 void prepare_interrupts() {
     // REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
@@ -549,6 +551,8 @@ void kstage1(BootInfo* bInfo) {
             std::print("Sucessfully created new process from `/fs0/stdout`\n");
             vfs.close(fds.Process);
         }
+        // Get last process in queue from scheduler.
+        SYSTEM->set_init(Scheduler::last_process());
     }
 
     // Initialize High Precision Event Timer.

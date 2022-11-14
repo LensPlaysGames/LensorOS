@@ -20,6 +20,9 @@
 #ifndef LENSOR_OS_STORAGE_DEVICE_DRIVER_H
 #define LENSOR_OS_STORAGE_DEVICE_DRIVER_H
 
+#include <string_view>
+#include <memory>
+
 #include <integers.h>
 #include <pure_virtuals.h>
 
