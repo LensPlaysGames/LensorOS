@@ -78,7 +78,7 @@ cmake --build kernel/bld --target <name of target>
 10. Navigate to `Storage` within the list on the left.
     1. Right click the default controller (`IDE`), and select `Remove Controller`.
     2. Right click the area labeled `Storage Devices`, and select `AHCI (SATA)`.
-    3. Richt click the new AHCI storage controller, and select either `Optical Drive` or `Hard Disk` depending on whether you'd like to boot from the `.iso` or `.bin`, respectively.
+    3. Right click the new AHCI storage controller, and select either `Optical Drive` or `Hard Disk` depending on whether you'd like to boot from the `.iso` or `.bin`, respectively.
     4. Click `Add` in the new Virtual Media Selector window that pops up.
     5. Browse to this folder and, depending on whether `Optical Drive` or `Hard Disk` was selected, choose either `LensorOS.iso` or `LensorOS.bin`.
 11. Navigate to `Network` within the list on the left.
