@@ -19,28 +19,39 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/syscalls.h>
 
 int main(int argc, const char **argv) {
   //const char *message = "Hello, friends :^)";
   //puts(message);
   for (int i = 0; i < argc; i++) puts(argv[i]);
 
-  for (;;) {
-    // Get character from standard input.
-    int c = getchar();
-    // Skip error return value.
-    if (c == EOF) {
-      // TODO: Wait/waste some time so we don't choke the system just
-      // spinning.
-      continue;
-    } else if (c == 'q') {
-      puts("Quitting.");
-      break;
-    }
-    // Echo character to standard out.
-    putc((char)c, stdout);
-    fflush(stdout);
-  }
+  //for (;;) {
+  //  // Get character from standard input.
+  //  int c = getchar();
+  //  // Skip error return value.
+  //  if (c == EOF) {
+  //    // TODO: Wait/waste some time so we don't choke the system just
+  //    // spinning.
+  //    continue;
+  //  } else if (c == 'q') {
+  //    puts("Quitting.");
+  //    break;
+  //  }
+  //  // Echo character to standard out.
+  //  putc((char)c, stdout);
+  //  fflush(stdout);
+  //}
+
+  //pid_t cpid =
+  (void)syscall(SYS_fork);
+  puts("fork returned");
+  //if (cpid) {
+  //  puts("Parent");
+  //} else {
+  //  puts("Child");
+  //}
 
   return 0;
 }
