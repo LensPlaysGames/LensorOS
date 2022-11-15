@@ -28,6 +28,7 @@
 #include <pit.h>
 #include <scheduler.h>
 #include <vfs_forward.h>
+#include <system.h>
 
 /// External symbol definitions for `scheduler.asm`
 void(*scheduler_switch_process)(CPUState*)
@@ -243,4 +244,70 @@ namespace Scheduler {
         cpu->FS = cpu->Frame.ss;
         cpu->GS = cpu->Frame.ss;
     }
+}
+
+// SOMETHING IN HERE IS VERY VERY BROKEN!
+pid_t CopyUserspaceProcess(Process* original) {
+    // Copy current page table (fork)
+    auto* newPageTable = Memory::clone_page_map(original->CR3);
+    if (newPageTable == nullptr) {
+        std::print("Failed to clone current page map for new process page map.\n");
+        return false;
+    }
+    // Map new page table in itself.
+    Memory::map(newPageTable, newPageTable, newPageTable
+                , (u64)Memory::PageTableFlag::Present
+                | (u64)Memory::PageTableFlag::ReadWrite
+                );
+
+    Process* newProcess = new Process;
+
+    // Copy each memory region's contents into newly allocated
+    // memory.
+    for (SinglyLinkedListNode<Memory::Region>* it = original->Memories.head(); it; it = it->next()) {
+        Memory::Region& memory = it->value();
+        Memory::Region newMemory{memory};
+        u64 newMemoryPages = u64(Memory::request_pages(memory.pages));
+        if (!newMemoryPages) {
+            // Out of memory.
+            panic("OOM");
+            while (true) {
+                asm volatile ("hlt");
+            }
+        }
+        newMemory.paddr = (void*)newMemoryPages;
+        // Copy memory contents.
+        memcpy(newMemory.paddr, memory.paddr, memory.length);
+        // Map virtual addresses to new physical addresses.
+        for (u64 virtualAddress = (u64)newMemory.vaddr; virtualAddress < ((u64)newMemory.vaddr + newMemory.length); virtualAddress += PAGE_SIZE) {
+            Memory::unmap(newPageTable, (void*)virtualAddress);
+        }
+        // Map virtual addresses to new physical addresses.
+        u64 virtualAddress = (u64)newMemory.vaddr;
+        for (u64 physicalAddress = newMemoryPages; physicalAddress < (newMemoryPages + newMemory.length); virtualAddress += PAGE_SIZE, physicalAddress += PAGE_SIZE) {
+            Memory::map(newPageTable, (void*)virtualAddress, (void*)physicalAddress, memory.flags, Memory::ShowDebug::Yes);
+        }
+        // Add new memory region to new process.
+        newProcess->add_memory_region(newMemory);
+    }
+
+    // Copy file descriptors.
+    for (const auto& entry : original->FileDescriptors) {
+        std::shared_ptr<FileMetadata> meta = SYSTEM->virtual_filesystem().file(entry);
+        // Meta, isn't it? :p
+        auto f = meta->device_driver()->open(meta->name());
+        SYSTEM->virtual_filesystem().add_file(std::move(f), newProcess);
+    }
+
+    newProcess->State = Process::ProcessState::RUNNING;
+    newProcess->CR3 = newPageTable;
+    newProcess->CPU = original->CPU;
+    newProcess->next_region_vaddr = original->next_region_vaddr;
+    // Set child return value for `fork()`.
+    newProcess->CPU.RAX = 0;
+
+    pid_t cpid = Scheduler::add_process(newProcess);
+    //pid_t cpid = 0;
+    newProcess->ProcessID = cpid;
+    return cpid;
 }

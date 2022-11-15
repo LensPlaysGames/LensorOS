@@ -24,7 +24,11 @@
 #include <interrupts/interrupts.h>
 #include <linked_list.h>
 #include <memory/physical_memory_manager.h>
+#include <memory/virtual_memory_manager.h>
+#include <memory/paging.h>
 #include <memory/region.h>
+#include <storage/file_metadata.h>
+#include <memory>
 #include <vector>
 #include <extensions>
 #include <vfs_forward.h>
@@ -91,8 +95,13 @@ struct Process {
     Process(const Process&) = delete;
     Process& operator=(const Process&) = delete;
 
-    void add_memory_region(void* vaddr, void* paddr, usz size) {
-        Memories.add({vaddr, paddr, size});
+    // size is in bytes.
+    void add_memory_region(void* vaddr, void* paddr, usz size, u64 flags) {
+        Memories.add({vaddr, paddr, size, flags});
+    }
+
+    void add_memory_region(const Memory::Region& memory) {
+        Memories.add({memory.vaddr, memory.paddr, memory.length, memory.flags});
     }
 
     /// Find region in memories by vaddr and remove it.
@@ -144,7 +153,8 @@ namespace Scheduler {
     void switch_process(CPUState*);
 
     /// Add an existing process to the list of processes.
-    void add_process(Process*);
+    /// Creates and assigns a unique PID.
+    pid_t add_process(Process*);
 
     Process* last_process();
 
@@ -156,5 +166,7 @@ namespace Scheduler {
 
 __attribute__((no_caller_saved_registers))
 void scheduler_switch(CPUState*);
+
+pid_t CopyUserspaceProcess(Process* original);
 
 #endif

@@ -206,17 +206,16 @@ void sys$9_waitpid(pid_t pid) {
     // TODO: Add to WAITING list of process that we are waiting for,
     // then just stop self. When the process is destroyed, it should
     // restart this process and we can continue.
-
 }
 
 /// Copy the current process, resuming execution in both just after the
 /// fork call, but with the return value to each different (child gets
 /// zero, parent gets child's PID).
-void sys$10_fork() {
+pid_t sys$10_fork() {
     DBGMSG(sys$_dbgfmt, 10, "fork");
-    // TODO: Copy current process
-    // TODO: Set return value of each process (this one and the new
-    // child).
+    // Copy current process
+    pid_t cpid = CopyUserspaceProcess(Scheduler::CurrentProcess->value());
+    return cpid;
 }
 
 /// Replace the current process with a new process, specified by an
@@ -226,12 +225,11 @@ void sys$11_exec(char *path) {
     DBGMSG("  path: {}\n\n", (const char*) path);
     (void)path;
     // TODO: Ensure valid arguments
-
     Process* process = Scheduler::CurrentProcess->value();
+    (void)process;
 
     // TODO: Replace current process with new process, if successfully
     // loaded...
-    process->destroy();
 
 }
 
