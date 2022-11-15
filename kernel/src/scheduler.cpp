@@ -24,6 +24,7 @@
 #include <interrupts/interrupts.h>
 #include <linked_list.h>
 #include <memory.h>
+#include <memory/paging.h>
 #include <memory/virtual_memory_manager.h>
 #include <pit.h>
 #include <scheduler.h>
@@ -239,8 +240,9 @@ namespace Scheduler {
             :: "r"(cpu->Frame.ss)
             : "rax"
             );
+        // Eventually, FS and GS will be used for TLS, or Thread Local
+        // Storage.
         // Update FS and GS to SS.
-        // Technically we could use these for whatever.
         cpu->FS = cpu->Frame.ss;
         cpu->GS = cpu->Frame.ss;
     }
@@ -264,6 +266,8 @@ pid_t CopyUserspaceProcess(Process* original) {
 
     // Copy each memory region's contents into newly allocated
     // memory.
+    u64 testVaddr = 0;
+    u64 expectedPaddr = 0;
     for (SinglyLinkedListNode<Memory::Region>* it = original->Memories.head(); it; it = it->next()) {
         Memory::Region& memory = it->value();
         Memory::Region newMemory{memory};
@@ -279,14 +283,30 @@ pid_t CopyUserspaceProcess(Process* original) {
         // Copy memory contents.
         memcpy(newMemory.paddr, memory.paddr, memory.length);
         // Map virtual addresses to new physical addresses.
-        for (u64 virtualAddress = (u64)newMemory.vaddr; virtualAddress < ((u64)newMemory.vaddr + newMemory.length); virtualAddress += PAGE_SIZE) {
-            Memory::unmap(newPageTable, (void*)virtualAddress);
-        }
+        //for (u64 virtualAddress = (u64)newMemory.vaddr; virtualAddress < ((u64)newMemory.vaddr + newMemory.length); virtualAddress += PAGE_SIZE) {
+        //    Memory::unmap(newPageTable, (void*)virtualAddress);
+        //}
         // Map virtual addresses to new physical addresses.
         u64 virtualAddress = (u64)newMemory.vaddr;
+
+        testVaddr = virtualAddress;
+        expectedPaddr = newMemoryPages;
+
         for (u64 physicalAddress = newMemoryPages; physicalAddress < (newMemoryPages + newMemory.length); virtualAddress += PAGE_SIZE, physicalAddress += PAGE_SIZE) {
-            Memory::map(newPageTable, (void*)virtualAddress, (void*)physicalAddress, memory.flags, Memory::ShowDebug::Yes);
+            Memory::map(newPageTable, (void*)virtualAddress, (void*)physicalAddress, memory.flags, Memory::ShowDebug::No);
         }
+
+        Memory::PageMapIndexer indexer((u64)testVaddr);
+        Memory::PageDirectoryEntry PDE;
+        PDE = newPageTable->entries[indexer.page_directory_pointer()];
+        auto* PDP = (Memory::PageTable*)((u64)PDE.address() << 12);
+        PDE = PDP->entries[indexer.page_directory()];
+        auto* PD = (Memory::PageTable*)((u64)PDE.address() << 12);
+        PDE = PD->entries[indexer.page_table()];
+        auto* PT = (Memory::PageTable*)((u64)PDE.address() << 12);
+        PDE = PT->entries[indexer.page()];
+        std::print("PHYS {:#016x} at VIRT {:#016x} == EXPECTING {:#016x}\n", PDE.address() << 12, testVaddr, expectedPaddr);
+
         // Add new memory region to new process.
         newProcess->add_memory_region(newMemory);
     }
@@ -300,6 +320,7 @@ pid_t CopyUserspaceProcess(Process* original) {
     }
 
     newProcess->State = Process::ProcessState::RUNNING;
+    newProcess->State = Process::ProcessState::SLEEPING;
     newProcess->CR3 = newPageTable;
     newProcess->CPU = original->CPU;
     newProcess->next_region_vaddr = original->next_region_vaddr;

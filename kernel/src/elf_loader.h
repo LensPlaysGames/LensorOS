@@ -190,7 +190,6 @@ namespace ELF {
                        );
 
                 // Virtually map allocated pages.
-                u64 virtAddress = phdr->p_vaddr;
                 size_t flags = 0;
                 flags |= (size_t)Memory::PageTableFlag::Present;
                 flags |= (size_t)Memory::PageTableFlag::UserSuper;
@@ -200,6 +199,7 @@ namespace ELF {
                 if (!(phdr->p_flags & PF_X)) {
                     flags |= (size_t)Memory::PageTableFlag::NX;
                 }
+                u64 virtAddress = phdr->p_vaddr;
                 for (u64 t = 0; t < pages * PAGE_SIZE; t += PAGE_SIZE) {
                     Memory::map(newPageTable
                                 , (void*)(virtAddress + t)
@@ -210,7 +210,7 @@ namespace ELF {
                 }
                 // FIXME: Should we use size_to_load here? Does it matter?
                 process->add_memory_region((void*)phdr->p_vaddr
-                                           , loadedProgram
+                                           , (void*)loadedProgram
                                            , pages * PAGE_SIZE
                                            , flags
                                            );

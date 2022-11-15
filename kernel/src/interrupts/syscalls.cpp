@@ -219,9 +219,12 @@ pid_t sys$10_fork() {
                   );
     // Use userspace stack pointer instead of kernel stack pointer
     cpu->RSP = cpu->Frame.sp;
+    // Save cpu state into process cache so that it will be set
+    // properly for the forked process.
     memcpy(&Scheduler::CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
-    // Copy current process
+    // Copy current process.
     pid_t cpid = CopyUserspaceProcess(Scheduler::CurrentProcess->value());
+    DBGMSG("  CPID: {}\n", cpid);
     return cpid;
 }
 

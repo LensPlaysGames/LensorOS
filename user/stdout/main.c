@@ -44,14 +44,13 @@ int main(int argc, const char **argv) {
   //  fflush(stdout);
   //}
 
-  //pid_t cpid =
-  (void)syscall(SYS_fork);
-  puts("fork returned");
-  //if (cpid) {
-  //  puts("Parent");
-  //} else {
-  //  puts("Child");
-  //}
+  pid_t cpid = syscall(SYS_fork);
+  //puts("fork returned");
+  if (cpid) {
+    puts("Parent");
+  } else {
+    puts("Child");
+  }
 
   return 0;
 }
