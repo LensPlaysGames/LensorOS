@@ -112,11 +112,13 @@ namespace Scheduler {
         return ProcessQueue->tail()->value();
     }
 
-    void add_process(Process* process) {
-        process->ProcessID = request_pid();
+    pid_t add_process(Process* process) {
+        pid_t pid = request_pid();
+        process->ProcessID = pid;
         ProcessQueue->add_end(process);
         std::print("[SCHED]: Added process.\n");
         print_debug();
+        return pid;
     }
 
     bool remove_process(pid_t pid) {
