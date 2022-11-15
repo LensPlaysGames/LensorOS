@@ -24,13 +24,21 @@
 #include <bits/decls.h>
 
 #ifdef __lensor__
-#define SYS_open  0
-#define SYS_close 1
-#define SYS_read  2
-#define SYS_write 3
-#define SYS_poke  4
-#define SYS_exit  5
-#define SYS_MAXSYSCALL 6
+#define SYS_open    0
+#define SYS_close   1
+#define SYS_read    2
+#define SYS_write   3
+#define SYS_poke    4
+#define SYS_exit    5
+#define SYS_map     6
+#define SYS_unmap   7
+#define SYS_time    8
+#define SYS_waitpid 9
+#define SYS_fork    10
+#define SYS_exec    11
+#define SYS_repfd   12
+#define SYS_pipe    13
+#define SYS_MAXSYSCALL 13
 #else
 #define SYS_read  0
 #define SYS_write 1
