@@ -88,6 +88,10 @@ namespace Memory {
             return Value & (u64)flag;
         }
 
+        u64 flags() {
+            return Value &= 0xfff0000000000fff;
+        }
+
         void set_flag(PageTableFlag flag, bool enabled) {
             u64 bitSelector = (u64)flag;
             Value &= ~bitSelector;

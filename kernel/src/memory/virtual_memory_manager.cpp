@@ -301,4 +301,84 @@ namespace Memory {
     void init_virtual() {
         init_virtual((PageTable*)Memory::request_page());
     }
+
+    void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filter) {
+        u64 startAddress = -1ull;
+        u64 endAddress = -1ull;
+        u64 flags = -1ull;
+        Memory::PageDirectoryEntry PDE;
+        for (u64 i = 0; i < 512; ++i) {
+            PDE = oldPageTable->entries[i];
+            if (PDE.flag(Memory::PageTableFlag::Present) == false)
+                continue;
+
+            auto* oldTable = (Memory::PageTable*)((u64)PDE.address() << 12);
+            for (u64 j = 0; j < 512; ++j) {
+                PDE = oldTable->entries[j];
+                if (PDE.flag(Memory::PageTableFlag::Present) == false)
+                    continue;
+
+                auto* oldPD = (Memory::PageTable*)((u64)PDE.address() << 12);
+                for (u64 k = 0; k < 512; ++k) {
+                    PDE = oldPD->entries[k];
+                    if (PDE.flag(Memory::PageTableFlag::Present) == false)
+                        continue;
+
+                    auto* oldPT = (Memory::PageTable*)((u64)PDE.address() << 12);
+                    for (u64 l = 0; l < 512; ++l) {
+                        PDE = oldPT->entries[l];
+
+                        // Virtual Address from indices
+                        u64 virtualAddress = 0;
+                        virtualAddress |= (i & 0x1ff) << 27;
+                        virtualAddress |= (j & 0x1ff) << 18;
+                        virtualAddress |= (k & 0x1ff) << 9;
+                        virtualAddress |= (l & 0x1ff) << 0;
+                        virtualAddress <<= 12;
+
+                        endAddress = virtualAddress;
+
+                        // If flags does not equal new flags, stop and print.
+                        if (flags != -1ull && PDE.flags() != flags) {
+                            if (flags & (u64)Memory::PageTableFlag::Present && flags & (u64)filter) {
+                                std::print("Present:     ");
+
+                                std::print("{:#016x} to {:#016x} |",
+                                           startAddress, endAddress);
+                                if (flags & (u64)Memory::PageTableFlag::ReadWrite)
+                                    std::print(" RW");
+                                if (flags & (u64)Memory::PageTableFlag::UserSuper)
+                                    std::print(" US");
+                                if (flags & (u64)Memory::PageTableFlag::WriteThrough)
+                                    std::print(" WT");
+                                if (flags & (u64)Memory::PageTableFlag::CacheDisabled)
+                                    std::print(" CD");
+                                if (flags & (u64)Memory::PageTableFlag::Accessed)
+                                    std::print(" AC");
+                                if (flags & (u64)Memory::PageTableFlag::Dirty)
+                                    std::print(" DT");
+                                if (flags & (u64)Memory::PageTableFlag::LargerPages)
+                                    std::print(" LG");
+                                if (flags & (u64)Memory::PageTableFlag::Global)
+                                    std::print(" GB");
+                                if (flags & (u64)Memory::PageTableFlag::NX)
+                                    std::print(" NX");
+                                std::print("\n");
+                            }
+
+                            startAddress = endAddress;
+                            flags = PDE.flags();
+                            continue;
+                        }
+
+                        if (startAddress == -1ull)
+                            startAddress = endAddress;
+
+                        if (flags == -1ull)
+                            flags = PDE.flags();
+                    }
+                }
+            }
+        }
+    }
 }

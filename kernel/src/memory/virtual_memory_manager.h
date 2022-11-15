@@ -85,6 +85,8 @@ namespace Memory {
 
     /// Return the base address of the currently active page map.
     PageTable* active_page_map();
+
+    void print_page_map(Memory::PageTable*, Memory::PageTableFlag filter = Memory::PageTableFlag::Present);
 }
 
 #endif /* LENSOR_OS_VIRTUAL_MEMORY_MANAGER_H */

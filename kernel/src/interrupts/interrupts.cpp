@@ -25,12 +25,15 @@
 #include <io.h>
 #include <keyboard.h>
 #include <keyboard_scancode_translation.h>
+#include <memory/paging.h>
+#include <memory/virtual_memory_manager.h>
 #include <mouse.h>
 #include <panic.h>
 #include <pit.h>
 #include <rtc.h>
-#include <uart.h>
+#include <scheduler.h>
 #include <system.h>
+#include <uart.h>
 #include <vfs_forward.h>
 
 void enable_interrupt(u8 irq) {
@@ -191,6 +194,55 @@ void page_fault_handler(InterruptFrameError* frame) {
     // Collect faulty address as soon as possible (it may be lost quickly).
     u64 address;
     asm volatile ("mov %%cr2, %0" : "=r" (address));
+
+    std::print("  Faulty Address: {:#016x}\n", address);
+    u64 cr3;
+    asm volatile ("mov %%cr3, %0" : "=r" (cr3));
+    std::print("  PageTable Address: {:#016x}\n", cr3);
+
+    Memory::PageMapIndexer indexer(address);
+    Memory::PageDirectoryEntry PDE;
+    PDE = ((Memory::PageTable*)cr3)->entries[indexer.page_directory_pointer()];
+    auto* PDP = (Memory::PageTable*)((u64)PDE.address() << 12);
+    PDE = PDP->entries[indexer.page_directory()];
+    auto* PD = (Memory::PageTable*)((u64)PDE.address() << 12);
+    PDE = PD->entries[indexer.page_table()];
+    auto* PT = (Memory::PageTable*)((u64)PDE.address() << 12);
+    PDE = PT->entries[indexer.page()];
+    std::print("PHYS {:#016x} at VIRT {:#016x}\n"
+               " | PSNT {}\n"
+               " | USER {}\n"
+               " | WRIT {}\n",
+               u64(PDE.address() << 12),
+               u64(address),
+               PDE.flag(Memory::PageTableFlag::Present),
+               PDE.flag(Memory::PageTableFlag::UserSuper),
+               PDE.flag(Memory::PageTableFlag::ReadWrite));
+
+    if ((frame->error & (u64)PageFaultErrorCode::ProtectionKeyViolation) > 0)
+        std::print("  Protection Key Violation\n");
+    if ((frame->error & (u64)PageFaultErrorCode::HypervisorManagedLinearAddressTranslation) > 0)
+        std::print("  Hypervisor Managed Linear Address Translation\n");
+    if ((frame->error & (u64)PageFaultErrorCode::InstructionFetch) > 0)
+        std::print("  Instruction fetch\n");
+    else std::print("  Data Access\n");
+    if ((frame->error & (u64)PageFaultErrorCode::ShadowStackAccess) > 0)
+        std::print("  Shadow stack access\n");
+    if ((frame->error & (u64)PageFaultErrorCode::HypervisorManagedLinearAddressTranslation) > 0)
+        std::print("  Hypvervisor-managed linear address translation\n");
+    if ((frame->error & (u64)PageFaultErrorCode::SoftwareGaurdExtensions) > 0)
+        std::print("  Software gaurd extensions\n");
+    if ((frame->error & (u64)PageFaultErrorCode::UserSuper) > 0)
+        std::print("  From ring 3\n");
+    if ((frame->error & (u64)PageFaultErrorCode::ReadWrite) > 0)
+        std::print("  Write\n");
+    else std::print("  Read\n");
+    if ((frame->error & (u64)PageFaultErrorCode::Reserved) > 0)
+        std::print("  Reserved\n");
+
+
+    Memory::print_page_map((Memory::PageTable*)cr3, Memory::PageTableFlag::UserSuper);
+
     /* US RW P - Description
      * 0  0  0 - Supervisory process tried to read a non-present page entry
      * 0  0  1 - Supervisory process tried to read a page and caused a protection fault
@@ -226,21 +278,12 @@ void page_fault_handler(InterruptFrameError* frame) {
             else panic(frame, "#PF: Supervisor process attempted to read from a page and caused a protection fault");
         }
     }
-    if ((frame->error & (u64)PageFaultErrorCode::InstructionFetch) > 0)
-        std::print("  Instruction fetch\n");
-    if ((frame->error & (u64)PageFaultErrorCode::ShadowStackAccess) > 0)
-        std::print("  Shadow stack access\n");
-    if ((frame->error & (u64)PageFaultErrorCode::HypervisorManagedLinearAddressTranslation) > 0)
-        std::print("  Hypvervisor-managed linear address translation\n");
-    if ((frame->error & (u64)PageFaultErrorCode::SoftwareGaurdExtensions) > 0)
-        std::print("  Software gaurd extensions\n");
 
-    std::print("  Faulty Address: {:#016x}\n", address);
     Vector2<u64> drawPosition = { PanicStartX, PanicStartY };
     gRend.puts(drawPosition, std::format("Faulty Address: {:#016x}", address), 0x00000000);
     gRend.swap({ PanicStartX, PanicStartY }, { 1024, 128 } );
     while (true)
-        asm ("hlt");
+        asm volatile ("hlt");
 }
 
 __attribute__((interrupt))
