@@ -17,24 +17,12 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#ifndef LENSOR_OS_DBGOUT_DRIVER_H
-#define LENSOR_OS_DBGOUT_DRIVER_H
+#include <storage/device_drivers/dbgout.h>
 
-#include <debug.h>
-#include <integers.h>
-#include <storage/storage_device_driver.h>
+#include <system.h>
+#include <storage/file_metadata.h>
+#include <virtual_filesystem.h>
 
-struct DbgOutDriver final : StorageDeviceDriver {
-    /// Required by the interface but not valid for this driver.
-    void close(FileMetadata*) final { }
-    auto open(std::string_view) -> std::shared_ptr<FileMetadata> final;
-
-    ssz read(FileMetadata*, usz, usz, void*) final { return -1; };
-    ssz read_raw(usz, usz, void*) final { return -1; };
-    ssz write(FileMetadata*, usz offs, usz bytes, void* buffer) final {
-        dbgmsg_buf(reinterpret_cast<u8*>(buffer) + offs, bytes);
-        return ssz(bytes);
-    };
-};
-
-#endif /* LENSOR_OS_DBGOUT_DRIVER_H */
+auto DbgOutDriver::open(std::string_view) -> std::shared_ptr<FileMetadata> {
+    return std::make_shared<FileMetadata>("stdout", sdd(SYSTEM->virtual_filesystem().StdoutDriver), 0ull, nullptr);
+}
