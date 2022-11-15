@@ -212,12 +212,26 @@ void page_fault_handler(InterruptFrameError* frame) {
     std::print("PHYS {:#016x} at VIRT {:#016x}\n"
                " | PSNT {}\n"
                " | USER {}\n"
-               " | WRIT {}\n",
+               " | WRIT {}\n"
+               " | WRTH {}\n"
+               " | CDIS {}\n"
+               " | ACCS {}\n"
+               " | DIRT {}\n"
+               " | LARG {}\n"
+               " | GLBL {}\n"
+               " | NOTX {}\n",
                u64(PDE.address() << 12),
                u64(address),
                PDE.flag(Memory::PageTableFlag::Present),
                PDE.flag(Memory::PageTableFlag::UserSuper),
-               PDE.flag(Memory::PageTableFlag::ReadWrite));
+               PDE.flag(Memory::PageTableFlag::ReadWrite),
+               PDE.flag(Memory::PageTableFlag::WriteThrough),
+               PDE.flag(Memory::PageTableFlag::CacheDisabled),
+               PDE.flag(Memory::PageTableFlag::Accessed),
+               PDE.flag(Memory::PageTableFlag::Dirty),
+               PDE.flag(Memory::PageTableFlag::LargerPages),
+               PDE.flag(Memory::PageTableFlag::Global),
+               PDE.flag(Memory::PageTableFlag::NX));
 
     if ((frame->error & (u64)PageFaultErrorCode::ProtectionKeyViolation) > 0)
         std::print("  Protection Key Violation\n");
@@ -239,7 +253,6 @@ void page_fault_handler(InterruptFrameError* frame) {
     else std::print("  Read\n");
     if ((frame->error & (u64)PageFaultErrorCode::Reserved) > 0)
         std::print("  Reserved\n");
-
 
     Memory::print_page_map((Memory::PageTable*)cr3, Memory::PageTableFlag::UserSuper);
 

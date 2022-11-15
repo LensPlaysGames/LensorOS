@@ -120,18 +120,18 @@ struct InterruptFrameError {
 } __attribute__((packed));
 
 // HARDWARE INTERRUPT REQUESTS (IRQs)
-__attribute__((interrupt)) void system_timer_handler (InterruptFrame*);
-__attribute__((interrupt)) void keyboard_handler     (InterruptFrame*);
-__attribute__((interrupt)) void uart_com1_handler    (InterruptFrame*);
-__attribute__((interrupt)) void rtc_handler          (InterruptFrame*);
-__attribute__((interrupt)) void mouse_handler        (InterruptFrame*);
+void system_timer_handler (InterruptFrame*);
+void keyboard_handler     (InterruptFrame*);
+void uart_com1_handler    (InterruptFrame*);
+void rtc_handler          (InterruptFrame*);
+void mouse_handler        (InterruptFrame*);
 // EXCEPTION HANDLING
-__attribute__((interrupt)) void divide_by_zero_handler           (InterruptFrame*);
-__attribute__((interrupt)) void double_fault_handler             (InterruptFrameError*);
-__attribute__((interrupt)) void stack_segment_fault_handler      (InterruptFrameError*);
-__attribute__((interrupt)) void general_protection_fault_handler (InterruptFrameError*);
-__attribute__((interrupt)) void page_fault_handler               (InterruptFrameError*);
-__attribute__((interrupt)) void simd_exception_handler           (InterruptFrame*);
+void divide_by_zero_handler           (InterruptFrame*);
+void double_fault_handler             (InterruptFrameError*);
+void stack_segment_fault_handler      (InterruptFrameError*);
+void general_protection_fault_handler (InterruptFrameError*);
+void page_fault_handler               (InterruptFrameError*);
+void simd_exception_handler           (InterruptFrame*);
 
 // HELPER FUNCTIONS TO TRIGGER HANDLERS FOR TESTING
 void cause_div_by_zero(u8 one = 1);

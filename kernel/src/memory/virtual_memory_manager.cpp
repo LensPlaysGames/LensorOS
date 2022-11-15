@@ -340,10 +340,8 @@ namespace Memory {
 
                         // If flags does not equal new flags, stop and print.
                         if (flags != -1ull && PDE.flags() != flags) {
-                            if (flags & (u64)Memory::PageTableFlag::Present && flags & (u64)filter) {
-                                std::print("Present:     ");
-
-                                std::print("{:#016x} to {:#016x} |",
+                            if (flags & (u64)Memory::PageTableFlag::Present && (flags & (u64)filter) == (u64)filter) {
+                                std::print("Present: {:#016x} to {:#016x} |",
                                            startAddress, endAddress);
                                 if (flags & (u64)Memory::PageTableFlag::ReadWrite)
                                     std::print(" RW");
