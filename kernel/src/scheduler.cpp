@@ -320,7 +320,6 @@ pid_t CopyUserspaceProcess(Process* original) {
     }
 
     newProcess->State = Process::ProcessState::RUNNING;
-    newProcess->State = Process::ProcessState::SLEEPING;
     newProcess->CR3 = newPageTable;
     newProcess->CPU = original->CPU;
     newProcess->next_region_vaddr = original->next_region_vaddr;

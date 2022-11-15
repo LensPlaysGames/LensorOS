@@ -100,6 +100,19 @@ namespace Memory {
             }
         }
 
+        // Or the given flag with the PDE value. This is used to set a
+        // flag if it's set, but do nothing if it isn't.
+        void or_flag(PageTableFlag flag) {
+            Value |= (u64)flag;
+        }
+
+        void or_flag_if(PageTableFlag flag, bool enabled) {
+            if (enabled) {
+                Value |= (u64)flag;
+            }
+        }
+
+
     private:
         u64 Value { 0 };
     } __attribute__((packed));

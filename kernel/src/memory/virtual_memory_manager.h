@@ -86,7 +86,14 @@ namespace Memory {
     /// Return the base address of the currently active page map.
     PageTable* active_page_map();
 
+    /// Print present ranges of addresses that share all flags.
+    /// If filter is given, only show ranges with the given flag(s)
+    /// enabled.
     void print_page_map(Memory::PageTable*, Memory::PageTableFlag filter = Memory::PageTableFlag::Present);
+
+    /// Print the flags of a page directory entry. If no flags are set,
+    /// nothing will be printed.
+    void print_pde_flags(Memory::PageDirectoryEntry PDE);
 }
 
 #endif /* LENSOR_OS_VIRTUAL_MEMORY_MANAGER_H */

@@ -83,18 +83,17 @@ namespace Memory {
             PDP = (PageTable*)request_page();
             memset(PDP, 0, PAGE_SIZE);
             PDE.set_address((u64)PDP >> 12);
-
         }
-        PDE.set_flag(PageTableFlag::Present,       present);
-        PDE.set_flag(PageTableFlag::ReadWrite,     write);
-        PDE.set_flag(PageTableFlag::UserSuper,     user);
-        PDE.set_flag(PageTableFlag::WriteThrough,  writeThrough);
-        PDE.set_flag(PageTableFlag::CacheDisabled, cacheDisabled);
-        PDE.set_flag(PageTableFlag::Accessed,      accessed);
-        PDE.set_flag(PageTableFlag::Dirty,         dirty);
-        PDE.set_flag(PageTableFlag::LargerPages,   largerPages);
-        PDE.set_flag(PageTableFlag::Global,        global);
-        PDE.set_flag(PageTableFlag::Global,        noExecute);
+        PDE.or_flag_if(PageTableFlag::Present,       present);
+        PDE.or_flag_if(PageTableFlag::ReadWrite,     write);
+        PDE.or_flag_if(PageTableFlag::UserSuper,     user);
+        PDE.or_flag_if(PageTableFlag::WriteThrough,  writeThrough);
+        PDE.or_flag_if(PageTableFlag::CacheDisabled, cacheDisabled);
+        PDE.or_flag_if(PageTableFlag::Accessed,      accessed);
+        PDE.or_flag_if(PageTableFlag::Dirty,         dirty);
+        PDE.or_flag_if(PageTableFlag::LargerPages,   largerPages);
+        PDE.or_flag_if(PageTableFlag::Global,        global);
+        PDE.or_flag_if(PageTableFlag::Global,        noExecute);
         pageMapLevelFour->entries[indexer.page_directory_pointer()] = PDE;
         PDP = (PageTable*)((u64)PDE.address() << 12);
 
@@ -105,16 +104,16 @@ namespace Memory {
             memset(PD, 0, PAGE_SIZE);
             PDE.set_address((u64)PD >> 12);
         }
-        PDE.set_flag(PageTableFlag::Present,       present);
-        PDE.set_flag(PageTableFlag::ReadWrite,     write);
-        PDE.set_flag(PageTableFlag::UserSuper,     user);
-        PDE.set_flag(PageTableFlag::WriteThrough,  writeThrough);
-        PDE.set_flag(PageTableFlag::CacheDisabled, cacheDisabled);
-        PDE.set_flag(PageTableFlag::Accessed,      accessed);
-        PDE.set_flag(PageTableFlag::Dirty,         dirty);
-        PDE.set_flag(PageTableFlag::LargerPages,   largerPages);
-        PDE.set_flag(PageTableFlag::Global,        global);
-        PDE.set_flag(PageTableFlag::Global,        noExecute);
+        PDE.or_flag_if(PageTableFlag::Present,       present);
+        PDE.or_flag_if(PageTableFlag::ReadWrite,     write);
+        PDE.or_flag_if(PageTableFlag::UserSuper,     user);
+        PDE.or_flag_if(PageTableFlag::WriteThrough,  writeThrough);
+        PDE.or_flag_if(PageTableFlag::CacheDisabled, cacheDisabled);
+        PDE.or_flag_if(PageTableFlag::Accessed,      accessed);
+        PDE.or_flag_if(PageTableFlag::Dirty,         dirty);
+        PDE.or_flag_if(PageTableFlag::LargerPages,   largerPages);
+        PDE.or_flag_if(PageTableFlag::Global,        global);
+        PDE.or_flag_if(PageTableFlag::Global,        noExecute);
         PDP->entries[indexer.page_directory()] = PDE;
         PD = (PageTable*)((u64)PDE.address() << 12);
 
@@ -125,16 +124,16 @@ namespace Memory {
             memset(PT, 0, PAGE_SIZE);
             PDE.set_address((u64)PT >> 12);
         }
-        PDE.set_flag(PageTableFlag::Present,       present);
-        PDE.set_flag(PageTableFlag::ReadWrite,     write);
-        PDE.set_flag(PageTableFlag::UserSuper,     user);
-        PDE.set_flag(PageTableFlag::WriteThrough,  writeThrough);
-        PDE.set_flag(PageTableFlag::CacheDisabled, cacheDisabled);
-        PDE.set_flag(PageTableFlag::Accessed,      accessed);
-        PDE.set_flag(PageTableFlag::Dirty,         dirty);
-        PDE.set_flag(PageTableFlag::LargerPages,   largerPages);
-        PDE.set_flag(PageTableFlag::Global,        global);
-        PDE.set_flag(PageTableFlag::Global,        noExecute);
+        PDE.or_flag_if(PageTableFlag::Present,       present);
+        PDE.or_flag_if(PageTableFlag::ReadWrite,     write);
+        PDE.or_flag_if(PageTableFlag::UserSuper,     user);
+        PDE.or_flag_if(PageTableFlag::WriteThrough,  writeThrough);
+        PDE.or_flag_if(PageTableFlag::CacheDisabled, cacheDisabled);
+        PDE.or_flag_if(PageTableFlag::Accessed,      accessed);
+        PDE.or_flag_if(PageTableFlag::Dirty,         dirty);
+        PDE.or_flag_if(PageTableFlag::LargerPages,   largerPages);
+        PDE.or_flag_if(PageTableFlag::Global,        global);
+        PDE.or_flag_if(PageTableFlag::Global,        noExecute);
         PD->entries[indexer.page_table()] = PDE;
         PT = (PageTable*)((u64)PDE.address() << 12);
 
@@ -378,5 +377,26 @@ namespace Memory {
                 }
             }
         }
+    }
+
+    void print_pde_flags(Memory::PageDirectoryEntry PDE) {
+        if (PDE.flag(Memory::PageTableFlag::ReadWrite))
+            std::print(" RW");
+        if (PDE.flag(Memory::PageTableFlag::UserSuper))
+            std::print(" US");
+        if (PDE.flag(Memory::PageTableFlag::WriteThrough))
+            std::print(" WT");
+        if (PDE.flag(Memory::PageTableFlag::CacheDisabled))
+            std::print(" CD");
+        if (PDE.flag(Memory::PageTableFlag::Accessed))
+            std::print(" AC");
+        if (PDE.flag(Memory::PageTableFlag::Dirty))
+            std::print(" DT");
+        if (PDE.flag(Memory::PageTableFlag::LargerPages))
+            std::print(" LG");
+        if (PDE.flag(Memory::PageTableFlag::Global))
+            std::print(" GB");
+        if (PDE.flag(Memory::PageTableFlag::NX))
+            std::print(" NX");
     }
 }

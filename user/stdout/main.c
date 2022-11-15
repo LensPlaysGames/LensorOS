@@ -44,6 +44,12 @@ int main(int argc, const char **argv) {
   //  fflush(stdout);
   //}
 
+
+  // If there are pending writes, they will be executed on both the
+  // parent and the child; by flushing any buffers we have, it ensures
+  // the child won't write duplicate data on accident.
+  fflush(NULL);
+
   pid_t cpid = syscall(SYS_fork);
   //puts("fork returned");
   if (cpid) {
