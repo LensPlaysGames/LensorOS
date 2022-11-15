@@ -197,10 +197,9 @@ namespace Memory {
         ActivePageMap = pageMapLevelFour;
     }
 
-    PageTable* clone_active_page_map() {
+    Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable) {
         // FIXME: Free already allocated pages upon failure.
         Memory::PageDirectoryEntry PDE;
-        Memory::PageTable* oldPageTable = Memory::active_page_map();
         auto* newPageTable = reinterpret_cast<Memory::PageTable*>(Memory::request_page());
         if (newPageTable == nullptr) {
             std::print("Failed to allocate memory for new process page map level four.\n");
@@ -266,6 +265,10 @@ namespace Memory {
                           : "rax");
         }
         return ActivePageMap;
+    }
+
+    PageTable* clone_active_page_map() {
+        return clone_page_map(active_page_map());
     }
 
     void init_virtual(PageTable* pageMap) {
