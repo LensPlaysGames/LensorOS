@@ -128,10 +128,9 @@ void* sys$6_map(void* address, usz size, u64 flags) {
     }
 
     // Add memory region to current process
-    process->add_memory_region(address, paddr, size);
-
     // TODO: Convert given flags to Memory::PageTableFlag
     // TODO: Figure out what flags we are given (libc, ig).
+    process->add_memory_region(address, paddr, size, flags);
 
     // Map virtual address to physical with proper flags
     // Don't forget to map all pages!

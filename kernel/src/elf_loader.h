@@ -133,12 +133,13 @@ namespace ELF {
                     | (u64)Memory::PageTableFlag::ReadWrite
                     );
 
+        auto* process = new Process{};
+
         size_t stack_flags = 0;
         stack_flags |= (size_t)Memory::PageTableFlag::Present;
         stack_flags |= (size_t)Memory::PageTableFlag::ReadWrite;
         stack_flags |= (size_t)Memory::PageTableFlag::UserSuper;
 
-        // TODO: Keep track of allocated memory regions for process.
         // Load PT_LOAD program headers, mapping to vaddr as necessary.
         u64 programHeadersTableSize = elfHeader.e_phnum * elfHeader.e_phentsize;
         std::vector<Elf64_Phdr> programHeaders(elfHeader.e_phnum);
@@ -207,6 +208,12 @@ namespace ELF {
                                 , Memory::ShowDebug::No
                                 );
                 }
+                // FIXME: Should we use size_to_load here? Does it matter?
+                process->add_memory_region((void*)phdr->p_vaddr
+                                           , loadedProgram
+                                           , pages * PAGE_SIZE
+                                           , flags
+                                           );
             }
             else if (phdr->p_type == PT_GNU_STACK) {
                 DBGMSG("[ELF]: Stack permissions set by GNU_STACK program header.\n");
@@ -214,8 +221,6 @@ namespace ELF {
                     stack_flags |= (size_t)Memory::PageTableFlag::NX;}
             }
         }
-
-        auto* process = new Process{};
 
         /// TODO: `new` should *never* return nullptr. This check shouldn’t be necessary.
         if (process == nullptr) {
@@ -238,7 +243,8 @@ namespace ELF {
         // when it exits.
         process->add_memory_region((void*)newStackBottom,
                                    (void*)newStackBottom,
-                                   UserProcessStackSize);
+                                   UserProcessStackSize,
+                                   stack_flags);
 
         // TODO: Max argument length?
 

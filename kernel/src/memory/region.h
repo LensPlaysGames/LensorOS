@@ -29,13 +29,15 @@ namespace Memory {
         void* paddr = 0;
         usz length  = 0;
         usz pages   = 0;
+        u64 flags   = 0;
 
-        Region(void* vaddress, void* paddress, usz bytes) {
+        Region(void* vaddress, void* paddress, usz bytes, u64 flag) {
             vaddr  = vaddress;
             paddr  = paddress;
             length = bytes;
             pages  = 1;
             pages += bytes / PAGE_SIZE;
+            flags = flag;
         }
     };
 }
