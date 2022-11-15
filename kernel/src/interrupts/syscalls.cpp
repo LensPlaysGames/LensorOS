@@ -213,6 +213,13 @@ void sys$9_waitpid(pid_t pid) {
 /// zero, parent gets child's PID).
 pid_t sys$10_fork() {
     DBGMSG(sys$_dbgfmt, 10, "fork");
+    CPUState* cpu = nullptr;
+    asm volatile ("mov %%r11, %0\n"
+                  : "=r"(cpu)
+                  );
+    // Use userspace stack pointer instead of kernel stack pointer
+    cpu->RSP = cpu->Frame.sp;
+    memcpy(&Scheduler::CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
     // Copy current process
     pid_t cpid = CopyUserspaceProcess(Scheduler::CurrentProcess->value());
     return cpid;

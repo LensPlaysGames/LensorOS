@@ -60,6 +60,7 @@ irq0_handler:
 ;;; INCREMENT SYSTEM TIMER TICKS
     call [rel timer_tick]
 ;;; CALL C++ FUNCTION; ARGUMENT IN `rdi`
+;;#; FIXME: Does this only work because RSP is what's at the stack pointer? Should this be `lea` instead?
     mov rdi, rsp
     call [rel scheduler_switch_process]
 ;;; END INTERRUPT

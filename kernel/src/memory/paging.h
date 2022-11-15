@@ -79,7 +79,7 @@ namespace Memory {
         }
 
         void set_address(u64 addr)  {
-            addr &=  0x000000ffffffffff;
+            addr  &= 0x000000ffffffffff;
             Value &= 0xfff0000000000fff;
             Value |= (addr << 12);
         }
