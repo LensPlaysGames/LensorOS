@@ -76,17 +76,21 @@ struct Process {
         SLEEPING,
     } State = RUNNING;
 
-    // Keep track of memory that should be freed when the process exits.
+    /// Keep track of memory that should be freed when the process exits.
     SinglyLinkedList<Memory::Region> Memories;
     usz next_region_vaddr = 0xf8000000;
 
-    // Keep track of opened files that may be freed when the process
-    // exits, if no other process has it open.
+    /// A list of programs waiting to be set to `RUNNING` when this
+    /// program exits.
+    std::vector<pid_t> WaitingList;
+
+    /// Keep track of opened files that may be freed when the process
+    /// exits, if no other process has it open.
     std::sparse_vector<SysFD, -1, ProcFD> FileDescriptors;
 
     Memory::PageTable* CR3 { nullptr };
 
-    // Used to save/restore CPU state when a context switch occurs.
+    /// Used to save/restore CPU state when a context switch occurs.
     CPUState CPU;
 
     Process() = default;
@@ -119,14 +123,7 @@ struct Process {
         }
     }
 
-    void destroy() {
-        // Free memory regions.
-        Memories.for_each([](SinglyLinkedListNode<Memory::Region>* it){
-            Memory::free_pages(it->value().paddr, it->value().pages);
-        });
-        // TODO: Close open files.
-        // TODO: Free page table?
-    }
+    void destroy();
 };
 
 /// External symbols for 'scheduler.asm', defined in `scheduler.cpp`
@@ -143,6 +140,9 @@ namespace Scheduler {
 
     /// Get a process ID number that is unique.
     pid_t request_pid();
+
+    /// Get the process with PID if it is within list of processes, otherwise return NULL.
+    Process* process(pid_t);
 
     /* Switch to the next available task.
      * | Called by IRQ0 Handler (System Timer Interrupt).
@@ -162,6 +162,11 @@ namespace Scheduler {
     bool remove_process(pid_t);
 
     void print_debug();
+
+    /// Stop the current process, and start the next. NOTE: CPU state
+    /// is not saved by this function, so be sure the saved process CPU
+    /// state is valid and ready to be returned to.
+    void yield();
 }
 
 __attribute__((no_caller_saved_registers))

@@ -67,6 +67,7 @@ irq0_handler:
     mov ax, 0x20                ; 0x20 = PIC_EOI
     out 0x20, al                ; 0x20 = PIC1_COMMAND port
 ;;; RESTORE CPU STATE FROM STACK
+yield_asm_impl:
     add rsp, 8                  ; Eat `rsp` off of stack.
     pop rbx
     pop rcx
@@ -87,3 +88,8 @@ irq0_handler:
     pop rax
     call do_swapgs
     iretq
+
+GLOBAL yield_asm
+yield_asm:
+    mov rsp, rdi
+    jmp yield_asm_impl

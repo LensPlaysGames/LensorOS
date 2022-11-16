@@ -37,6 +37,22 @@ void(*scheduler_switch_process)(CPUState*)
 
 void(*timer_tick)();
 
+void Process::destroy() {
+    // Run all of the programs in the WaitingList.
+    for(pid_t pid : WaitingList) {
+        Process *waitingProcess = Scheduler::process(pid);
+        if (waitingProcess) {
+            waitingProcess->State = Process::ProcessState::RUNNING;
+        }
+    }
+    // Free memory regions.
+    Memories.for_each([](SinglyLinkedListNode<Memory::Region>* it){
+        Memory::free_pages(it->value().paddr, it->value().pages);
+    });
+    // TODO: Close open files.
+    // TODO: Free page table?
+}
+
 namespace Scheduler {
     // Not the best, but wouldn't be a problem unless ridiculous uptime.
     pid_t the_pid { 0 };
@@ -108,6 +124,15 @@ namespace Scheduler {
             }
         });
         std::print("\n");
+    }
+
+    Process* process(pid_t pid) {
+        for (SinglyLinkedListNode<Process*>* it = Scheduler::ProcessQueue->head(); it; it = it->next()) {
+            if (it->value()->ProcessID == pid) {
+                return it->value();
+            }
+        }
+        return nullptr;
     }
 
     Process* last_process() {
@@ -206,15 +231,7 @@ namespace Scheduler {
         return NextProcess;
     }
 
-    /// Called from `irq0_handler` in `scheduler.asm`
-    /// A stupid simple round-robin process switcher.
-    void switch_process(CPUState* cpu) {
-        memcpy(&CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
-
-        // TODO: Check all processes that called `wait(ms)`, and run/
-        // unstop them if the timestamp is greater than the calculated
-        // one.
-
+    void switch_process_impl(CPUState *cpu) {
         // Handle single viable process or end of queue.
         if (CurrentProcess->next() == nullptr) {
             // If there is only one viable process,
@@ -246,9 +263,29 @@ namespace Scheduler {
         cpu->FS = cpu->Frame.ss;
         cpu->GS = cpu->Frame.ss;
     }
+
+    /// Called from `irq0_handler` in `scheduler.asm`
+    /// A stupid simple round-robin process switcher.
+    void switch_process(CPUState* cpu) {
+        memcpy(&CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
+
+        // TODO: Check all processes that called `wait(ms)`, and run/
+        // unstop them if the timestamp is greater than the calculated
+        // one.
+
+        switch_process_impl(cpu);
+    }
+
+    extern "C" void yield_asm(CPUState*);
+
+    void yield() {
+        static CPUState newstate;
+        switch_process_impl(&newstate);
+        // iretq to the new process, bb.
+        yield_asm(&newstate);
+    }
 }
 
-// SOMETHING IN HERE IS VERY VERY BROKEN!
 pid_t CopyUserspaceProcess(Process* original) {
     // Copy current page table (fork)
     auto* newPageTable = Memory::clone_page_map(original->CR3);

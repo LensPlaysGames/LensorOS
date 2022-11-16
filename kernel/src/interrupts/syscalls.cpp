@@ -202,23 +202,31 @@ void sys$8_time(Time::tm* time) {
 /// invalid, return immediately.
 void sys$9_waitpid(pid_t pid) {
     DBGMSG(sys$_dbgfmt, 9, "waitpid");
-    DBGMSG("  pid: {}\n\n", pid);
-    (void)pid;
-    // TODO: Return immediately if PID isn't valid.
-    // TODO: Add to WAITING list of process that we are waiting for,
-    // then just stop self. When the process is destroyed, it should
-    // restart this process and we can continue.
+
+    Process *process = Scheduler::process(pid);
+    // Return immediately if PID isn't valid.
+    if (!process) {
+        return;
+    }
+
+    pid_t thisPID = Scheduler::CurrentProcess->value()->ProcessID;
+    DBGMSG("  pid {} waiting on {}\n\n", thisPID, pid);
+    // Add to WAITING list of process that we are waiting for.
+    process->WaitingList.push_back(thisPID);
+
+    Scheduler::CurrentProcess->value()->State = Process::ProcessState::SLEEPING;
+    Scheduler::yield();
 }
 
 /// Copy the current process, resuming execution in both just after the
 /// fork call, but with the return value to each different (child gets
 /// zero, parent gets child's PID).
 pid_t sys$10_fork() {
-    DBGMSG(sys$_dbgfmt, 10, "fork");
     CPUState* cpu = nullptr;
     asm volatile ("mov %%r11, %0\n"
                   : "=r"(cpu)
                   );
+    DBGMSG(sys$_dbgfmt, 10, "fork");
     // Use userspace stack pointer instead of kernel stack pointer
     cpu->RSP = cpu->Frame.sp;
     // Save cpu state into process cache so that it will be set
@@ -233,6 +241,10 @@ pid_t sys$10_fork() {
 /// Replace the current process with a new process, specified by an
 /// executable found at PATH.
 void sys$11_exec(const char *path) {
+    CPUState* cpu = nullptr;
+    asm volatile ("mov %%r11, %0\n"
+                  : "=r"(cpu)
+                  );
     DBGMSG(sys$_dbgfmt, 11, "exec");
     if (!path) {
         std::print("[EXEC]: Can not execute NULL path\n");
@@ -254,19 +266,24 @@ void sys$11_exec(const char *path) {
     if (!success) {
         // TODO: ... Unrecoverable, terminate the program, somehow.
         std::print("[EXEC]: Failed to replace process and parent is now unrecoverable, terminating.\n");
+        // TODO: Mark for destruction (halt and catch fire).
         Scheduler::CurrentProcess->value()->State = Process::ProcessState::SLEEPING;
         // I'm pretty sure interrupts are normally disabled during an
         // interrupt; this enables them again to allow for a context
         // switch to happen.
-        asm volatile ("sti");
+        // FIXME: Do we need this?
+        //asm volatile ("sti");
         while (1)
             asm volatile ("hlt");
+
+        // FIXME: Can we do this?
+        //Scheduler::yield();
     }
-    CPUState* cpu = nullptr;
-    asm volatile ("mov %%r11, %0\n"
-                  : "=r"(cpu)
-                  );
+    SYSTEM->virtual_filesystem().close(fds.Process);
     memcpy(cpu, &process->CPU, sizeof(CPUState));
+    // FIXME: Be able to remove this debug message, and it still work.
+    // Without this debug messag, it #PFs...???????
+    Scheduler::print_debug();
 }
 
 /// The second file descriptor given will be associated with the file
