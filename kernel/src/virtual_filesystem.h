@@ -78,6 +78,10 @@ struct FileDescriptors {
     bool valid() const {
         return Process != ProcFD::Invalid && Global != SysFD::Invalid;
     }
+
+    bool invalid() const {
+        return !valid();
+    }
 };
 
 struct VFS {

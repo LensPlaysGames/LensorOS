@@ -51,11 +51,11 @@ int main(int argc, const char **argv) {
   fflush(NULL);
 
   pid_t cpid = syscall(SYS_fork);
-  //puts("fork returned");
   if (cpid) {
     puts("Parent");
   } else {
     puts("Child");
+    syscall(SYS_exec, "/fs0/blazeit");
   }
 
   return 0;

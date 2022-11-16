@@ -159,9 +159,16 @@ namespace Memory {
         map(ActivePageMap, virtualAddress, physicalAddress, mappingFlags, debug);
     }
 
-    void unmap(PageTable* pageMapLevelFour
-               , void* virtualAddress
-               , ShowDebug debug)
+    void map_pages(PageTable* pageTable, void* virtualAddress, void* physicalAddress, u64 mappingFlags, usz pageCount, ShowDebug d) {
+        // We can't name this virtual because it's a keyword.
+        u64 virt = u64(virtualAddress);
+        u64 physical = u64(physicalAddress);
+        for (u64 end = virt + (pageCount * PAGE_SIZE); virt < end; virt += PAGE_SIZE, physical += PAGE_SIZE) {
+            Memory::map(pageTable, (void*)virt, (void*)physical, mappingFlags, d);
+        }
+    }
+
+    void unmap(PageTable* pageMapLevelFour, void* virtualAddress, ShowDebug debug)
     {
         if (debug == ShowDebug::Yes) {
             std::print("Attempting to unmap virtual {} in page table at {}\n"
@@ -187,6 +194,20 @@ namespace Memory {
 
     void unmap(void* virtualAddress, ShowDebug d) {
         unmap(ActivePageMap, virtualAddress, d);
+    }
+
+    void unmap_pages(PageTable* pageTable, void* virtualAddress, usz pageCount, ShowDebug d) {
+        if (d == Memory::ShowDebug::Yes) {
+            std::print("Attempting to unmap {} pages starting at virtual {} in page table at {}\n"
+                       , pageCount
+                       , virtualAddress
+                       , (void*) pageTable
+                       );
+        }
+        u64 end = u64(virtualAddress) + (pageCount * PAGE_SIZE);
+        for (u64 t = u64(virtualAddress); t < end; t += PAGE_SIZE) {
+            Memory::unmap(pageTable, (void*)t, d);
+        }
     }
 
     void flush_page_map(PageTable* pageMapLevelFour) {

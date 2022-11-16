@@ -54,12 +54,36 @@ namespace Memory {
              , ShowDebug d = ShowDebug::No
              );
 
+    /* If a mapping is within the range beginning at the given virtual
+     * address and spanning the given length in pages is marked as
+     * present within the given page map level four, it will be marked
+     * with the flags found in `mappingFlags`, and mapped to the
+     * corresponding contiguous physical address.
+    */
+    void map_pages(PageTable* pageTable
+                   , void* virtualAddress
+                   , void* physicalAddress
+                   , u64 mappingFlags
+                   , usz pageCount
+                   , ShowDebug d
+                   );
+
     /* If a mapping is marked as present within the given
      *   page map level four, it will be marked as not present.
      */
     void unmap(PageTable*, void* virtualAddress
                , ShowDebug d = ShowDebug::No
                );
+
+    /* If a mapping is within the range beginning at the given virtual
+     * address and spanning the given length in pages is marked as
+     * present within the given page map level four, it will be marked
+     * as not present.
+    */
+    void unmap_pages(PageTable*, void* virtualAddress
+                     , usz pageCount
+                     , ShowDebug d = ShowDebug::No
+                     );
 
     /* If a mapping is marked as present within the given
      *   page map level four, it will be marked as not present.
