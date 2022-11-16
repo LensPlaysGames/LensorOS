@@ -35,8 +35,11 @@ namespace Memory {
             vaddr  = vaddress;
             paddr  = paddress;
             length = bytes;
-            pages  = 1;
-            pages += bytes / PAGE_SIZE;
+            if ((bytes % PAGE_SIZE) == 0) {
+                pages = bytes / PAGE_SIZE;
+            } else {
+                pages = 1 + (bytes / PAGE_SIZE);
+            }
             flags = flag;
         }
     };
