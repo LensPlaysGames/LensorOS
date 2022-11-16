@@ -20,7 +20,9 @@
 #include <interrupts/syscalls.h>
 
 #include <debug.h>
+#include <elf_loader.h>
 #include <file.h>
+#include <linked_list.h>
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/region.h>
@@ -99,7 +101,7 @@ void sys$5_exit([[maybe_unused]] int status) {
            );
     pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
     Scheduler::remove_process(pid);
-    DBGMSG("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
+    std::print("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
 }
 
 void* sys$6_map(void* address, usz size, u64 flags) {
@@ -230,17 +232,41 @@ pid_t sys$10_fork() {
 
 /// Replace the current process with a new process, specified by an
 /// executable found at PATH.
-void sys$11_exec(char *path) {
+void sys$11_exec(const char *path) {
     DBGMSG(sys$_dbgfmt, 11, "exec");
+    if (!path) {
+        std::print("[EXEC]: Can not execute NULL path\n");
+        return;
+    }
     DBGMSG("  path: {}\n\n", (const char*) path);
-    (void)path;
-    // TODO: Ensure valid arguments
     Process* process = Scheduler::CurrentProcess->value();
-    (void)process;
 
-    // TODO: Replace current process with new process, if successfully
-    // loaded...
+    // Load executable at path with virtual filesystem.
+    FileDescriptors fds = SYSTEM->virtual_filesystem().open(path);
+    if (fds.invalid()) {
+        std::print("[EXEC]: Could not load file when path == {}\n", path);
+        return;
+    }
 
+    // Replace current process with new process.
+    // TODO: Arguments
+    bool success = ELF::ReplaceUserspaceElf64Process(process, fds.Process);
+    if (!success) {
+        // TODO: ... Unrecoverable, terminate the program, somehow.
+        std::print("[EXEC]: Failed to replace process and parent is now unrecoverable, terminating.\n");
+        Scheduler::CurrentProcess->value()->State = Process::ProcessState::SLEEPING;
+        // I'm pretty sure interrupts are normally disabled during an
+        // interrupt; this enables them again to allow for a context
+        // switch to happen.
+        asm volatile ("sti");
+        while (1)
+            asm volatile ("hlt");
+    }
+    CPUState* cpu = nullptr;
+    asm volatile ("mov %%r11, %0\n"
+                  : "=r"(cpu)
+                  );
+    memcpy(cpu, &process->CPU, sizeof(CPUState));
 }
 
 /// The second file descriptor given will be associated with the file

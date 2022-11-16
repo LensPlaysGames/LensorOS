@@ -125,7 +125,7 @@ namespace Memory {
         panic("\033[31mRan out of memory in request_page() :^<\033[0m\n");
         return nullptr;
     }
-    
+
     void* request_pages(u64 numberOfPages) {
         // Can't allocate nothing!
         if (numberOfPages == 0)
@@ -144,7 +144,7 @@ namespace Memory {
                        "Number of pages requested is larger than any contiguous run of pages available.");
             return nullptr;
         }
-        
+
         DBGMSG("request_pages():\n"
                "  # of pages requested:  {}\n"
                "  Free pages:            {}\n"

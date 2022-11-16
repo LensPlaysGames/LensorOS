@@ -107,33 +107,10 @@ namespace ELF {
 #endif /* #ifndef DEBUG_ELF */
     }
 
-    inline bool CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::string_view>& args = {}) {
+    inline bool LoadUserspaceElf64Process(Process* process, Memory::PageTable* pageTable,
+                                          ProcessFileDescriptor fd, const Elf64_Ehdr& elfHeader,
+                                          const std::vector<std::string_view>& args = {}) {
         VFS& vfs = SYSTEM->virtual_filesystem();
-        DBGMSG("Attempting to add userspace process from file descriptor {}\n", fd);
-        Elf64_Ehdr elfHeader;
-        bool read = vfs.read(fd, reinterpret_cast<u8*>(&elfHeader), sizeof(Elf64_Ehdr));
-        if (read == false) {
-            std::print("Failed to read ELF64 header.\n");
-            return false;
-        }
-        if (VerifyElf64Header(elfHeader) == false) {
-            std::print("Executable did not have valid ELF64 header.\n");
-            return false;
-        }
-
-        // Copy current page table (fork)
-        auto* newPageTable = Memory::clone_active_page_map();
-        if (newPageTable == nullptr) {
-            std::print("Failed to clone current page map for new process page map.\n");
-            return false;
-        }
-
-        Memory::map(newPageTable, newPageTable, newPageTable
-                    , (u64)Memory::PageTableFlag::Present
-                    | (u64)Memory::PageTableFlag::ReadWrite
-                    );
-
-        auto* process = new Process{};
 
         size_t stack_flags = 0;
         stack_flags |= (size_t)Memory::PageTableFlag::Present;
@@ -201,7 +178,7 @@ namespace ELF {
                 }
                 u64 virtAddress = phdr->p_vaddr;
                 for (u64 t = 0; t < pages * PAGE_SIZE; t += PAGE_SIZE) {
-                    Memory::map(newPageTable
+                    Memory::map(pageTable
                                 , (void*)(virtAddress + t)
                                 , loadedProgram + t
                                 , flags
@@ -236,7 +213,7 @@ namespace ELF {
         }
         u64 stack_top_address = newStackBottom + UserProcessStackSize;
         for (u64 t = newStackBottom; t < stack_top_address; t += PAGE_SIZE)
-            Memory::map(newPageTable, (void*)t, (void*)t, stack_flags);
+            Memory::map(pageTable, (void*)t, (void*)t, stack_flags);
 
         // Keep track of stack, as it is a memory region that remains
         // for the duration of the process, and should only be freed
@@ -292,6 +269,72 @@ namespace ELF {
         }
 #endif
 
+        // New stack.
+        process->CPU.RBP = (u64)(stack_top_address);
+        process->CPU.RSP = (u64)(stack_top_address);
+        process->CPU.Frame.sp = (u64)(stack_top_address);
+        // Entry point.
+        process->CPU.Frame.ip = elfHeader.e_entry;
+        // Ring 3 GDT segment selectors.
+        process->CPU.Frame.cs = 0x18 | 0b11;
+        process->CPU.Frame.ss = 0x20 | 0b11;
+        // Enable interrupts after jump.
+        process->CPU.Frame.flags = 0b1010000010;
+
+        return true;
+    }
+
+    inline bool ReplaceUserspaceElf64Process(Process* process, ProcessFileDescriptor fd, const std::vector<std::string_view>& args = {}) {
+        VFS& vfs = SYSTEM->virtual_filesystem();
+        DBGMSG("Attempting to add userspace process from file descriptor {}\n", fd);
+        Elf64_Ehdr elfHeader;
+        bool read = vfs.read(fd, reinterpret_cast<u8*>(&elfHeader), sizeof(Elf64_Ehdr));
+        if (read == false) {
+            std::print("Failed to read ELF64 header.\n");
+            return false;
+        }
+        if (VerifyElf64Header(elfHeader) == false) {
+            std::print("Executable did not have valid ELF64 header.\n");
+            return false;
+        }
+
+        // Unmap and free old process memory, if header is valid and things look good to go.
+        for (SinglyLinkedListNode<Memory::Region>* it = process->Memories.head(); it; it = it->next()) {
+            Memory::unmap_pages(process->CR3, it->value().vaddr, it->value().pages, Memory::ShowDebug::No);
+            Memory::free_pages(it->value().paddr, it->value().pages);
+        }
+
+        return LoadUserspaceElf64Process(process, process->CR3, fd, elfHeader, args);
+    }
+
+    inline bool CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::string_view>& args = {}) {
+        VFS& vfs = SYSTEM->virtual_filesystem();
+        DBGMSG("Attempting to add userspace process from file descriptor {}\n", fd);
+        Elf64_Ehdr elfHeader;
+        bool read = vfs.read(fd, reinterpret_cast<u8*>(&elfHeader), sizeof(Elf64_Ehdr));
+        if (read == false) {
+            std::print("Failed to read ELF64 header.\n");
+            return false;
+        }
+        if (VerifyElf64Header(elfHeader) == false) {
+            std::print("Executable did not have valid ELF64 header.\n");
+            return false;
+        }
+
+        // Copy current page table (fork)
+        auto* newPageTable = Memory::clone_active_page_map();
+        if (newPageTable == nullptr) {
+            std::print("Failed to clone current page map for new process page map.\n");
+            return false;
+        }
+
+        Memory::map(newPageTable, newPageTable, newPageTable
+                    , (u64)Memory::PageTableFlag::Present
+                    | (u64)Memory::PageTableFlag::ReadWrite
+                    );
+
+        auto* process = new Process{};
+        LoadUserspaceElf64Process(process, newPageTable, fd, elfHeader, args);
         // Open stdin.
         vfs.add_file(vfs.StdinDriver->open("stdin"), process);
         // Open stdout and stderr
@@ -309,20 +352,11 @@ namespace ELF {
 
         // New page map.
         process->CR3 = newPageTable;
-        // New stack.
-        process->CPU.RBP = (u64)(stack_top_address);
-        process->CPU.RSP = (u64)(stack_top_address);
-        process->CPU.Frame.sp = (u64)(stack_top_address);
-        // Entry point.
-        process->CPU.Frame.ip = elfHeader.e_entry;
-        // Ring 3 GDT segment selectors.
-        process->CPU.Frame.cs = 0x18 | 0b11;
-        process->CPU.Frame.ss = 0x20 | 0b11;
-        // Enable interrupts after jump.
-        process->CPU.Frame.flags = 0b1010000010;
         Scheduler::add_process(process);
         return true;
     }
 }
+
+#undef DBGMSG
 
 #endif /* LENSOR_OS_ELF_LOADER_H */
