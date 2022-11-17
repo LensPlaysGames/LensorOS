@@ -49,8 +49,14 @@ void Process::destroy() {
     Memories.for_each([](SinglyLinkedListNode<Memory::Region>* it){
         Memory::free_pages(it->value().paddr, it->value().pages);
     });
-    // TODO: Close open files.
-    // TODO: Free page table?
+    // Close open files.
+    // NOTE: There *should* be none; libc should close all open files on destruction.
+    for (const auto& [procfd, fd] : FileDescriptors.pairs()) {
+    }
+
+    // TODO: Free page table? May want to wait until another process
+    // can do it, just in case we are still in this process. Or we have
+    // to flush a new page table before we call destroy.
 }
 
 namespace Scheduler {
@@ -151,14 +157,14 @@ namespace Scheduler {
     bool remove_process(pid_t pid) {
         Process* processToRemove = nullptr;
         int processToRemoveIndex = 0;
-        ProcessQueue->for_each([pid, &processToRemove, &processToRemoveIndex](auto* it) {
+        for (SinglyLinkedListNode<Process*>* it = ProcessQueue->head(); it; it = it->next()) {
             Process* process = it->value();
             if (process->ProcessID == pid) {
                 processToRemove = process;
-            } else if (processToRemove == nullptr) {
-                processToRemoveIndex += 1;
+                break;
             }
-        });
+            processToRemoveIndex += 1;
+        }
         if (processToRemove) {
             ProcessQueue->remove(processToRemoveIndex);
             processToRemove->destroy();

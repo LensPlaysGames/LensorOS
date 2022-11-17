@@ -49,6 +49,8 @@ namespace Memory {
     u64 TotalUsedPages { 0 };
     u64 MaxFreePagesInARow { 0 };
 
+    u64 FirstFreePage { 0 };
+
     u64 total_ram() {
         return TotalPages * PAGE_SIZE;
     }
@@ -103,7 +105,6 @@ namespace Memory {
                , TotalFreePages);
     }
 
-    u64 FirstFreePage { 0 };
     void* request_page() {
         DBGMSG("request_page():\n"
                "  Free pages:            {}\n"
@@ -111,7 +112,7 @@ namespace Memory {
                "\n"
                , TotalFreePages
                , MaxFreePagesInARow);
-        for(; FirstFreePage < TotalPages; FirstFreePage++) {
+        for(; FirstFreePage < TotalPages; ++FirstFreePage) {
             if (PageMap.get(FirstFreePage) == false) {
                 void* addr = (void*)(FirstFreePage * PAGE_SIZE);
                 lock_page(addr);
