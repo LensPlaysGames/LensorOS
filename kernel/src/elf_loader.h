@@ -352,6 +352,8 @@ namespace ELF {
 
         // New page map.
         process->CR3 = newPageTable;
+
+        // Make scheduler aware that this process may be run.
         Scheduler::add_process(process);
         return true;
     }

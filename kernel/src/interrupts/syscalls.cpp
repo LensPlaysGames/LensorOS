@@ -57,7 +57,7 @@ ProcessFileDescriptor sys$0_open(const char* path) {
 
 void sys$1_close(ProcessFileDescriptor fd) {
     DBGMSG(sys$_dbgfmt, 1, "close");
-    SYSTEM->virtual_filesystem().close(static_cast<ProcessFileDescriptor>(fd));
+    SYSTEM->virtual_filesystem().close(fd);
 }
 
 // TODO: This should return the amount of bytes read.
@@ -71,7 +71,7 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
            , (void*) buffer
            , byteCount
            );
-    return SYSTEM->virtual_filesystem().read(static_cast<ProcessFileDescriptor>(fd), buffer, byteCount, 0);
+    return SYSTEM->virtual_filesystem().read(fd, buffer, byteCount, 0);
 }
 
 // TODO: This should return the amount of bytes written.
@@ -85,12 +85,12 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
            , (void*) buffer
            , byteCount
            );
-    return SYSTEM->virtual_filesystem().write(static_cast<ProcessFileDescriptor>(fd), buffer, byteCount, 0);
+    return SYSTEM->virtual_filesystem().write(fd, buffer, byteCount, 0);
 }
 
 void sys$4_poke() {
     DBGMSG(sys$_dbgfmt, 4, "poke");
-    DBGMSG("Poke from userland!\n");
+    std::print("Poke from userland!\n");
 }
 
 void sys$5_exit([[maybe_unused]] int status) {
@@ -100,7 +100,10 @@ void sys$5_exit([[maybe_unused]] int status) {
            , status
            );
     pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
-    Scheduler::remove_process(pid);
+    bool success = Scheduler::remove_process(pid);
+    if (!success) {
+        std::print("[EXIT]: Failure to remove process\n");
+    }
     std::print("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
 }
 

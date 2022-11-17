@@ -250,6 +250,7 @@ void page_fault_handler(InterruptFrameError* frame) {
     if ((frame->error & (u64)PageFaultErrorCode::Reserved) > 0)
         std::print("  Reserved\n");
 
+    std::print("CurrentProcess->ProcessID == {}\n", u64(Scheduler::CurrentProcess->value()->ProcessID));
     Memory::print_page_map((Memory::PageTable*)cr3, Memory::PageTableFlag::UserSuper);
 
     /* US RW P - Description
