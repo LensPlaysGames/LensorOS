@@ -122,6 +122,7 @@ struct VFS {
     FileDescriptors open(std::string_view);
 
     bool close(ProcFD procfd);
+    bool close(Process*, ProcFD procfd);
 
     ssz read(ProcFD procfd, u8* buffer, usz byteCount, usz byteOffset = 0);
     ssz write(ProcFD procfd, u8* buffer, usz byteCount, usz byteOffset);
@@ -132,6 +133,7 @@ struct VFS {
     FileDescriptors add_file(std::shared_ptr<FileMetadata>, Process* proc = nullptr);
 
     auto procfd_to_fd(ProcFD procfd) const -> SysFD;
+    auto procfd_to_fd(Process*, ProcFD procfd) const -> SysFD;
     auto file(ProcFD fd) -> std::shared_ptr<FileMetadata>;
     auto file(SysFD fd) -> std::shared_ptr<FileMetadata>;
 
@@ -140,6 +142,7 @@ private:
     std::vector<MountPoint> Mounts;
 
     void free_fd(SysFD fd, ProcFD procfd);
+    void free_fd(Process*, SysFD fd, ProcFD procfd);
     bool valid(ProcFD procfd) const;
     bool valid(SysFD fd) const;
 };

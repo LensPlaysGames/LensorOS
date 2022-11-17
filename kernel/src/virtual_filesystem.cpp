@@ -35,8 +35,11 @@
 #endif
 
 SysFD VFS::procfd_to_fd(ProcFD procfd) const {
-    const auto& proc = Scheduler::CurrentProcess->value();
-    auto sysfd = proc->FileDescriptors[procfd];
+    return procfd_to_fd(Scheduler::CurrentProcess->value(), procfd);
+}
+
+SysFD VFS::procfd_to_fd(Process* process, ProcFD procfd) const {
+    auto sysfd = process->FileDescriptors[procfd];
     if (!sysfd) {
         DBGMSG("[VFS]: ERROR {} (pid {}) is unmapped.\n", procfd, proc->ProcessID);
         return SysFD::Invalid;
@@ -46,6 +49,9 @@ SysFD VFS::procfd_to_fd(ProcFD procfd) const {
 }
 
 auto VFS::file(ProcFD procfd) -> std::shared_ptr<FileMetadata> {
+    // TODO: We should probably have the implementation take a process
+    // as a parameter, that way we can actually free fds other than
+    // within the currently scheduled process. :p
     const auto& proc = Scheduler::CurrentProcess->value();
 
 #ifdef DEBUG_VFS
@@ -89,13 +95,15 @@ bool VFS::valid(SysFD fd) const {
     return true;
 }
 
-void VFS::free_fd(SysFD fd, ProcFD procfd) {
-    const auto& proc = Scheduler::CurrentProcess->value();
-    proc->FileDescriptors.erase(procfd);
-
+void VFS::free_fd(Process* process, SysFD fd, ProcFD procfd) {
+    process->FileDescriptors.erase(procfd);
     /// Erasing the last shared_ptr holding the file metadata will call
     /// the destructor of FileMetadata, which will then close the file.
     Files.erase(fd);
+}
+
+void VFS::free_fd(SysFD fd, ProcFD procfd) {
+    free_fd(Scheduler::CurrentProcess->value(), fd, procfd);
 }
 
 FileDescriptors VFS::open(std::string_view path) {
@@ -141,11 +149,12 @@ FileDescriptors VFS::open(std::string_view path) {
     return {};
 }
 
-bool VFS::close(ProcFD procfd) {
-    auto fd = procfd_to_fd(procfd);
-    [[maybe_unused]] auto& proc = Scheduler::CurrentProcess->value();
+
+bool VFS::close(Process* process, ProcFD procfd) {
+    if (!process) { return false; }
+    auto fd = procfd_to_fd(process, procfd);
     if (fd == SysFD::Invalid) {
-        DBGMSG("[VFS]: Cannot close invalid {} (pid {}).\n", procfd, proc->ProcessID);
+        DBGMSG("[VFS]: Cannot close invalid {} (pid {}).\n", procfd, process->ProcessID);
         return false;
     }
 
@@ -155,10 +164,14 @@ bool VFS::close(ProcFD procfd) {
         return false;
     }
 
-    DBGMSG("[VFS]: Unmapping {} (pid {}).\n", procfd, proc->ProcessID);
+    DBGMSG("[VFS]: Unmapping {} (pid {}).\n", procfd, process->ProcessID);
     DBGMSG("[VFS]: Closing {}.\n", fd);
     free_fd(fd, procfd);
     return true;
+}
+
+bool VFS::close(ProcFD procfd) {
+    return close(Scheduler::CurrentProcess->value(), procfd);
 }
 
 ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
