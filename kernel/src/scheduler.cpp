@@ -52,6 +52,7 @@ void Process::destroy() {
     // Close open files.
     // NOTE: There *should* be none; libc should close all open files on destruction.
     for (const auto& [procfd, fd] : FileDescriptors.pairs()) {
+        SYSTEM->virtual_filesystem().close(this, procfd);
     }
 
     // TODO: Free page table? May want to wait until another process
