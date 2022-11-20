@@ -80,9 +80,6 @@ namespace Memory {
 
     void free_page(void* address) {
         u64 index = (u64)address / PAGE_SIZE;
-        if (PageMap.get(index) == false)
-            return;
-
         if (PageMap.set(index, false)) {
             TotalUsedPages -= 1;
             TotalFreePages += 1;
