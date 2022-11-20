@@ -374,3 +374,13 @@ pid_t CopyUserspaceProcess(Process* original) {
     newProcess->ProcessID = cpid;
     return cpid;
 }
+
+void Scheduler::map_pages_in_all_processes(void* virtualAddress, void* physicalAddress, u64 mappingFlags, size_t pages, Memory::ShowDebug d) {
+    for (SinglyLinkedListNode<Process*>* it = ProcessQueue->head(); it; it = it->next()) {
+        Memory::map_pages(it->value()->CR3
+                          , virtualAddress, physicalAddress
+                          , mappingFlags
+                          , pages
+                          , d);
+    }
+}

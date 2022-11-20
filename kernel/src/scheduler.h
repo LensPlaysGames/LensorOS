@@ -167,6 +167,15 @@ namespace Scheduler {
     /// is not saved by this function, so be sure the saved process CPU
     /// state is valid and ready to be returned to.
     void yield();
+
+    // Call `map_pages` with the given data on every process in the
+    // process queue.
+    void map_pages_in_all_processes
+    (void* virtualAddress
+     , void* physicalAddress
+     , u64 mappingFlags
+     , size_t pages
+     , Memory::ShowDebug d = Memory::ShowDebug::No);
 }
 
 __attribute__((no_caller_saved_registers))
