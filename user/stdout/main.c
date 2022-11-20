@@ -27,35 +27,39 @@ int main(int argc, const char **argv) {
   //puts(message);
   for (int i = 0; i < argc; i++) puts(argv[i]);
 
-  //for (;;) {
-  //  // Get character from standard input.
-  //  int c = getchar();
-  //  // Skip error return value.
-  //  if (c == EOF) {
-  //    // TODO: Wait/waste some time so we don't choke the system just
-  //    // spinning.
-  //    continue;
-  //  } else if (c == 'q') {
-  //    puts("Quitting.");
-  //    break;
-  //  }
-  //  // Echo character to standard out.
-  //  putc((char)c, stdout);
-  //  fflush(stdout);
-  //}
+  for (;;) {
+    // Get character from standard input.
+    int c = getchar();
+    // Skip error return value.
+    if (c == EOF) {
+      // TODO: Wait/waste some time so we don't choke the system just
+      // spinning.
+      continue;
 
-
-  // If there are pending writes, they will be executed on both the
-  // parent and the child; by flushing any buffers we have, it ensures
-  // the child won't write duplicate data on accident.
-  fflush(NULL);
-
-  pid_t cpid = syscall(SYS_fork);
-  if (cpid) {
-    puts("Parent");
-  } else {
-    puts("Child");
-    syscall(SYS_exec, "/fs0/blazeit");
+    } else if (c == 'a') {
+      // If there are pending writes, they will be executed on both the
+      // parent and the child; by flushing any buffers we have, it ensures
+      // the child won't write duplicate data on accident.
+      pid_t cpid = syscall(SYS_fork);
+      if (cpid) {
+        puts("Parent");
+        fflush(NULL);
+        syscall(SYS_waitpid, cpid);
+        puts("Parent waited");
+        fflush(NULL);
+      } else {
+        puts("Child");
+        fflush(NULL);
+        syscall(SYS_exec, "/fs0/blazeit");
+        fflush(NULL);
+      }
+    } else if (c == 'q') {
+      puts("Quitting.");
+      break;
+    }
+    // Echo character to standard out.
+    putc((char)c, stdout);
+    fflush(NULL);
   }
 
   return 0;
