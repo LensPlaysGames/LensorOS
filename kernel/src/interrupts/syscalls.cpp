@@ -271,22 +271,13 @@ void sys$11_exec(const char *path) {
         std::print("[EXEC]: Failed to replace process and parent is now unrecoverable, terminating.\n");
         // TODO: Mark for destruction (halt and catch fire).
         Scheduler::CurrentProcess->value()->State = Process::ProcessState::SLEEPING;
-        // I'm pretty sure interrupts are normally disabled during an
-        // interrupt; this enables them again to allow for a context
-        // switch to happen.
-        // FIXME: Do we need this?
-        //asm volatile ("sti");
-        while (1)
-            asm volatile ("hlt");
-
-        // FIXME: Can we do this?
-        //Scheduler::yield();
+        Scheduler::yield();
     }
+
+    //Scheduler::print_debug();
     SYSTEM->virtual_filesystem().close(fds.Process);
-    memcpy(cpu, &process->CPU, sizeof(CPUState));
-    // FIXME: Be able to remove this debug message, and it still work.
-    // Without this debug messag, it #PFs...???????
-    Scheduler::print_debug();
+
+    *cpu = process->CPU;
 }
 
 /// The second file descriptor given will be associated with the file
