@@ -93,7 +93,7 @@ namespace Memory {
         PDE.or_flag_if(PageTableFlag::Dirty,         dirty);
         PDE.or_flag_if(PageTableFlag::LargerPages,   largerPages);
         PDE.or_flag_if(PageTableFlag::Global,        global);
-        PDE.or_flag_if(PageTableFlag::Global,        noExecute);
+        PDE.or_flag_if(PageTableFlag::NX,            noExecute);
         pageMapLevelFour->entries[indexer.page_directory_pointer()] = PDE;
         PDP = (PageTable*)((u64)PDE.address() << 12);
 
@@ -113,7 +113,7 @@ namespace Memory {
         PDE.or_flag_if(PageTableFlag::Dirty,         dirty);
         PDE.or_flag_if(PageTableFlag::LargerPages,   largerPages);
         PDE.or_flag_if(PageTableFlag::Global,        global);
-        PDE.or_flag_if(PageTableFlag::Global,        noExecute);
+        PDE.or_flag_if(PageTableFlag::NX,            noExecute);
         PDP->entries[indexer.page_directory()] = PDE;
         PD = (PageTable*)((u64)PDE.address() << 12);
 
@@ -133,7 +133,7 @@ namespace Memory {
         PDE.or_flag_if(PageTableFlag::Dirty,         dirty);
         PDE.or_flag_if(PageTableFlag::LargerPages,   largerPages);
         PDE.or_flag_if(PageTableFlag::Global,        global);
-        PDE.or_flag_if(PageTableFlag::Global,        noExecute);
+        PDE.or_flag_if(PageTableFlag::NX,            noExecute);
         PD->entries[indexer.page_table()] = PDE;
         PT = (PageTable*)((u64)PDE.address() << 12);
 
@@ -148,7 +148,7 @@ namespace Memory {
         PDE.set_flag(PageTableFlag::Dirty,         dirty);
         PDE.set_flag(PageTableFlag::LargerPages,   largerPages);
         PDE.set_flag(PageTableFlag::Global,        global);
-        PDE.set_flag(PageTableFlag::Global,        noExecute);
+        PDE.set_flag(PageTableFlag::NX,            noExecute);
         PT->entries[indexer.page()] = PDE;
         if (debug == ShowDebug::Yes) {
             std::print("  \033[32mMapped\033[0m\n\n");
@@ -220,7 +220,9 @@ namespace Memory {
     Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable) {
         // FIXME: Free already allocated pages upon failure.
         Memory::PageDirectoryEntry PDE;
+
         auto* newPageTable = reinterpret_cast<Memory::PageTable*>(Memory::request_page());
+
         if (newPageTable == nullptr) {
             std::print("Failed to allocate memory for new process page map level four.\n");
             return nullptr;
@@ -260,7 +262,15 @@ namespace Memory {
                     }
                     auto* oldPT = (Memory::PageTable*)((u64)PDE.address() << 12);
                     memcpy(newPT, oldPT, PAGE_SIZE);
+                    //for (u64 l = 0; l < 512; ++l) {
+                    //    PDE = oldPT->entries[l];
+                    //    if (PDE.flag(Memory::PageTableFlag::Present) == false)
+                    //        continue;
 
+                    //    PDE = oldPT->entries[l];
+                    //    PDE.set_address((u64)PDE.address());
+                    //    newPT->entries[l] = PDE;
+                    //}
                     PDE = oldPD->entries[k];
                     PDE.set_address((u64)newPT >> 12);
                     newPD->entries[k] = PDE;
@@ -309,7 +319,7 @@ namespace Memory {
             map(pageMap, (void*)(t + (u64)&KERNEL_VIRTUAL), (void*)t
                 , (u64)PageTableFlag::Present
                 | (u64)PageTableFlag::ReadWrite
-                | (u64)PageTableFlag::Global
+                //| (u64)PageTableFlag::Global
                 );
         }
         // Make null-dereference generate exception.

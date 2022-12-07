@@ -110,12 +110,11 @@ void init_heap() {
     u64 numBytes = HEAP_INITIAL_PAGES * PAGE_SIZE;
     for (u64 i = 0; i < HEAP_INITIAL_PAGES * PAGE_SIZE; i += PAGE_SIZE) {
         // Map virtual heap position to physical memory address returned by page frame allocator.
-        // FIXME: Should this be global? It probably doesn't matter, I
-        // don't even know what it does, candidly.
+        // FIXME: Should this be global?
         Memory::map((void*)((u64)HEAP_VIRTUAL_BASE + i), Memory::request_page()
                     , (u64)Memory::PageTableFlag::Present
                     | (u64)Memory::PageTableFlag::ReadWrite
-                    | (u64)Memory::PageTableFlag::Global
+                    //| (u64)Memory::PageTableFlag::Global
                     );
     }
     sHeapStart = (void*)HEAP_VIRTUAL_BASE;
@@ -149,7 +148,7 @@ void expand_heap(u64 numBytes) {
     Scheduler::map_pages_in_all_processes(sHeapEnd, phys_heap_expansion
                                           , (u64)Memory::PageTableFlag::Present
                                           | (u64)Memory::PageTableFlag::ReadWrite
-                                          | (u64)Memory::PageTableFlag::Global
+                                          //| (u64)Memory::PageTableFlag::Global
                                           , numPages);
     sHeapEnd = (void*)((u64)sHeapEnd + numBytes);
 

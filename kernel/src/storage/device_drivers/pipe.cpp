@@ -17,8 +17,14 @@
 * along with LensorOS. If not, see <https://www.gnu.org/licenses
 */
 
-#include <system.h>
 #include <storage/device_drivers/pipe.h>
+
+#include <storage/file_metadata.h>
+#include <system.h>
+
+#include <string_view>
+#include <memory>
+#include <vector>
 
 auto PipeDriver::open(std::string_view path) -> std::shared_ptr<FileMetadata> {
     PipeBuffer* pipe = nullptr;

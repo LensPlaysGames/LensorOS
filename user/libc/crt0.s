@@ -20,6 +20,7 @@
     .global _start
 _start:
     ;;# Stack frame linked list null entry.
+    endbr64
     xor %rbp, %rbp
     pushq %rbp
     movq %rsp, %rbp
