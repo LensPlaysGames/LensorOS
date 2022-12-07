@@ -93,7 +93,7 @@ namespace Memory {
         PDE.or_flag_if(PageTableFlag::Dirty,         dirty);
         PDE.or_flag_if(PageTableFlag::LargerPages,   largerPages);
         PDE.or_flag_if(PageTableFlag::Global,        global);
-        PDE.or_flag_if(PageTableFlag::NX,            noExecute);
+        //PDE.or_flag_if(PageTableFlag::NX,            noExecute);
         pageMapLevelFour->entries[indexer.page_directory_pointer()] = PDE;
         PDP = (PageTable*)((u64)PDE.address() << 12);
 
@@ -113,7 +113,7 @@ namespace Memory {
         PDE.or_flag_if(PageTableFlag::Dirty,         dirty);
         PDE.or_flag_if(PageTableFlag::LargerPages,   largerPages);
         PDE.or_flag_if(PageTableFlag::Global,        global);
-        PDE.or_flag_if(PageTableFlag::NX,            noExecute);
+        //PDE.or_flag_if(PageTableFlag::NX,            noExecute);
         PDP->entries[indexer.page_directory()] = PDE;
         PD = (PageTable*)((u64)PDE.address() << 12);
 
@@ -133,7 +133,7 @@ namespace Memory {
         PDE.or_flag_if(PageTableFlag::Dirty,         dirty);
         PDE.or_flag_if(PageTableFlag::LargerPages,   largerPages);
         PDE.or_flag_if(PageTableFlag::Global,        global);
-        PDE.or_flag_if(PageTableFlag::NX,            noExecute);
+        //PDE.or_flag_if(PageTableFlag::NX,            noExecute);
         PD->entries[indexer.page_table()] = PDE;
         PT = (PageTable*)((u64)PDE.address() << 12);
 
