@@ -229,10 +229,16 @@ namespace ELF {
         std::vector<u64> argv_addresses;
         for (auto str : args) {
             usz size = str.size() + 1;
+            size += 16 - (size & 15);
             stack_top_address -= size;
             argv_addresses.push_back(stack_top_address);
             memcpy(reinterpret_cast<void*>(stack_top_address), str.data(), str.size());
             reinterpret_cast<char*>(stack_top_address)[str.size()] = 0;
+        }
+
+        if (argv_addresses.size() % 2 != 0) {
+            stack_top_address -= 8;
+            *reinterpret_cast<u64*>(stack_top_address) = 0;
         }
 
         // Write null pointer to end of argv.
@@ -268,6 +274,10 @@ namespace ELF {
             std::print("argv[{}]: {}\n", i, _argv[i]);
         }
 #endif
+
+        if (stack_top_address % 16 != 0) {
+            panic("STACK UNALIGNED\n");
+        }
 
         // New stack.
         process->CPU.RBP = (u64)(stack_top_address);
