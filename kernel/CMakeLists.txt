@@ -230,9 +230,7 @@ if( DD_PROGRAM AND MTOOLS_PROGRAM )
   # Image generation relies on kernel.elf
   add_dependencies( image_raw Kernel )
 else()
-  message(
-    "-- dd and mtools not found on system, skipping image_raw target generation"
-  )
+  message(NOTICE "[31;5mWARN: MISSING PROGRAM!  Could not find `dd` and `mtools`, image_raw target has not been generated. See dependencies in README.[m")
 endif()
 
 # Boot media generation: GPT partitioned hard drive.
@@ -290,9 +288,7 @@ elseif( CMAKE_HOST_UNIX )
     endif()
   endif()
 else()
-  message(
-    "-- createGPT not found on system, skipping image_gpt target generation"
-  )
+  message(NOTICE "[31;5mWARN: MISSING PROGRAM!  Could not find `createGPT`, image_gpt target has not been generated. See dependencies in README.[m")
 endif()
 
 # Boot media generation: ISO-9660 CD-ROM.
@@ -319,9 +315,7 @@ if( XORRISO_PROGRAM )
     VERBATIM
   )
 else()
-  message(
-    "-- xorriso not found on system, skipping image_iso target generation."
-  )
+  message(NOTICE "[31;5mWARN: MISSING PROGRAM!  Could not find `xorriso`, image_iso target has not been generated. See dependencies in README.[m")
 endif()
 
 # Boot media generation: GPT formatted disk image in VDI format.
@@ -343,9 +337,7 @@ if( QEMU_IMG_PROGRAM )
     add_dependencies( image_vdi image_gpt )
   endif()
 else()
-  message(
-    "-- qemu-img not found on system, skipping image_vdi target generation"
-  )
+  message(NOTICE "[31;5mWARN: MISSING PROGRAM!  Could not find `qemu-img`, image_vdi target has not been generated. See dependencies in README.[m")
 endif()
 
 if( TARGET image_raw )
