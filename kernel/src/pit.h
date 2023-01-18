@@ -94,12 +94,10 @@ class PIT {
 public:
     PIT();
 
-    _PushIgnoreWarning("-Wvolatile")
     void tick() { Ticks += 1; }
-    _PopWarnings()
 
     u64 get() { return Ticks; }
-    double seconds_since_boot();
+    //double seconds_since_boot();
 
     /* PIT Channel two is connected to PC Speaker when
      *   bit 0 of I/O port 0x61 is equal to one.

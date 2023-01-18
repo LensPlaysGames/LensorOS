@@ -174,12 +174,12 @@ u64 HPET::get() {
     return result;
 }
 
-double HPET::seconds() {
-    if (Initialized == false)
-        return 0;
-
-    return static_cast<double>(get()) / Frequency;
-}
+//double HPET::seconds() {
+//    if (Initialized == false)
+//        return 0;
+//
+//    return static_cast<double>(get()) / Frequency;
+//}
 
 void HPET::set_main_counter(u64 value) {
     if (Initialized == false)

@@ -286,7 +286,7 @@ namespace Scheduler {
     extern "C" void yield_asm(CPUState*);
 
     void yield() {
-        static CPUState newstate;
+        CPUState newstate;
         switch_process_impl(&newstate);
         // iretq to the new process, bb.
         yield_asm(&newstate);

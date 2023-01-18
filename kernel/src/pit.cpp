@@ -30,9 +30,9 @@ PIT::PIT() {
     configure_channel(Channel::Two, Access::HighAndLow, Mode::SquareWaveGenerator, 440);
 }
 
-double PIT::seconds_since_boot() {
-    return (double)Ticks / PIT_FREQUENCY;
-}
+//double PIT::seconds_since_boot() {
+//    return (double)Ticks / PIT_FREQUENCY;
+//}
 
 void PIT::prepare_wait_seconds(double duration) {
     TicksToWait = duration * PIT_FREQUENCY;

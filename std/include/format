@@ -683,7 +683,7 @@ struct __format_visitor {
     /// Builtin format args.
     template <typename _Ty>
     constexpr void operator()(_Ty __val) {
-        formatter<remove_cvref_t<_Ty>, _Char> __fmt;
+        formatter<remove_cvref_t<_Ty>, _Char> __fmt{};
         auto __end = __fmt.parse(__parse_ctx);
         if (__end != __parse_ctx.end()) {
             __throw_format_error("formatter::parse() must consume the entire format specifier");

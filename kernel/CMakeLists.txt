@@ -55,10 +55,19 @@ add_library(
 target_compile_options(
   Interrupts PRIVATE
   -ffreestanding
+  -fshort-wchar
+
   -fno-exceptions
+  -fno-tree-vectorize
+  -fno-fast-math
+  -fno-associative-math
+
   -mcmodel=kernel
   -mgeneral-regs-only
   -mno-red-zone
+  -mno-sse
+  -mno-sse2
+
   -c
 )
 target_include_directories( Interrupts PRIVATE src/ )
@@ -133,17 +142,27 @@ endif()
 target_compile_options(
   Kernel PRIVATE
   -ffreestanding
+  -fshort-wchar
+
   -fno-use-cxa-atexit
   -fno-exceptions
   -fno-rtti
-  -fshort-wchar
+  -fno-tree-vectorize
+  -fno-fast-math
+  -fno-associative-math
+
   -mcmodel=kernel
+
   -mno-red-zone
+  -mno-sse
+  -mno-sse2
+
   -Wall
   -Wextra
   -Werror
-
   -Wno-error=deprecated-enum-enum-conversion
+
+  -Wno-unused-parameter
 
   ## C++20 deprecates volatile |= and &=. That's nonsense, so we disable this warning.
   ##

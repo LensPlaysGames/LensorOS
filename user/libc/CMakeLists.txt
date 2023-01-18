@@ -90,6 +90,7 @@ target_compile_options(
     -nostdlib
     -nostdinc
     -lgcc
+    -mno-red-zone
 )
 
 target_link_options(

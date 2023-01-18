@@ -127,7 +127,7 @@ public:
         return in8(CMOS_DATA);
     }
 
-    double seconds_since_boot();
+    //double seconds_since_boot();
 
     void update_data();
     void set_periodic_int_enabled(bool);

@@ -47,7 +47,7 @@ namespace Memory {
         bool dirty         = mappingFlags & static_cast<u64>(PageTableFlag::Dirty);
         bool largerPages   = mappingFlags & static_cast<u64>(PageTableFlag::LargerPages);
         bool global        = mappingFlags & static_cast<u64>(PageTableFlag::Global);
-        bool noExecute     = mappingFlags & static_cast<u64>(PageTableFlag::NX);
+        //bool noExecute     = mappingFlags & static_cast<u64>(PageTableFlag::NX);
 
         if (debug == ShowDebug::Yes) {
             std::print("Attempting to map virtual {} to physical {} in page table at {}\n"
@@ -148,7 +148,7 @@ namespace Memory {
         PDE.set_flag(PageTableFlag::Dirty,         dirty);
         PDE.set_flag(PageTableFlag::LargerPages,   largerPages);
         PDE.set_flag(PageTableFlag::Global,        global);
-        PDE.set_flag(PageTableFlag::NX,            noExecute);
+        //PDE.set_flag(PageTableFlag::NX,            noExecute);
         PT->entries[indexer.page()] = PDE;
         if (debug == ShowDebug::Yes) {
             std::print("  \033[32mMapped\033[0m\n\n");

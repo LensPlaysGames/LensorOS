@@ -106,14 +106,14 @@ extern "C" void kmain(BootInfo* bInfo) {
         print_now(drawPosition);
         gRend.crlf(drawPosition, debugInfoX);
         // PRINT PIT ELAPSED TIME.
-        gRend.puts(drawPosition, std::format("PIT Elapsed: {:.3}", gPIT.seconds_since_boot()));
-        gRend.crlf(drawPosition, debugInfoX);
+        //gRend.puts(drawPosition, std::format("PIT Elapsed: {:.3}", gPIT.seconds_since_boot()));
+        //gRend.crlf(drawPosition, debugInfoX);
         // PRINT RTC ELAPSED TIME.
-        gRend.puts(drawPosition, std::format("RTC Elapsed: {:.3}", gRTC.seconds_since_boot()));
-        gRend.crlf(drawPosition, debugInfoX);
+        //gRend.puts(drawPosition, std::format("RTC Elapsed: {:.3}", gRTC.seconds_since_boot()));
+        //gRend.crlf(drawPosition, debugInfoX);
         // PRINT HPET ELAPSED TIME.
-        gRend.puts(drawPosition, std::format("HPET Elapsed: {:.3}", gHPET.seconds()));
-        gRend.crlf(drawPosition, debugInfoX);
+        //gRend.puts(drawPosition, std::format("HPET Elapsed: {:.3}", gHPET.seconds()));
+        //gRend.crlf(drawPosition, debugInfoX);
         // PRINT MEMORY INFO.
         gRend.crlf(drawPosition, debugInfoX);
         print_memory_info(drawPosition);

@@ -2,9 +2,9 @@
 
 RTC gRTC;
 
-double RTC::seconds_since_boot() {
-    return (double)Ticks / RTC_PERIODIC_HERTZ;
-}
+//double RTC::seconds_since_boot() {
+//    return (double)Ticks / RTC_PERIODIC_HERTZ;
+//}
 
 /// Set IRQ8 periodic interrupt enabled or disabled.
 /// NOTE: Must be called when interrupts are disabled (in-between `cli` and `sti`)!
@@ -33,7 +33,7 @@ void RTC::get_rtc_data(RTCData& data) {
     if (CENTURY_REGISTER != 0)
         data.century = read_register(0x32);
 }
-    
+
 void RTC::update_data() {
     // SPIN UNTIL RTC IS NOT UPDATING
     //   This may be up to one second.
