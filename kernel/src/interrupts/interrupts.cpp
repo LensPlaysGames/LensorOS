@@ -122,7 +122,7 @@ void keyboard_handler(InterruptFrame* frame) {
              || Keyboard::gText.State.CapsLock
              );
         if (character) {
-            // Write translated character to stdin of non-current process.
+            // Write (hopefully) translated character to stdin of non-current process.
             auto fd = static_cast<ProcFD>(0);
             auto sysfd = init->FileDescriptors[fd];
             auto f = SYSTEM->virtual_filesystem().file(*sysfd);
@@ -130,6 +130,7 @@ void keyboard_handler(InterruptFrame* frame) {
                 f->device_driver()->write(f.get(), 0, sizeof(char), &character);
             }
         }
+        //else std::print("Unhandled scancode: {}\n", scancode);
     }
     end_of_interrupt(1);
 }
