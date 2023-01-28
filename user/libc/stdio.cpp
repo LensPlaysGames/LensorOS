@@ -686,12 +686,41 @@ int sscanf(const char* __restrict__ str, const char* __restrict__ format, ...) {
 }
 
 int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list args) {
-    /// FIXME: Stub.
-    (void)stream;
-    (void)format;
-    (void)args;
-    _LIBC_STUB();
-    return -1;
+    if (!stream || !format) {
+        return -1;
+    }
+
+    for (const char *fmt = format; *fmt; ++fmt) {
+        if (*fmt == '%') {
+            ++fmt;
+            switch (*fmt) {
+
+            // TODO: Support more format specifiers
+
+            case 's': {
+                const char *str = va_arg(args, const char *);
+                fputs(str, stream);
+                continue;
+            } break;
+
+            case 'c': {
+                char c = va_arg(args, char);
+                fputc(c, stream);
+                continue;
+            } break;
+
+            case '\0':
+                fputc('%', stream);
+                return 0;
+
+            default:
+                fputc('%', stream);
+                break;
+            }
+        }
+        fputc(*fmt, stream);
+    }
+    return 0;
 }
 
 int vfscanf(FILE* __restrict__ stream, const char* __restrict__ format, va_list args) {

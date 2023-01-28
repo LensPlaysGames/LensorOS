@@ -27,7 +27,7 @@
 __BEGIN_DECLS__
 
 /// Copying
-__forceinline void* memcpy(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n) {
+static __forceinline void* memcpy(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n) {
 #   ifdef __have_memcpy_sse_unaligned_intrin
     __memcpy_sse_unaligned_intrin(__dest, __src, __n);
 #   else
@@ -35,6 +35,7 @@ __forceinline void* memcpy(void* __restrict__ __dest, const void* __restrict__ _
 #   endif
     return __dest;
 }
+
 
 void* memmove(void*, const void*, size_t);
 char* strcpy(char* __dest, const char* __src);
@@ -63,7 +64,15 @@ char* strtok(char* __str, const char* __delim);
 
 /// Other
 const void* memmem(const void* __haystack, size_t __haystacklen, const void* __needle, size_t __needlelen);
-void* memset(void*, int, size_t);
+
+/** Set the value of each byte within a block of memory.
+ *
+ * @param mem Beginning of memory block.
+ * @param val Value to write to each byte in the memory block (integer promotion)
+ * @param len Amount of bytes to set starting at 'mem'.
+ */
+void* memset(void* mem, int val, size_t len);
+
 char* strerror(int __errnum);
 size_t strlen(const char*);
 size_t strnlen(const char*, size_t __maxlen);
