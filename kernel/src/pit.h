@@ -29,7 +29,8 @@
 #else
 #define PIT_DIVISOR 1193
 #endif /* defined QEMU || defined VBOX || defined VMWARE */
-#define PIT_FREQUENCY ((double)PIT_MAX_FREQ / PIT_DIVISOR)
+#define PIT_FREQUENCY (PIT_MAX_FREQ / PIT_DIVISOR)
+#define PIT_FREQUENCY_MS (PIT_MAX_FREQ * 1000 / PIT_DIVISOR)
 
 #define PIT_CH0_DAT 0x40
 #define PIT_CH1_DAT 0x41
@@ -94,42 +95,43 @@ class PIT {
 public:
     PIT();
 
-    void tick() { Ticks += 1; }
+    void tick() { Ticks = Ticks + 1; }
 
-    u64 get() { return Ticks; }
-    //double seconds_since_boot();
+    usz get() { return Ticks; }
+    usz seconds_since_boot();
+    usz milliseconds_since_boot();
 
     /* PIT Channel two is connected to PC Speaker when
      *   bit 0 of I/O port 0x61 is equal to one.
      */
-    void play_sound(u64 freq, double duration);
+    void play_sound(u64 freq, usz ms);
 
     /// Prepare an amount of time to wait.
-    void prepare_wait_seconds(double);
+    void prepare_wait_milliseconds(usz ms);
 
     /// Wait for the prepared amount of time.
     void wait();
 
 private:
     /// Incremented by IRQ0 interrupt handler.
-    volatile u64 Ticks { 0 };
+    volatile usz Ticks { 0 };
     /* `wait()` stops spinning as soon `Ticks` reaches
      *   offset from `Ticks` at beginning of spinning.
      */
-    u64 TicksToWait { 0 };
-
-    void configure_channel(Channel, Access, Mode, u64 freq);
+    usz TicksToWait { 0 };
 
     /* Playing sound out of the PC Speaker by
      *   manipulating bits 0 & 1 of IO port 0x61.
      */
     void start_speaker();
     void stop_speaker();
+
+    void configure_channel(Channel, Access, Mode, u64 freq);
 };
 
 extern PIT gPIT;
 
-// This work-around/hack is due to needing a function pointer 
+// This work-around/hack is due to needing a function pointer
 void pit_tick();
 
 #endif /* LENSOR_OS_PIT_H */

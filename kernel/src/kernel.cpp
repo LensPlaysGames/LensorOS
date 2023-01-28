@@ -83,16 +83,16 @@ extern "C" void kmain(BootInfo* bInfo) {
     gRend.swap({0, 0}, {80000, gRend.Font->PSF1_Header->CharacterSize * 2u});
 
     // I'm lovin' it :^) (Plays Maccy's theme).
-    constexpr double MACCYS_BPM = 125;
-    constexpr double MACCYS_STEP_LENGTH_SECONDS = (60 / MACCYS_BPM) / 4;
-    gPIT.play_sound(262, MACCYS_STEP_LENGTH_SECONDS); // C4
-    gPIT.play_sound(294, MACCYS_STEP_LENGTH_SECONDS); // D4
-    gPIT.wait();                                      // Rest
-    gPIT.play_sound(330, MACCYS_STEP_LENGTH_SECONDS); // E4
-    gPIT.wait();                                      // Rest
-    gPIT.play_sound(440, MACCYS_STEP_LENGTH_SECONDS); // A4
-    gPIT.wait();                                      // Rest
-    gPIT.play_sound(392, MACCYS_STEP_LENGTH_SECONDS); // G4
+    constexpr usz MACCYS_BPM = 125;
+    constexpr usz MACCYS_STEP_LENGTH_MILLISECONDS = (60 * 1000 / MACCYS_BPM) / 4;
+    gPIT.play_sound(262, MACCYS_STEP_LENGTH_MILLISECONDS); // C4
+    gPIT.play_sound(294, MACCYS_STEP_LENGTH_MILLISECONDS); // D4
+    gPIT.wait();                                           // Rest
+    gPIT.play_sound(330, MACCYS_STEP_LENGTH_MILLISECONDS); // E4
+    gPIT.wait();                                           // Rest
+    gPIT.play_sound(440, MACCYS_STEP_LENGTH_MILLISECONDS); // A4
+    gPIT.wait();                                           // Rest
+    gPIT.play_sound(392, MACCYS_STEP_LENGTH_MILLISECONDS); // G4
 
     // Start keyboard input at draw position, not origin.
     Keyboard::gText.set_cursor_from_pixel_position(drawPosition);
@@ -106,8 +106,10 @@ extern "C" void kmain(BootInfo* bInfo) {
         print_now(drawPosition);
         gRend.crlf(drawPosition, debugInfoX);
         // PRINT PIT ELAPSED TIME.
-        //gRend.puts(drawPosition, std::format("PIT Elapsed: {:.3}", gPIT.seconds_since_boot()));
-        //gRend.crlf(drawPosition, debugInfoX);
+        usz pit_milliseconds = gPIT.milliseconds_since_boot();
+        usz pit_seconds = pit_milliseconds / 1000;
+        pit_milliseconds %= 1000;
+        gRend.puts(drawPosition, std::format("PIT Elapsed: {}.{}\n", pit_seconds, pit_milliseconds));
         // PRINT RTC ELAPSED TIME.
         //gRend.puts(drawPosition, std::format("RTC Elapsed: {:.3}", gRTC.seconds_since_boot()));
         //gRend.crlf(drawPosition, debugInfoX);
