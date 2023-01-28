@@ -48,13 +48,44 @@ static char command[MAX_COMMAND_LENGTH];
 #define ARROW_LEFT  0x4b
 #define ARROW_RIGHT 0x4d
 
-int main(int argc, const char **argv) {
-  puts("Arguments:");
-  for (int i = 0; i < argc; i++) puts(argv[i]);
+/// @param filepath Passed to `exec` syscall
+int run_program_waitpid(const char *const filepath) {
+  // If there are pending writes, they will be executed on both the
+  // parent and the child; by flushing any buffers we have, it ensures
+  // the child won't write duplicate data on accident.
+  pid_t cpid = syscall(SYS_fork);
+  if (cpid) {
+    //puts("Parent");
+    //fflush(NULL);
+    syscall(SYS_waitpid, cpid);
+    //puts("Parent waited");
+    //fflush(NULL);
+  } else {
+    //puts("Child");
+    //fflush(NULL);
+    syscall(SYS_exec, filepath);
+  }
+}
+
+void print_command_line() {
+  fputs("\033[2K", stdout); //> Erase entire line
+  fputs("\033[1G", stdout); //> Move cursor to first column
+  fputs("  $:", stdout);
+  fputs(command, stdout);
   fflush(NULL);
+}
+
+int main(int argc, const char **argv) {
+  //puts("Arguments:");
+  //for (int i = 0; i < argc; i++) puts(argv[i]);
+  //fflush(NULL);
+
+  puts("\n\n<== WELCOME TO LensorOS SHELL *WIP* ==>\n");
 
   for (;;) {
     memset(command, 0, MAX_COMMAND_LENGTH);
+    fputc('\n', stdout);
+    print_command_line();
 
     // Get line from standard input.
     int c;
@@ -65,49 +96,42 @@ int main(int argc, const char **argv) {
         // spinning.
         continue;
       }
-      if (c == '\b' && offset > 0) {
-        command[--offset] = '\0';
-        // Echo command to standard out.
-        puts(command);
-        fflush(NULL);
+      if (c == '\b') {
+        if (offset > 0) {
+          command[--offset] = '\0';
+          // Echo command to standard out.
+          print_command_line();
+        }
         continue;
       }
       if (offset >= MAX_COMMAND_LENGTH) {
-        puts("Reached max command length, discarding command.");
+        puts("Reached max command length, discarding command.\n");
         offset = 0;
         command[offset] = '\0';
+        print_command_line();
         continue;
       }
       command[offset++] = c;
+      command[offset] = '\0';
       // Echo command to standard out.
-      puts(command);
-      fflush(NULL);
+      print_command_line();
     }
     command[offset] = '\0';
 
+    // Finish printing command line.
+    fputc('\n', stdout);
+
     if (strcmp(command, "blazeit") == 0) {
-      // If there are pending writes, they will be executed on both the
-      // parent and the child; by flushing any buffers we have, it ensures
-      // the child won't write duplicate data on accident.
-      pid_t cpid = syscall(SYS_fork);
-      if (cpid) {
-        //puts("Parent");
-        //fflush(NULL);
-        syscall(SYS_waitpid, cpid);
-        //puts("Parent waited");
-        //fflush(NULL);
-      } else {
-        //puts("Child");
-        //fflush(NULL);
-        syscall(SYS_exec, "/fs0/blazeit");
-      }
+      run_program_waitpid("/fs0/blazeit");
       continue;
-    } else if (strcmp(command, "quit") == 0) {
-      puts("Shell quitting, baiBAI!\n");
+    }
+    if (strcmp(command, "quit") == 0) {
+      puts("Shell quitting, baiBAI!");
       fflush(NULL);
       break;
     }
-    puts("Unrecognized command, sorry!\n");
+    puts("Unrecognized command, sorry!\n"
+         "  Try `blazeit` or `quit`");
     fflush(NULL);
     continue;
   }
