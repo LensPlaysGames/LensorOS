@@ -2,9 +2,13 @@
 
 RTC gRTC;
 
-//double RTC::seconds_since_boot() {
-//    return (double)Ticks / RTC_PERIODIC_HERTZ;
-//}
+usz RTC::seconds_since_boot() {
+    return (usz)Ticks / RTC_PERIODIC_HERTZ;
+}
+
+usz RTC::milliseconds_since_boot() {
+    return (usz)Ticks * 1000 / RTC_PERIODIC_HERTZ;
+}
 
 /// Set IRQ8 periodic interrupt enabled or disabled.
 /// NOTE: Must be called when interrupts are disabled (in-between `cli` and `sti`)!

@@ -106,7 +106,7 @@ struct RTCData {
 class RTC {
 public:
     RTCData Time;
-    u64 Ticks { 0 };
+    usz Ticks { 0 };
 
     RTC() {
         update_data();
@@ -127,7 +127,8 @@ public:
         return in8(CMOS_DATA);
     }
 
-    //double seconds_since_boot();
+    usz seconds_since_boot();
+    usz milliseconds_since_boot();
 
     void update_data();
     void set_periodic_int_enabled(bool);

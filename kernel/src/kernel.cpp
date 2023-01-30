@@ -109,10 +109,14 @@ extern "C" void kmain(BootInfo* bInfo) {
         usz pit_milliseconds = gPIT.milliseconds_since_boot();
         usz pit_seconds = pit_milliseconds / 1000;
         pit_milliseconds %= 1000;
-        gRend.puts(drawPosition, std::format("PIT Elapsed: {}.{}\n", pit_seconds, pit_milliseconds));
+        gRend.puts(drawPosition, std::format("PIT Elapsed: {}.{}", pit_seconds, pit_milliseconds));
+        gRend.crlf(drawPosition, debugInfoX);
         // PRINT RTC ELAPSED TIME.
-        //gRend.puts(drawPosition, std::format("RTC Elapsed: {:.3}", gRTC.seconds_since_boot()));
-        //gRend.crlf(drawPosition, debugInfoX);
+        usz rtc_milliseconds = gRTC.milliseconds_since_boot();
+        usz rtc_seconds = rtc_milliseconds / 1000;
+        rtc_milliseconds %= 1000;
+        gRend.puts(drawPosition, std::format("RTC Elapsed: {}.{}", rtc_seconds, rtc_milliseconds));
+        gRend.crlf(drawPosition, debugInfoX);
         // PRINT HPET ELAPSED TIME.
         //gRend.puts(drawPosition, std::format("HPET Elapsed: {:.3}", gHPET.seconds()));
         //gRend.crlf(drawPosition, debugInfoX);

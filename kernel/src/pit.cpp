@@ -31,10 +31,10 @@ PIT::PIT() {
 }
 
 usz PIT::seconds_since_boot() {
-    return Ticks / PIT_FREQUENCY;
+    return (usz)Ticks / PIT_FREQUENCY;
 }
 usz PIT::milliseconds_since_boot() {
-    return Ticks * 1000 / PIT_FREQUENCY;
+    return (usz)Ticks * 1000 / PIT_FREQUENCY;
 }
 
 void PIT::prepare_wait_milliseconds(usz ms) {
