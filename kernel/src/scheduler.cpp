@@ -150,8 +150,8 @@ namespace Scheduler {
         pid_t pid = request_pid();
         process->ProcessID = pid;
         ProcessQueue->add_end(process);
-        std::print("[SCHED]: Added process.\n");
-        print_debug();
+        //std::print("[SCHED]: Added process.\n");
+        //print_debug();
         return pid;
     }
 

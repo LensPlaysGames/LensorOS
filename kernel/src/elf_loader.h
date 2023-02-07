@@ -295,6 +295,10 @@ namespace ELF {
         // Enable interrupts after jump.
         process->CPU.Frame.flags = 0b1010000010;
 
+#ifdef DEBUG_ELF
+        Scheduler::print_debug();
+#endif
+
         return true;
     }
 

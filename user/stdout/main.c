@@ -18,10 +18,11 @@
  */
 
 #include <stdio.h>
-#include <unistd.h>
+#include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/syscalls.h>
+#include <unistd.h>
 
 #ifndef MAX_COMMAND_LENGTH
 # define MAX_COMMAND_LENGTH 4096
@@ -72,15 +73,116 @@ void print_command_line() {
   fputs("\033[1G", stdout); //> Move cursor to first column
   fputs("  $:", stdout);
   fputs(command, stdout);
-  fflush(NULL);
+  fflush(stdout);
+}
+
+typedef struct Framebuffer {
+    void* BaseAddress;
+    uint64_t BufferSize;
+    uint32_t PixelWidth;
+    uint32_t PixelHeight;
+    uint32_t PixelsPerScanLine;
+} Framebuffer;
+
+void fprint_hexnibble(unsigned char byte, FILE *f) {
+  if (byte < 10) putc(byte + '0', f);
+  else if (byte < 16) putc(byte - 10 + 'a', f);
+  else putc('?', f);
+}
+
+unsigned int hex_value_digit(unsigned char value) {
+  if (value < 10) return value + '0';
+  else if (value < 16) return value - 10 + 'a';
+  return -1;
+}
+
+void fprint_hexnumber(size_t number, FILE *f) {
+  char leading = 1;
+  for (size_t i = sizeof(size_t) - 1; i < sizeof(size_t); --i) {
+    size_t value = (number >> (i * 8)) & 0xff;
+    if (leading && !value) continue;
+    else leading = 0;
+    putc(hex_value_digit((number >> (4 + i * 8))  & 0x0f), f);
+    putc(hex_value_digit((number >> (i * 8)) & 0x0f), f);
+  }
+  if (leading) {
+    putc('0', f);
+  }
+}
+
+unsigned int hex_digit_value(const char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  else if (c >= 'A' && c <= 'F') return 10 + c - 'A';
+  else if (c >= 'a' && c <= 'f') return 10 + c - 'a';
+  return -1;
+}
+
+// FIXME: I don't think this works :(
+size_t hexstring_to_number(const char *str) {
+  size_t out = 0;
+  // Skip `0x`
+  if (*str == '0' && *(str + 1) == 'x') str += 2;
+
+  char c;
+  unsigned char val = 0;
+  for (size_t i = sizeof(size_t) - 1; i < sizeof(size_t) ; --i) {
+    c = *(str++);
+    if (c >= '0' && c <= '9') val = c - '0';
+    else if (c >= 'A' && c <= 'F') val = 10 + c - 'A';
+    else if (c >= 'a' && c <= 'f') val = 10 + c - 'a';
+    else break;
+
+    out <<= 4;
+    out |= val;
+
+    fprint_hexnibble(val, stdout);
+
+    c = *(str++);
+    if (c >= '0' && c <= '9') val = c - '0';
+    else if (c >= 'A' && c <= 'F') val = 10 + c - 'A';
+    else if (c >= 'a' && c <= 'f') val = 10 + c - 'a';
+    else break;
+
+    out <<= 4;
+    out |= val;
+
+    fprint_hexnibble(val, stdout);
+  }
+  putc('\n', stdout);
+
+  return out;
+}
+
+uint32_t pixel(unsigned char r, unsigned char g, unsigned char b, unsigned char a) {
+  // BGRA format
+  //return ((uint32_t)r << 8) | ((uint32_t)g << 16) | ((uint32_t)b << 24) | ((uint32_t)a << 0);
+  // ABGR format
+  //return ((uint32_t)r << 0) | ((uint32_t)g << 8) | ((uint32_t)b << 16) | ((uint32_t)a << 24);
+  // ARGB format
+  return ((uint32_t)r << 16) | ((uint32_t)g << 8) | ((uint32_t)b << 0) | ((uint32_t)a << 24);
 }
 
 int main(int argc, const char **argv) {
-  //puts("Arguments:");
-  //for (int i = 0; i < argc; i++) puts(argv[i]);
-  //fflush(NULL);
+  puts("Arguments:");
+  for (int i = 0; i < argc; ++i) puts(argv[i]);
+  fflush(NULL);
 
-  puts("\n\n<== WELCOME TO LensorOS SHELL *WIP* ==>\n");
+  Framebuffer fb;
+  fb.BaseAddress       = (void *)hexstring_to_number(argv[0]);
+  fb.BufferSize        = hexstring_to_number(argv[1]);
+  fb.PixelWidth        = hexstring_to_number(argv[2]);
+  fb.PixelHeight       = hexstring_to_number(argv[3]);
+  fb.PixelsPerScanLine = hexstring_to_number(argv[4]);
+  //fprint_hexnumber(number, stdout);
+  //putc('\n', stdout);
+
+  puts("\n\n<===!= WELCOME TO LensorOS SHELL [WIP] =!=!==>\n");
+  puts("LensorOS  Copyright (C) 2022, Contributors To LensorOS.");
+
+  uint32_t red_pixel = pixel(0xff,0x00,0x00,0xff);
+  for (size_t i = 0; i < 20000; ++i) {
+    *((uint32_t *)fb.BaseAddress + i) = red_pixel;
+  }
 
   for (;;) {
     memset(command, 0, MAX_COMMAND_LENGTH);
@@ -91,6 +193,7 @@ int main(int argc, const char **argv) {
     int c;
     int offset = 0;
     while ((c = getchar()) != '\n') {
+
       if (c == EOF) {
         // TODO: Wait/waste some time so we don't choke the system just
         // spinning.

@@ -182,18 +182,20 @@ void kstage1(BootInfo* bInfo) {
 
     SYSTEM = new System();
 
-    // Initialize the Real Time Clock.
-    gRTC = RTC();
-    gRTC.set_periodic_int_enabled(true);
-    std::print("[kstage1]: \033[32mReal Time Clock (RTC) initialized\033[0m\n\033[1;33m"
+    {// Initialize the Real Time Clock.
+        gRTC = RTC();
+        gRTC.set_periodic_int_enabled(true);
+        std::print("[kstage1]: \033[32mReal Time Clock (RTC) initialized\033[0m\n\033[1;33m"
                "Now is {}:{}:{} on {}-{}-{}"
                "\033[0m\n\n"
-           , gRTC.Time.hour
-           , gRTC.Time.minute
-           , gRTC.Time.second
-           , gRTC.Time.year
-           , gRTC.Time.month
-           , gRTC.Time.date);
+                   , gRTC.Time.hour
+                   , gRTC.Time.minute
+                   , gRTC.Time.second
+                   , gRTC.Time.year
+                   , gRTC.Time.month
+                   , gRTC.Time.date);
+    }
+
     // Create basic framebuffer renderer.
     std::print("[kstage1]: Setting up Graphics Output Protocol Renderer\n");
     gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
@@ -202,17 +204,18 @@ void kstage1(BootInfo* bInfo) {
     // Create basic text renderer for the keyboard.
     Keyboard::gText = Keyboard::BasicTextRenderer();
 
-    // Setup random number generators.
-    const RTCData& tm = gRTC.Time;
-    u64 someNumber =
-        tm.century + tm.year
-        + tm.month   + tm.date
-        + tm.weekday + tm.hour
-        + tm.minute  + tm.second;
-    gRandomLCG = LCG();
-    gRandomLCG.seed(someNumber);
-    gRandomLFSR = LFSR();
-    gRandomLFSR.seed(gRandomLCG.get(), gRandomLCG.get());
+    {// Setup random number generators.
+        const RTCData& tm = gRTC.Time;
+        u64 someNumber =
+            tm.century + tm.year
+            + tm.month   + tm.date
+            + tm.weekday + tm.hour
+            + tm.minute  + tm.second;
+        gRandomLCG = LCG();
+        gRandomLCG.seed(someNumber);
+        gRandomLFSR = LFSR();
+        gRandomLFSR.seed(gRandomLCG.get(), gRandomLCG.get());
+    }
 
     // Store feature set of CPU (capabilities).
     CPUDescription* SystemCPU = &SYSTEM->cpu();
@@ -537,8 +540,18 @@ void kstage1(BootInfo* bInfo) {
             vfs.print_debug();
         }
         // Another userspace program
+
+        // Userspace Framebuffer
+        usz fb_phys_addr = (usz)bInfo->framebuffer->BaseAddress;
+        usz fb_virt_addr = 0x7f000000;
+
         std::vector<std::string_view> argv;
-        argv.push_back("test");
+        argv.push_back(std::format("{:x}", fb_virt_addr));
+        argv.push_back(std::format("{:x}", (usz)bInfo->framebuffer->BufferSize));
+        argv.push_back(std::format("{:x}", (usz)bInfo->framebuffer->PixelWidth));
+        argv.push_back(std::format("{:x}", (usz)bInfo->framebuffer->PixelHeight));
+        argv.push_back(std::format("{:x}", (usz)bInfo->framebuffer->PixelsPerScanLine));
+        argv.push_back("test1");
         argv.push_back("test2");
         argv.push_back("test3");
         argv.push_back("test4");
@@ -552,7 +565,30 @@ void kstage1(BootInfo* bInfo) {
             vfs.close(fds.Process);
         }
         // Get last process in queue from scheduler.
-        SYSTEM->set_init(Scheduler::last_process());
+        Process *process = Scheduler::last_process();
+
+        usz flags = 0;
+        flags |= (usz)Memory::PageTableFlag::Present;
+        flags |= (usz)Memory::PageTableFlag::UserSuper;
+        flags |= (usz)Memory::PageTableFlag::ReadWrite;
+
+        // TODO: We should probably pick this more betterer :Þ
+        for (usz t = 0; t < bInfo->framebuffer->BufferSize; t += PAGE_SIZE) {
+            Memory::map(process->CR3
+                        , (void*)(fb_virt_addr + t)
+                        , (void*)(fb_phys_addr + t)
+                        , flags
+                        , Memory::ShowDebug::No
+                        );
+        }
+        process->add_memory_region((void*)fb_virt_addr
+                                   , (void*)fb_phys_addr
+                                   , bInfo->framebuffer->BufferSize
+                                   , flags
+                                   );
+
+
+        SYSTEM->set_init(process);
     }
 
     // Initialize High Precision Event Timer.
@@ -580,5 +616,5 @@ void kstage1(BootInfo* bInfo) {
     // Allow interrupts to trigger.
     std::print("[kstage1]: Enabling interrupts\n");
     asm ("sti");
-    std::print("[kstage1]: \033[32mInterrupts enabled\033[0m\n");
+    //std::print("[kstage1]: \033[32mInterrupts enabled\033[0m\n");
 }
