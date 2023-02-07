@@ -142,6 +142,8 @@ void kstage1(BootInfo* bInfo) {
      * `-- A lot of hardware is just assumed to be there;
      *     figure out how to better probe for their existence,
      *     and gracefully handle the case that they aren't there.
+     *
+     *
      */
 
     // Disable interrupts while doing sensitive
@@ -186,18 +188,21 @@ void kstage1(BootInfo* bInfo) {
         gRTC = RTC();
         gRTC.set_periodic_int_enabled(true);
         std::print("[kstage1]: \033[32mReal Time Clock (RTC) initialized\033[0m\n\033[1;33m"
-               "Now is {}:{}:{} on {}-{}-{}"
-               "\033[0m\n\n"
+                   "Now is {}:{}:{} on {}-{}-{}"
+                   "\033[0m\n\n"
                    , gRTC.Time.hour
                    , gRTC.Time.minute
                    , gRTC.Time.second
                    , gRTC.Time.year
                    , gRTC.Time.month
-                   , gRTC.Time.date);
+                   , gRTC.Time.date
+                   );
     }
 
     // Create basic framebuffer renderer.
     std::print("[kstage1]: Setting up Graphics Output Protocol Renderer\n");
+    // TODO: We should move font loading up into the kernel; the
+    // bootloader doesn't need to deal with that, I don't think.
     gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
     std::print("  \033[32mSetup Successful\033[0m\n\n");
     draw_boot_gfx();

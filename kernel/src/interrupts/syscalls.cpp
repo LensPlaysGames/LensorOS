@@ -52,7 +52,7 @@ constexpr const char* sys$_dbgfmt = "[SYS$]: {} -- {}\n";
 
 ProcessFileDescriptor sys$0_open(const char* path) {
     DBGMSG(sys$_dbgfmt, 0, "open");
-    return static_cast<ProcessFileDescriptor>(SYSTEM->virtual_filesystem().open(path).Process);
+    return SYSTEM->virtual_filesystem().open(path).Process;
 }
 
 void sys$1_close(ProcessFileDescriptor fd) {

@@ -24,6 +24,8 @@
 #include <sys/syscalls.h>
 #include <unistd.h>
 
+#include "framebuffer.h"
+
 #ifndef MAX_COMMAND_LENGTH
 # define MAX_COMMAND_LENGTH 4096
 #endif
@@ -75,14 +77,6 @@ void print_command_line() {
   fputs(command, stdout);
   fflush(stdout);
 }
-
-typedef struct Framebuffer {
-    void* BaseAddress;
-    uint64_t BufferSize;
-    uint32_t PixelWidth;
-    uint32_t PixelHeight;
-    uint32_t PixelsPerScanLine;
-} Framebuffer;
 
 void fprint_hexnibble(unsigned char byte, FILE *f) {
   if (byte < 10) putc(byte + '0', f);
@@ -153,36 +147,29 @@ size_t hexstring_to_number(const char *str) {
   return out;
 }
 
-uint32_t pixel(unsigned char r, unsigned char g, unsigned char b, unsigned char a) {
-  // BGRA format
-  //return ((uint32_t)r << 8) | ((uint32_t)g << 16) | ((uint32_t)b << 24) | ((uint32_t)a << 0);
-  // ABGR format
-  //return ((uint32_t)r << 0) | ((uint32_t)g << 8) | ((uint32_t)b << 16) | ((uint32_t)a << 24);
-  // ARGB format
-  return ((uint32_t)r << 16) | ((uint32_t)g << 8) | ((uint32_t)b << 0) | ((uint32_t)a << 24);
-}
-
 int main(int argc, const char **argv) {
   puts("Arguments:");
   for (int i = 0; i < argc; ++i) puts(argv[i]);
   fflush(NULL);
 
   Framebuffer fb;
-  fb.BaseAddress       = (void *)hexstring_to_number(argv[0]);
-  fb.BufferSize        = hexstring_to_number(argv[1]);
-  fb.PixelWidth        = hexstring_to_number(argv[2]);
-  fb.PixelHeight       = hexstring_to_number(argv[3]);
-  fb.PixelsPerScanLine = hexstring_to_number(argv[4]);
-  //fprint_hexnumber(number, stdout);
-  //putc('\n', stdout);
+  fb.base_address        = (void *)hexstring_to_number(argv[0]);
+  fb.buffer_size         = hexstring_to_number(argv[1]);
+  fb.pixel_width         = hexstring_to_number(argv[2]);
+  fb.pixel_height        = hexstring_to_number(argv[3]);
+  fb.pixels_per_scanline = hexstring_to_number(argv[4]);
+  // TODO: Pass format from kernel (which gets format passed from bootloader)
+  fb.format = FB_FORMAT_DEFAULT;
 
   puts("\n\n<===!= WELCOME TO LensorOS SHELL [WIP] =!=!==>\n");
   puts("LensorOS  Copyright (C) 2022, Contributors To LensorOS.");
 
-  uint32_t red_pixel = pixel(0xff,0x00,0x00,0xff);
-  for (size_t i = 0; i < 20000; ++i) {
-    *((uint32_t *)fb.BaseAddress + i) = red_pixel;
-  }
+  // clear screen
+  uint32_t black = mkpixel(fb.format, 0x00,0x00,0x00,0xff);
+  fill_color(fb, black);
+
+  uint32_t red = mkpixel(fb.format, 0xff,0x00,0x00,0xff);
+  fill_rect(fb, red, 0x420, 0x300, 0x100, 0x100);
 
   for (;;) {
     memset(command, 0, MAX_COMMAND_LENGTH);
