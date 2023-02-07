@@ -136,7 +136,7 @@ namespace ACPI {
     /* Memory-mapped ConFiguration Space Header
      *   44 BYTES
      *
-     *   https://wiki.osdev.org/PCI_Express 
+     *   https://wiki.osdev.org/PCI_Express
      */
     struct MCFGHeader : public SDTHeader{
         u64 Reserved;
@@ -193,14 +193,14 @@ namespace ACPI {
          * 4  -- Quad Word access (64-bit)
          */
         u8  AccessSize;
-        /* 64-bit address of data structure or register in given address space. 
-         *   Format determined by AddressSpaceID above. 
+        /* 64-bit address of data structure or register in given address space.
+         *   Format determined by AddressSpaceID above.
          */
         u64 Address;
     } __attribute__((packed));
 
 
-    /* High Precision Event Timer Table 
+    /* High Precision Event Timer Table
      *   56 BYTES
      *   https://github.com/freebsd/freebsd-src/blob/97c0b5ab18b6131ab11ed03b38d5e239fc811a3e/sys/contrib/dev/acpica/include/actbl1.h#L2010
      *   https://wiki.osdev.org/HPET
@@ -221,7 +221,7 @@ namespace ACPI {
         GenericAddressStructure Address;
         /* HPET sequence number. */
         u8  Number;
-        /* Minimum clock ticks that must be waited 
+        /* Minimum clock ticks that must be waited
          *   between interrupts for no lost interrupts.
          * Chipset and/or platform dependent.
          */
@@ -230,16 +230,16 @@ namespace ACPI {
          *   Bits 0-3:
          *          0000  -- No gaurantee for page protection.
          *          0001  -- 4KiB page protected
-         *          0010  -- 64KiB page protected 
+         *          0010  -- 64KiB page protected
          *          xxxx  -- The rest are reserved.
-         *   Bits 4-7: Reserved for OEM specific attributes. 
+         *   Bits 4-7: Reserved for OEM specific attributes.
          */
         u8  PageProtection;
     } __attribute__((packed));
 
     /* Fixed ACPI Description Table
      *   276 BYTES
-     *   https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#fixed-acpi-description-table-fadt 
+     *   https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#fixed-acpi-description-table-fadt
      */
     struct FADTHeader : public SDTHeader {
         u32 FIRMWARE_CTRL;
@@ -247,7 +247,7 @@ namespace ACPI {
         u32 DSDT;
         /* ACPI 1.0 INT_MODEL, eliminated as of ACPI 2.0 */
         u8  Reserved0;
-        /* Preferred Power Management Profile (set by OEM) 
+        /* Preferred Power Management Profile (set by OEM)
          *   Values:
          *   |- 0  -- Unspecified
          *   |- 1  -- Desktop
@@ -261,9 +261,9 @@ namespace ACPI {
          *   `- >8 -- Reserved
          */
         u8  Preferred_PM_Profile;
-        /* System vector the SCI interrupt is wired to in 8259 mode. 
-         * If system not in 8259-mode, contains Global System 
-         *   interrupt number of the SCI interrupt. 
+        /* System vector the SCI interrupt is wired to in 8259 mode.
+         * If system not in 8259-mode, contains Global System
+         *   interrupt number of the SCI interrupt.
          */
         u16 SCI_INT;
         /* System port address of the SMI Command Port. */
@@ -275,10 +275,10 @@ namespace ACPI {
         /* The value to write to SMI_CMD to enter the S4BIOS state. */
         u8 S4BIOS_REQ;
         /* If non-zero, contains value to write to SMI_CMD register to assume
-         *   processor performance state control responsibility. 
+         *   processor performance state control responsibility.
          */
         u8 PSTATE_CNT;
-        /* System port address of the PM1a Event Register Block. 
+        /* System port address of the PM1a Event Register Block.
          *   REQUIRED
          */
         u32 PM1a_EVT_BLK;
@@ -286,7 +286,7 @@ namespace ACPI {
          *   Contains zero if not supported.
          */
         u32 PM1b_EVT_BLK;
-        /* System port address of the PM1a Control Register Block. 
+        /* System port address of the PM1a Control Register Block.
          *   REQUIRED
          */
         u32 PM1a_CNT_BLK;
@@ -294,31 +294,31 @@ namespace ACPI {
          *   Contains zero if not supported.
          */
         u32 PM1b_CNT_BLK;
-        /* System port address of the PM2 Control Register Block. 
-         *   Contains zero if not supported. 
+        /* System port address of the PM2 Control Register Block.
+         *   Contains zero if not supported.
          */
         u32 PM2_CNT_BLK;
-        /* System port address of the Power Management Timer Control Register Block. 
+        /* System port address of the Power Management Timer Control Register Block.
          *   Contains zero if not supported.
          */
         u32 PM_TMR_BLK;
-        /* System port address of the General Purpose Event 0 Register Block. 
+        /* System port address of the General Purpose Event 0 Register Block.
          *   Contains zero if not supported.
          */
         u32 GPE0_BLK;
-        /* System port address of the General Purpose Event 1 Register Block. 
+        /* System port address of the General Purpose Event 1 Register Block.
          *   Contains zero if not supported.
          */
         u32 GPE1_BLK;
-        /* Number of bytes decoded by PM1a_EVT_BLK and PM1b_EVT_BLK. 
+        /* Number of bytes decoded by PM1a_EVT_BLK and PM1b_EVT_BLK.
          *   MUST BE GREATER THAN OR EQUAL TO FOUR.
          */
         u8 PM1_EVT_LEN;
-        /* Number of bytes decoded by PM1a_CNT_BLK and PM1b_CNT_BLK. 
+        /* Number of bytes decoded by PM1a_CNT_BLK and PM1b_CNT_BLK.
          *   MUST BE GREATER THAN OR EQUAL TO TWO.
          */
         u8 PM1_CNT_LEN;
-        /* Number of bytes decoded by PM2_CNT_BLK. 
+        /* Number of bytes decoded by PM2_CNT_BLK.
          *   MUST BE GREATER THAN OR EQUAL TO ONE IF PM2_CNT_BLK IS SUPPORTED.
          *   Contains zero if not supported.
          */
@@ -329,45 +329,45 @@ namespace ACPI {
          */
         u8 PM_TMR_LEN;
         /* Number of bytes decoded by GPEO_BLK.
-         *   MUST BE NON-NEGATIVE MULTIPLE OF TWO. 
+         *   MUST BE NON-NEGATIVE MULTIPLE OF TWO.
          */
         u8 GPEO_BLK_LEN;
         /* Number of bytes decoded by GPE1_BLK.
-         *   MUST BE NON-NEGATIVE MULTIPLE OF TWO. 
+         *   MUST BE NON-NEGATIVE MULTIPLE OF TWO.
          */
         u8 GPE1_BLK_LEN;
-        /* Offset within the ACPI general-purpose event 
-         *   model where GPE1 based events start. 
+        /* Offset within the ACPI general-purpose event
+         *   model where GPE1 based events start.
          */
         u8 GPE1_BASE;
-        /* If non-zero, contains value to write to SMI_CMD to indicate OS 
-         *   support for the _CST object and C States Changed notification. 
+        /* If non-zero, contains value to write to SMI_CMD to indicate OS
+         *   support for the _CST object and C States Changed notification.
          */
         u8 CST_CNT;
         /* Worst case hardware latency in microseconds to enter and exit a C2 satte.
-         *   If greater than 100, system does not support C2 state. 
+         *   If greater than 100, system does not support C2 state.
          */
         u16 P_LVL2_LAT;
         /* Worst case hardware latency in microseconds to enter and exit a C3 satte.
-         *   If greater than 1000, system does not support C3 state. 
+         *   If greater than 1000, system does not support C3 state.
          */
         u16 P_LVL3_LAT;
-        /* if WBINVD is equal to zero, contains the number 
-         *   of flush strides that need to be read to completely 
+        /* if WBINVD is equal to zero, contains the number
+         *   of flush strides that need to be read to completely
          *   flush dirty lines from any processor's memory caches.
          * If not supported, contains zero along with WBINVD.
          */
         u16 FLUSH_SIZE;
-        /* if WBINVD is equal to zero, contains the cache line 
+        /* if WBINVD is equal to zero, contains the cache line
          *   width in bytes of the processor's memory caches.
          */
         u16 FLUSH_STRIDE;
-        /* Zero-based index of where the processor's duty cycle 
-         *   setting is within the processor's P_CNT register. 
+        /* Zero-based index of where the processor's duty cycle
+         *   setting is within the processor's P_CNT register.
          */
         u8 DUTY_OFFSET;
-        /* The bit width o fthe processor's duty cycle 
-         *   setting value in the P_CNT register. 
+        /* The bit width o fthe processor's duty cycle
+         *   setting value in the P_CNT register.
          */
         u8 DUTY_WIDTH;
         /* RTC CMOS RAM index to the day-of-month alarm value.
@@ -389,18 +389,18 @@ namespace ACPI {
          *     be used to program the centenary field.
          */
         u8 CENTURY;
-        /* IA-PC Boot Architecture Flags 
+        /* IA-PC Boot Architecture Flags
          *   0b0000000000000000
-         *                    =  LEGACY_DEVICES 
+         *                    =  LEGACY_DEVICES
          *                   =   8042
          *                  =    VGA Not Present
          *                 =     MSI Not Supported
          *                =      PCIe ASPM Controls
          *               =       CMOS RTC Not Present
          *     ==========        Reserved
-         *  
+         *
          * LEGACY_DEVICES: If set, drivers are needed to parse system hardware.
-         * 8042: If set, indicates that the motherboard contains support 
+         * 8042: If set, indicates that the motherboard contains support
          *   for a port 60 and 64 based keyboard controller.
          * VGA Not Present: If set, must not blindly probe VGA hardware.
          * MSI Not Supported: If set, Message Signaled Interrupts must not be enabled.
@@ -410,7 +410,7 @@ namespace ACPI {
          */
         u16 IAPC_BOOT_ARCH;
         u8 Reserved1;
-        /* Fixed Feature Flags 
+        /* Fixed Feature Flags
          *   0b00000000000000000000000000000000
          *                                    =  WBINVD
          *                                   =   WBINVD_FLUSH
@@ -443,9 +443,9 @@ namespace ACPI {
          * WBINVD_FLUSH: If set, hardware flushes all caches on `WBINVD` instruction,
          *   maintains memory coherency, but does not guarantee the caches are invalidated.
          * PROC_C1: If set, C1 power state is supported on all processors.
-         * P_LVL2_UP: 
+         * P_LVL2_UP:
          *   If zero, C2 power state only works on a uniprocessor system.
-         *   If one, C2 power state works with single or multi-processor systems.          
+         *   If one, C2 power state works with single or multi-processor systems.
          * PWR_BUTTON: If one, system has no power button.
          * SLP_BUTTON: If one, system has no sleep button.
          * FIX_RTC: If zero, RTC wake status is supported in fixed register space.
@@ -459,19 +459,19 @@ namespace ACPI {
          *   after writing to the SLP_TYPx register.
          * PCI_EXP_WAK: If set, platform supports PCIEXP_WAKE_STS bit in the PM1 Status register,
          *   and the PCIEXP_WAKE_EN bit in the PM1 Enable register.
-         * USE_PLATFORM_CLOCK: 
+         * USE_PLATFORM_CLOCK:
          *   If set, use platform provided timer for monotonically non-decreasing counters.
-         * S4_RTC_STS_VALID: 
+         * S4_RTC_STS_VALID:
          *   If set, contents of the RTC_STS flag is valid when waking the system from S4.
          * REMOTE_POWER_ON_CAPABLE: If set, patform is compatible with remote power-on.
          * FORCE_APIC_CLUSTER_MODEL: If set, all local APICs must be configured for the
          *   cluster destination model when delivering interrupts in logical mode.
-         * FORCE_APIC_PHYSICAL_DESTINATION_MODE: If set, all local xAPICs must be 
+         * FORCE_APIC_PHYSICAL_DESTINATION_MODE: If set, all local xAPICs must be
          *   configured for phsyical destination mode.
          *   On machine with less than eight local xAPICs, this bit is ignored.
          * HW_REDUCED_ACPI: If set, hardware-reduced ACPI is implemented,
          *   therefore software-only alternatives are used for supported fixed-features.
-         * LOW_POWER_S0_IDLE_CAPABLE: If set, platform is able to achieve power savings in 
+         * LOW_POWER_S0_IDLE_CAPABLE: If set, platform is able to achieve power savings in
          *   S0 similar to or better than those achieved in S3. (If set, don't transition to S3).
          * Reserved: Must be set to zero.
          */
@@ -480,7 +480,7 @@ namespace ACPI {
         GenericAddressStructure RESET_REG;
         /* The value to write to the RESET_REG port to reset the system. */
         u8 RESET_VALUE;
-        /* ARM Boot Architecture Flags 
+        /* ARM Boot Architecture Flags
          *   0b0000000000000000
          *                    =  PSCI_COMPLIANT
          *                   =   PSCI_USE_HVC
@@ -500,11 +500,11 @@ namespace ACPI {
         /* Extended physical addrress of the FACS.
          *   If non-zero, FIRMWARE_CTRL must be ignored.
          *   If HW_REDUCED_ACPI field is set in Flags and both this field
-         *     and FIRMWARE_CTRL are zero, there is no FACS available. 
+         *     and FIRMWARE_CTRL are zero, there is no FACS available.
          */
         u64 X_FIRMWARE_CTRL;
         /* Extended physical address of the DSDT.
-         *   If non-zero, DSDT must be ignored 
+         *   If non-zero, DSDT must be ignored
          */
         u64 X_DSDT;
         /* Extended address of PM1a Event Register Block.
