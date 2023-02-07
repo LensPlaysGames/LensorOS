@@ -168,9 +168,6 @@ int main(int argc, const char **argv) {
   uint32_t black = mkpixel(fb.format, 0x00,0x00,0x00,0xff);
   fill_color(fb, black);
 
-  uint32_t red = mkpixel(fb.format, 0xff,0x00,0x00,0xff);
-  fill_rect(fb, red, 0x420, 0x300, 0x100, 0x100);
-
   for (;;) {
     memset(command, 0, MAX_COMMAND_LENGTH);
     fputc('\n', stdout);
