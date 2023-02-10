@@ -278,6 +278,7 @@ void sys$11_exec(const char *path) {
     SYSTEM->virtual_filesystem().close(fds.Process);
 
     *cpu = process->CPU;
+    Scheduler::yield();
 }
 
 /// The second file descriptor given will be associated with the file

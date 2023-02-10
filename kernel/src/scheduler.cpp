@@ -283,6 +283,7 @@ namespace Scheduler {
         switch_process_impl(cpu);
     }
 
+    // Defined in `scheduler.asm`
     extern "C" void yield_asm(CPUState*);
 
     void yield() {

@@ -63,10 +63,10 @@ irq0_handler:
 ;;#; FIXME: Does this only work because RSP is what's at the stack pointer? Should this be `lea` instead?
     mov rdi, rsp
     call [rel scheduler_switch_process]
-yield_asm_impl:
 ;;; END INTERRUPT
     mov ax, 0x20                ; 0x20 = PIC_EOI
     out 0x20, al                ; 0x20 = PIC1_COMMAND port
+yield_asm_impl:
 ;;; RESTORE CPU STATE FROM STACK
     add rsp, 8                  ; Eat `rsp` off of stack.
     pop rbx
