@@ -276,6 +276,11 @@ namespace Scheduler {
     void switch_process(CPUState* cpu) {
         memcpy(&CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
 
+        // TODO: Save extra context depending on system features
+        // (i.e. xmm registers with fxsave/fxrestore)
+        // I will be curious as to where we store the buffers for these;
+        // a member in Process seems a little platform-dependant.
+
         // TODO: Check all processes that called `wait(ms)`, and run/
         // unstop them if the timestamp is greater than the calculated
         // one.

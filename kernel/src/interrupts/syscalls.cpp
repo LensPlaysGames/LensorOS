@@ -104,7 +104,7 @@ void sys$5_exit([[maybe_unused]] int status) {
     if (!success) {
         std::print("[EXIT]: Failure to remove process\n");
     }
-    std::print("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
+    DBGMSG("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
 }
 
 void* sys$6_map(void* address, usz size, u64 flags) {
@@ -208,9 +208,7 @@ void sys$9_waitpid(pid_t pid) {
 
     Process *process = Scheduler::process(pid);
     // Return immediately if PID isn't valid.
-    if (!process) {
-        return;
-    }
+    if (!process) return;
 
     pid_t thisPID = Scheduler::CurrentProcess->value()->ProcessID;
     DBGMSG("  pid {} waiting on {}\n\n", thisPID, pid);

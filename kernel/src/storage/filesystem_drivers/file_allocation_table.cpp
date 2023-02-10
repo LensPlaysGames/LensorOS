@@ -166,12 +166,14 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
     std::vector<u8> FAT(BR.BPB.NumBytesPerSector);
     u64 lastFATsector { 0 };
 
+    // TODO: ExFAT will need it's own code flow, essentially.
+
     constexpr u64 lfnBufferSize = 27;
+    const u64 clusterSize = BR.BPB.NumSectorsPerCluster * BR.BPB.NumBytesPerSector;
     u8 lfnBuffer[lfnBufferSize];
     u32 clusterIndex = BR.sector_to_cluster(BR.first_root_directory_sector());
     bool moreClusters = true;
     while (moreClusters) {
-        u64 clusterSize = BR.BPB.NumSectorsPerCluster * BR.BPB.NumBytesPerSector;
         std::vector<u8> clusterContents(clusterSize);
         u64 clusterSector = BR.cluster_to_sector(clusterIndex);
         Device->read_raw(clusterSector * BR.BPB.NumBytesPerSector
@@ -195,6 +197,7 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
                 entry++;
                 continue;
             }
+
             std::string fileName(reinterpret_cast<const char*>(&entry->FileName[0]), 11);
             if (lfnBufferFull) {
                fileName.append((const char*)lfnBuffer, lfnBufferSize);
@@ -230,7 +233,6 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
         }
         // Check if this is the last cluster in the chain.
         u64 clusterNumber = entry->get_cluster_number();
-        // FIXME: This assumes FAT32, but we should really determine type dynamically.
         u64 FAToffset = 0;
         switch (Type) {
         case FATType::FAT12:

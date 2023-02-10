@@ -41,7 +41,7 @@ SysFD VFS::procfd_to_fd(ProcFD procfd) const {
 SysFD VFS::procfd_to_fd(Process* process, ProcFD procfd) const {
     auto sysfd = process->FileDescriptors[procfd];
     if (!sysfd) {
-        DBGMSG("[VFS]: ERROR {} (pid {}) is unmapped.\n", procfd, proc->ProcessID);
+        DBGMSG("[VFS]: ERROR {} (pid {}) is unmapped.\n", procfd, process->ProcessID);
         return SysFD::Invalid;
     }
 
