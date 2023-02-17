@@ -88,7 +88,7 @@ public:
     /// Try to create a FileAllocationTableDriver from the given storage device.
     static auto try_create(std::shared_ptr<StorageDeviceDriver>) -> std::shared_ptr<FilesystemDriver>;
 
-    static auto translate_path(std::string_view path) -> std::string;
+    static auto translate_filename(std::string_view path) -> std::string;
 };
 
 #endif /* LENSOR_OS_FILE_ALLOCATION_TABLE_DRIVER_H */
