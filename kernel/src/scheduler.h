@@ -24,7 +24,11 @@
 #include <interrupts/interrupts.h>
 #include <linked_list.h>
 #include <memory/physical_memory_manager.h>
+#include <memory/virtual_memory_manager.h>
+#include <memory/paging.h>
 #include <memory/region.h>
+#include <storage/file_metadata.h>
+#include <memory>
 #include <vector>
 #include <extensions>
 #include <vfs_forward.h>
@@ -72,17 +76,21 @@ struct Process {
         SLEEPING,
     } State = RUNNING;
 
-    // Keep track of memory that should be freed when the process exits.
+    /// Keep track of memory that should be freed when the process exits.
     SinglyLinkedList<Memory::Region> Memories;
     usz next_region_vaddr = 0xf8000000;
 
-    // Keep track of opened files that may be freed when the process
-    // exits, if no other process has it open.
+    /// A list of programs waiting to be set to `RUNNING` when this
+    /// program exits.
+    std::vector<pid_t> WaitingList;
+
+    /// Keep track of opened files that may be freed when the process
+    /// exits, if no other process has it open.
     std::sparse_vector<SysFD, -1, ProcFD> FileDescriptors;
 
     Memory::PageTable* CR3 { nullptr };
 
-    // Used to save/restore CPU state when a context switch occurs.
+    /// Used to save/restore CPU state when a context switch occurs.
     CPUState CPU;
 
     Process() = default;
@@ -91,8 +99,13 @@ struct Process {
     Process(const Process&) = delete;
     Process& operator=(const Process&) = delete;
 
-    void add_memory_region(void* vaddr, void* paddr, usz size) {
-        Memories.add({vaddr, paddr, size});
+    // size is in bytes.
+    void add_memory_region(void* vaddr, void* paddr, usz size, u64 flags) {
+        Memories.add({vaddr, paddr, size, flags});
+    }
+
+    void add_memory_region(const Memory::Region& memory) {
+        Memories.add({memory.vaddr, memory.paddr, memory.length, memory.flags});
     }
 
     /// Find region in memories by vaddr and remove it.
@@ -110,14 +123,7 @@ struct Process {
         }
     }
 
-    void destroy() {
-        // Free memory regions.
-        Memories.for_each([](SinglyLinkedListNode<Memory::Region>* it){
-            Memory::free_pages(it->value().paddr, it->value().pages);
-        });
-        // TODO: Close open files.
-        // TODO: Free page table?
-    }
+    void destroy();
 };
 
 /// External symbols for 'scheduler.asm', defined in `scheduler.cpp`
@@ -135,6 +141,9 @@ namespace Scheduler {
     /// Get a process ID number that is unique.
     pid_t request_pid();
 
+    /// Get the process with PID if it is within list of processes, otherwise return NULL.
+    Process* process(pid_t);
+
     /* Switch to the next available task.
      * | Called by IRQ0 Handler (System Timer Interrupt).
      * |-- Copy registers saved from IRQ0 to current process.
@@ -144,7 +153,8 @@ namespace Scheduler {
     void switch_process(CPUState*);
 
     /// Add an existing process to the list of processes.
-    void add_process(Process*);
+    /// Creates and assigns a unique PID.
+    pid_t add_process(Process*);
 
     Process* last_process();
 
@@ -152,9 +162,25 @@ namespace Scheduler {
     bool remove_process(pid_t);
 
     void print_debug();
+
+    /// Stop the current process, and start the next. NOTE: CPU state
+    /// is not saved by this function, so be sure the saved process CPU
+    /// state is valid and ready to be returned to.
+    void yield();
+
+    // Call `map_pages` with the given data on every process in the
+    // process queue.
+    void map_pages_in_all_processes
+    (void* virtualAddress
+     , void* physicalAddress
+     , u64 mappingFlags
+     , size_t pages
+     , Memory::ShowDebug d = Memory::ShowDebug::No);
 }
 
 __attribute__((no_caller_saved_registers))
 void scheduler_switch(CPUState*);
+
+pid_t CopyUserspaceProcess(Process* original);
 
 #endif

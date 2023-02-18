@@ -20,9 +20,14 @@
 #ifndef LENSOR_OS_PIPE_DRIVER_H
 #define LENSOR_OS_PIPE_DRIVER_H
 
-#include <debug.h>
 #include <integers.h>
 #include <storage/storage_device_driver.h>
+#include <storage/file_metadata.h>
+
+#include <memory>
+#include <vector>
+#include <string>
+#include <string_view>
 
 #define PIPE_BUFSZ 512
 
@@ -51,7 +56,6 @@ struct PipeDriver final : StorageDeviceDriver {
     auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
 
     ssz read(FileMetadata* file, usz, usz byteCount, void* buffer) final {
-        // Find which pipe by using byte offset.
         if (!file) return -1;
         auto* pipe = static_cast<PipeBuffer*>(file->driver_data());
         if (!pipe) return -1;
@@ -62,20 +66,18 @@ struct PipeDriver final : StorageDeviceDriver {
         }
 
         // TODO: Read in a loop to fill buffers larger than what is currently written.
+        // For now, truncate read if it is too large.
         if (byteCount > pipe->Offset) {
             byteCount = pipe->Offset;
         }
 
-        memcpy(buffer, pipe->Data + pipe->Offset, byteCount);
+        memcpy(buffer, pipe->Data, byteCount);
         return ssz(byteCount);
     };
 
     ssz read_raw(usz, usz, void*) final { return -1; };
 
     ssz write(FileMetadata* file, usz, usz byteCount, void* buffer) final {
-        // Find which pipe by using byte offset. There is no filesystem
-        // backing, so we can just use that as an index/key to find
-        // which buffer to write to.
         if (!file) return -1;
         auto* pipe = static_cast<PipeBuffer*>(file->driver_data());
         if (!pipe) return -1;

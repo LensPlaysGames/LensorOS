@@ -29,4 +29,8 @@ set( CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/../../kernel/lensor_gnu_too
 
 project( stdout VERSION ${stdout_VERSION} LANGUAGES ${stdout_LANGUAGES} )
 
-add_executable( stdout main.c )
+add_executable( stdout framebuffer.c main.c)
+
+target_compile_options(
+  stdout PUBLIC -mno-red-zone
+)

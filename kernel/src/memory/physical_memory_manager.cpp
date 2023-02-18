@@ -49,6 +49,8 @@ namespace Memory {
     u64 TotalUsedPages { 0 };
     u64 MaxFreePagesInARow { 0 };
 
+    u64 FirstFreePage { 0 };
+
     u64 total_ram() {
         return TotalPages * PAGE_SIZE;
     }
@@ -78,9 +80,6 @@ namespace Memory {
 
     void free_page(void* address) {
         u64 index = (u64)address / PAGE_SIZE;
-        if (PageMap.get(index) == false)
-            return;
-
         if (PageMap.set(index, false)) {
             TotalUsedPages -= 1;
             TotalFreePages += 1;
@@ -103,7 +102,6 @@ namespace Memory {
                , TotalFreePages);
     }
 
-    u64 FirstFreePage { 0 };
     void* request_page() {
         DBGMSG("request_page():\n"
                "  Free pages:            {}\n"
@@ -111,7 +109,7 @@ namespace Memory {
                "\n"
                , TotalFreePages
                , MaxFreePagesInARow);
-        for(; FirstFreePage < TotalPages; FirstFreePage++) {
+        for(; FirstFreePage < TotalPages; ++FirstFreePage) {
             if (PageMap.get(FirstFreePage) == false) {
                 void* addr = (void*)(FirstFreePage * PAGE_SIZE);
                 lock_page(addr);
@@ -125,7 +123,7 @@ namespace Memory {
         panic("\033[31mRan out of memory in request_page() :^<\033[0m\n");
         return nullptr;
     }
-    
+
     void* request_pages(u64 numberOfPages) {
         // Can't allocate nothing!
         if (numberOfPages == 0)
@@ -144,7 +142,7 @@ namespace Memory {
                        "Number of pages requested is larger than any contiguous run of pages available.");
             return nullptr;
         }
-        
+
         DBGMSG("request_pages():\n"
                "  # of pages requested:  {}\n"
                "  Free pages:            {}\n"

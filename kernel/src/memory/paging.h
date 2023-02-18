@@ -79,13 +79,17 @@ namespace Memory {
         }
 
         void set_address(u64 addr)  {
-            addr &=  0x000000ffffffffff;
+            addr  &= 0x000000ffffffffff;
             Value &= 0xfff0000000000fff;
             Value |= (addr << 12);
         }
 
         bool flag(PageTableFlag flag)  {
             return Value & (u64)flag;
+        }
+
+        u64 flags() {
+            return Value &= 0xfff0000000000fff;
         }
 
         void set_flag(PageTableFlag flag, bool enabled) {
@@ -95,6 +99,19 @@ namespace Memory {
                 Value |= bitSelector;
             }
         }
+
+        // Or the given flag with the PDE value. This is used to set a
+        // flag if it's set, but do nothing if it isn't.
+        void or_flag(PageTableFlag flag) {
+            Value |= (u64)flag;
+        }
+
+        void or_flag_if(PageTableFlag flag, bool enabled) {
+            if (enabled) {
+                Value |= (u64)flag;
+            }
+        }
+
 
     private:
         u64 Value { 0 };

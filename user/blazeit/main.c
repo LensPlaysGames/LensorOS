@@ -17,8 +17,6 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-int main(int argc, char **argv) {
-  (void)argc;
-  (void)argv;
+int main(void) {
   return 420;
 }

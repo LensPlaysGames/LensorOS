@@ -54,12 +54,36 @@ namespace Memory {
              , ShowDebug d = ShowDebug::No
              );
 
+    /* If a mapping is within the range beginning at the given virtual
+     * address and spanning the given length in pages is marked as
+     * present within the given page map level four, it will be marked
+     * with the flags found in `mappingFlags`, and mapped to the
+     * corresponding contiguous physical address.
+    */
+    void map_pages(PageTable* pageTable
+                   , void* virtualAddress
+                   , void* physicalAddress
+                   , u64 mappingFlags
+                   , usz pageCount
+                   , ShowDebug d
+                   );
+
     /* If a mapping is marked as present within the given
      *   page map level four, it will be marked as not present.
      */
     void unmap(PageTable*, void* virtualAddress
                , ShowDebug d = ShowDebug::No
                );
+
+    /* If a mapping is within the range beginning at the given virtual
+     * address and spanning the given length in pages is marked as
+     * present within the given page map level four, it will be marked
+     * as not present.
+    */
+    void unmap_pages(PageTable*, void* virtualAddress
+                     , usz pageCount
+                     , ShowDebug d = ShowDebug::No
+                     );
 
     /* If a mapping is marked as present within the given
      *   page map level four, it will be marked as not present.
@@ -73,6 +97,11 @@ namespace Memory {
      */
     void flush_page_map(PageTable* pageMapLevelFour);
 
+    /* Return the base address of an exact copy of the given page map.
+     * NOTE: Does not map itself, or unmap physical identity mapping.
+     */
+    Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable);
+
     /* Return the base address of an exact copy of the currently active page map.
      * NOTE: Does not map itself, or unmap physical identity mapping.
      */
@@ -80,6 +109,15 @@ namespace Memory {
 
     /// Return the base address of the currently active page map.
     PageTable* active_page_map();
+
+    /// Print present ranges of addresses that share all flags.
+    /// If filter is given, only show ranges with the given flag(s)
+    /// enabled.
+    void print_page_map(Memory::PageTable*, Memory::PageTableFlag filter = Memory::PageTableFlag::Present);
+
+    /// Print the flags of a page directory entry. If no flags are set,
+    /// nothing will be printed.
+    void print_pde_flags(Memory::PageDirectoryEntry PDE);
 }
 
 #endif /* LENSOR_OS_VIRTUAL_MEMORY_MANAGER_H */

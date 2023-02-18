@@ -17,6 +17,16 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+/** On writing interrupt handlers for x86_64
+ *
+ *  MOST IMPORTANTLY:
+ *  YOU WILL CAUSE BIG BAD SYSTEM BREAKING PROBLEMS IF THE HANDLER
+ *  DOES NOT END UP ACKNOWLEDGING (by calling end of interrupt). DO
+ *  NOT EVER WRITE `return` UNLESS YOU ABSOLUTELY KNOW WHAT YOU ARE
+ *  DOING!
+ *
+ */
+
 #include <interrupts/interrupts.h>
 
 #include <basic_renderer.h>
@@ -25,13 +35,22 @@
 #include <io.h>
 #include <keyboard.h>
 #include <keyboard_scancode_translation.h>
+#include <memory/paging.h>
+#include <memory/virtual_memory_manager.h>
 #include <mouse.h>
 #include <panic.h>
 #include <pit.h>
 #include <rtc.h>
-#include <uart.h>
+#include <scheduler.h>
 #include <system.h>
+#include <uart.h>
 #include <vfs_forward.h>
+
+/// Use this when called from an interrupt handler.
+__attribute__((no_caller_saved_registers))
+u8 in8_wrap(u8 port) {
+    return in8(port);
+}
 
 void enable_interrupt(u8 irq) {
     if (irq > 15)
@@ -64,7 +83,7 @@ void disable_all_interrupts() {
 }
 
 __attribute__((no_caller_saved_registers))
-inline void end_of_interrupt(u8 IRQx) {
+void end_of_interrupt(u8 IRQx) {
     if (IRQx >= 8)
         out8(PIC2_COMMAND, PIC_EOI);
     out8(PIC1_COMMAND, PIC_EOI);
@@ -102,32 +121,66 @@ void system_timer_handler(InterruptFrame* frame) {
     end_of_interrupt(0);
 }
 
+Keyboard::KeyboardState State = {0};
+
+__attribute__((no_caller_saved_registers))
+static void handle_direct_input(char input) {
+    if (!input) {
+        std::print("[INPUT]: Refusing null input\n");
+        return;
+    }
+
+    // Send user input to userspace!
+    // Write to stdin of init process.
+    Process* init = SYSTEM->init_process();
+    if (init) {
+        auto fd = static_cast<ProcFD>(0);
+        auto sysfd = init->FileDescriptors[fd];
+        auto f = SYSTEM->virtual_filesystem().file(*sysfd);
+        if (f) f->device_driver()->write(f.get(), 0, sizeof(char), &input);
+    } else std::print("[INPUT]: No init process: can not handle user input properly.\n");
+}
+
+__attribute__((no_caller_saved_registers))
+static void handle_scancode_input(u8 scancode) {
+    // Handle modifiers
+    static Keyboard::KeyboardState State = {0};
+    switch (scancode) {
+    case LSHIFT:
+        //std::print("[INPUT]: mod_press: left shift\n");
+        State.LeftShift = true;
+        return;
+    case LSHIFT + 0x80:
+        //std::print("[INPUT]: mod_release: left shift\n");
+        State.LeftShift = false;
+        return;
+    case RSHIFT:
+        //std::print("[INPUT]: mod_press: right shift\n");
+        State.RightShift = true;
+        return;
+    case RSHIFT + 0x80:
+        //std::print("[INPUT]: mod_press: right shift\n");
+        State.RightShift = false;
+        return;
+    case CAPSLOCK:
+        //std::print("[INPUT]: mod_capslock\n");
+        State.CapsLock = !State.CapsLock;
+        return;
+    default: break;
+    }
+
+    // TODO: Support other keyboard scancode translation layouts.
+    char translated = Keyboard::QWERTY::Translate
+        (scancode, State.LeftShift || State.RightShift || State.CapsLock);
+    if (translated) handle_direct_input(translated);
+    //else std::print("Skipping scancode: {:x}\n", scancode);
+}
+
 /// IRQ1: PS/2 KEYBOARD
 __attribute__((interrupt))
 void keyboard_handler(InterruptFrame* frame) {
-    u8 scancode = in8(0x60);
-    // Kernel text renderer silliness.
-    Keyboard::gText.handle_scancode(scancode);
-    // Send user input to userspace!
-    Process* init = SYSTEM->init_process();
-    if (init) {
-        // TODO: Support other keyboard scancode translation layouts.
-        unsigned char character = Keyboard::QWERTY::Translate
-            (scancode,
-             Keyboard::gText.State.LeftShift
-             || Keyboard::gText.State.RightShift
-             || Keyboard::gText.State.CapsLock
-             );
-        if (character) {
-            // Write translated character to stdin of non-current process.
-            auto fd = static_cast<ProcFD>(0);
-            auto sysfd = init->FileDescriptors[fd];
-            auto f = SYSTEM->virtual_filesystem().file(*sysfd);
-            if (f) {
-                f->device_driver()->write(f.get(), 0, sizeof(char), &character);
-            }
-        }
-    }
+    // Read scancode from bus.
+    handle_scancode_input(in8_wrap(0x60));
     end_of_interrupt(1);
 }
 
@@ -135,8 +188,10 @@ void keyboard_handler(InterruptFrame* frame) {
 __attribute__((interrupt))
 void uart_com1_handler(InterruptFrame* frame) {
     u8 data = UART::read();
+    // TODO: Handle input data more betterer.
+    if (data == '\n' || data == '\b' || data == '\a' || (data >= ' ' && data <= '~')) handle_direct_input(data);
+    //Keyboard::gText.handle_character(data);
     end_of_interrupt(4);
-    Keyboard::gText.handle_character(data);
 }
 
 /// IRQ8: Real Time Clock
@@ -151,16 +206,16 @@ void uart_com1_handler(InterruptFrame* frame) {
 __attribute__((interrupt))
 void rtc_handler(InterruptFrame* frame) {
     u8 statusC = gRTC.read_register(0x0C);
-    if (statusC & 0b01000000)
-        gRTC.Ticks += 1;
+    if (statusC & 0b01000000) gRTC.Ticks += 1;
     end_of_interrupt(8);
 }
 
 /// IRQ12: PS/2 MOUSE
 __attribute__((interrupt))
 void mouse_handler(InterruptFrame* frame) {
-    u8 data = in8(0x60);
-    handle_ps2_mouse_interrupt(data);
+    u8 data = in8_wrap(0x60);
+    // TODO: Send input event or something? Write input event to queue?
+    //handle_ps2_mouse_interrupt(data);
     // End interrupt
     end_of_interrupt(12);
 }
@@ -191,6 +246,65 @@ void page_fault_handler(InterruptFrameError* frame) {
     // Collect faulty address as soon as possible (it may be lost quickly).
     u64 address;
     asm volatile ("mov %%cr2, %0" : "=r" (address));
+
+    std::print("  Faulty Address: {:#016x}\n", address);
+    u64 cr3;
+    asm volatile ("mov %%cr3, %0" : "=r" (cr3));
+    std::print("  PageTable Address: {:#016x}\n", cr3);
+
+    Memory::PageMapIndexer indexer(address);
+    Memory::PageDirectoryEntry PDE;
+    PDE = ((Memory::PageTable*)cr3)->entries[indexer.page_directory_pointer()];
+    std::print("4th lvl permissions | ");
+    Memory::print_pde_flags(PDE);
+    std::print("\n");
+
+    auto* PDP = (Memory::PageTable*)((u64)PDE.address() << 12);
+    PDE = PDP->entries[indexer.page_directory()];
+    std::print("3rd lvl permissions | ");
+    Memory::print_pde_flags(PDE);
+    std::print("\n");
+
+    auto* PD = (Memory::PageTable*)((u64)PDE.address() << 12);
+    PDE = PD->entries[indexer.page_table()];
+    std::print("2nd lvl permissions | ");
+    Memory::print_pde_flags(PDE);
+    std::print("\n");
+
+    auto* PT = (Memory::PageTable*)((u64)PDE.address() << 12);
+    PDE = PT->entries[indexer.page()];
+    std::print("1st lvl permissions | ");
+    Memory::print_pde_flags(PDE);
+    std::print("\n");
+
+    std::print("PHYS {:#016x} at VIRT {:#016x}\n",
+               u64(PDE.address() << 12),
+               u64(address));
+
+    if ((frame->error & (u64)PageFaultErrorCode::ProtectionKeyViolation) > 0)
+        std::print("  Protection Key Violation\n");
+    if ((frame->error & (u64)PageFaultErrorCode::HypervisorManagedLinearAddressTranslation) > 0)
+        std::print("  Hypervisor Managed Linear Address Translation\n");
+    if ((frame->error & (u64)PageFaultErrorCode::InstructionFetch) > 0)
+        std::print("  Instruction fetch\n");
+    else std::print("  Data Access\n");
+    if ((frame->error & (u64)PageFaultErrorCode::ShadowStackAccess) > 0)
+        std::print("  Shadow stack access\n");
+    if ((frame->error & (u64)PageFaultErrorCode::HypervisorManagedLinearAddressTranslation) > 0)
+        std::print("  Hypvervisor-managed linear address translation\n");
+    if ((frame->error & (u64)PageFaultErrorCode::SoftwareGaurdExtensions) > 0)
+        std::print("  Software gaurd extensions\n");
+    if ((frame->error & (u64)PageFaultErrorCode::UserSuper) > 0)
+        std::print("  From ring 3\n");
+    if ((frame->error & (u64)PageFaultErrorCode::ReadWrite) > 0)
+        std::print("  Write\n");
+    else std::print("  Read\n");
+    if ((frame->error & (u64)PageFaultErrorCode::Reserved) > 0)
+        std::print("  Reserved\n");
+
+    std::print("CurrentProcess->ProcessID == {}\n", u64(Scheduler::CurrentProcess->value()->ProcessID));
+    Memory::print_page_map((Memory::PageTable*)cr3, Memory::PageTableFlag::UserSuper);
+
     /* US RW P - Description
      * 0  0  0 - Supervisory process tried to read a non-present page entry
      * 0  0  1 - Supervisory process tried to read a page and caused a protection fault
@@ -226,21 +340,12 @@ void page_fault_handler(InterruptFrameError* frame) {
             else panic(frame, "#PF: Supervisor process attempted to read from a page and caused a protection fault");
         }
     }
-    if ((frame->error & (u64)PageFaultErrorCode::InstructionFetch) > 0)
-        std::print("  Instruction fetch\n");
-    if ((frame->error & (u64)PageFaultErrorCode::ShadowStackAccess) > 0)
-        std::print("  Shadow stack access\n");
-    if ((frame->error & (u64)PageFaultErrorCode::HypervisorManagedLinearAddressTranslation) > 0)
-        std::print("  Hypvervisor-managed linear address translation\n");
-    if ((frame->error & (u64)PageFaultErrorCode::SoftwareGaurdExtensions) > 0)
-        std::print("  Software gaurd extensions\n");
 
-    std::print("  Faulty Address: {:#016x}\n", address);
     Vector2<u64> drawPosition = { PanicStartX, PanicStartY };
     gRend.puts(drawPosition, std::format("Faulty Address: {:#016x}", address), 0x00000000);
     gRend.swap({ PanicStartX, PanicStartY }, { 1024, 128 } );
     while (true)
-        asm ("hlt");
+        asm volatile ("hlt");
 }
 
 __attribute__((interrupt))

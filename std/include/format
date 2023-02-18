@@ -683,7 +683,7 @@ struct __format_visitor {
     /// Builtin format args.
     template <typename _Ty>
     constexpr void operator()(_Ty __val) {
-        formatter<remove_cvref_t<_Ty>, _Char> __fmt;
+        formatter<remove_cvref_t<_Ty>, _Char> __fmt{};
         auto __end = __fmt.parse(__parse_ctx);
         if (__end != __parse_ctx.end()) {
             __throw_format_error("formatter::parse() must consume the entire format specifier");
@@ -702,7 +702,6 @@ constexpr void __format(basic_format_context<_Output, _Char>&& __ctx, basic_stri
     for (size_t __i = 0; __i < __ctx.__get_args().__sz(); __i++) {
         size_t __old_pos = __pos;
 
-
         /// Find the next unescaped '{' or '}'.
         const auto __find_delim = [&](char __delim) {
             size_t __found;
@@ -716,6 +715,7 @@ constexpr void __format(basic_format_context<_Output, _Char>&& __ctx, basic_stri
                 /// Double '{{' or '}}' are escaped.
                 if (__fmt[__found] == __fmt[__found + 1]) {
                     __ctx.out() = __fmt.substr(__old_pos, __found - __old_pos + 1);
+                    // pos and old_pos are updated here, past the escaped braces.
                     __pos = __old_pos = __found + 2;
                     continue;
                 }
@@ -729,7 +729,7 @@ constexpr void __format(basic_format_context<_Output, _Char>&& __ctx, basic_stri
             return __found;
         };
 
-        /// Advance past the start of the format specifier.
+        /// Advance past format specifier.
         size_t __fmt_spec = __find_delim('{');
         size_t __end = __find_delim('}');
 

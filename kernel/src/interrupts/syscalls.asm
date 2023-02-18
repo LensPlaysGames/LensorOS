@@ -68,6 +68,7 @@ system_call_handler_asm:
     mov r10, syscalls           ; Store address of syscalls function table.
     add r10, rax                ; Add offset to base address.
     mov rdx, r11                ; Restore clobbered RDX.
+    mov r11, rsp
     call [rel r10]              ; Call function at syscalls table base address + syscall number offset.
 ;;; Restore CPU state, then return from interrupt.
     add rsp, 8                  ; Eat `rsp` off the stack.

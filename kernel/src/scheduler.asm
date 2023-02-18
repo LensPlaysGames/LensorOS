@@ -60,11 +60,13 @@ irq0_handler:
 ;;; INCREMENT SYSTEM TIMER TICKS
     call [rel timer_tick]
 ;;; CALL C++ FUNCTION; ARGUMENT IN `rdi`
+;;#; FIXME: Does this only work because RSP is what's at the stack pointer? Should this be `lea` instead?
     mov rdi, rsp
     call [rel scheduler_switch_process]
 ;;; END INTERRUPT
     mov ax, 0x20                ; 0x20 = PIC_EOI
     out 0x20, al                ; 0x20 = PIC1_COMMAND port
+yield_asm_impl:
 ;;; RESTORE CPU STATE FROM STACK
     add rsp, 8                  ; Eat `rsp` off of stack.
     pop rbx
@@ -86,3 +88,8 @@ irq0_handler:
     pop rax
     call do_swapgs
     iretq
+
+GLOBAL yield_asm
+yield_asm:
+    mov rsp, rdi
+    jmp yield_asm_impl

@@ -39,8 +39,9 @@ extern kmain
 
 ;;# Allocate known good stack
 SECTION .bss
-align 0x1000
+align PAGE_SIZE
 prekernel_stack_bottom:
+    ;;# 64 KiB stack
     resb 0x16000
 prekernel_stack_top:
 

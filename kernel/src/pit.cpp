@@ -30,12 +30,15 @@ PIT::PIT() {
     configure_channel(Channel::Two, Access::HighAndLow, Mode::SquareWaveGenerator, 440);
 }
 
-double PIT::seconds_since_boot() {
-    return (double)Ticks / PIT_FREQUENCY;
+usz PIT::seconds_since_boot() {
+    return (usz)Ticks / PIT_FREQUENCY;
+}
+usz PIT::milliseconds_since_boot() {
+    return (usz)Ticks * 1000 / PIT_FREQUENCY;
 }
 
-void PIT::prepare_wait_seconds(double duration) {
-    TicksToWait = duration * PIT_FREQUENCY;
+void PIT::prepare_wait_milliseconds(usz ms) {
+  TicksToWait = ms * PIT_FREQUENCY / 1000;
 }
 
 void PIT::wait() {
@@ -56,15 +59,15 @@ void PIT::stop_speaker() {
     out8(PIT_PCSPK, tmp);
 }
 
-void PIT::play_sound(u64 frequency, double duration) {
-    if (frequency == 0 || duration <= 0)
-        return;
+void PIT::play_sound(u64 frequency, usz ms) {
+    if (frequency == 0 || ms <= 0) return;
 
     configure_channel(Channel::Two, Access::HighAndLow, Mode::SquareWaveGenerator, frequency);
 
     // FIXME: Playing a sound shouldn't block the entire system :^)
-    //   I should probably create a separate process that runs sound.
-    prepare_wait_seconds(duration);
+    // I should probably create a separate process that runs sound, or something like that.
+    // Or have a general timer process that runs timers when it is time to.
+    prepare_wait_milliseconds(ms);
     start_speaker();
     wait();
     stop_speaker();

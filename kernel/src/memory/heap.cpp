@@ -27,6 +27,7 @@
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
+#include <scheduler.h>
 #include <string>
 
 // Uncomment the following directive for extra debug information output.
@@ -113,7 +114,7 @@ void init_heap() {
         Memory::map((void*)((u64)HEAP_VIRTUAL_BASE + i), Memory::request_page()
                     , (u64)Memory::PageTableFlag::Present
                     | (u64)Memory::PageTableFlag::ReadWrite
-                    | (u64)Memory::PageTableFlag::Global
+                    //| (u64)Memory::PageTableFlag::Global
                     );
     }
     sHeapStart = (void*)HEAP_VIRTUAL_BASE;
@@ -141,15 +142,26 @@ void expand_heap(u64 numBytes) {
     numBytes = numPages * PAGE_SIZE;
     // Get address of new header at the end of the heap.
     auto* extension = (HeapSegmentHeader*)sHeapEnd;
-    // Allocate and map a page in memory for new header.
-    for (u64 i = 0; i < numPages; ++i) {
-        Memory::map(sHeapEnd, Memory::request_page()
-                    , (u64)Memory::PageTableFlag::Present
-                    | (u64)Memory::PageTableFlag::ReadWrite
-                    | (u64)Memory::PageTableFlag::Global
-                    );
-        sHeapEnd = (void*)((u64)sHeapEnd + PAGE_SIZE);
-    }
+
+    // Allocate and map a page in memory for new header in every single process...
+    void *phys_heap_expansion = Memory::request_pages(numPages);
+    Scheduler::map_pages_in_all_processes(sHeapEnd, phys_heap_expansion
+                                          , (u64)Memory::PageTableFlag::Present
+                                          | (u64)Memory::PageTableFlag::ReadWrite
+                                          //| (u64)Memory::PageTableFlag::Global
+                                          , numPages);
+    sHeapEnd = (void*)((u64)sHeapEnd + numBytes);
+
+    //for (u64 i = 0; i < numPages; ++i) {
+    //    Memory::map(sHeapEnd, Memory::request_page()
+    //                , (u64)Memory::PageTableFlag::Present
+    //                | (u64)Memory::PageTableFlag::ReadWrite
+    //                | (u64)Memory::PageTableFlag::Global
+    //                , Memory::ShowDebug::Yes
+    //                );
+    //    sHeapEnd = (void*)((u64)sHeapEnd + PAGE_SIZE);
+    //}
+
     extension->free = true;
     extension->last = sLastHeader;
     sLastHeader->next = extension;

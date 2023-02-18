@@ -118,7 +118,7 @@ public:
     /* Get the amount of seconds passed based on main counter.
      * NOTE: This is inaccurate as counter is paused/started often.
      */
-    double seconds();
+    //double seconds();
 
     /// Disable counting, set the main counter to the given value, then enable counting.
     void set_main_counter(u64 value);

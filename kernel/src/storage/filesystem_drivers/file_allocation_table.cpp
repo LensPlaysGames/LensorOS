@@ -33,6 +33,23 @@
 #   define DBGMSG(...)
 #endif
 
+/// Given "/foo/bar/baz.txt" return "foo" and set path to "bar/baz.txt"
+/// Given "/" return "/"
+std::string pop_filename_from_front_of_path(std::string& raw_path) {
+    /// Strip leading slash.
+    std::string path = raw_path;
+    if (path.starts_with("/")) path = path.substr(1);
+    if (path.size() < 1) return raw_path;
+
+    raw_path = path;
+    size_t first_sep = path.find_first_of("/");
+    if (first_sep == std::string::npos) return path;
+
+    std::string out = path.substr(0, first_sep);
+    raw_path = path.substr(first_sep);
+    return out;
+}
+
 void FileAllocationTableDriver::print_fat(BootRecord& br) {
     std::print("File Allocation Table Boot Record:\n"
                "  Total Clusters:      {}\n"
@@ -64,8 +81,7 @@ FATType FileAllocationTableDriver::fat_type(BootRecord& br) {
     else return FATType::FAT32;
 }
 
-auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> driver)
-    -> std::shared_ptr<FilesystemDriver> {
+auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> driver) -> std::shared_ptr<FilesystemDriver> {
     if (!driver) return nullptr;
 
     BootRecord br;
@@ -76,8 +92,8 @@ auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> 
     }
 
     u64 totalSectors = br.BPB.TotalSectors16 == 0
-        ? br.BPB.TotalSectors32
-        : br.BPB.TotalSectors16;
+                       ? br.BPB.TotalSectors32
+                       : br.BPB.TotalSectors16;
 
     /* Validate boot sector is of FAT format.
      * TODO: Use more of these confidence checks before
@@ -99,16 +115,16 @@ auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> 
      * [x] NumFATsPresent greater than zero
      */
     bool out = (br.Magic == 0xaa55
-           && totalSectors != 0
-           && br.BPB.NumBytesPerSector >= 512
-           && br.BPB.NumBytesPerSector <= 4096
-           && (br.BPB.NumBytesPerSector
-               & (br.BPB.NumBytesPerSector - 1)) == 0
-           && (br.BPB.NumSectorsPerCluster
-               & (br.BPB.NumSectorsPerCluster - 1)) == 0
-           && br.BPB.NumFATsPresent > 0);
+                && totalSectors != 0
+                && br.BPB.NumBytesPerSector >= 512
+                && br.BPB.NumBytesPerSector <= 4096
+                && (br.BPB.NumBytesPerSector
+                    & (br.BPB.NumBytesPerSector - 1)) == 0
+                && (br.BPB.NumSectorsPerCluster
+                    & (br.BPB.NumSectorsPerCluster - 1)) == 0
+                && br.BPB.NumFATsPresent > 0);
 
-   if (!out) return nullptr;
+    if (!out) return nullptr;
 
 #ifdef DEBUG_FAT
     print_fat(br);
@@ -119,18 +135,19 @@ auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> 
     return std::static_pointer_cast<FilesystemDriver>(fs);
 }
 
-auto FileAllocationTableDriver::translate_path(std::string_view raw_path) -> std::string {
-    std::string path = raw_path;
-    for (usz i = raw_path.size(); i < 11; i++) { path += " "; }
+auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename) -> std::string {
+    std::string path = raw_filename;
 
-    for (usz i = 0; i < raw_path.size(); i++) {
-        if (path[i] >= 97 && path[i] <= 122) path[i] -= 32;
+    // Pad filename to 11 bytes long (Length of all FAT filenames without LFN entry)
+    for (usz i = raw_filename.size(); i < 11; ++i) { path += " "; }
+
+    // Alter filename to have legal characters.
+    for (usz i = 0; i < raw_filename.size(); ++i) {
+        if (path[i] >= 97 && path[i] <= 122) path[i] -= 32; // toupper
         else if (path[i] == '.') path[i] = ' ';
     }
 
-    DBGMSG("[FAT]: Looking for file at {}\n"
-           "  Translated path: {}\n"
-           , raw_path, path);
+    DBGMSG("[FAT]: Translating filename \"{}\"; Got \"{}\"\n", raw_filename , path);
 
     return path;
 }
@@ -159,19 +176,26 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
         return {};
     }
 
+    // Get first filename from path.
+    // Given path "foo/bar/bas.exe", return "foo" as a legal FAT
+    // filename, and alter given path to be "past" that + directory
+    // separator.
+
     // Translate path (FAT has very limited file names).
-    auto path = translate_path(raw_path);
+    auto path = translate_filename(raw_path);
 
     // TODO: Take in cached FAT from filesystem.
     std::vector<u8> FAT(BR.BPB.NumBytesPerSector);
     u64 lastFATsector { 0 };
 
+    // TODO: ExFAT will need it's own code flow, essentially.
+
     constexpr u64 lfnBufferSize = 27;
+    const u64 clusterSize = BR.BPB.NumSectorsPerCluster * BR.BPB.NumBytesPerSector;
     u8 lfnBuffer[lfnBufferSize];
     u32 clusterIndex = BR.sector_to_cluster(BR.first_root_directory_sector());
     bool moreClusters = true;
     while (moreClusters) {
-        u64 clusterSize = BR.BPB.NumSectorsPerCluster * BR.BPB.NumBytesPerSector;
         std::vector<u8> clusterContents(clusterSize);
         u64 clusterSector = BR.cluster_to_sector(clusterIndex);
         Device->read_raw(clusterSector * BR.BPB.NumBytesPerSector
@@ -195,6 +219,7 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
                 entry++;
                 continue;
             }
+
             std::string fileName(reinterpret_cast<const char*>(&entry->FileName[0]), 11);
             if (lfnBufferFull) {
                fileName.append((const char*)lfnBuffer, lfnBufferSize);
@@ -230,7 +255,6 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
         }
         // Check if this is the last cluster in the chain.
         u64 clusterNumber = entry->get_cluster_number();
-        // FIXME: This assumes FAT32, but we should really determine type dynamically.
         u64 FAToffset = 0;
         switch (Type) {
         case FATType::FAT12:
