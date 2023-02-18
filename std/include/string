@@ -555,6 +555,8 @@ public:
     _Nodiscard size_t find(_Char __c, size_t __pos = 0) const { return __view().find(__c, __pos); }
     _Nodiscard size_t find(_View __sv, size_t __pos = 0) const { return __view().find(__sv, __pos); }
 
+    _Nodiscard size_t find_first_of(_View __sv, size_t __pos = 0) const { return __view().find_first_of(__sv, __pos); }
+
     _Nodiscard bool starts_with(_View __sv) const { return __view().starts_with(__sv); }
     _Nodiscard bool ends_with(_View __sv) const { return __view().ends_with(__sv); }
 
