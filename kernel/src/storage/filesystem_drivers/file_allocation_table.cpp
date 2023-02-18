@@ -37,12 +37,14 @@
 /// Given "/" return "/"
 std::string pop_filename_from_front_of_path(std::string& raw_path) {
     /// Strip leading slash.
-    std::string_view path = raw_path;
+    std::string path = raw_path;
     if (path.starts_with("/")) path = path.substr(1);
     if (path.size() < 1) return raw_path;
 
+    raw_path = path;
     size_t first_sep = path.find_first_of("/");
     if (first_sep == std::string::npos) return path;
+
     std::string out = path.substr(0, first_sep);
     raw_path = path.substr(first_sep);
     return out;
