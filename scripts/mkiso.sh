@@ -28,6 +28,9 @@ run() {
     { set +x; } 2>/dev/null
 }
 
+# TODO: Think about how to run LensorOS from a bootable ISO image while
+# also having the data partition loaded on there.
+
 run $ScriptDirectory/mkimg.sh
 run mkdir -p $BuildDirectory/iso
 run cp \
