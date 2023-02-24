@@ -52,3 +52,20 @@ mcopy -i $BuildDirectory/LensorOS.img $ScriptDirectory/startup.nsh ::
 mcopy -i $BuildDirectory/LensorOS.img $BuildDirectory/kernel.elf ::/LensorOS
 mcopy -i $BuildDirectory/LensorOS.img $BuildDirectory/dfltfont.psf ::/LensorOS
 Write-Host "`n -> Resources copied`n"
+
+dd if=/dev/zero of=$BuildDirectory/LensorOSData.img count=93750
+mformat -i $BuildDirectory/LensorOSData.img -F -v "LensorOS" ::
+Write-Host "`n -> Created FAT32 LensorOSData image`n"
+mmd -i $BuildDirectory/LensorOSData.img ::/bin
+mmd -i $BuildDirectory/LensorOSData.img ::/res
+mmd -i $BuildDirectory/LensorOSData.img ::/res/fonts
+mmd -i $BuildDirectory/LensorOSData.img ::/res/fonts/psf1
+Write-Host "`n -> Directories initialized`n"
+mcopy -i $BuildDirectory/LensorOSData.img $BuildDirectory/dfltfont.psf ::/res/fonts/psf1
+mcopy -i $BuildDirectory/LensorOSData.img $RepositoryDirectory/user/blazeit/blazeit ::/bin
+mcopy -i $BuildDirectory/LensorOSData.img $RepositoryDirectory/user/stdout/stdout ::/bin
+# TODO get rid of following lines once directory traversal works in FAT driver...
+mcopy -i $BuildDirectory/LensorOSData.img $BuildDirectory/dfltfont.psf ::
+mcopy -i $BuildDirectory/LensorOSData.img $RepositoryDirectory/user/stdout/stdout ::
+mcopy -i $BuildDirectory/LensorOSData.img $RepositoryDirectory/user/blazeit/blazeit ::
+Write-Host "`n -> Resources copied`n"

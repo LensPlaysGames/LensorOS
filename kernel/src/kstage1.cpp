@@ -500,6 +500,10 @@ void kstage1(BootInfo* bInfo) {
                     std::print("  Checking for valid File Allocation Table filesystem\n");
                     if (auto FAT = FileAllocationTableDriver::try_create(sdd(controller->Driver))) {
                         std::print("  Found valid File Allocation Table filesystem\n");
+                        // TODO: Name EFI SYSTEM partition something else to make it separate from
+                        // regular partitions. Eventually should probably also disallow writing to
+                        // EFI SYSTEM mount path unless in very specific circumstances controlled
+                        // by the kernel.
                         vfs.mount(std::format("/fs{}", vfs.mounts().size()), std::move(FAT));
 
                         // Done searching AHCI port, found valid filesystem.

@@ -20,8 +20,9 @@
 
 
 ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-BootloaderEFI="$ScriptDirectory/../gnu-efi/x86_64/bootloader/main.efi"
-KernelDirectory="$ScriptDirectory/../kernel"
+RepositoryDirectory="$ScriptDirectory/.."
+BootloaderEFI="$RepositoryDirectory/gnu-efi/x86_64/bootloader/main.efi"
+KernelDirectory="$RepositoryDirectory/kernel"
 BuildDirectory="$KernelDirectory/bin"
 
 run(){
@@ -49,6 +50,7 @@ if [ ! -f "$ScriptDirectory/startup.nsh" ]; then
 fi
 
 run mkdir -p $BuildDirectory
+
 run dd if=/dev/zero of=$BuildDirectory/LensorOS.img count=93750
 run mformat -i $BuildDirectory/LensorOS.img -F -v "EFI System" ::
 echo -e "\n\n -> Created FAT32 UEFI bootable disk image\n\n"
@@ -60,4 +62,21 @@ run mcopy -i $BuildDirectory/LensorOS.img $BootloaderEFI ::/EFI/BOOT
 run mcopy -i $BuildDirectory/LensorOS.img $ScriptDirectory/startup.nsh ::
 run mcopy -i $BuildDirectory/LensorOS.img $BuildDirectory/kernel.elf ::/LensorOS
 run mcopy -i $BuildDirectory/LensorOS.img $BuildDirectory/dfltfont.psf ::/LensorOS
+echo -e "\n\n -> Resources copied\n\n"
+
+run dd if=/dev/zero of=$BuildDirectory/LensorOSData.img count=93750
+run mformat -i $BuildDirectory/LensorOSData.img -F -v "LensorOS" ::
+echo -e "\n\n -> Created FAT32 LensorOSData image\n\n"
+run mmd -i $BuildDirectory/LensorOSData.img ::/bin
+run mmd -i $BuildDirectory/LensorOSData.img ::/res
+run mmd -i $BuildDirectory/LensorOSData.img ::/res/fonts
+run mmd -i $BuildDirectory/LensorOSData.img ::/res/fonts/psf1
+echo -e "\n\n -> Directories initialized\n\n"
+run mcopy -i $BuildDirectory/LensorOSData.img $BuildDirectory/dfltfont.psf ::/res/fonts/psf1
+run mcopy -i $BuildDirectory/LensorOSData.img $RepositoryDirectory/user/blazeit/blazeit ::/bin
+run mcopy -i $BuildDirectory/LensorOSData.img $RepositoryDirectory/user/stdout/stdout ::/bin
+# TODO get rid of following lines once directory traversal works in FAT driver...
+run mcopy -i $BuildDirectory/LensorOSData.img $BuildDirectory/dfltfont.psf ::
+run mcopy -i $BuildDirectory/LensorOSData.img $RepositoryDirectory/user/stdout/stdout ::
+run mcopy -i $BuildDirectory/LensorOSData.img $RepositoryDirectory/user/blazeit/blazeit ::
 echo -e "\n\n -> Resources copied\n\n"

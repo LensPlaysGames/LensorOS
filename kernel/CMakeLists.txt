@@ -239,6 +239,22 @@ if( DD_PROGRAM AND MTOOLS_PROGRAM )
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${REPO_DIR}/user/stdout/stdout ::
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${IMAGE_DIR}/kernel.elf ::/LensorOS
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${IMAGE_DIR}/dfltfont.psf ::/LensorOS
+
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${IMAGE_DIR}
+    COMMAND ${DD_PROGRAM} if=/dev/zero of=${IMAGE_DIR}/LensorOSData.img count=93750
+    COMMAND mformat -i ${IMAGE_DIR}/LensorOSData.img -F -v "LensorOS" ::
+    COMMAND mmd -i ${IMAGE_DIR}/LensorOSData.img ::/bin
+    COMMAND mmd -i ${IMAGE_DIR}/LensorOSData.img ::/res
+    COMMAND mmd -i ${IMAGE_DIR}/LensorOSData.img ::/res/fonts
+    COMMAND mmd -i ${IMAGE_DIR}/LensorOSData.img ::/res/fonts/psf1
+    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${IMAGE_DIR}/dfltfont.psf ::/res/fonts/psf1
+    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/blazeit/blazeit ::/bin
+    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/stdout/stdout ::/bin
+    #TODO get rid of following lines once directory traversal works in FAT driver...
+    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${IMAGE_DIR}/dfltfont.psf ::
+    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/stdout/stdout ::
+    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/blazeit/blazeit ::
+
     COMMENT "Generating UEFI-compatible FAT32 boot media"
     DEPENDS
     ${REPO_DIR}/gnu-efi/x86_64/bootloader/main.efi
@@ -265,6 +281,7 @@ if( CREATEGPT_PROGRAM )
     ${CREATEGPT_PROGRAM}
     -o ${IMAGE_DIR}/LensorOS.bin
     -p ${IMAGE_DIR}/LensorOS.img --type system
+    -p ${IMAGE_DIR}/LensorOSData.img --type 00000000-0000-0000-0000-000000000069
     COMMENT "Generating GUID Partion Table with EFI System partion using `createGPT`"
     USES_TERMINAL
     VERBATIM
