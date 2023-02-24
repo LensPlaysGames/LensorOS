@@ -29,4 +29,4 @@ run(){
 }
 
 run $ScriptDirectory/mkimg.sh
-run mkgpt -o $KernelDirectory/bin/LensorOS.bin --part $KernelDirectory/bin/LensorOS.img --type system
+run mkgpt -o $KernelDirectory/bin/LensorOS.bin --part $KernelDirectory/bin/LensorOS.img --type system --part $KernelDirectory/bin/LensorOSData.img --type 00000000-0000-0000-0000-000000000069
