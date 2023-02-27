@@ -333,10 +333,12 @@ size_t _IO_File::copy_from_read_buffer(char* __restrict__ buf, size_t size) {
     memcpy(buf, __rdbuf.__buf, to_copy);
 
     /// If we've copied all the data, reset the buffer.
-    if (stream_rem == to_copy) { __rdbuf.__start = __rdbuf.__offs = 0; }
-
+    if (stream_rem == to_copy) {
+        __rdbuf.__start = 0;
+        __rdbuf.__offs = 0;
+    }
     /// Otherwise, move the start pointer.
-    else { __rdbuf.__start += to_copy; }
+    else __rdbuf.__start += to_copy;
 
     /// Return the number of bytes copied.
     return to_copy;
