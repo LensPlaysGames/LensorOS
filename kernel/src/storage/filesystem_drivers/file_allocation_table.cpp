@@ -23,9 +23,10 @@
 #include <storage/file_metadata.h>
 #include <storage/filesystem_drivers/file_allocation_table.h>
 #include <vector>
+#include <string>
 
 // Uncomment the following directive for extra debug information output.
-//#define DEBUG_FAT
+#define DEBUG_FAT
 
 #ifdef DEBUG_FAT
 #   define DBGMSG(...) std::print(__VA_ARGS__)
@@ -135,21 +136,95 @@ auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> 
     return std::static_pointer_cast<FilesystemDriver>(fs);
 }
 
+// "abcdefgh.ijk" needs to become "ABCDEFGHIJK"
+// "ABCDEFGHIJK" needs to become "ABCDEFGHIJK"
+// "blazeit" needs to become "BLAZEIT    "
 auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename) -> std::string {
     std::string path = raw_filename;
 
-    // Pad filename to 11 bytes long (Length of all FAT filenames without LFN entry)
-    for (usz i = raw_filename.size(); i < 11; ++i) { path += " "; }
+    // toupper
+    for (usz i = 0; i < path.size(); ++i)
+        if (path[i] >= 97 && path[i] <= 122) path[i] -= 32;
 
-    // Alter filename to have legal characters.
-    for (usz i = 0; i < raw_filename.size(); ++i) {
-        if (path[i] >= 97 && path[i] <= 122) path[i] -= 32; // toupper
-        else if (path[i] == '.') path[i] = ' ';
+    // Check if filename is in valid 8.3 format already
+    if (path.size() == 12 && path[8] == '.') {
+        // Erase period from name (i.e. "ABCDEFGH.IJK" -> "ABCDEFGHIJK")
+        path.erase(8,1);
+
+        DBGMSG("[FAT]: Got perfect 8.3 \"{}\"\n", path);
+
+        return path;
+    } else if (path.size() <= 12) {
+
+        // "blazeit" -> "BLAZEIT    "
+        // "foo.a"   -> "FOO     A  "
+
+        // TODO: What about multiple '.' in filename?
+        // TODO: What about over-long extension? How does that interact
+        // with LFN?
+
+        std::string name;
+        std::string extension;
+
+        // Find last '.'.
+        size_t last_dot = path.find_last_of(".");
+        if (last_dot != std::string::npos) {
+            // If last '.' is past eighth byte, then there is no way
+            // the filename can fit in the eight bytes allotted to it.
+            // Need to return computer-generated filename or the LFN,
+            // or something.
+            if (last_dot > 8) {
+                std::print("[FAT]: TODO: translate_filename() computer-generated 8.3 filenames... (path short, name long)\n");
+                return "INVALID_TRANSLATION";
+            }
+
+            // If it exists, the three bytes following it are the
+            // extension.
+
+            for (size_t i = last_dot + 1; i < path.size(); ++i)
+                extension += path[i];
+
+            // If less than three bytes follow the '.', then spaces are
+            // appended until three bytes are reached.
+            for (size_t i = 0; i < 3; ++i)
+                extension += ' ';
+
+            // Truncate to three bytes (over-long extension).
+            extension = extension.substr(0, 3);
+
+            name = path.substr(0, 8);
+
+            DBGMSG("[FAT]: Got name \"{}\" and extension \"{}\"\n", name, extension);
+
+            return name + extension;
+
+        } else {
+            // If no '.' in filename, ensure it's length is less than or equal to 8 bytes.
+
+            // If it is longer than eight bytes, make computer-generated filename...
+            if (path.size() > 11) {
+                std::print("[FAT]: TODO: translate_filename() computer-generated 8.3 filenames... (path short, name long, no extension)\n");
+                return "INVALID_TRANSLATION";
+            }
+
+            // Pad filename with spaces to reach full 11-byte 8.3 filename length.
+            for (usz i = path.size(); i < 11; ++i)
+                path += ' ';
+
+            DBGMSG("[FAT]: Got filename \"{}\" (no extension)\n", path);
+
+            return path;
+
+        }
+    } else {
+        // Name is too long, have to do computer-generated short file
+        // name, or look for long file name entry... it really depends
+        // on where this is called from.
+        std::print("[FAT]: TODO: translate_filename() computer-generated 8.3 filenames... (path long)\n");
+
+        return "INVALID_TRANSLATION";
     }
-
-    DBGMSG("[FAT]: Translating filename \"{}\"; Got \"{}\"\n", raw_filename , path);
-
-    return path;
+    // UNREACHABLE();
 }
 
 auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_ptr<FileMetadata> {
@@ -164,7 +239,7 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
     auto __this = This.lock();
     if (!__this) {
         /// Should never get here.
-        std::print("FileAllocationTableDriver::open(): This is null!\n");
+        std::print("[FAT]::open(): `This` is null!\n");
         return {};
     }
 #endif
@@ -172,7 +247,7 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
     /// Strip leading slash.
     if (raw_path.starts_with("/")) raw_path = raw_path.substr(1);
     if (raw_path.size() < 1) {
-        DBGMSG("FileAllocationTableDriver::open(): Invalid path: {}\n", raw_path);
+        DBGMSG("[FAT]:open(): Invalid path: {}\n", raw_path);
         return {};
     }
 
@@ -180,9 +255,16 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
     // Given path "foo/bar/bas.exe", return "foo" as a legal FAT
     // filename, and alter given path to be "past" that + directory
     // separator.
+    std::string path = raw_path;
+    auto raw_filename = pop_filename_from_front_of_path(path);
+
+    DBGMSG("[FAT]:open(): Got filename \"{}\" and path \"{}\" from \"{}\"\n", raw_filename, path, raw_path);
 
     // Translate path (FAT has very limited file names).
-    auto path = translate_filename(raw_path);
+    path = translate_filename(raw_filename);
+
+    DBGMSG("[FAT]:open(): Translated filename \"{}\" from \"{}\"\n", path, raw_filename);
+
 
     // TODO: Take in cached FAT from filesystem.
     std::vector<u8> FAT(BR.BPB.NumBytesPerSector);
