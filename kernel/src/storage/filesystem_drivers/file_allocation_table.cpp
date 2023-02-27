@@ -26,7 +26,7 @@
 #include <string>
 
 // Uncomment the following directive for extra debug information output.
-#define DEBUG_FAT
+//#define DEBUG_FAT
 
 #ifdef DEBUG_FAT
 #   define DBGMSG(...) std::print(__VA_ARGS__)
