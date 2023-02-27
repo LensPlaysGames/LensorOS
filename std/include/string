@@ -102,6 +102,17 @@ public:
         return npos;
     }
 
+    _Nodiscard constexpr size_t find_last_of(_View __sv, size_t __pos = npos) const {
+        if (__pos == npos) __pos = __size - 1; // start at end of string by default
+        // NOTE: Relies on unsigned integer underflow
+        for (size_t __i = __pos; __i <= __pos; --__i) {
+            for (size_t __j = 0; __j < __sv.__size; __j++) {
+                if (__data[__i] == __sv.__data[__j]) return __i;
+            }
+        }
+        return npos;
+    }
+
     _Nodiscard bool starts_with(_View __sv) const {
         if (__sv.size() > __size) return false;
         return memcmp((void*)__data, (void*)__sv.__data, __sv.size() * sizeof(_Char)) == 0;
@@ -555,6 +566,7 @@ public:
     _Nodiscard size_t find(_View __sv, size_t __pos = 0) const { return __view().find(__sv, __pos); }
 
     _Nodiscard size_t find_first_of(_View __sv, size_t __pos = 0) const { return __view().find_first_of(__sv, __pos); }
+    _Nodiscard size_t find_last_of(_View __sv, size_t __pos = 0) const { return __view().find_last_of(__sv, __pos); }
 
     _Nodiscard bool starts_with(_View __sv) const { return __view().starts_with(__sv); }
     _Nodiscard bool ends_with(_View __sv) const { return __view().ends_with(__sv); }
