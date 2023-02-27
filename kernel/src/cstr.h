@@ -21,6 +21,7 @@
 #define LENSOR_OS_CSTR_H
 
 #include <integers.h>
+#include <memory.h>
 
 #ifndef LENSOR_OS_UART_HIDE_COLOR_CODES
 constexpr const char* trueString = "\033[32mTrue\033[0m";

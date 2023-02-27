@@ -19,8 +19,7 @@
 #ifndef _LENSOROS_STRING_
 #define _LENSOROS_STRING_
 
-#include "algorithm"
-
+#include <algorithm>
 #include <bits/decls.h>
 #include <cmath>
 #include <concepts>
