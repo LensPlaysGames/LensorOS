@@ -710,7 +710,7 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
             } break;
 
             case 'c': {
-                char c = va_arg(args, char);
+                int c = va_arg(args, int);
                 fputc(c, stream);
                 continue;
             } break;
