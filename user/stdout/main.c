@@ -17,14 +17,33 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/syscalls.h>
 #include <unistd.h>
 
 #include "framebuffer.h"
+
+/// Unsigned Integer Alias Declaration
+typedef unsigned int uint;
+
+/// Fixed-Width Unsigned Integer Alias Declarations
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+typedef uintptr_t usz;
+
+/// Fixed-Width Signed Integer Alias Declarations
+typedef int8_t s8;
+typedef int16_t s16;
+typedef int32_t s32;
+typedef int64_t s64;
+typedef intptr_t ssz;
 
 #ifndef MAX_COMMAND_LENGTH
 # define MAX_COMMAND_LENGTH 4096
@@ -111,7 +130,6 @@ unsigned int hex_digit_value(const char c) {
   return -1;
 }
 
-// FIXME: I don't think this works :(
 size_t hexstring_to_number(const char *str) {
   size_t out = 0;
   // Skip `0x`
@@ -147,6 +165,65 @@ size_t hexstring_to_number(const char *str) {
   return out;
 }
 
+
+#define PSF1_MAGIC0 0x36
+#define PSF1_MAGIC1 0x04
+typedef struct PSF1_HEADER {
+  // Magic bytes to indicate PSF1 font type
+  u8 magic[2];
+  u8 mode;
+  u8 character_size;
+} PSF1_HEADER;
+typedef struct PSF1_FONT {
+  PSF1_HEADER header;
+  void* glyph_buffer;
+} PSF1_FONT;
+void psf1_delete(const PSF1_FONT font) {
+  free(font.glyph_buffer);
+}
+u8 psf1_width(const PSF1_FONT font) {
+  return 8;
+}
+u8 psf1_height(const PSF1_FONT font) {
+  return font.header.character_size;
+}
+/// bitmap size is as follows: (8, font.header->character_size)
+/// @return address of beginning of bitmap pertaining to given character.
+u8* psf1_char_bitmap(const PSF1_FONT font, const u8 c) {
+  return (u8*)font.glyph_buffer + (c * psf1_height(font));
+}
+
+void draw_psf1_char(const Framebuffer fb, const PSF1_FONT font, size_t position_x, size_t position_y, const u8 c) {
+  const u32 fg_color = mkpixel(fb.format, 0xff, 0xff, 0xff, 0xff);
+  const u32 bg_color = mkpixel(fb.format, 0,0,0xff,0xff);
+
+  clamp_draw_position(fb, &position_x, &position_y);
+
+  usz size_x = psf1_width(font);
+  const usz initX = size_x;
+  usz size_y = font.header.character_size;
+  usz diffX = fb.pixel_width - position_x;
+  usz diffY = fb.pixel_height - position_y;
+  if (diffX < size_x) size_x = diffX;
+  if (diffY < size_y) size_y = diffY;
+
+  u8* bitmap = psf1_char_bitmap(font, c);
+  u32* pixel_ptr = (u32*)fb.base_address;
+
+  for (usz y = position_y; y < position_y + size_y; ++y) {
+    for (usz x = position_x; x < position_x + size_x; ++x) {
+      u32 color = bg_color;
+
+      usz byte = ((x - position_x) + ((y - position_y) * initX)) / 8;
+      if ((bitmap[byte] & (0b10000000 >> ((x - position_x) % 8))) > 0)
+        color = fg_color;
+
+      write_pixel(fb, color, x, y);
+    }
+  }
+}
+
+
 int main(int argc, const char **argv) {
   puts("Arguments:");
   for (int i = 0; i < argc; ++i) puts(argv[i]);
@@ -161,12 +238,66 @@ int main(int argc, const char **argv) {
   // TODO: Pass format from kernel (which gets format passed from bootloader)
   fb.format = FB_FORMAT_DEFAULT;
 
-  puts("\n\n<===!= WELCOME TO LensorOS SHELL [WIP] =!=!==>\n");
-  puts("LensorOS  Copyright (C) 2022, Contributors To LensorOS.");
-
   // clear screen
   uint32_t black = mkpixel(fb.format, 0x00,0x00,0x00,0xff);
   fill_color(fb, black);
+
+  puts("\n\n<===!= WELCOME TO LensorOS SHELL [WIP] =!=!==>\n");
+  puts("  LensorOS  Copyright (C) 2022, Contributors To LensorOS.");
+
+  const char *const fontpath = "/fs0/dfltfont.psf";
+  FILE *fontfile = fopen(fontpath, "rb");
+  if (!fontfile) {
+    printf("Could not open font at %s\n", fontpath);
+    return 1;
+  }
+  printf("Successfully loaded font at %s\n", fontpath);
+
+  PSF1_FONT font;
+  size_t bytes_read = 0;
+  bytes_read = fread(&font.header, 1, sizeof(PSF1_HEADER), fontfile);
+  if (bytes_read != sizeof(PSF1_HEADER)) {
+    printf("Could not read PSF1 header from font file.\n");
+    return 1;
+  }
+  if (font.header.magic[0] != PSF1_MAGIC0 || font.header.magic[1] != PSF1_MAGIC1) {
+    printf("Invalid font format (magic bytes not correct)\n");
+    return 1;
+  }
+
+  size_t glyph_buffer_size = font.header.character_size * 256;
+  // FIXME: This value checked against Mode may be wrong.
+  if (font.header.mode == 1) {
+    // 512 glyph mode
+    glyph_buffer_size  = font.header.character_size * 512;
+  }
+
+  // Read glyph buffer from font file after header
+  font.glyph_buffer = malloc(glyph_buffer_size);
+  if (!font.glyph_buffer) {
+    printf("Failed to allocate memory for PSF1 font glyph buffer.\n");
+    return 1;
+  }
+
+  fseek(fontfile, sizeof(PSF1_HEADER) - 1, SEEK_SET);
+  bytes_read = fread(font.glyph_buffer, 1, glyph_buffer_size, fontfile);
+  if (bytes_read != glyph_buffer_size) {
+    printf("Could not read PSF1 glyph buffer from font file.\n");
+    return 1;
+  }
+
+  fclose(fontfile);
+
+  printf("Successfully loaded PSF1 font from \"%s\"\n", fontpath);
+
+  size_t x = 20;
+  size_t y = 10;
+  draw_psf1_char(fb, font, x,y, 'A');x+=8;
+  draw_psf1_char(fb, font, x,y, 'B');x+=8;
+  draw_psf1_char(fb, font, x,y, 'C');x+=8;
+  draw_psf1_char(fb, font, x,y, 'D');x+=8;
+  draw_psf1_char(fb, font, x,y, 'E');x+=8;
+  draw_psf1_char(fb, font, x,y, 'F');
 
   for (;;) {
     memset(command, 0, MAX_COMMAND_LENGTH);
@@ -222,6 +353,8 @@ int main(int argc, const char **argv) {
     fflush(NULL);
     continue;
   }
+
+  psf1_delete(font);
 
   return 0;
 }

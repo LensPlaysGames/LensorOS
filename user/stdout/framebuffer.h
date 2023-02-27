@@ -26,6 +26,9 @@ typedef struct Framebuffer {
 /// Get a pixel given a framebuffer format
 uint32_t mkpixel(const FramebufferFormat format, const unsigned char r, const unsigned char g, const unsigned char b, const unsigned char a);
 
+/// Ensure given x and y pixel coordinates are within bounds.
+void clamp_draw_position(const Framebuffer fb, size_t *x, size_t *y);
+
 /// Write a single pixel to the framebuffer (slow).
 void write_pixel(const Framebuffer fb, const uint32_t pixel, size_t x, size_t y);
 

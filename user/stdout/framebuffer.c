@@ -12,6 +12,13 @@ uint32_t mkpixel(FramebufferFormat format, unsigned char r, unsigned char g, uns
   }
 }
 
+void clamp_draw_position(const Framebuffer fb, size_t *x, size_t *y) {
+  if (*x > fb.pixel_width)
+    *x = fb.pixel_width - 1;
+  if (*y > fb.pixel_height)
+    *y = fb.pixel_height - 1;
+}
+
 void write_pixel(const Framebuffer fb, const uint32_t pixel, size_t x, size_t y) {
   size_t index = y * fb.pixels_per_scanline + x;
   ((uint32_t *)fb.base_address)[index] = pixel;
