@@ -48,6 +48,8 @@ struct FileMetadata {
         }
     }
 
+    usz offset { 0 };
+
     auto name() -> std::string_view { return Name; }
     auto invalid() -> bool { return Invalid; }
     auto device_driver() -> std::shared_ptr<StorageDeviceDriver>  { return DeviceDriver; }
@@ -60,7 +62,7 @@ private:
     // The device driver is used for reading and writing from and to
     // the file.
     std::shared_ptr<StorageDeviceDriver> DeviceDriver { nullptr };
-    u64 FileSize   { -1ull };
+    usz FileSize { -1ull };
     // Driver-specific data.
     void* DriverData { nullptr };
 };

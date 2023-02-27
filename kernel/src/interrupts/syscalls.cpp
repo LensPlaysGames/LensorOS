@@ -306,6 +306,69 @@ void sys$13_pipe(ProcessFileDescriptor fds[2]) {
     fds[1] = writeFDs.Process;
 }
 
+
+/// OFFSET is based off of current offset (relative).
+#define SEEK_CUR 0
+/// OFFSET is from end of file (must be negative).
+#define SEEK_END 1
+/// OFFSET is from beginning of file (must be positive).
+#define SEEK_SET 2
+static const char * seek_strings[] = {
+    [SEEK_CUR] = "CURRENT",
+    [SEEK_END] = "END",
+    [SEEK_SET] = "BEGINNING",
+};
+const char *get_seek_string(int whence) {
+    if (whence < 0 || whence > SEEK_SET) return "INVALID";
+    return seek_strings[whence];
+}
+
+// TODO: Thread safety is out of the window.
+// TODO: Should probably allow for setting offset past file size
+// (requires implementing holes, I think).
+/// @param offset    Byte offset to set within file.
+/// @param whence    One of SEEK_* directives
+/// @return 1 if offset is outside of file bounds, whence is invalid,
+///         or fd is invalid. Otherwise, return zero.
+int sys$14_seek(ProcessFileDescriptor fd, ssz offset, int whence) {
+    DBGMSG(sys$_dbgfmt, 14, "seek");
+    DBGMSG("[SYS$]:seek(): {}, offset={}, whence={}\n", fd, offset, get_seek_string(whence));
+
+    VFS& vfs = SYSTEM->virtual_filesystem();
+    std::shared_ptr<FileMetadata> file = vfs.file(fd);
+    if (!file) return 1;
+
+    switch (whence) {
+    case SEEK_CUR: {
+        if (offset == 0) return 0;
+        usz current_offset = file.get()->offset;
+        // Cannot seek behind beginning of file...
+        if (offset < 0 && ((usz)(-offset) > current_offset)) return 1;
+        // FIXME: Cannot seek past end of file...
+        else if (current_offset + offset > file.get()->file_size()) return 1;
+        file.get()->offset += offset;
+    } return 0;
+
+    case SEEK_END: {
+        // FIXME: Cannot seek past end of file...
+        if (offset > 0) return 1;
+        file.get()->offset = file.get()->file_size() + offset;
+    } return 0;
+
+    case SEEK_SET: {
+        if (offset < 0) return 1;
+        // FIXME: Cannot seek past end of file...
+        if ((usz)offset >= file.get()->file_size()) return 1;
+        file.get()->offset = offset;
+    } return 0;
+
+    default: break;
+
+    }
+
+    return 1;
+}
+
 u64 num_syscalls = LENSOR_OS_NUM_SYSCALLS;
 void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     // FILE STUFFS
@@ -331,4 +394,7 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     (void*)sys$11_exec,
     (void*)sys$12_repfd,
     (void*)sys$13_pipe,
+
+    // MORE FILE STUFFS
+    (void*)sys$14_seek,
 };

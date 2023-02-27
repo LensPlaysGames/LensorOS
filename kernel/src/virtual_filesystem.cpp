@@ -190,24 +190,29 @@ ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
     auto f = file(fd);
     if (!f) { return -1; }
 
-    return f->device_driver()->read(f.get(), byteOffset, byteCount, buffer);
+    DBGMSG("  file offset:     {}\n", f.get()->offset);
+
+    return f->device_driver()->read(f.get(), byteOffset + f.get()->offset, byteCount, buffer);
 }
 
 ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
     auto f = file(fd);
+    if (!f) { return -1; }
 
     DBGMSG("[VFS]: write\n"
            "  file descriptor: {}\n"
            "  buffer address:  {}\n"
            "  byte count:      {}\n"
            "  byte offset:     {}\n"
+           "  file offset:     {}\n"
            , fd
            , (void*) buffer
            , byteCount
            , byteOffset
+           , f.get()->offset
            );
 
-    return f->device_driver()->write(f.get(), byteOffset, byteCount, buffer);
+    return f->device_driver()->write(f.get(), byteOffset + f.get()->offset, byteCount, buffer);
 }
 
 void VFS::print_debug() {

@@ -28,6 +28,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "unistd.h"
+#include "sys/syscalls.h"
 
 #include <algorithm>
 #include <atomic>
@@ -199,10 +200,6 @@ int _IO_File::getpos(fpos_t& pos) const {
 }
 
 int _IO_File::seek(_IO_off_t offset, int whence) {
-    (void)offset;
-    (void)whence;
-    return -1;
-
     __f_has_ungotten = false;
     __f_eof = false;
 
@@ -210,7 +207,7 @@ int _IO_File::seek(_IO_off_t offset, int whence) {
     if (!flush()) return -1;
 
     // TODO: seek syscall
-    //return syscall(SYS_seek, __fd, offset, whence);
+    return syscall(SYS_seek, __fd, offset, whence);
 }
 
 int _IO_File::setpos(const fpos_t& pos) {
@@ -877,7 +874,7 @@ int fseek(FILE* stream, long offset, int whence) {
     LOCK(stream);
 
     /// Seek to the position.
-    return stream->seek(offset, whence) ? 0 : -1;
+    return stream->seek(offset, whence) == 0 ? 0 : -1;
 }
 
 int fsetpos(FILE* stream, const fpos_t* pos) {
