@@ -199,11 +199,18 @@ int _IO_File::getpos(fpos_t& pos) const {
 }
 
 int _IO_File::seek(_IO_off_t offset, int whence) {
-    /// TODO: Implement.
-    /// TODO: This has to undo unget()s.
     (void)offset;
     (void)whence;
     return -1;
+
+    __f_has_ungotten = false;
+    __f_eof = false;
+
+    /// Flush the stream.
+    if (!flush()) return -1;
+
+    // TODO: seek syscall
+    //return syscall(SYS_seek, __fd, offset, whence);
 }
 
 int _IO_File::setpos(const fpos_t& pos) {
