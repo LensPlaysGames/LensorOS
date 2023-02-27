@@ -177,9 +177,10 @@ typedef struct PSF1_HEADER {
 typedef struct PSF1_FONT {
   PSF1_HEADER header;
   void* glyph_buffer;
+  void* glyph_buffer_impl; //> get rid of this once we have seek syscall
 } PSF1_FONT;
 void psf1_delete(const PSF1_FONT font) {
-  free(font.glyph_buffer);
+  free(font.glyph_buffer_impl);
 }
 u8 psf1_width(const PSF1_FONT font) {
   return 8;
@@ -273,18 +274,19 @@ int main(int argc, const char **argv) {
   }
 
   // Read glyph buffer from font file after header
-  font.glyph_buffer = malloc(glyph_buffer_size);
+  font.glyph_buffer_impl = malloc(glyph_buffer_size + sizeof(PSF1_HEADER));
   if (!font.glyph_buffer) {
     printf("Failed to allocate memory for PSF1 font glyph buffer.\n");
     return 1;
   }
 
-  fseek(fontfile, sizeof(PSF1_HEADER) - 1, SEEK_SET);
-  bytes_read = fread(font.glyph_buffer, 1, glyph_buffer_size, fontfile);
-  if (bytes_read != glyph_buffer_size) {
+  //fseek(fontfile, sizeof(PSF1_HEADER), SEEK_SET);
+  bytes_read = fread(font.glyph_buffer_impl, 1, sizeof(PSF1_HEADER) + glyph_buffer_size, fontfile);
+  if (bytes_read != sizeof(PSF1_HEADER) + glyph_buffer_size) {
     printf("Could not read PSF1 glyph buffer from font file.\n");
     return 1;
   }
+  font.glyph_buffer = (void*)((usz)font.glyph_buffer_impl + sizeof(PSF1_HEADER));
 
   fclose(fontfile);
 
