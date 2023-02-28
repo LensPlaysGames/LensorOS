@@ -83,6 +83,8 @@ cmake --build kernel/bld --target <name of target>
     5. Browse to this folder and, depending on whether `Optical Drive` or `Hard Disk` was selected, choose either `LensorOS.iso` or `LensorOS.bin`.
 11. Navigate to `Network` within the list on the left.
     1. Disable all network adapters.
+12. Navigate to `Serial Ports` within the list on the left.
+    1. Ensure `Enable Serial Port` is checked, `COM1` is selected, `IRQ` is `4`, and `I/O Port` is `0x3F8`.
 
 #### VMWare
 
