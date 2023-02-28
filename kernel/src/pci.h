@@ -63,7 +63,7 @@ namespace PCI {
         u8 MinGrant;
         u8 MaxLatency;
     };
-    
+
     void enumerate_pci(ACPI::MCFGHeader* mcfg);
 
     extern const char* DeviceClasses[];

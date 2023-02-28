@@ -458,12 +458,14 @@ void kstage1(BootInfo* bInfo) {
                         SYSTEM->create_device<Devices::GPTPartition>(std::static_pointer_cast<Devices::AHCIPort>(dev), *part);
                     }
                 }
+
                 /* Don't search port any further, we figured
                  * out it's storage media that is GPT partitioned
                  * and devices have been created for those
                  * (that will themselves be searched for filesystems).
                  */
                 dev->set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
+
             }
         }
     }

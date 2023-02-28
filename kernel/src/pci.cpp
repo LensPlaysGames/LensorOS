@@ -104,7 +104,7 @@ namespace PCI {
             }
         }
     }
-    
+
     void enumerate_device(u64 busAddress, u64 deviceNumber) {
         u64 offset = deviceNumber << 15;
         u64 deviceAddress = busAddress + offset;
@@ -125,7 +125,7 @@ namespace PCI {
         for (u64 function = 0; function < 8; ++function)
             enumerate_function(deviceAddress, function);
     }
-    
+
     void enumerate_bus(u64 baseAddress, u64 busNumber) {
         u64 offset = busNumber << 20;
         u64 busAddress = baseAddress + offset;
@@ -138,7 +138,7 @@ namespace PCI {
         for (u64 device = 0; device < 32; ++device)
             enumerate_device(busAddress, device);
     }
-    
+
     void enumerate_pci(ACPI::MCFGHeader* mcfg) {
         std::print("[PCI]: Discovering devices...\n");
         int entries = ((mcfg->Length) - sizeof(ACPI::MCFGHeader)) / sizeof(ACPI::DeviceConfig);
