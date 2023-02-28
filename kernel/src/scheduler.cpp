@@ -45,7 +45,8 @@ void Process::destroy() {
             waitingProcess->State = Process::ProcessState::RUNNING;
         }
     }
-    // Free memory regions.
+    // Free memory regions. This includes libc heap-allocated memory as
+    // well as loaded program regions, the stack, etc.
     Memories.for_each([](SinglyLinkedListNode<Memory::Region>* it){
         Memory::free_pages(it->value().paddr, it->value().pages);
     });
@@ -56,8 +57,7 @@ void Process::destroy() {
     }
 
     // TODO: Free page table? May want to wait until another process
-    // can do it, just in case we are still in this process. Or we have
-    // to flush a new page table before we call destroy.
+    // can do it, just in case we are still in this process.
 }
 
 namespace Scheduler {
@@ -382,7 +382,7 @@ pid_t CopyUserspaceProcess(Process* original) {
     return cpid;
 }
 
-void Scheduler::map_pages_in_all_processes(void* virtualAddress, void* physicalAddress, u64 mappingFlags, size_t pages, Memory::ShowDebug d) {
+void Scheduler::map_pages_in_all_processes(void* virtualAddress, void* physicalAddress, u64 mappingFlags, usz pages, Memory::ShowDebug d) {
     for (SinglyLinkedListNode<Process*>* it = ProcessQueue->head(); it; it = it->next()) {
         Memory::map_pages(it->value()->CR3
                           , virtualAddress, physicalAddress

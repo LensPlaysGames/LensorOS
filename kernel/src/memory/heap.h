@@ -26,6 +26,8 @@
 #define HEAP_VIRTUAL_BASE 0xffffffffff000000
 #define HEAP_INITIAL_PAGES 1
 
+#define HEAP_BYTE_ALIGN 16
+
 // TODO: Store physical address (or make it easy to
 //   convert between physical/virtual addresses).
 struct HeapSegmentHeader {

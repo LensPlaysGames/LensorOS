@@ -17,12 +17,12 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include "devices/devices.h"
+#include <pci.h>
 
 #include <acpi.h>
+#include <devices/devices.h>
 #include <memory/paging.h>
 #include <memory/virtual_memory_manager.h>
-#include <pci.h>
 #include <system.h>
 
 // Uncomment the following directive for extra debug information output.
