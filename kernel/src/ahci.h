@@ -212,7 +212,7 @@ namespace AHCI {
         u32 BIOSHandoffControlStatus;
         u8 Reserved0[0x74];
         u8 Vendor[0x60];
-        HBAPort Ports[1];
+        HBAPort Ports[32];
     };
 
     /// Host Bus Adapter Command Header
