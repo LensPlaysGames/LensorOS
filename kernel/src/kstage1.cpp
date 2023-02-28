@@ -579,23 +579,20 @@ void kstage1(BootInfo* bInfo) {
             vfs.print_debug();
         }
         // Another userspace program
+        constexpr const char *const programTwoFilePath = "/fs0/stdout";
 
         // Userspace Framebuffer
         usz fb_phys_addr = (usz)bInfo->framebuffer->BaseAddress;
         usz fb_virt_addr = 0x7f000000;
 
         std::vector<std::string_view> argv;
+        argv.push_back(std::format("{}", programTwoFilePath));
         argv.push_back(std::format("{:x}", fb_virt_addr));
         argv.push_back(std::format("{:x}", (usz)bInfo->framebuffer->BufferSize));
         argv.push_back(std::format("{:x}", (usz)bInfo->framebuffer->PixelWidth));
         argv.push_back(std::format("{:x}", (usz)bInfo->framebuffer->PixelHeight));
         argv.push_back(std::format("{:x}", (usz)bInfo->framebuffer->PixelsPerScanLine));
-        argv.push_back("test1");
-        argv.push_back("test2");
-        argv.push_back("test3");
-        argv.push_back("test4");
 
-        constexpr const char* programTwoFilePath = "/fs0/stdout";
         std::print("Opening {} with VFS\n", programTwoFilePath);
         fds = vfs.open(programTwoFilePath);
         std::print("  Got FileDescriptors. {}, {}\n", fds.Process, fds.Global);

@@ -6,7 +6,7 @@
 
 /// 4 bytes per pixel, one byte per color, unless otherwise specified.
 typedef enum FramebufferFormat {
-  FB_FORMAT_INVALID,
+  FB_FORMAT_INVALID = 0,
   FB_FORMAT_ARGB,
   FB_FORMAT_BGRA,
   FB_FORMAT_ABGR,

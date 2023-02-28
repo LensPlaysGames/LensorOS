@@ -263,11 +263,11 @@ int main(int argc, const char **argv) {
   */
 
   Framebuffer fb;
-  fb.base_address        = (void *)hexstring_to_number(argv[0]);
-  fb.buffer_size         = hexstring_to_number(argv[1]);
-  fb.pixel_width         = hexstring_to_number(argv[2]);
-  fb.pixel_height        = hexstring_to_number(argv[3]);
-  fb.pixels_per_scanline = hexstring_to_number(argv[4]);
+  fb.base_address        = (void *)hexstring_to_number(argv[1]);
+  fb.buffer_size         = hexstring_to_number(argv[2]);
+  fb.pixel_width         = hexstring_to_number(argv[3]);
+  fb.pixel_height        = hexstring_to_number(argv[4]);
+  fb.pixels_per_scanline = hexstring_to_number(argv[5]);
   // TODO: Pass format from kernel (which gets format passed from bootloader)
   fb.format = FB_FORMAT_DEFAULT;
 
