@@ -356,6 +356,7 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
                     // TODO: tail call (recurse into directory)...
                     [[maybe_unused]]u32 dirCluster = entry->get_cluster_number();
                     std::print("[FAT]:TODO: Recurse directories (cannot yet follow path {} within {}, sorry)", path, filename);
+                    return {};
                 }
             }
 

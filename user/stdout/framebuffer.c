@@ -10,6 +10,7 @@ uint32_t mkpixel(FramebufferFormat format, unsigned char r, unsigned char g, uns
   case FB_FORMAT_ABGR:
     return ((uint32_t)r << 0) | ((uint32_t)g << 8) | ((uint32_t)b << 16) | ((uint32_t)a << 24);
   }
+  return 0;
 }
 
 void clamp_draw_position(const Framebuffer fb, size_t *x, size_t *y) {
