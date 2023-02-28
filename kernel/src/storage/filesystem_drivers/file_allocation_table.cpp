@@ -272,9 +272,7 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
 
     // TODO: ExFAT will need it's own code flow, essentially.
 
-    constexpr u64 lfnBufferSize = 27;
     const u64 clusterSize = BR.BPB.NumSectorsPerCluster * BR.BPB.NumBytesPerSector;
-    u8 lfnBuffer[lfnBufferSize];
     u32 clusterIndex = BR.sector_to_cluster(BR.first_root_directory_sector());
     bool moreClusters = true;
     while (moreClusters) {
@@ -284,29 +282,30 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
                          , clusterSize
                          , clusterContents.data());
         auto* entry = reinterpret_cast<ClusterEntry*>(clusterContents.data());
-        bool lfnBufferFull{};
+        std::string longFileName;
+        bool clearLFN{false};
         while (entry->FileName[0] != 0) {
             if (entry->FileName[0] == 0xe5)
                 continue;
 
+            if (clearLFN) {
+                longFileName.clear();
+                clearLFN = false;
+            }
+
             if (entry->long_file_name()) {
+
                 auto* lfn = reinterpret_cast<LFNClusterEntry*>(entry);
-                u8 offset = 0;
-                memcpy(&lfnBuffer[offset], &lfn->Characters1[0], sizeof(u16) * 5);
-                offset += 5;
-                memcpy(&lfnBuffer[offset], &lfn->Characters1[0], sizeof(u16) * 6);
-                offset += 6;
-                memcpy(&lfnBuffer[offset], &lfn->Characters3[0], sizeof(u16) * 2);
-                lfnBufferFull = true;
+                longFileName += std::string((const char *)&lfn->Characters1[0], sizeof(u16) * 5);
+                longFileName += std::string((const char *)&lfn->Characters2[0], sizeof(u16) * 6);
+                longFileName += std::string((const char *)&lfn->Characters3[0], sizeof(u16) * 2);
+
                 entry++;
                 continue;
             }
+            clearLFN = true;
 
             std::string fileName(reinterpret_cast<const char*>(&entry->FileName[0]), 11);
-            if (lfnBufferFull) {
-               fileName.append((const char*)lfnBuffer, lfnBufferSize);
-               lfnBufferFull = false;
-            }
             std::string fileType;
 
             if (entry->read_only()) fileType += "read-only ";
@@ -318,10 +317,25 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
             else if (entry->volume_id()) fileType += "volume identifier ";
             else fileType += "file ";
 
-            DBGMSG("    Found {}named {}\n", fileType , fileName);
+            // Remove 0xff and then two 0x00 from end of longFileName.
+            usz lfn_amount_to_remove = 0;
+            for (auto lfnIt = longFileName.rbegin(); lfnIt != longFileName.rend(); ++lfnIt) {
+                if ((u8)*lfnIt != 0xff && (u8)*lfnIt != 0) break;
+                ++lfn_amount_to_remove;
+            }
+            if (lfn_amount_to_remove)
+                longFileName = longFileName.substr(0, longFileName.size() - lfn_amount_to_remove);
 
-            if (fileName == path) {
-                DBGMSG("  Found file!\n");
+            DBGMSG("    Found {}named \"{}\" (\"{}\")\n", fileType , fileName, longFileName);
+
+            if (path == fileName || (longFileName.size() && path == longFileName)) {
+                DBGMSG("  Found file at {}!\n"
+                       "    Name: \"{}\"\n"
+                       "    Long: \"{}\"\n"
+                       , path
+                       , fileName
+                       , longFileName
+                       );
                 // TODO: directory vs. file metadata
                 u64 byteOffset = BR.cluster_to_sector(entry->get_cluster_number())
                     * BR.BPB.NumBytesPerSector;
