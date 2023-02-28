@@ -224,7 +224,31 @@ void draw_psf1_char(const Framebuffer fb, const PSF1_FONT font, size_t position_
 }
 
 
+static const size_t prompt_start_x = 20;
+static const size_t prompt_start_y = 10;
+
+void draw_prompt(Framebuffer fb, PSF1_FONT font) {
+  size_t x = prompt_start_x;
+  size_t y = prompt_start_y;
+
+  for (const char *s = command; *s; ++s) {
+    char c = *s;
+    draw_psf1_char(fb, font, x, y, c);
+    if (c == '\n') {
+      x = 0;
+      y += font.header.character_size;
+    }
+    else if (c == '\r') x = 0;
+    else x += 8;
+  }
+}
+
+
 int main(int argc, const char **argv) {
+  // TODO: If arguments are there, we should init framebuffer, draw to
+  // it, etc. If it's not there, we should also be able to gracefully
+  // handle that case.
+
   puts("Arguments:");
   for (int i = 0; i < argc; ++i) puts(argv[i]);
   fflush(NULL);
@@ -290,19 +314,16 @@ int main(int argc, const char **argv) {
 
   printf("Successfully loaded PSF1 font from \"%s\"\n", fontpath);
 
-  size_t x = 20;
-  size_t y = 10;
-  draw_psf1_char(fb, font, x,y, 'A');x+=8;
-  draw_psf1_char(fb, font, x,y, 'B');x+=8;
-  draw_psf1_char(fb, font, x,y, 'C');x+=8;
-  draw_psf1_char(fb, font, x,y, 'D');x+=8;
-  draw_psf1_char(fb, font, x,y, 'E');x+=8;
-  draw_psf1_char(fb, font, x,y, 'F');
+  // TODO: Very basic text editor implementation (GNU readline equivalent, basically).
+  // |-- Moveable Cursor
+  // |-- Insert/Delete byte at cursor
+  // `-- GUI layout: place prompt always at bottom of screen, clear before redraw, etc.
 
   for (;;) {
     memset(command, 0, MAX_COMMAND_LENGTH);
     fputc('\n', stdout);
     print_command_line();
+    draw_prompt(fb, font);
 
     // Get line from standard input.
     int c;
@@ -319,6 +340,9 @@ int main(int argc, const char **argv) {
           command[--offset] = '\0';
           // Echo command to standard out.
           print_command_line();
+          // Draw a space over erased character (doesn't work over newline).
+          draw_psf1_char(fb, font, prompt_start_x + (offset * psf1_width(font)), prompt_start_y, ' ');
+          draw_prompt(fb, font);
         }
         continue;
       }
@@ -327,12 +351,14 @@ int main(int argc, const char **argv) {
         offset = 0;
         command[offset] = '\0';
         print_command_line();
+        draw_prompt(fb, font);
         continue;
       }
       command[offset++] = c;
       command[offset] = '\0';
       // Echo command to standard out.
       print_command_line();
+      draw_prompt(fb, font);
     }
     command[offset] = '\0';
 
