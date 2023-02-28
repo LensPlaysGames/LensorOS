@@ -261,9 +261,9 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
     DBGMSG("[FAT]:open(): Got filename \"{}\" and path \"{}\" from \"{}\"\n", raw_filename, path, raw_path);
 
     // Translate path (FAT has very limited file names).
-    path = translate_filename(raw_filename);
+    std::string filename = translate_filename(raw_filename);
 
-    DBGMSG("[FAT]:open(): Translated filename \"{}\" from \"{}\"\n", path, raw_filename);
+    DBGMSG("[FAT]:open(): Translated filename \"{}\" from \"{}\"\n", filename, raw_filename);
 
 
     // TODO: Take in cached FAT from filesystem.
@@ -294,7 +294,6 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
             }
 
             if (entry->long_file_name()) {
-
                 auto* lfn = reinterpret_cast<LFNClusterEntry*>(entry);
                 longFileName += std::string((const char *)&lfn->Characters1[0], sizeof(u16) * 5);
                 longFileName += std::string((const char *)&lfn->Characters2[0], sizeof(u16) * 6);
@@ -328,23 +327,36 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
 
             DBGMSG("    Found {}named \"{}\" (\"{}\")\n", fileType , fileName, longFileName);
 
-            if (path == fileName || (longFileName.size() && path == longFileName)) {
-                DBGMSG("  Found file at {}!\n"
+            if (filename == fileName || (longFileName.size() && filename == longFileName)) {
+
+                // If path and raw_filename are equal, we can not resolve any more
+                // filenames from full path; we have found the file.
+                if (path == raw_filename) {
+                    DBGMSG("  Found file at {}!\n"
                        "    Name: \"{}\"\n"
                        "    Long: \"{}\"\n"
-                       , path
-                       , fileName
-                       , longFileName
-                       );
-                // TODO: directory vs. file metadata
-                u64 byteOffset = BR.cluster_to_sector(entry->get_cluster_number())
-                    * BR.BPB.NumBytesPerSector;
-                return std::make_shared<FileMetadata> (
-                    std::move(fileName),
-                    std::static_pointer_cast<StorageDeviceDriver>(This.lock()),
-                    u32(entry->FileSizeInBytes),
-                    (void*) byteOffset
-                );
+                           , path
+                           , fileName
+                           , longFileName
+                           );
+                    // TODO: directory vs. file metadata
+                    u64 byteOffset = BR.cluster_to_sector(entry->get_cluster_number())
+                                     * BR.BPB.NumBytesPerSector;
+                    return std::make_shared<FileMetadata>(
+                        std::move(fileName),
+                        std::static_pointer_cast<StorageDeviceDriver>(This.lock()),
+                        u32(entry->FileSizeInBytes),
+                        (void*) byteOffset
+                        );
+                } else {
+                    if (!entry->directory()) {
+                        std::print("[FAT]: Cannot follow path \"{}\" because {}named \"{}\" is not a directory", path, fileType, filename);
+                        return {};
+                    }
+                    // TODO: tail call (recurse into directory)...
+                    [[maybe_unused]]u32 dirCluster = entry->get_cluster_number();
+                    std::print("[FAT]:TODO: Recurse directories (cannot yet follow path {} within {}, sorry)", path, filename);
+                }
             }
 
             entry++;
