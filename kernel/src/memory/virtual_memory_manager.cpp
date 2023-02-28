@@ -170,12 +170,12 @@ namespace Memory {
 
     void unmap(PageTable* pageMapLevelFour, void* virtualAddress, ShowDebug debug)
     {
-        if (debug == ShowDebug::Yes) {
+        if (debug == ShowDebug::Yes)
             std::print("Attempting to unmap virtual {} in page table at {}\n"
                        , virtualAddress
                        , (void*) pageMapLevelFour
                        );
-        }
+
         PageMapIndexer indexer((u64)virtualAddress);
         PageDirectoryEntry PDE;
         PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
@@ -187,9 +187,8 @@ namespace Memory {
         PDE = PT->entries[indexer.page()];
         PDE.set_flag(PageTableFlag::Present, false);
         PT->entries[indexer.page()] = PDE;
-        if (debug == ShowDebug::Yes) {
+        if (debug == ShowDebug::Yes)
             std::print("  \033[32mUnmapped\033[0m\n\n");
-        }
     }
 
     void unmap(void* virtualAddress, ShowDebug d) {

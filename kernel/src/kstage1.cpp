@@ -405,7 +405,7 @@ void kstage1(BootInfo* bInfo) {
                               | (u64)Memory::PageTableFlag::ReadWrite
                             );
 
-            // Handle case where ABAR spans three pages, in which case we have to map both.
+            // Handle case where ABAR spans three pages, in which case we have to map a third.
             next_page = (void*)((usz)next_page + PAGE_SIZE);
             if (((usz)ABAR + sizeof(AHCI::HBAMemory)) >= (u64)next_page)
                 Memory::map(next_page, next_page

@@ -29,8 +29,8 @@
 namespace Devices {
 
 struct AHCIController : SystemDevice {
-    PCI::PCIHeader0 Header;
-    AHCIController(PCI::PCIHeader0& hdr);
+    PCI::PCIHeader0* Header;
+    AHCIController(PCI::PCIHeader0* hdr);
 };
 
 struct AHCIPort : SystemDevice {

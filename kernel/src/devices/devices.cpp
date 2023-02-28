@@ -21,9 +21,9 @@
 #include <devices/devices.h>
 #include <pci.h>
 
-Devices::AHCIController::AHCIController(PCI::PCIHeader0& hdr)
-    : SystemDevice(SYSDEV_MAJOR_STORAGE, SYSDEV_MINOR_AHCI_CONTROLLER)
-    , Header(hdr) {
+Devices::AHCIController::AHCIController(PCI::PCIHeader0* hdr)
+    : SystemDevice(SYSDEV_MAJOR_STORAGE, SYSDEV_MINOR_AHCI_CONTROLLER) {
+    Header = hdr;
     set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, true);
 }
 
