@@ -324,7 +324,7 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
                 ++lfn_amount_to_remove;
             }
             if (lfn_amount_to_remove)
-                longFileName = longFileName.substr(0, longFileName.size() - lfn_amount_to_remove);
+                longFileName.erase(longFileName.size() - lfn_amount_to_remove);
 
             DBGMSG("    Found {}named \"{}\" (\"{}\")\n", fileType , fileName, longFileName);
 
