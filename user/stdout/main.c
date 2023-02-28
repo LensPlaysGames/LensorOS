@@ -224,12 +224,19 @@ void draw_psf1_char(const Framebuffer fb, const PSF1_FONT font, size_t position_
 }
 
 
-static const size_t prompt_start_x = 20;
-static const size_t prompt_start_y = 10;
+static const size_t prompt_start_x = 0;
+static const size_t prompt_start_y = 0;
+static const char *const prompt = "  $:";
 
 void draw_prompt(Framebuffer fb, PSF1_FONT font) {
   size_t x = prompt_start_x;
   size_t y = prompt_start_y;
+
+  for (const char *s = prompt; *s; ++s) {
+    char c = *s;
+    draw_psf1_char(fb, font, x, y, c);
+    x += 8;
+  }
 
   for (const char *s = command; *s; ++s) {
     char c = *s;
@@ -249,9 +256,11 @@ int main(int argc, const char **argv) {
   // it, etc. If it's not there, we should also be able to gracefully
   // handle that case.
 
+  /*
   puts("Arguments:");
   for (int i = 0; i < argc; ++i) puts(argv[i]);
   fflush(NULL);
+  */
 
   Framebuffer fb;
   fb.base_address        = (void *)hexstring_to_number(argv[0]);
@@ -263,7 +272,7 @@ int main(int argc, const char **argv) {
   fb.format = FB_FORMAT_DEFAULT;
 
   // clear screen
-  uint32_t black = mkpixel(fb.format, 0x00,0x00,0x00,0xff);
+  const uint32_t black = mkpixel(fb.format, 0x00,0x00,0x00,0xff);
   fill_color(fb, black);
 
   puts("\n\n<===!= WELCOME TO LensorOS SHELL [WIP] =!=!==>\n");
@@ -322,6 +331,7 @@ int main(int argc, const char **argv) {
   for (;;) {
     memset(command, 0, MAX_COMMAND_LENGTH);
     fputc('\n', stdout);
+    fill_color(fb, black);
     print_command_line();
     draw_prompt(fb, font);
 
@@ -341,7 +351,7 @@ int main(int argc, const char **argv) {
           // Echo command to standard out.
           print_command_line();
           // Draw a space over erased character (doesn't work over newline).
-          draw_psf1_char(fb, font, prompt_start_x + (offset * psf1_width(font)), prompt_start_y, ' ');
+          draw_psf1_char(fb, font, prompt_start_x + ((strlen(prompt) + offset) * psf1_width(font)), prompt_start_y, ' ');
           draw_prompt(fb, font);
         }
         continue;
