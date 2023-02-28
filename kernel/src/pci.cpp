@@ -99,7 +99,7 @@ namespace PCI {
             if (pciDevHdr->Subclass == 0x06) {
                 // ProgIF 0x01 = AHCI 1.0 Device
                 if (pciDevHdr->ProgIF == 0x01) {
-                    SYSTEM->create_device<Devices::AHCIController>(*reinterpret_cast<PCIHeader0*>(pciDevHdr));
+                    SYSTEM->create_device<Devices::AHCIController>(reinterpret_cast<PCIHeader0*>(pciDevHdr));
                 }
             }
         }

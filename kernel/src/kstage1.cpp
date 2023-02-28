@@ -378,7 +378,7 @@ void kstage1(BootInfo* bInfo) {
         {
             std::print("[kstage1]: Probing AHCI Controller\n");
             auto controller = static_cast<Devices::AHCIController*>(dev.get());
-            auto* ABAR = reinterpret_cast<AHCI::HBAMemory*>(u64(controller->Header.BAR5));
+            auto* ABAR = reinterpret_cast<AHCI::HBAMemory*>(u64(controller->Header->BAR5));
 
             // TODO: Better MMIO!! It should be separate from regular virtual mappings, I think.
 
