@@ -93,14 +93,14 @@ void sys$4_poke() {
     std::print("Poke from userland!\n");
 }
 
-void sys$5_exit([[maybe_unused]] int status) {
+void sys$5_exit(int status) {
     DBGMSG(sys$_dbgfmt, 5, "exit");
     DBGMSG("  status: {}\n"
            "\n"
            , status
            );
     pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
-    bool success = Scheduler::remove_process(pid);
+    bool success = Scheduler::remove_process(pid, status);
     if (!success) {
         std::print("[EXIT]: Failure to remove process\n");
     }

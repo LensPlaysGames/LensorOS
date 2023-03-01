@@ -37,11 +37,15 @@ void(*scheduler_switch_process)(CPUState*)
 
 void(*timer_tick)();
 
-void Process::destroy() {
+void Process::destroy(int status) {
+    std::print("Destroying process {}\n", ProcessID);
     // Run all of the programs in the WaitingList.
     for(pid_t pid : WaitingList) {
         Process *waitingProcess = Scheduler::process(pid);
         if (waitingProcess) {
+            // Set return value of CPU state that will be restored when process is run.
+            std::print("[SCHED]: Setting return value of waiting PID {} to {}\n", pid, status);
+            waitingProcess->CPU.RAX = status;
             waitingProcess->State = Process::ProcessState::RUNNING;
         }
     }
@@ -155,7 +159,7 @@ namespace Scheduler {
         return pid;
     }
 
-    bool remove_process(pid_t pid) {
+    bool remove_process(pid_t pid, int status) {
         Process* processToRemove = nullptr;
         int processToRemoveIndex = 0;
         for (SinglyLinkedListNode<Process*>* it = ProcessQueue->head(); it; it = it->next()) {
@@ -168,7 +172,7 @@ namespace Scheduler {
         }
         if (processToRemove) {
             ProcessQueue->remove(processToRemoveIndex);
-            processToRemove->destroy();
+            processToRemove->destroy(status);
             return true;
         }
         return false;

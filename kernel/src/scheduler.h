@@ -123,7 +123,8 @@ struct Process {
         }
     }
 
-    void destroy();
+    /// @param status Relays exit status to all waiting processes (i.e. via `waitpid`).
+    void destroy(int status);
 };
 
 /// External symbols for 'scheduler.asm', defined in `scheduler.cpp`
@@ -159,7 +160,10 @@ namespace Scheduler {
     Process* last_process();
 
     /// remove the process with PID list of processes.
-    bool remove_process(pid_t);
+    /// @param status
+    ///     Used for relaying status to processes
+    ///     waiting on this process (i.e. via `waitpid`)
+    bool remove_process(pid_t, int status);
 
     void print_debug();
 
