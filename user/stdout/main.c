@@ -50,6 +50,8 @@ typedef intptr_t ssz;
 #endif
 
 static char command[MAX_COMMAND_LENGTH];
+// NOTE: struct with status integer and cached status string
+static int command_status = 0;
 
 #define ESCAPE     0x01
 #define BACKSPACE  0x0e
@@ -69,48 +71,6 @@ static char command[MAX_COMMAND_LENGTH];
 #define ARROW_DOWN  0x50
 #define ARROW_LEFT  0x4b
 #define ARROW_RIGHT 0x4d
-
-/// @param filepath Passed to `exec` syscall
-void run_program_waitpid(const char *const filepath) {
-  // If there are pending writes, they will be executed on both the
-  // parent and the child; by flushing any buffers we have, it ensures
-  // the child won't write duplicate data on accident.
-  fflush(NULL);
-  pid_t cpid = syscall(SYS_fork);
-  //printf("pid: %d\n", cpid);
-  if (cpid) {
-    //puts("Parent");
-
-    // TODO: waitpid needs to reserve some uncommon error code for
-    // itself so that it is clear what is a failure from waitpid or just a
-    // failing status. Maybe have some other way to check? Or wrap this in
-    // libc that sets errno (that always goes well).
-    fflush(NULL);
-    int status = (int)syscall(SYS_waitpid, cpid);
-    if (status == -1) {
-      // TODO: Technically, it's possible that the child has exited already.
-      printf("`waitpid` failure!\n");
-      return;
-    }
-
-    printf("%d\n", status);
-    //puts("Parent waited");
-    //fflush(NULL);
-
-  } else {
-    //puts("Child");
-    fflush(NULL);
-    syscall(SYS_exec, filepath);
-  }
-}
-
-void print_command_line() {
-  fputs("\033[2K", stdout); //> Erase entire line
-  fputs("\033[1G", stdout); //> Move cursor to first column
-  fputs("  $:", stdout);
-  fputs(command, stdout);
-  fflush(stdout);
-}
 
 void fprint_hexnibble(unsigned char byte, FILE *f) {
   if (byte < 10) putc(byte + '0', f);
@@ -210,7 +170,7 @@ u8* psf1_char_bitmap(const PSF1_FONT font, const u8 c) {
 
 void draw_psf1_char(const Framebuffer fb, const PSF1_FONT font, size_t position_x, size_t position_y, const u8 c) {
   const u32 fg_color = mkpixel(fb.format, 0xff, 0xff, 0xff, 0xff);
-  const u32 bg_color = mkpixel(fb.format, 0,0,0xff,0xff);
+  const u32 bg_color = mkpixel(fb.format, 22,23,24,0xff);
 
   clamp_draw_position(fb, &position_x, &position_y);
 
@@ -238,33 +198,91 @@ void draw_psf1_char(const Framebuffer fb, const PSF1_FONT font, size_t position_
   }
 }
 
+static void draw_psf1_cr(const Framebuffer fb, const PSF1_FONT font, size_t *x) {
+  *x = 0;
+}
+static void draw_psf1_lf(const Framebuffer fb, const PSF1_FONT font, size_t *y) {
+  *y += font.header.character_size;
+}
+static void draw_psf1_crlf(const Framebuffer fb, const PSF1_FONT font, size_t *x, size_t *y) {
+  draw_psf1_cr(fb, font, x);
+  draw_psf1_lf(fb, font, y);
+}
+
+void draw_psf1_string(Framebuffer fb, const PSF1_FONT font, size_t *x, size_t *y, const char *str) {
+  char c;
+  while ((c = *str++)) {
+    if (c == '\n') {
+      draw_psf1_crlf(fb, font, x, y);
+    }
+    else if (c == '\r') *x = 0;
+    else if (c == '\b') *x -= psf1_width(font);
+    else {
+      draw_psf1_char(fb, font, *x, *y, c);
+      *x += psf1_width(font);
+    }
+  }
+}
+
+void draw_psf1_int(Framebuffer fb, const PSF1_FONT font, size_t *x, size_t *y, int val) {
+  char numstr[32] = {0};
+  sprintf(numstr, "%d", val);
+  draw_psf1_string(fb, font, x, y, numstr);
+}
 
 static const size_t prompt_start_x = 0;
 static const size_t prompt_start_y = 0;
 static const char *const prompt = "  $:";
-
-void draw_prompt(Framebuffer fb, PSF1_FONT font) {
+void draw_prompt(Framebuffer fb, const PSF1_FONT font) {
   size_t x = prompt_start_x;
   size_t y = prompt_start_y;
 
-  for (const char *s = prompt; *s; ++s) {
-    char c = *s;
-    draw_psf1_char(fb, font, x, y, c);
-    x += 8;
-  }
-
-  for (const char *s = command; *s; ++s) {
-    char c = *s;
-    draw_psf1_char(fb, font, x, y, c);
-    if (c == '\n') {
-      x = 0;
-      y += font.header.character_size;
-    }
-    else if (c == '\r') x = 0;
-    else x += 8;
-  }
+  draw_psf1_int(fb, font, &x, &y, command_status);
+  draw_psf1_string(fb, font, &x, &y, prompt);
+  draw_psf1_string(fb, font, &x, &y, command);
 }
 
+void print_command_line() {
+  printf("\033[2K" //> Erase entire line
+         "\033[1G" //> Move cursor to first column
+         "%d%s%s",
+         command_status, prompt, command);
+  fflush(stdout);
+}
+
+
+/// @param filepath Passed to `exec` syscall
+void run_program_waitpid(const char *const filepath) {
+  // If there are pending writes, they will be executed on both the
+  // parent and the child; by flushing any buffers we have, it ensures
+  // the child won't write duplicate data on accident.
+  fflush(NULL);
+  pid_t cpid = syscall(SYS_fork);
+  //printf("pid: %d\n", cpid);
+  if (cpid) {
+    //puts("Parent");
+
+    // TODO: waitpid needs to reserve some uncommon error code for
+    // itself so that it is clear what is a failure from waitpid or just a
+    // failing status. Maybe have some other way to check? Or wrap this in
+    // libc that sets errno (that always goes well).
+    fflush(NULL);
+    command_status = (int)syscall(SYS_waitpid, cpid);
+    if (command_status == -1) {
+      // TODO: Technically, it's possible that the child has exited already.
+      printf("`waitpid` failure!\n");
+      return;
+    }
+
+    //puts("Parent waited");
+    //fflush(NULL);
+
+  } else {
+    //puts("Child");
+    fflush(NULL);
+    syscall(SYS_exec, filepath);
+  }
+}
 
 int main(int argc, const char **argv) {
   // TODO: If arguments are there, we should init framebuffer, draw to
@@ -366,7 +384,9 @@ int main(int argc, const char **argv) {
           // Echo command to standard out.
           print_command_line();
           // Draw a space over erased character (doesn't work over newline).
-          draw_psf1_char(fb, font, prompt_start_x + ((strlen(prompt) + offset) * psf1_width(font)), prompt_start_y, ' ');
+          char numstr[32] = {0};
+          sprintf(numstr, "%d", command_status);
+          draw_psf1_char(fb, font, prompt_start_x + ((strlen(numstr) + strlen(prompt) + offset) * psf1_width(font)), prompt_start_y, ' ');
           draw_prompt(fb, font);
         }
         continue;
@@ -399,9 +419,12 @@ int main(int argc, const char **argv) {
       fflush(NULL);
       break;
     }
+
+    command_status = 0;
     puts("Unrecognized command, sorry!\n"
          "  Try `blazeit` or `quit`");
     fflush(NULL);
+
     continue;
   }
 
