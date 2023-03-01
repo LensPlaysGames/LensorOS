@@ -48,9 +48,23 @@ struct PipeBuffer {
     PipeBuffer(PipeBuffer&&) = delete;
 };
 
+struct NamedPipeBuffer {
+    std::weak_ptr<FileMetadata> meta;
+    std::string name;
+    PipeBuffer *pipe;
+};
+
 struct PipeDriver final : StorageDeviceDriver {
     void close(FileMetadata* meta) final {
         if (!meta) return;
+
+        // Remove pipe from named pipe buffer vector.
+        for (const NamedPipeBuffer* existing_pipe = PipeBuffers.begin(); existing_pipe != PipeBuffers.end(); existing_pipe++)
+            if (std::string_view(existing_pipe->name) == meta->name()) {
+                PipeBuffers.erase(existing_pipe);
+                break;
+            }
+
         auto* pipe = static_cast<PipeBuffer*>(meta->driver_data());
         if (std::find(FreePipeBuffers.begin(), FreePipeBuffers.end(), pipe) != FreePipeBuffers.end()) {
             std::print("[PIPE]:ERROR: Denying attempt to free pipe buffer at {} more than once!\n", (void*)pipe);
@@ -108,10 +122,14 @@ struct PipeDriver final : StorageDeviceDriver {
     /// buffer, allocated by this function.
     auto lay_pipe() -> std::shared_ptr<FileMetadata> {
         // TODO: Pick suitable file name for file metadata.
-        return open("");
+        static usz counter = 0;
+        std::string name = std::format("p{}", counter++);
+        return open(name);
     }
 
 private:
+    /// Stores pipe buffers along with names for mock-filesystem functionality.
+    std::vector<NamedPipeBuffer> PipeBuffers;
     std::vector<PipeBuffer*> FreePipeBuffers;
 };
 

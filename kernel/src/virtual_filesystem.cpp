@@ -94,14 +94,12 @@ bool VFS::valid(SysFD fd) const {
     return true;
 }
 
+/// Erasing the last shared_ptr holding the file metadata will call
+/// the destructor of FileMetadata, which will then close the file.
 void VFS::free_fd(Process* process, SysFD fd, ProcFD procfd) {
     // Remove file descriptor from process's list of open file
     // descriptors using Process File Descriptor.
     process->FileDescriptors.erase(procfd);
-
-    /// Erasing the last shared_ptr holding the file metadata will call
-    /// the destructor of FileMetadata, which will then close the file.
-
     // Remove kernel file description from VFS list of open files using
     // System File Descriptor.
     Files.erase(fd);

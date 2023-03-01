@@ -253,21 +253,22 @@ void print_command_line() {
 
 /// @param filepath Passed to `exec` syscall
 void run_program_waitpid(const char *const filepath) {
+  usz fds[2] = {-1,-1};
+  syscall(SYS_pipe, fds);
+
+  printf("fds: [%d,%d]\n", (int)fds[0], (int)fds[1]);
+
   // If there are pending writes, they will be executed on both the
   // parent and the child; by flushing any buffers we have, it ensures
   // the child won't write duplicate data on accident.
   fflush(NULL);
-
-  usz fds[2] = {-1,-1};
-  syscall(SYS_pipe, fds);
-
-  close(fds[0]);
-  close(fds[1]);
-
   pid_t cpid = syscall(SYS_fork);
   //printf("pid: %d\n", cpid);
   if (cpid) {
     //puts("Parent");
+
+    close(fds[0]);
+    close(fds[1]);
 
     // TODO: waitpid needs to reserve some uncommon error code for
     // itself so that it is clear what is a failure from waitpid or just a
@@ -286,6 +287,10 @@ void run_program_waitpid(const char *const filepath) {
 
   } else {
     //puts("Child");
+
+    close(fds[0]);
+    close(fds[1]);
+
     fflush(NULL);
     syscall(SYS_exec, filepath);
   }
