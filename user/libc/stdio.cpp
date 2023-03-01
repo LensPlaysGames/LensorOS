@@ -715,6 +715,13 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
 
             case 'd': {
                 int val = va_arg(args, int);
+                bool negative = false;
+
+                if (val < 0) {
+                    negative = true;
+                    val = -val;
+                }
+
                 // TODO: Abstract + parameterise number printing
                 constexpr const size_t radix = 10;
                 static_assert(radix != 0, "Can not print zero-base numbers");
@@ -742,6 +749,7 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
                     }
                 }
 
+                if (negative) fputc('-', stream);
                 for (const char *it = &digits[0]; it < &digits[0] + max_digits && *it; ++it)
                     fputc(*it, stream);
 
