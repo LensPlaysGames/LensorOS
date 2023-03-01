@@ -305,13 +305,11 @@ void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
 
 /// Create two file descriptors. One of which can be read from, and the
 /// other which can be written to.
-void sys$13_pipe(ProcessFileDescriptor fds[2]) {
+void sys$13_pipe(ProcessFileDescriptor *fds) {
     DBGMSG(sys$_dbgfmt, 13, "pipe");
     Process* process = Scheduler::CurrentProcess->value();
-
     VFS& vfs = SYSTEM->virtual_filesystem();
-
-    // Get valid pipe index from pipe driver.
+    // Lay down a new pipe.
     auto file = vfs.PipesDriver->lay_pipe();
     FileDescriptors readFDs = vfs.add_file(file, process);
     FileDescriptors writeFDs = vfs.add_file(std::move(file), process);

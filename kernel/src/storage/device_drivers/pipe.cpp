@@ -30,9 +30,11 @@ auto PipeDriver::open(std::string_view path) -> std::shared_ptr<FileMetadata> {
     PipeBuffer* pipe = nullptr;
     if (FreePipeBuffers.empty()) {
         pipe = new PipeBuffer();
+        std::print("[PIPE]: Allocated new pipe buffer at {}\n", (void*)pipe);
     } else {
         pipe = FreePipeBuffers.back();
         FreePipeBuffers.pop_back();
+        std::print("[PIPE]: Re-used existing pipe buffer at {}\n", (void*)pipe);
     }
     return std::make_shared<FileMetadata>(path, sdd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, pipe);
 }

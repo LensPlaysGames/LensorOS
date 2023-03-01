@@ -95,9 +95,15 @@ bool VFS::valid(SysFD fd) const {
 }
 
 void VFS::free_fd(Process* process, SysFD fd, ProcFD procfd) {
+    // Remove file descriptor from process's list of open file
+    // descriptors using Process File Descriptor.
     process->FileDescriptors.erase(procfd);
+
     /// Erasing the last shared_ptr holding the file metadata will call
     /// the destructor of FileMetadata, which will then close the file.
+
+    // Remove kernel file description from VFS list of open files using
+    // System File Descriptor.
     Files.erase(fd);
 }
 
@@ -150,7 +156,7 @@ FileDescriptors VFS::open(std::string_view path) {
 
 
 bool VFS::close(Process* process, ProcFD procfd) {
-    if (!process) { return false; }
+    if (!process) return false;
     auto fd = procfd_to_fd(process, procfd);
     if (fd == SysFD::Invalid) {
         DBGMSG("[VFS]: Cannot close invalid {} (pid {}).\n", procfd, process->ProcessID);

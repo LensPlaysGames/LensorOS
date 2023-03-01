@@ -24,16 +24,18 @@
 #include <storage/storage_device_driver.h>
 #include <storage/file_metadata.h>
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 #include <string>
 #include <string_view>
+#include <format>
 
 #define PIPE_BUFSZ 512
 
 struct PipeBuffer {
-    u8 Data[PIPE_BUFSZ]{};
-    usz Offset{};
+    u8 Data[PIPE_BUFSZ]{0};
+    usz Offset{0};
 
     constexpr PipeBuffer() = default;
     ~PipeBuffer() = default;
@@ -50,43 +52,55 @@ struct PipeDriver final : StorageDeviceDriver {
     void close(FileMetadata* meta) final {
         if (!meta) return;
         auto* pipe = static_cast<PipeBuffer*>(meta->driver_data());
+        if (std::find(FreePipeBuffers.begin(), FreePipeBuffers.end(), pipe) != FreePipeBuffers.end()) {
+            std::print("[PIPE]:ERROR: Denying attempt to free pipe buffer at {} more than once!\n", (void*)pipe);
+            return;
+        }
         FreePipeBuffers.push_back(pipe);
+        std::print("[PIPE]: Closed pipe buffer at {}\n", (void*)pipe);
     }
 
     auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
 
-    ssz read(FileMetadata* file, usz, usz byteCount, void* buffer) final {
-        if (!file) return -1;
-        auto* pipe = static_cast<PipeBuffer*>(file->driver_data());
+    ssz read(FileMetadata* meta, usz, usz byteCount, void* buffer) final {
+        if (!meta) return -1;
+        auto* pipe = static_cast<PipeBuffer*>(meta->driver_data());
         if (!pipe) return -1;
 
+        std::print("[PIPE]: Reading from pipe buffer at {}\n", (void*)pipe);
+
         // TODO: Support "wait until there is something to read".
-        if (pipe->Offset == 0) {
-            return -1;
-        }
+        // I'm hesitant to just stick a while loop here because most
+        // likely we are in a syscall and no other processes are actually
+        // running...
+        if (pipe->Offset == 0) return -1;
 
         // TODO: Read in a loop to fill buffers larger than what is currently written.
         // For now, truncate read if it is too large.
-        if (byteCount > pipe->Offset) {
+        if (byteCount > pipe->Offset)
             byteCount = pipe->Offset;
-        }
 
         memcpy(buffer, pipe->Data, byteCount);
+        // TODO: After data is read, shouldn't we reset pipe->Offset?
         return ssz(byteCount);
     };
 
     ssz read_raw(usz, usz, void*) final { return -1; };
 
-    ssz write(FileMetadata* file, usz, usz byteCount, void* buffer) final {
-        if (!file) return -1;
-        auto* pipe = static_cast<PipeBuffer*>(file->driver_data());
+    ssz write(FileMetadata* meta, usz, usz byteCount, void* buffer) final {
+        if (!meta) return -1;
+        auto* pipe = static_cast<PipeBuffer*>(meta->driver_data());
         if (!pipe) return -1;
+
+        std::print("[PIPE]: Writing to pipe buffer at {}\n", (void*)pipe);
+
         if (pipe->Offset + byteCount > PIPE_BUFSZ) {
             // TODO: Support "wait if full". For now, just truncate write.
             byteCount = PIPE_BUFSZ - pipe->Offset;
         }
 
         memcpy(pipe->Data + pipe->Offset, buffer, byteCount);
+        // TODO: After data is read, shouldn't we update pipe->Offset?
         return ssz(byteCount);
     }
 

@@ -43,9 +43,8 @@ struct FileMetadata {
         , DriverData(driver_data) {}
 
     ~FileMetadata() {
-        if (DriverData) {
+        if (DriverData)
             DeviceDriver->close(this);
-        }
     }
 
     usz offset { 0 };

@@ -257,6 +257,13 @@ void run_program_waitpid(const char *const filepath) {
   // parent and the child; by flushing any buffers we have, it ensures
   // the child won't write duplicate data on accident.
   fflush(NULL);
+
+  usz fds[2] = {-1,-1};
+  syscall(SYS_pipe, fds);
+
+  close(fds[0]);
+  close(fds[1]);
+
   pid_t cpid = syscall(SYS_fork);
   //printf("pid: %d\n", cpid);
   if (cpid) {
@@ -305,7 +312,7 @@ int main(int argc, const char **argv) {
   fb.format = FB_FORMAT_DEFAULT;
 
   // clear screen
-  const uint32_t black = mkpixel(fb.format, 0x00,0x00,0x00,0xff);
+  const uint32_t black = mkpixel(fb.format, 22,23,24,0xff);
   fill_color(fb, black);
 
   puts("\n\n<===!= WELCOME TO LensorOS SHELL [WIP] =!=!==>\n");
