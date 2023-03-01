@@ -285,6 +285,9 @@ void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
     DBGMSG(sys$_dbgfmt, 12, "repfd");
     DBGMSG("  fd: {}, replaced: {}\n\n", fd, replaced);
     bool result = SYSTEM->virtual_filesystem().dup2(fd, replaced);
+    if (!result) {
+        std::print("  ERROR OCCURED: dup2 failed\n");
+    }
     // TODO: Use result/handle error in some way.
     (void)result;
 }

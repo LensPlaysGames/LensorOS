@@ -17,13 +17,12 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <format>
-
-#include "scheduler.h"
+#include <virtual_filesystem.h>
 
 #include <cstr.h>
+#include <format>
 #include <storage/file_metadata.h>
-#include <virtual_filesystem.h>
+#include <scheduler.h>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_VFS
