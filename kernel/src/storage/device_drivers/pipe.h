@@ -77,9 +77,15 @@ struct PipeDriver final : StorageDeviceDriver {
     auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
 
     ssz read(FileMetadata* meta, usz, usz byteCount, void* buffer) final {
-        if (!meta) return -1;
+        if (!meta) {
+            std::print("[PIPE]: Cannot read file given null file metadata\n");
+            return -1;
+        }
         auto* pipe = static_cast<PipeBuffer*>(meta->driver_data());
-        if (!pipe) return -1;
+        if (!pipe) {
+            std::print("[PIPE]: Null pipe (driver_data of FileMetadata)\n");
+            return -1;
+        }
 
         std::print("[PIPE]: Reading from pipe buffer at {}\n", (void*)pipe);
 
@@ -95,7 +101,7 @@ struct PipeDriver final : StorageDeviceDriver {
             byteCount = pipe->Offset;
 
         memcpy(buffer, pipe->Data, byteCount);
-        // TODO: After data is read, shouldn't we reset pipe->Offset?
+        pipe->Offset -= byteCount;
         return ssz(byteCount);
     };
 
@@ -114,7 +120,7 @@ struct PipeDriver final : StorageDeviceDriver {
         }
 
         memcpy(pipe->Data + pipe->Offset, buffer, byteCount);
-        // TODO: After data is read, shouldn't we update pipe->Offset?
+        pipe->Offset = byteCount;
         return ssz(byteCount);
     }
 
