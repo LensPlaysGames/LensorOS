@@ -171,8 +171,6 @@ bool VFS::close(Process* process, ProcFD procfd) {
 
     DBGMSG("[VFS]: Unmapping {} (pid {}).\n", procfd, process->ProcessID);
     free_fd(fd, procfd);
-    DBGMSG("[VFS]: Closing {}.\n", fd);
-    f->device_driver()->close(f.get());
     return true;
 }
 
