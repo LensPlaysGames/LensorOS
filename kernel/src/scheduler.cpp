@@ -304,7 +304,7 @@ pid_t CopyUserspaceProcess(Process* original) {
     auto* newPageTable = Memory::clone_page_map(original->CR3);
     if (newPageTable == nullptr) {
         std::print("Failed to clone current page map for new process page map.\n");
-        return false;
+        return -1;
     }
     // Map new page table in itself.
     Memory::map(newPageTable, newPageTable, newPageTable
@@ -314,8 +314,7 @@ pid_t CopyUserspaceProcess(Process* original) {
 
     Process* newProcess = new Process;
 
-    // Copy each memory region's contents into newly allocated
-    // memory.
+    // Copy each memory region's contents into newly allocated memory.
     //u64 testVaddr = 0;
     //u64 expectedPaddr = 0;
     for (SinglyLinkedListNode<Memory::Region>* it = original->Memories.head(); it; it = it->next()) {
@@ -376,10 +375,7 @@ pid_t CopyUserspaceProcess(Process* original) {
     // Set child return value for `fork()`.
     newProcess->CPU.RAX = 0;
 
-    pid_t cpid = Scheduler::add_process(newProcess);
-    //pid_t cpid = 0;
-    newProcess->ProcessID = cpid;
-    return cpid;
+    return Scheduler::add_process(newProcess);
 }
 
 void Scheduler::map_pages_in_all_processes(void* virtualAddress, void* physicalAddress, u64 mappingFlags, usz pages, Memory::ShowDebug d) {
