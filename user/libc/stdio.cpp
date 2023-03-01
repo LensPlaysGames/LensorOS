@@ -706,14 +706,46 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
             case 's': {
                 const char *str = va_arg(args, const char *);
                 fputs(str, stream);
-                continue;
-            } break;
+            } continue;
 
             case 'c': {
                 int c = va_arg(args, int);
                 fputc(c, stream);
-                continue;
-            } break;
+            } continue;
+
+            case 'd': {
+                int val = va_arg(args, int);
+                // TODO: Abstract + parameterise number printing
+                constexpr const size_t radix = 10;
+                static_assert(radix != 0, "Can not print zero-base numbers");
+
+                constexpr const size_t max_digits = 32;
+                static_assert(max_digits != 0, "Can not print into zero-length buffer");
+                char digits[max_digits] = {0};
+
+                size_t i = 0;
+                for (size_t tmp_val = val; tmp_val && i < max_digits; tmp_val /= radix, ++i) {
+                    // TODO: better value -> digit conversion
+                    digits[i] = '0' + (tmp_val % radix);
+                }
+
+                if (i == 0) digits[0] = '0';
+                else if (i != 1) {
+                    // Reverse digits
+                    size_t j = 0;
+                    while (j < i) {
+                        --i;
+                        char tmp = digits[i];
+                        digits[i] = digits[j];
+                        digits[j] = tmp;
+                        ++j;
+                    }
+                }
+
+                for (const char *it = &digits[0]; it < &digits[0] + max_digits && *it; ++it)
+                    fputc(*it, stream);
+
+            } continue;
 
             case '\0':
                 fputc('%', stream);
