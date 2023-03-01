@@ -38,13 +38,14 @@ void(*scheduler_switch_process)(CPUState*)
 void(*timer_tick)();
 
 void Process::destroy(int status) {
-    std::print("Destroying process {}\n", ProcessID);
+    //std::print("Destroying process {}\n", ProcessID);
+
     // Run all of the programs in the WaitingList.
     for(pid_t pid : WaitingList) {
         Process *waitingProcess = Scheduler::process(pid);
         if (waitingProcess) {
             // Set return value of CPU state that will be restored when process is run.
-            std::print("[SCHED]: Setting return value of waiting PID {} to {}\n", pid, status);
+            //std::print("[SCHED]: Setting return value of waiting PID {} to {}\n", pid, status);
             waitingProcess->CPU.RAX = status;
             waitingProcess->State = Process::ProcessState::RUNNING;
         }

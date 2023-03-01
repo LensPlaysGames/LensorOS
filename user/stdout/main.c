@@ -71,20 +71,35 @@ static char command[MAX_COMMAND_LENGTH];
 #define ARROW_RIGHT 0x4d
 
 /// @param filepath Passed to `exec` syscall
-int run_program_waitpid(const char *const filepath) {
+void run_program_waitpid(const char *const filepath) {
   // If there are pending writes, they will be executed on both the
   // parent and the child; by flushing any buffers we have, it ensures
   // the child won't write duplicate data on accident.
+  fflush(NULL);
   pid_t cpid = syscall(SYS_fork);
+  //printf("pid: %d\n", cpid);
   if (cpid) {
     //puts("Parent");
-    //fflush(NULL);
-    syscall(SYS_waitpid, cpid);
+
+    // TODO: waitpid needs to reserve some uncommon error code for
+    // itself so that it is clear what is a failure from waitpid or just a
+    // failing status. Maybe have some other way to check? Or wrap this in
+    // libc that sets errno (that always goes well).
+    fflush(NULL);
+    int status = (int)syscall(SYS_waitpid, cpid);
+    if (status == -1) {
+      // TODO: Technically, it's possible that the child has exited already.
+      printf("`waitpid` failure!\n");
+      return;
+    }
+
+    printf("%d\n", status);
     //puts("Parent waited");
     //fflush(NULL);
+
   } else {
     //puts("Child");
-    //fflush(NULL);
+    fflush(NULL);
     syscall(SYS_exec, filepath);
   }
 }
