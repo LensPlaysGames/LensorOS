@@ -691,6 +691,12 @@ int sscanf(const char* __restrict__ str, const char* __restrict__ format, ...) {
     return ret;
 }
 
+constexpr static char __digit_from_value(auto value) {
+    if (value < 10) return (char)('0' + (unsigned char)value);
+    if (value < 16) return (char)('a' + (unsigned char)value);
+    return '_';
+}
+
 int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list args) {
     if (!stream || !format) {
         return -1;
@@ -715,12 +721,7 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
 
             case 'd': {
                 int val = va_arg(args, int);
-                bool negative = false;
-
-                if (val < 0) {
-                    negative = true;
-                    val = -val;
-                }
+                bool negative = val < 0;
 
                 // TODO: Abstract + parameterise number printing
                 constexpr const size_t radix = 10;
@@ -730,11 +731,10 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
                 static_assert(max_digits != 0, "Can not print into zero-length buffer");
                 char digits[max_digits] = {0};
 
+                // TODO: better value -> digit conversion
                 size_t i = 0;
-                for (size_t tmp_val = val; tmp_val && i < max_digits; tmp_val /= radix, ++i) {
-                    // TODO: better value -> digit conversion
-                    digits[i] = '0' + (tmp_val % radix);
-                }
+                for (size_t tmp_val = negative ? -val : val; tmp_val && i < max_digits; tmp_val /= radix, ++i)
+                    digits[i] = __digit_from_value(tmp_val % radix);
 
                 if (i == 0) digits[0] = '0';
                 else if (i != 1) {
@@ -797,12 +797,79 @@ int vsnprintf(char* __restrict__ str, size_t size, const char* __restrict__ form
 }
 
 int vsprintf(char* __restrict__ str, const char* __restrict__ format, va_list args) {
-    /// FIXME: Stub.
-    (void)str;
-    (void)format;
-    (void)args;
-    _LIBC_STUB();
-    return -1;
+    if (!str || !format) {
+        return -1;
+    }
+
+    for (const char *fmt = format; *fmt; ++fmt) {
+        if (*fmt == '%') {
+            ++fmt;
+            switch (*fmt) {
+
+            // TODO: Support more format specifiers
+
+            case 's': {
+                const char *str_val = va_arg(args, const char *);
+                while (*str_val) {
+                    *str++ = *str_val++;
+                }
+                *str = '\0';
+            } continue;
+
+            case 'c': {
+                int c = va_arg(args, int);
+                *str++ = c;
+            } continue;
+
+            case 'd': {
+                int val = va_arg(args, int);
+                bool negative = val < 0;
+
+                // TODO: Abstract + parameterise number printing
+                constexpr const size_t radix = 10;
+                static_assert(radix != 0, "Can not print zero-base numbers");
+
+                constexpr const size_t max_digits = 32;
+                static_assert(max_digits != 0, "Can not print into zero-length buffer");
+                char digits[max_digits] = {0};
+
+                // TODO: better value -> digit conversion
+                size_t i = 0;
+                for (size_t tmp_val = negative ? -val : val; tmp_val && i < max_digits; tmp_val /= radix, ++i)
+                    digits[i] = __digit_from_value(tmp_val % radix);
+
+                if (i == 0) digits[0] = '0';
+                else if (i != 1) {
+                    // Reverse digits
+                    size_t j = 0;
+                    while (j < i) {
+                        --i;
+                        char tmp = digits[i];
+                        digits[i] = digits[j];
+                        digits[j] = tmp;
+                        ++j;
+                    }
+                }
+
+                if (negative) *str++ = '-';
+                for (const char *it = &digits[0]; it < &digits[0] + max_digits && *it; ++it)
+                    *str++ = *it;
+
+            } continue;
+
+            case '\0':
+                *str++ = '%';
+                *str = '\0';
+                return 0;
+
+            default:
+                *str++ = '%';
+                break;
+            }
+        }
+        *str++ = *fmt;
+    }
+    return 0;
 }
 
 int vsscanf(const char* __restrict__ str, const char* __restrict__ format, va_list args) {
