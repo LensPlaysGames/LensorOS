@@ -166,7 +166,7 @@ namespace Scheduler {
     /// Stop the current process, and start the next. NOTE: CPU state
     /// is not saved by this function, so be sure the saved process CPU
     /// state is valid and ready to be returned to.
-    void yield();
+    [[noreturn]] void yield();
 
     // Call `map_pages` with the given data on every process in the
     // process queue.

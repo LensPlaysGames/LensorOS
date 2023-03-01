@@ -289,7 +289,7 @@ namespace Scheduler {
     }
 
     // Defined in `scheduler.asm`
-    extern "C" void yield_asm(CPUState*);
+    extern "C" [[noreturn]] void yield_asm(CPUState*);
 
     void yield() {
         CPUState newstate;
