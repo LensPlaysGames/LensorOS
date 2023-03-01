@@ -203,18 +203,29 @@ void sys$8_time(Time::tm* time) {
 
 /// Wait for process with PID to terminate. If process with PID is
 /// invalid, return immediately.
-void sys$9_waitpid(pid_t pid) {
+int sys$9_waitpid(pid_t pid) {
+    CPUState* cpu = nullptr;
+    asm volatile ("mov %%r11, %0\n"
+                  : "=r"(cpu)
+                  );
     DBGMSG(sys$_dbgfmt, 9, "waitpid");
 
     Process *process = Scheduler::process(pid);
     // Return immediately if PID isn't valid.
-    if (!process) return;
+    // FIXME: Return meaningful value here, or something.
+    if (!process) {
+        std::print("[SYS$]:ERROR:waitpid: Could not find process at PID {}\n", pid);
+        return -1;
+    }
 
     pid_t thisPID = Scheduler::CurrentProcess->value()->ProcessID;
     DBGMSG("  pid {} waiting on {}\n\n", thisPID, pid);
     // Add to WAITING list of process that we are waiting for.
     process->WaitingList.push_back(thisPID);
 
+    // Save cpu state into process cache so that we return to the
+    // proper place when set off running again.
+    memcpy(&Scheduler::CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
     Scheduler::CurrentProcess->value()->State = Process::ProcessState::SLEEPING;
     Scheduler::yield();
 }
