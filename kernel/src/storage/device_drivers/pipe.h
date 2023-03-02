@@ -55,83 +55,14 @@ struct NamedPipeBuffer {
 };
 
 struct PipeDriver final : StorageDeviceDriver {
-    void close(FileMetadata* meta) final {
-        if (!meta) return;
-
-        // Remove pipe from named pipe buffer vector.
-        for (const NamedPipeBuffer* existing_pipe = PipeBuffers.begin(); existing_pipe != PipeBuffers.end(); existing_pipe++)
-            if (std::string_view(existing_pipe->name) == meta->name()) {
-                PipeBuffers.erase(existing_pipe);
-                break;
-            }
-
-        auto* pipe = static_cast<PipeBuffer*>(meta->driver_data());
-        if (std::find(FreePipeBuffers.begin(), FreePipeBuffers.end(), pipe) != FreePipeBuffers.end()) {
-            std::print("[PIPE]:ERROR: Denying attempt to free pipe buffer at {} more than once!\n", (void*)pipe);
-            return;
-        }
-        FreePipeBuffers.push_back(pipe);
-        std::print("[PIPE]: Closed pipe buffer at {}\n", (void*)pipe);
-    }
-
+    void close(FileMetadata* meta) final;
     auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
 
-    ssz read(FileMetadata* meta, usz, usz byteCount, void* buffer) final {
-        if (!meta) {
-            std::print("[PIPE]: Cannot read file given null file metadata\n");
-            return -1;
-        }
-        auto* pipe = static_cast<PipeBuffer*>(meta->driver_data());
-        if (!pipe) {
-            std::print("[PIPE]: Null pipe (driver_data of FileMetadata)\n");
-            return -1;
-        }
-
-        std::print("[PIPE]: Reading from pipe buffer at {}\n", (void*)pipe);
-
-        // TODO: Support "wait until there is something to read".
-        // I'm hesitant to just stick a while loop here because most
-        // likely we are in a syscall and no other processes are actually
-        // running...
-        if (pipe->Offset == 0) return -1;
-
-        // TODO: Read in a loop to fill buffers larger than what is currently written.
-        // For now, truncate read if it is too large.
-        if (byteCount > pipe->Offset)
-            byteCount = pipe->Offset;
-
-        memcpy(buffer, pipe->Data, byteCount);
-        pipe->Offset -= byteCount;
-        return ssz(byteCount);
-    };
-
+    ssz read(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
     ssz read_raw(usz, usz, void*) final { return -1; };
+    ssz write(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
 
-    ssz write(FileMetadata* meta, usz, usz byteCount, void* buffer) final {
-        if (!meta) return -1;
-        auto* pipe = static_cast<PipeBuffer*>(meta->driver_data());
-        if (!pipe) return -1;
-
-        std::print("[PIPE]: Writing to pipe buffer at {}\n", (void*)pipe);
-
-        if (pipe->Offset + byteCount > PIPE_BUFSZ) {
-            // TODO: Support "wait if full". For now, just truncate write.
-            byteCount = PIPE_BUFSZ - pipe->Offset;
-        }
-
-        memcpy(pipe->Data + pipe->Offset, buffer, byteCount);
-        pipe->Offset = byteCount;
-        return ssz(byteCount);
-    }
-
-    /// Return a byte offset that can be used later to find a unique
-    /// buffer, allocated by this function.
-    auto lay_pipe() -> std::shared_ptr<FileMetadata> {
-        // TODO: Pick suitable file name for file metadata.
-        static usz counter = 0;
-        std::string name = std::format("p{}", counter++);
-        return open(name);
-    }
+    auto lay_pipe() -> std::shared_ptr<FileMetadata>;
 
 private:
     /// Stores pipe buffers along with names for mock-filesystem functionality.
