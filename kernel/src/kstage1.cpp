@@ -29,6 +29,7 @@
 #include <elf_loader.h>
 #include <gdt.h>
 #include <gpt.h>
+#include <gpt_partition_type_guids.h>
 #include <guid.h>
 #include <hpet.h>
 #include <interrupts/idt.h>
@@ -201,8 +202,6 @@ void kstage1(BootInfo* bInfo) {
 
     // Create basic framebuffer renderer.
     std::print("[kstage1]: Setting up Graphics Output Protocol Renderer\n");
-    // TODO: We should move font loading up into the kernel; the
-    // bootloader doesn't need to deal with that, I don't think.
     gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
     std::print("  \033[32mSetup Successful\033[0m\n\n");
     draw_boot_gfx();
@@ -473,18 +472,17 @@ void kstage1(BootInfo* bInfo) {
                                u64(part->Attributes));
 
 
-                    // Don't touch partitions with ANY known GUIDs (for now).
-                    bool found = false;
-                    for (auto* knownGUID = &GPT::ReservedPartitionGUIDs[0]; *knownGUID != GPT::NullGUID; knownGUID++) {
-                        if (part->TypeGUID == *knownGUID) {
-                            found = true;
+                    // Don't touch partitions with known GUIDs, except for a select few.
+                    bool known = false;
+                    GUID known_guid;
+                    for (auto* reserved_guid = &GPT::ReservedPartitionGUIDs[0]; *reserved_guid != GPT::NullGUID; reserved_guid++) {
+                        if (part->TypeGUID == *reserved_guid) {
+                            known_guid = *reserved_guid;
+                            known = true;
                             break;
                         }
                     }
-
-                    if (!found) {
-                        SYSTEM->create_device<Devices::GPTPartition>(std::static_pointer_cast<Devices::AHCIPort>(dev), *part);
-                    }
+                    if (!known) SYSTEM->create_device<Devices::GPTPartition>(std::static_pointer_cast<Devices::AHCIPort>(dev), *part);
                 }
 
                 /* Don't search port any further, we figured
@@ -493,7 +491,6 @@ void kstage1(BootInfo* bInfo) {
                  * (that will themselves be searched for filesystems).
                  */
                 dev->set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
-
             }
         }
     }
@@ -517,7 +514,14 @@ void kstage1(BootInfo* bInfo) {
                                partition->Driver->unique_guid());
                     if (auto FAT = FileAllocationTableDriver::try_create(sdd(partition->Driver))) {
                         std::print("  Found valid File Allocation Table filesystem\n");
-                        vfs.mount(std::format("/fs{}", vfs.mounts().size()), std::move(FAT));
+                        static bool foundEFI = false;
+                        std::string mountPath;
+                        if (!foundEFI && partition->Partition.TypeGUID == GPT::PartitionType$EFISystem) {
+                            mountPath = "/efi";
+                            foundEFI = true;
+                        } else mountPath = std::format("/fs{}", vfs.mounts().size());
+
+                        vfs.mount(mountPath, std::move(FAT));
 
                         // Done searching GPT partition, found valid filesystem.
                         dev->set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
