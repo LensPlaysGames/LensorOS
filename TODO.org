@@ -1,0 +1,128 @@
+#+title: LensorOS TODO 2023
+#+author: Lens
+#+description: What the fuck we should be doing for LensorOS in 2023
+#+created: <2023-01-12 Thu>
+
+* TODO Time Syscall(s)
+
+Something to get realtime would be a minimum, I think.
+
+[2023-03-01 Wed 20:19]
+
+* TODO Directory Traversal (syscalls, or something)
+
+Maybe reading a directory doesn't return anything filesystem specific; rather, it builds a custom structure containing basic data of all files within that directory and returns that in a specified format. So the file would still be opened, could still be fread(), but it would contain the list of filesystem entries in the directory.
+
+[2023-03-01 Wed 20:15]
+
+* TODO LensorOS partition needs fleshing out
+
+First and foremost: a lot of the boot media that we used to support *doesn't* support multiple partitions. For example: booting from the raw EFI image, booting from an El-Torito ISO cd, etc... So we will need to begin to separate two paths the kernel takes: one when the LensorOS partition is present, and one when it isn't. The one when it isn't will have to reduce it's expectations about how to boot the system: we should only try to open files present in the EFI partition. This is currently "hackily" done by having =blazeit= and =stdout= executables in the top level of both partitions...
+
+[2023-02-23 Thu 16:44]
+
+* TODO FAT driver is a joke
+
+It doesn't traverse directories, it doesn't do any caching, and it's all stuffed into one big function. Needs refactored so that the directory iteration can happen on any directory, first of all.
+
+[2023-02-10 Fri 15:23]
+
+* TODO Power Off, Sleep
+
+I've already done a lot of "grunt work" to define ACPI table header structures and such, so it should be relatively easy to get the FADT (fixed ACPI descriptor table). From there, we can start checking it's fields. I even wrote great docs on what each field is and what it's used for, so this really should be as easy as writing an API to interact with this and then using it.
+
+This would be a good time to use the kernel renderer, in order to draw over userspace and confirm that the user would like to shut down.
+
+[2023-02-07 Tue 11:07]
+
+* DONE LensorOS Simple Data Partition
+
+Have another partition installed onto the GPT disk by default, other than the EFI system one. This one should be used for data and userspace stuff separate from the bootloader/kernel. At first, we really just need to store a font there for userspace to load, and subsequently use to display user input...
+
+Reasons for this:
+
+1. ext2 is a long-term goal, but not achievable now. At any point, we can switch to ext2, migrate codebases to use directories longer than eight bytes, etc.
+2. Quick to implement (mtools + creategpt is enough)
+3. Provides a "root" filesystem that can be messed around in without messing with bootloader/kernel. This will be important when we gain AHCI write capabilities, as one could technically botch the kernel itself and make it impossible to reboot. Then, in file-handling syscalls, we could validate that `/fs0` isn't the path, so only the kernel can read/write itself, effectively.
+
+[2023-02-07 Tue 10:41]
+
+We are able to generate a data partition and boot with it installed on a disk, along with the EFI system partition. All still goes well. There *does* still need to be some work done, but that's covered in above TODOs.
+
+DONE [2023-02-23 Thu 16:41]
+
+* DONE Fix bug in ~<format>~ OR SOMEWHERE that is causing graphical issues (fix #18)
+
+[2023-01-12 Thu 10:07]
+
+NOTE: This is A. no longer causing graphical issues: the kernel no longer deals with the graphical framebuffer after boot and B. "fixed" (by avoiding the cause of the problem) using ~-mno-sse~, ~-mno-sse2~, AND ~-fno-tree-vectorize~ on BOTH the interrupts and kernel targets.
+
+[2023-02-07 Tue 10:40]
+
+* DONE Stabilise forking/execcing of programs; it's currently "working" but scuffed.
+
+This one is going to take a long while, as I suspect there's been a slowly but ever growing pile of bugs, memory related and logic related, that has accumulated in the codebase as I've written it without extensively using large parts of it (we are just now able to really start using the ELF loader and scheduler how they are supposed to, VFS is miles behind what it will be, etc).
+
+[2023-01-12 Thu 10:07]
+
+It's definitely working a lot better than it was before, but there are still occasional errors with it. Ideally, this whole "pipeline" would be very solid and dependable.
+
+[2023-02-07 Tue 10:39]
+
+It is **much** better than it was before, as of today.
+
+[2023-03-01 Wed 20:16]
+
+* TODO Improve scheduler context switch to include any extra registers that are present according to ~cpuid~ and such.
+
+Basically, there *isn't* any context switching for anything other than general purpose registers, and it would be great to fix that.
+
+[2023-01-12 Thu 10:08]
+
+Luckily, we can kind of do this incrementally: because we know how to write C code that only uses general registers, we can save the current state of general registers, do whatever we need to save/restore the fancy registers from C using general registers. Then we can update the general registers from the context we are switching to. This reduces the complexity of having to do the conditional checks from assembly; it can all happen from C(++).
+
+[2023-02-07 Tue 10:38]
+
+* DONE Make basic shell program that is run as init process, or whatever.
+
+There are a few pieces to this, really.
+
+1. Gather input from user, use it to ~fork~ current and ~exec~ a new program
+
+   We already have a "demo" of this in the ~stdout~ user program.
+
+   It just works on characters; all we have to do is make it collect characters into a command buffer until a newline is reached, in which case we can actually run the command in the command buffer, clear it, then go back.
+
+   [2023-01-12 Thu 10:15]
+
+2. Show the user the data, somehow.
+
+   Really, it would be ideal if we could draw to the screen (a graphical terminal).
+
+   However, it may be easier (at first) to simply use UART with terminal escape codes to properly redraw a prompt and such. Not ideal, but a start.
+
+   For graphical, we would need to pass a framebuffer address and it's two dimensional size, and then the program writes into that. This also means we need to map the framebuffer in the program's page table, when loading the executable. For now, we can do this for every process, but it'd be ideal if it was only mapped for GUI applications (I can see why Windows has the COFF subsystem thing, now).
+
+   It may be a smart idea to abstract display to it's own API, that way it can be implemented for either a framebuffer or a text terminal.
+
+  [2023-01-12 Thu 10:18]
+
+3. Pipes
+
+   Pipes are a way for a parent process and a child process to "communicate".
+
+   Basically, we want the parent to open a pipe before forking, then the child can open the write end and the parent can open the read end.
+
+   INNER TODO: It would be really cool if the shell could update what the process is writing to stdout *as it's running* instead of only once the program exits. Just a thought.
+
+   Anyway, then we can redirect stdout as the write end of the pipe, and exec into the program the user command signals. This way the shell will be able to collect all ~stdout~ and show it to the user, as well. We should almost definitely also handle stderr in this same way.
+
+   [2023-01-12 Thu 10:20]
+
+
+
+Okay; this is done now. We even pass graphical framebuffer information.
+
+Only took a month :Þ
+
+[2023-02-07 Tue 10:35]
