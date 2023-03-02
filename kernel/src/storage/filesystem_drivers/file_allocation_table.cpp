@@ -421,5 +421,6 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
     }
 
     /// No such file.
+    std::print("[FAT]: Could not find file at \"{}\", sorry\n", filename);
     return {};
 }
