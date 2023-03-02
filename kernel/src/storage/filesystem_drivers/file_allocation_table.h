@@ -63,6 +63,12 @@ class FileAllocationTableDriver final : public FilesystemDriver {
 
     static auto fat_type(BootRecord& br) -> FATType;
 
+    /// If returned T from `callback` causes `predicate` to return true, return T.
+    /// Otherwise, continue trying entries. Contents of returned T undefined if returned bool is false.
+    /// @param data Data to be used by callback; can be anything.
+    template<typename T>
+    std::pair<bool, T> for_each_entry_in_directory(BootRecord BR, T (*callback)(BootRecord& BR, ClusterEntry* entry, u64 byteOffset, std::string_view filename, std::string_view longfilename, void* data), bool(*predicate)(T), void* data);
+
 public:
     static void print_fat(BootRecord&);
 

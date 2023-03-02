@@ -20,6 +20,7 @@
 #include <fat_definitions.h>
 #include <format>
 #include <integers.h>
+#include <memory>
 #include <storage/file_metadata.h>
 #include <storage/filesystem_drivers/file_allocation_table.h>
 #include <vector>
@@ -227,46 +228,8 @@ auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename
     // UNREACHABLE();
 }
 
-auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_ptr<FileMetadata> {
-    DBGMSG("[FAT]: Attempting to open file {}\n", raw_path);
-    if (Device == nullptr) {
-        /// Should never get here.
-        std::print("FileAllocationTableDriver::open(): Device is null!\n");
-        return {};
-    }
-
-#ifdef DEBUG_FAT
-    auto __this = This.lock();
-    if (!__this) {
-        /// Should never get here.
-        std::print("[FAT]::open(): `This` is null!\n");
-        return {};
-    }
-#endif
-
-    /// Strip leading slash.
-    if (raw_path.starts_with("/")) raw_path = raw_path.substr(1);
-    if (raw_path.size() < 1) {
-        DBGMSG("[FAT]:open(): Invalid path: {}\n", raw_path);
-        return {};
-    }
-
-    // Get first filename from path.
-    // Given path "foo/bar/bas.exe", return "foo" as a legal FAT
-    // filename, and alter given path to be "past" that + directory
-    // separator.
-    std::string path = raw_path;
-    auto raw_filename = pop_filename_from_front_of_path(path);
-
-    DBGMSG("[FAT]:open(): Got filename \"{}\" and path \"{}\" from \"{}\"\n", raw_filename, path, raw_path);
-
-    // Translate path (FAT has very limited file names).
-    std::string filename = translate_filename(raw_filename);
-
-    DBGMSG("[FAT]:open(): Translated filename \"{}\" from \"{}\"\n", filename, raw_filename);
-
-
-    // TODO: Take in cached FAT from filesystem.
+template<typename T>
+std::pair<bool, T> FileAllocationTableDriver::for_each_entry_in_directory(BootRecord BR, T (*callback)(BootRecord& BR, ClusterEntry* entry, u64 byteOffset, std::string_view filename, std::string_view longfilename, void* data), bool(*predicate)(T), void* data) {
     std::vector<u8> FAT(BR.BPB.NumBytesPerSector);
     u64 lastFATsector { 0 };
 
@@ -327,38 +290,10 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
 
             DBGMSG("    Found {}named \"{}\" (\"{}\")\n", fileType , fileName, longFileName);
 
-            if (filename == fileName || (longFileName.size() && filename == longFileName)) {
-
-                // If path and raw_filename are equal, we can not resolve any more
-                // filenames from full path; we have found the file.
-                if (path == raw_filename) {
-                    DBGMSG("  Found file at {}!\n"
-                       "    Name: \"{}\"\n"
-                       "    Long: \"{}\"\n"
-                           , path
-                           , fileName
-                           , longFileName
-                           );
-                    // TODO: directory vs. file metadata
-                    u64 byteOffset = BR.cluster_to_sector(entry->get_cluster_number())
-                                     * BR.BPB.NumBytesPerSector;
-                    return std::make_shared<FileMetadata>(
-                        std::move(fileName),
-                        std::static_pointer_cast<StorageDeviceDriver>(This.lock()),
-                        u32(entry->FileSizeInBytes),
-                        (void*) byteOffset
-                        );
-                } else {
-                    if (!entry->directory()) {
-                        std::print("[FAT]: Cannot follow path \"{}\" because {}named \"{}\" is not a directory", path, fileType, filename);
-                        return {};
-                    }
-                    // TODO: tail call (recurse into directory)...
-                    [[maybe_unused]]u32 dirCluster = entry->get_cluster_number();
-                    std::print("[FAT]:TODO: Recurse directories (cannot yet follow path {} within {}, sorry)", path, filename);
-                    return {};
-                }
-            }
+            u64 byteOffset = BR.cluster_to_sector(entry->get_cluster_number())
+                             * BR.BPB.NumBytesPerSector;
+            T ret = callback(BR, entry, byteOffset, fileName, longFileName, data);
+            if (predicate(ret)) return {true, ret};
 
             entry++;
         }
@@ -420,6 +355,106 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
         }
 
         clusterIndex = tableValue;
+    }
+    return {false, {}};
+}
+
+auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_ptr<FileMetadata> {
+    DBGMSG("[FAT]: Attempting to open file {}\n", raw_path);
+    if (Device == nullptr) {
+        /// Should never get here.
+        std::print("FileAllocationTableDriver::open(): Device is null!\n");
+        return {};
+    }
+
+#ifdef DEBUG_FAT
+    auto __this = This.lock();
+    if (!__this) {
+        /// Should never get here.
+        std::print("[FAT]::open(): `This` is null!\n");
+        return {};
+    }
+#endif
+
+    /// Strip leading slash.
+    if (raw_path.starts_with("/")) raw_path = raw_path.substr(1);
+    if (raw_path.size() < 1) {
+        DBGMSG("[FAT]:open(): Invalid path: {}\n", raw_path);
+        return {};
+    }
+
+    // Get first filename from path.
+    // Given path "foo/bar/bas.exe", return "foo" as a legal FAT
+    // filename, and alter given path to be "past" that + directory
+    // separator.
+    std::string path = raw_path;
+    auto raw_filename = pop_filename_from_front_of_path(path);
+
+    DBGMSG("[FAT]:open(): Got filename \"{}\" and path \"{}\" from \"{}\"\n", raw_filename, path, raw_path);
+
+    // Translate path (FAT has very limited file names).
+    std::string filename = translate_filename(raw_filename);
+
+    DBGMSG("[FAT]:open(): Translated filename \"{}\" from \"{}\"\n", filename, raw_filename);
+
+    struct callback_data {
+        std::string_view path;
+        std::string_view raw_filename;
+        std::string_view filename;
+        std::shared_ptr<StorageDeviceDriver> driver;
+    };
+    struct entry_t {
+        std::shared_ptr<FileMetadata> meta;
+        std::string error_string;
+    };
+    callback_data cb_data{path, raw_filename, filename, static_pointer_cast<StorageDeviceDriver>(This.lock())};
+    std::pair<bool, entry_t> found_file =
+        for_each_entry_in_directory<entry_t>(BR, [](BootRecord& BR, ClusterEntry* entry, u64 byteOffset, std::string_view fileName, std::string_view longFileName, void* data) -> entry_t {
+            callback_data* cb_data = static_cast<callback_data*>(data);
+            if (std::string_view(cb_data->filename) == fileName || (longFileName.size() && std::string_view(cb_data->filename) == longFileName)) {
+                // If path and raw_filename are equal, we can not resolve any more
+                // filenames from full path; we have found the file.
+                if (cb_data->path == cb_data->raw_filename) {
+                    DBGMSG("  Found file at {}!\n"
+                           "    Name: \"{}\"\n"
+                           "    Long: \"{}\"\n"
+                           , cb_data->path
+                           , fileName
+                           , longFileName
+                           );
+                    // TODO: directory vs. file metadata
+                    u64 byteOffset = BR.cluster_to_sector(entry->get_cluster_number())
+                                     * BR.BPB.NumBytesPerSector;
+                    return {
+                        std::make_shared<FileMetadata>(std::move(fileName),
+                                                       cb_data->driver,
+                                                       u32(entry->FileSizeInBytes),
+                                                       (void*) byteOffset
+                                                       ),
+                        ""
+                    };
+                } else {
+                    if (!entry->directory())
+                        return {{}, std::format("[FAT]: Cannot follow path \"{}\" because \"{}\" is not a directory", cb_data->path, cb_data->filename)};
+                    // TODO: recurse into directory...
+                    [[maybe_unused]]u32 dirCluster = entry->get_cluster_number();
+                    return {{}, std::format("[FAT]:TODO: Recurse directories (cannot yet follow path {} within {}, sorry)", cb_data->path, cb_data->filename)};
+                }
+            }
+            return {{}, ""};
+        }, [](entry_t data) -> bool {
+            if (data.meta) return true;
+            if (data.error_string.size()) return true;
+            return false;
+        }, &cb_data);
+    if (found_file.first) {
+        if (found_file.second.error_string.size()) std::print("ERR: {}\n", found_file.second.error_string);
+        return found_file.second.meta;
+    } else {
+        if (!found_file.second.error_string.size())
+            std::print("[FAT]: Cannot find file at \"{}\", sorry\n", filename);
+        else std::print("{}\n", found_file.second.error_string);
+        return {};
     }
     return {};
 }
