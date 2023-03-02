@@ -18,5 +18,6 @@
  */
 
 int main(void) {
+  puts("  >== blaze it, mafk ==>");
   return 420;
 }

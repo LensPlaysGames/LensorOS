@@ -48,8 +48,13 @@ typedef intptr_t ssz;
 #ifndef MAX_COMMAND_LENGTH
 # define MAX_COMMAND_LENGTH 4096
 #endif
+#ifndef MAX_OUTPUT_LENGTH
+# define MAX_OUTPUT_LENGTH 4096
+#endif
 
 static char command[MAX_COMMAND_LENGTH];
+static char command_output[MAX_OUTPUT_LENGTH];
+static usz command_output_it = 0;
 // NOTE: struct with status integer and cached status string
 static int command_status = 0;
 
@@ -240,9 +245,12 @@ void draw_prompt(Framebuffer fb, const PSF1_FONT font) {
   draw_psf1_int(fb, font, &x, &y, command_status);
   draw_psf1_string(fb, font, &x, &y, prompt);
   draw_psf1_string(fb, font, &x, &y, command);
+  draw_psf1_string(fb, font, &x, &y, "\n");
+  draw_psf1_string(fb, font, &x, &y, command_output);
 }
 
 void print_command_line() {
+  printf("%s", command_output);
   printf("\033[2K" //> Erase entire line
          "\033[1G" //> Move cursor to first column
          "%d%s%s",
@@ -256,8 +264,6 @@ void run_program_waitpid(const char *const filepath) {
   usz fds[2] = {-1,-1};
   syscall(SYS_pipe, fds);
 
-  printf("fds: [%d,%d]\n", (int)fds[0], (int)fds[1]);
-
   // If there are pending writes, they will be executed on both the
   // parent and the child; by flushing any buffers we have, it ensures
   // the child won't write duplicate data on accident.
@@ -266,8 +272,6 @@ void run_program_waitpid(const char *const filepath) {
   //printf("pid: %d\n", cpid);
   if (cpid) {
     //puts("Parent");
-
-    close(fds[0]);
     close(fds[1]);
 
     // TODO: waitpid needs to reserve some uncommon error code for
@@ -282,13 +286,21 @@ void run_program_waitpid(const char *const filepath) {
       return;
     }
 
+    char c;
+    while (read(fds[0], &c, 1) == 1 && c) {
+      command_output[command_output_it++] = c;
+    }
+    close(fds[0]);
+
     //puts("Parent waited");
     //fflush(NULL);
 
   } else {
-    //puts("Child");
-
+    //puts("Child");;
     close(fds[0]);
+
+    // Redirect stdout to write end of pipe.
+    syscall(SYS_repfd, fds[1], STDOUT_FILENO);
     close(fds[1]);
 
     fflush(NULL);
@@ -379,6 +391,9 @@ int main(int argc, const char **argv) {
     fill_color(fb, black);
     print_command_line();
     draw_prompt(fb, font);
+
+    memset(command_output, 0, MAX_OUTPUT_LENGTH);
+    command_output_it = 0;
 
     // Get line from standard input.
     int c;
