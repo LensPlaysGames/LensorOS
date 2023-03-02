@@ -24,6 +24,7 @@
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
 #include <string>
+#include <vector>
 
 class FileAllocationTableDriver final : public FilesystemDriver {
     /// This constructor is only used internally in try_create() and is always
@@ -62,6 +63,56 @@ class FileAllocationTableDriver final : public FilesystemDriver {
         std::make_shared(std::shared_ptr<StorageDeviceDriver>&& device, BootRecord&& br);
 
     static auto fat_type(BootRecord& br) -> FATType;
+
+    /// This is so we have something that we can call begin() and end() on because
+    /// calling begin()/end() on the driver itself would be a bit weird semantically.
+    struct DirIteratorHelper {
+        FileAllocationTableDriver& Drv;
+
+        /// This does the actual iterating.
+        struct Iterator {
+            FileAllocationTableDriver& Drv;
+
+            /// Constants.
+            const u64 ClusterSize = Drv.BR.BPB.NumSectorsPerCluster * Drv.BR.BPB.NumBytesPerSector;
+
+            /// Iteration data.
+            std::vector<u8> ClusterContents{ClusterSize};
+            u64 LastFATSector = 0;
+            u32 ClusterIndex = Drv.BR.sector_to_cluster(Drv.BR.first_root_directory_sector());
+            bool MoreClusters = true;
+            bool ClearLFN = false;
+
+            /// The current entry.
+            struct EntryType {
+                ClusterEntry* CE{};
+                u64 ByteOffset{};
+                std::string FileName;
+                std::string LongFileName;
+            } Entry{};
+
+            explicit Iterator(FileAllocationTableDriver& _Drv);
+            auto operator++() -> Iterator&;
+            auto operator*() -> EntryType& { return Entry; }
+            auto operator->() -> EntryType* { return &Entry; }
+            bool operator!=(std::default_sentinel_t) const { return MoreClusters; }
+
+        private:
+            /// Read the next cluster unconditionally.
+            void ReadNextCluster();
+
+            /// Read the next cluster if there is one. If there isn’t, set MoreClusters to false.
+            void TryReadNextCluster();
+        };
+
+        /// Get an iterator that points to the first entry.
+        auto begin() -> Iterator { return Iterator{Drv}; }
+
+        /// We don’t really have a predetermined ‘end’, so this just returns a dummy value.
+        auto end() -> std::default_sentinel_t { return {}; }
+    };
+
+    auto for_each_dir_entry() -> DirIteratorHelper { return DirIteratorHelper{*this}; }
 
 public:
     static void print_fat(BootRecord&);

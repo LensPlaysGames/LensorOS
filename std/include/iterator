@@ -25,41 +25,47 @@
 
 namespace std {
 
-template <
-    typename _T,
-    typename = _Requires<_Pointer<_T>>
->
-class _ReverseIterator {
+template <typename _T>
+class reverse_iterator {
     _T __it;
 
 public:
-    constexpr _ReverseIterator(_T __it) : __it(__it) {}
 
-    constexpr _ReverseIterator& operator++() { --__it; return *this; }
-    constexpr _ReverseIterator operator++(int) {
-        _ReverseIterator __tmp = *this;
-        --__it;
+    reverse_iterator() = default;
+    constexpr explicit reverse_iterator(_T __it) : __it(__it) {}
+
+    /// Returns the underlying iterator.
+    constexpr _T base() const { return __it; }
+
+    /// Post-increment.
+    constexpr reverse_iterator operator++(int) {
+        reverse_iterator __tmp = *this;
+        ++(*this);
         return __tmp;
     }
 
-    constexpr _ReverseIterator& operator--() { ++__it; return *this; }
-    constexpr _ReverseIterator operator--(int) {
-        _ReverseIterator __tmp = *this;
-        ++__it;
+    /// Pre-increment.
+    constexpr reverse_iterator operator--(int) {
+        reverse_iterator __tmp = *this;
+        ++(*this);
         return __tmp;
     }
 
-    constexpr _ReverseIterator operator+(size_t __n) { return _ReverseIterator(__it - __n); }
-    constexpr _ReverseIterator operator-(size_t __n) { return _ReverseIterator(__it + __n); }
-    constexpr _ReverseIterator& operator+=(size_t __n) { __it -= __n; return *this; }
-    constexpr _ReverseIterator& operator-=(size_t __n) { __it += __n; return *this; }
-
-    constexpr std::remove_pointer_t<_T> operator->() { return __it; }
-    constexpr std::remove_pointer_t<_T> operator*() { return *__it; }
-
-    constexpr bool operator==(const _ReverseIterator& __other) const { return __it == __other.__it; }
-    constexpr bool operator!=(const _ReverseIterator& __other) const { return __it != __other.__it; }
+    constexpr auto operator++() -> reverse_iterator& { --__it; return *this; }
+    constexpr auto operator--() -> reverse_iterator& { ++__it; return *this; }
+    constexpr auto operator+(size_t __n) -> reverse_iterator { return reverse_iterator(__it - __n); }
+    constexpr auto operator-(size_t __n) -> reverse_iterator { return reverse_iterator(__it + __n); }
+    constexpr auto operator+=(size_t __n) -> reverse_iterator& { __it -= __n; return *this; }
+    constexpr auto operator-=(size_t __n) -> reverse_iterator& { __it += __n; return *this; }
+    constexpr bool operator==(const reverse_iterator& __other) const { return __it == __other.__it; }
+    constexpr bool operator!=(const reverse_iterator& __other) const { return __it != __other.__it; }
+    constexpr auto operator->() -> _T { return __it - 1; }
+    constexpr auto operator*() const -> decltype(auto) { return *(__it - 1); }
 };
+
+/// Helper for creating iterators. This is an empty type that does nothing.
+struct default_sentinel_t {};
+inline constexpr default_sentinel_t default_sentinel{};
 
 }
 
