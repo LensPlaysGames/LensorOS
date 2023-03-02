@@ -83,8 +83,8 @@ extern "C" void* memmove(void* dst, const void* src, size_t num) {
     if (src > dst)
         return memcpy(dst, src, num);
     else
-        for (usz i = num - 1; i < num; --i)
-            ((u8*)dst)[i] = ((u8*)src)[i];
+        for (usz i = num; i; --i)
+            ((u8*)dst)[i-1] = ((u8*)src)[i-1];
     return dst;
 }
 
