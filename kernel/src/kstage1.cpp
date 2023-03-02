@@ -571,8 +571,10 @@ void kstage1(BootInfo* bInfo) {
         char tmpBuffer[11]{};
         vfs.read(fds.Process, reinterpret_cast<u8*>(tmpBuffer), 11);
         std::print("{}\n", std::string_view{tmpBuffer, 11});
-        if (fds.valid() && ELF::CreateUserspaceElf64Process(fds.Process)) {
-            std::print("Successfully created new process from `/fs0/blazeit`\n");
+        if (fds.valid()) {
+            if (ELF::CreateUserspaceElf64Process(fds.Process))
+                std::print("Successfully created new process from `/fs0/blazeit`\n");
+
             std::print("Closing FileDescriptor {}\n", fds.Process);
             vfs.close(fds.Process);
             std::print("FileDescriptor {} closed\n", fds.Process);
@@ -596,8 +598,9 @@ void kstage1(BootInfo* bInfo) {
         std::print("Opening {} with VFS\n", programTwoFilePath);
         fds = vfs.open(programTwoFilePath);
         std::print("  Got FileDescriptors. {}, {}\n", fds.Process, fds.Global);
-        if (fds.valid() && ELF::CreateUserspaceElf64Process(fds.Process, argv)) {
-            std::print("Sucessfully created new process from `/fs0/stdout`\n");
+        if (fds.valid()) {
+            if (ELF::CreateUserspaceElf64Process(fds.Process, argv))
+                std::print("Sucessfully created new process from `/fs0/stdout`\n");
             vfs.close(fds.Process);
         }
         // Get last process in queue from scheduler.
@@ -625,6 +628,11 @@ void kstage1(BootInfo* bInfo) {
 
 
         SYSTEM->set_init(process);
+
+        constexpr const char* programTestFilePath = "/fs0/notexist.ing";
+        std::print("Opening {} just for fun\n", programTestFilePath);
+        fds = vfs.open(programTestFilePath);
+        if (fds.valid()) vfs.close(fds.Process);
     }
 
     // Initialize High Precision Event Timer.

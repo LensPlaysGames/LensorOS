@@ -40,6 +40,40 @@ template <typename _Char>
 class basic_string;
 
 template <typename _Char>
+class basic_string_view;
+
+/// Remove from a string or string view all trailing characters in `chars`.
+namespace __detail {
+template <typename _Str, typename _Char>
+constexpr void __remove_trailing(_Str& __str, basic_string_view<_Char> __chars) {
+    /// String is empty, so there's nothing to do.
+    if (!__str.size() || !__chars.size()) return;
+
+    /// So long as there are characters left,
+    auto __it = __str.rbegin();
+    while (__it != __str.rend()) {
+        bool __found = false;
+
+        /// compare the last one against each character in `chars`
+        for (_Char __c : __chars) {
+            if (*__it == __c) {
+                /// and move on to the next character if it matches;
+                __it++;
+                __found = true;
+                break;
+            }
+        }
+
+        /// finally, stop if we didn't find a match.
+        if (!__found) break;
+    }
+
+    /// Erase everything after the last character we found.
+    __str.erase(__it.base(), __str.end());
+}
+}
+
+template <typename _Char>
 class basic_string_view {
     using _View = basic_string_view<_Char>;
 
@@ -64,6 +98,10 @@ public:
     template <size_t __N>
     constexpr basic_string_view(const _Char (&__data)[__N]) : __data(__data), __size(__N - 1) {}
 
+    void __remove_trailing(basic_string_view __other) { ::std::__detail::__remove_trailing(*this, __other); }
+    void remove_prefix(size_t __n) { __data += __n; __size -= __n; }
+    void remove_suffix(size_t __n) { __size -= __n; }
+
     constexpr const _Char* data() const { return __data; }
     constexpr size_t size() const { return __size; }
 
@@ -81,8 +119,8 @@ public:
     _Nodiscard constexpr const char* begin() const { return __data; }
     _Nodiscard constexpr const char* end() const { return __data + __size; }
 
-    _Nodiscard constexpr _ReverseIterator<const char*> rbegin() const { return _ReverseIterator<const char*>(data() + size() - 1); }
-    _Nodiscard constexpr _ReverseIterator<const char*> rend() const { return _ReverseIterator<const char*>(data() - 1); }
+    _Nodiscard constexpr reverse_iterator<const _Char*> rbegin() const { return reverse_iterator{data() + size()}; }
+    _Nodiscard constexpr reverse_iterator<const _Char*> rend() const { return reverse_iterator{data()}; }
 
     _Nodiscard constexpr _View substr(size_t __pos = 0, size_t __len = npos) const {
         if (__pos > __size) return {};
@@ -362,13 +400,13 @@ public:
     _Nodiscard constexpr const _Char* end() const { return data() + size(); }
     _Nodiscard constexpr const _Char* cend() const { return data() + size(); }
 
-    _Nodiscard constexpr _ReverseIterator<_Char*> rbegin() { return data() + size() - 1; }
-    _Nodiscard constexpr _ReverseIterator<const _Char*> rbegin() const { return data() + size() - 1; }
-    _Nodiscard constexpr _ReverseIterator<const _Char*> crbegin() const { return data() + size() - 1; }
+    _Nodiscard constexpr reverse_iterator<_Char*> rbegin() { return reverse_iterator{data() + size()}; }
+    _Nodiscard constexpr reverse_iterator<const _Char*> rbegin() const { return reverse_iterator{data() + size()}; }
+    _Nodiscard constexpr reverse_iterator<const _Char*> crbegin() const { return reverse_iterator{data() + size()}; }
 
-    _Nodiscard constexpr _ReverseIterator<_Char*> rend() { return data() - 1; }
-    _Nodiscard constexpr _ReverseIterator<const _Char*> rend() const { return data() - 1; }
-    _Nodiscard constexpr _ReverseIterator<const _Char*> crend() const { return data() - 1; }
+    _Nodiscard constexpr reverse_iterator<_Char*> rend() { return reverse_iterator{data()}; }
+    _Nodiscard constexpr reverse_iterator<const _Char*> rend() const { return reverse_iterator{data()}; }
+    _Nodiscard constexpr reverse_iterator<const _Char*> crend() const { return reverse_iterator{data()}; }
 
     /// =======================================================================
     ///  Adding elements.
@@ -504,6 +542,8 @@ public:
     /// =======================================================================
     ///  Removing elements.
     /// =======================================================================
+    void __remove_trailing(basic_string_view<_Char> __other) { ::std::__detail::__remove_trailing(*this, __other); }
+
     void clear() {
         if (!__is_large()) {
             __small.__data[0] = 0;
