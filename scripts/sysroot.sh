@@ -17,10 +17,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
-
+set -u
 
 ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-SystemRoot="$ScriptDirectory/../root"
+ProjectRoot="$ScriptDirectory/.."
+SystemRoot="$ProjectRoot/root"
 
 run(){
     set -x
@@ -34,9 +35,11 @@ run mkdir -p "$SystemRoot"
 #     binaries into newly-created sysroot.
 # This solves the issue of having to build a
 #     bootstrap version of the compiler first.
-cd $ScriptDirectory
+cd "$ScriptDirectory"
 run cp -r ../base/* "$SystemRoot/"
 # Copy header files from libc to sysroot.
 run cd ../user/libc/
-run find ./ -name '*.h' -exec cp --parents '{}' -t $SystemRoot/inc ';'
-run cd $ScriptDirectory
+run find ./ -name '*.h' -exec cp --parents '{}' -t "$SystemRoot/inc" ';'
+run cp "$ProjectRoot"/std/include/* "$SystemRoot/inc/"
+run cp "$ProjectRoot"/std/include/bits/* "$SystemRoot/inc/bits/"
+run cd "$ScriptDirectory"

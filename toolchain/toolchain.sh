@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Copyright 2022, Contributors To LensorOS.
 # All rights reserved.
 #
@@ -40,7 +42,7 @@ if [ -z "$GCC_VERSION" ]; then
 fi
 GCC_STRING="gcc-$GCC_VERSION"
 # Ensure known working directory (assuming script wasn't moved).
-cd $ToolchainDir
+cd "$ToolchainDir"
 # Download, extract, and patch source archives if they haven't been already.
 if [ ! -d $BINUTILS_STRING ]; then
     echo -e "\n\n -> Downloading GNU Binutils Source Archive\n\n"
@@ -50,7 +52,7 @@ if [ ! -d $BINUTILS_STRING ]; then
     mkdir -p "$BINUTILS_STRING"
     tar -xf $BINUTILS_STRING.tar.xz -C .
     echo -e "\n\n -> Patching GNU Binutils\n\n"
-    patch -s -u -p0 < $ToolchainDir/$BINUTILS_STRING-lensor.patch
+    patch -s -u -p0 < "$ToolchainDir/$BINUTILS_STRING-lensor.patch"
 else
     echo -e "\n\n -> Using existing GNU Binutils Source\n\n"
 fi
@@ -64,16 +66,16 @@ if [ ! -d $GCC_STRING ]; then
     echo -e "\n\n -> Downloading GNU Compiler Collection Prerequisites\n\n"
     cd $GCC_STRING
     ./contrib/download_prerequisites
-    cd $ToolchainDir
+    cd "$ToolchainDir"
     echo -e "\n\n -> Patching GNU Compiler Collection\n\n"
-    patch -s -u -p0 < $ToolchainDir/$GCC_STRING-lensor.patch
+    patch -s -u -p0 < "$ToolchainDir/$GCC_STRING-lensor.patch"
 else
     echo -e "\n\n -> Using existing GNU Compiler Collection Source\n\n"
 fi
-if [ ! -d $SYSROOT ] ; then
-    cd $ToolchainDir/../scripts
+if [ ! -d "$SYSROOT" ] ; then
+    cd "$ToolchainDir/../scripts"
     source sysroot.sh
-    cd $ToolchainDir
+    cd "$ToolchainDir"
 else
     echo -e "\n\n -> Using existing System Root at $SYSROOT\n\n"
 fi
@@ -83,7 +85,7 @@ if [ ! -d $BINUTILS_STRING"-build" ] ; then
     echo -e "\n\n -> Configuring GNU Binutils\n\n"
     mkdir -p $BINUTILS_STRING"-build"
     cd $BINUTILS_STRING"-build"
-    $ToolchainDir/$BINUTILS_STRING/configure  \
+    "$ToolchainDir/$BINUTILS_STRING/configure"  \
         --target=$TARGET                      \
         --prefix="$PREFIX"                    \
         --with-sysroot="$SYSROOT"             \
@@ -99,10 +101,10 @@ else
 fi
 if [ ! -d $GCC_STRING"-build" ] ; then
     echo -e "\n\n -> Configuring GNU Compiler Collection\n\n"
-    cd $ToolchainDir
+    cd "$ToolchainDir"
     mkdir -p $GCC_STRING"-build"
     cd $GCC_STRING"-build"
-    $ToolchainDir/$GCC_STRING/configure  \
+    "$ToolchainDir/$GCC_STRING/configure"  \
         --target=$TARGET                 \
         --prefix="$PREFIX"               \
         --disable-nls                    \
