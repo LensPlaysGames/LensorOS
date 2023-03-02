@@ -119,8 +119,8 @@ public:
     _Nodiscard constexpr const char* begin() const { return __data; }
     _Nodiscard constexpr const char* end() const { return __data + __size; }
 
-    _Nodiscard constexpr reverse_iterator<const char*> rbegin() const { return reverse_iterator<const char*>(data() + size()); }
-    _Nodiscard constexpr reverse_iterator<const char*> rend() const { return reverse_iterator<const char*>(data()); }
+    _Nodiscard constexpr reverse_iterator<const _Char*> rbegin() const { return reverse_iterator{data() + size()}; }
+    _Nodiscard constexpr reverse_iterator<const _Char*> rend() const { return reverse_iterator{data()}; }
 
     _Nodiscard constexpr _View substr(size_t __pos = 0, size_t __len = npos) const {
         if (__pos > __size) return {};
@@ -400,13 +400,13 @@ public:
     _Nodiscard constexpr const _Char* end() const { return data() + size(); }
     _Nodiscard constexpr const _Char* cend() const { return data() + size(); }
 
-    _Nodiscard constexpr reverse_iterator<_Char*> rbegin() { return data() + size(); }
-    _Nodiscard constexpr reverse_iterator<const _Char*> rbegin() const { return data() + size(); }
-    _Nodiscard constexpr reverse_iterator<const _Char*> crbegin() const { return data() + size(); }
+    _Nodiscard constexpr reverse_iterator<_Char*> rbegin() { return reverse_iterator{data() + size()}; }
+    _Nodiscard constexpr reverse_iterator<const _Char*> rbegin() const { return reverse_iterator{data() + size()}; }
+    _Nodiscard constexpr reverse_iterator<const _Char*> crbegin() const { return reverse_iterator{data() + size()}; }
 
-    _Nodiscard constexpr reverse_iterator<_Char*> rend() { return data(); }
-    _Nodiscard constexpr reverse_iterator<const _Char*> rend() const { return data(); }
-    _Nodiscard constexpr reverse_iterator<const _Char*> crend() const { return data(); }
+    _Nodiscard constexpr reverse_iterator<_Char*> rend() { return reverse_iterator{data()}; }
+    _Nodiscard constexpr reverse_iterator<const _Char*> rend() const { return reverse_iterator{data()}; }
+    _Nodiscard constexpr reverse_iterator<const _Char*> crend() const { return reverse_iterator{data()}; }
 
     /// =======================================================================
     ///  Adding elements.
