@@ -56,7 +56,7 @@ constexpr void __remove_trailing(_Str& __str, basic_string_view<_Char> __chars) 
 
         /// compare the last one against each character in `chars`
         for (_Char __c : __chars) {
-            if (__it == __c) {
+            if (*__it == __c) {
                 /// and move on to the next character if it matches;
                 __it++;
                 __found = true;
