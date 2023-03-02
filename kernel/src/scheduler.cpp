@@ -40,6 +40,13 @@ void(*timer_tick)();
 void Process::destroy(int status) {
     //std::print("Destroying process {}\n", ProcessID);
 
+    // If process being destroyed is the init process, set the SYSTEM
+    // init process to NULL so that the kernel will know it has exited.
+    // This prevents the keyboard interrupt from writing to stdin, for
+    // example.
+    if (this == SYSTEM->init_process())
+        SYSTEM->set_init(NULL);
+
     // Run all of the programs in the WaitingList.
     for(pid_t pid : WaitingList) {
         Process *waitingProcess = Scheduler::process(pid);
