@@ -64,7 +64,7 @@ auto VFS::file(ProcFD procfd) -> std::shared_ptr<FileMetadata> {
 
     auto sysfd = proc->FileDescriptors[procfd];
     if (!sysfd) {
-        DBGMSG("[VFS]: ERROR: {} (pid {}) is unmapped.\n", procfd, proc->ProcessID);
+        std::print("[VFS]: ERROR: {} (pid {}) is unmapped.\n", procfd, proc->ProcessID);
         return {};
     }
 
@@ -75,20 +75,24 @@ auto VFS::file(ProcFD procfd) -> std::shared_ptr<FileMetadata> {
 auto VFS::file(SysFD fd) -> std::shared_ptr<FileMetadata> {
     auto f = Files[fd];
     if (!f) {
-        DBGMSG("[VFS]: ERROR: {} is unmapped.\n", fd);
+        std::print("[VFS]: ERROR: {} is unmapped.\n", fd);
         return {};
     }
     return f;
 }
 
+bool VFS::valid(Process *proc, ProcFD procfd) const {
+    return procfd_to_fd(proc, procfd) != SysFD::Invalid;
+}
+
 bool VFS::valid(ProcFD procfd) const {
-    return procfd_to_fd(procfd) != SysFD::Invalid;
+    return procfd_to_fd(Scheduler::CurrentProcess->value(), procfd) != SysFD::Invalid;
 }
 
 bool VFS::valid(SysFD fd) const {
     auto f = Files[fd];
     if (!f) {
-        DBGMSG("[VFS]: ERROR: {} is unmapped.\n", fd);
+        std::print("[VFS]: ERROR: {} is unmapped.\n", fd);
         return false;
     }
     return true;
@@ -197,6 +201,19 @@ ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
 }
 
 ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
+    /*
+    DBGMSG("[VFS]: write11111111111111111\n"
+           "  file descriptor: {}\n"
+           "  buffer address:  {}\n"
+           "  byte count:      {}\n"
+           "  byte offset:     {}\n"
+           , fd
+           , (void*) buffer
+           , byteCount
+           , byteOffset
+           );
+    */
+
     auto f = file(fd);
     if (!f) { return -1; }
 

@@ -103,19 +103,14 @@ struct VFS {
 
     /// The second file descriptor given will be associated with the file
     /// description of the first.
-    bool dup2(ProcFD fd, ProcFD replaced) {
-        if (!valid(fd) || !valid(replaced)) {
-            return false;
-        }
-        SysFD sysfd = procfd_to_fd(replaced);
-        if (sysfd == SysFD::Invalid) {
-            return false;
-        }
-        auto f = file(fd);
-        if (!f) {
-            return false;
-        }
-        Files[sysfd] = std::move(f);
+    bool dup2(Process* proc, ProcFD fd, ProcFD replaced) {
+        if (!proc) return false;
+        if (!valid(proc, fd) || !valid(proc, replaced)) return false;
+        SysFD sysfd = procfd_to_fd(proc, fd);
+        auto f = file(sysfd);
+        if (!f) return false;
+        auto [new_sysfd, _] = Files.push_back(std::move(f));
+        *proc->FileDescriptors[replaced] = new_sysfd;
         return true;
     }
 
@@ -143,6 +138,7 @@ private:
 
     void free_fd(SysFD fd, ProcFD procfd);
     void free_fd(Process*, SysFD fd, ProcFD procfd);
+    bool valid(Process *proc, ProcFD procfd) const;
     bool valid(ProcFD procfd) const;
     bool valid(SysFD fd) const;
 };

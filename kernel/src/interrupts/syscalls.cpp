@@ -295,7 +295,8 @@ void sys$11_exec(const char *path) {
 void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
     DBGMSG(sys$_dbgfmt, 12, "repfd");
     DBGMSG("  fd: {}, replaced: {}\n\n", fd, replaced);
-    bool result = SYSTEM->virtual_filesystem().dup2(fd, replaced);
+    Process* process = Scheduler::CurrentProcess->value();
+    bool result = SYSTEM->virtual_filesystem().dup2(process, fd, replaced);
     if (!result) {
         std::print("  ERROR OCCURED: dup2 failed\n");
     }

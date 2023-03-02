@@ -132,13 +132,17 @@ static void handle_direct_input(char input) {
 
     // Send user input to userspace!
     // Write to stdin of init process.
-    Process* init = SYSTEM->init_process();
-    if (init) {
-        auto fd = static_cast<ProcFD>(0);
-        auto sysfd = init->FileDescriptors[fd];
-        auto f = SYSTEM->virtual_filesystem().file(*sysfd);
-        if (f) f->device_driver()->write(f.get(), 0, sizeof(char), &input);
-    } else std::print("[INPUT]: No init process: can not handle user input properly.\n");
+    if (SYSTEM) {
+        Process* init = SYSTEM->init_process();
+        if (init) {
+            auto fd = static_cast<ProcFD>(0);
+            auto sysfd = init->FileDescriptors[fd];
+            auto f = SYSTEM->virtual_filesystem().file(*sysfd);
+            if (f) f->device_driver()->write(f.get(), 0, sizeof(char), &input);
+            return;
+        }
+    }
+    std::print("[INPUT]: No init process: cannot handle user input properly.\n");
 }
 
 __attribute__((no_caller_saved_registers))
