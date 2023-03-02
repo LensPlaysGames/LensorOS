@@ -448,10 +448,10 @@ int main(int argc, const char **argv) {
     }
 
     command_status = 0;
-    puts("Unrecognized command, sorry!\n"
-         "  Try `blazeit` or `quit`");
-    fflush(NULL);
-
+    const char unrecognized_str[] =
+      "Unrecognized command, sorry!\n"
+      "  Try `blazeit` or `quit`\n";
+    memcpy(command_output, unrecognized_str, sizeof(unrecognized_str));
     continue;
   }
 
