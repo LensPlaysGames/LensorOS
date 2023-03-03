@@ -185,7 +185,6 @@ namespace ELF {
                                 , Memory::ShowDebug::No
                                 );
                 }
-                // FIXME: Should we use size_to_load here? Does it matter?
                 process->add_memory_region((void*)phdr->p_vaddr
                                            , (void*)loadedProgram
                                            , pages * PAGE_SIZE
@@ -283,6 +282,8 @@ namespace ELF {
             }
         }
 
+        // TODO: Abstract x86_64 specific stuff, somehow.
+
         // New stack.
         process->CPU.RBP = (u64)(stack_top_address);
         process->CPU.RSP = (u64)(stack_top_address);
@@ -321,6 +322,8 @@ namespace ELF {
             Memory::unmap_pages(process->CR3, it->value().vaddr, it->value().pages, Memory::ShowDebug::No);
             Memory::free_pages(it->value().paddr, it->value().pages);
         }
+        // Clear memories list.
+        while (process->Memories.remove(0));
 
         return LoadUserspaceElf64Process(process, process->CR3, fd, elfHeader, args);
     }

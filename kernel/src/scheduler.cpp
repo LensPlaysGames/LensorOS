@@ -44,8 +44,10 @@ void Process::destroy(int status) {
     // init process to NULL so that the kernel will know it has exited.
     // This prevents the keyboard interrupt from writing to stdin, for
     // example.
-    if (this == SYSTEM->init_process())
+    if (this == SYSTEM->init_process()) {
+        std::print("[SCHED]: Destroying init process");
         SYSTEM->set_init(NULL);
+    }
 
     // Run all of the programs in the WaitingList.
     for(pid_t pid : WaitingList) {
@@ -62,6 +64,9 @@ void Process::destroy(int status) {
     Memories.for_each([](SinglyLinkedListNode<Memory::Region>* it){
         Memory::free_pages(it->value().paddr, it->value().pages);
     });
+    // Clear memories list.
+    while (Memories.remove(0));
+
     // Close open files.
     // NOTE: There *should* be none; libc should close all open files on destruction.
     for (const auto& [procfd, fd] : FileDescriptors.pairs()) {
@@ -76,7 +81,7 @@ namespace Scheduler {
     // Not the best, but wouldn't be a problem unless ridiculous uptime.
     pid_t the_pid { 0 };
     pid_t request_pid() {
-        return the_pid++;
+        return ++the_pid;
     }
 
     Process StartupProcess;
@@ -193,13 +198,15 @@ namespace Scheduler {
         scheduler_switch_process = scheduler_switch;
         // Setup currently executing code as the start process.
         StartupProcess.CR3 = Memory::active_page_map();
+        StartupProcess.State = Process::RUNNING;
+        StartupProcess.ProcessID = 0;
         // Create the process queue and add the startup process to it.
         ProcessQueue = new SinglyLinkedList<Process*>;
         if (ProcessQueue == nullptr) {
-            std::print("\033[31mScheduler failed to initialize:\033[0m Could not create process list.\n");
+            std::print("\033[31mScheduler failed to initialize:\033[0m Could not allocate process list.\n");
             return false;
         }
-        add_process(&StartupProcess);
+        ProcessQueue->add_end(&StartupProcess);
         CurrentProcess = ProcessQueue->head();
         // Install IRQ0 handler found in `scheduler.asm` (over-write default system timer handler).
         gIDT.install_handler((u64)irq0_handler, PIC_IRQ0);
@@ -325,10 +332,12 @@ pid_t CopyUserspaceProcess(Process* original) {
                 );
 
     Process* newProcess = new Process;
+    newProcess->State = Process::ProcessState::SLEEPING;
+    Scheduler::add_process(newProcess);
+
+    std::print("[SCHED]: Allocated new process {} at {}\n", newProcess->ProcessID, (void*)newProcess);
 
     // Copy each memory region's contents into newly allocated memory.
-    //u64 testVaddr = 0;
-    //u64 expectedPaddr = 0;
     for (SinglyLinkedListNode<Memory::Region>* it = original->Memories.head(); it; it = it->next()) {
         Memory::Region& memory = it->value();
         Memory::Region newMemory{memory};
@@ -341,32 +350,27 @@ pid_t CopyUserspaceProcess(Process* original) {
             }
         }
         newMemory.paddr = (void*)newMemoryPages;
-        // Copy memory contents.
+
+        /*
+        std::print("[SCHED]: Copying memory region A to B\n"
+                   "  A: vaddr={}  paddr={}  pages={}\n"
+                   "  B: vaddr={}  paddr={}  pages={}\n"
+                   , memory.vaddr, memory.paddr, memory.pages
+                   , newMemory.vaddr, newMemory.paddr, newMemory.pages
+                   );
+        */
+
+        // Copy memory contents (physical addresses because kernel has identity mapping).
         memcpy(newMemory.paddr, memory.paddr, memory.length);
+
         // Map virtual addresses to new physical addresses.
-        //for (u64 virtualAddress = (u64)newMemory.vaddr; virtualAddress < ((u64)newMemory.vaddr + newMemory.length); virtualAddress += PAGE_SIZE) {
-        //    Memory::unmap(newPageTable, (void*)virtualAddress);
-        //}
-        // Map virtual addresses to new physical addresses.
-        u64 virtualAddress = (u64)newMemory.vaddr;
-
-        //testVaddr = virtualAddress;
-        //expectedPaddr = newMemoryPages;
-
-        for (u64 physicalAddress = newMemoryPages; physicalAddress < (newMemoryPages + newMemory.length); virtualAddress += PAGE_SIZE, physicalAddress += PAGE_SIZE) {
-            Memory::map(newPageTable, (void*)virtualAddress, (void*)physicalAddress, memory.flags, Memory::ShowDebug::No);
-        }
-
-        //Memory::PageMapIndexer indexer((u64)testVaddr);
-        //Memory::PageDirectoryEntry PDE;
-        //PDE = newPageTable->entries[indexer.page_directory_pointer()];
-        //auto* PDP = (Memory::PageTable*)((u64)PDE.address() << 12);
-        //PDE = PDP->entries[indexer.page_directory()];
-        //auto* PD = (Memory::PageTable*)((u64)PDE.address() << 12);
-        //PDE = PD->entries[indexer.page_table()];
-        //auto* PT = (Memory::PageTable*)((u64)PDE.address() << 12);
-        //PDE = PT->entries[indexer.page()];
-        //std::print("PHYS {:#016x} at VIRT {:#016x} == EXPECTING {:#016x}\n", PDE.address() << 12, testVaddr, expectedPaddr);
+        Memory::map_pages(newPageTable, newMemory.vaddr, newMemory.paddr
+                          , (u64)Memory::PageTableFlag::Present
+                          | (u64)Memory::PageTableFlag::ReadWrite
+                          | (u64)Memory::PageTableFlag::UserSuper
+                          , newMemory.pages
+                          , Memory::ShowDebug::No
+                          );
 
         // Add new memory region to new process.
         newProcess->add_memory_region(newMemory);
@@ -387,7 +391,7 @@ pid_t CopyUserspaceProcess(Process* original) {
     // Set child return value for `fork()`.
     newProcess->CPU.RAX = 0;
 
-    return Scheduler::add_process(newProcess);
+    return newProcess->ProcessID;
 }
 
 void Scheduler::map_pages_in_all_processes(void* virtualAddress, void* physicalAddress, u64 mappingFlags, usz pages, Memory::ShowDebug d) {
