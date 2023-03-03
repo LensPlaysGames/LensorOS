@@ -335,7 +335,7 @@ pid_t CopyUserspaceProcess(Process* original) {
     newProcess->State = Process::ProcessState::SLEEPING;
     Scheduler::add_process(newProcess);
 
-    std::print("[SCHED]: Allocated new process {} at {}\n", newProcess->ProcessID, (void*)newProcess);
+    //std::print("[SCHED]: Allocated new process {} at {}\n", newProcess->ProcessID, (void*)newProcess);
 
     // Copy each memory region's contents into newly allocated memory.
     for (SinglyLinkedListNode<Memory::Region>* it = original->Memories.head(); it; it = it->next()) {
