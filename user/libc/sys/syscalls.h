@@ -39,7 +39,8 @@
 #define SYS_repfd   12
 #define SYS_pipe    13
 #define SYS_seek    14
-#define SYS_MAXSYSCALL 14
+#define SYS_pwd     15
+#define SYS_MAXSYSCALL 15
 #else
 #define SYS_read  0
 #define SYS_write 1

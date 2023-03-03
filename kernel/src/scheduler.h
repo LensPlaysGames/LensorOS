@@ -88,10 +88,20 @@ struct Process {
     /// exits, if no other process has it open.
     std::sparse_vector<SysFD, -1, ProcFD> FileDescriptors;
 
-    Memory::PageTable* CR3 { nullptr };
+    std::string ExecutablePath { "" };
+    std::string WorkingDirectory { "" };
+
+
+    // TODO: x86_64 specific things should be somehow platform specific.
+    // We may want to have a Process with virtual methods and then just
+    // leave it to each platform to implement it, but that may just be
+    // a level of abstraction that's not needed, and a simpler solution
+    // would be more ideal.
 
     /// Used to save/restore CPU state when a context switch occurs.
     CPUState CPU;
+    Memory::PageTable* CR3 { nullptr };
+
 
     Process() = default;
 

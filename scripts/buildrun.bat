@@ -21,6 +21,12 @@ cmake --build user/stdout/winja --clean-first -- -j %PROC%
 if %errorlevel% neq 0 exit /b %errorlevel%
 xcopy /y user\stdout\winja\stdout user\stdout\stdout
 if %errorlevel% neq 0 exit /b %errorlevel%
+cmake -G Ninja -S user/pwd -B user/pwd/winja
+if %errorlevel% neq 0 exit /b %errorlevel%
+cmake --build user/pwd/winja --clean-first -- -j %PROC%
+if %errorlevel% neq 0 exit /b %errorlevel%
+xcopy /y user\pwd\winja\pwd user\pwd\pwd
+if %errorlevel% neq 0 exit /b %errorlevel%
 :: KERNEL
 cmake -G Ninja -S kernel -B kernel/winja -DHIDE_UART_COLOR_CODES=OFF
 if %errorlevel% neq 0 exit /b %errorlevel%

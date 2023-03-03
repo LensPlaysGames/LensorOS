@@ -328,7 +328,12 @@ namespace ELF {
         return LoadUserspaceElf64Process(process, process->CR3, fd, elfHeader, args);
     }
 
-    inline bool CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::string_view>& args = {}) {
+/// @param args  Should NEVER be empty, as argv[0] should ALWAYS contain executable invocation (filepath).
+    inline bool CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::string_view>& args) {
+        if (!args.size()) {
+            std::print("Can not invoke process with zero arguments: at least invocation (argv[0]) is required\n");
+            return false;
+        }
         VFS& vfs = SYSTEM->virtual_filesystem();
         DBGMSG("Attempting to add userspace process from file descriptor {}\n", fd);
         Elf64_Ehdr elfHeader;
@@ -355,7 +360,9 @@ namespace ELF {
                     );
 
         auto* process = new Process{};
-        LoadUserspaceElf64Process(process, newPageTable, fd, elfHeader, args);
+        if (!LoadUserspaceElf64Process(process, newPageTable, fd, elfHeader, args))
+            return false;
+
         // Open stdin.
         vfs.add_file(vfs.StdinDriver->open("stdin"), process);
         // Open stdout and stderr
@@ -364,15 +371,21 @@ namespace ELF {
         vfs.add_file(std::move(outmeta), process);
         vfs.print_debug();
 
+#ifdef DEBUG_ELF
         std::print("[ELF] ProcFds:\n");
         u64 n = 0;
         for (const auto& entry : process->FileDescriptors) {
             std::print("  {} -> {}\n", n, entry);
             n++;
         }
+#endif
 
         // New page map.
         process->CR3 = newPageTable;
+
+        process->ExecutablePath = args[0];
+        process->WorkingDirectory =
+            process->ExecutablePath.substr(0, process->ExecutablePath.find_last_of("/"));
 
         // Make scheduler aware that this process may be run.
         Scheduler::add_process(process);

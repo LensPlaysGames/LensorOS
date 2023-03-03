@@ -264,7 +264,7 @@ void sys$11_exec(const char *path) {
         std::print("[EXEC]: Can not execute NULL path\n");
         return;
     }
-    DBGMSG("  path: {}\n\n", (const char*) path);
+    DBGMSG("  path: {}\n\n", path);
     Process* process = Scheduler::CurrentProcess->value();
 
     // Load executable at path with virtual filesystem.
@@ -273,6 +273,9 @@ void sys$11_exec(const char *path) {
         std::print("[EXEC]: Could not load file when path == {}\n", path);
         return;
     }
+
+    process->ExecutablePath = path;
+    process->WorkingDirectory = process->ExecutablePath.substr(0, process->ExecutablePath.find_last_of("/"));
 
     // Replace current process with new process.
     // TODO: Arguments
@@ -384,6 +387,28 @@ int sys$14_seek(ProcessFileDescriptor fd, ssz offset, int whence) {
     return 1;
 }
 
+/// Write as much of the current working directory to the given buffer
+/// while not exceeding numBytes (including null terminator)
+/// Return true iff entire PWD was written.
+bool sys$15_pwd(char *buffer, usz numBytes) {
+    DBGMSG(sys$_dbgfmt, 15, "pwd");
+    std::print("[SYS$]:pwd(): buffer={}, numBytes={}\n", (void*)buffer, numBytes);
+
+    if (!buffer || !numBytes)
+        return false;
+
+    Process *process = Scheduler::CurrentProcess->value();
+    bool entire = numBytes > process->WorkingDirectory.size();
+
+    std::print("  PID:{} pwd: \"{}\"\n", process->ProcessID, process->WorkingDirectory);
+
+    usz byteCount = entire ? process->WorkingDirectory.size() + 1 : numBytes;
+    memcpy(buffer, process->WorkingDirectory.data(), byteCount);
+    buffer[byteCount - 1] = '\0';
+
+    return entire;
+}
+
 u64 num_syscalls = LENSOR_OS_NUM_SYSCALLS;
 void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     // FILE STUFFS
@@ -412,4 +437,6 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
 
     // MORE FILE STUFFS
     (void*)sys$14_seek,
+
+    (void*)sys$15_pwd,
 };

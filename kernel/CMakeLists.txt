@@ -250,10 +250,12 @@ if( DD_PROGRAM AND MTOOLS_PROGRAM )
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${IMAGE_DIR}/dfltfont.psf ::/res/fonts/psf1
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/blazeit/blazeit ::/bin
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/stdout/stdout ::/bin
+    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/pwd/pwd ::/bin
     #TODO get rid of following lines once directory traversal works in FAT driver...
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${IMAGE_DIR}/dfltfont.psf ::
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/stdout/stdout ::
     COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/blazeit/blazeit ::
+    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/pwd/pwd ::
 
     COMMENT "Generating UEFI-compatible FAT32 boot media"
     DEPENDS

@@ -75,8 +75,10 @@ echo -e "\n\n -> Directories initialized\n\n"
 run mcopy -i $BuildDirectory/LensorOSData.img $BuildDirectory/dfltfont.psf ::/res/fonts/psf1
 run mcopy -i $BuildDirectory/LensorOSData.img $RepositoryDirectory/user/blazeit/blazeit ::/bin
 run mcopy -i $BuildDirectory/LensorOSData.img $RepositoryDirectory/user/stdout/stdout ::/bin
+run mcopy -i $BuildDirectory/LensorOSData.img $RepositoryDirectory/user/pwd/pwd ::/bin
 # TODO get rid of following lines once directory traversal works in FAT driver...
 run mcopy -i $BuildDirectory/LensorOSData.img $BuildDirectory/dfltfont.psf ::
 run mcopy -i $BuildDirectory/LensorOSData.img $RepositoryDirectory/user/stdout/stdout ::
 run mcopy -i $BuildDirectory/LensorOSData.img $RepositoryDirectory/user/blazeit/blazeit ::
+run mcopy -i $BuildDirectory/LensorOSData.img $RepositoryDirectory/user/pwd/pwd ::
 echo -e "\n\n -> Resources copied\n\n"

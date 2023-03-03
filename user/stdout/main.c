@@ -17,6 +17,7 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -439,6 +440,15 @@ int main(int argc, const char **argv) {
 
     if (strcmp(command, "blazeit") == 0) {
       run_program_waitpid("/fs0/blazeit");
+      continue;
+    }
+    if (strcmp(command, "pwd") == 0) {
+      run_program_waitpid("/fs0/pwd");
+      continue;
+    }
+    if (strcmp(command, "poke") == 0) {
+      syscall(SYS_poke);
+      command_status = 0;
       continue;
     }
     if (strcmp(command, "quit") == 0) {
