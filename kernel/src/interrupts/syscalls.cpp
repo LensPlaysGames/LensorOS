@@ -105,6 +105,7 @@ void sys$5_exit(int status) {
         std::print("[EXIT]: Failure to remove process\n");
     }
     DBGMSG("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
+    Scheduler::yield();
 }
 
 void* sys$6_map(void* address, usz size, u64 flags) {
@@ -239,13 +240,14 @@ pid_t sys$10_fork() {
                   : "=r"(cpu)
                   );
     DBGMSG(sys$_dbgfmt, 10, "fork");
+    Process *process = Scheduler::CurrentProcess->value();
     // Use userspace stack pointer instead of kernel stack pointer
     cpu->RSP = cpu->Frame.sp;
     // Save cpu state into process cache so that it will be set
     // properly for the forked process.
-    memcpy(&Scheduler::CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
+    memcpy(&process->CPU, cpu, sizeof(CPUState));
     // Copy current process.
-    pid_t cpid = CopyUserspaceProcess(Scheduler::CurrentProcess->value());
+    pid_t cpid = CopyUserspaceProcess(process);
     DBGMSG("  CPID: {}\n", cpid);
     return cpid;
 }
