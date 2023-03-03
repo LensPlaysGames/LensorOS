@@ -59,7 +59,7 @@ public:
     /// =======================================================================
     ///  Constructors.
     /// =======================================================================
-    /// Contstruct an empty vector.
+    /// Construct an empty vector.
     __vector() noexcept = default;
 
     /// Construct a __vector with a given size.
