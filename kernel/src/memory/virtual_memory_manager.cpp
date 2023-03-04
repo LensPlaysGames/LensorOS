@@ -296,7 +296,7 @@ namespace Memory {
         }
         PageDirectoryEntry PDE;
         for (u64 i = 0; i < 512; ++i) {
-            std::print("  PDP {}\n", i);
+            //std::print("  PDP {}\n", i);
             PDE = pageTable->entries[i];
             if (!PDE.flag(PageTableFlag::Present))
                 continue;
@@ -306,9 +306,9 @@ namespace Memory {
             if ((usz)PDP == 0x000ffffffffff000 || (usz)PDP > Memory::total_ram() || (usz)PDP % PAGE_SIZE != 0)
                 continue;
 
-            std::print("  PDP {} present at {}\n", i, (void*)PDP);
+            //std::print("  PDP {} present at {}\n", i, (void*)PDP);
             for (u64 j = 0; j < 512; ++j) {
-                std::print("  PD {}\n", j);
+                //std::print("  PD {}\n", j);
                 PDE = PDP->entries[j];
                 if (!PDE.flag(PageTableFlag::Present))
                     continue;
@@ -317,9 +317,9 @@ namespace Memory {
                 if ((usz)PD == 0x000ffffffffff000 || (usz)PD > Memory::total_ram() || (usz)PD % PAGE_SIZE != 0)
                     continue;
 
-                std::print("  PD {} present at {}\n", j, (void*)PD);
+                //std::print("  PD {} present at {}\n", j, (void*)PD);
                 for (u64 k = 0; k < 512; ++k) {
-                    std::print("  PT {}\n", k);
+                    //std::print("  PT {}\n", k);
                     PDE = PD->entries[k];
                     if (!PDE.flag(PageTableFlag::Present))
                         continue;
@@ -328,7 +328,7 @@ namespace Memory {
                     if ((usz)PT == 0x000ffffffffff000 || (usz)PT > Memory::total_ram() || (usz)PT % PAGE_SIZE != 0)
                         continue;
 
-                    std::print("  PT {} present at {}\n", k, (void*)PT);
+                    //std::print("  PT {} present at {}\n", k, (void*)PT);
                     free_page(PT);
                 }
                 free_page(PD);

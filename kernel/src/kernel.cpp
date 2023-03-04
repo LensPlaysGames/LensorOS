@@ -79,7 +79,7 @@ extern "C" void kmain(BootInfo* bInfo) {
 
     for (;;) {
         for (Memory::PageTable* table : Scheduler::PageMapsToFree) {
-            std::print("Freeing page table at {}\n", (void*)table);
+            //std::print("Freeing page table at {}\n", (void*)table);
             Memory::free_page_map(table);
         }
         Scheduler::PageMapsToFree.clear();
