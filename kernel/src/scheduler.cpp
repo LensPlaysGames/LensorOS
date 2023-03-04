@@ -17,17 +17,18 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <format>
+#include <scheduler.h>
 
+#include <format>
 #include <integers.h>
 #include <interrupts/idt.h>
 #include <interrupts/interrupts.h>
 #include <linked_list.h>
 #include <memory.h>
 #include <memory/paging.h>
+#include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 #include <pit.h>
-#include <scheduler.h>
 #include <vfs_forward.h>
 #include <system.h>
 
@@ -59,7 +60,7 @@ void Process::destroy(int status) {
             waitingProcess->State = Process::ProcessState::RUNNING;
         }
     }
-    // Free memory regions. This includes libc heap-allocated memory as
+    // Free memory regions. This includes mmap()ed memory as
     // well as loaded program regions, the stack, etc.
     Memories.for_each([](SinglyLinkedListNode<Memory::Region>* it){
         Memory::free_pages(it->value().paddr, it->value().pages);
@@ -73,8 +74,8 @@ void Process::destroy(int status) {
         SYSTEM->virtual_filesystem().close(this, procfd);
     }
 
-    // TODO: Free page table? May want to wait until another process
-    // can do it, just in case we are still in this process.
+    // FIXME: Abstract x86_64 specific stuff!!
+    Scheduler::PageMapsToFree.push_back(CR3);
 }
 
 namespace Scheduler {
@@ -88,6 +89,7 @@ namespace Scheduler {
 
     SinglyLinkedList<Process*>* ProcessQueue { nullptr };
     SinglyLinkedListNode<Process*>* CurrentProcess { nullptr };
+    std::vector<Memory::PageTable*> PageMapsToFree;
 
     void print_debug() {
         std::print("[SCHED]: Debug information:\n"
@@ -185,6 +187,8 @@ namespace Scheduler {
         }
         if (processToRemove) {
             ProcessQueue->remove(processToRemoveIndex);
+            // Ensure scheduler doesn't **somehow** run this process after it's destroyed.
+            processToRemove->State = Process::SLEEPING;
             processToRemove->destroy(status);
             return true;
         }

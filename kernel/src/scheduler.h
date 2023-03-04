@@ -147,6 +147,8 @@ namespace Scheduler {
     // The list node of the currently executing process.
     extern SinglyLinkedListNode<Process*>* CurrentProcess;
 
+    extern std::vector<Memory::PageTable*> PageMapsToFree;
+
     bool initialize();
 
     /// Get a process ID number that is unique.
@@ -169,10 +171,17 @@ namespace Scheduler {
 
     Process* last_process();
 
-    /// remove the process with PID list of processes.
+    /// Remove the process with PID from the scheduler's list of viable
+    /// processes to switch to. If not found, do nothing. Destroy the process.
+    /// NOTE: If passing pid of current process, be careful to stay in
+    /// kernel until calling yield. DO NOT try to return to a destroyed
+    /// process.
+    ///
     /// @param status
     ///     Used for relaying status to processes
     ///     waiting on this process (i.e. via `waitpid`)
+    ///
+    /// @return true iff process with given PID is found, removed, and destroyed.
     bool remove_process(pid_t, int status);
 
     void print_debug();
