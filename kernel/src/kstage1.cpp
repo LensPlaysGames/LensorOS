@@ -586,6 +586,7 @@ void kstage1(BootInfo* bInfo) {
             std::print("FileDescriptor {} closed\n", fds.Process);
             vfs.print_debug();
         }
+
         // Another userspace program
         constexpr const char *const programTwoFilePath = "/fs0/stdout";
 

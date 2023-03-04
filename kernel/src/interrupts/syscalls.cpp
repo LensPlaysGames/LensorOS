@@ -275,7 +275,6 @@ void sys$11_exec(const char *path) {
     }
 
     process->ExecutablePath = path;
-    process->WorkingDirectory = process->ExecutablePath.substr(0, process->ExecutablePath.find_last_of("/"));
 
     // Replace current process with new process.
     // TODO: Arguments
@@ -284,7 +283,7 @@ void sys$11_exec(const char *path) {
         // TODO: ... Unrecoverable, terminate the program, somehow.
         std::print("[EXEC]: Failed to replace process and parent is now unrecoverable, terminating.\n");
         // TODO: Mark for destruction (halt and catch fire).
-        Scheduler::CurrentProcess->value()->State = Process::ProcessState::SLEEPING;
+        process->State = Process::ProcessState::SLEEPING;
         Scheduler::yield();
     }
 

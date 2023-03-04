@@ -388,6 +388,10 @@ pid_t CopyUserspaceProcess(Process* original) {
         SYSTEM->virtual_filesystem().add_file(std::move(f), newProcess);
     }
 
+    // Copy PWD
+    newProcess->ExecutablePath = original->ExecutablePath;
+    newProcess->WorkingDirectory = original->WorkingDirectory;
+
     newProcess->State = Process::ProcessState::RUNNING;
     newProcess->CR3 = newPageTable;
     newProcess->CPU = original->CPU;
