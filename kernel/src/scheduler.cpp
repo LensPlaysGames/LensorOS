@@ -341,10 +341,10 @@ pid_t CopyUserspaceProcess(Process* original) {
     for (SinglyLinkedListNode<Memory::Region>* it = original->Memories.head(); it; it = it->next()) {
         Memory::Region& memory = it->value();
         Memory::Region newMemory{memory};
-        u64 newMemoryPages = u64(Memory::request_pages(memory.pages));
+        usz newMemoryPages = usz(Memory::request_pages(memory.pages));
         if (!newMemoryPages) {
             // Out of memory.
-            panic("OOM");
+            panic("OOM while copying process' regions...");
             while (true) {
                 asm volatile ("hlt");
             }

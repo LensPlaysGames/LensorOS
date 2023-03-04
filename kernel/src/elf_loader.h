@@ -211,8 +211,7 @@ namespace ELF {
             return false;
         }
         u64 stack_top_address = newStackBottom + UserProcessStackSize;
-        for (u64 t = newStackBottom; t < stack_top_address; t += PAGE_SIZE)
-            Memory::map(pageTable, (void*)t, (void*)t, stack_flags);
+        Memory::map_pages(pageTable, (void*)newStackBottom, (void*)newStackBottom, stack_flags, UserProcessStackSizePages, Memory::ShowDebug::No);
 
         // Keep track of stack, as it is a memory region that remains
         // for the duration of the process, and should only be freed
@@ -223,6 +222,8 @@ namespace ELF {
                                    stack_flags);
 
         // TODO: Max argument length?
+
+        // TODO: envp
 
         // Copy arguments contents to the stack, keeping track of addresses.
         std::vector<u64> argv_addresses;
