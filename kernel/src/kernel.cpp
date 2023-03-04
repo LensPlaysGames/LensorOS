@@ -28,9 +28,11 @@
 #include <kstage1.h>
 #include <math.h>
 #include <memory/common.h>
+#include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <pit.h>
 #include <rtc.h>
+#include <scheduler.h>
 
 void print_memory_info(Vector2<u64>& position) {
     u32 startOffset = position.x;
@@ -75,7 +77,13 @@ extern "C" void kmain(BootInfo* bInfo) {
     gPIT.wait();                                           // Rest
     gPIT.play_sound(392, MACCYS_STEP_LENGTH_MILLISECONDS); // G4
 
-    for (;;) {}
+    for (;;) {
+        for (Memory::PageTable* table : Scheduler::PageMapsToFree) {
+            std::print("Freeing page table at {}\n", (void*)table);
+            Memory::free_page_map(table);
+        }
+        Scheduler::PageMapsToFree.clear();
+    }
 
     // HALT LOOP (KERNEL INACTIVE).
     for (;;) asm volatile ("hlt");

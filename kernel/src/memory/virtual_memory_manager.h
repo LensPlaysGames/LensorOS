@@ -102,6 +102,11 @@ namespace Memory {
      */
     Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable);
 
+    /* Free the physical memory used to describe the given page table.
+     * DO NOT try to free the currently active page map!
+     */
+    void free_page_map(PageTable* pageTable);
+
     /* Return the base address of an exact copy of the currently active page map.
      * NOTE: Does not map itself, or unmap physical identity mapping.
      */
