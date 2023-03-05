@@ -52,12 +52,36 @@ typedef intptr_t ssz;
 #ifndef MAX_OUTPUT_LENGTH
 # define MAX_OUTPUT_LENGTH 4096
 #endif
+#ifndef MAX_OUTPUT_LINES
+# define MAX_OUTPUT_LINES 10
+#endif
 
 static char command[MAX_COMMAND_LENGTH];
 static char command_output[MAX_OUTPUT_LENGTH];
 static usz command_output_it = 0;
-// NOTE: struct with status integer and cached status string
+static usz command_output_line_count = 0;
 static int command_status = 0;
+
+void write_command_output(char c) {
+  command_output[command_output_it++] = c;
+  if (c == '\n') ++command_output_line_count;
+  if (command_output_line_count > MAX_OUTPUT_LINES ||
+      command_output_it >= MAX_OUTPUT_LENGTH - 1) {
+    // TODO: Make this either a define or configurable at runtime, or something.
+    const size_t scroll_amount = 1;
+    size_t skip_bytes = 0;
+    size_t lines_scrolled = 0;
+    for (; lines_scrolled < scroll_amount; ++lines_scrolled) {
+      size_t next_newline = strcspn(command_output, "\n") + 1;
+      if (skip_bytes + next_newline >= MAX_OUTPUT_LENGTH) break;
+      skip_bytes += next_newline;
+    }
+    memmove(command_output, command_output + skip_bytes, MAX_OUTPUT_LENGTH - skip_bytes);
+    command_output[MAX_OUTPUT_LENGTH - 1 - skip_bytes] = 0;
+    command_output_it -= skip_bytes;
+    command_output_line_count -= lines_scrolled;
+  }
+}
 
 #define ESCAPE     0x01
 #define BACKSPACE  0x0e
@@ -215,12 +239,23 @@ static void draw_psf1_crlf(const Framebuffer fb, const PSF1_FONT font, size_t *x
   draw_psf1_lf(fb, font, y);
 }
 
+void draw_psf1_string_view(Framebuffer fb, const PSF1_FONT font, size_t *x, size_t *y, const char *str, size_t length) {
+  char c;
+  while ((c = *str++) && length--) {
+    if (c == '\n') draw_psf1_crlf(fb, font, x, y);
+    else if (c == '\r') *x = 0;
+    else if (c == '\b') *x -= psf1_width(font);
+    else {
+      draw_psf1_char(fb, font, *x, *y, c);
+      *x += psf1_width(font);
+    }
+  }
+}
+
 void draw_psf1_string(Framebuffer fb, const PSF1_FONT font, size_t *x, size_t *y, const char *str) {
   char c;
   while ((c = *str++)) {
-    if (c == '\n') {
-      draw_psf1_crlf(fb, font, x, y);
-    }
+    if (c == '\n') draw_psf1_crlf(fb, font, x, y);
     else if (c == '\r') *x = 0;
     else if (c == '\b') *x -= psf1_width(font);
     else {
@@ -238,20 +273,17 @@ void draw_psf1_int(Framebuffer fb, const PSF1_FONT font, size_t *x, size_t *y, i
 
 static const size_t prompt_start_x = 0;
 static const size_t prompt_start_y = 0;
-static const char *const prompt = "  $:";
+static const char prompt[] = "  $:";
 void draw_prompt(Framebuffer fb, const PSF1_FONT font) {
   size_t x = prompt_start_x;
   size_t y = prompt_start_y;
-
+  draw_psf1_string_view(fb, font, &x, &y, command_output, command_output_it);
   draw_psf1_int(fb, font, &x, &y, command_status);
   draw_psf1_string(fb, font, &x, &y, prompt);
   draw_psf1_string(fb, font, &x, &y, command);
-  draw_psf1_string(fb, font, &x, &y, "\n");
-  draw_psf1_string(fb, font, &x, &y, command_output);
 }
 
 void print_command_line() {
-  printf("%s", command_output);
   printf("\033[2K" //> Erase entire line
          "\033[1G" //> Move cursor to first column
          "%d%s%s",
@@ -288,9 +320,9 @@ void run_program_waitpid(const char *const filepath) {
     }
 
     char c;
-    while (read(fds[0], &c, 1) == 1 && c) {
-      command_output[command_output_it++] = c;
-    }
+    while (read(fds[0], &c, 1) == 1 && c)
+      write_command_output(c);
+
     close(fds[0]);
 
     //puts("Parent waited");
@@ -321,7 +353,7 @@ int main(int argc, const char **argv) {
   */
 
   Framebuffer fb;
-  fb.base_address        = (void *)hexstring_to_number(argv[1]);
+  fb.base_address = (void*)hexstring_to_number(argv[1]);
   fb.buffer_size         = hexstring_to_number(argv[2]);
   fb.pixel_width         = hexstring_to_number(argv[3]);
   fb.pixel_height        = hexstring_to_number(argv[4]);
@@ -386,21 +418,28 @@ int main(int argc, const char **argv) {
   // |-- Insert/Delete byte at cursor
   // `-- GUI layout: place prompt always at bottom of screen, clear before redraw, etc.
 
+  size_t last_command_output_it = command_output_it;
+
   for (;;) {
     memset(command, 0, MAX_COMMAND_LENGTH);
-    fputc('\n', stdout);
     fill_color(fb, black);
+
+    if (command_output_it < last_command_output_it)
+      last_command_output_it = command_output_it;
+    printf("%s", command_output + last_command_output_it);
+    last_command_output_it = command_output_it;
+
+    //for (size_t i = 0; i < sizeof(prompt); ++i)
+    //  write_command_output(prompt[i]);
+
     print_command_line();
     draw_prompt(fb, font);
 
-    memset(command_output, 0, MAX_OUTPUT_LENGTH);
-    command_output_it = 0;
 
     // Get line from standard input.
     int c;
     int offset = 0;
     while ((c = getchar()) != '\n') {
-
       if (c == EOF) {
         // TODO: Wait/waste some time so we don't choke the system just
         // spinning.
@@ -420,9 +459,9 @@ int main(int argc, const char **argv) {
         continue;
       }
       if (offset >= MAX_COMMAND_LENGTH) {
-        puts("Reached max command length, discarding command.\n");
+        puts("\nReached max command length, discarding command.\n");
         offset = 0;
-        command[offset] = '\0';
+        command[0] = '\0';
         print_command_line();
         draw_prompt(fb, font);
         continue;
@@ -458,10 +497,12 @@ int main(int argc, const char **argv) {
     }
 
     command_status = 0;
-    const char unrecognized_str[] =
+    const char *const unrecognized_str =
       "Unrecognized command, sorry!\n"
       "  Try `blazeit` or `quit`\n";
     memcpy(command_output, unrecognized_str, sizeof(unrecognized_str));
+    for (const char* c = unrecognized_str; *c; ++c)
+      write_command_output(*c);
     continue;
   }
 

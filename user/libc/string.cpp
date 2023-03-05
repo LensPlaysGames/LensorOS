@@ -21,7 +21,7 @@
 #include "string.h"
 
 #include "errno.h"
-
+#include "bits/stub.h"
 
 // TODO: Set this at runtime initialization based on cpuid bits or some
 // other way of accessing the kernel CPU data.
@@ -92,6 +92,7 @@ int strcmp(const char* s1, const char* s2) {
 
 int strcoll(const char* s1, const char* s2) {
     // TODO: Implement me!
+    _LIBC_STUB();
     return 1;
 }
 
@@ -109,6 +110,7 @@ int strncmp(const char* s1, const char* s2, size_t n) {
 
 size_t strxfrm(char* dst, const char* src, size_t n) {
     // TODO: Implement me!
+    _LIBC_STUB();
     return 1;
 }
 
@@ -200,8 +202,7 @@ int strstr_compare(const char* s1, const char* s2) {
 }
 
 char* strstr(const char* haystack, const char* needle) {
-    while (*haystack != '\0')
-    {
+    while (*haystack != '\0') {
         if ((*haystack == *needle) && strstr_compare(haystack, needle))
             return (char*)haystack;
         haystack++;
