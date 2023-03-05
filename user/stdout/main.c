@@ -53,7 +53,7 @@ typedef intptr_t ssz;
 # define MAX_OUTPUT_LENGTH 4096
 #endif
 #ifndef MAX_OUTPUT_LINES
-# define MAX_OUTPUT_LINES 10
+# define MAX_OUTPUT_LINES 2
 #endif
 
 static char command[MAX_COMMAND_LENGTH];

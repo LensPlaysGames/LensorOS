@@ -20,6 +20,9 @@
 
 #include "unistd.h"
 
+#include "errno.h"
+#include "stddef.h"
+#include "stdlib.h"
 #include "sys/syscalls.h"
 
 extern "C" {
@@ -43,5 +46,52 @@ extern "C" {
     ssize_t write(int fd, const void* buffer, size_t count) {
         /// TODO: check return value and set errno.
         return syscall<ssize_t>(SYS_write, fd, buffer, count);
+    }
+
+    char *getcwd(char *buf, size_t size) {
+        if (!size) {
+            errno = EINVAL;
+            return NULL;
+        }
+        if (!buf) return buf;
+        buf[0] = '\0';
+        // On failure, return NULL, and errno is set to indicate the
+        // error. The contents of the array pointed to by buf are
+        // undefined on error.
+        if (!syscall(SYS_pwd, buf, size)) {
+            // ERANGE
+            //   The size argument is less than the length of the
+            //   absolute pathname of the working directory, including the
+            //   terminating null byte.  You need to allocate a bigger
+            //   array and try again.
+            errno = ERANGE;
+            return NULL;
+        }
+        return buf;
+    }
+
+    char *get_current_dir_name() {
+        size_t length = 128;
+        char* buf = (char*)malloc(128);
+        if (!buf) {
+            errno = ENOMEM;
+            return NULL;
+        }
+        buf[0] = '\0';
+        while (!syscall(SYS_pwd, buf, length)) {
+            length *= 2;
+            if (length >= 4096) {
+                free(buf);
+                errno = ERANGE;
+                return NULL;
+            }
+            char* new_buf = (char*)realloc(buf, length);
+            if (!new_buf) {
+                free(buf);
+                errno = ENOMEM;
+                return NULL;
+            }
+        }
+        return buf;
     }
 }
