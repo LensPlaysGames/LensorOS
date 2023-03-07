@@ -77,58 +77,14 @@ cmake_path(
 )
 
 # Boot media generation: raw FAT32 images.
-# TODO: Can also use truncate in place of mtools
-find_program( DD_PROGRAM dd )
-find_program( MTOOLS_PROGRAM mtools )
-if( DD_PROGRAM AND MTOOLS_PROGRAM )
-  message(
-    VERBOSE
-    "Found dd and mtools, creating target: image_raw"
-  )
-  add_custom_target(
-    image_raw
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${IMAGE_DIR}
-    COMMAND ${DD_PROGRAM} if=/dev/zero of=${IMAGE_DIR}/LensorOS.img count=93750
-    COMMAND mformat -i ${IMAGE_DIR}/LensorOS.img -F -v "EFI System" ::
-    COMMAND mmd -i ${IMAGE_DIR}/LensorOS.img ::/EFI
-    COMMAND mmd -i ${IMAGE_DIR}/LensorOS.img ::/EFI/BOOT
-    COMMAND mmd -i ${IMAGE_DIR}/LensorOS.img ::/LensorOS
-    COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${REPO_DIR}/gnu-efi/x86_64/bootloader/main.efi ::/EFI/BOOT
-    COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${SCRIPTS_DIR}/startup.nsh ::
-    COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${REPO_DIR}/user/blazeit/blazeit ::
-    COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${REPO_DIR}/user/stdout/stdout ::
-    COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${IMAGE_DIR}/kernel.elf ::/LensorOS
-    COMMAND mcopy -i ${IMAGE_DIR}/LensorOS.img ${IMAGE_DIR}/dfltfont.psf ::/LensorOS
-
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${IMAGE_DIR}
-    COMMAND ${DD_PROGRAM} if=/dev/zero of=${IMAGE_DIR}/LensorOSData.img count=93750
-    COMMAND mformat -i ${IMAGE_DIR}/LensorOSData.img -F -v "LensorOS" ::
-    COMMAND mmd -i ${IMAGE_DIR}/LensorOSData.img ::/bin
-    COMMAND mmd -i ${IMAGE_DIR}/LensorOSData.img ::/res
-    COMMAND mmd -i ${IMAGE_DIR}/LensorOSData.img ::/res/fonts
-    COMMAND mmd -i ${IMAGE_DIR}/LensorOSData.img ::/res/fonts/psf1
-    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${IMAGE_DIR}/dfltfont.psf ::/res/fonts/psf1
-    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/blazeit/blazeit ::/bin
-    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/stdout/stdout ::/bin
-    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/pwd/pwd ::/bin
-    #TODO get rid of following lines once directory traversal works in FAT driver...
-    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${IMAGE_DIR}/dfltfont.psf ::
-    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/stdout/stdout ::
-    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/blazeit/blazeit ::
-    COMMAND mcopy -i ${IMAGE_DIR}/LensorOSData.img ${REPO_DIR}/user/pwd/pwd ::
-
-    COMMENT "Generating UEFI-compatible FAT32 boot media"
-    DEPENDS
-    ${REPO_DIR}/gnu-efi/x86_64/bootloader/main.efi
-    ${SCRIPTS_DIR}/startup.nsh
-    USES_TERMINAL
-    VERBATIM
-  )
-  # Image generation relies on kernel.elf
-  add_dependencies( image_raw kernel-userspace )
-else()
-  message(NOTICE "[31;5mWARN: MISSING PROGRAM!  Could not find `dd` and `mtools`, image_raw target has not been generated. See dependencies in README.[m")
-endif()
+add_custom_target(
+  image_raw
+  COMMAND ${CMAKE_COMMAND} -P ${SCRIPTS_DIR}/mkfat32images.cmake
+  USES_TERMINAL
+  VERBATIM
+)
+# Image generation relies on kernel *and* userspace
+add_dependencies( image_raw kernel-userspace )
 
 # Boot media generation: GPT partitioned hard drive.
 find_program( CREATEGPT_PROGRAM createGPT )
@@ -138,7 +94,7 @@ if( CREATEGPT_PROGRAM )
     "Found createGPT, creating target: image_gpt"
   )
   add_custom_target(
-    image_gpt
+    image_gpt ALL
     COMMAND
     ${CREATEGPT_PROGRAM}
     -o ${IMAGE_DIR}/LensorOS.bin
