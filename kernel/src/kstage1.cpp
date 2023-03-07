@@ -464,7 +464,7 @@ void kstage1(BootInfo* bInfo) {
                                "        Sector Offset: {}\n"
                                "        Sector Count: {}\n"
                                "        Attributes: {}\n",
-                               i, __s(part->Name),
+                               i, std::string_view((const char *)part->Name, sizeof(GPT::PartitionEntry) - 0x38),
                                GUID(part->TypeGUID),
                                GUID(part->UniqueGUID),
                                u64(part->StartLBA),

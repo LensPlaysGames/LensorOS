@@ -99,7 +99,7 @@ if( CREATEGPT_PROGRAM )
     ${CREATEGPT_PROGRAM}
     -o ${IMAGE_DIR}/LensorOS.bin
     -p ${IMAGE_DIR}/LensorOS.img --type system
-    -p ${IMAGE_DIR}/LensorOSData.img --type 00000000-0000-0000-0000-000000000069
+    -p ${IMAGE_DIR}/LensorOSData.img --type 00000000-0000-0000-0000-000000000069 --name LensorOSData
     DEPENDS
     image_raw
     COMMENT "Generating GUID Partion Table with EFI System partion using `createGPT`"
@@ -184,8 +184,8 @@ if ( QEMU_PROGRAM )
     -cpu qemu64
     # Multiple processors (commented until utilized).
     #-smp 8,sockets=2,cores=2,threads=2,maxcpus=8
-    # One hundred megabytes of RAM.
-    -m 100M
+    # One hundred and twenty eight megabytes of RAM.
+    -m 128M
     # Use local time as real time clock base.
     -rtc base=localtime,clock=host,driftfix=none
     # No networking drivers yet.
