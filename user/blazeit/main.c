@@ -17,6 +17,8 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
+
 int main(void) {
   puts("  >== blaze it, mafk ==>");
   return 420;

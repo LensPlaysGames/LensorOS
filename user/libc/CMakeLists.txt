@@ -27,7 +27,7 @@ set(CMAKE_CXX_STANDARD 20)
 if (NOT LENSOR_OS_LIBC_BUILD_HOST)
     message(STATUS "Cross compiling LensorOS libc")
     # Use cross compiler.
-    set( CMAKE_TOOLCHAIN_FILE "../../kernel/lensor_gnu_toolchain.cmake" )
+    set( CMAKE_TOOLCHAIN_FILE ../../toolchain/lensor_gnu_toolchain.cmake )
 else()
     message(STATUS "Building LensorOS libc on host")
 endif()
@@ -43,8 +43,8 @@ add_library(c)
 target_include_directories(
   c
   PUBLIC
-  "${PROJECT_SOURCE_DIR}"
-  "${PROJECT_SOURCE_DIR}/../../std/include"
+  "${CMAKE_CURRENT_LIST_DIR}"
+  "${CMAKE_CURRENT_LIST_DIR}/../../std/include"
 )
 
 target_sources(
@@ -112,18 +112,17 @@ if (LENSOR_OS_LIBC_BUILD_HOST)
     )
 endif()
 
-set(ROOT "${PROJECT_SOURCE_DIR}/../../root")
-set(STD "${PROJECT_SOURCE_DIR}/../../std")
+set(ROOT "${CMAKE_CURRENT_LIST_DIR}/../../root")
+set(STD "${CMAKE_CURRENT_LIST_DIR}/../../std")
 
 if (NOT LENSOR_OS_LIBC_BUILD_HOST)
   add_custom_target(
     install-libc ALL
-
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:c> "${ROOT}/lib"
-    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crt0.s.obj" "${ROOT}/lib/crt0.o"
-    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crti.s.obj" "${ROOT}/lib/crti.o"
-    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/CMakeFiles/c.dir/crtn.s.obj" "${ROOT}/lib/crtn.o"
-    COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}" -P "${PROJECT_SOURCE_DIR}/install-headers.cmake"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/c.dir/crt0.s.obj" "${ROOT}/lib/crt0.o"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/c.dir/crti.s.obj" "${ROOT}/lib/crti.o"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/c.dir/crtn.s.obj" "${ROOT}/lib/crtn.o"
+    COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=${CMAKE_CURRENT_LIST_DIR}" -P "${CMAKE_CURRENT_LIST_DIR}/install-headers.cmake"
     COMMENT "Installing LibC headers"
 
     DEPENDS c

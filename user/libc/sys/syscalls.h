@@ -58,7 +58,7 @@ __BEGIN_DECLS__
 #define __a uintptr_t
 
 /// Syscall argument registers.
-#ifdef __lensor__
+#if defined(__lensor__)
 #define _R1 "D"
 #define _R2 "S"
 #define _R3 "d"

@@ -6,6 +6,7 @@
 static char pwdbuf[PWD_MAX];
 
 int main(void) {
+  // TODO: Handle -L and -P arguments.
   pwdbuf[0] = '\0';
   if (!syscall(SYS_pwd, pwdbuf, PWD_MAX)) return 1;
   printf("%s", pwdbuf);

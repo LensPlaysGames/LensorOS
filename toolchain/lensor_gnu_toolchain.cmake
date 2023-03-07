@@ -33,7 +33,7 @@ if( NOT EXISTS "${CMAKE_SYSROOT}" )
 endif()
 
 # Set extra places to look for toolchain executables based on host OS.
-set( TOOLCHAIN_DIR "${CMAKE_CURRENT_LIST_DIR}/../toolchain" )
+set( TOOLCHAIN_DIR ${CMAKE_CURRENT_LIST_DIR} )
 if( CMAKE_HOST_WIN32 )
   set( TOOLCHAIN_HINTS ${TOOLCHAIN_DIR}/wincross/bin )
 else()
@@ -56,10 +56,12 @@ find_program(
   REQUIRED
 )
 
+# LensorOS toolchain is GCC 11.2 or greater, so we're good here.
+set( CMAKE_CXX_STANDARD 20 )
+
 # Skip compiler tests (hard to run an executable made for another OS).
 set( CMAKE_C_COMPILER_WORKS 1 )
 set( CMAKE_CXX_COMPILER_WORKS 1 )
-
 # Don't try to link during `try_compile()`, just in case.
 set( CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY )
 

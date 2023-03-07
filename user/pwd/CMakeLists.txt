@@ -24,12 +24,9 @@ set( pwd_LANGUAGES C )
 # Export compilation database in JSON format.
 set( CMAKE_EXPORT_COMPILE_COMMANDS on )
 
-# Use LensorOS GNU-based toolchain by default.
-set( CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/../../kernel/lensor_gnu_toolchain.cmake" )
-
 project( pwd VERSION ${pwd_VERSION} LANGUAGES ${pwd_LANGUAGES} )
 
-add_executable( pwd main.c)
+add_executable( pwd main.c )
 
 target_compile_options(
   pwd PUBLIC -mno-red-zone
