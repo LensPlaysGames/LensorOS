@@ -281,11 +281,7 @@ namespace Scheduler {
 
         if (SYSTEM->cpu().fxsr_enabled() && CurrentProcess->value()->CPUExtraSet) {
             // Get 512-byte aligned address.
-            size_t i = 0;
-            void* addr = &CurrentProcess->value()->CPUExtra[0];
-            while (((usz)addr + i) & (512 - 1) && i < sizeof(CurrentProcess->value()->CPUExtra)) ++i;
-            addr = (void*)((usz)addr + i);
-
+            usz i = (512 - ((usz)&CurrentProcess->value()->CPUExtra[0] % 512)) % 512;
             //std::print("Restoring FPU state using fxrstor64 at {}...\n", addr);
             asm volatile("fxrstor64 %0"
                          :: "m"(CurrentProcess->value()->CPUExtra[i])
@@ -321,11 +317,7 @@ namespace Scheduler {
         // a member in Process seems a little platform-dependant.
         if (SYSTEM->cpu().fxsr_enabled()) {
             // Get 512-byte aligned address.
-            size_t i = 0;
-            void* addr = &CurrentProcess->value()->CPUExtra[0];
-            while (((usz)addr + i) & (512 - 1) && i < sizeof(CurrentProcess->value()->CPUExtra)) ++i;
-            addr = (void*)((usz)addr + i);
-
+            usz i = (512 - ((usz)&CurrentProcess->value()->CPUExtra[0] % 512)) % 512;
             //std::print("Saving FPU state using fxsave64 at {}...\n", addr);
             asm volatile("fxsave64 %0\n\t"
                          :: "m"(CurrentProcess->value()->CPUExtra[i])
