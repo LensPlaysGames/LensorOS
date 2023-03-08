@@ -715,6 +715,7 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
                 fputc(c, stream);
             } continue;
 
+            case 'i':
             case 'd': {
                 int val = va_arg(args, int);
                 bool negative = val < 0;
@@ -727,23 +728,11 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
                 static_assert(max_digits != 0, "Can not print into zero-length buffer");
                 char digits[max_digits] = {0};
 
-                // TODO: better value -> digit conversion
-                size_t i = 0;
-                for (size_t tmp_val = negative ? -val : val; tmp_val && i < max_digits; tmp_val /= radix, ++i)
-                    digits[i] = __digit_from_value(tmp_val % radix);
+                size_t i = max_digits;
+                for (size_t tmp_val = negative ? -val : val; tmp_val && i; tmp_val /= radix, --i)
+                    digits[i - 1] = __digit_from_value(tmp_val % radix);
 
-                if (i == 0) digits[0] = '0';
-                else if (i != 1) {
-                    // Reverse digits
-                    size_t j = 0;
-                    while (j < i) {
-                        --i;
-                        char tmp = digits[i];
-                        digits[i] = digits[j];
-                        digits[j] = tmp;
-                        ++j;
-                    }
-                }
+                if (i == max_digits) digits[max_digits - 1] = '0';
 
                 if (negative) fputc('-', stream);
                 for (const char *it = &digits[0]; it < &digits[0] + max_digits && *it; ++it)
