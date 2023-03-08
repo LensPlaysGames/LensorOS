@@ -456,10 +456,7 @@ int main(int argc, const char **argv) {
           command[--offset] = '\0';
           // Echo command to standard out.
           print_command_line();
-          // Draw a space over erased character (doesn't work over newline).
-          char numstr[32] = {0};
-          sprintf(numstr, "%d", command_status);
-          draw_psf1_char(fb, font, prompt_start_x + ((strlen(numstr) + strlen(prompt) + offset) * psf1_width(font)), prompt_start_y, ' ');
+          // TODO: Draw a space over erased character (kind of complicated: have to figure out pixel position).
           draw_prompt(fb, font);
         }
         continue;
@@ -483,23 +480,46 @@ int main(int argc, const char **argv) {
     // Finish printing command line.
     fputc('\n', stdout);
 
-    if (strcmp(command, "blazeit") == 0) {
-      run_program_waitpid("/fs0/blazeit");
-      continue;
+    // TODO: Lex, parse, sema, etc. Don't just treat every command as a single string.
+
+    if (strcmp(command, "quit") == 0) {
+      puts("Shell quitting, baiBAI!");
+      fflush(NULL);
+      break;
     }
-    if (strcmp(command, "pwd") == 0) {
-      run_program_waitpid("/fs0/pwd");
-      continue;
-    }
+
+    // If command is recognized and supported syscall, make the syscall.
+    // TODO: Maybe some syntax for this would be better? Or just a
+    // utility program that does this i.e. "syscall poke" would run
+    // syscall with poke as an argument.
     if (strcmp(command, "poke") == 0) {
       syscall(SYS_poke);
       command_status = 0;
       continue;
     }
-    if (strcmp(command, "quit") == 0) {
-      puts("Shell quitting, baiBAI!");
-      fflush(NULL);
-      break;
+
+    // If file exists, attempt to load it as an executable (pass to exec).
+    // TODO: To prevent failures, we should check valid elf64 file header, as well.
+    if (offset) {
+      const char fs0_prefix[] = "/fs0/";
+      const size_t prefix_length = sizeof(fs0_prefix) - 1;
+      // Includes null terminator
+      const size_t path_length = sizeof(fs0_prefix) + offset;
+      char *const path = malloc(path_length);
+      if (path) {
+        memcpy(path, fs0_prefix, prefix_length);
+        memcpy(path + prefix_length, command, path_length - prefix_length);
+        path[path_length - 1] = '\0';
+
+        FILE *exists = fopen(path, "r");
+        if (exists) {
+          run_program_waitpid(path);
+          fclose(exists);
+          free(path);
+          continue;
+        }
+        free(path);
+      }
     }
 
     command_status = 0;
