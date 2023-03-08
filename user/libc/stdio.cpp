@@ -698,10 +698,6 @@ constexpr static char __digit_from_value(auto value) {
 }
 
 int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list args) {
-    if (!stream || !format) {
-        return -1;
-    }
-
     for (const char *fmt = format; *fmt; ++fmt) {
         if (*fmt == '%') {
             ++fmt;
@@ -797,10 +793,6 @@ int vsnprintf(char* __restrict__ str, size_t size, const char* __restrict__ form
 }
 
 int vsprintf(char* __restrict__ str, const char* __restrict__ format, va_list args) {
-    if (!str || !format) {
-        return -1;
-    }
-
     for (const char *fmt = format; *fmt; ++fmt) {
         if (*fmt == '%') {
             ++fmt;
@@ -833,7 +825,6 @@ int vsprintf(char* __restrict__ str, const char* __restrict__ format, va_list ar
                 static_assert(max_digits != 0, "Can not print into zero-length buffer");
                 char digits[max_digits] = {0};
 
-                // TODO: better value -> digit conversion
                 size_t i = 0;
                 for (size_t tmp_val = negative ? -val : val; tmp_val && i < max_digits; tmp_val /= radix, ++i)
                     digits[i] = __digit_from_value(tmp_val % radix);
