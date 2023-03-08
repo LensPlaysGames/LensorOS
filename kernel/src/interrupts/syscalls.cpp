@@ -391,7 +391,7 @@ int sys$14_seek(ProcessFileDescriptor fd, ssz offset, int whence) {
 /// Return true iff entire PWD was written.
 bool sys$15_pwd(char *buffer, usz numBytes) {
     DBGMSG(sys$_dbgfmt, 15, "pwd");
-    std::print("[SYS$]:pwd(): buffer={}, numBytes={}\n", (void*)buffer, numBytes);
+    DBGMSG("[SYS$]:pwd(): buffer={}, numBytes={}\n", (void*)buffer, numBytes);
 
     if (!buffer || !numBytes)
         return false;
@@ -399,7 +399,7 @@ bool sys$15_pwd(char *buffer, usz numBytes) {
     Process *process = Scheduler::CurrentProcess->value();
     bool entire = numBytes > process->WorkingDirectory.size();
 
-    std::print("  PID:{} pwd: \"{}\"\n", process->ProcessID, process->WorkingDirectory);
+    DBGMSG("  PID:{} pwd: \"{}\"\n", process->ProcessID, process->WorkingDirectory);
 
     usz byteCount = entire ? process->WorkingDirectory.size() + 1 : numBytes;
     memcpy(buffer, process->WorkingDirectory.data(), byteCount);
