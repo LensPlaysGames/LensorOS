@@ -235,6 +235,8 @@ static void draw_psf1_lf(const Framebuffer fb, const PSF1_FONT font, size_t *y) 
   *y += font.header.character_size;
 }
 static void draw_psf1_crlf(const Framebuffer fb, const PSF1_FONT font, size_t *x, size_t *y) {
+  // TODO: use bg color
+  fill_rect(fb, mkpixel(fb.format, 22,23,24,255), *x, *y, fb.pixel_width, psf1_height(font));
   draw_psf1_cr(fb, font, x);
   draw_psf1_lf(fb, font, y);
 }
@@ -284,6 +286,7 @@ void draw_prompt(Framebuffer fb, const PSF1_FONT font) {
   draw_psf1_int(fb, font, &x, &y, command_status);
   draw_psf1_string(fb, font, &x, &y, prompt);
   draw_psf1_string(fb, font, &x, &y, command);
+  draw_psf1_string(fb, font, &x, &y, "\n");
 }
 
 void print_command_line() {
@@ -425,7 +428,7 @@ int main(int argc, const char **argv) {
 
   for (;;) {
     memset(command, 0, MAX_COMMAND_LENGTH);
-    fill_color(fb, black);
+    //fill_color(fb, black);
 
     if (command_output_it < last_command_output_it)
       last_command_output_it = command_output_it;
@@ -456,7 +459,6 @@ int main(int argc, const char **argv) {
           command[--offset] = '\0';
           // Echo command to standard out.
           print_command_line();
-          // TODO: Draw a space over erased character (kind of complicated: have to figure out pixel position).
           draw_prompt(fb, font);
         }
         continue;
