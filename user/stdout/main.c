@@ -278,6 +278,9 @@ void draw_prompt(Framebuffer fb, const PSF1_FONT font) {
   size_t x = prompt_start_x;
   size_t y = prompt_start_y;
   draw_psf1_string_view(fb, font, &x, &y, command_output, command_output_it);
+  // TODO: Make it clear when newline isn't present at end of command output, somehow.
+  if (command_output_it == 0 || command_output[command_output_it - 1] != '\n')
+    draw_psf1_string(fb, font, &x, &y, "\n");
   draw_psf1_int(fb, font, &x, &y, command_status);
   draw_psf1_string(fb, font, &x, &y, prompt);
   draw_psf1_string(fb, font, &x, &y, command);
@@ -427,6 +430,9 @@ int main(int argc, const char **argv) {
     if (command_output_it < last_command_output_it)
       last_command_output_it = command_output_it;
     printf("%s", command_output + last_command_output_it);
+    // TODO: Make it clear when newline isn't present at end of command output, somehow.
+    if (command_output_it == 0 || command_output[command_output_it - 1] != '\n')
+      putchar('\n');
     last_command_output_it = command_output_it;
 
     //for (size_t i = 0; i < sizeof(prompt); ++i)
