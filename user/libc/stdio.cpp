@@ -715,6 +715,28 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
                 fputc(c, stream);
             } continue;
 
+            case 'u': {
+                unsigned int val = va_arg(args, unsigned int);
+
+                // TODO: Abstract + parameterise number printing
+                constexpr const size_t radix = 10;
+                static_assert(radix != 0, "Can not print zero-base numbers");
+
+                constexpr const size_t max_digits = 32;
+                static_assert(max_digits != 0, "Can not print into zero-length buffer");
+                char digits[max_digits] = {0};
+
+                size_t i = max_digits;
+                for (size_t tmp_val = val; tmp_val && i; tmp_val /= radix, --i)
+                    digits[i - 1] = __digit_from_value(tmp_val % radix);
+
+                if (i == max_digits) digits[--i] = '0';
+
+                for (const char *it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
+                    fputc(*it, stream);
+
+            } continue;
+
             case 'i':
             case 'd': {
                 int val = va_arg(args, int);
@@ -802,6 +824,29 @@ int vsprintf(char* __restrict__ str, const char* __restrict__ format, va_list ar
                 *str++ = c;
             } continue;
 
+            case 'u': {
+                unsigned int val = va_arg(args, unsigned int);
+
+                // TODO: Abstract + parameterise number printing
+                constexpr const size_t radix = 10;
+                static_assert(radix != 0, "Can not print zero-base numbers");
+
+                constexpr const size_t max_digits = 32;
+                static_assert(max_digits != 0, "Can not print into zero-length buffer");
+                char digits[max_digits] = {0};
+
+                size_t i = max_digits;
+                for (size_t tmp_val = val; tmp_val && i; tmp_val /= radix, --i)
+                    digits[i - 1] = __digit_from_value(tmp_val % radix);
+
+                if (i == max_digits) digits[--i] = '0';
+
+                for (const char *it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
+                    *str++ = *it;
+
+            } continue;
+
+            case 'i':
             case 'd': {
                 int val = va_arg(args, int);
                 bool negative = val < 0;
