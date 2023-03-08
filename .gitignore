@@ -38,8 +38,12 @@
 **/win/
 **/winja/
 **/windows/
+**/winbld/
+**/winbuild/
 **/lnx/
 **/linux/
+**/lnxbuild/
+**/linuxbuild/
 **/make/
 **/ninja/
 **/debug/
@@ -50,8 +54,21 @@
 **/testing/
 **/cmake-build-*/
 
+# Scripts at the top level
+*.cmake
+*.sh
+*.bat
+*.ps1
+*.py
+
+# Build stuff
+bin/
+
 # LibC Tests
 user/libc/test/test
+
+# Userspace build install directory
+user/bin
 
 # Backups
 **/*.tmp*
@@ -67,9 +84,6 @@ user/libc/test/test
 
 # System Root
 /root/
-
-# Kernel Build Stuff
-/kernel/bin/
 
 # clangd
 **/compile_commands.json*
