@@ -506,7 +506,7 @@ int main(int argc, const char **argv) {
     const char *const unrecognized_str =
       "Unrecognized command, sorry!\n"
       "  Try `blazeit` or `quit`\n";
-    memcpy(command_output, unrecognized_str, sizeof(unrecognized_str));
+    last_command_output_it = command_output_it;
     for (const char* c = unrecognized_str; *c; ++c)
       write_command_output(*c);
     continue;
