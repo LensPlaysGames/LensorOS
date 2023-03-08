@@ -515,8 +515,8 @@ int main(int argc, const char **argv) {
 
         FILE *exists = fopen(path, "r");
         if (exists) {
-          run_program_waitpid(path);
           fclose(exists);
+          run_program_waitpid(path);
           free(path);
           continue;
         }
