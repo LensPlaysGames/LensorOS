@@ -72,7 +72,6 @@ target_compile_options(
   c
   PRIVATE
   -fPIE
-  -mno-sse2
   -Wall
   -Wextra
   -Wconversion

@@ -275,8 +275,24 @@ namespace Scheduler {
                                                  , IncludeGivenProcess::Yes);
         }
         else CurrentProcess = next_viable_process(CurrentProcess);
+
         // Update state of CPU that will be restored.
         memcpy(cpu, &CurrentProcess->value()->CPU, sizeof(CPUState));
+
+        if (SYSTEM->cpu().fxsr_enabled() && CurrentProcess->value()->CPUExtraSet) {
+            // Get 512-byte aligned address.
+            size_t i = 0;
+            void* addr = &CurrentProcess->value()->CPUExtra[0];
+            while (((usz)addr + i) & (512 - 1) && i < sizeof(CurrentProcess->value()->CPUExtra)) ++i;
+            addr = (void*)((usz)addr + i);
+
+            //std::print("Restoring FPU state using fxrstor64 at {}...\n", addr);
+            asm volatile("fxrstor64 %0"
+                         :: "m"(CurrentProcess->value()->CPUExtra[i])
+                         );
+            //std::print("Restored FPU state using fxrstor64 at {}...\n", addr);
+        }
+
         // Use new process' page map.
         Memory::flush_page_map(CurrentProcess->value()->CR3);
         // Update ES and DS to SS.
@@ -303,6 +319,20 @@ namespace Scheduler {
         // (i.e. xmm registers with fxsave/fxrestore)
         // I will be curious as to where we store the buffers for these;
         // a member in Process seems a little platform-dependant.
+        if (SYSTEM->cpu().fxsr_enabled()) {
+            // Get 512-byte aligned address.
+            size_t i = 0;
+            void* addr = &CurrentProcess->value()->CPUExtra[0];
+            while (((usz)addr + i) & (512 - 1) && i < sizeof(CurrentProcess->value()->CPUExtra)) ++i;
+            addr = (void*)((usz)addr + i);
+
+            //std::print("Saving FPU state using fxsave64 at {}...\n", addr);
+            asm volatile("fxsave64 %0\n\t"
+                         :: "m"(CurrentProcess->value()->CPUExtra[i])
+                         );
+            CurrentProcess->value()->CPUExtraSet = true;
+            //std::print("Saved fpu state using fxsave at {}...\n", addr);
+        }
 
         // TODO: Check all processes that called `wait(ms)`, and run/
         // unstop them if the timestamp is greater than the calculated
