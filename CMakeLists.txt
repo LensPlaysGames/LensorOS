@@ -27,6 +27,30 @@ endif()
 cmake_minimum_required( VERSION 3.20 )
 project( LensorOS VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGES} )
 
+# If on Unix, add `bootloader`, `toolchain`, and `win_toolchain` targets.
+if (CMAKE_HOST_UNIX)
+  add_custom_target(
+    bootloader
+    COMMAND make
+    COMMAND make bootloader
+    WORKING_DIRECTORY gnu-efi
+    USES_TERMINAL
+    VERBATIM
+  )
+  add_custom_target(
+    toolchain
+    COMMAND bash toolchain/toolchain.sh
+    USES_TERMINAL
+    VERBATIM
+  )
+  add_custom_target(
+    win_toolchain
+    COMMAND bash toolchain/win_toolchain.sh
+    USES_TERMINAL
+    VERBATIM
+  )
+endif()
+
 add_subdirectory( user EXCLUDE_FROM_ALL )
 add_subdirectory( kernel EXCLUDE_FROM_ALL )
 
@@ -37,6 +61,7 @@ add_custom_target(
   DEPENDS
   Kernel
 )
+
 
 set( REPO_DIR ${CMAKE_CURRENT_LIST_DIR} )
 set( SCRIPTS_DIR "${REPO_DIR}/scripts" )
