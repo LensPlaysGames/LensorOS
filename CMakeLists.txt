@@ -27,37 +27,15 @@ endif()
 cmake_minimum_required( VERSION 3.20 )
 project( LensorOS VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGES} )
 
-# USERSPACE
-# USER LIBC
-add_subdirectory(user/libc)
-
-# USER PROGRAMS
-add_subdirectory(user/blazeit EXCLUDE_FROM_ALL)
-add_dependencies(blazeit c)
-add_subdirectory(user/pwd EXCLUDE_FROM_ALL)
-add_dependencies(pwd c)
-add_subdirectory(user/stdout EXCLUDE_FROM_ALL)
-add_dependencies(stdout c)
-add_custom_target(
-  userspace
-  ALL
-  DEPENDS
-  blazeit
-  pwd
-  stdout
-)
-
-# KERNELSPACE
-# BOOT MEDIA
-# TODO: Kernel has **lots** of stuff that should be here (like all the QEMU stuff ... and the boot media generation stuff).
-add_subdirectory(kernel EXCLUDE_FROM_ALL)
+add_subdirectory( user EXCLUDE_FROM_ALL )
+add_subdirectory( kernel EXCLUDE_FROM_ALL )
 
 # NOTE: fake dependency just to get stuff to build in the right order.
+add_dependencies( Kernel userspace )
 add_custom_target(
   kernel-userspace ALL
   DEPENDS
   Kernel
-  userspace
 )
 
 set( REPO_DIR ${CMAKE_CURRENT_LIST_DIR} )

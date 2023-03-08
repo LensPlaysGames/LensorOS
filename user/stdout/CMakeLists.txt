@@ -18,7 +18,7 @@
 
 
 cmake_minimum_required( VERSION 3.14 )
-set( stdout_VERSION 0.0.1 )
+set( stdout_VERSION 0.1.0 )
 set( stdout_LANGUAGES C )
 
 # Export compilation database in JSON format.
@@ -26,7 +26,7 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS on )
 
 project( stdout VERSION ${stdout_VERSION} LANGUAGES ${stdout_LANGUAGES} )
 
-add_executable( stdout framebuffer.c main.c)
+add_executable( stdout framebuffer.c main.c )
 
 target_compile_options(
   stdout PUBLIC -mno-red-zone
