@@ -207,7 +207,7 @@ int _IO_File::seek(_IO_off_t offset, int whence) {
     if (!flush()) return -1;
 
     // TODO: seek syscall
-    return syscall(SYS_seek, __fd, offset, whence);
+    return (int)syscall(SYS_seek, __fd, offset, whence);
 }
 
 int _IO_File::setpos(const fpos_t& pos) {
@@ -821,7 +821,7 @@ int vsprintf(char* __restrict__ str, const char* __restrict__ format, va_list ar
 
             case 'c': {
                 int c = va_arg(args, int);
-                *str++ = c;
+                *str++ = (char)c;
             } continue;
 
             case 'u': {
