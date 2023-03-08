@@ -38,6 +38,3 @@ cmake_path(
 project( LensorOS VERSION ${blazeit_VERSION} LANGUAGES ${blazeit_LANGUAGES} )
 
 add_executable( blazeit main.c )
-
-target_compile_options(blazeit PRIVATE -mno-sse2 -mno-red-zone)
-

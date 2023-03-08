@@ -56,6 +56,8 @@ find_program(
   REQUIRED
 )
 
+# TODO: Should we add -mno-red-zone here?
+
 # LensorOS toolchain is GCC 11.2 or greater, so we're good here.
 set( CMAKE_CXX_STANDARD 20 )
 

@@ -27,7 +27,3 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS on )
 project( pwd VERSION ${pwd_VERSION} LANGUAGES ${pwd_LANGUAGES} )
 
 add_executable( pwd main.c )
-
-target_compile_options(
-  pwd PUBLIC -mno-red-zone
-)

@@ -27,7 +27,3 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS on )
 project( stdout VERSION ${stdout_VERSION} LANGUAGES ${stdout_LANGUAGES} )
 
 add_executable( stdout framebuffer.c main.c )
-
-target_compile_options(
-  stdout PUBLIC -mno-red-zone
-)
