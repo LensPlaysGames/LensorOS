@@ -165,9 +165,9 @@ add_custom_command(
   TARGET Kernel
   PRE_BUILD
   COMMAND
-  ${CMAKE_COMMAND} -E make_directory ${PROJECT_SOURCE_DIR}/bin
+  ${CMAKE_COMMAND} -E make_directory ${PROJECT_SOURCE_DIR}/boot/LensorOS
   COMMAND
   ${CMAKE_COMMAND} -E copy_directory
-  ${CMAKE_CURRENT_LIST_DIR}/res ${PROJECT_SOURCE_DIR}/bin
+  ${CMAKE_CURRENT_LIST_DIR}/res ${PROJECT_SOURCE_DIR}/boot/LensorOS
   VERBATIM
 )

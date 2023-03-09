@@ -53,6 +53,7 @@ endif()
 
 add_subdirectory( user EXCLUDE_FROM_ALL )
 add_subdirectory( kernel EXCLUDE_FROM_ALL )
+set_target_properties( Kernel PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/boot/LensorOS )
 
 # NOTE: fake dependency just to get stuff to build in the right order.
 add_dependencies( Kernel userspace )
@@ -83,6 +84,9 @@ cmake_path(
 add_custom_target(
   image_raw
   COMMAND ${CMAKE_COMMAND} -P ${SCRIPTS_DIR}/mkfat32images.cmake
+  BYPRODUCTS
+  ${IMAGE_DIR}/LensorOS.img
+  ${IMAGE_DIR}/LensorOSData.img
   USES_TERMINAL
   VERBATIM
 )

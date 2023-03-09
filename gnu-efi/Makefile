@@ -76,8 +76,26 @@ mkvars:
 	@echo TOPDIR=$(TOPDIR)
 
 $(SUBDIRS):
+#
+# Ensure directory exists that we are going to be building into
+#
 	mkdir -p $(OBJDIR)/$@
+#
+# This just runs make in the output directory (-C) with the source makefile (-f) set
+# to the subdirectory's Makefile, and ARCH variable set to our ARCH variable.
+#
 	$(MAKE) -C $(OBJDIR)/$@ -f $(SRCDIR)/$@/Makefile SRCDIR=$(SRCDIR)/$@ ARCH=$(ARCH)
+#
+# Install the bootloader into the `boot` subdirectory of the LensorOS repository
+# The contents of the `boot` subdirectory represents files that should be
+# installed on the EFI system partition that is subsequently booted from.
+# NOTE: The bootloader depends on `dfltfont.psf` being present, but
+# that is installed by the kernel.
+#
+	@if [ "$@" = "bootloader" ]; then\
+		mkdir -p $(SRCDIR)/../boot/EFI/BOOT;\
+		install $(OBJDIR)/$@/main.efi $(SRCDIR)/../boot/EFI/BOOT/main.efi;\
+	fi
 
 clean:
 	rm -f *~

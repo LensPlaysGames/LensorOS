@@ -1,6 +1,7 @@
 # Run like `cmake -P mkfat32efibootimage.cmake`
 
 set(REPO_DIR ${CMAKE_CURRENT_LIST_DIR}/..)
+set(BOOT_DIR ${REPO_DIR}/boot)
 set(IMAGE_DIR ${REPO_DIR}/bin)
 set(SCRIPTS_DIR ${REPO_DIR}/scripts)
 
@@ -11,12 +12,6 @@ find_program( MTOOLS_PROGRAM mtools )
 if(NOT DD_PROGRAM OR NOT MTOOLS_PROGRAM)
   message(NOTICE "[31;5mWARN: MISSING PROGRAM!  Could not find `dd` and `mtools`, cannot generate FAT32 UEFI boot media. See dependencies in README.[m")
 endif()
-
-file(
-  COPY_FILE
-  ${REPO_DIR}/kernel/res/dfltfont.psf
-  ${IMAGE_DIR}/dfltfont.psf
-)
 
 function(mcopy_file filename_to_copy directory)
   if (NOT EXISTS ${filename_to_copy})
@@ -32,7 +27,8 @@ execute_process(COMMAND mformat -i ${IMAGE_DIR}/LensorOS.img -F -v "EFI System" 
 execute_process(COMMAND mmd -i ${IMAGE_DIR}/LensorOS.img ::/EFI)
 execute_process(COMMAND mmd -i ${IMAGE_DIR}/LensorOS.img ::/EFI/BOOT)
 execute_process(COMMAND mmd -i ${IMAGE_DIR}/LensorOS.img ::/LensorOS)
-mcopy_file(${REPO_DIR}/gnu-efi/x86_64/bootloader/main.efi /EFI/BOOT)
 mcopy_file(${SCRIPTS_DIR}/startup.nsh "")
-mcopy_file(${IMAGE_DIR}/kernel.elf /LensorOS)
-mcopy_file(${IMAGE_DIR}/dfltfont.psf /LensorOS)
+mcopy_file(${BOOT_DIR}/EFI/BOOT/main.efi /EFI/BOOT)
+mcopy_file(${BOOT_DIR}/LensorOS/kernel.elf /LensorOS)
+mcopy_file(${BOOT_DIR}/LensorOS/dfltfont.psf /LensorOS)
+
