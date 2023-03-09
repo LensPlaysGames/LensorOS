@@ -3,6 +3,12 @@
 #+description: What the fuck we should be doing for LensorOS in 2023
 #+created: <2023-01-12 Thu>
 
+* TODO Free Physical Memory
+
+Kind of embarrassing, but ~request_pages()~ never actually resets the page it's looking for memory, so it just keeps getting bigger until it's too big... Even though we have `free_pages`, it isn't interacting in any way.
+
+[2023-03-08 Wed 23:50]
+
 * TODO Time Syscall(s)
 
 Something to get realtime would be a minimum, I think.
@@ -21,11 +27,15 @@ First and foremost: a lot of the boot media that we used to support *doesn't* su
 
 [2023-02-23 Thu 16:44]
 
-* TODO FAT driver is a joke
+* DONE FAT driver is a joke
 
 It doesn't traverse directories, it doesn't do any caching, and it's all stuffed into one big function. Needs refactored so that the directory iteration can happen on any directory, first of all.
 
 [2023-02-10 Fri 15:23]
+
+Sirraide helped immensely with directory iteration. The driver is still measly and horrible, can't even write things, but it's doing better than it was...
+
+[2023-03-08 Wed 23:47]
 
 * TODO Power Off, Sleep
 
@@ -82,6 +92,10 @@ Basically, there *isn't* any context switching for anything other than general p
 Luckily, we can kind of do this incrementally: because we know how to write C code that only uses general registers, we can save the current state of general registers, do whatever we need to save/restore the fancy registers from C using general registers. Then we can update the general registers from the context we are switching to. This reduces the complexity of having to do the conditional checks from assembly; it can all happen from C(++).
 
 [2023-02-07 Tue 10:38]
+
+I've added the ability to save/restore using ~fxsave64~ and friends. This, however, unearthed a HUGE glaring problem in the current kernel heap: there is no way to actually align things. So yeah, it'd be great to be able to ask for aligned memory. HOWEVER! This is a huge stupid problems because it means that `split` may actually need to create a header before as well as a header after, in order to properly return an aligned address for the payload.
+
+[2023-03-08 Wed 23:49]
 
 * DONE Make basic shell program that is run as init process, or whatever.
 
