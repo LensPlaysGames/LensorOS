@@ -53,6 +53,7 @@ namespace Memory {
     void print_debug();
     void print_debug_kib();
     void print_debug_mib();
+    void print_physmem();
 }
 
 #endif /* LENSOR_OS_PHYSICAL_MEMORY_MANAGER_H */

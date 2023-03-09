@@ -61,6 +61,26 @@ namespace Memory {
         return TotalUsedPages * PAGE_SIZE;
     }
 
+    void print_physmem() {
+        std::print("PHYSMEM:\n");
+        for (usz i = 0; i + 1 < PageMap.length();) {
+            bool locked = PageMap.get(i);
+            bool last_locked = locked;
+            usz begin = i;
+            usz run = 1;
+            //std::print("  begrun page at {:16x} is locked? {}\n", begin * PAGE_SIZE, last_locked);
+            ++i;
+            while (i < PageMap.length()) {
+                locked = PageMap.get(i);
+                if (locked != last_locked) break;
+                ++run;
+                ++i;
+            }
+            //std::print("  endrun page at {:16x} is locked? {}\n", i * PAGE_SIZE, locked);
+            std::print("  {}: {} pages beginning at {:16x} through {:16x}\n", last_locked ? "used" : "free", run, begin * PAGE_SIZE, (begin + run) * PAGE_SIZE);
+        }
+    }
+
     void lock_page(void* address) {
         u64 index = (u64)address / PAGE_SIZE;
         // Page already locked.

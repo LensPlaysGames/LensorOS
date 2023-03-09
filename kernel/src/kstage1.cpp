@@ -183,6 +183,8 @@ void kstage1(BootInfo* bInfo) {
     // Setup dynamic memory allocation (`new`, `delete`).
     init_heap();
 
+    Memory::print_physmem();
+
     SYSTEM = new System();
 
     {// Initialize the Real Time Clock.
