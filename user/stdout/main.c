@@ -438,12 +438,8 @@ int main(int argc, const char **argv) {
       putchar('\n');
     last_command_output_it = command_output_it;
 
-    //for (size_t i = 0; i < sizeof(prompt); ++i)
-    //  write_command_output(prompt[i]);
-
     print_command_line();
     draw_prompt(fb, font);
-
 
     // Get line from standard input.
     int c;

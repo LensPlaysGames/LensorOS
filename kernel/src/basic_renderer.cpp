@@ -21,6 +21,7 @@
 #include <format>
 #include <integers.h>
 #include <math.h>
+#include <memory/common.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 
@@ -34,12 +35,12 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
     // physical memory dedicated to the framebuffer into virtual memory.
     // Calculate size of framebuffer in pages.
     u64 fbBase = (u64)render->BaseAddress;
-    u64 fbSize = render->BufferSize + 0x1000;
-    u64 fbPages = fbSize / 0x1000 + 1;
+    u64 fbSize = render->BufferSize + PAGE_SIZE;
+    u64 fbPages = fbSize / PAGE_SIZE + 1;
     // Allocate physical pages for Render framebuffer.
     Memory::lock_pages(render->BaseAddress, fbPages);
     // Map active framebuffer physical address to virtual addresses 1:1.
-    for (u64 t = fbBase; t < fbBase + fbSize; t += 0x1000) {
+    for (u64 t = fbBase; t < fbBase + fbSize; t += PAGE_SIZE) {
         Memory::map((void*)t, (void*)t
                     , (u64)Memory::PageTableFlag::Present
                     | (u64)Memory::PageTableFlag::ReadWrite
@@ -73,7 +74,7 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
         // FIXME: Don't hard code this address.
         constexpr u64 virtualTargetBaseAddress = 0xffffff8000000000;
         u64 physicalTargetBaseAddress = (u64)target.BaseAddress;
-        for (u64 t = 0; t < fbSize; t += 0x1000) {
+        for (u64 t = 0; t < fbSize; t += PAGE_SIZE) {
             Memory::map((void*)(virtualTargetBaseAddress + t)
                         , (void*)(physicalTargetBaseAddress + t)
                         , (u64)Memory::PageTableFlag::Present
