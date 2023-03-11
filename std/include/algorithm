@@ -219,6 +219,20 @@ constexpr _OutputIt generate_n(_OutputIt __first, _Size __n, _Generator __genera
     return __first;
 }
 
+template<class _ForwardIt, class _T>
+constexpr void replace(_ForwardIt __first, _ForwardIt __last, const _T& __old_value, const _T& __new_value) {
+    for (; __first != __last; ++__first)
+        if (*__first == __old_value)
+            *__first = __new_value;
+}
+
+template<class _ForwardIt, class _UnaryPredicate, class _T>
+constexpr void replace_if(_ForwardIt __first, _ForwardIt __last, _UnaryPredicate __predicate, const _T& __new_value) {
+    for (; __first != __last; ++__first)
+        if (__predicate(*__first))
+            *__first = __new_value;
+}
+
 } /* namespace std */
 
 #endif // _LENSOR_OS_ALGORITHM
