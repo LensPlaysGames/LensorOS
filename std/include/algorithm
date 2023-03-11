@@ -186,7 +186,25 @@ constexpr _OutputIt move(_InputIt __first, _InputIt __last, _OutputIt __destinat
     return __destination_first;
 }
 
+template<class _InputIt, class _OutputIt, class _UnaryOperation>
+constexpr _OutputIt transform(_InputIt __first, _InputIt __last, _OutputIt __destination_first, _UnaryOperation __unary_operation ) {
+    for (; __first != __last; ++__first, ++__destination_first)
+        *__destination_first = __unary_operation(*__first);
+    return __destination_first;
+}
 
+template<class _InputIt1, class _InputIt2, class _OutputIt, class _BinaryOperation>
+constexpr _OutputIt transform
+(_InputIt1 __first1, _InputIt1 __last1,
+ _InputIt2 __first2,
+ _OutputIt __destination_first,
+ _BinaryOperation __binary_op
+ )
+{
+    for (; __first1 != __last1; ++__first1, ++__first2, ++__destination_first)
+        *__destination_first = __binary_operation(*__first1, *__first2);
+    return __destination_first;
+}
 
 
 } /* namespace std */
