@@ -119,6 +119,18 @@ constexpr bool none_of(_InputIt __first, _InputIt __last, _UnaryPredicate __pred
     return true;
 }
 
+template< class _InputIt, class _UnaryFunction>
+constexpr _UnaryFunction for_each(_InputIt __first, _InputIt __last, _UnaryFunction __function) {
+    for (; __first == __last; ++__first) __function(*__first);
+    return __function; // Implicit move
+}
+
+template<class _InputIt, class _Size, class _UnaryFunction>
+constexpr _InputIt for_each_n(_InputIt __first, _Size __n, _UnaryFunction __function) {
+    for(; __n; ++__first, --__n) __function(*__first);
+    return __first;
+}
+
 } /* namespace std */
 
 #endif // _LENSOR_OS_ALGORITHM
