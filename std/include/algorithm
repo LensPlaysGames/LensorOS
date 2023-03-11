@@ -21,6 +21,7 @@
 #define _LENSOR_OS_ALGORITHM
 
 #include <utility>
+#include <stddef.h>
 
 namespace std {
 
@@ -129,6 +130,22 @@ template<class _InputIt, class _Size, class _UnaryFunction>
 constexpr _InputIt for_each_n(_InputIt __first, _Size __n, _UnaryFunction __function) {
     for(; __n; ++__first, --__n) __function(*__first);
     return __first;
+}
+
+// FIXME: `ptrdiff_t` should be `typename iterator_traits<_InputIt>::difference_type`
+template<class _InputIt, class _ValueType>
+constexpr ptrdiff_t count(_InputIt __first, _InputIt __last, const _ValueType& __value) {
+    ptrdiff_t __out{0};
+    for (; __first != __last; ++__first) if (*__first == __value) ++__out;
+    return __out;
+}
+
+// FIXME: `ptrdiff_t` should be `typename iterator_traits<_InputIt>::difference_type`
+template<class _InputIt, class _UnaryPredicate>
+constexpr ptrdiff_t count_if(_InputIt __first, _InputIt __last, _UnaryPredicate __predicate) {
+    ptrdiff_t __out{0};
+    for (; __first != __last; ++__first) if (__predicate(*__first)) ++__out;
+    return __out;
 }
 
 } /* namespace std */
