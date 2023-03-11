@@ -38,16 +38,24 @@ constexpr integer max(integer a, integer b, integers... ints) {
 }
 
 template <typename _It, typename _End, typename _Predicate>
-constexpr _It find_if(_It first, _End last, _Predicate pred) {
+constexpr _It find_if(_It first, _End last, _Predicate predicate) {
     for (; first != last; ++first) {
-        if (pred(*first)) return first;
+        if (predicate(*first)) return first;
     }
     return first;
 }
 
-template <typename _It, typename _End, typename _El>
-constexpr _It find(_It begin, _End end, _El&& el) {
-    return find_if(begin, end, [el = std::forward<_El>(el)](const remove_reference_t<decltype(*declval<_It>())>& e) { return e == el; });
+template <typename _It, typename _End, typename _Predicate>
+constexpr _It find_if_not(_It first, _End last, _Predicate predicate) {
+    for (; first != last; ++first) {
+        if (!predicate(*first)) return first;
+    }
+    return first;
+}
+
+template <typename _It, typename _End, typename _ElementType>
+constexpr _It find(_It begin, _End end, _ElementType&& element) {
+    return find_if(begin, end, [element = std::forward<_ElementType>(element)](const remove_reference_t<decltype(*declval<_It>())>& e) { return e == element; });
 }
 
 /// Removes all elements that are equal to value (using operator==).
