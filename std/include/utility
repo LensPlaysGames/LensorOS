@@ -64,6 +64,13 @@ constexpr _T&& forward(std::remove_reference_t<_T>&& __t) noexcept {
     return static_cast<_T&&>(__t);
 }
 
+template<class _T>
+constexpr void swap(_T& a, _T& b) noexcept {
+    auto c = move(a);
+    a = move(b);
+    b = move(c);
+}
+
 } // namespace std
 
 #endif // _LENSOR_OS_UTILITY
