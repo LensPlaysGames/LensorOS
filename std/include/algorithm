@@ -101,6 +101,24 @@ constexpr _ForwardIt remove_if(_ForwardIt __first, _ForwardIt __last, _UnaryPred
     return __first;
 }
 
+template<class _InputIt, class _UnaryPredicate>
+constexpr bool all_of(_InputIt __first, _InputIt __last, _UnaryPredicate __predicate) {
+    for (; __first != __last; ++__first) if (!__predicate(*__first)) return false;
+    return true;
 }
+
+template<class _InputIt, class _UnaryPredicate>
+constexpr bool any_of(_InputIt __first, _InputIt __last, _UnaryPredicate __predicate) {
+    for (; __first != __last; ++__first) if (__predicate(*__first)) return true;
+    return false;
+}
+
+template<class _InputIt, class _UnaryPredicate>
+constexpr bool none_of(_InputIt __first, _InputIt __last, _UnaryPredicate __predicate) {
+    for (; __first != __last; ++__first) if (__predicate(*__first)) return false;
+    return true;
+}
+
+} /* namespace std */
 
 #endif // _LENSOR_OS_ALGORITHM
