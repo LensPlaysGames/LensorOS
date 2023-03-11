@@ -49,6 +49,58 @@ constexpr _It find(_It begin, _End end, _El&& el) {
     return find_if(begin, end, [el = std::forward<_El>(el)](const remove_reference_t<decltype(*declval<_It>())>& e) { return e == el; });
 }
 
+/// Removes all elements that are equal to value (using operator==).
+template<class _ForwardIt, class _T>
+constexpr _ForwardIt remove(_ForwardIt __first, _ForwardIt __last, const _T& __value) {
+    // Use `find` to reduce range by incrementing `first` to the first
+    // occurence of `value`.
+    __first = find(__first, __last, __value);
+    // Only try to remove iff an occurence of `value` has appeared
+    // within the given range.
+    if (__first != __last) {
+        // `it` should always be equal to `first + 1` within the body
+        // of the following `while`.
+        auto __it = __first;
+        /// Iterate `it` from the first found object to the end of the
+        /// given range.
+        while (++__it != __last) {
+            /// If a value matches the given value to remove, we skip it.
+            /// Otherwise, we move the value into the next available position.
+            if (!(*__it == __value)) {
+                *__first = move(*__it);
+                ++__first;
+            }
+        }
+    }
+    return __first;
+}
+
+/// Removes all elements for which predicate p returns true.
+template<class _ForwardIt, class _UnaryPredicate>
+constexpr _ForwardIt remove_if(_ForwardIt __first, _ForwardIt __last, _UnaryPredicate __predicate) {
+    // Use `find` to reduce range by incrementing `first` to the first
+    // occurence of `value`.
+    __first = find_if(__first, __last, __predicate);
+    // Only try to remove iff an occurence of `value` has appeared
+    // within the given range.
+    if (__first != __last) {
+        // `it` should always be equal to `first + 1` within the body
+        // of the following `while`.
+        auto __it = __first;
+        /// Iterate `it` from the first found object to the end of the
+        /// given range.
+        while (++__it != __last) {
+            /// If a value causes `predicate` to return true when invoked, we skip it.
+            /// Otherwise, we move the value into the next available position.
+            if (!__predicate(*__it)) {
+                *__first = move(*__it);
+                ++__first;
+            }
+        }
+    }
+    return __first;
+}
+
 }
 
 #endif // _LENSOR_OS_ALGORITHM
