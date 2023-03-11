@@ -148,6 +148,25 @@ constexpr ptrdiff_t count_if(_InputIt __first, _InputIt __last, _UnaryPredicate 
     return __out;
 }
 
+template<class _InputIt, class _OutputIt>
+constexpr _OutputIt copy(_InputIt __first, _InputIt __last, _OutputIt __destination_first) {
+    for (; __first != __last; ++__first, ++__destination_first)
+        *__destination_first = *__first;
+    return __destination_first;
+}
+
+template<class _InputIt, class _OutputIt, class UnaryPredicate>
+constexpr _OutputIt copy_if(_InputIt __first, _InputIt __last, _OutputIt __destination_first, UnaryPredicate __predicate) {
+    for (; __first != __last; ++__first) {
+        if (predicate(*__first)) {
+            *__destination_first = *__first;
+            ++__destination_first;
+        }
+    }
+    return __destination_first;
+}
+
+
 } /* namespace std */
 
 #endif // _LENSOR_OS_ALGORITHM
