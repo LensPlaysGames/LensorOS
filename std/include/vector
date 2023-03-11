@@ -261,6 +261,32 @@ public:
     iterator erase(const_iterator __pos) { return erase(__pos, __pos + 1); }
 };
 
+
+template
+<typename _ElementType,
+ typename __index_type = size_t,
+ class _ComparedType
+ >
+constexpr typename __vector<_ElementType, __index_type>::size_type
+erase(__vector<_ElementType, __index_type>& __container, const _ComparedType& __value) {
+    size_t __size = __container.size();
+    __container.erase(remove(__container.begin(), __container.end(), __value), __container.end());
+    return __size - __container.size();
+}
+
+template
+<typename _ElementType,
+ typename __index_type = size_t,
+ class _Predicate
+ >
+constexpr typename __vector<_ElementType, __index_type>::size_type
+erase_if(__vector<_ElementType, __index_type>& __container, _Predicate __predicate) {
+    size_t __size = __container.size();
+    __container.erase(remove_if(__container.begin(), __container.end(), __predicate), __container.end());
+    return __size - __container.size();
+}
+
+
 template <typename _T>
 using vector = __vector<_T, size_t>;
 
