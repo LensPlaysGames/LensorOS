@@ -179,6 +179,15 @@ constexpr _OutputIt copy_n(_InputIt __first, _Size __n, _OutputIt __destination_
     return __destination_first;
 }
 
+template<class _InputIt, class _OutputIt>
+constexpr _OutputIt move(_InputIt __first, _InputIt __last, _OutputIt __destination_first) {
+    for (; __first != __last; ++__first, ++__destination_first)
+        *__destination_first = move(*__first);
+    return __destination_first;
+}
+
+
+
 
 } /* namespace std */
 
