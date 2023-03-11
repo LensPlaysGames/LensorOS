@@ -206,6 +206,18 @@ constexpr _OutputIt transform
     return __destination_first;
 }
 
+template<class _ForwardIt, class _Generator>
+constexpr void generate(_ForwardIt __first, _ForwardIt __last, _Generator __generator) {
+    for (; __first != __last; ++__first)
+        *__first = __generator();
+}
+
+template<class _OutputIt, class _Size, class _Generator>
+constexpr _OutputIt generate_n(_OutputIt __first, _Size __n, _Generator __generator) {
+    for (; __n; --__n, ++__first)
+        __first = __generator();
+    return __first;
+}
 
 } /* namespace std */
 
