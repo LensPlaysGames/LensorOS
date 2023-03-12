@@ -253,9 +253,22 @@ constexpr _ForwardIt2 swap_ranges(_ForwardIt1 __first1, _ForwardIt1 __last1, _Fo
     return __first2;
 }
 
-template<class _T, std::size_t _N>
+template<class _T, size_t _N>
 constexpr void swap(_T (&__a)[_N], _T (&__b)[_N]) noexcept {
     swap_ranges(__a, __a + _N, __b);
+}
+
+// FIXME: `ptrdiff_t` should be `typename std::iterator_traits<ForwardIt>::difference_type`
+template<class _ForwardIt>
+constexpr _ForwardIt shift_left(_ForwardIt __first, _ForwardIt __last, ptrdiff_t __n ) {
+    if (__n != 0 && __n < __last - __first) {
+        auto __it = __first;
+        // FIXME: `std::advance(__it, __n)`
+        while (__n--) ++__it;
+        for (; __first != __last; ++__first, ++__it)
+            *__first = move(*__it);
+    }
+    return __first;
 }
 
 } /* namespace std */
