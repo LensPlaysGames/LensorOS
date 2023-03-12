@@ -271,6 +271,34 @@ constexpr _ForwardIt shift_left(_ForwardIt __first, _ForwardIt __last, ptrdiff_t
     return __first;
 }
 
+template<class _ForwardIt, class _UnaryPredicate>
+_ForwardIt partition(_ForwardIt __first, _ForwardIt __last, _UnaryPredicate __predicate) {
+    __first = find_if_not(__first, __last, __predicate);
+    if (__first == __last) return __first;
+    auto __it = __first;
+    ++__it;
+    for (; __it != __last; ++__it) {
+        if (__predicate(*__it)) {
+            iter_swap(__it, __first);
+            ++__first;
+        }
+    }
+    return __first;
+}
+
+template<class _RandomIt>
+constexpr void sort(_RandomIt first, _RandomIt last) {
+    if (first >= last) return;
+    auto back = last - 1;
+    auto pivot = partition(first, last,
+                           [back](const auto& i) {
+                               return i < *back;
+                           });
+    iter_swap(pivot, back);
+    sort(first, pivot);
+    sort(pivot + 1, last);
+}
+
 } /* namespace std */
 
 #endif // _LENSOR_OS_ALGORITHM
