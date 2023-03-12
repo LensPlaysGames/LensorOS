@@ -3,6 +3,12 @@
 #+description: What the fuck we should be doing for LensorOS in 2023
 #+created: <2023-01-12 Thu>
 
+* TODO Actually install `root` subdirectory onto the system root...
+
+One interesting thing to note: We may have to hardcode some basic symlinks for now in the "mount prefix" level of things in the VFS in order for `/inc` to access what will actually amount to `/fs0/inc`, or something similar.
+
+[2023-03-12 Sun 12:21]
+
 * TODO Free Physical Memory
 
 Kind of embarrassing, but ~request_pages()~ never actually resets the page it's looking for memory, so it just keeps getting bigger until it's too big... Even though we have `free_pages`, it isn't interacting in any way.

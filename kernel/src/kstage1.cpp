@@ -372,7 +372,7 @@ void kstage1(BootInfo* bInfo) {
      * a single AHCI controller has multiple ports,
      * each one referring to its own device.
      */
-    for (auto& dev : SYSTEM->Devices){
+    for (auto& dev : SYSTEM->Devices) {
         if (dev->major() == SYSDEV_MAJOR_STORAGE
             && dev->minor() == SYSDEV_MINOR_AHCI_CONTROLLER
             && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
