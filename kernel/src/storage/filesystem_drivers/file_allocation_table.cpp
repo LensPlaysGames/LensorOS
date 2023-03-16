@@ -357,9 +357,6 @@ std::shared_ptr<FileMetadata> FileAllocationTableDriver::traverse_path(std::stri
     if (directoryCluster == u32(-1))
         directoryCluster = BR.sector_to_cluster(BR.first_root_directory_sector());
 
-    std::print("cluster: {}\n", directoryCluster);
-
-
     /// Strip leading slash.
     if (raw_path.starts_with("/")) raw_path = raw_path.substr(1);
     if (raw_path.size() < 1) {
@@ -408,7 +405,7 @@ std::shared_ptr<FileMetadata> FileAllocationTableDriver::traverse_path(std::stri
 
         // Recurse into directory...
         u32 dirCluster = Entry.CE->get_cluster_number();
-        std::print("Recursing! Following {} at cluster {}\n", path, dirCluster);
+        //std::print("Recursing! Following {} at cluster {}\n", path, dirCluster);
         return traverse_path(path, dirCluster);
     }
 
