@@ -566,7 +566,7 @@ void kstage1(BootInfo* bInfo) {
     Scheduler::initialize();
 
     if (!vfs.mounts().empty()) {
-        constexpr const char* filePath = "/fs0/blazeit";
+        constexpr const char* filePath = "/fs0/bin/blazeit";
         std::print("Opening {} with VFS\n", filePath);
         auto fds = vfs.open(filePath);
 
@@ -581,7 +581,7 @@ void kstage1(BootInfo* bInfo) {
             std::vector<std::string_view> argv;
             argv.push_back(filePath);
             if (ELF::CreateUserspaceElf64Process(fds.Process, argv))
-                std::print("Successfully created new process from `/fs0/blazeit`\n");
+                std::print("Successfully created new process from `{}`\n", filePath);
 
             std::print("Closing FileDescriptor {}\n", fds.Process);
             vfs.close(fds.Process);
@@ -590,7 +590,7 @@ void kstage1(BootInfo* bInfo) {
         }
 
         // Another userspace program
-        constexpr const char *const programTwoFilePath = "/fs0/stdout";
+        constexpr const char *const programTwoFilePath = "/fs0/bin/stdout";
 
         // Userspace Framebuffer
         usz fb_phys_addr = (usz)bInfo->framebuffer->BaseAddress;
