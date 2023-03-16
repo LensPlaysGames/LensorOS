@@ -345,10 +345,17 @@ namespace Scheduler {
 }
 
 pid_t CopyUserspaceProcess(Process* original) {
+    // Allocate process before cloning page table in case it causes
+    // heap to expand.
+    Process* newProcess = new Process;
+    newProcess->State = Process::ProcessState::SLEEPING;
+    Scheduler::add_process(newProcess);
+
     // Copy current page table (fork)
     auto* newPageTable = Memory::clone_page_map(original->CR3);
     if (newPageTable == nullptr) {
         std::print("Failed to clone current page map for new process page map.\n");
+        Scheduler::remove_process(newProcess->ProcessID, -1);
         return -1;
     }
     // Map new page table in itself.
@@ -356,10 +363,6 @@ pid_t CopyUserspaceProcess(Process* original) {
                 , (u64)Memory::PageTableFlag::Present
                 | (u64)Memory::PageTableFlag::ReadWrite
                 );
-
-    Process* newProcess = new Process;
-    newProcess->State = Process::ProcessState::SLEEPING;
-    Scheduler::add_process(newProcess);
 
     //std::print("[SCHED]: Allocated new process {} at {}\n", newProcess->ProcessID, (void*)newProcess);
 
@@ -414,12 +417,13 @@ pid_t CopyUserspaceProcess(Process* original) {
     newProcess->ExecutablePath = original->ExecutablePath;
     newProcess->WorkingDirectory = original->WorkingDirectory;
 
-    newProcess->State = Process::ProcessState::RUNNING;
     newProcess->CR3 = newPageTable;
     newProcess->CPU = original->CPU;
     newProcess->next_region_vaddr = original->next_region_vaddr;
     // Set child return value for `fork()`.
     newProcess->CPU.RAX = 0;
+
+    newProcess->State = Process::ProcessState::RUNNING;
 
     return newProcess->ProcessID;
 }
