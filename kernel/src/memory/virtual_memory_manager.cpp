@@ -237,6 +237,7 @@ namespace Memory {
                 std::print("Failed to allocate memory for new process page directory pointer table.\n");
                 return nullptr;
             }
+            memset(newPDP, 0, PAGE_SIZE);
             auto* oldTable = (Memory::PageTable*)((u64)PDE.address() << 12);
             for (u64 j = 0; j < 512; ++j) {
                 PDE = oldTable->entries[j];
@@ -248,6 +249,7 @@ namespace Memory {
                     std::print("Failed to allocate memory for new process page directory table.\n");
                     return nullptr;
                 }
+                memset(newPD, 0, PAGE_SIZE);
                 auto* oldPD = (Memory::PageTable*)((u64)PDE.address() << 12);
                 for (u64 k = 0; k < 512; ++k) {
                     PDE = oldPD->entries[k];
@@ -259,17 +261,16 @@ namespace Memory {
                         std::print("Failed to allocate memory for new process page table.\n");
                         return nullptr;
                     }
+                    memset(newPT, 0, PAGE_SIZE);
                     auto* oldPT = (Memory::PageTable*)((u64)PDE.address() << 12);
-                    memcpy(newPT, oldPT, PAGE_SIZE);
-                    //for (u64 l = 0; l < 512; ++l) {
-                    //    PDE = oldPT->entries[l];
-                    //    if (PDE.flag(Memory::PageTableFlag::Present) == false)
-                    //        continue;
+                    //memcpy(newPT, oldPT, PAGE_SIZE);
+                    for (u64 l = 0; l < 512; ++l) {
+                        PDE = oldPT->entries[l];
+                        if (PDE.flag(Memory::PageTableFlag::Present) == false)
+                            continue;
 
-                    //    PDE = oldPT->entries[l];
-                    //    PDE.set_address((u64)PDE.address());
-                    //    newPT->entries[l] = PDE;
-                    //}
+                        newPT->entries[l] = PDE;
+                    }
                     PDE = oldPD->entries[k];
                     PDE.set_address((u64)newPT >> 12);
                     newPD->entries[k] = PDE;
