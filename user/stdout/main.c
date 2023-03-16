@@ -374,7 +374,7 @@ int main(int argc, const char **argv) {
   puts("\n\n<===!= WELCOME TO LensorOS SHELL [WIP] =!=!==>\n");
   puts("  LensorOS  Copyright (C) 2022, Contributors To LensorOS.");
 
-  const char *const fontpath = "/fs0/dfltfont.psf";
+  const char *const fontpath = "/fs0/res/fonts/psf1/dfltfont.psf";
   FILE *fontfile = fopen(fontpath, "rb");
   if (!fontfile) {
     printf("Could not open font at %s\n", fontpath);

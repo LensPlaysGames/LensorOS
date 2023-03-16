@@ -67,19 +67,20 @@ class FileAllocationTableDriver final : public FilesystemDriver {
     /// This is so we have something that we can call begin() and end() on because
     /// calling begin()/end() on the driver itself would be a bit weird semantically.
     struct DirIteratorHelper {
-        FileAllocationTableDriver& Drv;
+        FileAllocationTableDriver& Driver;
+        u32 ClusterIndex = Driver.BR.sector_to_cluster(Driver.BR.first_root_directory_sector());
 
         /// This does the actual iterating.
         struct Iterator {
-            FileAllocationTableDriver& Drv;
+            FileAllocationTableDriver& Driver;
+            u32 ClusterIndex;
 
             /// Constants.
-            const u64 ClusterSize = Drv.BR.BPB.NumSectorsPerCluster * Drv.BR.BPB.NumBytesPerSector;
+            const u64 ClusterSize = Driver.BR.BPB.NumSectorsPerCluster * Driver.BR.BPB.NumBytesPerSector;
 
             /// Iteration data.
             std::vector<u8> ClusterContents{ClusterSize};
             u64 LastFATSector = 0;
-            u32 ClusterIndex = Drv.BR.sector_to_cluster(Drv.BR.first_root_directory_sector());
             bool MoreClusters = true;
             bool ClearLFN = false;
 
@@ -91,7 +92,7 @@ class FileAllocationTableDriver final : public FilesystemDriver {
                 std::string LongFileName;
             } Entry{};
 
-            explicit Iterator(FileAllocationTableDriver& _Drv);
+            explicit Iterator(FileAllocationTableDriver& driver, u32 directoryCluster);
             auto operator++() -> Iterator&;
             auto operator*() -> EntryType& { return Entry; }
             auto operator->() -> EntryType* { return &Entry; }
@@ -105,14 +106,22 @@ class FileAllocationTableDriver final : public FilesystemDriver {
             void TryReadNextCluster();
         };
 
+        DirIteratorHelper(FileAllocationTableDriver& driver) : Driver(driver) {}
+        DirIteratorHelper(FileAllocationTableDriver& driver, u32 directoryCluster)
+        : Driver(driver), ClusterIndex(directoryCluster) {}
+
         /// Get an iterator that points to the first entry.
-        auto begin() -> Iterator { return Iterator{Drv}; }
+        auto begin() -> Iterator { return Iterator{Driver, ClusterIndex}; }
 
         /// We don’t really have a predetermined ‘end’, so this just returns a dummy value.
         auto end() -> std::default_sentinel_t { return {}; }
     };
 
     auto for_each_dir_entry() -> DirIteratorHelper { return DirIteratorHelper{*this}; }
+    auto for_each_dir_entry_in(u32 directoryCluster) -> DirIteratorHelper { return DirIteratorHelper{*this, directoryCluster}; }
+
+    /// NOTE: If directoryCluster == -1, it will be replaced with the directory cluster of the root directory.
+    std::shared_ptr<FileMetadata> traverse_path(std::string_view raw_path, u32 directoryCluster = -1);
 
 public:
     static void print_fat(BootRecord&);
