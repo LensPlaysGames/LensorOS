@@ -382,7 +382,9 @@ namespace Memory {
     }
 
     void init_virtual() {
-        init_virtual((PageTable*)Memory::request_page());
+        Memory::PageTable* table = (PageTable*)Memory::request_page();
+        memset(table, 0, PAGE_SIZE);
+        init_virtual(table);
     }
 
     void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filter) {
