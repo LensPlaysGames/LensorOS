@@ -210,7 +210,7 @@ namespace Scheduler {
             std::print("\033[31mScheduler failed to initialize:\033[0m Could not allocate process list.\n");
             return false;
         }
-        ProcessQueue->add_end(&StartupProcess);
+        ProcessQueue->add(&StartupProcess);
         CurrentProcess = ProcessQueue->head();
         // Install IRQ0 handler found in `scheduler.asm` (over-write default system timer handler).
         gIDT.install_handler((u64)irq0_handler, PIC_IRQ0);

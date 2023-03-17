@@ -413,10 +413,10 @@ namespace Memory {
 
                         // Virtual Address from indices
                         u64 virtualAddress = 0;
-                        virtualAddress |= (i & 0x1ff) << 27;
-                        virtualAddress |= (j & 0x1ff) << 18;
-                        virtualAddress |= (k & 0x1ff) << 9;
-                        virtualAddress |= (l & 0x1ff) << 0;
+                        virtualAddress |= i << 27;
+                        virtualAddress |= j << 18;
+                        virtualAddress |= k << 9;
+                        virtualAddress |= l << 0;
                         virtualAddress <<= 12;
 
                         endAddress = virtualAddress;

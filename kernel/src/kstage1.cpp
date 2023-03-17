@@ -609,7 +609,7 @@ void kstage1(BootInfo* bInfo) {
         std::print("  Got FileDescriptors. {}, {}\n", fds.Process, fds.Global);
         if (fds.valid()) {
             if (ELF::CreateUserspaceElf64Process(fds.Process, argv))
-                std::print("Sucessfully created new process from `/fs0/stdout`\n");
+                std::print("Sucessfully created new process from `{}`\n", programTwoFilePath);
             vfs.close(fds.Process);
         }
         // Get last process in queue from scheduler.
