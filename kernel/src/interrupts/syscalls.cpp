@@ -101,10 +101,11 @@ void sys$5_exit(int status) {
            );
     pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
     bool success = Scheduler::remove_process(pid, status);
-    if (!success) {
+    if (!success)
         std::print("[EXIT]: Failure to remove process\n");
-    }
-    DBGMSG("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
+    else
+        DBGMSG("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
+
     Scheduler::yield();
 }
 
