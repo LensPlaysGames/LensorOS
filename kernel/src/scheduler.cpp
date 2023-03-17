@@ -190,6 +190,7 @@ namespace Scheduler {
             // Ensure scheduler doesn't **somehow** run this process after it's destroyed.
             processToRemove->State = Process::SLEEPING;
             processToRemove->destroy(status);
+            delete processToRemove;
             return true;
         }
         return false;
