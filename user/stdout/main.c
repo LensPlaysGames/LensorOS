@@ -504,7 +504,7 @@ int main(int argc, const char **argv) {
     // If file exists, attempt to load it as an executable (pass to exec).
     // TODO: To prevent failures, we should check valid elf64 file header, as well.
     if (offset) {
-      const char fs0_prefix[] = "/fs0/";
+      const char fs0_prefix[] = "/fs0/bin/";
       const size_t prefix_length = sizeof(fs0_prefix) - 1;
       // Includes null terminator
       const size_t path_length = sizeof(fs0_prefix) + offset;
