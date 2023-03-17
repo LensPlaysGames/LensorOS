@@ -358,6 +358,11 @@ int main(int argc, const char **argv) {
   fflush(NULL);
   */
 
+  if (argc != 6) {
+    printf("[INIT]: argc is not valid: %d\n", argc);
+    return 1;
+  }
+
   Framebuffer fb;
   fb.base_address = (void*)hexstring_to_number(argv[1]);
   fb.buffer_size         = hexstring_to_number(argv[2]);
