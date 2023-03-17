@@ -359,6 +359,7 @@ namespace ELF {
             Scheduler::remove_process(pid, -1);
             return false;
         }
+        process->CR3 = newPageTable;
 
         Memory::map(newPageTable, newPageTable, newPageTable
                     , (u64)Memory::PageTableFlag::Present

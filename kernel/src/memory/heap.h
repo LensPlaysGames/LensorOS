@@ -24,7 +24,7 @@
 #include <new>
 
 #define HEAP_VIRTUAL_BASE 0xffffffffff000000
-#define HEAP_INITIAL_PAGES 16
+#define HEAP_INITIAL_PAGES 1
 
 #define HEAP_BYTE_ALIGN 16
 

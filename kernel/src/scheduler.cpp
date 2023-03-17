@@ -358,6 +358,7 @@ pid_t CopyUserspaceProcess(Process* original) {
         Scheduler::remove_process(newProcess->ProcessID, -1);
         return -1;
     }
+    newProcess->CR3 = newPageTable;
     // Map new page table in itself.
     Memory::map(newPageTable, newPageTable, newPageTable
                 , (u64)Memory::PageTableFlag::Present
@@ -417,7 +418,6 @@ pid_t CopyUserspaceProcess(Process* original) {
     newProcess->ExecutablePath = original->ExecutablePath;
     newProcess->WorkingDirectory = original->WorkingDirectory;
 
-    newProcess->CR3 = newPageTable;
     newProcess->CPU = original->CPU;
     newProcess->next_region_vaddr = original->next_region_vaddr;
     // Set child return value for `fork()`.
