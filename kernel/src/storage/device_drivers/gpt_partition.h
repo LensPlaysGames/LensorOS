@@ -39,15 +39,15 @@ struct GPTPartitionDriver final : StorageDeviceDriver {
 
     ssz read(FileMetadata* file, usz offs, usz byteCount, void* buffer) final {
         return Driver->read(file, offs + Offset, byteCount, buffer);
-    };
+    }
     ssz read_raw(usz offs, usz byteCount, void* buffer) final {
         return Driver->read_raw(offs + Offset, byteCount, buffer);
-    };
+    }
 
 
     ssz write(FileMetadata* file, usz offs, usz byteCount, void* buffer) final {
         return Driver->read(file, offs + Offset, byteCount, buffer);
-    };
+    }
 
     GUID type_guid() { return Type; }
     GUID unique_guid() { return Unique; }
