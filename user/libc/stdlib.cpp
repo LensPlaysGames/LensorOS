@@ -346,6 +346,7 @@ __attribute__((malloc, alloc_size(1))) void* malloc(size_t bytes) {
         if (free_list == free_ptr) { free_list = free_ptr->next; }
 
         /// Add the block to the allocated list.
+        free_ptr->prev = nullptr;
         free_ptr->next = alloc_list;
         if (alloc_list) { alloc_list->prev = free_ptr; }
         alloc_list = free_ptr;
@@ -356,7 +357,7 @@ __attribute__((malloc, alloc_size(1))) void* malloc(size_t bytes) {
     /// We need to allocate a new block. Make sure we have enough space in the
     /// heap for both the block and the memory we need to allocate.
     static constexpr size_t block_sz = align_to_max_align_t(sizeof(alloc_header));
-    if (heap_ptr + bytes + block_sz > heap_base + sizeof(heap_base)) {
+    if (heap_ptr + bytes + block_sz >= heap_base + sizeof(heap_base)) {
         __errno = ENOMEM;
         return nullptr;
     }
@@ -375,6 +376,7 @@ __attribute__((malloc, alloc_size(1))) void* malloc(size_t bytes) {
     /// Add the block to the allocated list.
     block->ptr = static_cast<char*>(ptr);
     block->size = bytes;
+    block->prev = nullptr;
     block->next = alloc_list;
     if (alloc_list) { alloc_list->prev = block; }
     alloc_list = block;
@@ -429,6 +431,7 @@ void free(void* ptr) {
     if (alloc_list == block) { alloc_list = block->next; }
 
     /// And add it to the free list.
+    block->prev = nullptr;
     block->next = free_list;
     if (free_list) { free_list->prev = block; }
     free_list = block;
