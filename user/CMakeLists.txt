@@ -41,4 +41,5 @@ endfunction()
 
 add_userspace_program( blazeit )
 add_userspace_program( pwd )
+add_userspace_program( echo )
 add_userspace_program( stdout )
