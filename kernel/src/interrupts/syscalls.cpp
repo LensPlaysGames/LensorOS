@@ -256,7 +256,13 @@ pid_t sys$10_fork() {
 
 /// Replace the current process with a new process, specified by an
 /// executable found at PATH.
-void sys$11_exec(const char *path) {
+/// @param path
+///   The filepath to the executable that will replace the current
+///   process.
+/// @param args
+///   NULL-terminated array of pointers to NULL-terminated string
+///   arguments.
+void sys$11_exec(const char *path, const char **args) {
     CPUState* cpu = nullptr;
     asm volatile ("mov %%r11, %0\n"
                   : "=r"(cpu)
@@ -266,7 +272,16 @@ void sys$11_exec(const char *path) {
         std::print("[EXEC]: Can not execute NULL path\n");
         return;
     }
-    DBGMSG("  path: {}\n\n", path);
+#if defined(DEBUG_SYSCALLS)
+    std::print("  path: {}\n"
+               "  args:\n"
+               , path
+               );
+    usz i = 0;
+    for (const char **args_it = args; args_it && *args_it; ++args_it)
+        std::print("    {}: \"{}\"\n", i++, *args_it);
+    std::print("  endargs\n");
+#endif
     Process* process = Scheduler::CurrentProcess->value();
 
     // Load executable at path with virtual filesystem.
@@ -278,9 +293,21 @@ void sys$11_exec(const char *path) {
 
     process->ExecutablePath = path;
 
+    std::vector<std::string> args_vector_impl;
+    std::vector<std::string_view> args_vector;
+    args_vector.push_back(process->ExecutablePath.data());
+    {   // We create copies of the userspace buffer(s), because during
+        // replacing the userspace process, any data within it is
+        // invalidated.
+        for (const char **args_it = args; args_it && *args_it; ++args_it)
+            args_vector_impl.push_back(*args_it);
+
+        for (const auto& s : args_vector_impl)
+            args_vector.push_back(s);
+    }
+
     // Replace current process with new process.
-    // TODO: Arguments
-    bool success = ELF::ReplaceUserspaceElf64Process(process, fds.Process);
+    bool success = ELF::ReplaceUserspaceElf64Process(process, fds.Process, args_vector);
     if (!success) {
         // TODO: ... Unrecoverable, terminate the program, somehow.
         std::print("[EXEC]: Failed to replace process and parent is now unrecoverable, terminating.\n");
