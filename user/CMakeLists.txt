@@ -22,7 +22,7 @@ function(add_userspace_library NAME)
 endfunction()
 
 add_userspace_library( c )
-
+add_dependencies( userspace install-libc )
 
 # PROGRAMS
 
