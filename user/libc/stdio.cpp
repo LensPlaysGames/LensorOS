@@ -757,7 +757,7 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
                 if (i == max_digits) digits[--i] = '0';
 
                 if (negative) fputc('-', stream);
-                for (const char *it = &digits[0]; it < &digits[0] + max_digits && *it; ++it)
+                for (const char *it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
                     fputc(*it, stream);
 
             } continue;
