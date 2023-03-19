@@ -162,7 +162,7 @@ void expand_heap(u64 numBytes) {
                     , Memory::ShowDebug::No
                     );
 
-        std::print("Mapped {} to {}\n", (void*)((u64)sHeapEnd + i), addr);
+        DBGMSG("[Heap]: Mapped {} to {}\n", (void*)((u64)sHeapEnd + i), addr);
     }
 
     // Get address of new header at the end of the heap.
