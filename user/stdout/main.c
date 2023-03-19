@@ -52,15 +52,21 @@ typedef intptr_t ssz;
 #ifndef MAX_OUTPUT_LENGTH
 # define MAX_OUTPUT_LENGTH 4096
 #endif
+#ifndef MAX_ARG_COUNT
+# define MAX_ARG_COUNT 256
+#endif
 #ifndef MAX_OUTPUT_LINES
 # define MAX_OUTPUT_LINES 2
 #endif
+
 
 static char command[MAX_COMMAND_LENGTH];
 static char command_output[MAX_OUTPUT_LENGTH];
 static usz command_output_it = 0;
 static usz command_output_line_count = 0;
 static int command_status = 0;
+static char *args[MAX_ARG_COUNT];
+static usz args_it = 0;
 
 void write_command_output(char c) {
   command_output[command_output_it++] = c;
@@ -299,7 +305,10 @@ void print_command_line() {
 
 
 /// @param filepath Passed to `exec` syscall
-void run_program_waitpid(const char *const filepath) {
+/// @param args
+///   NULL-terminated array of pointers to NULL-terminated strings.
+///   Passed to `exec` syscall
+void run_program_waitpid(const char *const filepath, const char **args) {
   usz fds[2] = {-1,-1};
   syscall(SYS_pipe, fds);
 
@@ -343,7 +352,7 @@ void run_program_waitpid(const char *const filepath) {
     close(fds[1]);
 
     fflush(NULL);
-    syscall(SYS_exec, filepath);
+    syscall(SYS_exec, filepath, args);
   }
 }
 
@@ -429,6 +438,8 @@ int main(int argc, const char **argv) {
   // |-- Insert/Delete byte at cursor
   // `-- GUI layout: place prompt always at bottom of screen, clear before redraw, etc.
 
+  memset(args, 0, sizeof(args));
+
   size_t last_command_output_it = command_output_it;
 
   for (;;) {
@@ -485,17 +496,53 @@ int main(int argc, const char **argv) {
 
     // TODO: Lex, parse, sema, etc. Don't just treat every command as a single string.
 
-    if (strcmp(command, "quit") == 0) {
+    static const char *const whitespace = "; \t\r\n";
+    char *parsed_command = NULL;
+    // find first whitespace, expression separator, or null character;
+    // that's the end of "parsed_command".
+    size_t parsed_command_length = strcspn(command, whitespace);
+
+    parsed_command = malloc(parsed_command_length + 1);
+    memcpy(parsed_command, command, parsed_command_length);
+    parsed_command[parsed_command_length] = '\0';
+    // command = "echo"
+
+    // Free all strings in args array
+    for (char **str = args; *str; ++str) {
+      free(*str);
+      *str = NULL;
+    }
+
+    args_it = 0;
+    char *arg_start = command + parsed_command_length;
+    for (;;) {
+      // Skip expression delimiters/whitespace at beginning of arg.
+      arg_start += strspn(arg_start, whitespace);
+      size_t parsed_arg_length = strcspn(arg_start, whitespace);
+      if (!parsed_arg_length) break;
+
+      char *arg = malloc(parsed_arg_length + 1);
+      if (!arg) break;
+      memcpy(arg, arg_start, parsed_arg_length);
+      arg[parsed_arg_length] = '\0';
+
+      args[args_it++] = arg;
+
+      arg_start += parsed_arg_length;
+    }
+    args[args_it] = NULL;
+
+    if (strcmp(parsed_command, "quit") == 0) {
       puts("Shell quitting, baiBAI!");
       fflush(NULL);
       break;
     }
 
-    // If command is recognized and supported syscall, make the syscall.
+    // If parsed_command is recognized and supported syscall, make the syscall.
     // TODO: Maybe some syntax for this would be better? Or just a
     // utility program that does this i.e. "syscall poke" would run
     // syscall with poke as an argument.
-    if (strcmp(command, "poke") == 0) {
+    if (strcmp(parsed_command, "poke") == 0) {
       syscall(SYS_poke);
       command_status = 0;
       continue;
@@ -503,21 +550,21 @@ int main(int argc, const char **argv) {
 
     // If file exists, attempt to load it as an executable (pass to exec).
     // TODO: To prevent failures, we should check valid elf64 file header, as well.
-    if (offset) {
+    if (parsed_command_length) {
       const char fs0_prefix[] = "/fs0/bin/";
       const size_t prefix_length = sizeof(fs0_prefix) - 1;
       // Includes null terminator
-      const size_t path_length = sizeof(fs0_prefix) + offset;
+      const size_t path_length = sizeof(fs0_prefix) + parsed_command_length;
       char *const path = malloc(path_length);
       if (path) {
         memcpy(path, fs0_prefix, prefix_length);
-        memcpy(path + prefix_length, command, path_length - prefix_length);
+        memcpy(path + prefix_length, parsed_command, path_length - prefix_length);
         path[path_length - 1] = '\0';
 
         FILE *exists = fopen(path, "r");
         if (exists) {
           fclose(exists);
-          run_program_waitpid(path);
+          run_program_waitpid(path, (const char **)args);
           free(path);
           continue;
         }
