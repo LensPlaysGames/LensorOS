@@ -3,6 +3,12 @@
 #+description: What the fuck we should be doing for LensorOS in 2023
 #+created: <2023-01-12 Thu>
 
+* TODO C++ programs in userspace break to all hell
+
+They are trying to link with ~-lstdc++~ and ~-lm~...
+
+[2023-03-19 Sun 11:22]
+
 * TODO Actually install `root` subdirectory onto the system root...
 
 One interesting thing to note: We may have to hardcode some basic symlinks for now in the "mount prefix" level of things in the VFS in order for `/inc` to access what will actually amount to `/fs0/inc`, or something similar.
