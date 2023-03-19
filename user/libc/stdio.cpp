@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <atomic>
 #include <extensions>
+#include <format>
 #include <mutex>
 #include <new>
 #include <string>
@@ -704,6 +705,11 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
             switch (*fmt) {
 
             // TODO: Support more format specifiers
+
+            case 'p': {
+                void *addr = va_arg(args, void *);
+                std::print("{}", addr);
+            } continue;
 
             case 's': {
                 const char *str = va_arg(args, const char *);
