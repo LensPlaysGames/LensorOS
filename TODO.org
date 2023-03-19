@@ -9,17 +9,53 @@ They are trying to link with ~-lstdc++~ and ~-lm~...
 
 [2023-03-19 Sun 11:22]
 
-* TODO Actually install `root` subdirectory onto the system root...
+In ~gcc-12.1.0/libstdc++-v3/crossconfig.m4~, the LensorOS toolchain adds the following.
+#+begin_src diff
+diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/crossconfig.m4 gcc-12.1.0/libstdc++-v3/crossconfig.m4
+--- untouched/gcc-12.1.0/libstdc++-v3/crossconfig.m4	2022-05-06 00:31:00.000000000 -0700
++++ gcc-12.1.0/libstdc++-v3/crossconfig.m4	2022-10-26 13:04:28.979947700 -0700
+@@ -183,6 +183,12 @@
+ 	;;
+     esac
+     ;;
++  *-lensor*)
++    GLIBCXX_CHECK_COMPILER_FEATURES
++    GLIBCXX_CHECK_LINKER_FEATURES
++    GLIBCXX_CHECK_MATH_SUPPORT
++    GLIBCXX_CHECK_STDLIB_SUPPORT
++    ;;
+   *-linux* | *-uclinux* | *-gnu* | *-kfreebsd*-gnu | *-cygwin* | *-solaris*)
+     GLIBCXX_CHECK_COMPILER_FEATURES
+     GLIBCXX_CHECK_LINKER_FEATURES
+#+end_src
+
+I /believe/ the ~GLIBCXX_CHECK_MATH_SUPPORT~ is causing libstdc++-v3 to search the sysroot for =libm=. There is currently no =libm= in the sysroot, which causes GCC to want to use GLIBC/GNU libm. GNU libm is then expected to be on the target (LensorOS), even though it isn't, which means at compile-time, when we try to use G++, it assumes it must use GNU libm, which can't be found, and that causes errors.
+
+Presumably, the same thing is happening with the ~GLIBCXX_CHECK_STDLIB_SUPPORT~.
+
+[2023-03-19 Sun 14:42]
+
+* DONE Actually install `root` subdirectory onto the system root...
 
 One interesting thing to note: We may have to hardcode some basic symlinks for now in the "mount prefix" level of things in the VFS in order for `/inc` to access what will actually amount to `/fs0/inc`, or something similar.
 
 [2023-03-12 Sun 12:21]
 
-* TODO Free Physical Memory
+There is now `mcopy_glob` which helps a ton with things like this.
+
+NOTE: We don't /actually/ install the sysroot yet, as it adds a lot of time to the build process, and until we build software from within LensorOS for LensorOS, this won't be a problem. Or until dynamic linking, when shared object files must be able to be resolved at runtime.
+
+DONE [2023-03-19 Sun 14:48]
+
+* DONE Free Physical Memory
 
 Kind of embarrassing, but ~request_pages()~ never actually resets the page it's looking for memory, so it just keeps getting bigger until it's too big... Even though we have `free_pages`, it isn't interacting in any way.
 
 [2023-03-08 Wed 23:50]
+
+I did it! It was really hard, but it turns out I was assuming ~Memory::request_pages()~ would return zeroed memory; it doesn't. Fixing that made reclaiming physical memory quite easy.
+
+DONE [2023-03-19 Sun 14:50]
 
 * TODO Time Syscall(s)
 
@@ -27,17 +63,27 @@ Something to get realtime would be a minimum, I think.
 
 [2023-03-01 Wed 20:19]
 
+We have /one/... It gets the realtime using the RTC chip.
+
+Really what would let me mark this as "done" is a way to get a UNIX timestamp, or something of that nature.
+
+[2023-03-19 Sun 14:50]
+
 * TODO Directory Traversal (syscalls, or something)
 
 Maybe reading a directory doesn't return anything filesystem specific; rather, it builds a custom structure containing basic data of all files within that directory and returns that in a specified format. So the file would still be opened, could still be fread(), but it would contain the list of filesystem entries in the directory.
 
 [2023-03-01 Wed 20:15]
 
-* TODO LensorOS partition needs fleshing out
+* DONE LensorOS partition needs fleshing out
 
 First and foremost: a lot of the boot media that we used to support *doesn't* support multiple partitions. For example: booting from the raw EFI image, booting from an El-Torito ISO cd, etc... So we will need to begin to separate two paths the kernel takes: one when the LensorOS partition is present, and one when it isn't. The one when it isn't will have to reduce it's expectations about how to boot the system: we should only try to open files present in the EFI partition. This is currently "hackily" done by having =blazeit= and =stdout= executables in the top level of both partitions...
 
 [2023-02-23 Thu 16:44]
+
+This has been resolved, I think.
+
+DONE [2023-03-19 Sun]
 
 * DONE FAT driver is a joke
 
