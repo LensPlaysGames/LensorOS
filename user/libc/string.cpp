@@ -139,7 +139,7 @@ char* strchr(const char* str, int chr) {
 
 size_t strcspn(const char* src, const char* reject) {
     auto source = std::string_view(src);
-    size_t out = source.find_first_not_of(std::string_view(reject));
+    size_t out = source.find_first_of(std::string_view(reject));
     return out == std::string::npos ? source.size() : out;
 }
 
@@ -166,7 +166,7 @@ char* strrchr(const char* str, int chr) {
 
 size_t strspn(const char* src, const char* accept) {
     auto source = std::string_view(src);
-    size_t out = source.find_first_of(std::string_view(accept));
+    size_t out = source.find_first_not_of(std::string_view(accept));
     return out == std::string::npos ? source.size() : out;
 }
 
