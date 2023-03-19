@@ -63,6 +63,7 @@ typedef intptr_t ssz;
 static char command[MAX_COMMAND_LENGTH];
 static char command_output[MAX_OUTPUT_LENGTH];
 static usz command_output_it = 0;
+static usz last_command_output_it = 0;
 static usz command_output_line_count = 0;
 static int command_status = 0;
 static char *args[MAX_ARG_COUNT];
@@ -84,7 +85,12 @@ void write_command_output(char c) {
     }
     memmove(command_output, command_output + skip_bytes, MAX_OUTPUT_LENGTH - skip_bytes);
     command_output[MAX_OUTPUT_LENGTH - 1 - skip_bytes] = 0;
-    command_output_it -= skip_bytes;
+    if (command_output_it >= skip_bytes)
+        command_output_it -= skip_bytes;
+    else command_output_it = 0;
+    if (last_command_output_it >= skip_bytes)
+        last_command_output_it -= skip_bytes;
+    else last_command_output_it = 0;
     command_output_line_count -= lines_scrolled;
   }
 }
@@ -440,7 +446,7 @@ int main(int argc, const char **argv) {
 
   memset(args, 0, sizeof(args));
 
-  size_t last_command_output_it = command_output_it;
+  last_command_output_it = command_output_it;
 
   for (;;) {
     memset(command, 0, MAX_COMMAND_LENGTH);
