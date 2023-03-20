@@ -56,7 +56,7 @@ typedef intptr_t ssz;
 # define MAX_ARG_COUNT 256
 #endif
 #ifndef MAX_OUTPUT_LINES
-# define MAX_OUTPUT_LINES 2
+# define MAX_OUTPUT_LINES 16
 #endif
 
 

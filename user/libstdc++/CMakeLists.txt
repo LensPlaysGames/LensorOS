@@ -27,7 +27,11 @@ project(LensorOS_libstdc++ VERSION 0.0.1 LANGUAGES CXX)
 # This gives language servers like `clangd` all the info they need.
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
-add_library(stdc++ src/stub.cpp)
+add_library(
+  stdc++
+  src/stub.cpp
+  src/filesystem.cpp
+)
 
 target_include_directories(
   stdc++
@@ -59,32 +63,18 @@ target_compile_options(
 
 target_compile_options(
     stdc++
-    PRIVATE
-    -fno-exceptions
-    -fno-rtti
-    -nostdlib
-    -nostdinc
-)
-
-target_link_options(
-    stdc++
-    PRIVATE
-    -fno-exceptions
-    -fno-rtti
-    -nostdlib
-    -nostdinc
-)
-
-target_compile_options(
-    stdc++
     PUBLIC
-    -lgcc
+    -fno-stack-protector
+    -fno-exceptions
+    -fno-rtti
 )
 
 target_link_options(
     stdc++
     PUBLIC
-    -lgcc
+    -fno-stack-protector
+    -fno-exceptions
+    -fno-rtti
 )
 
 set(ROOT "${CMAKE_CURRENT_LIST_DIR}/../../root")

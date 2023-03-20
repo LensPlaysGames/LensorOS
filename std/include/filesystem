@@ -165,6 +165,8 @@ public:
 
 using path = __path<char, basic_string<char>>;
 
+bool exists(path p);
+
 } /* namespace filesystem */
 } /* namespace std */
 

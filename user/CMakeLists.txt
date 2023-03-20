@@ -41,7 +41,14 @@ function(add_userspace_program NAME )
   add_dependencies( userspace ${NAME} )
 endfunction()
 
+function(add_cxx_userspace_program NAME )
+  add_userspace_program( ${NAME} )
+  add_dependencies( ${NAME} stdc++ )
+endfunction()
+
+
 add_userspace_program( blazeit )
 add_userspace_program( pwd )
-add_userspace_program( echo )
 add_userspace_program( stdout )
+add_cxx_userspace_program( echo )
+
