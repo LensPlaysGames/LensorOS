@@ -23,6 +23,8 @@ endfunction()
 
 add_userspace_library( c )
 add_dependencies( userspace install-libc )
+add_userspace_library( m )
+add_dependencies( userspace install-libm )
 add_userspace_library( stdc++ )
 add_dependencies( userspace install-libstdc++ )
 
