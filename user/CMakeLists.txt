@@ -3,6 +3,7 @@ project( LensorOS VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGES} )
 
 set( USERSPACE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin CACHE PATH "This is where built userspace libraries and programs will be installed." )
 
+add_custom_target( userspace-libraries )
 add_custom_target( userspace )
 
 
@@ -22,11 +23,13 @@ function(add_userspace_library NAME)
 endfunction()
 
 add_userspace_library( c )
-add_dependencies( userspace install-libc )
+add_dependencies( userspace-libraries install-libc )
 add_userspace_library( m )
-add_dependencies( userspace install-libm )
+add_dependencies( userspace-libraries install-libm )
 add_userspace_library( stdc++ )
-add_dependencies( userspace install-libstdc++ )
+add_dependencies( userspace-libraries install-libstdc++ )
+
+add_dependencies( userspace userspace-libraries )
 
 # PROGRAMS
 
@@ -45,6 +48,8 @@ endfunction()
 
 function(add_cxx_userspace_program NAME )
   add_userspace_program( ${NAME} )
+  # g++ automatically links with these libraries
+  add_dependencies( ${NAME} m )
   add_dependencies( ${NAME} stdc++ )
 endfunction()
 
