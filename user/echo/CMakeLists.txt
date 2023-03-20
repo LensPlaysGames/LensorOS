@@ -19,11 +19,17 @@
 
 cmake_minimum_required( VERSION 3.14 )
 set( echo_VERSION 0.0.1 )
-set( echo_LANGUAGES C )
+set( echo_LANGUAGES CXX )
 
 # Export compilation database in JSON format.
 set( CMAKE_EXPORT_COMPILE_COMMANDS on )
 
 project( echo VERSION ${echo_VERSION} LANGUAGES ${echo_LANGUAGES} )
 
-add_executable( echo main.c )
+add_executable( echo main.cpp )
+target_link_options(
+  echo
+  PUBLIC
+  -fno-exceptions
+  -fno-rtti
+)
