@@ -437,6 +437,19 @@ bool sys$15_pwd(char *buffer, usz numBytes) {
     return entire;
 }
 
+/// The returned file descriptor will be associated with the file
+/// description of the given file descriptor.
+ProcFD sys$16_dup(ProcessFileDescriptor fd) {
+    DBGMSG(sys$_dbgfmt, 16, "dup");
+    DBGMSG("  fd: {}\n", fd);
+    auto* process = Scheduler::CurrentProcess->value();
+    auto fds = SYSTEM->virtual_filesystem().dup(process, fd);
+    if (fds.invalid())
+        std::print("  ERROR OCCURED: dup failed\n");
+    return fds.Process;
+}
+
+
 u64 num_syscalls = LENSOR_OS_NUM_SYSCALLS;
 void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     // FILE STUFFS
@@ -467,4 +480,6 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     (void*)sys$14_seek,
 
     (void*)sys$15_pwd,
+
+    (void*)sys$16_dup,
 };

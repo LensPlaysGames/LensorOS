@@ -101,6 +101,16 @@ struct VFS {
 
     const std::vector<MountPoint>& mounts() const { return Mounts; }
 
+    /// The returned file descriptors will be associated with the file
+    /// description of the given file descriptor.
+    FileDescriptors dup(Process* proc, ProcFD fd) {
+        if (!proc || !valid(proc, fd)) return {};
+        SysFD sysfd = procfd_to_fd(proc, fd);
+        auto f = file(sysfd);
+        if (!f) return {};
+        return add_file(std::move(f), proc);
+    }
+
     /// The second file descriptor given will be associated with the file
     /// description of the first.
     bool dup2(Process* proc, ProcFD fd, ProcFD replaced) {
