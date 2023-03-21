@@ -38,7 +38,7 @@ add_dependencies( userspace userspace-libraries )
 # generate one target that is named the same as the subdirectory.
 function(add_userspace_program NAME )
   add_subdirectory( ${NAME} EXCLUDE_FROM_ALL )
-  add_dependencies( ${NAME} c ) # depend on libc by default
+  add_dependencies( ${NAME} install-libc ) # depend on libc by default
   set_property(
     TARGET ${NAME}
     PROPERTY RUNTIME_OUTPUT_DIRECTORY ${USERSPACE_OUTPUT_DIRECTORY}
@@ -49,8 +49,8 @@ endfunction()
 function(add_cxx_userspace_program NAME )
   add_userspace_program( ${NAME} )
   # g++ automatically links with these libraries
-  add_dependencies( ${NAME} m )
-  add_dependencies( ${NAME} stdc++ )
+  add_dependencies( ${NAME} install-libm )
+  add_dependencies( ${NAME} install-libstdc++ )
 endfunction()
 
 
