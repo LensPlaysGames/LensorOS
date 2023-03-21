@@ -27,6 +27,12 @@
 #include <memory>
 
 std::shared_ptr<FileMetadata> InputDriver::open(std::string_view path) {
+    // FIXME: We may want to disallow empty paths.
+
+    for (const auto& existing_buffer : InputBuffers)
+        if (std::string_view(existing_buffer.Name) == path)
+            return existing_buffer.Meta.lock();
+
     InputBuffer* input = nullptr;
     if (FreeInputBuffers.empty()) {
         input = new InputBuffer();
@@ -34,5 +40,7 @@ std::shared_ptr<FileMetadata> InputDriver::open(std::string_view path) {
         input = FreeInputBuffers.back();
         FreeInputBuffers.pop_back();
     }
-    return std::make_shared<FileMetadata>(path, sdd(SYSTEM->virtual_filesystem().StdinDriver), INPUT_BUFSZ, input);
+    auto f = std::make_shared<FileMetadata>(path, sdd(SYSTEM->virtual_filesystem().StdinDriver), INPUT_BUFSZ, input);
+    InputBuffers.push_back({f, path, input});
+    return f;
 }

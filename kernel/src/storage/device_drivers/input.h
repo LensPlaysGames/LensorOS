@@ -20,16 +20,27 @@
 #ifndef LENSOR_OS_INPUT_DRIVER_H
 #define LENSOR_OS_INPUT_DRIVER_H
 
-#include <format>
+// Uncomment the following directive for extra debug information output.
+//#define DEBUG_INPUT_DRIVER
 
-#include <vector>
+
+#include <format>
 #include <string>
 #include <string_view>
+#include <vector>
 
+#include <memory/common.h>
 #include <storage/storage_device_driver.h>
 #include <storage/file_metadata.h>
 
-#define INPUT_BUFSZ 4088
+#ifdef DEBUG_INPUT_DRIVER
+# define DBGMSG(...) std::print(__VA_ARGS__)
+#else
+# define DBGMSG(...)
+#endif
+
+// NOTE: This is an attempt to keep `sizeof(InputBuffer)` == PAGE_SIZE
+#define INPUT_BUFSZ PAGE_SIZE - sizeof(usz)
 
 struct InputBuffer {
     u8 Data[INPUT_BUFSZ];
@@ -46,6 +57,12 @@ struct InputBuffer {
     InputBuffer(InputBuffer&&) = delete;
 };
 
+struct NamedInputBuffer {
+    std::weak_ptr<FileMetadata> Meta;
+    std::string Name;
+    InputBuffer* Buffer;
+};
+
 struct InputDriver final : StorageDeviceDriver {
     void close(FileMetadata* file) final {
         if (!file) return;
@@ -60,16 +77,14 @@ struct InputDriver final : StorageDeviceDriver {
     }
 
     ssz read(FileMetadata* file, usz, usz bytes, void* buffer) final {
-        if (!file){
-            return -1;
-        }
+        if (!file) return -1;
+
         auto* input = static_cast<InputBuffer*>(file->driver_data());
-        if (!input) {
-            return -1;
-        }
+        if (!input) return -1;
 
         // TODO: Support "wait until there is something to read".
         if (input->Offset == 0) {
+            DBGMSG("[INPUT]: Input buffer at {} has no data (todo: wait)\n", (void*)input);
             return -1;
         }
 
@@ -108,7 +123,10 @@ struct InputDriver final : StorageDeviceDriver {
     }
 
 private:
+    std::vector<NamedInputBuffer> InputBuffers;
     std::vector<InputBuffer*> FreeInputBuffers;
 };
+
+#undef DBGMSG
 
 #endif /* LENSOR_OS_INPUT_DRIVER_H */
