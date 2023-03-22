@@ -20,6 +20,7 @@
 #include <storage/device_drivers/pipe.h>
 
 #include <vfs_forward.h>
+#include <scheduler.h>
 #include <storage/file_metadata.h>
 #include <system.h>
 
@@ -121,8 +122,24 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
     // likely we are in a syscall and no other processes are actually
     // running...
     if (pipe->Buffer->Offset == 0) {
-        //std::print("[PIPE]:TODO: Support \"wait until there is something to read\"\n");
-        return -1;
+        // return EOF when write end of pipe is completely closed.
+        if (pipe->Buffer->WriteClosed) {
+            std::print("[PIPE]: read()  Returning EOF because write end is closed and pipe is empty\n");
+            return -1;
+        }
+
+        auto* process = Scheduler::CurrentProcess->value();
+        std::print("[PIPE]: read()  Blocking process {}\n", process->ProcessID);
+
+        pipe->Buffer->PIDsWaiting.push_back(process->ProcessID);
+
+        // Set state to SLEEPING so that after we yield, the scheduler
+        // won't switch back to us until the pipe has been written to.
+        process->State = Process::SLEEPING;
+        // FIXME: Make platform agnostic.
+        // Set return value for when we get resumed.
+        process->CPU.RAX = -2;
+        Scheduler::yield();
     }
 
     // TODO: Read in a loop to fill buffers larger than what is currently written.
@@ -155,6 +172,15 @@ ssz PipeDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
 
     memcpy(pipe->Buffer->Data + pipe->Buffer->Offset, buffer, byteCount);
     pipe->Buffer->Offset += byteCount;
+
+    for (pid_t pid : pipe->Buffer->PIDsWaiting) {
+        auto* process = Scheduler::process(pid);
+        if (!process) continue;
+        std::print("[PIPE]: write()  Unblocking process {}\n", pid);
+        process->State = Process::RUNNING;
+    }
+    pipe->Buffer->PIDsWaiting.clear();
+
     return ssz(byteCount);
 }
 

@@ -40,7 +40,9 @@ extern "C" {
 
     ssize_t read(int fd, const void* buffer, size_t count) {
         /// TODO: check return value and set errno.
-        return syscall<ssize_t>(SYS_read, fd, buffer, count);
+        int rc = 0;
+        while ((rc = syscall<int>(SYS_read, fd, buffer, count)) == -2);
+        return rc;
     }
 
     ssize_t write(int fd, const void* buffer, size_t count) {

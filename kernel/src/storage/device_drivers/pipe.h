@@ -23,6 +23,7 @@
 #include <integers.h>
 #include <storage/storage_device_driver.h>
 #include <storage/file_metadata.h>
+#include <scheduler.h>
 
 #include <algorithm>
 #include <memory>
@@ -49,6 +50,7 @@ struct PipeBuffer {
     usz Offset{0};
     bool ReadClosed{false};
     bool WriteClosed{false};
+    std::vector<pid_t> PIDsWaiting;
 
     constexpr PipeBuffer() = default;
     ~PipeBuffer() = default;

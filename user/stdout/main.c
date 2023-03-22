@@ -331,6 +331,12 @@ void run_program_waitpid(const char *const filepath, const char **args) {
     close(fds[1]);
     close(stdin_copy);
 
+    char c;
+    while (read(fds[0], &c, 1) == 1 && c)
+      write_command_output(c);
+
+    close(fds[0]);
+
     // TODO: waitpid needs to reserve some uncommon error code for
     // itself so that it is clear what is a failure from waitpid or just a
     // failing status. Maybe have some other way to check? Or wrap this in
@@ -342,12 +348,6 @@ void run_program_waitpid(const char *const filepath, const char **args) {
       printf("`waitpid` failure!\n");
       return;
     }
-
-    char c;
-    while (read(fds[0], &c, 1) == 1 && c)
-      write_command_output(c);
-
-    close(fds[0]);
 
     //puts("Parent waited");
     //fflush(NULL);
