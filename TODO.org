@@ -3,9 +3,22 @@
 #+description: What the fuck we should be doing for LensorOS in 2023
 #+created: <2023-01-12 Thu>
 
-* TODO C++ string SSO breaks when appending a single character to a 22/23 byte string
+* TODO ~waitpid~ isn't implemented right
+
+Basically, ~waitpid~ is /supposed/ to be able to return the status of a child process *even if it has already exited*. This currently doesn't work, because as soon as a process calls `exit`, it is completely cleaned up, in it's entirety.
+
+We need the concept of zombies. So basically each process needs two new members: a pointer to a parent process and a vector of ZombieState structures, each of which contain a PID and a return status. When a process exits, it needs to add a a zombie state entry into the parent process. This entry will contain it's pid and return status, which is enough information for waitpid to be implemented.
+
+[2023-03-22 Wed 15:26]
+
+* DONE C++ string SSO breaks when appending a single character to a 22/23 byte string
 
 [2023-03-21 Tue 17:54]
+
+It was actually fixed yesterday, on stream by Sirraide. Thank God, I
+probably never would have found this.
+
+DONE [2023-03-22 Wed 14:57]
 
 * TODO C++ Posix Shell (xish)
 
