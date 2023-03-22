@@ -53,17 +53,17 @@ void PipeDriver::close(FileMetadata* meta) {
         }
         pipeBuffer->WriteClosed = true;
     }
-    std::print("[PIPE]: close()  Freeing pipe end at {}\n", (void*)pipe);
+    //std::print("[PIPE]: close()  Freeing pipe end at {}\n", (void*)pipe);
     delete pipe;
 
 
     // Only attempt to actually free the underlying pipe buffer if both ends are closed.
     if (!pipeBuffer->ReadClosed || !pipeBuffer->WriteClosed) {
-        std::print("[PIPE]: close()  NOT freeing pipe buffer at {} because both ends are not closed\n", (void*)pipeBuffer);
+        //std::print("[PIPE]: close()  NOT freeing pipe buffer at {} because both ends are not closed\n", (void*)pipeBuffer);
         return;
     }
 
-    std::print("[PIPE]: close()  Freeing pipe buffer at {}\n", (void*)pipeBuffer);
+    //std::print("[PIPE]: close()  Freeing pipe buffer at {}\n", (void*)pipeBuffer);
 
     // Remove pipe from named pipe buffer vector.
     auto existing = std::find_if(PipeBuffers.begin(), PipeBuffers.end(), [&meta](const NamedPipeBuffer& existing_pipe) {
@@ -77,7 +77,7 @@ void PipeDriver::close(FileMetadata* meta) {
     }
     pipeBuffer->clear();
     FreePipeBuffers.push_back(pipeBuffer);
-    std::print("[PIPE]: Closed pipe buffer at {}\n", (void*)pipeBuffer);
+    //std::print("[PIPE]: Closed pipe buffer at {}\n", (void*)pipeBuffer);
 }
 
 auto PipeDriver::open(std::string_view path) -> std::shared_ptr<FileMetadata> {
@@ -124,12 +124,12 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
     if (pipe->Buffer->Offset == 0) {
         // return EOF when write end of pipe is completely closed.
         if (pipe->Buffer->WriteClosed) {
-            std::print("[PIPE]: read()  Returning EOF because write end is closed and pipe is empty\n");
+            //std::print("[PIPE]: read()  Returning EOF because write end is closed and pipe is empty\n");
             return -1;
         }
 
         auto* process = Scheduler::CurrentProcess->value();
-        std::print("[PIPE]: read()  Blocking process {}\n", process->ProcessID);
+        //std::print("[PIPE]: read()  Blocking process {}\n", process->ProcessID);
 
         pipe->Buffer->PIDsWaiting.push_back(process->ProcessID);
 
@@ -176,7 +176,7 @@ ssz PipeDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
     for (pid_t pid : pipe->Buffer->PIDsWaiting) {
         auto* process = Scheduler::process(pid);
         if (!process) continue;
-        std::print("[PIPE]: write()  Unblocking process {}\n", pid);
+        //std::print("[PIPE]: write()  Unblocking process {}\n", pid);
         process->State = Process::RUNNING;
     }
     pipe->Buffer->PIDsWaiting.clear();
@@ -205,7 +205,7 @@ auto PipeDriver::lay_pipe() -> PipeMetas {
     auto readMeta = std::make_shared<FileMetadata>(path, sdd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, readEnd);
     auto writeMeta = std::make_shared<FileMetadata>(path, sdd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, writeEnd);
 
-    std::print("[PIPE]: lay_pipe()  \"{}\"  buffer={}  read={}  write={}\n", path, (void*)pipe, (void*)readEnd, (void*)writeEnd);
+    //std::print("[PIPE]: lay_pipe()  \"{}\"  buffer={}  read={}  write={}\n", path, (void*)pipe, (void*)readEnd, (void*)writeEnd);
 
     return {readMeta, writeMeta};
 }

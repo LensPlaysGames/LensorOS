@@ -343,14 +343,6 @@ void run_program_waitpid(const char *const filepath, const char **args) {
     // libc that sets errno (that always goes well).
     fflush(NULL);
     command_status = (int)syscall(SYS_waitpid, cpid);
-    if (command_status == -1) {
-      // TODO: Technically, it's possible that the child has exited already.
-      printf("`waitpid` failure!\n");
-      return;
-    }
-
-    //puts("Parent waited");
-    //fflush(NULL);
 
   } else {
     //puts("Child");;
