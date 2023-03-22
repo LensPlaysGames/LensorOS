@@ -355,9 +355,9 @@ void sys$13_pipe(ProcessFileDescriptor *fds) {
     Process* process = Scheduler::CurrentProcess->value();
     VFS& vfs = SYSTEM->virtual_filesystem();
     // Lay down a new pipe.
-    auto file = vfs.PipesDriver->lay_pipe();
-    FileDescriptors readFDs = vfs.add_file(file, process);
-    FileDescriptors writeFDs = vfs.add_file(std::move(file), process);
+    auto pipeEnds = vfs.PipesDriver->lay_pipe();
+    FileDescriptors readFDs = vfs.add_file(std::move(pipeEnds.Read), process);
+    FileDescriptors writeFDs = vfs.add_file(std::move(pipeEnds.Write), process);
     // Write fds.
     fds[0] = readFDs.Process;
     fds[1] = writeFDs.Process;

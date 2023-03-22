@@ -411,8 +411,8 @@ pid_t CopyUserspaceProcess(Process* original) {
     for (const auto& entry : original->FileDescriptors) {
         std::shared_ptr<FileMetadata> meta = SYSTEM->virtual_filesystem().file(entry);
         // Meta, isn't it? :p
-        auto f = meta->device_driver()->open(meta->name());
-        SYSTEM->virtual_filesystem().add_file(std::move(f), newProcess);
+        //auto f = meta->device_driver()->open(meta->name());
+        SYSTEM->virtual_filesystem().add_file(std::move(meta), newProcess);
     }
 
     // Copy PWD
