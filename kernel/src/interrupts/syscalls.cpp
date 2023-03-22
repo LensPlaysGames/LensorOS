@@ -52,6 +52,7 @@ constexpr const char* sys$_dbgfmt = "[SYS$]: {} -- {}\n";
 
 ProcessFileDescriptor sys$0_open(const char* path) {
     DBGMSG(sys$_dbgfmt, 0, "open");
+    // FIXME: Validate path pointer.
     return SYSTEM->virtual_filesystem().open(path).Process;
 }
 
@@ -71,6 +72,7 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
            , (void*) buffer
            , byteCount
            );
+    // FIXME: Validate buffer pointer.
     return SYSTEM->virtual_filesystem().read(fd, buffer, byteCount, 0);
 }
 
@@ -85,6 +87,7 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
            , (void*) buffer
            , byteCount
            );
+    // FIXME: Validate buffer pointer.
     return SYSTEM->virtual_filesystem().write(fd, buffer, byteCount, 0);
 }
 
@@ -134,6 +137,11 @@ void* sys$6_map(void* address, usz size, u64 flags) {
         address = (void*)process->next_region_vaddr;
         process->next_region_vaddr += pages * PAGE_SIZE;
     }
+
+    // FIXME: Major problem: we need to check for overlapping regions
+    // here. If the user asks for the same memory twice. If the user
+    // asks for an address out of the range of addresses allowed in
+    // userspace, etc.
 
     // Add memory region to current process
     // TODO: Convert given flags to Memory::PageTableFlag
@@ -200,6 +208,7 @@ void sys$8_time(Time::tm* time) {
            , (void*) time
            );
     if (!time) { return; }
+    // FIXME: Validate time pointer
     Time::fill_tm(time);
 }
 
@@ -262,6 +271,7 @@ pid_t sys$10_fork() {
 /// @param args
 ///   NULL-terminated array of pointers to NULL-terminated string
 ///   arguments.
+// FIXME: This really needs to be updated to a type-safe API. This stinks like scanf().
 void sys$11_exec(const char *path, const char **args) {
     CPUState* cpu = nullptr;
     asm volatile ("mov %%r11, %0\n"
@@ -341,6 +351,7 @@ void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
 /// other which can be written to.
 void sys$13_pipe(ProcessFileDescriptor *fds) {
     DBGMSG(sys$_dbgfmt, 13, "pipe");
+    // TODO: Validate pointer.
     Process* process = Scheduler::CurrentProcess->value();
     VFS& vfs = SYSTEM->virtual_filesystem();
     // Lay down a new pipe.
