@@ -331,7 +331,7 @@ void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
     Process* process = Scheduler::CurrentProcess->value();
     bool result = SYSTEM->virtual_filesystem().dup2(process, fd, replaced);
     if (!result) {
-        std::print("  ERROR OCCURED: repfd failed\n");
+        std::print("  ERROR OCCURED: repfd failed (pid={}  fd={}  replaced={})\n", process->ProcessID, fd, replaced);
     }
     // TODO: Use result/handle error in some way.
     (void)result;
