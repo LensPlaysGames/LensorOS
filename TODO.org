@@ -7,6 +7,21 @@
 
 [2023-03-21 Tue 17:54]
 
+* TODO C++ Posix Shell (xish)
+
+This just needs expanded in a lot of ways.
+
+** TODO Write a proper lexer
+
+Being able to lex "stream-wise" where we gather a token which has a type and value (tagged union) will make parsing 100% easier.
+
+** TODO Actually search something akin to PATH to find executables to run!
+
+Currently, we just pass the command directly through to ~exec~.
+
+[2023-03-21 Tue 17:11]
+
+* DONE C++ programs in userspace break to all hell
 
 They are trying to link with ~-lstdc++~ and ~-lm~...
 

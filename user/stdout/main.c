@@ -318,6 +318,8 @@ void run_program_waitpid(const char *const filepath, const char **args) {
   usz fds[2] = {-1,-1};
   syscall(SYS_pipe, fds);
 
+  int stdin_copy = syscall(SYS_dup, STDIN_FILENO);
+
   // If there are pending writes, they will be executed on both the
   // parent and the child; by flushing any buffers we have, it ensures
   // the child won't write duplicate data on accident.
@@ -327,6 +329,7 @@ void run_program_waitpid(const char *const filepath, const char **args) {
   if (cpid) {
     //puts("Parent");
     close(fds[1]);
+    close(stdin_copy);
 
     // TODO: waitpid needs to reserve some uncommon error code for
     // itself so that it is clear what is a failure from waitpid or just a
@@ -352,6 +355,10 @@ void run_program_waitpid(const char *const filepath, const char **args) {
   } else {
     //puts("Child");;
     close(fds[0]);
+
+    // Redirect stdin to copy of stdin.
+    syscall(SYS_repfd, stdin_copy, STDIN_FILENO);
+    close(stdin_copy);
 
     // Redirect stdout to write end of pipe.
     syscall(SYS_repfd, fds[1], STDOUT_FILENO);
