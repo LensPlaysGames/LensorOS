@@ -149,18 +149,20 @@ int main(int argc, char **argv) {
             return arg_start.substr(0, arg_end);
         };
 
-        std::vector<std::string_view> arguments;
+        std::vector<std::string> arguments;
         for (;;) {
             auto arg = collect_arg(the_rest);
             if (!arg.size()) break;
-            arguments.push_back(arg);
+            arguments.push_back({arg.data(), arg.size()});
         }
 
-        std::print("got command: \"{}\"\n", command);
-        size_t index = 0;
-        for (const auto& arg : arguments) {
-            std::print("arg{}: \"{}\"\n", index, arg);
-            ++index;
+        {
+            std::print("got command: \"{}\"\n", command);
+            size_t index = 0;
+            for (const auto& arg : arguments) {
+                std::print("arg{}: \"{}\"\n", index, arg);
+                ++index;
+            }
         }
 
         std::vector<const char *> argv;
