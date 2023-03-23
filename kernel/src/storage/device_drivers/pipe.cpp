@@ -52,8 +52,18 @@ void PipeDriver::close(FileMetadata* meta) {
             return;
         }
         pipeBuffer->WriteClosed = true;
+        // Run processes waiting to read from this pipe with a return value
+        // indicating EOF.
+        for (pid_t pid : pipe->Buffer->PIDsWaiting) {
+            auto* process = Scheduler::process(pid);
+            if (!process) continue;
+            std::print("[PIPE]: close()  Unblocking process {}\n", pid);
+            process->CPU.RAX = usz(-1);
+            process->State = Process::RUNNING;
+        }
+        pipe->Buffer->PIDsWaiting.clear();
     }
-    //std::print("[PIPE]: close()  Freeing pipe end at {}\n", (void*)pipe);
+    std::print("[PIPE]: close()  Freeing {} pipe end at {}\n", pipe->End == PipeEnd::READ ? "read" : "write", (void*)pipe);
     delete pipe;
 
 
@@ -75,6 +85,7 @@ void PipeDriver::close(FileMetadata* meta) {
         std::print("[PIPE]:ERROR: Denying attempt to free pipe buffer at {} more than once!\n", (void*)pipeBuffer);
         return;
     }
+
     pipeBuffer->clear();
     FreePipeBuffers.push_back(pipeBuffer);
     //std::print("[PIPE]: Closed pipe buffer at {}\n", (void*)pipeBuffer);
@@ -138,7 +149,7 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
         process->State = Process::SLEEPING;
         // FIXME: Make platform agnostic.
         // Set return value for when we get resumed.
-        process->CPU.RAX = -2;
+        process->CPU.RAX = u64(-2);
         Scheduler::yield();
     }
 
@@ -173,6 +184,8 @@ ssz PipeDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
     memcpy(pipe->Buffer->Data + pipe->Buffer->Offset, buffer, byteCount);
     pipe->Buffer->Offset += byteCount;
 
+    // Run processes waiting to read from this pipe with a return value
+    // indicating that the syscall should be retried.
     for (pid_t pid : pipe->Buffer->PIDsWaiting) {
         auto* process = Scheduler::process(pid);
         if (!process) continue;

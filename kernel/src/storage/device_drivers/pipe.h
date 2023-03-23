@@ -63,6 +63,7 @@ struct PipeBuffer {
     PipeBuffer(PipeBuffer&&) = delete;
 
     void clear() {
+        PIDsWaiting.clear();
         memset(&Data[0], 0, sizeof(Data));
         Offset = 0;
         ReadClosed = false;
