@@ -17,6 +17,7 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <algorithm>
 #include <interrupts/syscalls.h>
 
 #include <debug.h>
@@ -236,6 +237,20 @@ int sys$9_waitpid(pid_t pid) {
                   );
     DBGMSG(sys$_dbgfmt, 9, "waitpid");
 
+    auto* thisProcess = Scheduler::CurrentProcess->value();
+    pid_t thisPID = thisProcess->ProcessID;
+
+    // Reap zombie.
+    auto zombie = std::find_if(thisProcess->Zombies.begin(), thisProcess->Zombies.begin(), [&pid](const auto& zombie) {
+        return zombie.PID == pid;
+    });
+    if (zombie != thisProcess->Zombies.end()) {
+        DBGMSG("[SYS$]:waitpid: Reaping zombie ({}, {}) from process {}\n", zombie->PID, zombie->ReturnStatus, thisPID);
+        int returnStatus = zombie->ReturnStatus;
+        thisProcess->Zombies.erase(zombie);
+        return returnStatus;
+    }
+
     Process *process = Scheduler::process(pid);
     // Return immediately if PID isn't valid.
     // FIXME: Return meaningful value here, or something.
@@ -244,7 +259,6 @@ int sys$9_waitpid(pid_t pid) {
         return -1;
     }
 
-    pid_t thisPID = Scheduler::CurrentProcess->value()->ProcessID;
     DBGMSG("  pid {} waiting on {}\n\n", thisPID, pid);
     // Add to WAITING list of process that we are waiting for.
     process->WaitingList.push_back(thisPID);
@@ -356,6 +370,8 @@ void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
     bool result = SYSTEM->virtual_filesystem().dup2(process, fd, replaced);
     if (!result) {
         std::print("  ERROR OCCURED: repfd failed (pid={}  fd={}  replaced={})\n", process->ProcessID, fd, replaced);
+        for (const auto& [procfd, sysfd] : process->FileDescriptors.pairs())
+            std::print("  {}: {}\n", procfd, sysfd);
     }
     // TODO: Use result/handle error in some way.
     (void)result;

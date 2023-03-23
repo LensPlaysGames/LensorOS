@@ -50,6 +50,15 @@ void Process::destroy(int status) {
         SYSTEM->set_init(NULL);
     }
 
+    // Add zombie entry to parent process.
+    // FIXME: Do we need to copy all of our zombies over as well?
+    Process *parent = Scheduler::process(ParentProcess);
+    if (parent) {
+        ZombieState zombie{ProcessID, status};
+        //std::print("[SCHED]: Adding zombie ({}, {}) to process {}\n", zombie.PID, zombie.ReturnStatus, ParentProcess);
+        parent->Zombies.push_back(zombie);
+    }
+
     // Run all of the programs in the WaitingList.
     for(pid_t pid : WaitingList) {
         Process *waitingProcess = Scheduler::process(pid);
@@ -351,6 +360,7 @@ pid_t CopyUserspaceProcess(Process* original) {
     Process* newProcess = new Process;
     newProcess->State = Process::ProcessState::SLEEPING;
     Scheduler::add_process(newProcess);
+    newProcess->ParentProcess = original->ProcessID;
 
     // Copy current page table (fork)
     auto* newPageTable = Memory::clone_page_map(original->CR3);
@@ -409,10 +419,11 @@ pid_t CopyUserspaceProcess(Process* original) {
 
     // Copy file descriptors.
     for (const auto& entry : original->FileDescriptors) {
-        std::shared_ptr<FileMetadata> meta = SYSTEM->virtual_filesystem().file(entry);
-        // Meta, isn't it? :p
-        //auto f = meta->device_driver()->open(meta->name());
-        SYSTEM->virtual_filesystem().add_file(std::move(meta), newProcess);
+        // TODO: We need to better control the indices/sysfds mapping;
+        // we are losing data here as `entry` may be at procfd 14 but
+        // there are only 10 open, meaning using `push_back` as the
+        // implementation of `add_file` does will get the mappings wrong.
+        SYSTEM->virtual_filesystem().add_file(SYSTEM->virtual_filesystem().file(entry), newProcess);
     }
 
     // Copy PWD

@@ -332,7 +332,7 @@ void run_program_waitpid(const char *const filepath, const char **args) {
     close(stdin_copy);
 
     char c;
-    while (read(fds[0], &c, 1) == 1 && c)
+    while (read(fds[0], &c, 1) != EOF && c)
       write_command_output(c);
 
     close(fds[0]);
@@ -343,6 +343,13 @@ void run_program_waitpid(const char *const filepath, const char **args) {
     // libc that sets errno (that always goes well).
     fflush(NULL);
     command_status = (int)syscall(SYS_waitpid, cpid);
+    if (command_status == -1) {
+      printf("`waitpid` failure! pid=%d\n", (int)cpid);
+      return;
+    }
+
+    //puts("Parent waited");
+    //fflush(NULL);
 
   } else {
     //puts("Child");;
@@ -466,11 +473,7 @@ int main(int argc, const char **argv) {
     int c;
     int offset = 0;
     while ((c = getchar()) != '\n') {
-      if (c == EOF) {
-        // TODO: Wait/waste some time so we don't choke the system just
-        // spinning.
-        continue;
-      }
+      if (c == EOF) continue;
       if (c == '\b') {
         if (offset > 0) {
           command[--offset] = '\0';

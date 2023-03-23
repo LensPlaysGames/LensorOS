@@ -19,6 +19,8 @@ int run_program_waitpid(const char *const filepath, const char **args) {
     size_t fds[2] = {size_t(-1), size_t(-1)};
     syscall(SYS_pipe, fds);
 
+    std::print("[XiSh]: Created pipe: ({}, {})\n", fds[0], fds[1]);
+
     // If there are pending writes, they will be executed on both the
     // parent and the child; by flushing any buffers we have, it ensures
     // the child won't write duplicate data on accident.
@@ -29,23 +31,22 @@ int run_program_waitpid(const char *const filepath, const char **args) {
         //puts("Parent");
         close(fds[1]);
 
+        char c;
+        while (read(fds[0], &c, 1) != EOF && c)
+            std::print("{}", c);
+
+        close(fds[0]);
+
         // TODO: waitpid needs to reserve some uncommon error code for
         // itself so that it is clear what is a failure from waitpid or just a
         // failing status. Maybe have some other way to check? Or wrap this in
         // libc that sets errno (that always goes well).
         fflush(NULL);
-        int command_status = (int)syscall(SYS_waitpid, cpid);
+        int command_status = syscall<int>(SYS_waitpid, cpid);
         if (command_status == -1) {
-            // TODO: Technically, it's possible that the child has exited already.
             printf("`waitpid` failure!\n");
             return -1;
         }
-
-        char c;
-        while (read(fds[0], &c, 1) == 1 && c)
-            std::print("{}", c);
-
-        close(fds[0]);
 
         //puts("Parent waited");
         //fflush(NULL);
