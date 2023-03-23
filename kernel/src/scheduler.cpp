@@ -418,12 +418,27 @@ pid_t CopyUserspaceProcess(Process* original) {
     }
 
     // Copy file descriptors.
-    for (const auto& entry : original->FileDescriptors) {
-        // TODO: We need to better control the indices/sysfds mapping;
-        // we are losing data here as `entry` may be at procfd 14 but
-        // there are only 10 open, meaning using `push_back` as the
-        // implementation of `add_file` does will get the mappings wrong.
-        SYSTEM->virtual_filesystem().add_file(SYSTEM->virtual_filesystem().file(entry), newProcess);
+    // FIXME: We need a better way of doing this.
+    // ProcFDs need to remain equal, while the values that they index
+    // in the sparse_vector need to be replaced with a new shared ptr.
+    std::vector<ProcFD> garbage_fds_to_erase;
+    for (const auto& [procfd, sysfd] : original->FileDescriptors.pairs()) {
+        // In order to account for holes in the file descriptors vector
+        // we are copying from, we need to push garbage values until we
+        // reach the expected procfd...
+        while (newProcess->FileDescriptors.allocated_size() < (usz)procfd) {
+            auto [fd, success] = newProcess->FileDescriptors.push_back(sysfd);
+            if (!success) break;
+            std::print("Pushing garbage: {}...\n", fd);
+            garbage_fds_to_erase.push_back(fd);
+        }
+
+        SYSTEM->virtual_filesystem().add_file(SYSTEM->virtual_filesystem().file(sysfd), newProcess);
+    }
+
+    for (auto fd : garbage_fds_to_erase) {
+        std::print("Clearing garbage at {}...\n", fd);
+        newProcess->FileDescriptors.erase(fd);
     }
 
     // Copy PWD
