@@ -63,6 +63,10 @@ void sys$1_close(ProcessFileDescriptor fd) {
 
 // TODO: This should return the amount of bytes read.
 int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
+    CPUState* cpu = nullptr;
+    asm volatile ("mov %%r11, %0\n"
+                  : "=r"(cpu)
+                  );
     DBGMSG(sys$_dbgfmt, 2, "read");
     DBGMSG("  file descriptor: {}\n"
            "  buffer address:  {}\n"
@@ -73,11 +77,18 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
            , byteCount
            );
     // FIXME: Validate buffer pointer.
+
+    // Save CPU state in case read blocks, aka calls yield.
+    memcpy(&Scheduler::CurrentProcess->value()->CPU, cpu, sizeof(CPU));
     return SYSTEM->virtual_filesystem().read(fd, buffer, byteCount, 0);
 }
 
 // TODO: This should return the amount of bytes written.
 int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
+    CPUState* cpu = nullptr;
+    asm volatile ("mov %%r11, %0\n"
+                  : "=r"(cpu)
+                  );
     DBGMSG(sys$_dbgfmt, 3, "write");
     DBGMSG("  file descriptor: {}\n"
            "  buffer address:  {}\n"
@@ -88,6 +99,9 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
            , byteCount
            );
     // FIXME: Validate buffer pointer.
+
+    // Save CPU state in case write blocks, aka calls yield.
+    memcpy(&Scheduler::CurrentProcess->value()->CPU, cpu, sizeof(CPU));
     return SYSTEM->virtual_filesystem().write(fd, buffer, byteCount, 0);
 }
 
