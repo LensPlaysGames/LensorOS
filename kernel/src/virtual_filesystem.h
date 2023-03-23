@@ -114,11 +114,24 @@ struct VFS {
     /// The second file descriptor given will be associated with the file
     /// description of the first.
     bool dup2(Process* proc, ProcFD fd, ProcFD replaced) {
-        if (!proc) return false;
-        if (!valid(proc, fd) || !valid(proc, replaced)) return false;
+        if (!proc) {
+            std::print("[VFS]:dup2: Rejecting NULL process\n");
+            return false;
+        }
+        if (!valid(proc, fd)) {
+            std::print("[VFS]:dup2: Rejecting to replace {} with invalid process file descriptor {}\n", replaced, fd);
+            return false;
+        }
+        if (!valid(proc, replaced)) {
+            std::print("[VFS]:dup2: Rejecting to replace invalid process file descriptor {} with {}\n", replaced, fd);
+            return false;
+        }
         SysFD sysfd = procfd_to_fd(proc, fd);
         auto f = file(sysfd);
-        if (!f) return false;
+        if (!f) {
+            std::print("[VFS]:dup2: SysFD {} did not return a valid FileMetadata\n", sysfd);
+            return false;
+        }
         auto [new_sysfd, _] = Files.push_back(std::move(f));
         *proc->FileDescriptors[replaced] = new_sysfd;
         return true;
@@ -134,7 +147,6 @@ struct VFS {
 
     void print_debug();
 
-    /// Files are stored as shared_ptrs to support dup() more easily.
     FileDescriptors add_file(std::shared_ptr<FileMetadata>, Process* proc = nullptr);
 
     auto procfd_to_fd(ProcFD procfd) const -> SysFD;
