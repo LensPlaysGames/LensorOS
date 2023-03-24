@@ -80,6 +80,7 @@ void Process::destroy(int status) {
     // Close open files.
     // NOTE: There *should* be none; libc should close all open files on destruction.
     for (const auto& [procfd, fd] : FileDescriptors.pairs()) {
+        std::print("Process {} leaked {} ProcFD, closing...\n", ProcessID, procfd);
         SYSTEM->virtual_filesystem().close(this, procfd);
     }
 
