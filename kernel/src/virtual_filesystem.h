@@ -126,9 +126,11 @@ struct VFS {
             std::print("[VFS]:dup2: Rejecting to replace invalid process file descriptor {} with {}\n", replaced, fd);
             return false;
         }
+        // If oldfd is a valid file descriptor, and newfd has the same
+        // value as oldfd, then dup2() does nothing, and returns newfd.
         if (fd == replaced) {
-            std::print("[VFS]:dup2: Rejecting to replace process file descriptor {} with itself\n", fd);
-            return false;
+            std::print("[VFS]:dup2: Process file descriptor {} is already equal to {}\n", replaced, fd);
+            return true;
         }
         SysFD sysfd = procfd_to_fd(proc, fd);
         auto f = file(sysfd);
