@@ -117,12 +117,14 @@ void sys$5_exit(int status) {
            "\n"
            , status
            );
-    pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
-    bool success = Scheduler::remove_process(pid, status);
-    if (!success)
-        std::print("[EXIT]: Failure to remove process\n");
-    else {
-        DBGMSG("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
+    {
+        pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
+        bool success = Scheduler::remove_process(pid, status);
+        if (!success)
+            std::print("[EXIT]: Failure to remove process\n");
+        else {
+            std::print("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
+        }
     }
 
     Scheduler::yield();
@@ -310,6 +312,9 @@ void sys$11_exec(const char *path, const char **args) {
         std::print("[EXEC]: Can not execute NULL path\n");
         return;
     }
+    Process* process = Scheduler::CurrentProcess->value();
+
+    { // Nested scope so that dtors get called before yield
 #if defined(DEBUG_SYSCALLS)
     std::print("  path: {}\n"
                "  args:\n"
@@ -320,42 +325,42 @@ void sys$11_exec(const char *path, const char **args) {
         std::print("    {}: \"{}\"\n", i++, *args_it);
     std::print("  endargs\n");
 #endif
-    Process* process = Scheduler::CurrentProcess->value();
+        // Load executable at path with virtual filesystem.
+        FileDescriptors fds = SYSTEM->virtual_filesystem().open(path);
+        if (fds.invalid()) {
+            std::print("[EXEC]: Could not load file when path == {}\n", path);
+            return;
+        }
 
-    // Load executable at path with virtual filesystem.
-    FileDescriptors fds = SYSTEM->virtual_filesystem().open(path);
-    if (fds.invalid()) {
-        std::print("[EXEC]: Could not load file when path == {}\n", path);
-        return;
-    }
+        process->ExecutablePath = path;
 
-    process->ExecutablePath = path;
+        std::vector<std::string> args_vector_impl;
+        std::vector<std::string_view> args_vector;
+        args_vector.push_back(process->ExecutablePath.data());
+        {   // We create copies of the userspace buffer(s), because during
+            // replacing the userspace process, any data within it is
+            // invalidated.
+            for (const char **args_it = args; args_it && *args_it; ++args_it)
+                args_vector_impl.push_back(*args_it);
 
-    std::vector<std::string> args_vector_impl;
-    std::vector<std::string_view> args_vector;
-    args_vector.push_back(process->ExecutablePath.data());
-    {   // We create copies of the userspace buffer(s), because during
-        // replacing the userspace process, any data within it is
-        // invalidated.
-        for (const char **args_it = args; args_it && *args_it; ++args_it)
-            args_vector_impl.push_back(*args_it);
-
-        for (const auto& s : args_vector_impl)
+            for (const auto& s : args_vector_impl)
             args_vector.push_back(s);
-    }
+        }
 
-    // Replace current process with new process.
-    bool success = ELF::ReplaceUserspaceElf64Process(process, fds.Process, args_vector);
-    if (!success) {
-        // TODO: ... Unrecoverable, terminate the program, somehow.
-        std::print("[EXEC]: Failed to replace process and parent is now unrecoverable, terminating.\n");
-        // TODO: Mark for destruction (halt and catch fire).
-        process->State = Process::ProcessState::SLEEPING;
-        Scheduler::yield();
-    }
+        // Replace current process with new process.
+        bool success = ELF::ReplaceUserspaceElf64Process(process, fds.Process, args_vector);
+        if (!success) {
+            // TODO: ... Unrecoverable, terminate the program, somehow.
+            std::print("[EXEC]: Failed to replace process and parent is now unrecoverable, terminating.\n");
+            // TODO: Mark for destruction (halt and catch fire).
+            // FIXME: We should figure out how to exit the scope, so that everything is freed properly.
+            process->State = Process::ProcessState::SLEEPING;
+            Scheduler::yield();
+        }
 
-    //Scheduler::print_debug();
-    SYSTEM->virtual_filesystem().close(fds.Process);
+        //Scheduler::print_debug();
+        SYSTEM->virtual_filesystem().close(fds.Process);
+    }
 
     *cpu = process->CPU;
     Scheduler::yield();
