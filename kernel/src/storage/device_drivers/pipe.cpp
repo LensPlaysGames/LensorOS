@@ -54,14 +54,14 @@ void PipeDriver::close(FileMetadata* meta) {
         pipeBuffer->WriteClosed = true;
         // Run processes waiting to read from this pipe with a return value
         // indicating EOF.
-        for (pid_t pid : pipe->Buffer->PIDsWaiting) {
+        for (pid_t pid : pipeBuffer->PIDsWaiting) {
             auto* process = Scheduler::process(pid);
             if (!process) continue;
             std::print("[PIPE]: close()  Unblocking process {}\n", pid);
             process->CPU.RAX = usz(-1);
             process->State = Process::RUNNING;
         }
-        pipe->Buffer->PIDsWaiting.clear();
+        pipeBuffer->PIDsWaiting.clear();
     }
     std::print("[PIPE]: close()  Freeing {} pipe end at {}\n", pipe->End == PipeEnd::READ ? "read" : "write", (void*)pipe);
     delete pipe;
@@ -147,9 +147,6 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
         // Set state to SLEEPING so that after we yield, the scheduler
         // won't switch back to us until the pipe has been written to.
         process->State = Process::SLEEPING;
-        // FIXME: Make platform agnostic.
-        // Set return value for when we get resumed.
-        process->CPU.RAX = u64(-2);
         Scheduler::yield();
     }
 
@@ -190,6 +187,8 @@ ssz PipeDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
         auto* process = Scheduler::process(pid);
         if (!process) continue;
         //std::print("[PIPE]: write()  Unblocking process {}\n", pid);
+        // Set return value of process to retry syscall.
+        process->CPU.RAX = usz(-2);
         process->State = Process::RUNNING;
     }
     pipe->Buffer->PIDsWaiting.clear();
