@@ -126,10 +126,14 @@ struct VFS {
             std::print("[VFS]:dup2: Rejecting to replace invalid process file descriptor {} with {}\n", replaced, fd);
             return false;
         }
+        if (fd == replaced) {
+            std::print("[VFS]:dup2: Rejecting to replace process file descriptor {} with itself\n", fd);
+            return false;
+        }
         SysFD sysfd = procfd_to_fd(proc, fd);
         auto f = file(sysfd);
         if (!f) {
-            std::print("[VFS]:dup2: SysFD {} did not return a valid FileMetadata\n", sysfd);
+            std::print("[VFS]:dup2: ProcFD {} mapped to SysFD {} did not return a valid FileMetadata\n", fd, sysfd);
             return false;
         }
         auto [new_sysfd, _] = Files.push_back(std::move(f));
