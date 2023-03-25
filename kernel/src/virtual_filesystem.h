@@ -138,8 +138,32 @@ struct VFS {
             std::print("[VFS]:dup2: ProcFD {} mapped to SysFD {} did not return a valid FileMetadata\n", fd, sysfd);
             return false;
         }
-        auto [new_sysfd, _] = Files.push_back(std::move(f));
-        *proc->FileDescriptors[replaced] = new_sysfd;
+
+        // Get meta currently associated with `replaced` ProcFD.
+        SysFD replaced_sysfd = procfd_to_fd(proc, replaced);
+        //auto replaced_file = file(replaced_sysfd);
+        //std::print("[VFS]:dup2: Replacing \"{}\" (ProcFD {}) with \"{}\" (ProcFD {})\n", replaced_file->name(), replaced, f->name(), fd);
+
+        // FIXME: This assumes that each and every process file
+        // descriptor refers to a unique FileMetadata in the VFS Files
+        // vector. However! We should allow multiple processes to have
+        // fds that refer to *one* entry in the VFS Files vector. To
+        // accomplish this, we will need to maybe add an intrusive
+        // refcount to filemetadata, or something similar.
+
+        // Remove kernel file description from VFS list of open files using
+        // System File Descriptor. This decrements the refcount of the
+        // shared_ptr, which *may* call the destructor on the driver of
+        // the actual file, if it's the last occurence.
+        // FIXME: In the future, this should probably be an intrusive
+        // refcount that just gets decremented, that way we don't need
+        // copies of shared_ptrs in the kernel Files table.
+        Files.replace(replaced_sysfd, std::move(f));
+        // NOTE: Because we are replacing the file metadata in the VFS
+        // Files table, this means that the process' FileDescriptor
+        // still maps to the same SysFD. It's just the data stored *at*
+        // that SysFD that changes. This may change in the future, and
+        // the proc->FileDesriptors mappings may need altered.
         return true;
     }
 
