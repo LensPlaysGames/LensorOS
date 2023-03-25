@@ -175,7 +175,7 @@ void* sys$6_map(void* address, usz size, u64 flags) {
     // Map virtual address to physical with proper flags
     Memory::map_pages(process->CR3, address, paddr, memory_flags, pages, Memory::ShowDebug::No);
 
-    std::print("[SYS$]:map: Mapped {} pages at {} (physical {})\n", pages, (void*)address, (void*)paddr);
+    //std::print("[SYS$]:map: Mapped {} pages at {} (physical {})\n", pages, (void*)address, (void*)paddr);
 
     // Return usable address.
     return address;
@@ -192,16 +192,14 @@ void sys$7_unmap(void* address) {
 
     // Search current process' memories for matching address.
     auto* region = process->Memories.head();
-    for (; region; region = region->next()) {
-        if (region->value().vaddr == address) {
+    for (; region; region = region->next())
+        if (region->value().vaddr == address)
             break;
-        }
-    }
 
     // Ignore an attempt to unmap invalid address.
     // TODO: If a single program is freeing invalid addresses over and
     // over, it's a good sign they are a bad actor and should maybe
-    // just be stopped.
+    // just be stopped. Maybe keep count in process struct?
     if (!region) return;
 
     // Unmap memory from current process page table.
@@ -211,7 +209,7 @@ void sys$7_unmap(void* address) {
     // Free physical memory referred to by region.
     Memory::free_pages(region->value().paddr, region->value().pages);
 
-    std::print("[SYS$]:unmap: Unmapped {} pages at {} (physical {})\n", region->value().pages, (void*)address, (void*)region->value().paddr);
+    //std::print("[SYS$]:unmap: Unmapped {} pages at {} (physical {})\n", region->value().pages, (void*)address, (void*)region->value().paddr);
 
     // Remove memory region from process memories list.
     process->remove_memory_region(address);
@@ -244,7 +242,7 @@ int sys$9_waitpid(pid_t pid) {
     pid_t thisPID = thisProcess->ProcessID;
 
     // Reap zombie.
-    auto zombie = std::find_if(thisProcess->Zombies.begin(), thisProcess->Zombies.begin(), [&pid](const auto& zombie) {
+    auto zombie = std::find_if(thisProcess->Zombies, [&pid](const auto& zombie) {
         return zombie.PID == pid;
     });
     if (zombie != thisProcess->Zombies.end()) {
@@ -256,7 +254,10 @@ int sys$9_waitpid(pid_t pid) {
 
     Process *process = Scheduler::process(pid);
     // Return immediately if PID isn't valid.
-    // FIXME: Return meaningful value here, or something.
+    // FIXME: Return meaningful value here, or something. Basically, -1
+    // may be returned by the waited-upon process. We need to return
+    // something here or signify somehow before returning that waitpid had
+    // this failure.
     if (!process) {
         std::print("[SYS$]:ERROR:waitpid: Could not find process at PID {}\n", pid);
         return -1;
