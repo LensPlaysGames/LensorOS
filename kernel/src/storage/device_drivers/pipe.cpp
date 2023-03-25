@@ -56,16 +56,18 @@ void PipeDriver::close(FileMetadata* meta) {
         // indicating EOF.
         for (pid_t pid : pipeBuffer->PIDsWaiting) {
             auto* process = Scheduler::process(pid);
-            if (!process) continue;
-            std::print("[PIPE]: close()  Unblocking process {}\n", pid);
+            if (!process) {
+                //std::print("[PIPE]: close()  Can't unblock process {}  pipeEnd={} pipeBuffer={}\n", pid, (void*)pipe, (void*)pipeBuffer);
+                continue;
+            }
+            //std::print("[PIPE]: close()  Unblocking process {}  pipeEnd={} pipeBuffer={}\n", pid, (void*)pipe, (void*)pipeBuffer);
             process->CPU.RAX = usz(-1);
             process->State = Process::RUNNING;
         }
         pipeBuffer->PIDsWaiting.clear();
     }
-    std::print("[PIPE]: close()  Freeing {} pipe end at {}\n", pipe->End == PipeEnd::READ ? "read" : "write", (void*)pipe);
+    //std::print("[PIPE]: close()  Freeing {} pipe end at {}  pipeBuffer={}\n", pipe->End == PipeEnd::READ ? "read" : "write", (void*)pipe, (void*)pipeBuffer);
     delete pipe;
-
 
     // Only attempt to actually free the underlying pipe buffer if both ends are closed.
     if (!pipeBuffer->ReadClosed || !pipeBuffer->WriteClosed) {
@@ -140,7 +142,7 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
         }
 
         auto* process = Scheduler::CurrentProcess->value();
-        //std::print("[PIPE]: read()  Blocking process {}\n", process->ProcessID);
+        //std::print("[PIPE]: read()  Blocking process {}  pipeEnd={} pipeBuffer={}\n", process->ProcessID, (void*)pipe, (void*)pipe->Buffer);
 
         pipe->Buffer->PIDsWaiting.push_back(process->ProcessID);
 
@@ -186,7 +188,7 @@ ssz PipeDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
     for (pid_t pid : pipe->Buffer->PIDsWaiting) {
         auto* process = Scheduler::process(pid);
         if (!process) continue;
-        //std::print("[PIPE]: write()  Unblocking process {}\n", pid);
+        //std::print("[PIPE]: write()  Unblocking process {}  pipeEnd={} pipeBuffer={}\n", pid, (void*)pipe, (void*)pipe->Buffer);
         // Set return value of process to retry syscall.
         process->CPU.RAX = usz(-2);
         process->State = Process::RUNNING;

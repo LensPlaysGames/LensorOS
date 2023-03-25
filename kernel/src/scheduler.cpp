@@ -434,7 +434,9 @@ pid_t CopyUserspaceProcess(Process* original) {
             garbage_fds_to_erase.push_back(fd);
         }
 
-        SYSTEM->virtual_filesystem().add_file(SYSTEM->virtual_filesystem().file(sysfd), newProcess);
+        auto f = SYSTEM->virtual_filesystem().file(sysfd);
+        //std::print("[FORK]: Copying \"{}\" (ProcFD {}) to process {}\n", f->name(), procfd, newProcess->ProcessID);
+        SYSTEM->virtual_filesystem().add_file(std::move(f), newProcess);
     }
 
     for (auto fd : garbage_fds_to_erase) {

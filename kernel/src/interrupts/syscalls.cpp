@@ -123,7 +123,7 @@ void sys$5_exit(int status) {
         if (!success)
             std::print("[EXIT]: Failure to remove process\n");
         else {
-            std::print("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
+            DBGMSG("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
         }
     }
 

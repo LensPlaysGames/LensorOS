@@ -101,6 +101,8 @@ bool VFS::valid(SysFD fd) const {
 /// Erasing the last shared_ptr holding the file metadata will call
 /// the destructor of FileMetadata, which will then close the file.
 void VFS::free_fd(Process* process, SysFD fd, ProcFD procfd) {
+    if (!process) return;
+    DBGMSG("Freeing ProcFD={} SysFD={} in process {}\n", procfd, fd, process->ProcessID);
     // Remove file descriptor from process's list of open file
     // descriptors using Process File Descriptor.
     process->FileDescriptors.erase(procfd);
@@ -171,7 +173,7 @@ bool VFS::close(Process* process, ProcFD procfd) {
         return false;
     }
 
-    DBGMSG("[VFS]: Unmapping {} (pid {}).\n", procfd, process->ProcessID);
+    DBGMSG("[VFS]: Unmapping {} (pid {})  \"{}\".\n", procfd, process->ProcessID, f->name());
     free_fd(fd, procfd);
     return true;
 }

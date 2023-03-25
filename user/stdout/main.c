@@ -315,7 +315,7 @@ void print_command_line() {
 ///   NULL-terminated array of pointers to NULL-terminated strings.
 ///   Passed to `exec` syscall
 void run_program_waitpid(const char *const filepath, const char **args) {
-  usz fds[2] = {-1,-1};
+  u64 fds[2] = {-1,-1};
   syscall(SYS_pipe, fds);
 
   int stdin_copy = syscall(SYS_dup, STDIN_FILENO);
@@ -328,14 +328,24 @@ void run_program_waitpid(const char *const filepath, const char **args) {
   //printf("pid: %d\n", cpid);
   if (cpid) {
     //puts("Parent");
+    //printf("PARENT: Closing write end...\n");
+    //fflush(stdout);
+
     close(fds[1]);
     close(stdin_copy);
+
+    //printf("Reading from pipe!\n");
+    //fflush(stdout);
 
     char c;
     while (read(fds[0], &c, 1) != EOF && c)
       write_command_output(c);
 
+    //printf("PARENT: Closing read end...\n");
+    //fflush(stdout);
     close(fds[0]);
+
+    //printf("Read from pipe, waiting...\n");
 
     // TODO: waitpid needs to reserve some uncommon error code for
     // itself so that it is clear what is a failure from waitpid or just a

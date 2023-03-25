@@ -18,8 +18,7 @@ constexpr const char prompt[] = "  $:";
 int run_program_waitpid(const char *const filepath, const char **args) {
     size_t fds[2] = {size_t(-1), size_t(-1)};
     syscall(SYS_pipe, fds);
-
-    std::print("[XiSh]: Created pipe: ({}, {})\n", fds[0], fds[1]);
+    //std::print("[XiSh]: Created pipe: ({}, {})\n", fds[0], fds[1]);
 
     // If there are pending writes, they will be executed on both the
     // parent and the child; by flushing any buffers we have, it ensures
