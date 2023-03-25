@@ -101,6 +101,8 @@ bool VFS::valid(SysFD fd) const {
 /// Erasing the last shared_ptr holding the file metadata will call
 /// the destructor of FileMetadata, which will then close the file.
 void VFS::free_fd(Process* process, SysFD fd, ProcFD procfd) {
+    if (!process) return;
+    DBGMSG("Freeing ProcFD={} SysFD={} in process {}\n", procfd, fd, process->ProcessID);
     // Remove file descriptor from process's list of open file
     // descriptors using Process File Descriptor.
     process->FileDescriptors.erase(procfd);
@@ -171,7 +173,7 @@ bool VFS::close(Process* process, ProcFD procfd) {
         return false;
     }
 
-    DBGMSG("[VFS]: Unmapping {} (pid {}).\n", procfd, process->ProcessID);
+    DBGMSG("[VFS]: Unmapping {} (pid {})  \"{}\".\n", procfd, process->ProcessID, f->name());
     free_fd(fd, procfd);
     return true;
 }
@@ -192,12 +194,32 @@ ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
            , byteOffset
            );
 
-    auto f = file(fd);
-    if (!f) { return -1; }
+    // Scheduler::yield() is noreturn, but that doesn't mean the stackframe(s)
+    // will be cleaned up. So we either have to
+    //   A. not take the shared_ptr here, and instead a weak_ptr,
+    //      possibly risking a race condition of the file being closed
+    //      while it's being read from (not good), or
+    //   B. Take a shared ptr but instead of passing it, move it to the
+    //      device driver. This would mean the device driver could unlock
+    //      it or whatever before yielding, or
+    //   C. Have the device driver `read()` function return a value
+    //      that indicates whether or not we should yield; take the
+    //      shared_ptr in a nested scope, call read, then outside of
+    //      that scope, conditionally call yield.
+
+    // Discussed with Sirraide: I think that we should pass a weak_ptr
+    // to the `read` device driver virtual function, and it locks it as
+    // long as it needs it, unlocks it when it doesn't.
+    FileMetadata* meta = nullptr;
+    {
+        auto f = file(fd);
+        meta = f.get();
+    }
+    if (!meta) return -1;
 
     DBGMSG("  file offset:     {}\n", f.get()->offset);
 
-    return f->device_driver()->read(f.get(), byteOffset + f.get()->offset, byteCount, buffer);
+    return meta->device_driver()->read(meta, byteOffset + meta->offset, byteCount, buffer);
 }
 
 ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
@@ -214,8 +236,13 @@ ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
            );
     */
 
-    auto f = file(fd);
-    if (!f) { return -1; }
+    // SEE COMMENTS ON CONCURRENCY AND (B)LOCKING IN VFS::read()
+    FileMetadata* meta = nullptr;
+    {
+        auto f = file(fd);
+        meta = f.get();
+    }
+    if (!meta) return -1;
 
     DBGMSG("[VFS]: write\n"
            "  file descriptor: {}\n"
@@ -230,7 +257,7 @@ ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
            , f.get()->offset
            );
 
-    return f->device_driver()->write(f.get(), byteOffset + f.get()->offset, byteCount, buffer);
+    return meta->device_driver()->write(meta, byteOffset + meta->offset, byteCount, buffer);
 }
 
 void VFS::print_debug() {

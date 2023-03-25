@@ -237,6 +237,7 @@ namespace Memory {
                 std::print("Failed to allocate memory for new process page directory pointer table.\n");
                 return nullptr;
             }
+            memset(newPDP, 0, PAGE_SIZE);
             auto* oldTable = (Memory::PageTable*)((u64)PDE.address() << 12);
             for (u64 j = 0; j < 512; ++j) {
                 PDE = oldTable->entries[j];
@@ -248,6 +249,7 @@ namespace Memory {
                     std::print("Failed to allocate memory for new process page directory table.\n");
                     return nullptr;
                 }
+                memset(newPD, 0, PAGE_SIZE);
                 auto* oldPD = (Memory::PageTable*)((u64)PDE.address() << 12);
                 for (u64 k = 0; k < 512; ++k) {
                     PDE = oldPD->entries[k];
@@ -259,17 +261,16 @@ namespace Memory {
                         std::print("Failed to allocate memory for new process page table.\n");
                         return nullptr;
                     }
+                    memset(newPT, 0, PAGE_SIZE);
                     auto* oldPT = (Memory::PageTable*)((u64)PDE.address() << 12);
-                    memcpy(newPT, oldPT, PAGE_SIZE);
-                    //for (u64 l = 0; l < 512; ++l) {
-                    //    PDE = oldPT->entries[l];
-                    //    if (PDE.flag(Memory::PageTableFlag::Present) == false)
-                    //        continue;
+                    //memcpy(newPT, oldPT, PAGE_SIZE);
+                    for (u64 l = 0; l < 512; ++l) {
+                        PDE = oldPT->entries[l];
+                        if (PDE.flag(Memory::PageTableFlag::Present) == false)
+                            continue;
 
-                    //    PDE = oldPT->entries[l];
-                    //    PDE.set_address((u64)PDE.address());
-                    //    newPT->entries[l] = PDE;
-                    //}
+                        newPT->entries[l] = PDE;
+                    }
                     PDE = oldPD->entries[k];
                     PDE.set_address((u64)newPT >> 12);
                     newPD->entries[k] = PDE;
@@ -381,7 +382,9 @@ namespace Memory {
     }
 
     void init_virtual() {
-        init_virtual((PageTable*)Memory::request_page());
+        Memory::PageTable* table = (PageTable*)Memory::request_page();
+        memset(table, 0, PAGE_SIZE);
+        init_virtual(table);
     }
 
     void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filter) {
@@ -412,10 +415,10 @@ namespace Memory {
 
                         // Virtual Address from indices
                         u64 virtualAddress = 0;
-                        virtualAddress |= (i & 0x1ff) << 27;
-                        virtualAddress |= (j & 0x1ff) << 18;
-                        virtualAddress |= (k & 0x1ff) << 9;
-                        virtualAddress |= (l & 0x1ff) << 0;
+                        virtualAddress |= i << 27;
+                        virtualAddress |= j << 18;
+                        virtualAddress |= k << 9;
+                        virtualAddress |= l << 0;
                         virtualAddress <<= 12;
 
                         endAddress = virtualAddress;

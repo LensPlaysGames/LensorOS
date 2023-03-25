@@ -108,6 +108,7 @@ HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
 
 void init_heap() {
     u64 numBytes = HEAP_INITIAL_PAGES * PAGE_SIZE;
+    // NOTE: We don't use map_pages here because we request a new page for each one mapped.
     for (u64 i = 0; i < HEAP_INITIAL_PAGES * PAGE_SIZE; i += PAGE_SIZE) {
         // Map virtual heap position to physical memory address returned by page frame allocator.
         // FIXME: Should this be global?
@@ -143,29 +144,30 @@ void expand_heap(u64 numBytes) {
 
     DBGMSG("[Heap]: Expanding by {} bytes\n" , numBytes);
 
-    // Get address of new header at the end of the heap.
-    auto* extension = (HeapSegmentHeader*)sHeapEnd;
-
-    DBGMSG("  extension begin addr={}\n", (void*)extension);
-
-    // Allocate and map a page in memory for new header in every single process...
-    void *phys_heap_expansion = Memory::request_pages(numPages);
-    DBGMSG("  phys extension addr={}\n", phys_heap_expansion);
-    Scheduler::map_pages_in_all_processes(sHeapEnd, phys_heap_expansion
-                                          , (u64)Memory::PageTableFlag::Present
-                                          | (u64)Memory::PageTableFlag::ReadWrite
-                                          , numPages
-                                          , Memory::ShowDebug::No);
-
-    for (u64 i = 0; i < numPages; ++i) {
-        Memory::map(sHeapEnd, phys_heap_expansion
+    // NOTE: We don't use map_pages here because we request a new page for each one mapped.
+    for (u64 i = 0; i < numPages * PAGE_SIZE; i += PAGE_SIZE) {
+        // Map virtual heap position to physical memory address returned by page frame allocator.
+        void* addr = Memory::request_page();
+        memset(addr, 0, PAGE_SIZE);
+        Scheduler::map_pages_in_all_processes
+            ((void*)((u64)sHeapEnd + i), addr
+             , (u64)Memory::PageTableFlag::Present
+             | (u64)Memory::PageTableFlag::ReadWrite
+             , 1
+             );
+        Memory::map(Memory::active_page_map()
+                    , (void*)((u64)sHeapEnd + i), addr
                     , (u64)Memory::PageTableFlag::Present
                     | (u64)Memory::PageTableFlag::ReadWrite
                     , Memory::ShowDebug::No
                     );
-        sHeapEnd = (void*)((u64)sHeapEnd + PAGE_SIZE);
-        phys_heap_expansion = (void*)((u64)phys_heap_expansion + PAGE_SIZE);
+
+        DBGMSG("[Heap]: Mapped {} to {}\n", (void*)((u64)sHeapEnd + i), addr);
     }
+
+    // Get address of new header at the end of the heap.
+    auto* extension = (HeapSegmentHeader*)sHeapEnd;
+    DBGMSG("  extension begin addr={}\n", (void*)extension);
 
     sHeapEnd = (void*)((u64)extension + numBytes);
     DBGMSG("  extension end addr={}\n", sHeapEnd);

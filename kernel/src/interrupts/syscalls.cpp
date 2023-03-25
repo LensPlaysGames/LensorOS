@@ -17,6 +17,7 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <algorithm>
 #include <interrupts/syscalls.h>
 
 #include <debug.h>
@@ -52,6 +53,7 @@ constexpr const char* sys$_dbgfmt = "[SYS$]: {} -- {}\n";
 
 ProcessFileDescriptor sys$0_open(const char* path) {
     DBGMSG(sys$_dbgfmt, 0, "open");
+    // FIXME: Validate path pointer.
     return SYSTEM->virtual_filesystem().open(path).Process;
 }
 
@@ -60,8 +62,11 @@ void sys$1_close(ProcessFileDescriptor fd) {
     SYSTEM->virtual_filesystem().close(fd);
 }
 
-// TODO: This should return the amount of bytes read.
 int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
+    CPUState* cpu = nullptr;
+    asm volatile ("mov %%r11, %0\n"
+                  : "=r"(cpu)
+                  );
     DBGMSG(sys$_dbgfmt, 2, "read");
     DBGMSG("  file descriptor: {}\n"
            "  buffer address:  {}\n"
@@ -71,11 +76,18 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
            , (void*) buffer
            , byteCount
            );
+    // FIXME: Validate buffer pointer.
+
+    // Save CPU state in case read blocks, aka calls yield.
+    memcpy(&Scheduler::CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
     return SYSTEM->virtual_filesystem().read(fd, buffer, byteCount, 0);
 }
 
-// TODO: This should return the amount of bytes written.
 int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
+    CPUState* cpu = nullptr;
+    asm volatile ("mov %%r11, %0\n"
+                  : "=r"(cpu)
+                  );
     DBGMSG(sys$_dbgfmt, 3, "write");
     DBGMSG("  file descriptor: {}\n"
            "  buffer address:  {}\n"
@@ -85,6 +97,10 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
            , (void*) buffer
            , byteCount
            );
+    // FIXME: Validate buffer pointer.
+
+    // Save CPU state in case write blocks, aka calls yield.
+    memcpy(&Scheduler::CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
     return SYSTEM->virtual_filesystem().write(fd, buffer, byteCount, 0);
 }
 
@@ -99,19 +115,23 @@ void sys$5_exit(int status) {
            "\n"
            , status
            );
-    pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
-    bool success = Scheduler::remove_process(pid, status);
-    if (!success) {
-        std::print("[EXIT]: Failure to remove process\n");
+    {
+        pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
+        bool success = Scheduler::remove_process(pid, status);
+        if (!success)
+            std::print("[EXIT]: Failure to remove process\n");
+        else {
+            DBGMSG("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
+        }
     }
-    DBGMSG("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
+
     Scheduler::yield();
 }
 
 void* sys$6_map(void* address, usz size, u64 flags) {
     DBGMSG(sys$_dbgfmt, 6, "map");
     DBGMSG("  address: {}\n"
-           "  size:    {}\n" // TODO: %ull is wrong, we need a size type format
+           "  size:    {}\n"
            "  flags:   {}\n"
            "\n"
            , address
@@ -125,6 +145,7 @@ void* sys$6_map(void* address, usz size, u64 flags) {
     pages += size / PAGE_SIZE;
 
     // Allocate physical RAM
+    // TODO: There isn't really any reason these need to be contiguous.
     void* paddr = Memory::request_pages(pages);
 
     // If address is NULL, pick an address to place memory at.
@@ -132,6 +153,11 @@ void* sys$6_map(void* address, usz size, u64 flags) {
         address = (void*)process->next_region_vaddr;
         process->next_region_vaddr += pages * PAGE_SIZE;
     }
+
+    // FIXME: Major problem: we need to check for overlapping regions
+    // here. If the user asks for the same memory twice. If the user
+    // asks for an address out of the range of addresses allowed in
+    // userspace, etc.
 
     // Add memory region to current process
     // TODO: Convert given flags to Memory::PageTableFlag
@@ -198,6 +224,7 @@ void sys$8_time(Time::tm* time) {
            , (void*) time
            );
     if (!time) { return; }
+    // FIXME: Validate time pointer
     Time::fill_tm(time);
 }
 
@@ -211,6 +238,20 @@ int sys$9_waitpid(pid_t pid) {
                   );
     DBGMSG(sys$_dbgfmt, 9, "waitpid");
 
+    auto* thisProcess = Scheduler::CurrentProcess->value();
+    pid_t thisPID = thisProcess->ProcessID;
+
+    // Reap zombie.
+    auto zombie = std::find_if(thisProcess->Zombies.begin(), thisProcess->Zombies.begin(), [&pid](const auto& zombie) {
+        return zombie.PID == pid;
+    });
+    if (zombie != thisProcess->Zombies.end()) {
+        DBGMSG("[SYS$]:waitpid: Reaping zombie ({}, {}) from process {}\n", zombie->PID, zombie->ReturnStatus, thisPID);
+        int returnStatus = zombie->ReturnStatus;
+        thisProcess->Zombies.erase(zombie);
+        return returnStatus;
+    }
+
     Process *process = Scheduler::process(pid);
     // Return immediately if PID isn't valid.
     // FIXME: Return meaningful value here, or something.
@@ -219,7 +260,6 @@ int sys$9_waitpid(pid_t pid) {
         return -1;
     }
 
-    pid_t thisPID = Scheduler::CurrentProcess->value()->ProcessID;
     DBGMSG("  pid {} waiting on {}\n\n", thisPID, pid);
     // Add to WAITING list of process that we are waiting for.
     process->WaitingList.push_back(thisPID);
@@ -254,7 +294,14 @@ pid_t sys$10_fork() {
 
 /// Replace the current process with a new process, specified by an
 /// executable found at PATH.
-void sys$11_exec(const char *path) {
+/// @param path
+///   The filepath to the executable that will replace the current
+///   process.
+/// @param args
+///   NULL-terminated array of pointers to NULL-terminated string
+///   arguments.
+// FIXME: This really needs to be updated to a type-safe API. This stinks like scanf().
+void sys$11_exec(const char *path, const char **args) {
     CPUState* cpu = nullptr;
     asm volatile ("mov %%r11, %0\n"
                   : "=r"(cpu)
@@ -264,31 +311,55 @@ void sys$11_exec(const char *path) {
         std::print("[EXEC]: Can not execute NULL path\n");
         return;
     }
-    DBGMSG("  path: {}\n\n", path);
     Process* process = Scheduler::CurrentProcess->value();
 
-    // Load executable at path with virtual filesystem.
-    FileDescriptors fds = SYSTEM->virtual_filesystem().open(path);
-    if (fds.invalid()) {
-        std::print("[EXEC]: Could not load file when path == {}\n", path);
-        return;
+    { // Nested scope so that dtors get called before yield
+#if defined(DEBUG_SYSCALLS)
+    std::print("  path: {}\n"
+               "  args:\n"
+               , path
+               );
+    usz i = 0;
+    for (const char **args_it = args; args_it && *args_it; ++args_it)
+        std::print("    {}: \"{}\"\n", i++, *args_it);
+    std::print("  endargs\n");
+#endif
+        // Load executable at path with virtual filesystem.
+        FileDescriptors fds = SYSTEM->virtual_filesystem().open(path);
+        if (fds.invalid()) {
+            std::print("[EXEC]: Could not load file when path == {}\n", path);
+            return;
+        }
+
+        process->ExecutablePath = path;
+
+        std::vector<std::string> args_vector_impl;
+        std::vector<std::string_view> args_vector;
+        args_vector.push_back(process->ExecutablePath.data());
+        {   // We create copies of the userspace buffer(s), because during
+            // replacing the userspace process, any data within it is
+            // invalidated.
+            for (const char **args_it = args; args_it && *args_it; ++args_it)
+                args_vector_impl.push_back(*args_it);
+
+            for (const auto& s : args_vector_impl)
+            args_vector.push_back(s);
+        }
+
+        // Replace current process with new process.
+        bool success = ELF::ReplaceUserspaceElf64Process(process, fds.Process, args_vector);
+        if (!success) {
+            // TODO: ... Unrecoverable, terminate the program, somehow.
+            std::print("[EXEC]: Failed to replace process and parent is now unrecoverable, terminating.\n");
+            // TODO: Mark for destruction (halt and catch fire).
+            // FIXME: We should figure out how to exit the scope, so that everything is freed properly.
+            process->State = Process::ProcessState::SLEEPING;
+            Scheduler::yield();
+        }
+
+        //Scheduler::print_debug();
+        SYSTEM->virtual_filesystem().close(fds.Process);
     }
-
-    process->ExecutablePath = path;
-
-    // Replace current process with new process.
-    // TODO: Arguments
-    bool success = ELF::ReplaceUserspaceElf64Process(process, fds.Process);
-    if (!success) {
-        // TODO: ... Unrecoverable, terminate the program, somehow.
-        std::print("[EXEC]: Failed to replace process and parent is now unrecoverable, terminating.\n");
-        // TODO: Mark for destruction (halt and catch fire).
-        process->State = Process::ProcessState::SLEEPING;
-        Scheduler::yield();
-    }
-
-    //Scheduler::print_debug();
-    SYSTEM->virtual_filesystem().close(fds.Process);
 
     *cpu = process->CPU;
     Scheduler::yield();
@@ -302,7 +373,9 @@ void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
     Process* process = Scheduler::CurrentProcess->value();
     bool result = SYSTEM->virtual_filesystem().dup2(process, fd, replaced);
     if (!result) {
-        std::print("  ERROR OCCURED: dup2 failed\n");
+        std::print("  ERROR OCCURED: repfd failed (pid={}  fd={}  replaced={})\n", process->ProcessID, fd, replaced);
+        for (const auto& [procfd, sysfd] : process->FileDescriptors.pairs())
+            std::print("  {}: {}\n", procfd, sysfd);
     }
     // TODO: Use result/handle error in some way.
     (void)result;
@@ -312,12 +385,13 @@ void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
 /// other which can be written to.
 void sys$13_pipe(ProcessFileDescriptor *fds) {
     DBGMSG(sys$_dbgfmt, 13, "pipe");
+    // TODO: Validate pointer.
     Process* process = Scheduler::CurrentProcess->value();
     VFS& vfs = SYSTEM->virtual_filesystem();
     // Lay down a new pipe.
-    auto file = vfs.PipesDriver->lay_pipe();
-    FileDescriptors readFDs = vfs.add_file(file, process);
-    FileDescriptors writeFDs = vfs.add_file(std::move(file), process);
+    auto pipeEnds = vfs.PipesDriver->lay_pipe();
+    FileDescriptors readFDs = vfs.add_file(std::move(pipeEnds.Read), process);
+    FileDescriptors writeFDs = vfs.add_file(std::move(pipeEnds.Write), process);
     // Write fds.
     fds[0] = readFDs.Process;
     fds[1] = writeFDs.Process;
@@ -408,6 +482,22 @@ bool sys$15_pwd(char *buffer, usz numBytes) {
     return entire;
 }
 
+/// The returned file descriptor will be associated with the file
+/// description of the given file descriptor.
+ProcFD sys$16_dup(ProcessFileDescriptor fd) {
+    DBGMSG(sys$_dbgfmt, 16, "dup");
+    DBGMSG("  fd: {}\n", fd);
+    auto* process = Scheduler::CurrentProcess->value();
+    auto fds = SYSTEM->virtual_filesystem().dup(process, fd);
+    if (fds.invalid())
+        std::print("  ERROR OCCURED: dup failed\n");
+    return fds.Process;
+}
+
+
+// TODO: Reorder this
+// FIXME: Make it easier to reorder this (maybe separate the number
+// from the name? I don't know, something to make this easier...)
 u64 num_syscalls = LENSOR_OS_NUM_SYSCALLS;
 void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     // FILE STUFFS
@@ -438,4 +528,6 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     (void*)sys$14_seek,
 
     (void*)sys$15_pwd,
+
+    (void*)sys$16_dup,
 };

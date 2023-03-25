@@ -348,21 +348,29 @@ namespace ELF {
             return false;
         }
 
+        auto* process = new Process{};
+        process->State = Process::ProcessState::SLEEPING;
+        pid_t pid = Scheduler::add_process(process);
+
         // Copy current page table (fork)
         auto* newPageTable = Memory::clone_active_page_map();
         if (newPageTable == nullptr) {
             std::print("Failed to clone current page map for new process page map.\n");
+            Scheduler::remove_process(pid, -1);
             return false;
         }
+        process->CR3 = newPageTable;
 
         Memory::map(newPageTable, newPageTable, newPageTable
                     , (u64)Memory::PageTableFlag::Present
                     | (u64)Memory::PageTableFlag::ReadWrite
                     );
 
-        auto* process = new Process{};
-        if (!LoadUserspaceElf64Process(process, newPageTable, fd, elfHeader, args))
+        if (!LoadUserspaceElf64Process(process, newPageTable, fd, elfHeader, args)) {
+            // Remove process from process list
+            Scheduler::remove_process(pid, -1);
             return false;
+        }
 
         // Open stdin.
         vfs.add_file(vfs.StdinDriver->open("stdin"), process);
@@ -389,7 +397,7 @@ namespace ELF {
             process->ExecutablePath.substr(0, process->ExecutablePath.find_last_of("/"));
 
         // Make scheduler aware that this process may be run.
-        Scheduler::add_process(process);
+        process->State = Process::ProcessState::RUNNING;
         return true;
     }
 }

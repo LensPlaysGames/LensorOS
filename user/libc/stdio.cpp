@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <atomic>
 #include <extensions>
+#include <format>
 #include <mutex>
 #include <new>
 #include <string>
@@ -705,6 +706,11 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
 
             // TODO: Support more format specifiers
 
+            case 'p': {
+                void *addr = va_arg(args, void *);
+                std::print("{}", addr);
+            } continue;
+
             case 's': {
                 const char *str = va_arg(args, const char *);
                 fputs(str, stream);
@@ -757,7 +763,7 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
                 if (i == max_digits) digits[--i] = '0';
 
                 if (negative) fputc('-', stream);
-                for (const char *it = &digits[0]; it < &digits[0] + max_digits && *it; ++it)
+                for (const char *it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
                     fputc(*it, stream);
 
             } continue;

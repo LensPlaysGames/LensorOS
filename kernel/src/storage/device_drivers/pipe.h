@@ -23,6 +23,7 @@
 #include <integers.h>
 #include <storage/storage_device_driver.h>
 #include <storage/file_metadata.h>
+#include <scheduler.h>
 
 #include <algorithm>
 #include <memory>
@@ -33,9 +34,23 @@
 
 #define PIPE_BUFSZ 512
 
+//   pipe
+//  o====o
+//  r    w
+//
+// A pipe has a read end and a write end. The write end can push data
+// into the pipe. The read end can pop data from the pipe. Pipes follow
+// the FIFO principle; first in, first out (just like a pipe in real
+// life).
+
+// TODO: Support `open` for FIFOs (named pipes).
+
 struct PipeBuffer {
     u8 Data[PIPE_BUFSZ]{0};
     usz Offset{0};
+    bool ReadClosed{false};
+    bool WriteClosed{false};
+    std::vector<pid_t> PIDsWaiting;
 
     constexpr PipeBuffer() = default;
     ~PipeBuffer() = default;
@@ -46,6 +61,34 @@ struct PipeBuffer {
     /// We don’t allow moving either so we don’t accidentally move
     /// a pipe buffer while someone is reading from or writing to it.
     PipeBuffer(PipeBuffer&&) = delete;
+
+    void clear() {
+        PIDsWaiting.clear();
+        memset(&Data[0], 0, sizeof(Data));
+        Offset = 0;
+        ReadClosed = false;
+        WriteClosed = false;
+    }
+};
+
+
+struct PipeMetas {
+    std::shared_ptr<FileMetadata> Read;
+    std::shared_ptr<FileMetadata> Write;
+
+    PipeMetas(std::shared_ptr<FileMetadata> readMeta, std::shared_ptr<FileMetadata> writeMeta)
+    : Read(readMeta), Write(writeMeta) {}
+};
+
+struct PipeEnd {
+    PipeBuffer* Buffer;
+    enum EndType{
+        READ,
+        WRITE,
+    } End;
+
+    PipeEnd(PipeBuffer* buffer, PipeEnd::EndType endType)
+    : Buffer(buffer), End(endType) {}
 };
 
 struct NamedPipeBuffer {
@@ -62,7 +105,7 @@ struct PipeDriver final : StorageDeviceDriver {
     ssz read_raw(usz, usz, void*) final { return -1; };
     ssz write(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
 
-    auto lay_pipe() -> std::shared_ptr<FileMetadata>;
+    PipeMetas lay_pipe();
 
 private:
     /// Stores pipe buffers along with names for mock-filesystem functionality.

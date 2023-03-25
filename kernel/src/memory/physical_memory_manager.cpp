@@ -98,12 +98,29 @@ namespace Memory {
             lock_page((void*)((u64)address + (i * PAGE_SIZE)));
     }
 
-    void free_page(void* address) {
+    void free_page_impl(void* address) {
         u64 index = (u64)address / PAGE_SIZE;
         if (PageMap.set(index, false)) {
+            if (index < FirstFreePage) {
+                FirstFreePage = index;
+            }
             TotalUsedPages -= 1;
             TotalFreePages += 1;
         }
+    }
+
+    void free_page(void* address) {
+        DBGMSG("free_page():\n"
+               "  Address:     {}\n"
+               "  Free before: {}\n"
+               , address
+               , TotalFreePages);
+
+        free_page_impl(address);
+
+        DBGMSG("  Free after:  {}\n"
+               "\n"
+               , TotalFreePages);
     }
 
     void free_pages(void* address, u64 numberOfPages) {
@@ -115,9 +132,9 @@ namespace Memory {
                , numberOfPages
                , TotalFreePages);
         for (u64 i = 0; i < numberOfPages; ++i)
-            free_page((void*)((u64)address + (i * PAGE_SIZE)));
+            free_page_impl((void*)((u64)address + (i * PAGE_SIZE)));
 
-        DBGMSG("  Free after: {}\n"
+        DBGMSG("  Free after:  {}\n"
                "\n"
                , TotalFreePages);
     }

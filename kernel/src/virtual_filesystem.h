@@ -101,16 +101,69 @@ struct VFS {
 
     const std::vector<MountPoint>& mounts() const { return Mounts; }
 
+    /// The returned file descriptors will be associated with the file
+    /// description of the given file descriptor.
+    FileDescriptors dup(Process* proc, ProcFD fd) {
+        if (!proc || !valid(proc, fd)) return {};
+        SysFD sysfd = procfd_to_fd(proc, fd);
+        auto f = file(sysfd);
+        if (!f) return {};
+        return add_file(std::move(f), proc);
+    }
+
     /// The second file descriptor given will be associated with the file
     /// description of the first.
     bool dup2(Process* proc, ProcFD fd, ProcFD replaced) {
-        if (!proc) return false;
-        if (!valid(proc, fd) || !valid(proc, replaced)) return false;
+        if (!proc) {
+            std::print("[VFS]:dup2: Rejecting NULL process\n");
+            return false;
+        }
+        if (!valid(proc, fd)) {
+            std::print("[VFS]:dup2: Rejecting to replace {} with invalid process file descriptor {}\n", replaced, fd);
+            return false;
+        }
+        if (!valid(proc, replaced)) {
+            std::print("[VFS]:dup2: Rejecting to replace invalid process file descriptor {} with {}\n", replaced, fd);
+            return false;
+        }
+        // If oldfd is a valid file descriptor, and newfd has the same
+        // value as oldfd, then dup2() does nothing, and returns newfd.
+        if (fd == replaced) {
+            std::print("[VFS]:dup2: Process file descriptor {} is already equal to {}\n", replaced, fd);
+            return true;
+        }
         SysFD sysfd = procfd_to_fd(proc, fd);
         auto f = file(sysfd);
-        if (!f) return false;
-        auto [new_sysfd, _] = Files.push_back(std::move(f));
-        *proc->FileDescriptors[replaced] = new_sysfd;
+        if (!f) {
+            std::print("[VFS]:dup2: ProcFD {} mapped to SysFD {} did not return a valid FileMetadata\n", fd, sysfd);
+            return false;
+        }
+
+        // Get meta currently associated with `replaced` ProcFD.
+        SysFD replaced_sysfd = procfd_to_fd(proc, replaced);
+        //auto replaced_file = file(replaced_sysfd);
+        //std::print("[VFS]:dup2: Replacing \"{}\" (ProcFD {}) with \"{}\" (ProcFD {})\n", replaced_file->name(), replaced, f->name(), fd);
+
+        // FIXME: This assumes that each and every process file
+        // descriptor refers to a unique FileMetadata in the VFS Files
+        // vector. However! We should allow multiple processes to have
+        // fds that refer to *one* entry in the VFS Files vector. To
+        // accomplish this, we will need to maybe add an intrusive
+        // refcount to filemetadata, or something similar.
+
+        // Remove kernel file description from VFS list of open files using
+        // System File Descriptor. This decrements the refcount of the
+        // shared_ptr, which *may* call the destructor on the driver of
+        // the actual file, if it's the last occurence.
+        // FIXME: In the future, this should probably be an intrusive
+        // refcount that just gets decremented, that way we don't need
+        // copies of shared_ptrs in the kernel Files table.
+        Files.replace(replaced_sysfd, std::move(f));
+        // NOTE: Because we are replacing the file metadata in the VFS
+        // Files table, this means that the process' FileDescriptor
+        // still maps to the same SysFD. It's just the data stored *at*
+        // that SysFD that changes. This may change in the future, and
+        // the proc->FileDesriptors mappings may need altered.
         return true;
     }
 
@@ -124,7 +177,6 @@ struct VFS {
 
     void print_debug();
 
-    /// Files are stored as shared_ptrs to support dup() more easily.
     FileDescriptors add_file(std::shared_ptr<FileMetadata>, Process* proc = nullptr);
 
     auto procfd_to_fd(ProcFD procfd) const -> SysFD;

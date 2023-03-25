@@ -43,8 +43,11 @@ struct FileMetadata {
         , DriverData(driver_data) {}
 
     ~FileMetadata() {
-        if (DriverData)
+        //std::print("Closing FileMetadata \"{}\"\n", Name);
+        if (DriverData) {
+            //std::print("  Closing on device driver...\n");
             DeviceDriver->close(this);
+        }
     }
 
     usz offset { 0 };

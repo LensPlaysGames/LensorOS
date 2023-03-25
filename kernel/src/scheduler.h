@@ -68,6 +68,11 @@ struct CPUState {
 
 typedef u64 pid_t;
 
+struct ZombieState {
+    pid_t PID;
+    int ReturnStatus;
+};
+
 struct Process {
     pid_t ProcessID = 0;
 
@@ -80,9 +85,15 @@ struct Process {
     SinglyLinkedList<Memory::Region> Memories;
     usz next_region_vaddr = 0xf8000000;
 
+    pid_t ParentProcess{(pid_t)-1};
+
     /// A list of programs waiting to be set to `RUNNING` when this
     /// program exits.
     std::vector<pid_t> WaitingList;
+
+    // Information regarding child processes that have exited or
+    // inherited from a child that has exited. See waitpid syscall.
+    std::vector<ZombieState> Zombies;
 
     /// Keep track of opened files that may be freed when the process
     /// exits, if no other process has it open.
@@ -90,7 +101,6 @@ struct Process {
 
     std::string ExecutablePath { "" };
     std::string WorkingDirectory { "" };
-
 
     // TODO: x86_64 specific things should be somehow platform specific.
     // We may want to have a Process with virtual methods and then just

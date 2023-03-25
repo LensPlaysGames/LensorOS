@@ -307,7 +307,9 @@ void page_fault_handler(InterruptFrameError* frame) {
         std::print("  Reserved\n");
 
     std::print("CurrentProcess->ProcessID == {}\n", u64(Scheduler::CurrentProcess->value()->ProcessID));
-    Memory::print_page_map((Memory::PageTable*)cr3, Memory::PageTableFlag::UserSuper);
+    if (frame->error & (u64)PageFaultErrorCode::UserSuper)
+        Memory::print_page_map((Memory::PageTable*)cr3, Memory::PageTableFlag::UserSuper);
+    else Memory::print_page_map((Memory::PageTable*)cr3);
 
     /* US RW P - Description
      * 0  0  0 - Supervisory process tried to read a non-present page entry

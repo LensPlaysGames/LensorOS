@@ -64,12 +64,10 @@ public:
 
     void add(const DataType& value) {
         auto* newHead = new Node(value, Head);
-        if (newHead != nullptr) {
-            Head = newHead;
-            if (Tail == nullptr)
-                Tail = Head;
-            Length += 1;
-        } else __terminate_with_message("Failed to allocate memory for linked list.");
+        if (!newHead) __terminate_with_message("Failed to allocate memory for linked list.");
+        Head = newHead;
+        if (Tail == nullptr) Tail = Head;
+        Length += 1;
     }
 
     void add_end(const DataType& value) {
@@ -78,15 +76,13 @@ public:
             add(value);
         else {
             auto* newTail = new Node(value, nullptr);
-            if (newTail != nullptr) {
-                // Prevent nullptr dereference.
-                if (Tail == nullptr)
-                    Tail = Head;
-                // Place new node at end of list.
-                Tail->Next = newTail;
-                Tail = Tail->next();
-                Length += 1;
-            } else __terminate_with_message("Failed to allocate memory for linked list.");
+            if (!newTail) __terminate_with_message("Failed to allocate memory for linked list.");
+            // Prevent nullptr dereference.
+            if (Tail == nullptr) Tail = Head;
+            // Place new node at end of list.
+            Tail->Next = newTail;
+            Tail = Tail->next();
+            Length += 1;
         }
     }
 
@@ -145,8 +141,7 @@ public:
             i++;
         }
         // Set Tail if removing last item.
-        if (next == nullptr)
-            Tail = prev;
+        if (next == nullptr) Tail = prev;
 
         prev->Next = next;
         Length -= 1;

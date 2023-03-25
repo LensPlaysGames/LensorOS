@@ -1,0 +1,11 @@
+#ifndef _LENSOROS_LOCALE_H
+#define _LENSOROS_LOCALE_H
+
+namespace std {
+
+// FIXME: STUB
+class locale{};
+
+} /* namespace std */
+
+#endif /* _LENSOROS_LOCALE_H */

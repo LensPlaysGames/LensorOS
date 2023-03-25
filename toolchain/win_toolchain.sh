@@ -128,6 +128,9 @@ if [ ! -d $GCC_STRING"-winbuild" ] ; then
     echo -e "\n\n -> Installing GNU Compiler Collection\n\n"
     make install-gcc -j
     make install-target-libgcc -j
-    cd ..
+    cd $ScriptDirectory
+    # Stupid hack because for some ungodly reason GCC fills .init and
+    # .fini section of crtbegin.o with calls to memcpy...
+    objcopy -N memcpy $PREFIX/lib/gcc/x86_64-lensor/$GCC_VERSION/crtbegin.o
 fi
 

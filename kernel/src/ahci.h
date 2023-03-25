@@ -22,12 +22,13 @@
 
 #include <integers.h>
 #include <system.h>
+#include <memory/common.h>
 
 /// Size of AHCI Port buffer (how much the hardware reads/writes at a time)
 /// 128mib = 134217700 bytes = 32768 pages = 0x8000
 /// 1mib = 1048576 bytes = 256 pages = 0x100
 #define MAX_READ_PAGES 0x100
-#define MAX_READ_BYTES (MAX_READ_PAGES * 0x1000)
+#define MAX_READ_BYTES (MAX_READ_PAGES * PAGE_SIZE)
 
 #define ATA_DEV_BUSY 0x80
 #define ATA_DEV_DRQ  0x08

@@ -3,6 +3,7 @@ project( LensorOS VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGES} )
 
 set( USERSPACE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin CACHE PATH "This is where built userspace libraries and programs will be installed." )
 
+add_custom_target( userspace-libraries )
 add_custom_target( userspace )
 
 
@@ -22,7 +23,13 @@ function(add_userspace_library NAME)
 endfunction()
 
 add_userspace_library( c )
+add_dependencies( userspace-libraries install-libc )
+add_userspace_library( m )
+add_dependencies( userspace-libraries install-libm )
+add_userspace_library( stdc++ )
+add_dependencies( userspace-libraries install-libstdc++ )
 
+add_dependencies( userspace userspace-libraries )
 
 # PROGRAMS
 
@@ -31,7 +38,7 @@ add_userspace_library( c )
 # generate one target that is named the same as the subdirectory.
 function(add_userspace_program NAME )
   add_subdirectory( ${NAME} EXCLUDE_FROM_ALL )
-  add_dependencies( ${NAME} c ) # depend on libc by default
+  add_dependencies( ${NAME} install-libc ) # depend on libc by default
   set_property(
     TARGET ${NAME}
     PROPERTY RUNTIME_OUTPUT_DIRECTORY ${USERSPACE_OUTPUT_DIRECTORY}
@@ -39,6 +46,17 @@ function(add_userspace_program NAME )
   add_dependencies( userspace ${NAME} )
 endfunction()
 
+function(add_cxx_userspace_program NAME )
+  add_userspace_program( ${NAME} )
+  # g++ automatically links with these libraries
+  add_dependencies( ${NAME} install-libm )
+  add_dependencies( ${NAME} install-libstdc++ )
+endfunction()
+
+
 add_userspace_program( blazeit )
 add_userspace_program( pwd )
 add_userspace_program( stdout )
+add_cxx_userspace_program( xish )
+add_cxx_userspace_program( echo )
+

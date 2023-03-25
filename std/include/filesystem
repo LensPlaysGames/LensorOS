@@ -1,0 +1,175 @@
+#ifndef _LENSOROS_FILESYSTEM_H
+#define _LENSOROS_FILESYSTEM_H
+
+#include <iterator>
+#include <string>
+#include <locale>
+
+#if defined(_WIN32)
+#define DIR_SEP '\\'
+#elif defined(__lensor__) || defined(__unix__)
+#define DIR_SEP '/'
+#endif
+
+namespace std {
+namespace filesystem {
+
+template<typename value_type = char, typename string_type = basic_string<char>>
+class __path {
+    string_type __str;
+
+public:
+    using const_iterator = const value_type*;
+    using iterator = const_iterator;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+    // NOTE: On POSIX, native == generic
+    enum format {
+        native_format,
+        generic_format,
+        auto_format
+    };
+
+    /// =======================================================================
+    ///  Constructors.
+    /// =======================================================================
+    /// Constructs an empty path.
+    __path() noexcept = default;
+
+    __path(string_type&& __source, format __fmt = auto_format) {
+        // FIXME: __fmt should do something.
+        __str = __source;
+    }
+    template<class _InputIt>
+    __path(_InputIt __first, _InputIt __last, format __fmt = auto_format) {
+        // FIXME: Both locale and format should do something.
+        __str.clear();
+        for (_InputIt i = __first; i != __last; ++i)
+            __str += *i;
+    }
+
+    template<class _Source>
+    __path(const _Source& __source, const std::locale& __loc, format __fmt = auto_format) {
+        // FIXME: Both locale and format should do something.
+        __str = __source;
+    }
+    template<class _InputIt>
+    __path(_InputIt __first, _InputIt __last, const std::locale& loc, format __fmt = auto_format) {
+        // FIXME: Both locale and format should do something.
+        __str.clear();
+        for (_InputIt i = __first; i != __last; ++i)
+            __str += *i;
+    }
+
+
+    /// =======================================================================
+    ///  Copy and move constructors, assignment operators, and destructor.
+    /// =======================================================================
+
+    /// Copy constructor. Constructs a path whose pathname, in both
+    /// native and generic formats, is the same as that of __source.
+    __path(const __path& __other) : __str(__other.__str){}
+
+    /// Move constructor. Constructs a path whose pathname, in both
+    /// native and generic formats, is the same as that of __source,
+    /// __source is left in valid but unspecified state.
+    __path(__path&& __other) noexcept : __str(std::move<__other.str>) {}
+
+    __path& operator=(const __path& __other) {
+        if (this == addressof(__other)) { return *this; }
+        __str = __other.__str;
+        return *this;
+    }
+
+    // Move assignment operator (from another path)
+    __path& operator=(__path&& __other) noexcept {
+        if (this == addressof(__other)) { return *this; }
+        __str = __other.__str;
+        __other.__str.clear();
+        return *this;
+    }
+
+    // Move assignment operator (from string type)
+    __path& operator=(string_type&& __source) noexcept {
+        if (&__str == addressof(__source)) { return *this; }
+        __str = __source;
+        __source.clear();
+        return *this;
+    }
+
+    template<class _Source>
+    __path& operator=(const _Source& __source) noexcept {
+        if (&__str == addressof(__source)) { return *this; }
+        __str = __source;
+        return *this;
+    }
+
+    // TODO: assign()
+
+    /// Destructor.
+    ~__path() = default;
+
+    /// =======================================================================
+    ///  Concatenation/Appending
+    /// =======================================================================
+
+    __path& operator/=(const __path& __other) {
+        // TODO:
+        // Remove all separators from end of this path.
+        // Remove all separators from beginning of other path.
+        // Join this path and other path with a separator inbetween.
+
+        if (!__other.__str.starts_with(std::string_view{DIR_SEP}))
+            __str += DIR_SEP;
+        __str += __other.__str;
+    }
+
+    __path& operator+=(const __path& __other) {
+        __str += __other.__str;
+    }
+
+    /// =======================================================================
+    ///  Compare (incomplete)
+    /// =======================================================================
+    int compare(const __path& __other) const noexcept{
+        return __str.compare(__other.__str);
+    }
+    int compare(const string_type& __source) const{
+        return __str.compare(__source);
+    }
+
+    /// =======================================================================
+    ///  Format observers (incomplete)
+    /// =======================================================================
+
+    const value_type* c_str() const noexcept {
+        return __str.data();
+    }
+
+    const string_type& native() const noexcept {
+        return __str;
+    }
+
+    operator string_type() const {
+        return __str;
+    }
+
+    // TODO: wstring, u8string, u16string, u32string...
+    std::string string() const {
+        return __str;
+    }
+
+    // TODO: "generic" strings...
+};
+
+using path = __path<char, basic_string<char>>;
+
+bool exists(path p);
+
+} /* namespace filesystem */
+} /* namespace std */
+
+#undef DIR_SEP
+
+#endif /* _LENSOROS_FILESYSTEM_H */

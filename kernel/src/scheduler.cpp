@@ -50,6 +50,15 @@ void Process::destroy(int status) {
         SYSTEM->set_init(NULL);
     }
 
+    // Add zombie entry to parent process.
+    // FIXME: Do we need to copy all of our zombies over as well?
+    Process *parent = Scheduler::process(ParentProcess);
+    if (parent) {
+        ZombieState zombie{ProcessID, status};
+        //std::print("[SCHED]: Adding zombie ({}, {}) to process {}\n", zombie.PID, zombie.ReturnStatus, ParentProcess);
+        parent->Zombies.push_back(zombie);
+    }
+
     // Run all of the programs in the WaitingList.
     for(pid_t pid : WaitingList) {
         Process *waitingProcess = Scheduler::process(pid);
@@ -71,6 +80,7 @@ void Process::destroy(int status) {
     // Close open files.
     // NOTE: There *should* be none; libc should close all open files on destruction.
     for (const auto& [procfd, fd] : FileDescriptors.pairs()) {
+        std::print("Process {} leaked {} ProcFD, closing...\n", ProcessID, procfd);
         SYSTEM->virtual_filesystem().close(this, procfd);
     }
 
@@ -190,6 +200,7 @@ namespace Scheduler {
             // Ensure scheduler doesn't **somehow** run this process after it's destroyed.
             processToRemove->State = Process::SLEEPING;
             processToRemove->destroy(status);
+            delete processToRemove;
             return true;
         }
         return false;
@@ -210,7 +221,7 @@ namespace Scheduler {
             std::print("\033[31mScheduler failed to initialize:\033[0m Could not allocate process list.\n");
             return false;
         }
-        ProcessQueue->add_end(&StartupProcess);
+        ProcessQueue->add(&StartupProcess);
         CurrentProcess = ProcessQueue->head();
         // Install IRQ0 handler found in `scheduler.asm` (over-write default system timer handler).
         gIDT.install_handler((u64)irq0_handler, PIC_IRQ0);
@@ -345,21 +356,26 @@ namespace Scheduler {
 }
 
 pid_t CopyUserspaceProcess(Process* original) {
+    // Allocate process before cloning page table in case it causes
+    // heap to expand.
+    Process* newProcess = new Process;
+    newProcess->State = Process::ProcessState::SLEEPING;
+    Scheduler::add_process(newProcess);
+    newProcess->ParentProcess = original->ProcessID;
+
     // Copy current page table (fork)
     auto* newPageTable = Memory::clone_page_map(original->CR3);
     if (newPageTable == nullptr) {
         std::print("Failed to clone current page map for new process page map.\n");
+        Scheduler::remove_process(newProcess->ProcessID, -1);
         return -1;
     }
+    newProcess->CR3 = newPageTable;
     // Map new page table in itself.
     Memory::map(newPageTable, newPageTable, newPageTable
                 , (u64)Memory::PageTableFlag::Present
                 | (u64)Memory::PageTableFlag::ReadWrite
                 );
-
-    Process* newProcess = new Process;
-    newProcess->State = Process::ProcessState::SLEEPING;
-    Scheduler::add_process(newProcess);
 
     //std::print("[SCHED]: Allocated new process {} at {}\n", newProcess->ProcessID, (void*)newProcess);
 
@@ -403,23 +419,41 @@ pid_t CopyUserspaceProcess(Process* original) {
     }
 
     // Copy file descriptors.
-    for (const auto& entry : original->FileDescriptors) {
-        std::shared_ptr<FileMetadata> meta = SYSTEM->virtual_filesystem().file(entry);
-        // Meta, isn't it? :p
-        auto f = meta->device_driver()->open(meta->name());
+    // FIXME: We need a better way of doing this.
+    // ProcFDs need to remain equal, while the values that they index
+    // in the sparse_vector need to be replaced with a new shared ptr.
+    std::vector<ProcFD> garbage_fds_to_erase;
+    for (const auto& [procfd, sysfd] : original->FileDescriptors.pairs()) {
+        // In order to account for holes in the file descriptors vector
+        // we are copying from, we need to push garbage values until we
+        // reach the expected procfd...
+        while (newProcess->FileDescriptors.allocated_size() < (usz)procfd) {
+            auto [fd, success] = newProcess->FileDescriptors.push_back(sysfd);
+            if (!success) break;
+            std::print("Pushing garbage: {}...\n", fd);
+            garbage_fds_to_erase.push_back(fd);
+        }
+
+        auto f = SYSTEM->virtual_filesystem().file(sysfd);
+        //std::print("[FORK]: Copying \"{}\" (ProcFD {}) to process {}\n", f->name(), procfd, newProcess->ProcessID);
         SYSTEM->virtual_filesystem().add_file(std::move(f), newProcess);
+    }
+
+    for (auto fd : garbage_fds_to_erase) {
+        std::print("Clearing garbage at {}...\n", fd);
+        newProcess->FileDescriptors.erase(fd);
     }
 
     // Copy PWD
     newProcess->ExecutablePath = original->ExecutablePath;
     newProcess->WorkingDirectory = original->WorkingDirectory;
 
-    newProcess->State = Process::ProcessState::RUNNING;
-    newProcess->CR3 = newPageTable;
     newProcess->CPU = original->CPU;
     newProcess->next_region_vaddr = original->next_region_vaddr;
     // Set child return value for `fork()`.
     newProcess->CPU.RAX = 0;
+
+    newProcess->State = Process::ProcessState::RUNNING;
 
     return newProcess->ProcessID;
 }

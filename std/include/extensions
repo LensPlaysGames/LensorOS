@@ -162,6 +162,15 @@ public:
         }
     }
 
+    /// Place element `__el` at index `__idx` within sparse vector.
+    bool replace(index_type __idx, _T __el) {
+        const auto __i = static_cast<size_t>(__idx);
+        if (__i > __els.size()) return false;
+        if (__els[__i] == static_cast<_T>(__invalid)) std::erase_if(__idxs, [__i](auto __j) { return __j == __i; });
+        __els[__i] = std::move(__el);
+        return true;
+    }
+
     bool erase(index_type __idx) {
         const auto __i = static_cast<size_t>(__idx);
         if (__i > __els.size()) { return false; }
