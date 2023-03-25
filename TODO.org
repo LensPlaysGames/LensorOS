@@ -15,6 +15,10 @@ Currently, this is causing issues in the PipeDriver. The PipeDriver::read() may 
 
 [2023-03-24 Fri 09:22]
 
+Alright, we /are/ now freeing pipes! Hurray. It /was/ the issue described above: yield never cleaning up, meaning things didn't get cleaned up. HOWEVER! There is still /some/ sort of bug, evident in the fact that a deadlock occurs when a shell starts a shell that starts a process. Basically, I think what's happening is that `dup2` *doesn't* close the file description it's replacing. This means that that file descriptor never gets closed, and it's corresponding shared_ptr in the Files table of the VFS never gets cleaned up, and therefore the underlying pipe can never truly close the write end, meaning the read end will forever block. One trick we could use is to just silently open a new fd and move the replaced fd into that one, that way, upon process clean-up, it would be closed. This isn't ideal. A better system would be to maybe close the replaced file somehow?
+
+[2023-03-25 Sat 08:56]
+
 * DONE ~waitpid~ isn't implemented right
 
 Basically, ~waitpid~ is /supposed/ to be able to return the status of a child process *even if it has already exited*. This currently doesn't work, because as soon as a process calls `exit`, it is completely cleaned up, in it's entirety.
