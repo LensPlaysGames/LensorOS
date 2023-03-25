@@ -43,8 +43,10 @@ namespace {
 /// TODO: This MUST be thread-local.
 int __errno { 0 };
 
-/// Temporary workaround to allow dynamic memory allocation.
-char heap_base[1'000'000];
+// NOTE: All of these should be initialised with libc, i.e. in
+// `__libc_init_malloc()`.
+char* heap_base;
+size_t heap_size;
 char* heap_ptr;
 
 /// Keep track of allocated blocks.
@@ -83,7 +85,7 @@ alloc_header* free_headers;
 /// ===========================================================================
 /// Check if the heap has enough space for a new allocation.
 bool heap_has_space(size_t size) {
-    return heap_ptr + size < heap_base + sizeof(heap_base);
+    return heap_ptr + size < heap_base + heap_size;
 }
 
 /// Allocate a new pointer on the heap.
@@ -167,7 +169,7 @@ __attribute__((alloc_size(2))) void* realloc_impl(void* ptr, size_t size) {
     /// FIXME: I think this check is not correct.
 /*    if (alloc_list && alloc_list->ptr == ptr) {
         /// Extend the block if possible and requested.
-        if (size > alloc_list->size && heap_ptr - alloc_list->size + size <= heap_base + sizeof(heap_base)) {
+        if (size > alloc_list->size && heap_ptr - alloc_list->size + size <= heap_base + heap_size) {
             heap_ptr += size - alloc_list->size;
             alloc_list->size = size;
             return ptr;
@@ -220,6 +222,9 @@ void __libc_init_malloc() {
     __stdio_destructed = true;
 
     /// Initialise the heap.
+    // FIXME: Proper flags...
+    heap_size = 1 << 20;
+    heap_base = (char*)syscall(SYS_map, nullptr, heap_size, 0);
     heap_ptr = heap_base;
     alloc_list = nullptr;
     free_list = nullptr;
@@ -227,8 +232,10 @@ void __libc_init_malloc() {
 }
 
 void __libc_fini_malloc() {
-    /// Currently, this does nothing, but one could, for instance, check
-    /// for memory leaks here.
+    // Free the memory region mapped during initialisation/expansion of
+    // the heap.
+    syscall(SYS_unmap, heap_base);
+    /// One could check for memory leaks here.
 }
 
 int* __errno_location(void) {
@@ -357,7 +364,7 @@ __attribute__((malloc, alloc_size(1))) void* malloc(size_t bytes) {
     /// We need to allocate a new block. Make sure we have enough space in the
     /// heap for both the block and the memory we need to allocate.
     static constexpr size_t block_sz = align_to_max_align_t(sizeof(alloc_header));
-    if (heap_ptr + bytes + block_sz >= heap_base + sizeof(heap_base)) {
+    if (heap_ptr + bytes + block_sz >= heap_base + heap_size) {
         __errno = ENOMEM;
         return nullptr;
     }

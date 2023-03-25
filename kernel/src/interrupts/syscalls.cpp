@@ -141,8 +141,12 @@ void* sys$6_map(void* address, usz size, u64 flags) {
 
     Process* process = Scheduler::CurrentProcess->value();
 
-    usz pages = 1;
-    pages += size / PAGE_SIZE;
+    usz pages = 0;
+    if ((size % PAGE_SIZE) == 0) {
+        pages = size / PAGE_SIZE;
+    } else {
+        pages = 1 + (size / PAGE_SIZE);
+    }
 
     // Allocate physical RAM
     // TODO: There isn't really any reason these need to be contiguous.
@@ -162,17 +166,16 @@ void* sys$6_map(void* address, usz size, u64 flags) {
     // Add memory region to current process
     // TODO: Convert given flags to Memory::PageTableFlag
     // TODO: Figure out what flags we are given (libc, ig).
-    process->add_memory_region(address, paddr, size, flags);
+    usz memory_flags = 0;
+    memory_flags |= (usz)Memory::PageTableFlag::Present;
+    memory_flags |= (usz)Memory::PageTableFlag::UserSuper;
+    memory_flags |= (usz)Memory::PageTableFlag::ReadWrite;
+    process->add_memory_region(address, paddr, size, memory_flags);
 
     // Map virtual address to physical with proper flags
-    // Don't forget to map all pages!
-    usz vaddr_it = (usz)address;
-    usz paddr_it = (usz)paddr;
-    for (usz i = 0; i < pages; ++i) {
-        Memory::map(process->CR3, (void*)vaddr_it, (void*)paddr_it, flags);
-        vaddr_it = vaddr_it + PAGE_SIZE;
-        paddr_it = paddr_it + PAGE_SIZE;
-    }
+    Memory::map_pages(process->CR3, address, paddr, memory_flags, pages, Memory::ShowDebug::No);
+
+    std::print("[SYS$]:map: Mapped {} pages at {} (physical {})\n", pages, (void*)address, (void*)paddr);
 
     // Return usable address.
     return address;
@@ -203,17 +206,16 @@ void sys$7_unmap(void* address) {
 
     // Unmap memory from current process page table.
     // Don't forget to unmap all pages!
-    usz vaddr_it = (usz)address;
-    for (usz i = 0; i < region->value().length; ++i) {
-        Memory::unmap((void*)vaddr_it);
-        vaddr_it = vaddr_it + PAGE_SIZE;
-    }
+    Memory::unmap_pages(process->CR3, address, region->value().pages);
 
     // Free physical memory referred to by region.
     Memory::free_pages(region->value().paddr, region->value().pages);
 
+    std::print("[SYS$]:unmap: Unmapped {} pages at {} (physical {})\n", region->value().pages, (void*)address, (void*)region->value().paddr);
+
     // Remove memory region from process memories list.
     process->remove_memory_region(address);
+
     return;
 }
 
