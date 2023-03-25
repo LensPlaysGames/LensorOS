@@ -62,7 +62,6 @@ void sys$1_close(ProcessFileDescriptor fd) {
     SYSTEM->virtual_filesystem().close(fd);
 }
 
-// TODO: This should return the amount of bytes read.
 int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
     CPUState* cpu = nullptr;
     asm volatile ("mov %%r11, %0\n"
@@ -84,7 +83,6 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
     return SYSTEM->virtual_filesystem().read(fd, buffer, byteCount, 0);
 }
 
-// TODO: This should return the amount of bytes written.
 int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
     CPUState* cpu = nullptr;
     asm volatile ("mov %%r11, %0\n"
@@ -133,7 +131,7 @@ void sys$5_exit(int status) {
 void* sys$6_map(void* address, usz size, u64 flags) {
     DBGMSG(sys$_dbgfmt, 6, "map");
     DBGMSG("  address: {}\n"
-           "  size:    {}\n" // TODO: %ull is wrong, we need a size type format
+           "  size:    {}\n"
            "  flags:   {}\n"
            "\n"
            , address
@@ -147,6 +145,7 @@ void* sys$6_map(void* address, usz size, u64 flags) {
     pages += size / PAGE_SIZE;
 
     // Allocate physical RAM
+    // TODO: There isn't really any reason these need to be contiguous.
     void* paddr = Memory::request_pages(pages);
 
     // If address is NULL, pick an address to place memory at.
@@ -496,6 +495,9 @@ ProcFD sys$16_dup(ProcessFileDescriptor fd) {
 }
 
 
+// TODO: Reorder this
+// FIXME: Make it easier to reorder this (maybe separate the number
+// from the name? I don't know, something to make this easier...)
 u64 num_syscalls = LENSOR_OS_NUM_SYSCALLS;
 void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     // FILE STUFFS
