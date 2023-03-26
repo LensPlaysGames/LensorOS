@@ -97,6 +97,8 @@ bool PortController::read_low_level(u64 sector, u64 sectors) {
     // Issue command in first slot.
     Port->CommandIssue = 1;
     // Wait until command is completed.
+    // TODO: Possibly support yielding here instead of spinning
+    // (requires interrupt handler or something...)
     while (Port->CommandIssue != 0)
         if (Port->InterruptStatus & HBA_PxIS_TFES)
             return false;
@@ -119,7 +121,7 @@ ssz PortController::read_raw(usz byteOffset, usz byteCount, void* buffer) {
            , byteOffset
            , byteCount
            , (void*) buffer
-    );
+           );
 
     if (Type != PortType::SATA) {
         std::print("  \033[31mERRROR\033[0m: `read()`  port type not implemented: {}\n"
@@ -148,7 +150,7 @@ ssz PortController::read_raw(usz byteOffset, usz byteCount, void* buffer) {
            , sector
            , sectors
            , byteOffsetWithinSector
-    );
+           );
 
     if (sectors * BYTES_PER_SECTOR > PORT_BUFFER_BYTES) {
         DBGMSG("  \033[31mERROR\033[0m: `read()`  can not read more bytes than internal buffer size.\n");
@@ -164,13 +166,112 @@ ssz PortController::read_raw(usz byteOffset, usz byteCount, void* buffer) {
     return byteCount;
 }
 
+bool PortController::write_low_level(u64 sector, u64 sectors) {
+    // Ensure hardware port is not busy by spinning until it isn't, or
+    // giving up.
+    const u64 maxSpin = 1000000;
+    u64 spin = 0;
+    while ((Port->TaskFileData & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < maxSpin)
+        spin++;
+
+    if (spin >= maxSpin)
+        return false;
+
+    // Disable interrupts during command construction.
+    Port->InterruptStatus = (u32)-1;
+    auto* commandHeader = reinterpret_cast<HBACommandHeader*>(Port->command_list_base());
+    commandHeader->CommandFISLength = sizeof(FIS_REG_H2D)/sizeof(u32);
+    commandHeader->Write = 1;
+    commandHeader->PRDTLength = 1;
+
+    auto* commandTable = reinterpret_cast<HBACommandTable*>(commandHeader->command_table_base());
+    memset(commandTable, 0, sizeof(HBACommandTable) + ((commandHeader->PRDTLength - 1) * sizeof(HBA_PRDTEntry)));
+    commandTable->PRDTEntry[0].set_data_base((u64)Buffer);
+    commandTable->PRDTEntry[0].set_byte_count((sectors << 9) - 1);
+    commandTable->PRDTEntry[0].set_interrupt_on_completion(true);
+    auto* commandFIS = reinterpret_cast<FIS_REG_H2D*>(&commandTable->CommandFIS);
+    commandFIS->Type = FIS_TYPE::REG_H2D;
+    // Take control of command structure.
+    commandFIS->CommandControl = 1;
+    commandFIS->Command = ATA_CMD_WRITE_DMA_EXT;
+    commandFIS->set_logical_block_addresses(sector);
+    // Use lba mode.
+    commandFIS->DeviceRegister = 1 << 6;
+    // Set sector count.
+    commandFIS->set_count(static_cast<u16>(sectors));
+    // Issue command in first slot.
+    Port->CommandIssue = 1;
+
+    // TODO: Possibly support yielding here instead of spinning
+    // (requires interrupt handler or something...)
+
+    // Wait until command is completed.
+    while (Port->CommandIssue != 0)
+        if (Port->InterruptStatus & HBA_PxIS_TFES)
+            return false;
+    // Check once more after break that read did not fail.
+    if (Port->InterruptStatus & HBA_PxIS_TFES)
+        return false;
+
+    return true;
+}
+
+ssz PortController::write_raw(usz byteOffset, usz byteCount, void* buffer) {
+    DBGMSG("[AHCI]: Port {} -- write()  byteOffset={}, byteCount={}, buffer={}\n"
+           , PortNumber
+           , byteOffset
+           , byteCount
+           , (void*) buffer
+           );
+
+    if (Type != PortType::SATA) {
+        std::print("  \033[31mERRROR\033[0m: `write()`  port type not implemented: {}\n"
+                   , port_type_string(Type));
+        return -1;
+    }
+    if (buffer == nullptr) {
+        std::print("  \033[31mERROR\033[0m: `write()`  buffer can not be nullptr\n");
+        return -1;
+    }
+    // TODO: Don't reject writes over port buffer max size, just do multiple low level writes.
+    if (byteCount > MAX_READ_BYTES) {
+        std::print("  \033[31mERROR\033[0m: `write()`  byteCount can not be larger than maximum readable bytes.\n");
+        return -1;
+    }
+
+    u64 sector = byteOffset / BYTES_PER_SECTOR;
+    u64 byteOffsetWithinSector = byteOffset % BYTES_PER_SECTOR;
+    u64 sectors = (byteOffsetWithinSector + byteCount + BYTES_PER_SECTOR - 1) / BYTES_PER_SECTOR;
+
+    if (byteOffsetWithinSector + byteCount <= BYTES_PER_SECTOR)
+        sectors = 1;
+
+    DBGMSG("  Calculated sector data: sector={}, sectors={}, byteOffsetWithinSector={}\n"
+           , sector
+           , sectors
+           , byteOffsetWithinSector
+           );
+
+    if (sectors * BYTES_PER_SECTOR > PORT_BUFFER_BYTES) {
+        DBGMSG("  \033[31mERROR\033[0m: `write()`  can not write more bytes than internal buffer size.\n");
+        return -1;
+    }
+
+    // TODO: Actually do something... write_low_level()
+    // NOTE: We can't just simply call write, because we have to write
+    // a sector at a time. This means we first have to read from the
+    // disk to fill the buffer with the data that *was* there, update
+    // the data within the buffer that needs updating, then write it
+    // back. We can get away with not doing this if both the byte
+    // offset and byte size are equal to zero when modulo sector size.
+    // if (!read_low_level(sector, sectors)) return false;
+    // if (write_low_level(sector, sectors)) return true;
+
+    return byteCount;
+}
+
 ssz PortController::write(FileMetadata*, usz byteOffset, usz byteCount, void* buffer) {
-    std::print("[AHCI]: TODO: Implement write()  byteOffset={}, byteCount={}, buffer={}\n"
-               , byteOffset
-               , byteCount
-               , (void*) buffer
-    );
-    return -1;
+    return write_raw(byteOffset, byteCount, buffer);
 }
 
 _PushIgnoreWarning("-Wvolatile")

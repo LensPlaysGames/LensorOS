@@ -28,14 +28,16 @@ struct PortController final : StorageDeviceDriver {
 
     /// Not valid for this driver, but required by the interface.
     void close(FileMetadata*) final {}
-    auto open(std::string_view) -> std::shared_ptr<FileMetadata> final
-    { return std::shared_ptr<FileMetadata>{nullptr}; }
+    auto open(std::string_view) -> std::shared_ptr<FileMetadata> final {
+        return std::shared_ptr<FileMetadata>{nullptr};
+    }
 
     /// Convert bytes to sectors, then read into and copy from intermediate
     /// `Buffer` to given `buffer` until all data is read and copied.
     ssz read(FileMetadata*,usz byteOffset, usz byteCount, void* buffer) final;
     ssz read_raw(usz byteOffset, usz byteCount, void* buffer) final;
     ssz write(FileMetadata*,usz byteOffset, usz byteCount, void* buffer) final;
+    ssz write_raw(usz byteOffset, usz byteCount, void* buffer);
 
     // FIXME: I think there are a max of 32 ports, no? We can
     // probably use something smaller than a u64 here.
@@ -52,6 +54,9 @@ private:
 
     /// Populate `Buffer` with `sectors` amount of data starting at `sector`.
     bool read_low_level(u64 sector, u64 sectors);
+
+    /// Write `sectors` data in `Buffer` starting at `sector`.
+    bool write_low_level(u64 sector, u64 sectors);
 
     void start_commands();
     void stop_commands();
