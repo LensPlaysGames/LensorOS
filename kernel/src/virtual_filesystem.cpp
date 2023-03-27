@@ -245,16 +245,18 @@ ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
     if (!meta) return -1;
 
     DBGMSG("[VFS]: write\n"
+           "  name:            {}\n"
            "  file descriptor: {}\n"
            "  buffer address:  {}\n"
            "  byte count:      {}\n"
            "  byte offset:     {}\n"
            "  file offset:     {}\n"
+           , meta->name()
            , fd
            , (void*) buffer
            , byteCount
            , byteOffset
-           , f.get()->offset
+           , meta->offset
            );
 
     return meta->device_driver()->write(meta, byteOffset + meta->offset, byteCount, buffer);

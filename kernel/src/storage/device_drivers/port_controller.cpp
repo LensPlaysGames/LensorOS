@@ -153,7 +153,7 @@ ssz PortController::read_raw(usz byteOffset, usz byteCount, void* buffer) {
            );
 
     if (sectors * BYTES_PER_SECTOR > PORT_BUFFER_BYTES) {
-        DBGMSG("  \033[31mERROR\033[0m: `read()`  can not read more bytes than internal buffer size.\n");
+        std::print("  \033[31mERROR\033[0m: `read()`  can not read more bytes than internal buffer size.\n");
         return -1;
     }
 
@@ -174,8 +174,10 @@ bool PortController::write_low_level(u64 sector, u64 sectors) {
     while ((Port->TaskFileData & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < maxSpin)
         spin++;
 
-    if (spin >= maxSpin)
+    if (spin >= maxSpin) {
+        std::print("[AHCI]:write_low_level(): Device busy, sorry\n");
         return false;
+    }
 
     // Disable interrupts during command construction.
     Port->InterruptStatus = (u32)-1;
@@ -207,22 +209,29 @@ bool PortController::write_low_level(u64 sector, u64 sectors) {
 
     // Wait until command is completed.
     while (Port->CommandIssue != 0)
-        if (Port->InterruptStatus & HBA_PxIS_TFES)
+        if (Port->InterruptStatus & HBA_PxIS_TFES) {
+            std::print("[AHCI]:write_low_level(): Task File Error, sorry\n");
             return false;
-    // Check once more after break that read did not fail.
-    if (Port->InterruptStatus & HBA_PxIS_TFES)
+        }
+    // Check once more after break that write did not fail.
+    if (Port->InterruptStatus & HBA_PxIS_TFES) {
+        std::print("[AHCI]:write_low_level(): Task File Error, sorry\n");
         return false;
+    }
+
+    std::print("[AHCI]:write_low_level(): Issued command; no errors\n");
 
     return true;
 }
 
 ssz PortController::write_raw(usz byteOffset, usz byteCount, void* buffer) {
-    DBGMSG("[AHCI]: Port {} -- write()  byteOffset={}, byteCount={}, buffer={}\n"
-           , PortNumber
-           , byteOffset
-           , byteCount
-           , (void*) buffer
-           );
+    // FIXME: DBGMSG
+    std::print("[AHCI]: Port {} -- write()  byteOffset={}, byteCount={}, buffer={}\n"
+               , PortNumber
+               , byteOffset
+               , byteCount
+               , (void*) buffer
+               );
 
     if (Type != PortType::SATA) {
         std::print("  \033[31mERRROR\033[0m: `write()`  port type not implemented: {}\n"
@@ -246,31 +255,53 @@ ssz PortController::write_raw(usz byteOffset, usz byteCount, void* buffer) {
     if (byteOffsetWithinSector + byteCount <= BYTES_PER_SECTOR)
         sectors = 1;
 
-    DBGMSG("  Calculated sector data: sector={}, sectors={}, byteOffsetWithinSector={}\n"
-           , sector
-           , sectors
-           , byteOffsetWithinSector
-           );
+    std::print("  Calculated sector data: sector={}, sectors={}, byteOffsetWithinSector={}\n"
+               , sector
+               , sectors
+               , byteOffsetWithinSector
+               );
 
     if (sectors * BYTES_PER_SECTOR > PORT_BUFFER_BYTES) {
-        DBGMSG("  \033[31mERROR\033[0m: `write()`  can not write more bytes than internal buffer size.\n");
+        std::print("  \033[31mERROR\033[0m: `write()`  can not write more bytes than internal buffer size.\n");
         return -1;
     }
 
-    // TODO: Actually do something... write_low_level()
-    // NOTE: We can't just simply call write, because we have to write
-    // a sector at a time. This means we first have to read from the
-    // disk to fill the buffer with the data that *was* there, update
-    // the data within the buffer that needs updating, then write it
-    // back. We can get away with not doing this if both the byte
-    // offset and byte size are equal to zero when modulo sector size.
-    // if (!read_low_level(sector, sectors)) return false;
-    // if (write_low_level(sector, sectors)) return true;
+    if (byteOffsetWithinSector || byteCount % BYTES_PER_SECTOR != 0) {
+        // NOTE: We can't just simply call write, because we have to write
+        // a sector at a time. This means we first have to read from the
+        // disk to fill the buffer with the data that *was* there, update
+        // the data within the buffer that needs updating, then write it
+        // back. We can get away with not doing this if both the byte
+        // offset and byte size are equal to zero when modulo sector size.
+        if (!read_low_level(sector, sectors)) {
+            std::print("WRITE: read_low_level(): \033[31mFAILED!\033[m\n");
+            return -1;
+        }
+        std::print("WRITE: read_low_level(): \033[32mSUCCEEDED!\033[m\n");
+
+        // Write overwritten data to buffer.
+        memcpy((u8*)Buffer + byteOffsetWithinSector, (u8*)buffer, byteCount);
+
+        if (!write_low_level(sector, sectors)) {
+            std::print("write_low_level(): \033[31mFAILED!\033[m\n");
+            return -1;
+        }
+        std::print("write_low_level(): \033[32mSUCCEEDED!\033[m\n");
+
+    } else {
+        if (!write_low_level(sector, sectors)) {
+            std::print("write_low_level(): \033[31mFAILED!\033[m\n");
+            return -1;
+        }
+        std::print("write_low_level(): \033[32mSUCCEEDED!\033[m\n");
+    }
+    std::print("write_raw(): \033[32mSUCCEEDED!\033[m\n");
 
     return byteCount;
 }
 
 ssz PortController::write(FileMetadata*, usz byteOffset, usz byteCount, void* buffer) {
+    std::print("[AHCI]: write()  offset={}  size={}  buffer={}\n", byteOffset, byteCount, buffer);
     return write_raw(byteOffset, byteCount, buffer);
 }
 

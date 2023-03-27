@@ -137,8 +137,12 @@ public:
         return Device->read_raw(offs, bytes, buffer);
     }
 
-    ssz write(FileMetadata* file, usz offs, usz size, void* buffer) final {
-        return Device->write(file, usz(file->driver_data()) + offs, size, buffer);
+    ssz write(FileMetadata* file, usz offset, usz size, void* buffer) final {
+        // TODO: Fail? if this would increase file size. I feel like we
+        // don't want to write past the end of the file, just in case
+        // there is stuff there, right? So we will have to figure out
+        // how to make a file bigger in FAT.
+        return Device->write(file, usz(file->driver_data()) + offset, size, buffer);
     }
 
     const char* name() final { return "File Allocation Table"; }

@@ -44,9 +44,8 @@ struct GPTPartitionDriver final : StorageDeviceDriver {
         return Driver->read_raw(offs + Offset, byteCount, buffer);
     }
 
-
     ssz write(FileMetadata* file, usz offs, usz byteCount, void* buffer) final {
-        return Driver->read(file, offs + Offset, byteCount, buffer);
+        return Driver->write(file, offs + Offset, byteCount, buffer);
     }
 
     GUID type_guid() { return Type; }
