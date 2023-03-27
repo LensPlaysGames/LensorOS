@@ -175,7 +175,7 @@ void* sys$6_map(void* address, usz size, u64 flags) {
     // Map virtual address to physical with proper flags
     Memory::map_pages(process->CR3, address, paddr, memory_flags, pages, Memory::ShowDebug::No);
 
-    //std::print("[SYS$]:map: Mapped {} pages at {} (physical {})\n", pages, (void*)address, (void*)paddr);
+    DBGMSG("[SYS$]:map: Mapped {} pages at {} (physical {})\n", pages, (void*)address, (void*)paddr);
 
     // Return usable address.
     return address;
@@ -209,7 +209,7 @@ void sys$7_unmap(void* address) {
     // Free physical memory referred to by region.
     Memory::free_pages(region->value().paddr, region->value().pages);
 
-    //std::print("[SYS$]:unmap: Unmapped {} pages at {} (physical {})\n", region->value().pages, (void*)address, (void*)region->value().paddr);
+    DBGMSG("[SYS$]:unmap: Unmapped {} pages at {} (physical {})\n", region->value().pages, (void*)address, (void*)region->value().paddr);
 
     // Remove memory region from process memories list.
     process->remove_memory_region(address);

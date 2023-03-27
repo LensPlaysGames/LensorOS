@@ -219,14 +219,13 @@ bool PortController::write_low_level(u64 sector, u64 sectors) {
         return false;
     }
 
-    std::print("[AHCI]:write_low_level(): Issued command; no errors\n");
+    DBGMSG("[AHCI]:write_low_level(): Issued command; no errors\n");
 
     return true;
 }
 
 ssz PortController::write_raw(usz byteOffset, usz byteCount, void* buffer) {
-    // FIXME: DBGMSG
-    std::print("[AHCI]: Port {} -- write()  byteOffset={}, byteCount={}, buffer={}\n"
+    DBGMSG("[AHCI]: Port {} -- write()  byteOffset={}, byteCount={}, buffer={}\n"
                , PortNumber
                , byteOffset
                , byteCount
@@ -255,7 +254,7 @@ ssz PortController::write_raw(usz byteOffset, usz byteCount, void* buffer) {
     if (byteOffsetWithinSector + byteCount <= BYTES_PER_SECTOR)
         sectors = 1;
 
-    std::print("  Calculated sector data: sector={}, sectors={}, byteOffsetWithinSector={}\n"
+    DBGMSG("  Calculated sector data: sector={}, sectors={}, byteOffsetWithinSector={}\n"
                , sector
                , sectors
                , byteOffsetWithinSector
@@ -277,7 +276,7 @@ ssz PortController::write_raw(usz byteOffset, usz byteCount, void* buffer) {
             std::print("WRITE: read_low_level(): \033[31mFAILED!\033[m\n");
             return -1;
         }
-        std::print("WRITE: read_low_level(): \033[32mSUCCEEDED!\033[m\n");
+        DBGMSG("WRITE: read_low_level(): \033[32mSUCCEEDED!\033[m\n");
 
         // Write overwritten data to buffer.
         memcpy((u8*)Buffer + byteOffsetWithinSector, (u8*)buffer, byteCount);
@@ -286,22 +285,22 @@ ssz PortController::write_raw(usz byteOffset, usz byteCount, void* buffer) {
             std::print("write_low_level(): \033[31mFAILED!\033[m\n");
             return -1;
         }
-        std::print("write_low_level(): \033[32mSUCCEEDED!\033[m\n");
+        DBGMSG("write_low_level(): \033[32mSUCCEEDED!\033[m\n");
 
     } else {
         if (!write_low_level(sector, sectors)) {
             std::print("write_low_level(): \033[31mFAILED!\033[m\n");
             return -1;
         }
-        std::print("write_low_level(): \033[32mSUCCEEDED!\033[m\n");
+        DBGMSG("write_low_level(): \033[32mSUCCEEDED!\033[m\n");
     }
-    std::print("write_raw(): \033[32mSUCCEEDED!\033[m\n");
+    DBGMSG("write_raw(): \033[32mSUCCEEDED!\033[m\n");
 
     return byteCount;
 }
 
 ssz PortController::write(FileMetadata*, usz byteOffset, usz byteCount, void* buffer) {
-    std::print("[AHCI]: write()  offset={}  size={}  buffer={}\n", byteOffset, byteCount, buffer);
+    DBGMSG("[AHCI]: write()  offset={}  size={}  buffer={}\n", byteOffset, byteCount, buffer);
     return write_raw(byteOffset, byteCount, buffer);
 }
 
