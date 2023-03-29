@@ -372,7 +372,8 @@ void kstage1(BootInfo* bInfo) {
      * a single AHCI controller has multiple ports,
      * each one referring to its own device.
      */
-    for (auto& dev : SYSTEM->Devices) {
+    for (usz i = 0; i < SYSTEM->Devices.size(); ++i) {
+        auto dev = SYSTEM->Devices[i];
         if (dev->major() == SYSDEV_MAJOR_STORAGE
             && dev->minor() == SYSDEV_MINOR_AHCI_CONTROLLER
             && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
@@ -433,7 +434,8 @@ void kstage1(BootInfo* bInfo) {
      * A storage device may be partitioned (i.e. GUID Partition Table).
      * These partitions are to be detected and new system devices created.
      */
-    for (auto& dev : SYSTEM->Devices) {
+    for (usz i = 0; i < SYSTEM->Devices.size(); ++i) {
+        auto dev = SYSTEM->Devices[i];
         if (dev->major() == SYSDEV_MAJOR_STORAGE
             && dev->minor() == SYSDEV_MINOR_AHCI_PORT
             && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
@@ -502,7 +504,8 @@ void kstage1(BootInfo* bInfo) {
      * check if a recognized filesystem resides on it.
      */
     VFS& vfs = SYSTEM->virtual_filesystem();
-    for (auto& dev : SYSTEM->Devices) {
+    for (usz i = 0; i < SYSTEM->Devices.size(); ++i) {
+        auto dev = SYSTEM->Devices[i];
         if (dev->major() == SYSDEV_MAJOR_STORAGE
             && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
         {
