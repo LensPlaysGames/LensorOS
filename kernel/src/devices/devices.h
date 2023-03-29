@@ -48,6 +48,11 @@ struct GPTPartition : SystemDevice {
     GPTPartition(std::shared_ptr<AHCIPort> port, GPT::PartitionEntry& part);
 };
 
+struct E1000Device : SystemDevice {
+    PCI::PCIHeader0* Header;
+    E1000Device(PCI::PCIHeader0* header);
+};
+
 }
 
 #endif // LENSOROS_DEVICES_H

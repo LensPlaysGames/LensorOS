@@ -43,21 +43,29 @@
  * |   |-- 1: AHCI Port
  * |   `-- 10: GPT Partition
  * |
+ * |-- 2: Network Device -- TODO: NetworkDeviceDriver at Data1 or whatever
+ * |   `-- 0: E1000 Network Controller
  * TODO:
- * `-- 2: Timer -- TimerInterface at Data1
+ * `-- 3: Timer -- TimerInterface at Data1
  *     |-- 0: Monotonic -- PIT :: has tick() and get() :: time_t
  *     |-- 1: Query -- RTC :: has get() :: struct tm
  *     `-- 2: Wait -- HPET :: do something at end of elapsed time, or something
  */
 
 /* STORAGE DEVICE MAJOR NUMBERS */
-constexpr u64 SYSDEV_MAJOR_STORAGE = 1;
+inline constexpr u64 SYSDEV_MAJOR_STORAGE = 1;
 /* STORAGE DEVICE FLAGS */
-constexpr u64 SYSDEV_MAJOR_STORAGE_SEARCH = 0;
+inline constexpr u64 SYSDEV_MAJOR_STORAGE_SEARCH = 0;
 /* STORAGE DEVICE MINOR NUMBERS */
-constexpr u64 SYSDEV_MINOR_AHCI_CONTROLLER = 0;
-constexpr u64 SYSDEV_MINOR_AHCI_PORT       = 1;
-constexpr u64 SYSDEV_MINOR_GPT_PARTITION   = 10;
+inline constexpr u64 SYSDEV_MINOR_AHCI_CONTROLLER = 0;
+inline constexpr u64 SYSDEV_MINOR_AHCI_PORT       = 1;
+inline constexpr u64 SYSDEV_MINOR_GPT_PARTITION   = 10;
+/* NETWORK DEVICE MAJOR NUMBERS */
+inline constexpr u64 SYSDEV_MAJOR_NETWORK = 2;
+/* NETWORK DEVICE FLAGS */
+/* NETWORK DEVICE MINOR NUMBERS */
+inline constexpr u64 SYSDEV_MINOR_E1000 = 0;
+
 
 struct System;
 
