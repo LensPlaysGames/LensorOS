@@ -195,8 +195,8 @@ if ( QEMU_PROGRAM )
     -m 128M
     # Use local time as real time clock base.
     -rtc base=localtime,clock=host,driftfix=none
-    # No networking drivers yet.
-    -net none
+    # e1000 network card emulation
+    -nic user,ipv6=off,model=e1000,mac=52:54:98:76:54:32
     # Show extra information regarding triple faults.
     -d cpu_reset
     # Use stdio as serial input and output.
