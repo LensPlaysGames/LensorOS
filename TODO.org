@@ -3,6 +3,10 @@
 #+description: What the fuck we should be doing for LensorOS in 2023
 #+created: <2023-01-12 Thu>
 
+* TODO Use ~[[gnu::packed]]~ instead of ~__attribute__((packed))~
+
+[2023-03-29 Wed 12:51]
+
 * TODO Processes, Files, and Concurrency
 
 Deadlocks is hard, mmkay?
