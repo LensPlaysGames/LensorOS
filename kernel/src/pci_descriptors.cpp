@@ -344,6 +344,8 @@ namespace PCI {
                 return "200 Series PCH SATA controller [RAID mode]";
             case 0xa382:
                 return "400 Series Chipset Family SATA AHCI Controller";
+            case 0x100e:
+                return "82540EM Gigabit Ethernet Controller";
             default:
                 std::print("{:x}", deviceID);
                 return "UNKNOWN ID";
@@ -738,7 +740,7 @@ namespace PCI {
                 case 0x8f:
                     return "PCI native mode controller, supports both channels switched to ISA compatibility mode, supports bus mastering";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             case 0x5:
@@ -749,7 +751,7 @@ namespace PCI {
                 case 0x30:
                     return "Chained DMA";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             case 0x6:
@@ -762,7 +764,7 @@ namespace PCI {
                 case 0x2:
                     return "Serial Storage Bus";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             case 0x7:
@@ -773,7 +775,7 @@ namespace PCI {
                 case 0x1:
                     return "Serial Storage Bus";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             case 0x8:
@@ -784,11 +786,11 @@ namespace PCI {
                 case 0x2:
                     return "NVM Express";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             default:
-                std::print("{:x}", progIF);
+                std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                 return "UNKNOWN PROG IF";
             }
         case 0x03:
@@ -801,11 +803,11 @@ namespace PCI {
                 case 0x1:
                     return "8514-Compatible Controller";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             }
-            std::print("{:x}", progIF);
+            std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
             return "UNKNOWN PROG IF";
         case 0x06:
             // Bridge
@@ -818,7 +820,7 @@ namespace PCI {
                 case 0x1:
                     return "Subtractive Decode";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             case 0x8:
@@ -829,7 +831,7 @@ namespace PCI {
                 case 0x1:
                     return "Endpoint Mode";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             case 0x9:
@@ -840,11 +842,11 @@ namespace PCI {
                 case 0x80:
                     return "Semi-Transparent, Secondary bus towards host CPU";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             default:
-                std::print("{:x}", progIF);
+                std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                 return "UNKNOWN PROG IF";
             }
         case 0x07:
@@ -868,7 +870,7 @@ namespace PCI {
                 case 0x6:
                     return "16950-Compatible";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             case 0x1:
@@ -885,7 +887,7 @@ namespace PCI {
                 case 0xfe:
                     return "IEEE 1284 Target Device";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             case 0x3:
@@ -902,11 +904,11 @@ namespace PCI {
                 case 0x4:
                     return "Hayes 16750-Compatible Interface";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             default:
-                std::print("{:x}", progIF);
+                std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                 return "UNKNOWN PROG IF";
             }
         case 0x08:
@@ -926,7 +928,7 @@ namespace PCI {
                 case 0x20:
                     return "I/O(x) APIC Interrupt Controller";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             case 0x1:
@@ -939,7 +941,7 @@ namespace PCI {
                 case 0x2:
                     return "EISA-Compatible";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             case 0x2:
@@ -954,7 +956,7 @@ namespace PCI {
                 case 0x3:
                     return "HPET";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             case 0x3:
@@ -965,11 +967,11 @@ namespace PCI {
                 case 0x1:
                     return "ISA-Compatible";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             default:
-                std::print("{:x}", progIF);
+                std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                 return "UNKNOWN PROG IF";
             }
         case 0x09:
@@ -979,11 +981,11 @@ namespace PCI {
                 if (progIF == 0x0)       { return "Generic";  }
                 else if (progIF == 0x10) { return "Extended"; }
                 else {
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             }
-            std::print("{:x}", progIF);
+            std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
             return "UNKNOWN PROG IF";
         case 0xc:
             // Serial Bus Controller
@@ -993,7 +995,7 @@ namespace PCI {
                 if (progIF == 0x0)       { return "Generic"; }
                 else if (progIF == 0x10) { return "OHCI";    }
                 else {
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             case 0x3:
@@ -1012,7 +1014,7 @@ namespace PCI {
                 case 0xfe:
                     return "USB Device";
                 default:
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             case 0x7:
@@ -1021,15 +1023,15 @@ namespace PCI {
                 else if (progIF == 0x1) { return "Keyboard Controller Style"; }
                 else if (progIF == 0x2) { return "Block Transfer";            }
                 else {
-                    std::print("{:x}", progIF);
+                    std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                     return "UNKNOWN PROG IF";
                 }
             default:
-                std::print("{:x}", progIF);
+                std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
                 return "UNKNOWN PROG IF";
             }
         default:
-            std::print("{:x}", progIF);
+            std::print("[PCI]: Unknown ProgIF: {:x}\n", progIF);
             return "UNKNOWN PROG IF";
         }
     }
