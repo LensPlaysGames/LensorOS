@@ -35,6 +35,10 @@
 #endif
 
 namespace PCI {
+    BarType get_bar_type(u32 BAR) {
+        return BAR & 1 ? BarType::IO : BarType::Memory;
+    }
+
     void print_device_header(PCIDeviceHeader* pci) {
         if (pci == nullptr)
             return;

@@ -27,6 +27,13 @@ namespace ACPI {
 }
 
 namespace PCI {
+    enum class BarType {
+        Memory,
+        IO,
+    };
+
+    BarType get_bar_type(u32 BAR);
+
     struct PCIDeviceHeader {
         u16 VendorID;
         u16 DeviceID;
