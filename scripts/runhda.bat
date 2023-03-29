@@ -16,7 +16,7 @@
 :: You should have received a copy of the GNU General Public License
 :: along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
 SET OVMFbin=%0/../../OVMFbin
-SET BuildDirectory=%0/../../kernel/bin
+SET BuildDirectory=%0/../../bin
 SET OVMFbin=%OVMFbin:"=%
 SET BuildDirectory=%BuildDirectory:"=%
 IF NOT EXIST %BuildDirectory%/LensorOS.bin echo " -> ERROR: Could not find %BuildDirectory%/LensorOS.bin" & EXIT
@@ -28,9 +28,10 @@ qemu-system-x86_64.exe ^
  -m 100M ^
  -rtc base=localtime,clock=host,driftfix=none ^
  -serial stdio ^
- -soundhw pcspk ^
+ -audiodev dsound,id=audio_device ^
+ -machine pcspk-audiodev=audio_device ^
  -d cpu_reset ^
  -hda %BuildDirectory%\LensorOS.bin ^
  -drive if=pflash,format=raw,unit=0,file=%OVMFbin%\OVMF_CODE-pure-efi.fd,readonly=on ^
  -drive if=pflash,format=raw,unit=1,file=%OVMFbin%\OVMF_VARS_LensorOS.fd ^
- -net none
+ -nic user,ipv6=off,model=e1000,mac=52:54:98:76:54:32

@@ -25,7 +25,7 @@ if (-not($ScriptDirectory))
 }
 $ScriptDirectory = Split-Path -Path $ScriptDirectory
 $RepoDirectory = Split-Path -Path $ScriptDirectory
-$BuildDirectory = "$RepoDirectory\kernel\bin"
+$BuildDirectory = "$RepoDirectory\bin"
 $OVMFDirectory = "$RepoDirectory\OVMFbin"
 
 if (-not(Test-Path -Path "$BuildDirectory\LensorOS.bin"))
@@ -58,9 +58,11 @@ qemu-system-x86_64                                                              
  -m 100M                                                                                  `
  -rtc base=localtime,clock=host,driftfix=none                                             `
  -serial stdio                                                                            `
- -soundhw pcspk                                                                           `
+ -audiodev dsound,id=audio_device                                                         `
+ -machine pcspk-audiodev=audio_device                                                     `
  -d cpu_reset                                                                             `
  -hda $BuildDirectory\LensorOS.bin                                                        `
  -drive if=pflash,format=raw,unit=0,file=$OVMFDirectory\OVMF_CODE-pure-efi.fd,readonly=on `
  -drive if=pflash,format=raw,unit=1,file=$OVMFDirectory\OVMF_VARS_LensorOS.fd             `
- -net none
+ -nic user,ipv6=off,model=e1000,mac=52:54:98:76:54:32
+

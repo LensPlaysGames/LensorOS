@@ -20,7 +20,7 @@
 
 
 ScriptDirectory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-BuildDirectory="$ScriptDirectory/../kernel/bin"
+BuildDirectory="$ScriptDirectory/../bin"
 OVMFDirectory="$ScriptDirectory/../OVMFbin"
 if ! [ -f $BuildDirectory/LensorOS.img ] ; then
     echo -e "\n\n -> ERROR: Couldn't locate $BuildDirectory/LensorOS.img\n\n"
@@ -43,9 +43,10 @@ qemu-system-x86_64 \
     -cpu qemu64 \
     -m 100M \
     -serial stdio \
-    -soundhw pcspk \
+    -audiodev oss,id=audio_device \
+    -machine pcspk-audiodev=audio_device \
     -rtc base=localtime,clock=host,driftfix=none \
     -hda $BuildDirectory/LensorOS.bin \
     -drive if=pflash,format=raw,unit=0,file=$OVMFDirectory/OVMF_CODE-pure-efi.fd,readonly=on \
     -drive if=pflash,format=raw,unit=1,file=$OVMFDirectory/OVMF_VARS_LensorOS.fd \
-    -net none
+    -nic user,ipv6=off,model=e1000,mac=52:54:98:76:54:32
