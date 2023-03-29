@@ -95,11 +95,23 @@ namespace PCI {
 
         // Class 0x01 = Mass Storage Controller
         if (pciDevHdr->Class == 0x01) {
-            // Class 0x06 = Serial ATA
+            // Subclass 0x06 = Serial ATA
             if (pciDevHdr->Subclass == 0x06) {
                 // ProgIF 0x01 = AHCI 1.0 Device
                 if (pciDevHdr->ProgIF == 0x01) {
+                    std::print("[PCI]: Found AHCI 1.0 SATA Controller at {}\n", (void*)pciDevHdr);
                     SYSTEM->create_device<Devices::AHCIController>(reinterpret_cast<PCIHeader0*>(pciDevHdr));
+                }
+            }
+        }
+        // Class 0x02 == Network Controller
+        else if (pciDevHdr->Class == 0x02) {
+            // Subclass 0x00 == Ethernet Controller
+            if (pciDevHdr->Subclass == 0x00) {
+                // Device ID 100e == E1000 Network Card
+                if (pciDevHdr->DeviceID == 0x100e) {
+                    std::print("[PCI]: Found e1000 network controller at {}\n", (void*)pciDevHdr);
+                    SYSTEM->create_device<Devices::E1000Device>(reinterpret_cast<PCIHeader0*>(pciDevHdr));
                 }
             }
         }
