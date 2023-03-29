@@ -72,6 +72,7 @@ add_executable(
   src/cstr.cpp
   src/debug.cpp
   src/devices/devices.cpp
+  src/e1000.cpp
   src/efi_memory.cpp
   src/gdt.cpp
   src/gpt.cpp

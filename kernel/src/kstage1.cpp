@@ -25,6 +25,7 @@
 #include <cpu.h>
 #include <cpuid.h>
 #include <devices/devices.h>
+#include <e1000.h>
 #include <efi_memory.h>
 #include <elf_loader.h>
 #include <gdt.h>
@@ -562,6 +563,16 @@ void kstage1(BootInfo* bInfo) {
            "  Rate Generator, BCD Disabled\n"
            "  Periodic interrupts at \033[33m{}hz\033[0m.\n"
            "\n", static_cast<double>(PIT_FREQUENCY));
+
+
+    for (auto& dev : SYSTEM->Devices) {
+        if (dev->major() == SYSDEV_MAJOR_NETWORK
+            && dev->minor() == SYSDEV_MINOR_E1000) {
+                Devices::E1000Device* e1000Device = static_cast<Devices::E1000Device*>(dev.get());
+                gE1000 = {e1000Device->Header};
+            }
+    }
+
 
     // The Task State Segment in x86_64 is used
     // for switches between privilege levels.
