@@ -522,7 +522,7 @@ inline constexpr auto EERD_DATA = [](u32 eerd) { return u16(eerd >> 16); };
 /// Category:    RX DMA
 /// Permissions: R/W
 /// RXCSUM  Receive Checksum Control
-#define REG_RXDCTL 0x5000
+#define REG_RXCSUM 0x5000
 /// Category:    Receive
 /// Permissions: R/W
 /// MTA[127:0]  Multicast Table Array (n)
@@ -570,8 +570,8 @@ inline constexpr auto EERD_DATA = [](u32 eerd) { return u16(eerd >> 16); };
 /// Permissions: R/W
 /// IP6AT  IPv6 Address Table
 /// NOTE: (not applicable to the 82544GC and 82544EI)
-#define REG_IPV4_TABLE_BEGIN 0x5880
-#define REG_IPV4_TABLE_END 0x588c
+#define REG_IPV6_TABLE_BEGIN 0x5880
+#define REG_IPV6_TABLE_END 0x588c
 /// Category:    Wakeup
 /// Permissions: R/W
 /// WUPL  Wakeup Packet Length
@@ -826,11 +826,11 @@ inline constexpr auto EERD_DATA = [](u32 eerd) { return u16(eerd >> 16); };
 /// Category:    Statistics
 /// Permissions: R
 /// TSCTC  TCP Segmentation Context Transmitted Count
-#define REG_BROADCAST_PACKETS_TX_COUNT 0x40f8
+#define REG_TCP_SEGMENTATION_CONTEXT_TX_COUNT 0x40f8
 /// Category:    Statistics
 /// Permissions: R
 /// TSCTFC  TCP Segmentation Context Transmitted Fail Count
-#define REG_BROADCAST_PACKETS_TX_FAIL_COUNT 0x40fc
+#define REG_TCP_SEGMENTATION_CONTEXT_TX_FAIL_COUNT 0x40fc
 /// Category:    Diagnostic
 /// Permissions: R/W
 /// RDFH  Receive Data FIFO Head
@@ -1618,8 +1618,6 @@ E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
                     );
         std::print("[E1000]: BAR0 is IO! addr={}\n", (void*)BARIOAddress);
     }
-
-
 
     EEPROMExists = detect_eeprom();
     if (EEPROMExists)
