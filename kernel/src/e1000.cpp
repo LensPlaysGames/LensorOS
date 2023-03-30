@@ -45,6 +45,148 @@
 /// SLU == Set Link Up
 #define ECTRL_SLU 0x40
 
+/// RCTL == Recieve Control Register
+/// Bits:
+///   31:27  RESERVED  (clear these bits)
+///   26     SECRC  Strip Ethernet CRC from incoming packet when set (default 0)
+///   25     BSEX  Buffer Size Extension (default 0)
+///          When set, the original BSIZE values are multiplied by 16.
+///   24     RESERVED  (clear this bit)
+///   23     PMCF  Pass MAC Control Frames (default 0)
+///          0b = Do not (specially) pass MAC control frames.
+///          1b = Pass any MAC control frame
+///          (type field value of 8808h) that does not contain the
+///          pause opcode of 0001h.
+///          PMCF controls the DMA function of MAC control frames
+///          (other than flow control). A MAC control frame in this
+///          context must be addressed to either the MAC control frame
+///          multicast address or the station address, match the type
+///          field and NOT match the PAUSE opcode of 0001h. If PMCF =
+///          1b then frames meeting this criteria are transferred to
+///          host memory. Otherwise, they are filtered out.
+///   22     DPF  Discard Pause Frames (default 0)
+///   21     RESERVED  (clear this bit)
+///   20     CFI  Canonical Form Indicator bit value (default 0)
+///          If RCTL.CFIEN is set, then 802.1Q packets with CFI equal
+///          to this field is accepted; otherwise, the 802.1Q packet is
+///          discarded.
+///   19     CFIEN Canonical Form Indicator Enable (default 0)
+///          0b = Disabled (CFI bit found in received 802.1Q packet’s
+///          tag is not compared to decide packet acceptance).
+///          1b = Enabled (CFI bit found in received 802.1Q packet’s
+///          tag must match RCTL.CFI to accept 802.1Q type packet).
+///   18     VFE  VLAN Filter Enable
+///          0b = Disabled (filter table does not decide packet acceptance).
+///          1b = Enabled (filter table decides packet acceptance for 802.1Q packets).
+///          Three bits control the VLAN filter table. RCTL.VFE
+///          determines whether the VLAN filter table participates in
+///          the packet acceptance criteria. RCTL.CFIEN and RCTL.CFI
+///          are used to decide whether the CFI bit found in the 802.1Q
+///          packet’s tag should be used as part of the acceptance
+///          criteria.
+///          NOTE: Not applicable to the 82541ER.
+///   17:16  BSIZE  Recieve Buffer Size (default 0)
+///          Controls the size of the receive buffers, allowing the
+///          software to trade off between system performance and
+///          storage space. Small buffers maximize memory efficiency at
+///          the cost of multiple descriptors for bigger packets.
+///          RCTL.BSEX = 0b:
+///          00b = 2048 Bytes.
+///          01b = 1024 Bytes.
+///          10b = 512 Bytes.
+///          11b = 256 Bytes. NOTE: Corrected 1b1 -> 11b
+///          RCTL.BSEX = 1b:
+///          00b = Reserved; software should not program this value.
+///          01b = 16384 Bytes.
+///          10b = 8192 Bytes.
+///          11b = 4096 Bytes.
+///   15     BAM  Broadcast Accept Mode (default 0)
+///          0 = ignore broadcast; 1 = accept broadcast packets.
+///          When set, passes and does not filter out all received
+///          broadcast packets. Otherwise, the Ethernet controller
+///          accepts, or rejects a broadcast packet only if it matches
+///          through perfect or imperfect filters.
+///   14     RESERVED (clear this bit)
+///   13:12  MO  Multicast Offset (default 0)
+///          The Ethernet controller is capable of filtering multicast
+///          packets based on 4096-bit vector multicast filtering
+///          table. The MO determines which bits of the incoming
+///          multicast address are used in looking up the 4096-bit
+///          vector.
+///          00b = bits [47:36] of received destination multicast address.
+///          01b = bits [46:35] of received destination multicast address.
+///          10b = bits [45:34] of received destination multicast address.
+///          11b = bits [43:32] of received destination multicast address.
+///   11:10  RESERVED (clear these bits)
+///   9:8    RDMTS  Recieve Descriptor Minimum Threshold Size (deafult 0)
+///          The corresponding interrupt ICR.RXDMT0 is set each time
+///          the fractional number of free descriptors becomes equal to
+///          RDMTS. The following table lists which fractional values
+///          correspond to RDMTS values. The size of the total receiver
+///          circular descriptor buffer is set by RDLEN. See Section
+///          13.4.27 for details regarding RDLEN.
+///          00b = Free Buffer threshold is set to 1/2 of RDLEN.
+///          01b = Free Buffer threshold is set to 1/4 of RDLEN.
+///          10b = Free Buffer threshold is set to 1/8 of RDLEN.
+///          11b = Reserved.
+///   7:6    LBM  Loopback mode.
+///          Controls the loopback mode of the Ethernet controller.
+///          00b = No loopback.
+///          01b = Undefined.
+///          10b = Undefined.
+///          11b = PHY or external SerDes loopback.
+///          All loopback modes are only allowed when the Ethernet
+///          controller is configured for full-duplex operation.
+///          Receive data from transmit data looped back internally to
+///          the SerDes or internal PHY. In TBI mode (82544GC/EI), the
+///          EWRAP signal is asserted.
+///          NOTE: The 82540EP/EM, 82541xx, and 82547GI/EI do not
+///          support SerDes functionality.
+///   5      LPE  Long Packet Reception Enable
+///          0b = Disabled.
+///          1b = Enabled.
+///          LPE controls whether long packet reception is permitted.
+///          When LPE is cleared, the Ethernet controller discards
+///          packets longer than 1522 bytes. When LPE is set, the
+///          Ethernet controller discards packets that are longer than
+///          16384 bytes.
+///          For the 82541xx and 82547GI/EI, packets larger than 2 KB
+///          require full duplex operation.
+///   4      MPE  Multicast Promiscuous Enabled
+///          0b = Disabled.
+///          1b = Enabled.
+///          When set, passes without filtering out all received
+///          multicast packets. Otherwise, the Ethernet controller
+///          accepts or rejects a multicast packet based on its 4096-
+///          bit vector multicast filtering table.
+///   3      UPE  Unicast Promiscuous Enabled
+///          0b = Disabled.
+///          1b = Enabled.
+///          When set, passes without filtering out all received
+///          unicast packets. Otherwise, the Ethernet controller
+///          accepts or rejects unicast packets based on the received
+///          packet destination address match with 1 of the 16 stored
+///          addresses.
+///   2      SBP  Store Bad Packets (default 0)
+///          0b = do not store.
+///          1b = store bad packets.
+///          When set, the Ethernet controller stores bad packets (CRC
+///          error, symbol error, sequence error, length error,
+///          alignment error, short packets or where carrier extension
+///          or RX_ERR errors) that pass the filter function in host
+///          memory. When the Ethernet controller is in promiscuous
+///          mode, and SBP is set, it might possibly store all packets.
+///   1      EN  Receiver Enable (default 0)
+///          The receiver is enabled when this bit is 1b. Writing this
+///          bit to 0b stops reception after receipt of any in-progress
+///          packets. Data remains in the receive FIFO until the device
+///          is re–enabled. Disabling or re-enabling the receiver does
+///          not reinitialize the packet filter logic that demarcates
+///          packet start and end locations in the FIFO; Therefore the
+///          receiver must be reset before re-enabling it.
+///   0      RESERVED (clear this bit)
+
+/// RCTL_* == bits within register
 /// Reciever Enable
 #define RCTL_EN              (1 << 1)
 /// Store Bad Packets
