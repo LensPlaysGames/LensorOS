@@ -210,6 +210,37 @@
  *
  */
 
+/// VendorID for all: 8086
+/// Stepping: 82547EI-A0  DeviceID:1019  Desc: Copper
+/// Stepping: 82547EI-A1  DeviceID:1019  Desc: Copper
+/// Stepping: 82547EI-B0  DeviceID:1019  Desc: Copper
+/// Stepping: 82547EI-B0  DeviceID:101a  Desc: Mobile
+/// Stepping: 82547GI-B0  DeviceID:1019  Desc: Copper
+/// Stepping: 82546EB-A1  DeviceID:1010  Desc: Copper; Dual Port; MAC Default
+/// Stepping: 82546EB-A1  DeviceID:1012  Desc: Fiber; Dual Port
+/// Stepping: 82546EB-A1  DeviceID:101d  Desc: Fiber; Quad Port
+/// Stepping: 82546GB-B0  DeviceID:1079  Desc: Copper; Dual Port
+/// Stepping: 82546GB-B0  DeviceID:107a  Desc: Fiber; Dual Port
+/// Stepping: 82546GB-B0  DeviceID:107b  Desc: SerDes; Dual Port
+/// Stepping: 82545EM-A   DeviceID:100f  Desc: Copper
+/// Stepping: 82545EM-A   DeviceID:1011  Desc: Fiber
+/// Stepping: 82545GM-B   DeviceID:1026  Desc: Copper; MAC Default
+/// Stepping: 82545GM-B   DeviceID:1027  Desc: Fiber
+/// Stepping: 82545GM-B   DeviceID:1028  Desc: SerDes
+/// Stepping: 82544EI-A4  DeviceID:1107  Desc: Copper; MAC Default
+/// Stepping: 82544GC-A4  DeviceID:1112  Desc: Copper; MAC Default
+/// Stepping: 82541EI-A0  DeviceID:1013  Desc: Copper; MAC Default
+/// Stepping: 82541EI-B0  DeviceID:1013  Desc: Copper; MAC Default
+/// Stepping: 82541EI-B0  DeviceID:1018  Desc: Mobile
+/// Stepping: 82541GI-B1  DeviceID:1076  Desc: Copper
+/// Stepping: 82541GI-B1  DeviceID:1077  Desc: Mobile
+/// Stepping: 82541PI-C0  DeviceID:1076  Desc: Copper
+/// Stepping: 82541ER-C0  DeviceID:1078  Desc: Copper
+/// Stepping: 82540EP-A   DeviceID:1017  Desc: Desktop
+/// Stepping: 82540EP-A   DeviceID:1016  Desc: Mobile
+/// Stepping: 82540EM-A   DeviceID:100e  Desc: Desktop
+/// Stepping: 82540EM-A   DeviceID:1015  Desc: Mobile
+
 /// REGISTERS ACCESSIBLE FROM BAR0 or BAR1:BAR0 DEPENDING ON BAR32 BIT
 
 /// Category:    General
