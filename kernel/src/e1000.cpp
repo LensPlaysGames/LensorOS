@@ -408,18 +408,67 @@
 #define RCTL_BSIZE_16384  ((1 << 16) | (1 << 25))
 
 /// End Of Packet
+/// When set, indicates the last descriptor making up the packet. One
+/// or many descriptors can be used to form a packet.
 #define CMD_EOP   (1 << 0)
 /// Insert FCS
+/// Controls the insertion of the FCS/CRC field in normal Ethernet
+/// packets. IFCS is valid only when EOP is set.
 #define CMD_IFCS  (1 << 1)
 /// Insert Checksum
+/// When set, the Ethernet controller needs to insert a checksum at the
+/// offset indicated by the CSO field. The checksum calculations are
+/// performed for the entire packet starting at the byte indicated by
+/// the CCS field. IC is ignored if CSO and CCS are out of the packet
+/// range. This occurs when (CSS >= length) OR (CSO >= length - 1). IC
+/// is valid only when EOP is set.
 #define CMD_IC    (1 << 2)
 /// Report Status
+/// When set, the Ethernet controller needs to report the status
+/// information. This ability may be used by software that does
+/// in-memory checks of the transmit descriptors to determine which
+/// ones are done and packets have been buffered in the transmit FIFO.
+/// Software does it by looking at the descriptor status byte and
+/// checking the Descriptor Done (DD) bit.
 #define CMD_RS    (1 << 3)
 /// Report Packet Sent
+/// When set, the 82544GC/EI defers writing the DD bit in the status
+/// byte (DESC.STATUS) until the packet has been sent, or transmission
+/// results in an error such as excessive collisions. It is used is
+/// cases where the software must know that the packet has been sent,
+/// and not just loaded to the transmit FIFO. The 82544GC/ EI might
+/// continue to prefetch data from descriptors logically after the one
+/// with RPS set, but does not advance the descriptor head pointer or
+/// write back any other descriptor until it sent the packet with the
+/// RPS set. RPS is valid only when EOP is set.
+/// This bit is reserved and should be programmed to 0b for all
+/// Ethernet controllers except the 82544GC/EI.
 #define CMD_RPS   (1 << 4)
 /// VLAN Packet Enable
+/// When set, indicates that the packet is a VLAN packet and the
+/// Ethernet controller should add the VLAN Ethertype and an 802.1q
+/// VLAN tag to the packet. The Ethertype field comes from the VET
+/// register and the VLAN tag comes from the special field of the TX
+/// descriptor. The hardware inserts the FCS/CRC field in that case.
+/// When cleared, the Ethernet controller sends a generic Ethernet
+/// packet. The IFCS controls the insertion of the FCS field in that
+/// case.
+/// In order to have this capability CTRL.VME bit should also be set,
+/// otherwise VLE capability is ignored. VLE is valid only when EOP is
+/// set.
 #define CMD_VLE   (1 << 6)
 /// Interrupt Delay Enable
+/// When set, activates the transmit interrupt delay timer. The
+/// Ethernet controller loads a countdown register when it writes back
+/// a transmit descriptor that has RS and IDE set. The value loaded
+/// comes from the IDV field of the Interrupt Delay (TIDV) register.
+/// When the count reaches 0, a transmit interrupt occurs if transmit
+/// descriptor write-back interrupts (IMS.TXDW) are enabled. Hardware
+/// always loads the transmit interrupt counter whenever it processes a
+/// descriptor with IDE set even if it is already counting down due to
+/// a previous descriptor. If hardware encounters a descriptor that has
+/// RS set, but not IDE, it generates an interrupt immediately after
+/// writing back the descriptor. The interrupt delay timer is cleared.
 #define CMD_IDE   (1 << 7)
 
 /// Transmit Enable
@@ -435,14 +484,37 @@
 /// Re-transmit on Late Collision
 #define TCTL_RTLC        (1 << 24)
 
-/// Descriptor Done
-#define TSTA_EN          (1 << 0)
-/// Excess Collisions
-#define TSTA_EC          (1 << 1)
-/// Late Collision
-#define TSTA_LC          (1 << 2)
-/// Transmit Underrun
-#define LSTA_TU          (1 << 3)
+/// TSTA == Transmission Status, field of transmission descriptor
+///         (struct E1000TXDesc).
+/// DD  Descriptor Done
+/// Indicates that the descriptor is finished and is written back
+/// either after the descriptor has been processed (with RS set) or for
+/// the 82544GC/EI, after the packet has been transmitted on the wire
+/// (with RPS set).
+#define TSTA_EN (1 << 0)
+/// EC  Excess Collisions
+/// Indicates that the packet has experienced more than the maximum
+/// excessive collisions as defined by TCTL.CT control field and was
+/// not transmitted. It has no meaning while working in full-duplex
+/// mode.
+#define TSTA_EC (1 << 1)
+/// LC  Late Collision
+/// Indicates that late collision occurred while working in half-duplex
+/// mode. It has no meaning while working in full-duplex mode. Note
+/// that the collision window is speed dependent: 64 bytes for 10/100
+/// Mb/s and 512 bytes for 1000 Mb/s operation.
+#define TSTA_LC (1 << 2)
+/// TU/RSV  Transmit Underrun/RESERVED
+/// Indicates a transmit underrun event occurred. Transmit Underrun might occur if Early
+/// Transmits are enabled (based on ETT.Txthreshold value) and the
+/// 82544GC/EI was not able to complete the early transmission of the
+/// packet due to lack of data in the packet buffer. This does not
+/// necessarily mean the packet failed to be eventually transmitted.
+/// The packet is successfully re-transmitted if the TCTL.NRTU bit is
+/// cleared (and excessive collisions do not occur).
+/// This bit is reserved and should be programmed to 0b for all
+/// Ethernet controllers except the 82544GC/EI.
+#define TSTA_TU (1 << 3)
 
 
 /// EEPROM Address Map (16-bit word offsets)
