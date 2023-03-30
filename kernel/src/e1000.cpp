@@ -869,25 +869,54 @@ bool E1000::detect_eeprom() {
 }
 
 u16 E1000::read_eeprom(u8 address) {
-    u32 out = 0;
+    /// EEPROM Read Register
+    /// Bits:
+    ///   0      START     Start Read (default 0)
+    ///            Writing a 1 to this bit causes the EEPROM to read
+    ///            16-bits at the address stored in the EE_ADDR
+    ///            field and then store the result in the EE_DATA
+    ///            field. This bit is self-clearing.
+    ///   3:1    RESERVED  Reads as 0
+    ///   4      DONE      Read Done
+    ///            Set to 1 when the EEPROM read completes. Set to 0
+    ///            when the EEPROM read is in progress. Writes by
+    ///            software are ignored.
+    ///   7:5    RESERVED  Reads as 0
+    ///   15:8   ADDR      Read Address
+    ///            This field is written by software along with Start
+    ///            Read to indicate the word to read.
+    ///   31:16  DATA   Read Data
+    ///            Data returned from the EEPROM read.
+    static constexpr u32 START_READ = (1 << 0);
+    static constexpr u32 READ_DONE  = (1 << 4);
+    static constexpr auto READ_ADDRESS = [](u8 address) { return u32(address) << 8; };
+    static constexpr auto READ_DATA = [](u32 eepromRegister) { return u16(eepromRegister >> 16); };
     u32 calculatedAddress = 0;
     u32 successMask = 0;
+    // FIXME: I'm not sure if this condition is correct or not. I at
+    // least haven't found a basis for the else branch in the 82540EM
+    // manual (yet). A better check would be specifically the 82544GC
+    // or 82544EI, I think? Or just disallow those cards altogether.
     if (EEPROMExists) {
-        calculatedAddress = u32(address) << 8;
-        successMask = 1 << 4;
+        calculatedAddress = READ_ADDRESS(address);
+        successMask = READ_DONE;
     } else {
         calculatedAddress = u32(address) << 2;
         successMask = 1 << 1;
     }
-    // Write address to EEPROM register.
-    write_command(REG_EEPROM, 1 | calculatedAddress);
+    // Write address to EEPROM register along with the Start Read bit
+    // to indicate to the NIC that it needs to do an EEPROM read with
+    // given address.
+    write_command(REG_EEPROM, START_READ | calculatedAddress);
+
     // TODO: Maybe put a max spin so we don't hang forever in case of
     // something going wrong!
-    // Read from EEPROM register until specific bit is set.
+    // Read from EEPROM register until READ_DONE bit is set.
+    u32 out = 0;
     do out = read_command(REG_EEPROM);
     while (!(out & successMask));
 
-    return (out >> 16) & 0xffff;
+    return READ_DATA(out);
 }
 
 void E1000::get_mac_address() {
