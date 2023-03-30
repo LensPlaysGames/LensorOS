@@ -1524,13 +1524,18 @@ u32 E1000::read_command(u16 address) {
 }
 
 bool E1000::detect_eeprom() {
+    // TODO: Can't we just use EECD.EE_PRES bit?
+
+    /// Attempt a read from the EEPROM using EERD (EEPROM Read Register).
     write_command(REG_EEPROM, 1);
     io_wait();
-    // Read value 1000 times in a row, in case it is just taking a
-    // while to be set.
-    for (usz i = 0; i < 1000; ++i) {
-        if (read_command(REG_EEPROM) & 0x10) return true;
-    }
+    /// Read the EERD register back and check if the read has completed
+    /// by seeing if the EERD_DONE bit is set.
+    /// We do this 1000 times in a row to make sure the hardware has
+    /// time to complete the read.
+    // FIXME: Use EERD_DONE_EXTRA for 82541xx, 82547GI, and 82547EI.
+    for (usz i = 0; i < 1000; ++i)
+        if (read_command(REG_EEPROM) & EERD_DONE) return true;
     return false;
 }
 
