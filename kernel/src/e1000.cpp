@@ -1,11 +1,23 @@
-#include "io.h"
-#include "memory/paging.h"
-#include "memory/virtual_memory_manager.h"
 #include <e1000.h>
 
+#include <io.h>
+#include <memory/paging.h>
+#include <memory/virtual_memory_manager.h>
 #include <pci.h>
 
 #include <format>
+
+/* The card may either be in 32 bit or 64 bit mode. This is indicated
+ * by the BAR32 bit (bit 13) being set in the Initialisation Control
+ * Word 1 (word 0x0a in the EEPROM). NOTE: bit is set for 82540EP and
+ * 82540EM, the latter of which is the card QEMU emulates.
+ * * FIXME: One thing I'm confused about here: how can we read a bit
+ * from the EEPROM (which requires writing a command to the EEPROM
+ * register, aka an offset from the base address) in order to know if
+ * we need to use the 32-bit vs 64-bit base address to offset from?
+ * Seems a bit chicken-and-eggy if you ask me.
+ *
+ */
 
 #define REG_CTRL          0x0000
 #define REG_STATUS        0x0008
@@ -126,6 +138,304 @@
 /// Transmit Underrun
 #define LSTA_TU          (1 << 3)
 
+
+/// EEPROM Address Map (16-bit word offsets)
+
+/// The first three words (six bytes) make up the MAC Address (unique
+/// address for this NIC). They are all "Used by HW".
+/// Image Value IA(2,1)
+#define EEPROM_ETHERNET_ADDRESS_BYTES0 0x0
+/// Image Value IA(4,3)
+#define EEPROM_ETHERNET_ADDRESS_BYTES1 0x1
+/// Image Value IA(6,5)
+#define EEPROM_ETHERNET_ADDRESS_BYTES2 0x2
+
+/// Contains additional initialization values that:
+/// - Sets defaults for some internal registers
+/// - Enables/disables specific features
+/// NOTE: For the 82544GC/EI, typical values are 0000h for a fiber-
+/// based design and 0400h for a copperbased design
+/// Bits:
+///   15:12  RESERVED  For future use.
+///   11     LOM  (set (default) to enable LAN On Motherboard, clear to disable)
+///   10     SRV  (set (default) to enable Server card, clear to disable)
+///   9      CLI  (set to enable Client card, clear (default) to disable)
+///   8      OEM  (set (default) to enable OEM card, clear to disable)
+///   7:6    RESERVED  Clear these bits (0)
+///   5      RESERVED  Set this bit (1). For 82540EP, 82540EM, 82541xx,
+///                    82547GI, and 82547EI, clear this bit (0).
+///   4      SMB  SMBus (set (default) to enable SMBus, clear to disable)
+///               Not applicable to 82544GC, 82544EI, or 82541ER.
+///   3      RESERVED  Clear this bit (0)
+///   2      BOB       PCI bridge (set this bit to enable PCI bridge, clear (default) to disable))
+///   1:0    RESERVED  Clear these bits (0)
+/// Image Value 0x0000
+#define EEPROM_SOFTWARE_COMPATIBILITY 0x3
+
+/// I don't really know what this does, candidly.
+/// If this word has a value of other than 0xffff, software programs
+/// its value into the Extended PHY Specific Control Register 2,
+/// located at address 26d in the PHY register space.
+/// NOTE: *Not* applicable to 82540EP, 82540EM, 82541xx, 82547GI or
+/// 82547EI.
+/// Used by SW
+/// Image Value 0xffff
+#define EEPROM_SERDES_CONFIG 0x4
+
+/// NOTE: Applicable to 82541xx, 82547GI, and 82547EI *only*.
+/// Used by SW
+/// Image Value 0x0000
+#define EEPROM_IMAGE_VERSION 0x5
+
+/// NOTE: Words 0x6 and 0x7 reserved for the 82541xx, 82547GI, and
+/// 82547EI.
+/// Image Value 0x0000 for all three
+#define EEPROM_COMPATIBILITY0 0x5
+#define EEPROM_COMPATIBILITY1 0x6
+#define EEPROM_COMPATIBILITY2 0x7
+
+/// A nine-digit Printed Board Assembly (PBA) number, used for Intel
+/// manufactured adapter cards, are stored in a four-byte field. Other
+/// hardware manufactureers can use these fields as they wish.
+/// Softwaredevice drivers should not rely on this field.
+/// Long story short: A bunch of numbers that don't matter.
+#define EEPROM_PBA0 0x8
+#define EEPROM_PBA1 0x9
+
+/// Used by HW
+/// Image Value 0x4408
+/// For 82541xx, 82547GI, and 82547EI, Image Value 0x640a
+/// Bits:
+///   15:14  Signature  THE MOST IMPORTANT BITS
+///          When Signature != 0b01, the EEPROM is INVALID!!
+///          Invalid EEPROM means no further EEPROM read is performed,
+///          and the default values are used for the configuration
+///          space IDs.
+///   13     BAR32  When set, disables 64-bit memory mapping.
+///          By default, it is cleared.
+///          NOTE: Bit set by default for the 82540EP and 82540EM.
+///   12     IPS0  When clear, does not invert Power State Output bit 0 (CTRL_EXT[14])
+///          NOTE: Reserved (clear this bit) for 82541xx, 82547GI, and 82547EI.
+///   11     FRCSPD  Force Speed bit in the Device Control reigster (CTRL[11]).
+///          When clear (default), does not force speed.
+///          NOTE: Bit set by default for the 82540EP and 82540EM.
+///          NOTE: Bit reserved (clear this bit) for 82541xx, 82547GI, and 82547EI.
+///   10     FD  Full Duplex (mapped to CTRL[0] and TXCW[5]).
+///          When set (default), enables full duplex (TBI mode/internal SerDes only).
+///          When clear, disables full duplex (TBI mode only/internal SerDes).
+///          NOTE: Reserved bit for the 82541PI/GI/EI and 82547GI/EI (clear this bit).
+///          NOTE: Reserved bit for the 82541ER (set this bit).
+///   9      LRST  Link Reset (mapped to CTRL[3]).
+///          When clear, enables Auto-Negotiation at power up or when asserting
+///          RST# without driver intervention.
+///          When set, disables Auto-Negotiation at power up or when asserting
+///          RST# without driver intervention.
+///          NOTE: Reserved bit for the 82541xx and 82547GI/EI (clear this bit).
+///   8      IPS1  When clear (default), does not invert the Power State Output bit 1
+///          (CTRL_EXT[16]).
+///          When set, inverts the Power State Output invert bit 1
+///          (CTRL_EXT[16]).
+///          NOTE: Reserved bit for the 82541xx and 82547GI/EI (clear this bit).
+///   7      Internal VREG Power Down Control
+///          NOTE: 82541xx and 82547GI/EI Only
+///          This bit is used to define the usage of the internal 1.2 V dc and 1.8 V dc
+///          regulators to supply power.
+///          0b = Yes (default).
+///          1b = No (external regulators used).
+///          NOTE: Reserved bit for all other Ethernet controllers.
+///   6:5    RESERVED  Clear these bits.
+///   4      RESERVED for copper PHY. Clear this bit.
+///   3      Power Management
+///          When set (default), enables full support for power management.
+///          When clear, the Power Management Registers set is read only. The
+///          Ethernet controller does not execute a hardware transition to D3.
+///          NOTE: Reserved bit for the 82541PI/GI/EI and 82547GI/EI (set this bit).
+///          NOTE: Reserved bit for the 82541ER (clear this bit).
+///   2      PME Clock
+///          When clear (default), indicates that the PCICLK is not required for
+///          PME# output.
+///          When set, indicates that the PCICLK is required for PME# output.
+///          NOTE: Reserved bit for the 82541xx and 82547GI/EI (clear this bit).
+///   1      Load Subsystem IDs
+///          When set (default), indicates that the Ethernet controller is to load its
+///          PCI Subsystem ID and Subsystem Vendor ID from the EEPROM (words 0x0b, 0x0c).
+///          When clear, indicates that the Ethernet controller is to load the default
+///          PCI Subsystem ID and Subsystem Vendor ID.
+///   0      Load Vendor/Device IDs
+///          When clear (default), indicates that the Ethernet controller is to load the
+///          default values for PCI Vendor and Device IDs.
+///          When set (default for the 82541xx and 82547GI/EI only),
+///          indicates that the Ethernet controller is to load its PCI
+///          Vendor and Device IDs from the EEPROM (words 0x0d, 0x0e).
+#define EEPROM_INIT_CONTROL1 0xa
+
+/// If the signature bits (15:14) and bit 1 (Load Subsystem IDs) of
+/// word 0Ah are valid, this word is read in to initialize the Subsystem ID.
+/// Used by HW
+/// Image Value TODO: See table 5-1
+#define EEPROM_SUBSYSTEM_ID 0xb
+
+/// If the signature bits (15:14) and bit 1 (Load Subsystem IDs) of
+/// word 0Ah are valid, this word is read in to initialize the Subsystem ID.
+/// Used by HW
+/// Image Value 0x8086
+#define EEPROM_SUBSYSTEM_VENDOR_ID 0xc
+
+/// If the signature bits (15:14) and bit 1 (Load Subsystem IDs) of
+/// word 0Ah are valid, this word is read in to initialize the Subsystem ID.
+/// For the 82546GB, the Device ID must be forced to 107Bh for SerDes-
+/// SerDes interface operation.
+/// For the 82545GM, the Device ID should be 1028h. This ensures proper
+/// functionality with Intel drivers and boot agent.
+/// NOTE: Since the 82546GB/EB is a dual-port device, the Device ID in
+/// 0x0d corresponds to LAN A and the Device ID in 0x11 corresponds to LAN B.
+/// Used by HW
+/// Image Value TODO: See table 5-1
+#define EEPROM_DEVICE_ID 0xd
+
+/// If the signature bits (15:14) and bit 1 (Load Subsystem IDs) of word
+/// 0x0a are valid, this word is read in to initialize the Subsystem ID.
+/// Used by HW
+/// Image Value 0x8086
+#define EEPROM_VENDOR_ID 0xe
+
+
+/// Used by HW
+/// For 82545GM, 82545EM, 82540EP, and 82540EM, Image Value 0x3040
+/// For 82541xx, 82547GI, and 82547EI, Image Value 0xb080
+#define EEPROM_INIT_CONTROL2 0xf
+
+/// These settings are specific to individual platform configurations
+/// for the 82541xx and 82547GI/EI and should not be altered from the
+/// reference design unless instructed to do so. Future Intel Ethernet
+/// controllers might use this space differently
+/// NOTE: 82541xx, 82547GI, and 82547EI only.
+/// Used by SW
+/// Image Value 0x00ba
+#define EEPROM_PHY_REGISTERS0 0x10
+/// Image Value 0x0000
+#define EEPROM_PHY_REGISTERS1 0x11
+
+/// Words 10h, 11h, and 13h through 1Fh of the EEPROM are reserved
+/// areas for general OEM use for all Ethernet controllers except the
+/// 82546GB/EB.
+/// NOTE: Words 0x10, 0x11, and 0x13 through 0x1f are reserved for the 82545GM, 82545EM, 82540EP, and 82540EM.
+
+/// This word is only applicable to 82541xx and 82547GI/EI Ethernet
+/// controllers that use SPI EEPROMs. Unused bits are reserved and
+/// should be programmed to 0. Bits 15:13 and 8:0 are reserved.
+/// bits
+/// 12:10  9  Size (bits)  Size (bytes)
+///   000  0         1 Kb           128
+///   001  1         4 Kb           512
+///   010  1         8 Kb          1 KB
+///   011  1        16 Kb          2 KB
+///   100  1        32 Kb          4 KB
+///   101  1        64 Kb          8 KB
+///   110  1       128 Kb         16 KB
+///   111  1     RESERVED      RESERVED
+#define EEPROM_SIZE 0x12
+
+/// For all Ethernet controllers except the 82541xx, 82547GI, and
+/// 82547GIEI, if the signature bits are valid and Power Management is
+/// not disabled, the value in this field is used in the PCI Power
+/// Management Data Register when the Data_Select field of the Power
+/// Management Control/Status Register (PMCSR) is set to 8. This
+/// setting indicates the power usage and heat dissipation of the
+/// common logic that is shared by both functions in tenths of a watt.
+#define EEPROM_COMMON_POWER 0x12
+
+/// NOTE: 82546GB and 82546EB use a *different* word: 0x10
+/// Used by HW
+#define EEPROM_SW_DEFINED_PINS_CONTROL 0x20
+
+/// NOTE: PCI-X not applicable to the 82540EP, 82540EM, 82541xx,
+/// 82547GI, and 82547EI.
+/// Used by HW
+/// Image Value 0x7863
+/// For 82540EP and 82540EM, Image Value 0x7061
+#define EEPROM_CIRCUIT_CONTROL 0x21
+
+/// Bits 0:7 D3 Power, bits 8:15 D0 Power
+/// D0:
+/// If the signature bits are valid and Power Management is not
+/// disabled, the value in this field is used in the PCI Power
+/// Management Data Register when the Data_Select field of the Power
+/// Management Control/Status Register (PMCSR) is set to 0 or 4. This
+/// indicates the power usage and heat dissipation of the networking
+/// function (including the Ethernet controller and any other devices
+/// managed by the Ethernet controller) in tenths of a watt.
+/// For example:
+///      If word22h = 290E, POWER CONSUMPTION (in 1/10W, hex), then:
+///      bits 15:8 = 0x29 Power in D0a, 0x29 = 4.1W
+///      bits 7:0 = 0x0e Power in D3h, 0x0e = 1.4W
+/// D3:
+/// If the signature bits are valid and Power Management is not
+/// disabled, the value in this field is used in the PCI Power
+/// Management Data Register when the Data_Select field of the Power
+/// Management Control/Status Register (PMCSR) is set to 3 or 7. This
+/// indicates the power usage and heat dissipation of the networking
+/// function (including the Ethernet controller and any other devices
+/// managed by the Ethernet controller) in tenths of a watt.
+/// Used by HW
+/// Image Value 0x280c
+/// For 82541xx, 82547GI, and 82547EI, Image Value 0x280b
+#define EEPROM_POWER 0x22
+
+/// Used by HW
+#define EEPROM_MANAGEMENT_CONTROL 0x23
+
+/// Used by HW
+/// NOTE: INIT_CONTROL3 is in bits 8:15 while SMBus Address is in bits 0:7
+#define EEPROM_INIT_CONTROL3 0x24
+#define EEPROM_SMBUS_ADDRESS 0x24
+
+/// Used by HW
+/// Image Value IP(2,1)
+#define EEPROM_IPV4_ADDRESS0 0x25
+/// Used by HW
+/// Image Value IP(4,3)
+#define EEPROM_IPV4_ADDRESS1 0x26
+
+/// Used by HW
+/// Image Value IP(2,1)
+#define EEPROM_IPV6_ADDRESS0 0x27
+/// Used by HW
+/// Image Value IP(4,3)
+#define EEPROM_IPV6_ADDRESS1 0x28
+/// Used by HW
+/// Image Value IP(6,5)
+#define EEPROM_IPV6_ADDRESS2 0x29
+/// Used by HW
+/// Image Value IP(8,7)
+#define EEPROM_IPV6_ADDRESS3 0x2a
+/// Used by HW
+/// Image Value IP(10,9)
+#define EEPROM_IPV6_ADDRESS4 0x2b
+/// Used by HW
+/// Image Value IP(12,11)
+#define EEPROM_IPV6_ADDRESS5 0x2c
+/// Used by HW
+/// Image Value IP(14,13)
+#define EEPROM_IPV6_ADDRESS6 0x2d
+/// Used by HW
+/// Image Value IP(16,15)
+#define EEPROM_IPV6_ADDRESS7 0x2e
+
+/// Used by HW
+/// Image Value 0x0602
+#define EEPROM_LEDCTL_DEFAULT 0x2f
+
+#define EEPROM_FIRMWARE_BEGIN 0x30
+#define EEPROM_FIRMWARE_END   0x3e
+
+/// Checksum of words 0x00 through 0x3f
+#define EEPROM_SOFTWARE_CHECKSUM 0x3f
+
+#define EEPROM_SOFTWARE_AVAIABLE_BEGIN 0xf8
+#define EEPROM_SOFTWARE_AVAIABLE_END   0xff
+
+
 #define E1000_NUM_RX_DESC 32
 #define E1000_NUM_TX_DESC 8
 
@@ -205,14 +515,15 @@ u16 E1000::read_eeprom(u8 address) {
 void E1000::get_mac_address() {
     if (EEPROMExists) {
         u16 value = 0;
+        // FIXME: Assumes little-endian architecture.
         // Byte order of each two-byte pair is flipped.
-        value = read_eeprom(0);
+        value = read_eeprom(EEPROM_ETHERNET_ADDRESS_BYTES0);
         MACAddress[0] = value & 0xff;
         MACAddress[1] = value >> 8;
-        value = read_eeprom(1);
+        value = read_eeprom(EEPROM_ETHERNET_ADDRESS_BYTES1);
         MACAddress[2] = value & 0xff;
         MACAddress[3] = value >> 8;
-        value = read_eeprom(2);
+        value = read_eeprom(EEPROM_ETHERNET_ADDRESS_BYTES2);
         MACAddress[4] = value & 0xff;
         MACAddress[5] = value >> 8;
     } else {
