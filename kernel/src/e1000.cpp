@@ -1591,11 +1591,9 @@ void E1000::get_mac_address() {
         MACAddress[4] = value & 0xff;
         MACAddress[5] = value >> 8;
     } else {
-        // TODO: What if BARType is IO?
-        // TODO: Figure out what 0x5400 is
-        u8* base = (u8*)(BARMemoryAddress + 0x5400);
-        for (uint i = 0; i < 6; ++i, ++base)
-            MACAddress[i] = *base;
+        // TODO: What if BARType is IO? We can probably do this same thing through BARIOAddress and 3 in32()s.
+        u8* base = (u8*)(BARMemoryAddress + REG_RAL_BEGIN);
+        for (uint i = 0; i < 6; ++i, ++base) MACAddress[i] = *base;
         if (!MACAddress[0] && !MACAddress[1] && !MACAddress[2] && !MACAddress[3])
             std::print("[E1000]:\033[31mERROR:\033[m First four bytes of MACAddress are zero!\n");
     }
