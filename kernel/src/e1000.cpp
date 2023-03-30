@@ -288,6 +288,11 @@
 /// EERD  EEPROM Read
 /// NOTE: (not applicable to the 82544GC or 82544EI)
 /// NOTE: *_EXTRA are required to be used by 82541xx, 82547GI, and 82547EI.
+/// NOTE: If EECD register indicates that software has direct pin
+/// control of the EEPROM, access through the EERD register can stall
+/// until that bit is clear. Software should ensure that EECD.EE_REQ
+/// and EECD.EE_GNT bits are clear before attempting to use EERD to
+/// access the EEPROM.
 /// Bits:
 ///   0      START     Start Read (default 0)
 ///            Writing a 1 to this bit causes the EEPROM to read
@@ -1540,45 +1545,26 @@ bool E1000::detect_eeprom() {
 }
 
 u16 E1000::read_eeprom(u8 address) {
-    /// EEPROM Read Register
-    /// Bits:
-    ///   0      START     Start Read (default 0)
-    ///            Writing a 1 to this bit causes the EEPROM to read
-    ///            16-bits at the address stored in the EE_ADDR
-    ///            field and then store the result in the EE_DATA
-    ///            field. This bit is self-clearing.
-    ///   3:1    RESERVED  Reads as 0
-    ///   4      DONE      Read Done
-    ///            Set to 1 when the EEPROM read completes. Set to 0
-    ///            when the EEPROM read is in progress. Writes by
-    ///            software are ignored.
-    ///   7:5    RESERVED  Reads as 0
-    ///   15:8   ADDR      Read Address
-    ///            This field is written by software along with Start
-    ///            Read to indicate the word to read.
-    ///   31:16  DATA   Read Data
-    ///            Data returned from the EEPROM read.
-    static constexpr u32 START_READ = (1 << 0);
-    static constexpr u32 READ_DONE  = (1 << 4);
-    static constexpr auto READ_ADDRESS = [](u8 address) { return u32(address) << 8; };
-    static constexpr auto READ_DATA = [](u32 eepromRegister) { return u16(eepromRegister >> 16); };
     u32 calculatedAddress = 0;
     u32 successMask = 0;
-    // FIXME: I'm not sure if this condition is correct or not. I at
-    // least haven't found a basis for the else branch in the 82540EM
-    // manual (yet). A better check would be specifically the 82544GC
-    // or 82544EI, I think? Or just disallow those cards altogether.
+    // TODO: Actually check for 82541xx, 82547GI, or 82547EI; if the
+    // eeprom doesn't exist, that's another story.
     if (EEPROMExists) {
-        calculatedAddress = READ_ADDRESS(address);
-        successMask = READ_DONE;
+        calculatedAddress = EERD_ADDRESS(address);
+        successMask = EERD_DONE;
     } else {
-        calculatedAddress = u32(address) << 2;
-        successMask = 1 << 1;
+        calculatedAddress = EERD_ADDRESS_EXTRA(address);
+        successMask = EERD_DONE_EXTRA;
     }
-    // Write address to EEPROM register along with the Start Read bit
-    // to indicate to the NIC that it needs to do an EEPROM read with
-    // given address.
-    write_command(REG_EEPROM, START_READ | calculatedAddress);
+    // TODO: If EECD register indicates that software has direct pin
+    /// control of the EEPROM, access through the EERD register can stall
+    /// until that bit is clear. Software should ensure that EECD.EE_REQ
+    /// and EECD.EE_GNT bits are clear before attempting to use EERD to
+    /// access the EEPROM.
+    /// Write address to EEPROM register along with the Start Read bit
+    /// to indicate to the NIC that it needs to do an EEPROM read with
+    /// given address.
+    write_command(REG_EEPROM, EERD_START | calculatedAddress);
 
     // TODO: Maybe put a max spin so we don't hang forever in case of
     // something going wrong!
@@ -1587,7 +1573,7 @@ u16 E1000::read_eeprom(u8 address) {
     do out = read_command(REG_EEPROM);
     while (!(out & successMask));
 
-    return READ_DATA(out);
+    return EERD_DATA(out);
 }
 
 void E1000::get_mac_address() {
