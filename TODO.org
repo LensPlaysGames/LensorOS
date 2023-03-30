@@ -3,6 +3,26 @@
 #+description: What the fuck we should be doing for LensorOS in 2023
 #+created: <2023-01-12 Thu>
 
+* TODO E1000 :: Add `State` member and slowly walk states upward
+
+#+begin_src c
+  enum {
+      UNINITIALISED,
+      BASE_ADDRESS_DECODED,
+      RESET,
+      EEPROM_PROBED,
+      MAC_ADDRESS_DECODED,
+      RX_DESCS_INITIALISED,
+      TX_DESCS_INITIALISED,
+      INTERRUPTS_ENABLED,
+      INITIALISED,
+  }
+#+end_src
+
+Then, we can assert or something at the beginning of a function that expects up to one of these to be done. For example, in `read_eeprom`, we can assert that the current state is `EEPROM_PROBED` or greater. In `read_command` and `write_command`, we assert that the current state is `BASE_ADDRESS_DECODED` or greater. Or something of that nature.
+
+[2023-03-30 Thu 12:36]
+
 * TODO Use ~[[gnu::packed]]~ instead of ~__attribute__((packed))~
 
 [2023-03-29 Wed 12:51]
