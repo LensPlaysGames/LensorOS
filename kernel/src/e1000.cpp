@@ -7,7 +7,171 @@
 
 #include <format>
 
-/* The card may either be in 32 bit or 64 bit mode. This is indicated
+/* TODO: Move all this into documentation of some sort, somewhere else.
+ *
+ * At power up, the Ethernet controller is not automatically configured
+ * by the hardware for normal operation. Software initialization is
+ * required before normal operation can continue. In general, the
+ * Ethernet controller is considered non-functional until the software
+ * driver successfully loads and sets up the hardware. However, Auto-
+ * Negotiation can start at power up or upon receipt of an assertion of
+ * PCI reset if configured to do so by the EEPROM.
+ *
+ *
+ * General Configuration:
+ * Several values in the Device Control Register (CTRL) need to be set upon power up or after an Ethernet controller reset for normal operation. • Speed and duplex are determined via Auto-Negotiation by the PHY, Auto-Negotiation by the MAC for internal SerDes1 mode, or forced by software if the link is forced. In internal PHY mode, the Ethernet controller can be configured automatically by hardware or forced by software to the same configuration as the PHY.
+ * - In internal PHY mode, the Auto-Speed Detection Enable (CTRL.ASDE)
+ *   bit, when set to 1b, detects the resolved speed and duplex of the
+ *   link and self-configure the MAC appropriately. This bit should be
+ *   set in conjunction with the Set Link Up (CTRL.SLU) bit.
+ * - The MAC can also be forced to a specific Speed/Duplex combination.
+ *   This is accomplished by setting the Set Link Up (CTRL.SLU), Force
+ *   Speed (CTRL. FRCSPD) and Force Duplex (CTRL.FRCDPLX) bits. Once
+ *   speed and duplex are determined (either via Auto-Negotiation or
+ *   forced by software), speed is forced by setting the appropriate
+ *   Speed Selection (CTRL.SPEED) bits and duplex is forced by updating
+ *   the Full Duplex (CTRL.FD) bit.
+ * - For the 82541xx and 82547GI/EI, configure the LED behavior through
+ *   LEDCTRL. • Link Reset (CTRL.LRST) should be set to 0b (normal). The
+ *   Ethernet controller defaults to LRST = 1b which disables Auto-
+ *   Negotiation. A transition to 0b initiates the Auto-Negotiation
+ *   function. LRST can be defined in the EEPROM. This bit is only valid
+ *   in internal SerDes mode and has no effect in internal PHY mode. 1.
+ *   The 82540EP/EM, 82541xx, and 82547GI/EI do not support any SerDes
+ *   functionality. 376 Software Developer’s Manual General
+ *   Initialization and Reset Operation
+ * - PHY Reset (CTRL.PHY_RST) should be set to 0b. Setting this bit to 1b
+ *   resets the PHY without accessing the PHY registers. This bit is
+ *   ignored in internal SerDes mode.
+ * - CTRL.ILOS should be set to 0b (not applicable to the 82541xx and
+ *   82547GI/EI).
+ * - If Flow Control is desired, program the FCAH, FCAL, FCT and FCTTV
+ *   registers. If not, they should be written with 0b. To enable XON
+ *   frame transmission, the XON Enable (FCTRL.XONE) bit must be set.
+ *   Advertising Flow Control capabilities during the AutoNegotiation
+ *   process is dependent on whether the Ethernet controller is operating
+ *   in internal SerDes or internal PHY mode. In internal SerDes mode,
+ *   the TXCW register must be set up prior to starting the Auto-
+ *   Negotiation process. In internal PHY mode, the appropriate PHY
+ *   registers must be set up properly to advertise desired capabilities
+ *   prior to starting or re-starting the Auto-Negotiation process. The
+ *   Receive Flow Control Enable (CTRL.RFCE) and Transmit Flow Control
+ *   Enable (CTRL.TFCE) bits need to be explicitly set by software in
+ *   internal PHY mode (because Auto-Negotiation is managed by PHY rather
+ *   than the MAC), or when a fiber connection is desired but link was
+ *   forced rather than Auto-Negotiated.
+ * - If VLANs are not used, software should clear VLAN Mode Enable (CTRL.
+ *   VME) bit. In this instance, there is no need then to initialize the
+ *   VLAN Filter Table Array (VFTA). If VLANs are desired, the VFTA
+ *   should be both initialized and loaded with the desired information.
+ * - For the 82541xx and 82547GI/EI, clear all statistical counters.
+ *
+ * Receive Initialization:
+ * - Program the Receive Address Register(s) (RAL/RAH) with the desired
+ *   Ethernet addresses. RAL[0]/RAH[0] should always be used to store the
+ *   Individual Ethernet MAC address of the Ethernet controller. This can
+ *   come from the EEPROM or from any other means (for example, on some
+ *   machines, this comes from the system PROM not the EEPROM on the
+ *   adapter port).
+ * - Initialize the MTA (Multicast Table Array) to 0b. Per
+ *   software, entries can be added to this table as desired.
+ * - Program the Interrupt Mask Set/Read (IMS) register to enable any
+ *   interrupt the software driver wants to be notified of when the event
+ *   occurs. Suggested bits include RXT, RXO, RXDMT, RXSEQ, and LSC.
+ *   There is no immediate reason to enable the transmit interrupts.
+ * - If software uses the Receive Descriptor Minimum Threshold Interrupt,
+ *   the Receive Delay Timer (RDTR) register should be initialized with
+ *   the desired delay time.
+ * - Allocate a region of memory for the receive descriptor list.
+ *   Software should insure this memory is aligned on a paragraph
+ *   (16-byte) boundary. Program the Receive Descriptor Base Address
+ *   (RDBAL/RDBAH) register(s) with the address of the region. RDBAL is
+ *   used for 32-bit addresses and both RDBAL and RDBAH are used for
+ *   64-bit addresses.
+ * - Set the Receive Descriptor Length (RDLEN) register to the size
+ *   (in bytes) of the descriptor ring. This register must be 128-byte
+ *   aligned. The Receive Descriptor Head and Tail registers are
+ *   initialized (by hardware) to 0b after a power-on or a software-
+ *   initiated Ethernet controller reset. Receive buffers of appropriate
+ *   size should be allocated and pointers to these buffers should be
+ *   stored in the receive descriptor ring. Software initializes the
+ *   Receive Descriptor Head (RDH) register and Receive Descriptor Tail
+ *   (RDT) with the appropriate head and tail addresses. Head should point
+ *   to the first valid receive descriptor in the descriptor ring and
+ *   tail should point to one descriptor beyond the last valid descriptor
+ *   in the descriptor ring.
+ * Program the Receive Control (RCTL) register with appropriate values
+ * for desired operation to include the following:
+ * - Set the receiver Enable (RCTL.EN) bit to 1b for normal operation.
+ *   However, it is best to leave the Ethernet controller receive logic
+ *   disabled (RCTL.EN = 0b) until after the receive descriptor ring has
+ *   been initialized and software is ready to process received packets.
+ * - Set the Long Packet Enable (RCTL.LPE) bit to 1b when processing
+ *   packets greater than the standard Ethernet packet size. For example,
+ *   this bit would be set to 1b when processing Jumbo Frames.
+ * - Loopback Mode (RCTL.LBM) should be set to 00b for normal operation.
+ * - Configure the Receive Descriptor Minimum Threshold Size (RCTL.RDMTS)
+ *   bits to the desired value.
+ * - Configure the Multicast Offset (RCTL.MO) bits to the desired value.
+ * - Set the Broadcast Accept Mode (RCTL.BAM) bit to 1b allowing the
+ *   hardware to accept broadcast packets.
+ * - Configure the Receive Buffer Size (RCTL.BSIZE) bits to reflect the
+ *   size of the receive buffers software provides to hardware. Also
+ *   configure the Buffer Extension Size (RCTL.BSEX) bits if receive
+ *   buffer needs to be larger than 2048 bytes.
+ * - Set the Strip Ethernet CRC (RCTL.SECRC) bit if the desire is for
+ *   hardware to strip the CRC prior to DMA-ing the receive packet to
+ *   host memory.
+ * - For the 82541xx and 82547GI/EI, program the Interrupt Mask Set/Read
+ *   (IMS) register to enable any interrupt the driver wants to be
+ *   notified of when the even occurs. Suggested bits include RXT, RXO,
+ *   RXDMT, RXSEQ, and LSC. There is no immediate reason to enable the
+ *   transmit interrupts. Plan to optimize interrupts later, including
+ *   programming the interrupt moderation registers TIDV, TADV, RADV and
+ *   IDTR.
+ * - For the 82541xx and 82547GI/EI, if software uses the Receive
+ *   Descriptor Minimum Threshold Interrupt, the Receive Delay Timer
+ *   (RDTR) register should be initialized with the desired delay time.
+ *
+ *
+ * Transmit Initialisation:
+ * - Allocate a region of memory for the transmit descriptor list.
+ *   Software should insure this memory is aligned on a paragraph (16-
+ *   byte) boundary. Program the Transmit Descriptor Base Address (TDBAL/
+ *   TDBAH) register(s) with the address of the region. TDBAL is used for
+ *   32-bit addresses and both TDBAL and TDBAH are used for 64-bit
+ *   addresses.
+ * - Set the Transmit Descriptor Length (TDLEN) register to the size (in
+ *   bytes) of the descriptor ring. This register must be 128-byte
+ *   aligned.
+ * - The Transmit Descriptor Head and Tail (TDH/TDT) registers are
+ *   initialized (by hardware) to 0b after a power-on or a software
+ *   initiated Ethernet controller reset. Software should write 0b to
+ *   both these registers to ensure this.
+ * Initialize the Transmit Control Register (TCTL) for desired
+ * operation to include the following:
+ * - Set the Enable (TCTL.EN) bit to 1b for normal operation.
+ * - Set the Pad Short Packets (TCTL.PSP) bit to 1b.
+ * - Configure the Collision Threshold (TCTL.CT) to the desired value.
+ *   Ethernet standard is 10h. This setting only has meaning in half
+ *   duplex mode.
+ * - Configure the Collision Distance (TCTL.COLD) to its expected value.
+ *   For full duplex operation, this value should be set to 40h. For
+ *   gigabit half duplex, this value should be set to 200h. For 10/100
+ *   half duplex, this value should be set to 40h. Program the Transmit
+ *   IPG (TIPG) register with the following decimal values to get the
+ *   minimum legal Inter Packet Gap:
+ *          FIBER   COPPER   FIBER (82544GC/EI)   COPPER(82544GC/EI)
+ *   IPGT      10       10                    6                    8
+ *   IPGR1     10       10                   8a                   8a
+ *   IPGR2     10       10                   6a                   6a
+ *   Where a == applicable to the 82541xx and 82547GI/EI.
+ *
+ *   Note: IPGR1 and IPGR2 are not needed in full duplex, but are
+ *   easier to always program to the values shown.
+ *
+ *
+ * The card may either be in 32 bit or 64 bit mode. This is indicated
  * by the BAR32 bit (bit 13) being set in the Initialisation Control
  * Word 1 (word 0x0a in the EEPROM). NOTE: bit is set for 82540EP and
  * 82540EM, the latter of which is the card QEMU emulates.
