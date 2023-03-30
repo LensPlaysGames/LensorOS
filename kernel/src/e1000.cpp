@@ -321,6 +321,23 @@
 ///   5:4    FWE
 ///   31:6   RESERVED (clear these bits)
 #define REG_EECD 0x0010
+
+/// SEE ABOVE FOR MORE ON EECD BITS AND THEIR MEANING
+#define EECD_CLOCK (1 << 0)
+#define EECD_CHIP_SELECT (1 << 1)
+#define EECD_DATA_IN (1 << 2)
+#define EECD_DATA_OUT (1 << 3)
+/// NOTE: One of these bits must be set, but not both and not neither!
+/// So always write 0b01 or 0b10 to these bits.
+#define EECD_FLASH_WRITE_DISABLED (0b01 << 4)
+#define EECD_FLASH_WRITE_ENABLED (0b10 << 4)
+#define EECD_FLASH_WRITE_MASK (0b11 << 4)
+#define EECD_EEPROM_REQUEST (1 << 6)
+#define EECD_EEPROM_GRANT (1 << 7)
+#define EECD_EEPROM_PRESENT (1 << 8)
+#define EECD_EEPROM_SIZE (1 << 9)
+#define EECD_EEPROM_TYPE (1 << 13)
+
 /// Category:    General
 /// Permissions: R/W
 /// EERD  EEPROM Read
