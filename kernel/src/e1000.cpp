@@ -181,31 +181,697 @@
  * we need to use the 32-bit vs 64-bit base address to offset from?
  * Seems a bit chicken-and-eggy if you ask me.
  *
+ *
+ * Software can also directly access the EEPROM’s 4-wire interface
+ * through the EEPROM/FLASH Control Register (EEC). It can use this for
+ * reads, writes, or other EEPROM operations. To directly access the
+ * EEPROM, software should follow these steps:
+ *   1. Write a 1b to the EEPROM Request bit (EEC.EE_REQ).
+ *   2. Read the EEPROM Grant bit (EEC.EE_GNT) until it becomes 1b. It
+ *      remains 0b as long as the hardware is accessing the EEPROM.
+ *   3. Write or read the EEPROM using the direct access to the 4-wire
+ *   interface as defined in the EEPROM/FLASH Control & Data Register
+ *   (EEC). The exact protocol used depends on the EEPROM placed on the
+ *   board and can be found in the appropriate data sheet.
+ *   4. Write a 0b to the EEPROM Request bit (EEC.EE_REQ).
+ *
+ * Software can cause the Ethernet controller to re-read the hardware
+ * accessed fields of the EEPROM (setting hardware’s internal registers
+ * appropriately) by writing a 1b to the EEPROM Reset bit of the
+ * Extended Device Control Register (CTRL_EXT.EE_RST). This action will
+ * also cause a reset.
+ *
  */
 
-#define REG_CTRL          0x0000
-#define REG_STATUS        0x0008
-#define REG_EEPROM        0x0014
-#define REG_CTRL_EXT      0x0018
-#define REG_IMASK         0x00d0
-#define REG_RCTRL         0x0100
-#define REG_RXDESCLO      0x2800
-#define REG_RXDESCHI      0x2804
-#define REG_RXDESCLEN     0x2808
-#define REG_RXDESCHEAD    0x2810
-#define REG_RXDESCTAIL    0x2818
+/// REGISTERS ACCESSIBLE FROM BAR0 or BAR1:BAR0 DEPENDING ON BAR32 BIT
 
-/// RX Delay Timer Register
-#define REG_RDTR    0x2820
-/// RX Descriptor Control
-#define REG_RXDCTL  0x3828
-/// RX Interrupt Absolute Delay Timer
-#define REG_RADV    0x282c
-/// RX Small Packet Detect Interrupt
-#define REG_RSRPD   0x2c00
+/// Category:    General
+/// Permissions: R/W
+/// CTRL  Device Control
+#define REG_CTRL 0x0000
+/// Category:    General
+/// Permissions: R
+/// STATUS  Device Status
+#define REG_STATUS 0x0008
 
-/// Transmit Inter Packet Gap
-#define REG_TIPG  0x0410
+/// Category:    General
+/// Permissions: R/W
+/// EECD  EEPROM/Flash Control/Data
+/// Bits:
+///   0      SK  Clock input to the EEPROM (default 0)
+///            The EESK output signal is mapped to this bit and
+///            provides the serial clock input to the EEPROM. Software
+///            clocks the EEPROM by means of toggling this bit with
+///            successive writes to EECD.
+///   1      CS  Chip select input to the EEPROM (default 0)
+///            The EECS output signal is mapped to the chip select of
+///            the EEPROM device. Software enables the EEPROM by
+///            writing a 1b to this bit.
+///   2      DI  Data input to the EEPROM (default 0)
+///            The EEDI output signal is mapped directly to this bit.
+///            Software provides data input to the EEPROM through
+///            writes to this bit.
+///   3      DO  Data output bit from the EEPROM
+///            The EEDO input signal is mapped directly to this bit in
+///            the register and contains the EEPROM data output. This
+///            bit is read-only from the software perspective – writes
+///            to this bit have no effect.
+///   5:4    FWE  Flash Write Enable Control (default 0b01)
+///            These two bits control whether writes to Flash memory are allowed.
+///            00b = Not allowed
+///            01b = Flash writes disabled
+///            10b = Flash writes enabled
+///            11b = Not allowed
+///   6*     EE_REQ  Request EEPROM Access (default 0)
+///            The software must write a 1b to this bit to get direct
+///            EEPROM access. It has access when EE_GNT is 1b. When the
+///            software completes the access it must write a 0b.
+///   7*     EE_GNT  Grant EEPROM Access (default 0)
+///            When this bit is 1b the software can access the EEPROM
+///            using the SK, CS, DI, and DO bits.
+///   8*     EE_PRES  EEPROM Present (default 1, default 0 for 82541xx, 82547GI, and 82547EI only)
+///            This bit indicates that an EEPROM is present by
+///            monitoring the EEDO input for a active-low acknowledge
+///            by the serial EEPROM during initial EEPROM scan.
+///            1b == EEPROM present.
+///   9*     EE_SIZE  EEPROM Size (default 0)
+///            0b = 1024-bit (64 word) NM93C46 compatible EEPROM
+///            1b = 4096-bit (256 word) NM93C66 compatible EEPROM
+///            This bit indicates the EEPROM size, based on
+///            acknowledges seen during EEPROM scans of different
+///            addresses. This bit is read-only.
+///            NOTE: This is a reserved bit for the 82541xx and 82547GI/EI.
+///   10*    EE_SIZE (82541xx, 82547GI, and 82547EI only)
+///            For Microwire EEPROMs:
+///              0b = 6-bit addressable (64 words).
+///              1b = 8-bit addressable (256 words).
+///            For SPI EEPROMs:
+///              0b = 8-bit addressable.
+///              1b = 16-bit addressable.
+///   12:11  RESERVED  (clear these bits)
+///   13*    EE_TYPE  EEPROM Type: Reflects the EE_MODE pin. (82541xx, 82547GI, 82547EI)
+///            0b = Microwire.
+///            1b = SPI.
+///   31:14  RESERVED (clear these bits)
+/// * == not applicable to 82544GC or 82544EI
+///
+/// Bits (for 82544GC and 82544EI):
+///   0      SK
+///   1      CS
+///   2      DI
+///   3      DO
+///   5:4    FWE
+///   31:6   RESERVED (clear these bits)
+#define REG_EECD 0x0010
+/// Category:    General
+/// Permissions: R/W
+/// EERD  EEPROM Read
+/// NOTE: (not applicable to the 82544GC or 82544EI)
+/// NOTE: *_EXTRA are required to be used by 82541xx, 82547GI, and 82547EI.
+/// Bits:
+///   0      START     Start Read (default 0)
+///            Writing a 1 to this bit causes the EEPROM to read
+///            16-bits at the address stored in the EE_ADDR
+///            field and then store the result in the EE_DATA
+///            field. This bit is self-clearing.
+///   3:1    RESERVED  Reads as 0
+///   4      DONE      Read Done
+///            Set to 1 when the EEPROM read completes. Set to 0
+///            when the EEPROM read is in progress. Writes by
+///            software are ignored.
+///   7:5    RESERVED  Reads as 0
+///   15:8   ADDR      Read Address
+///            This field is written by software along with Start
+///            Read to indicate the word to read.
+///   31:16  DATA   Read Data
+///            Data returned from the EEPROM read.
+///
+/// Bits (for 82541xx, 82547GI, and 82547EI):
+///   0      START     Start Read (default 0)
+///            Writing a 1b to this bit causes the EEPROM to read a
+///            (16-bit) word at the address stored in the EE_ADDR
+///            field and then storing the result in the EE_DATA
+///            field. This bit is self-clearing.
+///   1      DONE      Read Done (default 0)
+///            Set to 1b when the EEPROM read completes.
+///            Set to 0b when the EEPROM read is in progress.
+///            Writes by software are ignored.
+///   15:2   ADDR      Read Address
+///            This field is written by software along with Start
+///            Read to indicate the word to read.
+///   31:16  DATA      Read Data
+///            Data returned from the EEPROM read.
+#define REG_EEPROM 0x0014
+/// Set this bit to issue a read of the EEPROM. Write
+/// EERD_START | EERD_ADDRESS(address) to EERD to set the address that
+/// will be read from in the EEPROM address space.
+#define EERD_START (1 << 0)
+/// Check this bit in EERD register to see if the read previously
+/// issued is done/has finished.
+#define EERD_DONE (1 << 4)
+#define EERD_DONE_EXTRA (1 << 1)
+/// Use this to prepare an address to store into the EERD register.
+inline constexpr auto EERD_ADDRESS = [](u8 address) { return u32(address) << 8; };
+inline constexpr auto EERD_ADDRESS_EXTRA = [](u8 address) { return u32(address) << 2; };
+/// Get 16-bit data word from EERD register after a read is done.
+inline constexpr auto EERD_DATA = [](u32 eerd) { return u16(eerd >> 16); };
+
+/// Category:    General
+/// Permissions: R/W
+/// FLA  Flash Access
+/// NOTE: (appicable to the 82541xx, 82547GI, and 82547EI only)
+#define REG_FLASH_ACCESS 0x001c
+/// Category:    General
+/// Permissions: R/W
+/// CTRL_EXT  Extended Device Control
+#define REG_CTRL_EXT 0x0018
+/// Category:    General
+/// Permissions: R/W
+/// MDIC  MDI Control
+#define REG_MDI_CONTROL 0x0020
+/// Category:    General
+/// Permissions: R/W
+/// FCAL  Flow Control Address Low
+#define REG_FCAL 0x0028
+/// Category:    General
+/// Permissions: R/W
+/// FCAH  Flow Control Address High
+#define REG_FCAH 0x002c
+/// Category:    General
+/// Permissions: R/W
+/// FCT  Flow Control Type
+#define REG_FCT 0x0030
+/// Category:    General
+/// Permissions: R/W
+/// VET  VLAN Ether Type
+#define REG_VLAN_ETHERTYPE 0x0030
+/// Category:    General
+/// Permissions: R/W
+/// FCTTV  Flow Control Transmit Timer Value
+#define REG_FCTTV 0x0170
+/// Category:    General
+/// Permissions: R/W
+/// TXCW  Transmit Configuration Word
+/// NOTE: (not applicable to the 82540EP, 82540EM, 82541xx, 82547GI, or 82547EI)
+#define REG_TXCW 0x0178
+/// Category:    General
+/// Permissions: R
+/// RXCW  Receive Configuration Word
+/// NOTE: (not applicable to the 82540EP, 82540EM, 82541xx, 82547GI, or 82547EI)
+#define REG_RXCW 0x0180
+/// Category:    General
+/// Permissions: R/W
+/// LEDCTL  LED Control
+/// NOTE: (not applicable to the 82544GC or 82544EI)
+#define REG_LEDCTL 0x0e00
+/// Category:    DMA
+/// Permissions: R/W
+/// PBA  Packet Buffer Allocation
+#define REG_PBA 0x1000
+/// Category:    Interrupt
+/// Permissions: R
+/// ICR  Interrupt Cause Read
+#define REG_ICR 0x00c0
+/// Category:    Interrupt
+/// Permissions: R/W
+/// ICR  Interrupt Throttling
+/// NOTE: (not applicable to the 82544GC or 82544EI)
+#define REG_ITR 0x00c4
+/// Category:    Interrupt
+/// Permissions: W
+/// ICS  Interrupt Cause Set
+#define REG_ICS 0x00c8
+/// Category:    Interrupt
+/// Permissions: R/W
+/// IMS  Interrupt Mask Set/Read
+#define REG_IMASK 0x00d0
+/// Category:    Interrupt
+/// Permissions: W
+/// IMC  Interrupt Mask Clear
+#define REG_IMASK_CLEAR 0x00d8
+/// Category:    Receive
+/// Permissions: R/W
+/// RCTL  Receive Control
+#define REG_RCTRL 0x0100
+/// Category:    Receive
+/// Permissions: R/W
+/// FCRTL  Flow Control Receive Threshold Low
+#define REG_FCRTL 0x2160
+/// Category:    Receive
+/// Permissions: R/W
+/// FCRTH  Flow Control Receive Threshold High
+#define REG_FCRTH 0x2168
+/// Category:    Receive
+/// Permissions: R/W
+/// RDBAL  Receive Descriptor Base Low
+#define REG_RXDESCLO 0x2800
+/// Category:    Receive
+/// Permissions: R/W
+/// RDBAH  Receive Descriptor Base High
+#define REG_RXDESCHI 0x2804
+/// Category:    Receive
+/// Permissions: R/W
+/// RDLEN  Receive Descriptor Length
+#define REG_RXDESCLEN 0x2808
+/// Category:    Receive
+/// Permissions: R/W
+/// RDH  Receive Descriptor Head
+#define REG_RXDESCHEAD 0x2810
+/// Category:    Receive
+/// Permissions: R/W
+/// RDT  Receive Descriptor Tail
+#define REG_RXDESCTAIL 0x2818
+/// Category:    Receive
+/// Permissions: R/W
+/// RDTR  Receive Delay Timer
+#define REG_RDTR 0x2820
+/// Category:    Receive
+/// Permissions: R/W
+/// RADV  Receive Interrupt Absolute Delay Timer
+/// NOTE: (not applicable to the 82544GC or 82544EI)
+#define REG_RADV 0x282c
+/// Category:    Receive
+/// Permissions: R/W
+/// RSRPD  Receive Small Packet Detect Interrupt
+/// NOTE: (not applicable to the 82544GC or 82544EI)
+#define REG_RSRPD 0x2c00
+/// Category:    Transmit
+/// Permissions: R/W
+/// TCTL  Transmit Control
+#define REG_TCTL 0x0400
+/// Category:    Transmit
+/// Permissions: R/W
+/// TIPG  Transmit IPG
+#define REG_TIPG 0x0410
+/// Category:    Transmit
+/// Permissions: R/W
+/// AIFS  Adaptive IFS Throttle - AIT
+#define REG_AIFS 0x0458
+/// Category:    Transmit
+/// Permissions: R/W
+/// TDBAL  Transmit Descriptor Base Low
+#define REG_TDBAL 0x3800
+/// Category:    Transmit
+/// Permissions: R/W
+/// TDBAH  Transmit Descriptor Base High
+#define REG_TDBAH 0x3804
+/// Category:    Transmit
+/// Permissions: R/W
+/// TDLEN  Transmit Descriptor Length
+#define REG_TDLEN 0x3808
+/// Category:    Transmit
+/// Permissions: R/W
+/// TDH  Transmit Descriptor Head
+#define REG_TDHEAD 0x3810
+/// Category:    Transmit
+/// Permissions: R/W
+/// TDT  Transmit Descriptor Tail
+#define REG_TDTAIL 0x3818
+/// Category:    Transmit
+/// Permissions: R/W
+/// TIDV  Transmit Interrupt Delay Value
+#define REG_TIDV 0x3820
+/// Category:    TX DMA
+/// Permissions: R/W
+/// TXDMAC  TX DMAControl
+/// NOTE: (applicable to the 82544GC and 82544EI only).
+#define REG_TXDMAC 0x3000
+/// Category:    TX DMA
+/// Permissions: R/W
+/// TXDCTL  Transmit Descriptor Control
+/// NOTE: (applicable to the 82544GC and 82544EI only).
+#define REG_TXDCTL 0x3828
+/// Category:    TX DMA
+/// Permissions: R/W
+/// TADV  Transmit Absolute Interrupt Delay Timer
+/// NOTE: (not applicable to the 82544GC and 82544EI).
+#define REG_TADV 0x282c
+/// Category:    TX DMA
+/// Permissions: R/W
+/// TSPMT  TCP Segmentation Pad and Threshold
+#define REG_TSPMT 0x3830
+/// Category:    RX DMA
+/// Permissions: R/W
+/// RXDCTL  Receive Descriptor Control
+#define REG_RXDCTL 0x2828
+/// Category:    RX DMA
+/// Permissions: R/W
+/// RXCSUM  Receive Checksum Control
+#define REG_RXDCTL 0x5000
+/// Category:    Receive
+/// Permissions: R/W
+/// MTA[127:0]  Multicast Table Array (n)
+#define REG_MTA_BEGIN 0x5200
+#define REG_MTA_END 0x53fc
+/// Category:    Receive
+/// Permissions: R/W
+/// RAL(8*n)  Receive Address Low (n)
+#define REG_RAL_BEGIN 0x5400
+#define REG_RAL_END 0x5478
+/// Category:    Receive
+/// Permissions: R/W
+/// RAH(8*n)  Receive Address High (n)
+#define REG_RAH_BEGIN 0x5404
+#define REG_RAH_END 0x547c
+/// Category:    Receive
+/// Permissions: R/W
+/// VFTA[127:0]  VLAN Filter Table Array (n)
+/// NOTE: (not applicable to the 82541ER)
+#define REG_VFTA_BEGIN 0x5600
+#define REG_VFTA_END 0x57fc
+/// Category:    Wakeup
+/// Permissions: R/W
+/// WUC  Wakeup Control
+#define REG_WAKEUP_CONTROL 0x5800
+/// Category:    Wakeup
+/// Permissions: R/W
+/// WUFC  Wakeup Filter Control
+#define REG_WAKEUP_FILTER 0x5808
+/// Category:    Wakeup
+/// Permissions: R
+/// WUS  Wakeup Status
+#define REG_WAKEUP_STATUS 0x5810
+/// Category:    Wakeup
+/// Permissions: R/W
+/// IPAV  IP Address Valid
+#define REG_IP_ADDRESS_VALID 0x5838
+/// Category:    Wakeup
+/// Permissions: R/W
+/// IP4AT  IPv4 Address Table
+/// For 82544GC and 82544EI: IPAT  IP Address Table
+#define REG_IPV4_TABLE_BEGIN 0x5840
+#define REG_IPV4_TABLE_END 0x5858
+/// Category:    Wakeup
+/// Permissions: R/W
+/// IP6AT  IPv6 Address Table
+/// NOTE: (not applicable to the 82544GC and 82544EI)
+#define REG_IPV4_TABLE_BEGIN 0x5880
+#define REG_IPV4_TABLE_END 0x588c
+/// Category:    Wakeup
+/// Permissions: R/W
+/// WUPL  Wakeup Packet Length
+#define REG_WAKEUP_PACKET_LENGTH 0x5900
+/// Category:    Wakeup
+/// Permissions: R/W
+/// WUPM  Wakeup Packet Memory
+#define REG_WAKEUP_PACKET_MEMORY_BEGIN 0x5a00
+#define REG_WAKEUP_PACKET_MEMORY_END 0x5a7c
+/// Category:    Wakeup
+/// Permissions: R/W
+/// FFLT  Flexible Filter Length Table
+#define REG_WAKEUP_FILTER_LENGTH_TABLE_BEGIN 0x5f00
+#define REG_WAKEUP_FILTER_LENGTH_TABLE_END 0x5f18
+/// Category:    Wakeup
+/// Permissions: R/W
+/// FFMT  Flexible Filter Mask Table
+#define REG_WAKEUP_FILTER_MASK_TABLE_BEGIN 0x9000
+#define REG_WAKEUP_FILTER_MASK_TABLE_END 0x93f8
+/// Category:    Wakeup
+/// Permissions: R/W
+/// FFVT  Flexible Filter Value Table
+#define REG_WAKEUP_FILTER_VALUE_TABLE_BEGIN 0x9800
+#define REG_WAKEUP_FILTER_VALUE_TABLE_END 0x9bf8
+/// Category:    Statistics
+/// Permissions: R
+/// CRCERRS  CRC Error Count
+#define REG_CRC_ERROR_COUNT 0x4000
+/// Category:    Statistics
+/// Permissions: R
+/// ALGNERRC  Alignment Error Count
+#define REG_ALIGN_ERROR_COUNT 0x4004
+/// Category:    Statistics
+/// Permissions: R
+/// SYMERRS  Symbol Error Count
+#define REG_SYMBOL_ERROR_COUNT 0x4008
+/// Category:    Statistics
+/// Permissions: R
+/// RXERRC  RX Error Count
+#define REG_RX_ERROR_COUNT 0x400c
+/// Category:    Statistics
+/// Permissions: R
+/// MPC  Missed Packet Count
+#define REG_MISSED_PACKET_COUNT 0x4010
+/// Category:    Statistics
+/// Permissions: R
+/// SCC  Single Collission Count
+#define REG_SINGLE_COLLISSION_COUNT 0x4014
+/// Category:    Statistics
+/// Permissions: R
+/// ECOL  Excessive Collissions Count
+#define REG_EXCESSIVE_COLLISSIONS_COUNT 0x4018
+/// Category:    Statistics
+/// Permissions: R
+/// MCC  Multiple Collision Count
+#define REG_MULTIPLE_COLLISION_COUNT 0x401c
+/// Category:    Statistics
+/// Permissions: R
+/// LATECOL  Late Collisions Count
+#define REG_LATE_COLLISIONS_COUNT 0x4020
+/// Category:    Statistics
+/// Permissions: R
+/// COLC  Collision Count
+#define REG_COLLISION_COUNT 0x4028
+/// Category:    Statistics
+/// Permissions: R
+/// DC  Defer Count
+#define REG_DEFER_COUNT 0x4030
+/// Category:    Statistics
+/// Permissions: R
+/// TNCRS  Transmit - No CRS
+#define REG_TX_NO_CRS 0x4034
+/// Category:    Statistics
+/// Permissions: R
+/// SEC  Sequence Error Count
+#define REG_SEQUENCE_ERROR_COUNT 0x4038
+/// Category:    Statistics
+/// Permissions: R
+/// CEXTERR  Carrier Extension Error Count
+#define REG_CARRER_EXT_ERROR_COUNT 0x403c
+/// Category:    Statistics
+/// Permissions: R
+/// RLEC  Receive Length Error Count
+#define REG_RX_LENGTH_ERROR_COUNT 0x4040
+/// Category:    Statistics
+/// Permissions: R
+/// XONRXC  XON Received Count
+#define REG_XON_RECEIVED_COUNT 0x4048
+/// Category:    Statistics
+/// Permissions: R
+/// XONTXC  XON Transmitted Count
+#define REG_XON_TRANSMITTED_COUNT 0x404c
+/// Category:    Statistics
+/// Permissions: R
+/// XOFFRXC  XOFF Received Count
+#define REG_XOFF_RECEIVED_COUNT 0x4050
+/// Category:    Statistics
+/// Permissions: R
+/// XOFFTXC  XOFF Transmitted Count
+#define REG_XOFF_TRANSMITTED_COUNT 0x4054
+/// Category:    Statistics
+/// Permissions: R/W
+/// FCRUC  FC Received Unsupported Count
+#define REG_FC_RX_UNSUPPORTED_COUNT 0x4058
+/// Category:    Statistics
+/// Permissions: R/W
+/// PRC64  Packets Received (64 Bytes) Count
+#define REG_PACKETS_RX_64B_COUNT 0x405c
+/// Category:    Statistics
+/// Permissions: R/W
+/// PRC127  Packets Received (65-127 Bytes) Count
+#define REG_PACKETS_RX_127B_COUNT 0x4060
+/// Category:    Statistics
+/// Permissions: R/W
+/// PRC255  Packets Received (128-255 Bytes) Count
+#define REG_PACKETS_RX_255B_COUNT 0x4064
+/// Category:    Statistics
+/// Permissions: R/W
+/// PRC511  Packets Received (256-511 Bytes) Count
+#define REG_PACKETS_RX_511B_COUNT 0x4068
+/// Category:    Statistics
+/// Permissions: R/W
+/// PRC1023  Packets Received (512-1023 Bytes) Count
+#define REG_PACKETS_RX_1023B_COUNT 0x407c
+/// Category:    Statistics
+/// Permissions: R/W
+/// PRC1522  Packets Received (1024-MAX Bytes) Count
+#define REG_PACKETS_RX_MAX_COUNT 0x4070
+/// Category:    Statistics
+/// Permissions: R
+/// GPRC  Good Packets Received Count
+#define REG_GOOD_PACKETS_RX_COUNT 0x4074
+/// Category:    Statistics
+/// Permissions: R
+/// BPRC  Broadcast Packets Received Count
+#define REG_BROADCAST_PACKETS_RX_COUNT 0x4078
+/// Category:    Statistics
+/// Permissions: R
+/// MPRC  Multicast Packets Received Count
+#define REG_MULTICAST_PACKETS_RX_COUNT 0x407c
+/// Category:    Statistics
+/// Permissions: R
+/// GPTC  Good Packets Transmitted Count
+#define REG_GOOD_PACKETS_TX_COUNT 0x4080
+/// Category:    Statistics
+/// Permissions: R
+/// GORCL  Good Octets Received Count (Low)
+#define REG_GOOD_OCTETS_RX_COUNT_LOW 0x4088
+/// Category:    Statistics
+/// Permissions: R
+/// GORCH  Good Octets Received Count (High)
+#define REG_GOOD_OCTETS_RX_COUNT_HIGH 0x408c
+/// Category:    Statistics
+/// Permissions: R
+/// GOTCL  Good Octets Transmitted Count (Low)
+#define REG_GOOD_OCTETS_TX_COUNT_LOW 0x4090
+/// Category:    Statistics
+/// Permissions: R
+/// GOTCH  Good Octets Transmitted Count (High)
+#define REG_GOOD_OCTETS_TX_COUNT_HIGH 0x4094
+/// Category:    Statistics
+/// Permissions: R
+/// RNBV  Receive No Buffers Count
+#define REG_RX_NO_BUFFERS_COUNT 0x40a0
+/// Category:    Statistics
+/// Permissions: R
+/// RUC  Receive Undersize Count
+#define REG_RX_UNDERSIZE_COUNT 0x40a4
+/// Category:    Statistics
+/// Permissions: R
+/// RFC  Receive Fragment Count
+#define REG_RX_FRAGMENT_COUNT 0x40a8
+/// Category:    Statistics
+/// Permissions: R
+/// ROC  Receive Oversize Count
+#define REG_RX_OVERSIZE_COUNT 0x40ac
+/// Category:    Statistics
+/// Permissions: R
+/// RJC  Receive Jabber Count
+#define REG_RX_JABBER_COUNT 0x40b0
+/// Category:    Statistics
+/// Permissions: R
+/// MGTPRC  Management Packets Received Count
+/// NOTE: (not applicable to the 82544GC, 82544EI, or 82541ER)
+#define REG_MANAGEMENT_PACKETS_RX_COUNT 0x40b4
+/// Category:    Statistics
+/// Permissions: R
+/// MGTPDC  Management Packets Dropped Count
+/// NOTE: (not applicable to the 82544GC, 82544EI, or 82541ER)
+#define REG_MANAGEMENT_PACKETS_DROPPED_COUNT 0x40b8
+/// Category:    Statistics
+/// Permissions: R
+/// MGTPTC  Management Packets Transmitted Count
+/// NOTE: (not applicable to the 82544GC, 82544EI, or 82541ER)
+#define REG_MANAGEMENT_PACKETS_TRANSMITTED_COUNT 0x40bc
+/// Category:    Statistics
+/// Permissions: R
+/// TORL  Total Octets Received (Low)
+#define REG_TOTAL_OCTETS_RX_LOW 0x40c0
+/// Category:    Statistics
+/// Permissions: R
+/// TORH  Total Octets Received (High)
+#define REG_TOTAL_OCTETS_RX_HIGH 0x40c4
+/// Category:    Statistics
+/// Permissions: R
+/// TOTL  Total Octets Transmitted (Low)
+#define REG_TOTAL_OCTETS_TX_LOW 0x40c8
+/// Category:    Statistics
+/// Permissions: R
+/// TOTH  Total Octets Transmitted (High)
+#define REG_TOTAL_OCTETS_TX_HIGH 0x40cc
+/// Category:    Statistics
+/// Permissions: R
+/// TPR  Total Packets Received
+#define REG_TOTAL_PACKETS_RX 0x40d0
+/// Category:    Statistics
+/// Permissions: R
+/// TPT  Total Packets Transmitted
+#define REG_TOTAL_PACKETS_TX 0x40d4
+/// Category:    Statistics
+/// Permissions: R
+/// PTC64  Packets Transmitted (64 Bytes) Count
+#define REG_PACKETS_TX_64B_COUNT 0x40d8
+/// Category:    Statistics
+/// Permissions: R
+/// PTC127  Packets Transmitted (65-127 Bytes) Count
+#define REG_PACKETS_TX_127B_COUNT 0x40dc
+/// Category:    Statistics
+/// Permissions: R
+/// PTC255  Packets Transmitted (128-255 Bytes) Count
+#define REG_PACKETS_TX_255B_COUNT 0x40e0
+/// Category:    Statistics
+/// Permissions: R
+/// PTC511  Packets Transmitted (256-511 Bytes) Count
+#define REG_PACKETS_TX_511B_COUNT 0x40e4
+/// Category:    Statistics
+/// Permissions: R
+/// PTC1023  Packets Transmitted (512-1023 Bytes) Count
+#define REG_PACKETS_TX_1023B_COUNT 0x40e8
+/// Category:    Statistics
+/// Permissions: R
+/// PTC1522  Packets Transmitted (>=1024 Bytes) Count
+#define REG_PACKETS_TX_MAX_COUNT 0x40ec
+/// Category:    Statistics
+/// Permissions: R
+/// MPTC  Multicast Packets Transmitted Count
+#define REG_MULTICAST_PACKETS_TX_COUNT 0x40f0
+/// Category:    Statistics
+/// Permissions: R
+/// BPTC  Broadcast Packets Transmitted Count
+#define REG_BROADCAST_PACKETS_TX_COUNT 0x40f4
+/// Category:    Statistics
+/// Permissions: R
+/// TSCTC  TCP Segmentation Context Transmitted Count
+#define REG_BROADCAST_PACKETS_TX_COUNT 0x40f8
+/// Category:    Statistics
+/// Permissions: R
+/// TSCTFC  TCP Segmentation Context Transmitted Fail Count
+#define REG_BROADCAST_PACKETS_TX_FAIL_COUNT 0x40fc
+/// Category:    Diagnostic
+/// Permissions: R/W
+/// RDFH  Receive Data FIFO Head
+#define REG_RX_DATA_FIFO_HEAD 0x2410
+/// Category:    Diagnostic
+/// Permissions: R/W
+/// RDFT  Receive Data FIFO Tail
+#define REG_RX_DATA_FIFO_TAIL 0x2418
+/// Category:    Diagnostic
+/// Permissions: R/W
+/// RDFHS  Receive Data FIFO Head Saved Register
+#define REG_RX_DATA_FIFO_HEAD_SAVED_REGISTER 0x2420
+/// Category:    Diagnostic
+/// Permissions: R/W
+/// RDFTS  Receive Data FIFO Tail Saved Register
+#define REG_RX_DATA_FIFO_TAIL_SAVED_REGISTER 0x2428
+/// Category:    Diagnostic
+/// Permissions: R/W
+/// RDFPC  Receive Data FIFO Packet Count
+#define REG_RX_DATA_FIFO_PACKET_COUNT 0x2430
+/// Category:    Diagnostic
+/// Permissions: R/W
+/// TDFH  Transmit Data FIFO Head
+#define REG_TX_DATA_FIFO_HEAD 0x3410
+/// Category:    Diagnostic
+/// Permissions: R/W
+/// TDFT  Transmit Data FIFO Tail
+#define REG_TX_DATA_FIFO_TAIL 0x3418
+/// Category:    Diagnostic
+/// Permissions: R/W
+/// TDFHS  Transmit Data FIFO Head Saved Register
+#define REG_TX_DATA_FIFO_HEAD_SAVED_REGISTER 0x3420
+/// Category:    Diagnostic
+/// Permissions: R/W
+/// TDFTS  Transmit Data FIFO Tail Saved Register
+#define REG_TX_DATA_FIFO_TAIL_SAVED_REGISTER 0x3428
+/// Category:    Diagnostic
+/// Permissions: R/W
+/// TDFPC  Transmit Data FIFO Packet Count
+#define REG_TX_DATA_FIFO_PACKET_COUNT 0x3430
+/// Category:    Diagnostic
+/// Permissions: R/W
+/// PBM  Packet Buffer Memory
+#define REG_PACKET_BUFFER_MEMORY_BEGIN 0x10000
+#define REG_PACKET_BUFFER_MEMORY_END   0x1fffc
+
 /// SLU == Set Link Up
 #define ECTRL_SLU 0x40
 
