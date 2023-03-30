@@ -17,9 +17,15 @@
  * Negotiation can start at power up or upon receipt of an assertion of
  * PCI reset if configured to do so by the EEPROM.
  *
- *
  * General Configuration:
- * Several values in the Device Control Register (CTRL) need to be set upon power up or after an Ethernet controller reset for normal operation. • Speed and duplex are determined via Auto-Negotiation by the PHY, Auto-Negotiation by the MAC for internal SerDes1 mode, or forced by software if the link is forced. In internal PHY mode, the Ethernet controller can be configured automatically by hardware or forced by software to the same configuration as the PHY.
+ * Several values in the Device Control Register (CTRL) need to be set
+ * upon power up or after an Ethernet controller reset for normal
+ * operation.
+ * - Speed and duplex are determined via Auto-Negotiation by the PHY,
+ *   Auto-Negotiation by the MAC for internal SerDes1 mode, or forced
+ *   by software if the link is forced. In internal PHY mode, the
+ *   Ethernet controller can be configured automatically by hardware or
+ *   forced by software to the same configuration as the PHY.
  * - In internal PHY mode, the Auto-Speed Detection Enable (CTRL.ASDE)
  *   bit, when set to 1b, detects the resolved speed and duplex of the
  *   link and self-configure the MAC appropriately. This bit should be
@@ -32,14 +38,14 @@
  *   Speed Selection (CTRL.SPEED) bits and duplex is forced by updating
  *   the Full Duplex (CTRL.FD) bit.
  * - For the 82541xx and 82547GI/EI, configure the LED behavior through
- *   LEDCTRL. • Link Reset (CTRL.LRST) should be set to 0b (normal). The
+ *   LEDCTRL.
+ * - Link Reset (CTRL.LRST) should be set to 0b (normal). The
  *   Ethernet controller defaults to LRST = 1b which disables Auto-
  *   Negotiation. A transition to 0b initiates the Auto-Negotiation
  *   function. LRST can be defined in the EEPROM. This bit is only valid
  *   in internal SerDes mode and has no effect in internal PHY mode. 1.
  *   The 82540EP/EM, 82541xx, and 82547GI/EI do not support any SerDes
- *   functionality. 376 Software Developer’s Manual General
- *   Initialization and Reset Operation
+ *   functionality.
  * - PHY Reset (CTRL.PHY_RST) should be set to 0b. Setting this bit to 1b
  *   resets the PHY without accessing the PHY registers. This bit is
  *   ignored in internal SerDes mode.
@@ -60,10 +66,11 @@
  *   internal PHY mode (because Auto-Negotiation is managed by PHY rather
  *   than the MAC), or when a fiber connection is desired but link was
  *   forced rather than Auto-Negotiated.
- * - If VLANs are not used, software should clear VLAN Mode Enable (CTRL.
- *   VME) bit. In this instance, there is no need then to initialize the
- *   VLAN Filter Table Array (VFTA). If VLANs are desired, the VFTA
- *   should be both initialized and loaded with the desired information.
+ * - If VLANs are not used, software should clear VLAN Mode Enable
+ *   (CTRL.VME) bit. In this instance, there is no need then to
+ *   initialize the VLAN Filter Table Array (VFTA). If VLANs are
+ *   desired, the VFTA should be both initialized and loaded with the
+ *   desired information.
  * - For the 82541xx and 82547GI/EI, clear all statistical counters.
  *
  * Receive Initialization:
@@ -83,7 +90,7 @@
  *   the Receive Delay Timer (RDTR) register should be initialized with
  *   the desired delay time.
  * - Allocate a region of memory for the receive descriptor list.
- *   Software should insure this memory is aligned on a paragraph
+ *   Software should ensure this memory is aligned on a paragraph
  *   (16-byte) boundary. Program the Receive Descriptor Base Address
  *   (RDBAL/RDBAH) register(s) with the address of the region. RDBAL is
  *   used for 32-bit addresses and both RDBAL and RDBAH are used for
