@@ -336,10 +336,10 @@
 #define EERD_DONE (1 << 4)
 #define EERD_DONE_EXTRA (1 << 1)
 /// Use this to prepare an address to store into the EERD register.
-inline constexpr auto EERD_ADDRESS = [](u8 address) { return u32(address) << 8; };
-inline constexpr auto EERD_ADDRESS_EXTRA = [](u8 address) { return u32(address) << 2; };
+constexpr auto EERD_ADDRESS(u8 address) { return u32(address) << 8; };
+constexpr auto EERD_ADDRESS_EXTRA(u8 address) { return u32(address) << 2; };
 /// Get 16-bit data word from EERD register after a read is done.
-inline constexpr auto EERD_DATA = [](u32 eerd) { return u16(eerd >> 16); };
+constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 
 /// Category:    General
 /// Permissions: R/W
