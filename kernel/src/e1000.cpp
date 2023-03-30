@@ -246,7 +246,200 @@
 /// Category:    General
 /// Permissions: R/W
 /// CTRL  Device Control
+/// Bits:
+///   0      FD  Full-Duplex (default 1, default 0 for 82541xx, 82547GI, and 82547EI only)
+///            Enables software to override the hardware Auto-
+///            Negotiation function. The FD sets the duplex mode only
+///            if CTRL.FRCDPLX is set. When cleared, the Ethernet
+///            controller operates in half-duplex; when set, the
+///            Ethernet controller operates in full-duplex. When the
+///            Ethernet controller operates in TBI mode/internal SerDes
+///            mode, and the AN Hardware is enabled, this bit is
+///            ignored. When the Ethernet controller operates in TBI
+///            mode/ internal SerDes, and the AN Hardware is disabled,
+///            or the link is forced, this bit should be set by
+///            software. When the Ethernet controller operates in
+///            internal PHY mode, the FD bit is set by software based
+///            on AN and data rate resolution.
+///            Configurable through the EEPROM.
+///   2:1    RESERVED  (clear these bits)
+///   3      LRST  Link Reset (default 1)
+///            Not applicable to the 82540EP, 82540EM, 82541xx, 82547GI, or 82547EI.
+///            0b = Normal; 1b = Link Reset
+///            Applicable only in TBI mode/internal SerDes of
+///            operation. Used to reset the link control logic and
+///            restart the Auto-Negotiation process, when TXCW.ANE is
+///            set and TBI mode/internal SerDes is enabled.
+///            When set, transmission and reception are halted
+///            regardless of TBI mode/internal SerDes setting. A
+///            transition to 0b initiates the Auto-Negotiation
+///            function. Configurable from the EEPROM, allowing
+///            initiation of Auto-Negotiation function at power up.
+///   4      RESERVED  (clear this bit)
+///   5      ASDE  Auto-Speed Detection Enable. (default 0)
+///            When set, the Ethernet controller automatically detects
+///            the resolved speed of the link by sampling the link in
+///            internal PHY mode and self-configures the appropriate
+///            status and control bits. Software must also set the SLU
+///            bit for this operation. This function is ignored in TBI
+///            mode/internal Serdes. The ASD feature provides a method
+///            of determining the link speed without the need for
+///            software accesses to the MII management registers.
+///   6      SLU  Set Link Up (default 0)
+///            In TBI mode/internal SerDes, provides manual link
+///            configuration. When set, the Link Up signal is forced
+///            high once receiver synchronization is achieved (LOS not
+///            asserted) using CTRL.FD to determine the duplex mode.
+///            This operation bypasses the link configuration process.
+///            If Auto-Negotiation is enabled (TXCW.ANE equals 1b),
+///            then Set Link Up is ignored. In internal PHY mode, this
+///            bit must be set to 1b to permit the Ethernet controller
+///            to recognize the I_LOS/I_LIND link signal from the PHY.
+///            The "Set Link Up" is normally initialized to 0b.
+///            However, if either the APM Enable or SMBus Enable bits
+///            are set in the EEPROM then it is initialized to 1b,
+///            ensuring MAC/PHY communication during preboot states
+///            (for example, the 82547EI and 82541EI). Driver software
+///            sets this bit when the driver software initializes,
+///            therefore LED indications (link, activity, speed) are
+///            not active until the software driver loads even though
+///            the PHY has autonegotiated and established link with a
+///            partner on the Ethernet.
+///            Configurable through the EEPROM.
+///   7      ILOS  Invert Loss-of-Signal (LOS) (default 0)
+///            0b = do not invert (active high input signal); 1b = invert signal (active low input signal).
+///            If using the internal PHY, this bit should be set to 0b
+///            to ensure proper communication with the MAC. If using an
+///            external TBI device, this bit can be set if the Ethernet
+///            controller provides a link loss indication with negative
+///            polarity.
+///            NOTE: This is a reserved bit for the 82541xx and 82547GI/EI.
+///   9:8    SPEED  Speed selection (default 0b10)
+///            These bits determine the speed configuration and are
+///            written by software after reading the PHY configuration
+///            through the MDI/O interface. These signals are ignored
+///            in TBI mode/internal Serdes or when Auto-Speed Detection
+///            (CTRL.ASDE) is enabled
+///            00b 10 Mb/s
+///            01b 100 Mb/s
+///            10b 1000 Mb/s
+///            11b not used
+///   10     RESERVED  (clear this bit)
+///   11     FRCSPD  Force Speed (default 1)
+///            When set, the Ethernet controller speed is configured by
+///            CTRL.SPEED bits. The PHY device must resolve to the same
+///            speed configuration or software must manually set it to
+///            the same speed as the Ethernet controller. When cleared,
+///            this allows the PHY device or ASD function (CTRL.ASDE is
+///            set) to set the Ethernet controller speed. This bit is
+///            superseded by the CTRL_EXT.SPD_BYPS bit, which has a
+///            similar function. Applicable only in internal PHY mode
+///            of operation and is configurable through EEPROM.
+///   12     FRCDPLX  Force Duplex (default 0)
+///            When set, software can override the duplex indication
+///            from the PHY which is in internal PHY mode. When set the
+///            CTRL.FD bit sets duplex. When cleared, the CTRL.FD is
+///            ignored.
+///   17:13  RESERVED  (clear these bits)
+///   18     SDP0_DATA  SDP0 Data Value (default 0)
+///            Used to read (write) value of software-controllable IO
+///            pin SDP0. If SDP0 is configured as an output (SDP0_IODIR=1b),
+///            this bit controls the value driven on the pin (initial
+///            value EEPROM-configurable). If SDP0 is configured as an
+///            input, reads return the current value of the pin.
+///   19     SDP1_DATA  SDP1 Data Value (default 0)
+///            Used to read (write) value of softwarecontrollable IO
+///            pin SDP1. If SDP1 is configured as an output (SDP1_IODIR=1b),
+///            this bit controls the value driven on the pin (initial
+///            value EEPROM-configurable). If SDP1 is configured as an
+///            input, reads return the current value of the pin.
+///   20     ADVD3WUC  D3Cold Wakeup Capability Advertisement Enable (default 0)
+///            When set, D3Cold wakeup capability is advertised based on
+///            whether the AUX_PWR pin advertises presence of auxiliary
+///            power (yes if AUX_PWR is indicated, no otherwise). When
+///            0b, however, D3Cold wakeup capability is not advertised
+///            even if AUX_PWR presence is indicated. Formerly used as
+///            SDP2 pin data value, initial value is EEPROM-
+///            configurable.
+///            NOTE: Not applicable to the 82541ER
+///   21     EN_PHY_PWR_MGMT  PHY Power-Management Enable (default 0, default 1 for 82541xx, 82547GI, and 82547EI only)
+///            When set, the PHY is informed of power-state transitions
+///            and attempts to autonegotiate advertising lower line
+///            speeds only (10 or 100 Mb/sec) when entering D3 or D0u
+///            power states with wakeup or manageability enabled. It
+///            again re-negotiates, advertising full speed capabilities
+///            (10/100/1000 Mbps) when transitioning back to full D0
+///            operational state. If this bit is clear, the PHY
+///            automatic speed/power management capability is disabled,
+///            and the PHY remains operational at its current line speed
+///            through powerstate transitions. Formerly used as SDP3 pin
+///            data value, initial value is EEPROM-configurable.
+///   22     SDP0_IODIR  SDP0 Pin Directionality (default 0)
+///            Controls whether software-controllable pin SDP0 is
+///            configured as an input or output (0b = input, 1b = output).
+///            Initial value is EEPROM-configurable. This bit is not
+///            affected by software or system reset, only by initial
+///            power-on or direct software writes.
+///   23     SDP1_IODIR  SDP1 Pin Directionality (default 0)
+///            Controls whether software-controllable pin SDP1 is
+///            configured as an input or output (0b = input, 1b = output).
+///            Initial value is EEPROM-configurable. This bit is not
+///            affected by software or system reset, only by initial
+///            power-on or direct software writes.
+///   25:24  RESERVED  (clear these bits)
+///   26     RST  Device Reset (default 0)
+///            0b = normal; 1b = reset. Self clearing.
+///            When set, it globally resets the entire Ethernet
+///            controller with the exception of the PCI configuration
+///            registers. All registers (receive, transmit, interrupt,
+///            statistics, etc.), and state machines are set to their
+///            power-on reset values. This reset is equivalent to a PCI
+///            reset, with the one exception being that the PCI
+///            configuration registers are not reset.
+///            To ensure that global device reset has fully completed
+///            and that the Ethernet controller responds to subsequent
+///            access, wait approximately 1 microsecond after setting
+///            and before attempting to check to see if the bit has
+///            cleared or to access any other device register.
+///   27     RFCE  Receive Flow Control Enable (default 0)
+///            When set, indicates that the Ethernet controller
+///            responds to the reception of flow control packets.
+///            Reception and responding to flow control packets
+///            requires matching the content of the Ethernet
+///            controller’s FCAL/H and FCT registers. If
+///            AutoNegotiation is enabled, this bit is set to the
+///            negotiated flow control value.
+///   28     TFCE  Transmit Flow Control Enable (default 0)
+///            When set, indicates that the Ethernet controller
+///            transmits flow control packets (XON and XOFF frames)
+///            based on the receive FIFO fullness, or when triggered to
+///            do so based on external control pins (XOFF XON pins when
+///            FCTRH.XFCE is set). If Auto-Negotiation is enabled, this
+///            bit is set to the negotiated flow control value
+///   29     RESERVED  (clear this bit)
+///   30     VME  VLAN Mode Enable (default 0)
+///            When set to 1b, all packets transmitted from the
+///            Ethernet controller that have VLE bit set in their
+///            descriptor is sent with an 802.1Q header added to the
+///            packet. The contents of the header come from the
+///            transmit descriptor and from the VLAN type register. On
+///            receive, VLAN information is stripped from 802.1Q
+///            packets and is loaded to the packet’s descriptor.
+///            Reserved. Should be written with 0b to ensure future
+///            compatibility.
+///            NOTE: Not applicable to the 82541ER.
+///   31     PHY_RST  PHY Reset (default 0)
+///            0b = Normal.
+///            1b = Assert hardware reset to the internal PHY.
+///            The technique is to set the bit, wait approximately 3
+///            microseconds, then clear the bit. For the 82547GI/
+///            82541GI (B1 stepping), this register must be used
+///            instead of a PHY register.
+///            NOTE: For the 82546GB, when resetting the PHY through
+///            the MAC, the PHY should be held in reset for a minimum
+///            of 10 ms before releasing the reset signal.
 #define REG_CTRL 0x0000
+
 /// Category:    General
 /// Permissions: R
 /// STATUS  Device Status
