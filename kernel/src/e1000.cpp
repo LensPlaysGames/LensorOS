@@ -1776,8 +1776,21 @@ u32 E1000::read_command(u16 address) {
     }
 }
 
-bool E1000::detect_eeprom() {
-    // TODO: Can't we just use EECD.EE_PRES bit?
+void E1000::detect_eeprom() {
+    ASSERT(State >= E1000::BASE_ADDRESS_DECODED,
+           "[E1000]: Base address must be decoded before detecting EEPROM!");
+
+    /// EEPROM is explicitly missing from 82544GC and 82544EI cards.
+    if (PCIHeader->Header.VendorID == 0x1107 || PCIHeader->Header.VendorID == 0x1112) {
+        State = E1000::UNRECOVERABLE;
+        return;
+    }
+
+    /// Otherwise, it's as simple as checking whether or not the EECD.EE_PRES bit is set.
+    /// FIXME: Decide whether or not to include the actual read and success check below.
+    EEPROMExists = read_command(REG_EECD) & EECD_EEPROM_PRESENT;
+    State = E1000::EEPROM_PROBED;
+    return;
 
     /// Attempt a read from the EEPROM using EERD (EEPROM Read Register).
     write_command(REG_EEPROM, 1);
@@ -1787,12 +1800,19 @@ bool E1000::detect_eeprom() {
     /// We do this 1000 times in a row to make sure the hardware has
     /// time to complete the read.
     // FIXME: Use EERD_DONE_EXTRA for 82541xx, 82547GI, and 82547EI.
-    for (usz i = 0; i < 1000; ++i)
-        if (read_command(REG_EEPROM) & EERD_DONE) return true;
-    return false;
+    for (usz i = 0; i < 1000; ++i) {
+        if (read_command(REG_EEPROM) & EERD_DONE) {
+            EEPROMExists = true;
+            return;
+        }
+    }
+    EEPROMExists = false;
 }
 
 u16 E1000::read_eeprom(u8 address) {
+    ASSERT(State >= E1000::EEPROM_PROBED,
+           "[E1000]: EEPROM must be probed before reading from it!");
+
     u32 calculatedAddress = 0;
     u32 successMask = 0;
     // TODO: Actually check for 82541xx, 82547GI, or 82547EI; if the
@@ -1825,6 +1845,9 @@ u16 E1000::read_eeprom(u8 address) {
 }
 
 void E1000::get_mac_address() {
+    ASSERT(State >= E1000::EEPROM_PROBED,
+           "[E1000]: EEPROM must be probed before attempting to get MAC Address!");
+
     if (EEPROMExists) {
         u16 value = 0;
         // FIXME: Assumes little-endian architecture.
@@ -1845,13 +1868,18 @@ void E1000::get_mac_address() {
         if (!MACAddress[0] && !MACAddress[1] && !MACAddress[2] && !MACAddress[3])
             std::print("[E1000]:\033[31mERROR:\033[m First four bytes of MACAddress are zero!\n");
     }
+    State = E1000::MAC_ADDRESS_DECODED;
 }
 
-E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
+void E1000::decode_base_address() {
+    /// Set member function to keep track of which address space the
+    /// address is in. BARType acts like the tag and BARMemoryAddress/BARIOAddress
+    /// acts as the union of a tagged union.
     BARType = PCI::get_bar_type(PCIHeader->BAR0);
-
     if (BARType == PCI::BarType::Memory) {
+        /// Remove bottom 2 bits from address.
         BARMemoryAddress = PCIHeader->BAR0 & ~usz(3);
+        /// Map address in virtual page table.
         Memory::map((void*)BARMemoryAddress, (void*)BARMemoryAddress,
                     (u64)Memory::PageTableFlag::Present
                     | (u64)Memory::PageTableFlag::ReadWrite
@@ -1859,22 +1887,31 @@ E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
         std::print("[E1000]: BAR0 is memory! addr={}\n", (void*)BARMemoryAddress);
     }
     else {
+        /// Remove bottom bit from address.
         BARIOAddress = PCIHeader->BAR0 & ~usz(1);
+        /// Map address in virtual page table.
         Memory::map((void*)BARIOAddress, (void*)BARIOAddress,
                     (u64)Memory::PageTableFlag::Present
                     | (u64)Memory::PageTableFlag::ReadWrite
                     );
         std::print("[E1000]: BAR0 is IO! addr={}\n", (void*)BARIOAddress);
     }
+    State = E1000::BASE_ADDRESS_DECODED;
+}
 
-    EEPROMExists = detect_eeprom();
-    if (EEPROMExists)
-        std::print("[E1000]: EEPROM EXISTS!!\n");
-    else std::print("[E1000]: EEPROM DOES NOT EXIST!!\n");
+E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
+    if (!PCIHeader) {
+        State = E1000::UNRECOVERABLE;
+        return;
+    }
+
+    decode_base_address();
+    detect_eeprom();
 
     get_mac_address();
     std::print("[E1000]:MACAddress: ");
     for (u8 c : MACAddress)
         std::print("{:x}-", c);
     std::print("\n");
+
 }
