@@ -2116,6 +2116,9 @@ void E1000::initialise_rx() {
     for (uint i = 0; i < 6; ++i, ++base) *base = MACAddress[i];
 
     /// Initialize the MTA (Multicast Table Array) to 0b.
+    // FIXME: I don't think this is right. REG_* are /word/ offsets, so
+    // I think we need to just use it as an index into a u16 array,
+    // effectively.
     for (uintptr_t mta = REG_MTA_BEGIN; mta < REG_MTA_END; mta += 1)
         *((u8*)mta) = 0;
 
