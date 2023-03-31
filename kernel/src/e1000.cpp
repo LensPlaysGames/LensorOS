@@ -247,12 +247,12 @@
 /// Permissions: R/W
 /// CTRL  Device Control
 /// Bits:
-///   0      FD  Full-Duplex (default 1, default 0 for 82541xx, 82547GI, and 82547EI only)
+///   0      FD  Full Duplex (default 1, default 0 for 82541xx, 82547GI, and 82547EI only)
 ///            Enables software to override the hardware Auto-
 ///            Negotiation function. The FD sets the duplex mode only
 ///            if CTRL.FRCDPLX is set. When cleared, the Ethernet
 ///            controller operates in half-duplex; when set, the
-///            Ethernet controller operates in full-duplex. When the
+///            Ethernet controller operates in full duplex. When the
 ///            Ethernet controller operates in TBI mode/internal SerDes
 ///            mode, and the AN Hardware is enabled, this bit is
 ///            ignored. When the Ethernet controller operates in TBI
@@ -439,6 +439,27 @@
 ///            the MAC, the PHY should be held in reset for a minimum
 ///            of 10 ms before releasing the reset signal.
 #define REG_CTRL 0x0000
+#define CTRL_FULL_DUPLEX (1 << 0)
+#define CTRL_LINK_RESET (1 << 3)
+#define CTRL_AUTO_SPEED_DETECTION_ENABLE (1 << 5)
+#define CTRL_SET_LINK_UP (1 << 6)
+#define CTRL_INVERT_LOSS_OF_SIGNAL (1 << 7)
+#define CTRL_FORCE_SPEED_10MBS (0b00 << 8)
+#define CTRL_FORCE_SPEED_100MBS (0b11 << 8)
+#define CTRL_FORCE_SPEED_1000MBS (0b10 << 8)
+#define CTRL_FORCE_SPEED (1 << 11)
+#define CTRL_FORCE_DUPLEX (1 << 12)
+#define CTRL_SDP0_DATA (1 << 18)
+#define CTRL_SDP1_DATA (1 << 19)
+#define CTRL_D3COLD_WAKEUP_CAPABILITY_ADVERTISEMENT_ENABLE (1 << 20)
+#define CTRL_PHY_POWER_MANAGEMENT_ENABLE (1 << 21)
+#define CTRL_SDP0_PIN_DIRECTIONALITY (1 << 22)
+#define CTRL_SDP1_PIN_DIRECTIONALITY (1 << 23)
+#define CTRL_DEVICE_RESET (1 << 26)
+#define CTRL_RECEIVE_FLOW_CONTROL_ENABLE (1 << 27)
+#define CTRL_TRANSMIT_FLOW_CONTROL_ENABLE (1 << 28)
+#define CTRL_VLAN_MODE_ENABLE (1 << 30)
+#define CTRL_PHY_RESET (1 << 31)
 
 /// Category:    General
 /// Permissions: R
@@ -1219,7 +1240,7 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 ///          10b = Undefined.
 ///          11b = PHY or external SerDes loopback.
 ///          All loopback modes are only allowed when the Ethernet
-///          controller is configured for full-duplex operation.
+///          controller is configured for full duplex operation.
 ///          Receive data from transmit data looped back internally to
 ///          the SerDes or internal PHY. In TBI mode (82544GC/EI), the
 ///          EWRAP signal is asserted.
@@ -1414,12 +1435,12 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// EC  Excess Collisions
 /// Indicates that the packet has experienced more than the maximum
 /// excessive collisions as defined by TCTL.CT control field and was
-/// not transmitted. It has no meaning while working in full-duplex
+/// not transmitted. It has no meaning while working in full duplex
 /// mode.
 #define TSTA_EC (1 << 1)
 /// LC  Late Collision
 /// Indicates that late collision occurred while working in half-duplex
-/// mode. It has no meaning while working in full-duplex mode. Note
+/// mode. It has no meaning while working in full duplex mode. Note
 /// that the collision window is speed dependent: 64 bytes for 10/100
 /// Mb/s and 512 bytes for 1000 Mb/s operation.
 #define TSTA_LC (1 << 2)
@@ -1907,8 +1928,8 @@ E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
 
     decode_base_address();
     detect_eeprom();
-
     get_mac_address();
+
     std::print("[E1000]:MACAddress: ");
     for (u8 c : MACAddress)
         std::print("{:x}-", c);
