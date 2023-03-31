@@ -2073,6 +2073,70 @@ void E1000::decode_base_address() {
     State = E1000::BASE_ADDRESS_DECODED;
 }
 
+void E1000::configure_device() {
+    /// DEVICE CONFIGURATION THROUGH CONTROL REGISTER
+
+    /// Read Control Register
+    u32 control_register = read_command(REG_CTRL);
+
+    /// Link Reset (CTRL.LRST) should be set to 0b (normal). The
+    /// Ethernet controller defaults to LRST = 1b which disables
+    /// Auto-Negotiation.
+    /// Bitwise AND control register with negated link reset bit to
+    /// clear it (set to 0).
+    control_register &= ~CTRL_LINK_RESET;
+
+    /// PHY Reset (CTRL.PHY_RST) should be set to 0b.
+    control_register &= ~CTRL_PHY_RESET;
+
+    /// CTRL.ILOS should be set to 0b (not applicable to the
+    /// 82541xx and 82547GI/EI).
+    if (!is_82541xx(PCIHeader->Header.DeviceID) && !is_82547_GI_EI(PCIHeader->Header.DeviceID))
+        control_register &= ~CTRL_INVERT_LOSS_OF_SIGNAL;
+
+    /// If VLANs are not used, software should clear VLAN Mode
+    /// Enable (CTRL.VME) bit.
+    control_register &= ~CTRL_VLAN_MODE_ENABLE;
+
+    /// TODO: For the 82541xx and 82547GI/EI, clear all statistical
+    /// counters.
+
+    /// Write the CTRL register with this new value.
+    write_command(REG_CTRL, control_register);
+}
+
+void E1000::initialise_rx() {
+    /// Program the Receive Address Register(s) (RAL/RAH) with the desired
+    /// Ethernet addresses. RAL[0]/RAH[0] should always be used to store the
+    /// Individual Ethernet MAC address of the Ethernet controller. This can
+    /// come from the EEPROM or from any other means
+    // TODO: What if BARType is IO? We can probably do this same thing through BARIOAddress and 3 in32()s.
+    // FIXME: What about REG_RAH??
+    u8* base = (u8*)(BARMemoryAddress + REG_RAL_BEGIN);
+    for (uint i = 0; i < 6; ++i, ++base) *base = MACAddress[i];
+
+    /// Initialize the MTA (Multicast Table Array) to 0b.
+    for (uintptr_t mta = REG_MTA_BEGIN; mta < REG_MTA_END; mta += 1)
+        *((u8*)mta) = 0;
+
+    /// Program the Interrupt Mask Set/Read (IMS) register to enable any
+    /// interrupt the software driver wants to be notified of when the event
+    /// occurs. Suggested bits include RXT, RXO, RXDMT, RXSEQ, and LSC.
+    write_command(REG_IMASK,
+                  IMASK_RX_TIMER_INTERRUPT
+                  | IMASK_RX_FIFO_OVERRUN
+                  | IMASK_RX_DESC_MIN_THRESHOLD_HIT
+                  | IMASK_RX_SEQUENCE_ERROR
+                  | IMASK_LINK_STATUS_CHANGE
+                  );
+
+    // FIXME: Continue implementation...
+}
+
+void E1000::initialise_tx() {
+    ;
+}
+
 E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
     if (!PCIHeader) {
         State = E1000::UNRECOVERABLE;
@@ -2081,11 +2145,15 @@ E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
 
     decode_base_address();
     detect_eeprom();
-    get_mac_address();
 
+    get_mac_address();
     std::print("[E1000]:MACAddress: ");
     for (u8 c : MACAddress)
         std::print("{:x}-", c);
     std::print("\n");
 
+    configure_device();
+
+    initialise_rx();
+    initialise_tx();
 }

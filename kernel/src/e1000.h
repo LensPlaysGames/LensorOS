@@ -73,6 +73,12 @@ class E1000 {
     // initialised.
     void get_mac_address();
 
+    /// Configure the device through the device control register.
+    void configure_device();
+
+    void initialise_rx();
+    void initialise_tx();
+
 public:
     E1000() {}
     E1000(PCI::PCIHeader0* header);
