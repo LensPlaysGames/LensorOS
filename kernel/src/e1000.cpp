@@ -1,9 +1,11 @@
 #include <e1000.h>
 
 #include <io.h>
+#include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/virtual_memory_manager.h>
 #include <pci.h>
+#include <stdint.h>
 
 #include <format>
 
@@ -2054,20 +2056,18 @@ void E1000::decode_base_address() {
         /// Remove bottom 2 bits from address.
         BARMemoryAddress = PCIHeader->BAR0 & ~usz(3);
         /// Map address in virtual page table.
-        Memory::map((void*)BARMemoryAddress, (void*)BARMemoryAddress,
-                    (u64)Memory::PageTableFlag::Present
-                    | (u64)Memory::PageTableFlag::ReadWrite
-                    );
+        Memory::map_pages(Memory::active_page_map(),
+                          (void*)BARMemoryAddress, (void*)BARMemoryAddress
+                          , (u64)Memory::PageTableFlag::Present
+                          | (u64)Memory::PageTableFlag::ReadWrite
+                          , KiB(128) / PAGE_SIZE
+                          , Memory::ShowDebug::No
+                          );
         std::print("[E1000]: BAR0 is memory! addr={}\n", (void*)BARMemoryAddress);
     }
     else {
         /// Remove bottom bit from address.
         BARIOAddress = PCIHeader->BAR0 & ~usz(1);
-        /// Map address in virtual page table.
-        Memory::map((void*)BARIOAddress, (void*)BARIOAddress,
-                    (u64)Memory::PageTableFlag::Present
-                    | (u64)Memory::PageTableFlag::ReadWrite
-                    );
         std::print("[E1000]: BAR0 is IO! addr={}\n", (void*)BARIOAddress);
     }
     State = E1000::BASE_ADDRESS_DECODED;
