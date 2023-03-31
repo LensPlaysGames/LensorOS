@@ -241,6 +241,19 @@
 /// Stepping: 82540EM-A   DeviceID:100e  Desc: Desktop
 /// Stepping: 82540EM-A   DeviceID:1015  Desc: Mobile
 
+static constexpr bool is_82541xx(u16 deviceID) {
+    return deviceID == 0x1013
+        || deviceID == 0x1018
+        || deviceID == 0x1076
+        || deviceID == 0x1077
+        || deviceID == 0x1078;
+};
+
+static constexpr bool is_82547_GI_EI(u16 deviceID) {
+    return deviceID == 0x101a
+        || deviceID == 0x1019;
+}
+
 /// REGISTERS ACCESSIBLE FROM BAR0 or BAR1:BAR0 DEPENDING ON BAR32 BIT
 
 /// Category:    General
