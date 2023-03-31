@@ -556,8 +556,8 @@
 #define STATUS_LINK_SPEED_MASK (0b11 << 6)
 #define STATUS_LINK_SPEED_10MBS (0b00 << 6)
 #define STATUS_LINK_SPEED_100MBS (0b01 << 6)
-#define STATUS_LINK_SPEED_1000MBS (0b10 << 6)
-#define STATUS_LINK_SPEED_1000MBS (0b11 << 6)
+#define STATUS_LINK_SPEED_1000MBS_0 (0b10 << 6)
+#define STATUS_LINK_SPEED_1000MBS_1 (0b11 << 6)
 #define STATUS_ASDV (0b11 << 8)
 #define STATUS_PCI66 (1 << 11)
 #define STATUS_BUS64 (1 << 12)
@@ -780,7 +780,45 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// Category:    Interrupt
 /// Permissions: R/W
 /// IMS  Interrupt Mask Set/Read
+/// Bits:
+///   0      TXDW  Transmit Descriptor Written Back
+///   1      TXQE  Transmit Queue Empty
+///   2      LSC  Link Status Change
+///   3      RXSEQ  Receive Sequence Error
+///   4      RXDMT0  Receive Descriptor Minimum Threshold hit
+///   5      RESERVED  (clear this bit)
+///   6      RXO  Receiver FIFO Overrun
+///   7      RXT0  Receiver Timer Interrupt
+///   8      RESERVED  (clear this bit)
+///   9      MDAC  MDI/O Access Complete Interrupt
+///   10     RXCFG  Receiving /C/ ordered sets.
+///            NOTE: This is a reserved bit for the 82541xx and
+///            82547GI/EI. Set to 0b.
+///   11     RESERVED  (clear this bit)
+///            Should be written with 0b to ensure future compatibility (not
+///            applicable to the 82544GC/EI).
+///   12     PHYINT  PHY Interrupt (not applicable to the 82544GC/EI)
+///   14:11  GPI  General Purpose Interrupts (8254GC/EI only)
+///   14:13  GPI  General Purpose Interrupts
+///   15     TXD_LOW  Transmit Descriptor Low Threshold hit
+///            NOTE: not applicable to the 82544GC/EI.
+///   16     SRPD  Small Receive Packet Detection
+///            NOTE: not applicable to the 82544GC/EI.
+///   31:17  RESERVED  (clear these bits)
 #define REG_IMASK 0x00d0
+#define IMASK_TX_DESC_WRITTEN_BACK (1 << 0)
+#define IMASK_TX_QUEUE_EMPTY (1 << 1)
+#define IMASK_LINK_STATUS_CHANGE (1 << 2)
+#define IMASK_RX_SEQUENCE_ERROR (1 << 3)
+#define IMASK_RX_DESC_MIN_THRESHOLD_HIT (1 << 4)
+#define IMASK_RX_FIFO_OVERRUN (1 << 6)
+#define IMASK_RX_TIMER_INTERRUPT (1 << 7)
+#define IMASK_MDIO_ACCESS_COMPLETE (1 << 9)
+#define IMASK_RX_C_ORDERED_SETS (1 << 10)
+#define IMASK_PHY_INTERRUPT (1 << 12)
+#define IMASK_TX_DESC_LOW_THRESHOLD_HIT (1 << 15)
+#define IMASK_RX_SMALL_PACKET_DETECTION (1 << 16)
+
 /// Category:    Interrupt
 /// Permissions: W
 /// IMC  Interrupt Mask Clear
