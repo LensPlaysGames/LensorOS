@@ -464,7 +464,109 @@
 /// Category:    General
 /// Permissions: R
 /// STATUS  Device Status
+/// Bits:
+///   0      FD  Link Full Duplex configuration Indication
+///            When cleared, the Ethernet controller operates in half-
+///            duplex; when set, the Ethernet controller operates in
+///            Full duplex. The FD provides the duplex setting status
+///            of the Ethernet controller as set by either Hardware
+///            Auto-Negotiation function, or by software.
+///   1      LU  Link Up Indication
+///            0b = no link config; 1b = link config.
+///            For TBI mode/internal SerDes operation: If Auto-
+///            Negotiation is enabled, this bit is set if a valid link
+///            is negotiated. If link is forced through CTRL.SLU, it
+///            reflects the status of this control bit.
+///            For internal PHY mode of operation: Reflects the status
+///            of the internal link signal indicating a transition to a
+///            Link Up.
+///   3:2    Function ID (default 0)
+///            Provides software a mechanism to determine the Ethernet
+///            controller function number (LAN identifier) for this
+///            MAC. Read as: [0b,0b] LAN A, [0b,1b] LAN B.
+///            NOTE: These settings are only applicable to the 82546GB
+///            and 82546EB. For all other Ethernet controllers, set
+///            these bits to 0b.
+///   4      TXOFF  Transmission Paused
+///            When set, Indicates the transmit function is in Pause
+///            state due to reception of an XOFF pause frame when
+///            symmetrical flow control is enabled. It is cleared upon
+///            expiration of the pause timer, or receipt of an XON
+///            frame. Applicable only while working in full-duplex
+///            flow-control mode of operation.
+///   5      TBIMODE  TBI Mode/internal SerDes Indication
+///            When set, the Ethernet controller is configured to work
+///            in TBI mode/internal SerDes of operation. When clear,
+///            the Ethernet controller is configured to work in
+///            internal PHY mode.
+///            NOTE: For the 82544GC and 82544EI, reflects the status
+///            of the TBI_MODE input pin. For all other Ethernet
+///            controllers, set this bit to 0b.
+///   7:6    SPEED  Link Speed Setting
+///            Indicates the configured speed of the link. These bits
+///            are either forced by software when forcing the link
+///            speed through the CTRL.SPEED control bits, automatically
+///            set by hardware when Auto-Speed Detection is enabled or
+///            reflect the internal indication inputs from the PHY.
+///            When Auto-Speed Detection is enabled, the Ethernet
+///            controller’s speed is configured only once after the
+///            internal link is asserted.
+///            Speed indication is mapped as follows:
+///            00b = 10 Mb/s
+///            01b = 100 Mb/s
+///            10b = 1000 Mb/s
+///            11b = 1000 Mb/s
+///            These bits are not valid in TBI mode/internal SerDes.
+///   9:8    ASDV  Auto Speed Detection Value
+///            Indicates the speed sensed by the Ethernet controller
+///            from the internal PHY. The ASDV status bits are provided
+///            for diagnostics purposes. The ASD function can be
+///            initiated by software writing a logic 1b to the
+///            CTRL_EXT.ASDCHK bit. The resultant speed detection is
+///            reflected in these bits.
+///   10     RESERVED  (reads as 0)
+///   11     PCI66  PCI Bus speed indication
+///            When set, indicates that the PCI bus is running at
+///            66 MHz. Reflects the M66EN input pin.
+///            NOTE: Not applicable to the 82547GI or 82547EI.
+///   12     BUS64  PCI Bus Width indication
+///            When set, indicates that the Ethernet controller is
+///            sitting on a 64-bit PCI/PCI-X bus. BUS64 is determined
+///            by REQ64# assertion
+///   13     PCIX_MODE  PCI-X Mode indication
+///            When set to 1b, the Ethernet controller is operating in
+///            PCI-X Mode; otherwise, the Ethernet controller is
+///            operating in conventional PCI Mode.
+///   15:14  PCIXSPD  PCI-X Bus Speed Indication
+///            Attempts to indicate the speed of the bus when operating
+///            in a PCI-X bus. Only valid when STATUS.PCIX_MODE = 1b.
+///            00b = 50-66 MHz
+///            01b = 66-100 MHz
+///            10b = 100-133 MHz
+///            11b = Reserved
+///   31:16  RESERVED  (reads as 0)
 #define REG_STATUS 0x0008
+#define STATUS_FULL_DUPLEX (1 << 0)
+#define STATUS_LINK_UP (1 << 1)
+#define STATUS_FUNCTION_ID_MASK (0b11 << 2)
+#define STATUS_LAN_A (0b00 << 2)
+#define STATUS_LAN_B (0b01 << 2)
+#define STATUS_TXOFF (1 << 4)
+#define STATUS_TBIMODE (1 << 5)
+#define STATUS_LINK_SPEED_MASK (0b11 << 6)
+#define STATUS_LINK_SPEED_10MBS (0b00 << 6)
+#define STATUS_LINK_SPEED_100MBS (0b01 << 6)
+#define STATUS_LINK_SPEED_1000MBS (0b10 << 6)
+#define STATUS_LINK_SPEED_1000MBS (0b11 << 6)
+#define STATUS_ASDV (0b11 << 8)
+#define STATUS_PCI66 (1 << 11)
+#define STATUS_BUS64 (1 << 12)
+#define STATUS_PCIX_MODE (1 << 13)
+#define STATUS_PCIX_SPEED_MASK (0b11 << 14)
+#define STATUS_PCIX_SPEED_50_66_MHZ (0b00 << 14)
+#define STATUS_PCIX_SPEED_66_100_MHZ (0b01 << 14)
+#define STATUS_PCIX_SPEED_100_133_MHZ (0b10 << 14)
+
 
 /// Category:    General
 /// Permissions: R/W
