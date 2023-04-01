@@ -56,7 +56,12 @@ class E1000 {
         INITIALISED,
     } State {E1000::UNINITIALISED};
 
-    PCI::PCIHeader0* PCIHeader {nullptr};
+    PCI::PCIHeader0* PCIHeader { nullptr };
+
+    uint RXDescCount { 0 };
+    volatile RXDesc* RXDescPhysical { nullptr };
+    uint TXDescCount { 0 };
+    volatile TXDesc* TXDescPhysical { nullptr };
 
     /// Tagged union
     PCI::BarType BARType;

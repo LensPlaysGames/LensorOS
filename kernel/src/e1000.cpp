@@ -3,6 +3,7 @@
 #include <io.h>
 #include <memory/common.h>
 #include <memory/paging.h>
+#include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 #include <pci.h>
 #include <stdint.h>
@@ -2094,6 +2095,9 @@ void E1000::configure_device() {
     /// TODO: For the 82541xx and 82547GI/EI, clear all statistical
     /// counters.
 
+    // Set "Set Link Up" bit (set the link up).
+    control_register |= CTRL_SET_LINK_UP;
+
     /// Write the CTRL register with this new value.
     write_command(REG_CTRL, control_register);
 }
@@ -2109,24 +2113,53 @@ void E1000::initialise_rx() {
     for (uint i = 0; i < 6; ++i, ++base) *base = MACAddress[i];
 
     /// Initialize the MTA (Multicast Table Array) to 0b.
-    // FIXME: I don't think this is right. REG_* are /word/ offsets, so
-    // I think we need to just use it as an index into a u16 array,
-    // effectively.
-    for (uintptr_t mta = REG_MTA_BEGIN; mta < REG_MTA_END; mta += 1)
-        *((u8*)mta) = 0;
+    for(uint i = 0; i <= ((REG_MTA_END - REG_MTA_BEGIN) / 4); ++i)
+        write_command(REG_MTA_BEGIN + (i * 4), 0);
 
-    /// Program the Interrupt Mask Set/Read (IMS) register to enable any
-    /// interrupt the software driver wants to be notified of when the event
-    /// occurs. Suggested bits include RXT, RXO, RXDMT, RXSEQ, and LSC.
-    write_command(REG_IMASK,
-                  IMASK_RX_TIMER_INTERRUPT
-                  | IMASK_RX_FIFO_OVERRUN
-                  | IMASK_RX_DESC_MIN_THRESHOLD_HIT
-                  | IMASK_RX_SEQUENCE_ERROR
-                  | IMASK_LINK_STATUS_CHANGE
+    /// Allocate a region of memory for the receive descriptor list.
+    /// Software should ensure this memory is aligned on a paragraph
+    /// (16-byte) boundary. Program the Receive Descriptor Base Address
+    /// (RDBAL/RDBAH) register(s) with the address of the region. RDBAL is
+    /// used for 32-bit addresses and both RDBAL and RDBAH are used for
+    /// 64-bit addresses.
+    static constexpr uint pageCount = 1;
+    static constexpr uint RXDescCountMax = (pageCount * PAGE_SIZE) / sizeof(E1000::RXDesc);
+    RXDescCount = RXDescCountMax;
+    RXDescPhysical = (volatile E1000::RXDesc*)Memory::request_pages(pageCount);
+    u32 addressLowBytes = uintptr_t(RXDescPhysical) & 0xffffffff;
+    u32 addressHighBytes = uintptr_t(RXDescPhysical) >> 32;
+    write_command(REG_RXDESCLO, addressLowBytes);
+    write_command(REG_RXDESCHI, addressHighBytes);
+    write_command(REG_RXDESCLEN, RXDescCount * sizeof(E1000::RXDesc));
+    /// Software initializes the Receive Descriptor Head (RDH) register
+    /// and Receive Descriptor Tail (RDT) with the appropriate head and
+    /// tail addresses. Head should point to the first valid receive
+    /// descriptor in the descriptor ring and tail should point to one
+    /// descriptor beyond the last valid descriptor in the descriptor
+    /// ring.
+    write_command(REG_RXDESCHEAD, 0);
+    write_command(REG_RXDESCTAIL, RXDescCount);
+
+    /// Receive buffers of appropriate size should be allocated and
+    /// pointers to these buffers should be stored in the receive
+    /// descriptor ring.
+    for (usz i = 0; i < RXDescCount; ++i) {
+        volatile E1000::RXDesc* desc = RXDescPhysical + i;
+        desc->Address = (u64)Memory::request_pages(KiB(8) / PAGE_SIZE);
+        desc->Status = 0;
+    }
+
+    write_command(REG_RX_CONTROL
+                  , RCTL_LOOPBACK_MODE_OFF
+                  | RCTL_BROADCAST_ACCEPT_MODE
+                  | RCTL_LONG_PACKET_RECEPTION_ENABLE
+                  | RCTL_UNICAST_PROMISCUOUS_ENABLED
+                  | RCTL_MULTICAST_PROMISCUOUS_ENABLED
+                  | RCTL_DESC_MIN_THRESHOLD_SIZE_HALF
+                  | RCTL_STRIP_ETHERNET_CRC
+                  | RCTL_STORE_BAD_PACKETS
+                  | RCTL_BUFFER_SIZE_8192
                   );
-
-    // FIXME: Continue implementation...
 }
 
 void E1000::initialise_tx() {
