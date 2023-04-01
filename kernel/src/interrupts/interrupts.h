@@ -148,4 +148,7 @@ void disable_interrupt(u8 irq);
 // Disable all IRQs within the PIC masks.
 void disable_all_interrupts();
 
+__attribute__((no_caller_saved_registers))
+void end_of_interrupt(u8 IRQx);
+
 #endif

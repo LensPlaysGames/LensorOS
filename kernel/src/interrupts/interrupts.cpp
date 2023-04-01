@@ -82,7 +82,6 @@ void disable_all_interrupts() {
     out8(PIC2_DATA, 0);
 }
 
-__attribute__((no_caller_saved_registers))
 void end_of_interrupt(u8 IRQx) {
     if (IRQx >= 8)
         out8(PIC2_COMMAND, PIC_EOI);
