@@ -22,6 +22,7 @@
 #include <cstr.h>
 #include <debug.h>
 #include <format>
+#include <integers.h>
 #include <memory.h>
 #include <memory/common.h>
 #include <memory/paging.h>
@@ -361,6 +362,54 @@ void operator delete(void* ptr) noexcept { free(ptr); }
 void operator delete[](void* ptr) noexcept { free(ptr); }
 void operator delete(void* ptr, size_t) noexcept { free(ptr); }
 void operator delete[](void* ptr, size_t) noexcept { free(ptr); }
+
+[[nodiscard]] void* aligned_new(size_t size, size_t align) {
+    /// If alignment is less than or equal to minimum heap alignment,
+    /// just return a regularly allocated block.
+    if (align <= HEAP_BYTE_ALIGN) return malloc(size);
+    /// Allocate a piece of memory more than large enough to align any
+    /// return pointer to `align` as well as store the address to free
+    /// (original unaligned payload).
+    void* addr = malloc(size + align + sizeof(void*));
+    /// Actually align the address, as well as leave room for ptr-to-free
+    /// to be stored at addr - sizeof(void*).
+    /// To do this, we need to find the next largest multiple of a
+    /// given number; that given number being the address returned from
+    /// malloc, and the multiple being the align size.
+    /// LISP: (+ address (% (- alignment (% address alignment)) alignment))
+    uintptr_t addr_int = (uintptr_t)addr;
+    addr_int += sizeof(void*);
+    addr_int += (align - (addr_int % align)) % align;
+
+    /// A pointer to where the pointer-to-free is going to be stored.
+    uintptr_t* ptr_to_free_addr = (uintptr_t*)(addr_int - sizeof(uintptr_t*));
+    /// Store the pointer-to-free
+    *ptr_to_free_addr = (uintptr_t)addr;
+
+    return (void*)addr_int;
+}
+void aligned_delete(void* addr, size_t align) {
+    if (align <= HEAP_BYTE_ALIGN) {
+        std::print("[Heap]: aligned_delete() -- Align ({}) smaller than minimum alignment: regular free\n", align);
+        free(addr);
+        return;
+    }
+    if (((usz)addr & HEAP_VIRTUAL_BASE) != HEAP_VIRTUAL_BASE) {
+        std::print("[Heap]: aligned_delete() -- Denying deletion of address {} as it does not look like a heap pointer\n", addr);
+        return;
+    }
+    uintptr_t* ptr_to_free_addr = (uintptr_t*)((uintptr_t)addr - sizeof(uintptr_t*));
+    std::print("[Heap]: aligned_delete() -- align={}  addr={}  ptr_to_free_addr={}  ptr_to_free={:x}\n",
+               align, addr, (void*)ptr_to_free_addr, *ptr_to_free_addr);
+    free((void*)*ptr_to_free_addr);
+}
+
+/// Aligned new.
+[[nodiscard]] void* operator new(size_t size, std::align_val_t align) { return aligned_new(size, (size_t)align); }
+[[nodiscard]] void* operator new[](size_t size, std::align_val_t align) { return aligned_new(size, (size_t)align); }
+void operator delete(void* addr, std::align_val_t align) { return aligned_delete(addr, (size_t)align); }
+void operator delete[](void* addr, std::align_val_t align) { return aligned_delete(addr, (size_t)align); }
+
 
 [[nodiscard]] void* operator new(size_t, void* ptr) noexcept { return ptr; }
 [[nodiscard]] void* operator new[](size_t, void* ptr) noexcept { return ptr; }

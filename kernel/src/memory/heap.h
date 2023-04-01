@@ -42,7 +42,7 @@ struct HeapSegmentHeader {
     void combine_backward();
     // Allocation
     HeapSegmentHeader* split(u64 splitLength);
-} __attribute__((packed));
+};
 
 void init_heap();
 
