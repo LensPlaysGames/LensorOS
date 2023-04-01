@@ -498,6 +498,14 @@ ProcFD sys$16_dup(ProcessFileDescriptor fd) {
 }
 
 
+void sys$17_uart(void* buffer, size_t size) {
+    DBGMSG(sys$_dbgfmt, 17, "uart");
+    DBGMSG("  buffer: {}  size: {}\n", buffer, size);
+    // TODO: Validate buffer pointer.
+    std::print("{}", std::string_view((const char*)buffer, size));
+}
+
+
 // TODO: Reorder this
 // FIXME: Make it easier to reorder this (maybe separate the number
 // from the name? I don't know, something to make this easier...)
@@ -533,4 +541,6 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     (void*)sys$15_pwd,
 
     (void*)sys$16_dup,
+
+    (void*)sys$17_uart,
 };

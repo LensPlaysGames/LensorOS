@@ -41,7 +41,8 @@
 #define SYS_seek    14
 #define SYS_pwd     15
 #define SYS_dup     16
-#define SYS_MAXSYSCALL 16
+#define SYS_uart    17
+#define SYS_MAXSYSCALL 17
 #else
 #define SYS_read  0
 #define SYS_write 1
