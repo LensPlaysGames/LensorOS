@@ -24,6 +24,25 @@
 #include <pci.h>
 
 class E1000 {
+    struct RXDesc {
+        volatile u64 Address;
+        volatile u16 Length;
+        volatile u16 Checksum;
+        volatile u8 Status;
+        volatile u8 Errors;
+        volatile u16 Special;
+    } __attribute__((packed));
+
+    struct TXDesc {
+        volatile u64 Address;
+        volatile u16 Length;
+        volatile u8 CSO;
+        volatile u8 Command;
+        volatile u8 Status;
+        volatile u8 CSS;
+        volatile u16 Special;
+    } __attribute__((packed));
+
     enum E1000State {
         UNRECOVERABLE,
         UNINITIALISED,

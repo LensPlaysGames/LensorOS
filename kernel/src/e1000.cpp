@@ -1924,29 +1924,6 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 #define EEPROM_SOFTWARE_AVAIABLE_BEGIN 0xf8
 #define EEPROM_SOFTWARE_AVAIABLE_END   0xff
 
-
-#define E1000_NUM_RX_DESC 32
-#define E1000_NUM_TX_DESC 8
-
-struct E1000RXDesc {
-    volatile u64 Address;
-    volatile u16 Length;
-    volatile u16 Checksum;
-    volatile u8 Status;
-    volatile u8 Errors;
-    volatile u16 Special;
-} __attribute__((packed));
-
-struct E1000TXDesc {
-    volatile u64 Address;
-    volatile u16 Length;
-    volatile u8 CSO;
-    volatile u8 Command;
-    volatile u8 Status;
-    volatile u8 CSS;
-    volatile u16 Special;
-} __attribute__((packed));
-
 E1000 gE1000 = {};
 
 void E1000::write_command(u16 address, u32 value) {
