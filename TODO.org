@@ -3,7 +3,7 @@
 #+description: What the fuck we should be doing for LensorOS in 2023
 #+created: <2023-01-12 Thu>
 
-* TODO E1000 :: Add `State` member and slowly walk states upward
+* DONE E1000 :: Add `State` member and slowly walk states upward
 
 #+begin_src c
   enum {
