@@ -1985,20 +1985,21 @@ u16 E1000::read_eeprom(u8 address) {
 
     u32 calculatedAddress = 0;
     u32 successMask = 0;
-    // TODO: Actually check for 82541xx, 82547GI, or 82547EI; if the
-    // eeprom doesn't exist, that's another story.
-    if (EEPROMExists) {
-        calculatedAddress = EERD_ADDRESS(address);
-        successMask = EERD_DONE;
-    } else {
+    if (is_82541xx(PCIHeader->Header.DeviceID) || is_82547_GI_EI(PCIHeader->Header.DeviceID)) {
         calculatedAddress = EERD_ADDRESS_EXTRA(address);
         successMask = EERD_DONE_EXTRA;
+    } else {
+        calculatedAddress = EERD_ADDRESS(address);
+        successMask = EERD_DONE;
     }
-    // TODO: If EECD register indicates that software has direct pin
+    /// TODO: If EECD register indicates that software has direct pin
     /// control of the EEPROM, access through the EERD register can stall
     /// until that bit is clear. Software should ensure that EECD.EE_REQ
     /// and EECD.EE_GNT bits are clear before attempting to use EERD to
     /// access the EEPROM.
+    // FIXME: This hangs forever (am I doing something wrong?)
+    //while (read_command(REG_EECD) & (EECD_EEPROM_REQUEST | EECD_EEPROM_GRANT));
+
     /// Write address to EEPROM register along with the Start Read bit
     /// to indicate to the NIC that it needs to do an EEPROM read with
     /// given address.
