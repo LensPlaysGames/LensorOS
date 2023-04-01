@@ -43,7 +43,7 @@ int run_program_waitpid(const char *const filepath, const char **args) {
         fflush(NULL);
         int command_status = syscall<int>(SYS_waitpid, cpid);
         if (command_status == -1) {
-            printf("`waitpid` failure!\n");
+            std::print("`waitpid` failure!\n");
             return -1;
         }
 
@@ -63,7 +63,9 @@ int run_program_waitpid(const char *const filepath, const char **args) {
         fflush(NULL);
         syscall(SYS_exec, filepath, args);
     }
+
     // FIXME: Unreachable
+
     return -1;
 }
 
@@ -104,8 +106,9 @@ int main(int argc, char **argv) {
 
             // Handle control characters
             if (c == '\b') {
-                if (!input_command.empty())
-                    input_command.erase(input_command.size() - 1);
+                if (input_command.empty()) continue;
+                input_command.erase(input_command.size() - 1);
+                std::print("{}{}{}\n", rc, prompt, input_command);
                 continue;
             }
             if (c == '\r') continue;
