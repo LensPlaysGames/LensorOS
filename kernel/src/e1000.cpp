@@ -782,10 +782,36 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// Category:    Interrupt
 /// Permissions: R
 /// ICR  Interrupt Cause Read
+/// Bits:
+///   0      TXDW    Transmit Descriptor Written Back
+///   1      TXQE    Transmit Queue Empty
+///   2      LSC     Link Status Change
+///   3      RXSEQ   Receive Sequence Error
+///   4      RXDMT0  Receive Descriptor Minimum Threshold Reached
+///   5      RESERVED (reads as 0)
+///   6      RXO     Receiver Overrun
+///   7      RXT0    Receiver Timer Interrupt
+///   8      RESERVED (reads as 0)
+///   9      MDAC    MDI/O Access Complete
+///   10     RXCFG   Receiving /C/ ordered sets. Mapped to RXCW.RxConfig
+///   15     TXD_LOW Transmit Descriptor Low Threshold hit
+///   16     SRPD    Small Receive Packet Detected
+///   31:17  RESERVED (reads as 0)
 #define REG_ICR 0x00c0
+#define ICR_TX_DESC_WRITTEN_BACK (1 << 0)
+#define ICR_TX_QUEUE_EMPTY (1 << 1)
+#define ICR_LINK_STATUS_CHANGE (1 << 2)
+#define ICR_RX_SEQUENCE_ERROR (1 << 3)
+#define ICR_RX_DESC_MINIMUM_THRESHOLD_REACHED (1 << 4)
+#define ICR_RX_OVERRUN (1 << 6)
+#define ICR_RX_TIMER_INTERRUPT (1 << 7)
+#define ICR_MDIO_ACCESS_COMLETE (1 << 9)
+#define ICR_RX_CONFIGURATION (1 << 10)
+#define ICR_TX_DESC_LOW_THRESHOLD_HIT (1 << 15)
+#define ICR_SMALL_RECEIVE_PACKET (1 << 16)
 /// Category:    Interrupt
 /// Permissions: R/W
-/// ICR  Interrupt Throttling
+/// ITR  Interrupt Throttling
 /// NOTE: (not applicable to the 82544GC or 82544EI)
 #define REG_ITR 0x00c4
 /// Category:    Interrupt
