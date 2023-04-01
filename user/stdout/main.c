@@ -69,6 +69,12 @@ static int command_status = 0;
 static char *args[MAX_ARG_COUNT];
 static usz args_it = 0;
 
+// FIXME: I've identified a bug and tracked it down to this code, but
+// I'm not sure how it's broken.
+// When a program ends up outputting more lines than MAX_OUTPUT_LINES,
+// then a bunch of weird things happen and there is data corruption
+// with the command output. It seems to somehow be losing data when
+// scrolling along.
 void write_command_output(char c) {
   command_output[command_output_it++] = c;
   if (c == '\n') ++command_output_line_count;
