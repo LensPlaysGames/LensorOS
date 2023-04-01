@@ -1,6 +1,8 @@
 #include <e1000.h>
 
 #include <io.h>
+#include <interrupts/idt.h>
+#include <interrupts/interrupts.h>
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
@@ -2167,6 +2169,33 @@ void E1000::initialise_tx() {
     ;
 }
 
+void E1000::handle_interrupt() {
+    /// Read status of pending interrupt
+    u32 status = read_command(REG_ICR);
+
+    /// Clear transmit interrupt bits.
+    status &= ~(ICR_TX_DESC_WRITTEN_BACK | ICR_TX_QUEUE_EMPTY);
+
+    /// Link Status Change
+    if (status & ICR_LINK_STATUS_CHANGE) {
+        status &= ~ICR_LINK_STATUS_CHANGE;
+        write_command(REG_CTRL, (read_command(REG_CTRL) | CTRL_SET_LINK_UP));
+        std::print("[E1000]: Link status changed!\n");
+    }
+
+    // FIXME: Is this necessary?
+    read_command(REG_ICR);
+}
+
+void e1000_interrupt_handler(InterruptFrame* frame) {
+    std::print("[E1000]: Interrupt!\n");
+    // TODO: Get pointer to network device; maybe somehow store a
+    // mapping of interrupt vectors to void* that can be set when
+    // registering an interrupt.
+    gE1000.handle_interrupt();
+    end_of_interrupt(gE1000.interrupt_line());
+}
+
 E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
     if (!PCIHeader) {
         State = E1000::UNRECOVERABLE;
@@ -2186,4 +2215,24 @@ E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
 
     initialise_rx();
     initialise_tx();
+
+    /// Register interrupt handler in IDT!!
+    std::print("[E1000]: Interrupt line: 0x{:x}\n", PCIHeader->InterruptLine);
+    gIDT.install_handler((u64)e1000_interrupt_handler, PCIHeader->InterruptLine);
+
+    /// Program the Interrupt Mask Set/Read (IMS) register to enable any
+    /// interrupt the software driver wants to be notified of when the event
+    /// occurs. Suggested bits include RXT, RXO, RXDMT, RXSEQ, and LSC.
+    write_command(REG_IMASK,
+                  read_command(REG_IMASK)
+                  | IMASK_RX_TIMER_INTERRUPT
+                  | IMASK_RX_FIFO_OVERRUN
+                  | IMASK_RX_DESC_MIN_THRESHOLD_HIT
+                  | IMASK_RX_SEQUENCE_ERROR
+                  | IMASK_LINK_STATUS_CHANGE
+                  );
+    /// Clear pending interrupts
+    read_command(REG_ICR);
+
+    write_command(REG_RX_CONTROL, read_command(REG_RX_CONTROL) | RCTL_ENABLE);
 }

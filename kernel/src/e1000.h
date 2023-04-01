@@ -107,6 +107,8 @@ public:
     E1000() {}
     E1000(PCI::PCIHeader0* header);
     E1000State state() { return State; }
+    void handle_interrupt();
+    uint interrupt_line() { return PCIHeader->InterruptLine; }
 };
 
 extern E1000 gE1000;
