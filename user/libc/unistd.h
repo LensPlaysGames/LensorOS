@@ -36,6 +36,8 @@ void close(int fd);
 ssize_t read(int fd, const void* buffer, size_t count);
 ssize_t write(int fd, const void* buffer, size_t count);
 
+pid_t fork(void);
+
 /// On success, `buf` will be filled with the absolute path of the
 /// current process' working directory.
 /// On failure, return NULL, and errno is set to indicate the

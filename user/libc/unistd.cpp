@@ -22,6 +22,7 @@
 
 #include "errno.h"
 #include "stddef.h"
+#include "stdio.h"
 #include "stdlib.h"
 #include "sys/syscalls.h"
 
@@ -48,6 +49,24 @@ extern "C" {
     ssize_t write(int fd, const void* buffer, size_t count) {
         /// TODO: check return value and set errno.
         return syscall<ssize_t>(SYS_write, fd, buffer, count);
+    }
+
+    pid_t fork(void) {
+        // Flush all libc file buffers. This is necessary because, as
+        // you can imagine, it isn't ideal when the two processes after
+        // the fork syscall flush the buffers with data from before the
+        // fork; this means /two/ processes end up using the data
+        // provided before the fork by one process. Basically, this
+        // ensures you don't see "hello world" twice after a fork.
+        fflush(NULL);
+
+        pid_t child_pid = syscall(SYS_fork);
+        // TODO: Currently, the `fork` syscall "can't" fail. As in, the
+        // kernel implementation doesn't check for failures or return
+        // values indicating them. If we /do/ get an error-indicating
+        // return value, we should set errno to EAGAIN or ENOMEM,
+        // depending on the failure case.
+        return child_pid;
     }
 
     char *getcwd(char *buf, size_t size) {
