@@ -326,11 +326,7 @@ void run_program_waitpid(const char *const filepath, const char **args) {
 
   int stdin_copy = syscall(SYS_dup, STDIN_FILENO);
 
-  // If there are pending writes, they will be executed on both the
-  // parent and the child; by flushing any buffers we have, it ensures
-  // the child won't write duplicate data on accident.
-  fflush(NULL);
-  pid_t cpid = syscall(SYS_fork);
+  pid_t cpid = fork();
   //printf("pid: %d\n", cpid);
   if (cpid) {
     //puts("Parent");

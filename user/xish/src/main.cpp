@@ -20,11 +20,7 @@ int run_program_waitpid(const char *const filepath, const char **args) {
     syscall(SYS_pipe, fds);
     //std::print("[XiSh]: Created pipe: ({}, {})\n", fds[0], fds[1]);
 
-    // If there are pending writes, they will be executed on both the
-    // parent and the child; by flushing any buffers we have, it ensures
-    // the child won't write duplicate data on accident.
-    fflush(NULL);
-    pid_t cpid = syscall(SYS_fork);
+    pid_t cpid = fork();
     //printf("pid: %d\n", cpid);
     if (cpid) {
         //puts("Parent");
