@@ -28,6 +28,8 @@
 
 __BEGIN_DECLS__
 
+// TODO: Remove `&& 0` once we can actually get it compiling (I fucking
+// hate that GCC uses memcpy from our libc and inlines it ffs).
 #if defined(__SSE2__) && 0
 #    define __have_memcpy_sse_unaligned_intrin
 #endif

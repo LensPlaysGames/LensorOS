@@ -576,11 +576,9 @@ int fflush(FILE* stream) {
 }
 
 FILE* fopen(const char* __restrict__ filename, const char* __restrict__ mode) {
-    /// TODO: Parse mode.
-    (void)mode;
-
-    /// TODO: Allocate a new file and buffer.
     /// TODO: Parse mode and set the right flags.
+    (void)mode;
+    /// Allocate a new file and buffer.
     auto fd = open(filename, 0, 0);
     if (fd < 0) return nullptr;
     return FILE::create(fd);
