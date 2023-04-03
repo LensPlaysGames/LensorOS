@@ -282,8 +282,8 @@ int sys$9_waitpid(pid_t pid) {
 
     // Save cpu state into process cache so that we return to the
     // proper place when set off running again.
-    memcpy(&Scheduler::CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
-    Scheduler::CurrentProcess->value()->State = Process::ProcessState::SLEEPING;
+    memcpy(&thisProcess->CPU, cpu, sizeof(CPUState));
+    thisProcess->State = Process::ProcessState::SLEEPING;
     Scheduler::yield();
 }
 
@@ -517,7 +517,6 @@ void sys$17_uart(void* buffer, size_t size) {
     // TODO: Validate buffer pointer.
     std::print("{}", std::string_view((const char*)buffer, size));
 }
-
 
 // TODO: Reorder this
 // FIXME: Make it easier to reorder this (maybe separate the number
