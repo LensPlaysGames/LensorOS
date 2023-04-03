@@ -95,21 +95,17 @@ namespace Memory {
         void set_flag(PageTableFlag flag, bool enabled) {
             u64 bitSelector = (u64)flag;
             Value &= ~bitSelector;
-            if (enabled) {
-                Value |= bitSelector;
-            }
+            if (enabled) Value |= bitSelector;
         }
 
         // Or the given flag with the PDE value. This is used to set a
-        // flag if it's set, but do nothing if it isn't.
+        // flag if it's unset, but do nothing if it is already set.
         void or_flag(PageTableFlag flag) {
             Value |= (u64)flag;
         }
 
         void or_flag_if(PageTableFlag flag, bool enabled) {
-            if (enabled) {
-                Value |= (u64)flag;
-            }
+            if (enabled) Value |= (u64)flag;
         }
 
 
