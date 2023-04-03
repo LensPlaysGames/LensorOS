@@ -20,10 +20,6 @@
 #ifndef LENSOR_OS_INPUT_DRIVER_H
 #define LENSOR_OS_INPUT_DRIVER_H
 
-// Uncomment the following directive for extra debug information output.
-//#define DEBUG_INPUT_DRIVER
-
-
 #include <format>
 #include <string>
 #include <string_view>
@@ -32,19 +28,15 @@
 #include <memory/common.h>
 #include <storage/storage_device_driver.h>
 #include <storage/file_metadata.h>
-
-#ifdef DEBUG_INPUT_DRIVER
-# define DBGMSG(...) std::print(__VA_ARGS__)
-#else
-# define DBGMSG(...)
-#endif
+#include <scheduler.h>
 
 // NOTE: This is an attempt to keep `sizeof(InputBuffer)` == PAGE_SIZE
-#define INPUT_BUFSZ PAGE_SIZE - sizeof(usz)
+#define INPUT_BUFSZ PAGE_SIZE - sizeof(usz) - sizeof(std::vector<pid_t>)
 
 struct InputBuffer {
     u8 Data[INPUT_BUFSZ];
     usz Offset{};
+    std::vector<pid_t> PIDsWaiting{};
 
     constexpr InputBuffer() = default;
     ~InputBuffer() = default;
@@ -64,69 +56,17 @@ struct NamedInputBuffer {
 };
 
 struct InputDriver final : StorageDeviceDriver {
-    void close(FileMetadata* file) final {
-        if (!file) return;
-        auto* input = static_cast<InputBuffer*>(file->driver_data());
-        FreeInputBuffers.push_back(input);
-    }
-
+    void close(FileMetadata* file) final;
     std::shared_ptr<FileMetadata> open(std::string_view path) final;
 
-    ssz read_raw(usz, usz, void*) final {
-        return -1;
-    }
+    ssz read_raw(usz, usz, void*) final { return -1; }
+    ssz read(FileMetadata* file, usz, usz bytes, void* buffer);
 
-    ssz read(FileMetadata* file, usz, usz bytes, void* buffer) final {
-        if (!file) return -1;
-
-        auto* input = static_cast<InputBuffer*>(file->driver_data());
-        if (!input) return -1;
-
-        // TODO: Support "wait until there is something to read".
-        if (input->Offset == 0) {
-            DBGMSG("[INPUT]: Input buffer at {} has no data (todo: wait)\n", (void*)input);
-            return -1;
-        }
-
-        // TODO: Read in a loop to fill buffers larger than what is currently written.
-        // For now, truncate read if it is too large.
-        if (bytes > input->Offset) {
-            bytes = input->Offset;
-        }
-
-        memcpy(buffer, input->Data, bytes);
-
-        // "Pop" bytes read off beginning of buffer.
-        // Only on the heap to prevent stack overflow.
-        auto temp = new u8[INPUT_BUFSZ];
-        memcpy(temp, input->Data, INPUT_BUFSZ);
-        memcpy(input->Data, temp + bytes, INPUT_BUFSZ - bytes);
-        delete[] temp;
-
-        // Set write offset back, as we have just removed from the beginning.
-        input->Offset -= bytes;
-
-        return ssz(bytes);
-    }
-
-    ssz write(FileMetadata* file, usz, usz bytes, void* buffer) final {
-        if (!file) return -1;
-        auto* input = static_cast<InputBuffer*>(file->driver_data());
-        if (!input) return -1;
-        if (input->Offset + bytes > INPUT_BUFSZ) {
-            // TODO: Support "wait if full". For now, just truncate write.
-            bytes = INPUT_BUFSZ - input->Offset;
-        }
-        memcpy(input->Data + input->Offset, buffer, bytes);
-        input->Offset += bytes;
-        return ssz(bytes);
-    }
+    ssz write(FileMetadata* file, usz, usz bytes, void* buffer) final;
 
 private:
     std::vector<NamedInputBuffer> InputBuffers;
     std::vector<InputBuffer*> FreeInputBuffers;
 };
-
-#undef DBGMSG
 
 #endif /* LENSOR_OS_INPUT_DRIVER_H */
