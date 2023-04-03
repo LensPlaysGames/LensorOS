@@ -216,7 +216,7 @@ namespace Memory {
         ActivePageMap = pageMapLevelFour;
     }
 
-    Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable) {
+    static Memory::PageTable* clone_page_map_impl(Memory::PageTable* oldPageTable, bool readonly) {
         // FIXME: Free already allocated pages upon failure.
         Memory::PageDirectoryEntry PDE;
 
@@ -269,21 +269,30 @@ namespace Memory {
                         if (PDE.flag(Memory::PageTableFlag::Present) == false)
                             continue;
 
+                        if (readonly) PDE.set_flag(Memory::PageTableFlag::ReadWrite, false);
+
                         newPT->entries[l] = PDE;
                     }
                     PDE = oldPD->entries[k];
                     PDE.set_address((u64)newPT >> 12);
+                    if (readonly) PDE.set_flag(Memory::PageTableFlag::ReadWrite, false);
                     newPD->entries[k] = PDE;
                 }
                 PDE = oldTable->entries[j];
                 PDE.set_address((u64)newPD >> 12);
+                if (readonly) PDE.set_flag(Memory::PageTableFlag::ReadWrite, false);
                 newPDP->entries[j] = PDE;
             }
             PDE = oldPageTable->entries[i];
             PDE.set_address((u64)newPDP >> 12);
+            if (readonly) PDE.set_flag(Memory::PageTableFlag::ReadWrite, false);
             newPageTable->entries[i] = PDE;
         }
         return newPageTable;
+    }
+
+    Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable) {
+        return clone_page_map_impl(oldPageTable, false);
     }
 
     void free_page_map(PageTable* pageTable) {
