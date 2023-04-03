@@ -80,7 +80,6 @@ void write_command_output(char c) {
   if (c == '\n') ++command_output_line_count;
   if (command_output_line_count > MAX_OUTPUT_LINES ||
       command_output_it >= MAX_OUTPUT_LENGTH - 1) {
-    // TODO: Make this either a define or configurable at runtime, or something.
     const size_t scroll_amount = 1;
     size_t skip_bytes = 0;
     size_t lines_scrolled = 0;
@@ -90,7 +89,7 @@ void write_command_output(char c) {
       skip_bytes += next_newline;
     }
     memmove(command_output, command_output + skip_bytes, MAX_OUTPUT_LENGTH - skip_bytes);
-    command_output[MAX_OUTPUT_LENGTH - 1 - skip_bytes] = 0;
+    command_output[MAX_OUTPUT_LENGTH - skip_bytes - 1] = 0;
     if (command_output_it >= skip_bytes)
         command_output_it -= skip_bytes;
     else command_output_it = 0;
@@ -324,8 +323,6 @@ void run_program_waitpid(const char *const filepath, const char **args) {
   u64 fds[2] = {-1,-1};
   syscall(SYS_pipe, fds);
 
-  int stdin_copy = syscall(SYS_dup, STDIN_FILENO);
-
   pid_t cpid = fork();
   //printf("pid: %d\n", cpid);
   if (cpid) {
@@ -334,7 +331,6 @@ void run_program_waitpid(const char *const filepath, const char **args) {
     //fflush(stdout);
 
     close(fds[1]);
-    close(stdin_copy);
 
     //printf("Reading from pipe!\n");
     //fflush(stdout);
@@ -366,10 +362,6 @@ void run_program_waitpid(const char *const filepath, const char **args) {
   } else {
     //puts("Child");;
     close(fds[0]);
-
-    // Redirect stdin to copy of stdin.
-    syscall(SYS_repfd, stdin_copy, STDIN_FILENO);
-    close(stdin_copy);
 
     // Redirect stdout to write end of pipe.
     syscall(SYS_repfd, fds[1], STDOUT_FILENO);
