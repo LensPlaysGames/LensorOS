@@ -143,13 +143,8 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
 
         auto* process = Scheduler::CurrentProcess->value();
         //std::print("[PIPE]: read()  Blocking process {}  pipeEnd={} pipeBuffer={}\n", process->ProcessID, (void*)pipe, (void*)pipe->Buffer);
-
         pipe->Buffer->PIDsWaiting.push_back(process->ProcessID);
-
-        // Set state to SLEEPING so that after we yield, the scheduler
-        // won't switch back to us until the pipe has been written to.
-        process->State = Process::SLEEPING;
-        Scheduler::yield();
+        return -2;
     }
 
     // TODO: Read in a loop to fill buffers larger than what is currently written.

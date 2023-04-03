@@ -78,9 +78,22 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
            );
     // FIXME: Validate buffer pointer.
 
-    // Save CPU state in case read blocks, aka calls yield.
-    memcpy(&Scheduler::CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
-    return SYSTEM->virtual_filesystem().read(fd, buffer, byteCount, 0);
+    auto* process = Scheduler::CurrentProcess->value();
+
+    ssz rc = SYSTEM->virtual_filesystem().read(fd, buffer, byteCount, 0);
+    if (rc == -2) {
+        // Save CPU state so that we will return to the right spot when
+        // the process is run again.
+        memcpy(&process->CPU, cpu, sizeof(CPUState));
+
+        // Set state to SLEEPING so that after we yield, the scheduler
+        // won't switch back to us until the file has been written to,
+        // or something of that nature.
+        process->State = Process::SLEEPING;
+        // Bye!
+        Scheduler::yield();
+    }
+    return rc;
 }
 
 int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
