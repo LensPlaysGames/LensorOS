@@ -52,6 +52,18 @@ u8 in8_wrap(u8 port) {
     return in8(port);
 }
 
+
+/// Use this when called from an interrupt handler.
+#define print printerrupt
+namespace std {
+template <typename... _Args>
+__attribute__((no_caller_saved_registers))
+void printerrupt(std::format_string<_Args...> __fmt, _Args&&... __args) {
+    vprint(__fmt.get(), std::forward<_Args>(__args)...);
+}
+}
+
+
 void enable_interrupt(u8 irq) {
     if (irq > 15)
         return;
