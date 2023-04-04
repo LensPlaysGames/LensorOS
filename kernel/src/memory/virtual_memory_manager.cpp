@@ -216,7 +216,90 @@ namespace Memory {
         ActivePageMap = pageMapLevelFour;
     }
 
-    static Memory::PageTable* clone_page_map_impl(Memory::PageTable* oldPageTable, bool readonly) {
+    Memory::PageTable* clone_page_map_copy_on_write(Memory::PageTable* oldPageTable) {
+        auto make_pde_cow = [](Memory::PageDirectoryEntry& pde) {
+            if (pde.flag(Memory::PageTableFlag::ReadWrite)) {
+                // Unset write flag; this means any writes to this page will cause a page fault (good).
+                pde.set_flag(Memory::PageTableFlag::ReadWrite, false);
+                // Set the "copy on write" flag. This will allow the page fault to detect that it
+                // should actually copy this region, perform the write or whatever, and then return.
+                pde.set_flag(Memory::PageTableFlag::Lensor_CopyOnWrite, true);
+            }
+        };
+
+        // FIXME: Free already allocated pages upon failure.
+        Memory::PageDirectoryEntry PDE;
+
+        auto* newPageTable = reinterpret_cast<Memory::PageTable*>(Memory::request_page());
+        if (newPageTable == nullptr) {
+            std::print("Failed to allocate memory for new process page map level four.\n");
+            return nullptr;
+        }
+        memset(newPageTable, 0, PAGE_SIZE);
+        for (u64 i = 0; i < 512; ++i) {
+            PDE = oldPageTable->entries[i];
+            if (PDE.flag(Memory::PageTableFlag::Present) == false)
+                continue;
+
+            auto* newPDP = (Memory::PageTable*)Memory::request_page();
+            if (newPDP == nullptr) {
+                std::print("Failed to allocate memory for new process page directory pointer table.\n");
+                return nullptr;
+            }
+            memset(newPDP, 0, PAGE_SIZE);
+            auto* oldTable = (Memory::PageTable*)PDE.address();
+            for (u64 j = 0; j < 512; ++j) {
+                PDE = oldTable->entries[j];
+                if (PDE.flag(Memory::PageTableFlag::Present) == false)
+                    continue;
+
+                auto* newPD = (Memory::PageTable*)Memory::request_page();
+                if (newPD == nullptr) {
+                    std::print("Failed to allocate memory for new process page directory table.\n");
+                    return nullptr;
+                }
+                memset(newPD, 0, PAGE_SIZE);
+                auto* oldPD = (Memory::PageTable*)PDE.address();
+                for (u64 k = 0; k < 512; ++k) {
+                    PDE = oldPD->entries[k];
+                    if (PDE.flag(Memory::PageTableFlag::Present) == false)
+                        continue;
+
+                    auto* newPT = (Memory::PageTable*)Memory::request_page();
+                    if (newPT == nullptr) {
+                        std::print("Failed to allocate memory for new process page table.\n");
+                        return nullptr;
+                    }
+                    memset(newPT, 0, PAGE_SIZE);
+                    auto* oldPT = (Memory::PageTable*)PDE.address();
+                    //memcpy(newPT, oldPT, PAGE_SIZE);
+                    for (u64 l = 0; l < 512; ++l) {
+                        PDE = oldPT->entries[l];
+                        if (PDE.flag(Memory::PageTableFlag::Present) == false)
+                            continue;
+
+                        make_pde_cow(PDE);
+                        newPT->entries[l] = PDE;
+                    }
+                    PDE = oldPD->entries[k];
+                    PDE.set_address((u64)newPT);
+                    make_pde_cow(PDE);
+                    newPD->entries[k] = PDE;
+                }
+                PDE = oldTable->entries[j];
+                PDE.set_address((u64)newPD);
+                make_pde_cow(PDE);
+                newPDP->entries[j] = PDE;
+            }
+            PDE = oldPageTable->entries[i];
+            PDE.set_address((u64)newPDP);
+            make_pde_cow(PDE);
+            newPageTable->entries[i] = PDE;
+        }
+        return newPageTable;
+    }
+
+    Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable) {
         // FIXME: Free already allocated pages upon failure.
         Memory::PageDirectoryEntry PDE;
 
@@ -269,30 +352,21 @@ namespace Memory {
                         if (PDE.flag(Memory::PageTableFlag::Present) == false)
                             continue;
 
-                        if (readonly) PDE.set_flag(Memory::PageTableFlag::ReadWrite, false);
-
                         newPT->entries[l] = PDE;
                     }
                     PDE = oldPD->entries[k];
-                    PDE.set_address((u64)newPT >> 12);
-                    if (readonly) PDE.set_flag(Memory::PageTableFlag::ReadWrite, false);
+                    PDE.set_address((u64)newPT);
                     newPD->entries[k] = PDE;
                 }
                 PDE = oldTable->entries[j];
-                PDE.set_address((u64)newPD >> 12);
-                if (readonly) PDE.set_flag(Memory::PageTableFlag::ReadWrite, false);
+                PDE.set_address((u64)newPD);
                 newPDP->entries[j] = PDE;
             }
             PDE = oldPageTable->entries[i];
-            PDE.set_address((u64)newPDP >> 12);
-            if (readonly) PDE.set_flag(Memory::PageTableFlag::ReadWrite, false);
+            PDE.set_address((u64)newPDP);
             newPageTable->entries[i] = PDE;
         }
         return newPageTable;
-    }
-
-    Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable) {
-        return clone_page_map_impl(oldPageTable, false);
     }
 
     void free_page_map(PageTable* pageTable) {

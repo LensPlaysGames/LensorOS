@@ -24,16 +24,17 @@
 
 namespace Memory {
     enum class PageTableFlag : u64 {
-        Present       = 1ull << 0,
-        ReadWrite     = 1ull << 1,
-        UserSuper     = 1ull << 2,
-        WriteThrough  = 1ull << 3,
-        CacheDisabled = 1ull << 4,
-        Accessed      = 1ull << 5,
-        Dirty         = 1ull << 6,
-        LargerPages   = 1ull << 7,
-        Global        = 1ull << 8,
-        NX            = 1ull << 63,
+        Present = u64(1) << 0,
+        ReadWrite = u64(1) << 1,
+        UserSuper = u64(1) << 2,
+        WriteThrough = u64(1) << 3,
+        CacheDisabled = u64(1) << 4,
+        Accessed = u64(1) << 5,
+        Dirty = u64(1) << 6,
+        LargerPages = u64(1) << 7,
+        Global = u64(1) << 8,
+        Lensor_CopyOnWrite = u64(1) << 9,
+        NX = u64(1) << 63,
     };
 
     class PageMapIndexer {

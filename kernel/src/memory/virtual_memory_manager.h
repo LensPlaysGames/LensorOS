@@ -102,6 +102,22 @@ namespace Memory {
      */
     Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable);
 
+    /// Return the base address of a near-exact copy of the given page map.
+    /// The difference being that the copy will have all of the "write"
+    /// sections marked as readonly. If a process attempts to write to
+    /// these pages, it will cause a specific kind of page fault; we can
+    /// detect that kind of page fault, and instead of having it be an
+    /// error, we can use that time in kernel mode to actually allocate a
+    /// page of physical memory for the process, add it as a region to free
+    /// when it's destroyed, overwrite the virtual address mapping to the
+    /// new physical region, and *then* perform the write. This means that
+    /// all pages of memory that don't get written to by a process can be
+    /// shared by all processes; for example, the `.text` section of libc
+    /// that is in every single executable will no longer be copied in
+    /// physical memory; it will have one copy that lots of processes point
+    /// at with virtual addresses.
+    Memory::PageTable* clone_page_map_copy_on_write(Memory::PageTable* oldPageTable);
+
     /* Free the physical memory used to describe the given page table.
      * DO NOT try to free the currently active page map!
      */
