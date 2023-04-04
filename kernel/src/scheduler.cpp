@@ -309,8 +309,7 @@ namespace Scheduler {
             :: "r"(cpu->Frame.ss)
             : "rax"
             );
-        // Eventually, FS and GS will be used for TLS, or Thread Local
-        // Storage.
+        // Eventually, FS and GS will be used for TLS, or Thread Local Storage.
         // Update FS and GS to SS.
         cpu->FS = cpu->Frame.ss;
         cpu->GS = cpu->Frame.ss;
@@ -319,18 +318,15 @@ namespace Scheduler {
     /// Called from `irq0_handler` in `scheduler.asm`
     /// A stupid simple round-robin process switcher.
     void switch_process(CPUState* cpu) {
+        // Save CPU state into process
         memcpy(&CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
 
-        // TODO: Save extra context depending on system features
+        // Save extra context depending on system features
         // (i.e. xmm registers with fxsave/fxrestore)
-        // I will be curious as to where we store the buffers for these;
-        // a member in Process seems a little platform-dependant.
         if (SYSTEM->cpu().fxsr_enabled()) {
-            // Get 512-byte aligned address.
-            usz i = (512 - ((usz)&CurrentProcess->value()->CPUExtra[0] % 512)) % 512;
             //std::print("Saving FPU state using fxsave64 at {}...\n", addr);
             asm volatile("fxsave64 %0\n\t"
-                         :: "m"(CurrentProcess->value()->CPUExtra[i])
+                         :: "m"(CurrentProcess->value()->CPUExtra[0])
                          );
             CurrentProcess->value()->CPUExtraSet = true;
             //std::print("Saved fpu state using fxsave at {}...\n", addr);

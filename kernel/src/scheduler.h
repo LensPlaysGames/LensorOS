@@ -113,12 +113,8 @@ struct Process {
 
     /// Data for extra CPU info (fxsave, etc).
     /// NOTE: fxsave and friends leave bytes 464:511 available for software use.
-    /// NOTE: Although fxsave only requires 512 bytes of memory, we
-    /// need to store more here to make sure we can get an 16-byte-aligned
-    /// address to a 512 byte region... We could fix this by using an align
-    /// attribute and implementing proper alignment on the kernel heap.
-    u8 CPUExtra[1023] = {0};
-    u8 CPUExtraSet = false;
+    alignas(16) u8 CPUExtra[512] = {0};
+    bool CPUExtraSet = false;
 
     Memory::PageTable* CR3 { nullptr };
 
