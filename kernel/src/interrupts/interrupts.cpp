@@ -270,12 +270,14 @@ void page_fault_handler(InterruptFrameError* frame) {
     // remap the virtual address in the page table to point to the new
     // region with the copied data.
     /*
-    if ((frame->error & (u64)PageFaultErrorCode::UserSuper) > 0 &&
+    if ((frame->error & (u64)PageFaultErrorCode::Present) > 0 &&
+        (frame->error & (u64)PageFaultErrorCode::UserSuper) > 0 &&
         (frame->error & (u64)PageFaultErrorCode::ReadWrite) > 0) {
         std::print("  From ring 3\n");
         std::print("  Write\n");
 
         // TODO: Validate pointer is inside a memory region of the current process
+
         Memory::PageMapIndexer indexer(address);
         Memory::PageDirectoryEntry PDE;
         PDE = ((Memory::PageTable*)cr3)->entries[indexer.page_directory_pointer()];
@@ -359,10 +361,10 @@ void page_fault_handler(InterruptFrameError* frame) {
     else Memory::print_page_map((Memory::PageTable*)cr3);
 
     /* US RW P - Description
-     * 0  0  0 - Supervisory process tried to read a non-present page entry
-     * 0  0  1 - Supervisory process tried to read a page and caused a protection fault
-     * 0  1  0 - Supervisory process tried to write to a non-present page entry
-     * 0  1  1 - Supervisory process tried to write a page and caused a protection fault
+     * 0  0  0 - Supervisor process tried to read a non-present page entry
+     * 0  0  1 - Supervisor process tried to read a page and caused a protection fault
+     * 0  1  0 - Supervisor process tried to write to a non-present page entry
+     * 0  1  1 - Supervisor process tried to write a page and caused a protection fault
      * 1  0  0 - User process tried to read a non-present page entry
      * 1  0  1 - User process tried to read a page and caused a protection fault
      * 1  1  0 - User process tried to write to a non-present page entry
