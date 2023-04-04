@@ -155,7 +155,7 @@ void kstage1(BootInfo* bInfo) {
     // Don't even attempt to boot unless boot info exists.
     if (bInfo == nullptr)
         while (true)
-            asm ("hlt");
+            asm volatile ("hlt");
 
     /* Tell x86_64 CPU where the GDT is located by
      * populating and loading a GDT descriptor.
