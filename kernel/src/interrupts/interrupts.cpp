@@ -240,8 +240,7 @@ void mouse_handler(InterruptFrame* frame) {
 __attribute__((interrupt))
 void divide_by_zero_handler(InterruptFrame* frame) {
     panic(frame, "Divide by zero detected!");
-    while (true)
-        asm ("hlt");
+    hang();
 }
 
 enum class PageFaultErrorCode {
@@ -361,16 +360,13 @@ void page_fault_handler(InterruptFrameError* frame) {
     Vector2<u64> drawPosition = { PanicStartX, PanicStartY };
     gRend.puts(drawPosition, std::format("Faulty Address: {:#016x}", address), 0x00000000);
     gRend.swap({ PanicStartX, PanicStartY }, { 1024, 128 } );
-    while (true)
-        asm volatile ("hlt");
+    hang();
 }
 
 __attribute__((interrupt))
 void double_fault_handler(InterruptFrameError* frame) {
     panic(frame, "Double fault detected!");
-    while (true) {
-        asm ("hlt");
-    }
+    hang();
 }
 
 __attribute__((interrupt))
@@ -411,8 +407,7 @@ void general_protection_fault_handler(InterruptFrameError* frame) {
         std::print("  LDT");
 
     std::print(" Selector Index: {:x}\n", (frame->error & 0b1111'1111'1111'1000) >> 3);
-    while (true)
-        asm ("hlt");
+    hang();
 }
 
 __attribute__((interrupt))
@@ -445,8 +440,7 @@ void simd_exception_handler(InterruptFrame* frame) {
     else if (mxcsr & 0b01000000)
         panic(frame, "SIMD fault detected (Denormals are Zero)!");
     else panic(frame, "Unknown SIMD fault");
-    while (true)
-        asm ("hlt");
+    hang();
 }
 
 void remap_pic() {

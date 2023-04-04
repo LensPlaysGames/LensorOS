@@ -265,8 +265,7 @@ namespace Scheduler {
                 // FIXME: I honestly don't know how to handle this correctly.
                 // Hang forever.
                 std::print("[SCHED]: I don't know what to do when there are no processes!\n");
-                while (true)
-                    asm ("hlt");
+                hang();
             }
         }
         return NextProcess;
@@ -387,9 +386,7 @@ pid_t CopyUserspaceProcess(Process* original) {
         if (!newMemoryPages) {
             // Out of memory.
             panic("OOM while copying process' regions...");
-            while (true) {
-                asm volatile ("hlt");
-            }
+            hang();
         }
         newMemory.paddr = (void*)newMemoryPages;
 

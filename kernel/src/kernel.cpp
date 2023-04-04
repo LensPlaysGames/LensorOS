@@ -86,6 +86,6 @@ extern "C" void kmain(BootInfo* bInfo) {
         Scheduler::PageMapsToFree.clear();
     }
 
-    // HALT LOOP (KERNEL INACTIVE).
-    for (;;) asm volatile ("hlt");
+    // KERNEL INACTIVE
+    hang();
 }

@@ -72,3 +72,8 @@ void panic(InterruptFrameError* frame, const char* panicMessage) {
     // Update entire bottom-right of screen starting at (PanicStartX, PanicStartY).
     gRend.swap({PanicStartX, PanicStartY}, {80000, 80000});
 }
+
+void hang() {
+    while (true)
+        asm volatile ("hlt");
+}

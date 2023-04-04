@@ -199,7 +199,7 @@ void out(const u8* str, u64 numberOfBytes) {
     if (numberOfBytes > 1'000'000'000'000llu) {
         std::print("[UART]: Refusing to output more than 1'000'000'000'000 bytes\n");
         panic("Buffer overflow");
-        for (;;) asm volatile ("hlt");
+        hang();
     }
 
     while (numberOfBytes > 0) {

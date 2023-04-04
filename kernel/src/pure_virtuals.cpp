@@ -23,5 +23,5 @@
 
 extern "C" void __cxa_pure_virtual() {
     panic("Pure virtual function called!");
-    for (;;) asm volatile ("hlt");
+    hang();
 }

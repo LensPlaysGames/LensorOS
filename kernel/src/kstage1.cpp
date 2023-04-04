@@ -154,8 +154,7 @@ void kstage1(BootInfo* bInfo) {
 
     // Don't even attempt to boot unless boot info exists.
     if (bInfo == nullptr)
-        while (true)
-            asm volatile ("hlt");
+        hang();
 
     /* Tell x86_64 CPU where the GDT is located by
      * populating and loading a GDT descriptor.
@@ -344,7 +343,7 @@ void kstage1(BootInfo* bInfo) {
     if (!SystemCPU->sse_enabled()) {
         std::print("[kstage1]: {SSE is not enabled!}\n", __RED);
         std::print("[kstage1]: {Your CPU doesn’t support SSE. Please recompile the kernel without SSE support.}\n", __RED);
-        for (;;) asm volatile ("hlt");
+        hang();
     }
 #endif
 

@@ -38,4 +38,6 @@ void panic(InterruptFrameError*, const char* panicMessage);
 
 #define ASSERT(cond, msg) if (!(cond)) panic("Assertion \"" #cond "\" failed: " msg)
 
+void hang();
+
 #endif

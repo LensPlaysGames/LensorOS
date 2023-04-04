@@ -97,7 +97,7 @@ auto PipeDriver::open(std::string_view path) -> std::shared_ptr<FileMetadata> {
     // FIXME: All horribly wrong
 
     panic("TODO: Support opening named pipes");
-    while (true) asm volatile("hlt");
+    hang();
 
     PipeBuffer* pipe = nullptr;
     for (auto& existing_pipe : PipeBuffers)

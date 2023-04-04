@@ -256,8 +256,7 @@ namespace Memory {
             std::print("\033[31mERROR:\033[0m "
                        "Could not find free memory segment during "
                        "physical memory manager intialization.");
-            while (true)
-                asm ("hlt");
+            hang();
         }
         DBGMSG("Found initial free memory segment ({}KiB) at {}\n"
                , TO_KiB(largestFreeMemorySegmentPageCount * PAGE_SIZE)
