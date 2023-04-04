@@ -282,26 +282,26 @@ void page_fault_handler(InterruptFrameError* frame) {
     Memory::print_pde_flags(PDE);
     std::print("\n");
 
-    auto* PDP = (Memory::PageTable*)((u64)PDE.address() << 12);
+    auto* PDP = (Memory::PageTable*)PDE.address();
     PDE = PDP->entries[indexer.page_directory()];
     std::print("3rd lvl permissions | ");
     Memory::print_pde_flags(PDE);
     std::print("\n");
 
-    auto* PD = (Memory::PageTable*)((u64)PDE.address() << 12);
+    auto* PD = (Memory::PageTable*)PDE.address();
     PDE = PD->entries[indexer.page_table()];
     std::print("2nd lvl permissions | ");
     Memory::print_pde_flags(PDE);
     std::print("\n");
 
-    auto* PT = (Memory::PageTable*)((u64)PDE.address() << 12);
+    auto* PT = (Memory::PageTable*)PDE.address();
     PDE = PT->entries[indexer.page()];
     std::print("1st lvl permissions | ");
     Memory::print_pde_flags(PDE);
     std::print("\n");
 
     std::print("PHYS {:#016x} at VIRT {:#016x}\n",
-               u64(PDE.address() << 12),
+               u64(PDE.address()),
                u64(address));
 
     if ((frame->error & (u64)PageFaultErrorCode::ProtectionKeyViolation) > 0)
