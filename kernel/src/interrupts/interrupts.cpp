@@ -260,6 +260,8 @@ void page_fault_handler(InterruptFrameError* frame) {
     // Collect faulty address as soon as possible (it may be lost quickly).
     u64 address;
     asm volatile ("mov %%cr2, %0" : "=r" (address));
+    u64 cr3;
+    asm volatile ("mov %%cr3, %0" : "=r" (cr3));
 
     // TODO: Detect user process (ring 3) writing to a page that is
     // marked copy on write that is also within one of the process'
@@ -267,12 +269,38 @@ void page_fault_handler(InterruptFrameError* frame) {
     // a newly allocated physical page (maybe the whole region?), then
     // remap the virtual address in the page table to point to the new
     // region with the copied data.
+    /*
+    if ((frame->error & (u64)PageFaultErrorCode::UserSuper) > 0 &&
+        (frame->error & (u64)PageFaultErrorCode::ReadWrite) > 0) {
+        std::print("  From ring 3\n");
+        std::print("  Write\n");
+
+        // TODO: Validate pointer is inside a memory region of the current process
+        Memory::PageMapIndexer indexer(address);
+        Memory::PageDirectoryEntry PDE;
+        PDE = ((Memory::PageTable*)cr3)->entries[indexer.page_directory_pointer()];
+        auto* PDP = (Memory::PageTable*)PDE.address();
+        PDE = PDP->entries[indexer.page_directory()];
+        auto* PD = (Memory::PageTable*)PDE.address();
+        PDE = PD->entries[indexer.page_table()];
+        auto* PT = (Memory::PageTable*)PDE.address();
+        PDE = PT->entries[indexer.page()];
+
+        std::print("PHYS {:#016x} at VIRT {:#016x}\n",
+                   u64(PDE.address()),
+                   u64(address));
+
+        // TODO: Copy from physical `PDE.address()` into a newly
+        // allocated physical page, then update the PDE address with
+        // that new physical address. Also update the page's flags to
+        // make it writable, as well as no longer copy-on-write.
+    }
+    */
+
     // TODO: Figure out how to perform memory write that caused this
     // page fault again (or if we can just return and that will happen).
 
     std::print("  Faulty Address: {:#016x}\n", address);
-    u64 cr3;
-    asm volatile ("mov %%cr3, %0" : "=r" (cr3));
     std::print("  PageTable Address: {:#016x}\n", cr3);
 
     Memory::PageMapIndexer indexer(address);
