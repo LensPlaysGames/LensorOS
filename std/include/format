@@ -506,9 +506,9 @@ struct formatter<bool, _Char> {
 };
 
 /// Disallow formatting other char types.
-template <__char _C, typename _Char>
-requires (not std::is_same_v<_C, _Char>)
-struct formatter<_C, _Char> { formatter() = delete; };
+template <__char _Character, typename _Char>
+requires (not std::is_same_v<_Character, _Char>)
+struct formatter<_Character, _Char> { formatter() = delete; };
 
 /// Void*/nullptr formatter.
 template <__abstract_pointer _Ty, typename _Char>

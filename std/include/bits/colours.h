@@ -20,17 +20,6 @@
 #ifndef _LIBC_COLOURS_H
 #define _LIBC_COLOURS_H
 
-#ifdef __lensor__
-#define _RR ""
-#define _R ""
-#define _G ""
-#define _Y ""
-#define _B ""
-#define _M ""
-#define _C ""
-#define _W ""
-#define _N ""
-#else
 #define _RR "\033[1;31m"
 #define _R "\033[31m"
 #define _G "\033[32m"
@@ -40,6 +29,5 @@
 #define _C "\033[36m"
 #define _W "\033[37m"
 #define _N "\033[m"
-#endif
 
 #endif // _LIBC_COLOURS_H
