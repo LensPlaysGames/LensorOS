@@ -150,9 +150,8 @@ namespace Memory {
         PDE.set_flag(PageTableFlag::Global,        global);
         //PDE.set_flag(PageTableFlag::NX,            noExecute);
         PT->entries[indexer.page()] = PDE;
-        if (debug == ShowDebug::Yes) {
-            std::print("  \033[32mMapped\033[0m\n\n");
-        }
+        if (debug == ShowDebug::Yes)
+            std::print("  {Mapped}\n\n", __GREEN);
     }
 
     void map(void* virtualAddress, void* physicalAddress, u64 mappingFlags, ShowDebug debug) {
@@ -219,7 +218,7 @@ namespace Memory {
     Memory::PageTable* clone_page_map_copy_on_write(Memory::PageTable* oldPageTable) {
         auto make_pde_cow = [](Memory::PageDirectoryEntry& pde) {
             if (pde.flag(Memory::PageTableFlag::ReadWrite)) {
-                // Unset write flag; this means any writes to this page will cause a page fault (good).
+                // Unset write flag; this means any writes to this page will cause a page fault.
                 pde.set_flag(Memory::PageTableFlag::ReadWrite, false);
                 // Set the "copy on write" flag. This will allow the page fault to detect that it
                 // should actually copy this region, perform the write or whatever, and then return.

@@ -261,6 +261,15 @@ void page_fault_handler(InterruptFrameError* frame) {
     u64 address;
     asm volatile ("mov %%cr2, %0" : "=r" (address));
 
+    // TODO: Detect user process (ring 3) writing to a page that is
+    // marked copy on write that is also within one of the process'
+    // memories; in this case, we should copy the underlying page into
+    // a newly allocated physical page (maybe the whole region?), then
+    // remap the virtual address in the page table to point to the new
+    // region with the copied data.
+    // TODO: Figure out how to perform memory write that caused this
+    // page fault again (or if we can just return and that will happen).
+
     std::print("  Faulty Address: {:#016x}\n", address);
     u64 cr3;
     asm volatile ("mov %%cr3, %0" : "=r" (cr3));

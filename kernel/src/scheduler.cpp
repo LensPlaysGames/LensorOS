@@ -359,6 +359,9 @@ pid_t CopyUserspaceProcess(Process* original) {
     newProcess->ParentProcess = original->ProcessID;
 
     // Copy current page table (fork)
+    // TODO: Use clone_pag_map_copy_on_write, and remove "copy each
+    // memory region" section below. Or put it behind #ifdef
+    // LENSOR_OS_NO_COPY_ON_WRITE or smth
     auto* newPageTable = Memory::clone_page_map(original->CR3);
     if (newPageTable == nullptr) {
         std::print("Failed to clone current page map for new process page map.\n");
@@ -378,6 +381,7 @@ pid_t CopyUserspaceProcess(Process* original) {
     for (SinglyLinkedListNode<Memory::Region>* it = original->Memories.head(); it; it = it->next()) {
         Memory::Region& memory = it->value();
         Memory::Region newMemory{memory};
+        // FIXME: NO reason these have to be physically contiguous.
         usz newMemoryPages = usz(Memory::request_pages(memory.pages));
         if (!newMemoryPages) {
             // Out of memory.
