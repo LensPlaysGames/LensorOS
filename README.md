@@ -48,18 +48,25 @@ VirtualBox and VMWare Workstation Player.
 When the CMake build system is generated, it looks for QEMU on your
 system; if it finds it, it will add the following targets to the
 project. Invoke them to launch QEMU from the corresponding LensorOS
-boot media.
+boot media, after building it if it isn't up to date.
 
 The targets:
-- `run_qemu`    -- Straight from directory that mimics LensorOS.img (fastest)
+- `run_qemu`    -- Straight from directory that mimics LensorOS.img
 - `runimg_qemu` -- LensorOS.img
-- `runhda_qemu` -- LensorOS.bin
 - `runiso_qemu` -- LensorOS.iso
+- `runhda_qemu` -- LensorOS.bin (most common)
 
-Assuming the CMake build system was generated in the `kernel/bld/`
+For targets that do not currently support GPT partitions (i.e. iso,
+img, and straight from directory), *there is no userspace available,
+really*. I mean, it's possible, but you would have to modify things
+to put userspace processes and libraries in the boot partition instead
+of in the userspace data partition, and then also modify the kernel to
+load them from there.
+
+Assuming the CMake build system was generated in the `bld/`
 subdirectory, invoke like:
 ```sh
-cmake --build kernel/bld --target <name of target>
+cmake --build bld --target <name of target>
 ```
 
 #### VirtualBox
@@ -98,7 +105,7 @@ cmake --build kernel/bld --target <name of target>
     1. Select `New CD/DVD` on the left, then click `Advanced...` on the right.
     2. Select `SATA`, then click `OK`.
     3. On the right, select `Use ISO image file`, and then click `Browse...`.
-    4. Select the `LensorOS.iso` image file (located in `kernel/bin/`).
+    4. Select the `LensorOS.iso` image file (located in `bin/`).
     5. Select the hard drive that we skipped configuring in the list on the left.
     6. Remove the hard drive using the `Remove` button near the bottom center.
     7. Remove any and all network adapters and sound cards in the same manner.
@@ -173,8 +180,15 @@ However, twenty or so years ago, GNU decided to write custom relocation
 linker scripts that create PE32+ executables from ELF executables. This
 means that a compiler that generates ELF executables is used, then that
 executable is transformed into a PE32+ executable with the proper
-subsystem for an EFI application. Luckily, all of this is handled by a
-Makefile.
+subsystem for an EFI application. Luckily, all of this is handled by the
+build system.
+
+Build the bootloader and it's dependencies (target exists on *Unix only*):
+```sh
+cmake --build bld --target bootloader
+```
+
+Alternatively, you can run the bootloader build system manually.
 
 Build the dependencies for the bootloader:
 ```sh
@@ -245,7 +259,7 @@ generation, as well as their dependencies listed underneath each.
 - `image_raw` --
   Combine built executables and resources to generate UEFI-compatible FAT32 boot media.
   - The built bootloader EFI application at `gnu-efi/x86_64/bootloader/main.efi`.
-  - `Kernel` build target (relies on `kernel/bin/kernel.elf`).
+  - `Kernel` build target (relies on `boot/LensorOS/kernel.elf`).
   - dd -- Native command on Unix
     - On Windows, use one of the following options:
       - [MinGW installer to get MSYS coreutils ext package](https://osdn.net/projects/mingw/)
@@ -283,13 +297,13 @@ generation, as well as their dependencies listed underneath each.
 As an example, a FAT32 formatted UEFI-compatible boot image may be
 generated using the following command:
 ```sh
-cmake --build kernel/bld --target image_raw
+cmake --build bld --target image_raw
 ```
 
 It takes just one command to build the LensorOS kernel, generate new
 boot media, and then launch the QEMU virtual machine into LensorOS.
 ```sh
-cmake --build kernel/bld --target runimg_qemu
+cmake --build bld --target runhda_qemu
 ```
 
 ---
