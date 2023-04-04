@@ -120,7 +120,8 @@ class FileAllocationTableDriver final : public FilesystemDriver {
     auto for_each_dir_entry() -> DirIteratorHelper { return DirIteratorHelper{*this}; }
     auto for_each_dir_entry_in(u32 directoryCluster) -> DirIteratorHelper { return DirIteratorHelper{*this, directoryCluster}; }
 
-    /// NOTE: If directoryCluster == -1, it will be replaced with the directory cluster of the root directory.
+    /// NOTE: If directoryCluster == -1 (default), it will be replaced
+    /// with the directory cluster of the root directory.
     std::shared_ptr<FileMetadata> traverse_path(std::string_view raw_path, u32 directoryCluster = -1);
 
 public:

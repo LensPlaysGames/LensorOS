@@ -216,12 +216,10 @@ auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename
             return path;
         }
     } else {
-        // Name is too long, have to do computer-generated short file
-        // name, or look for long file name entry... it really depends
-        // on where this is called from.
-        std::print("[FAT]: TODO: translate_filename() computer-generated 8.3 filenames... (path long)\n");
-
-        return "INVALID_TRANSLATION";
+        // Just return the path, unchanged, as it will be compared
+        // against the long-file-name and we should still be able to
+        // find it.
+        return path;
     }
     // UNREACHABLE();
 }
