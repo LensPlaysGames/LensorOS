@@ -109,7 +109,8 @@ namespace ELF {
 
     inline bool LoadUserspaceElf64Process(Process* process, Memory::PageTable* pageTable,
                                           ProcessFileDescriptor fd, const Elf64_Ehdr& elfHeader,
-                                          const std::vector<std::string_view>& args = {}) {
+                                          const std::vector<std::string_view>& args = {},
+                                          const std::vector<std::string_view>& env = {}) {
         VFS& vfs = SYSTEM->virtual_filesystem();
 
         size_t stack_flags = 0;
@@ -205,6 +206,7 @@ namespace ELF {
         }
         constexpr u64 UserProcessStackSizePages = 4;
         constexpr u64 UserProcessStackSize = UserProcessStackSizePages * PAGE_SIZE;
+        // FIXME: There's no reason this memory needs to be physically contiguous.
         u64 newStackBottom = (u64)Memory::request_pages(UserProcessStackSizePages);
         if (newStackBottom == 0) {
             std::print("[ELF]: Couldn't allocate stack for new userspace process\n");
@@ -221,9 +223,18 @@ namespace ELF {
                                    UserProcessStackSize,
                                    stack_flags);
 
-        // TODO: Max argument length?
+        // TODO: Max argument length? Maximum environment length?
 
-        // TODO: envp
+        // Copy environment contents to the stack, keeping track of addresses.
+        std::vector<usz> envp_addresses;
+        for (auto str : env) {
+            usz size = str.size() + 1;
+            size += 16 - (size & 15);
+            stack_top_address -= size;
+            envp_addresses.push_back(stack_top_address);
+            memcpy(reinterpret_cast<void*>(stack_top_address), str.data(), str.size());
+            reinterpret_cast<char*>(stack_top_address)[str.size()] = 0;
+        }
 
         // Copy arguments contents to the stack, keeping track of addresses.
         std::vector<u64> argv_addresses;
@@ -236,9 +247,22 @@ namespace ELF {
             reinterpret_cast<char*>(stack_top_address)[str.size()] = 0;
         }
 
-        if (argv_addresses.size() % 2 != 0) {
+        // Align stack to 16 if it will be misaligned by pushing the
+        // addresses on to the stack.
+        // NOTE: `+ 1`s to account for NULL terminators of envp and argv, as well as argc.
+        if ((envp_addresses.size() + 1 + argv_addresses.size() + 1 + 1) % 2 != 0) {
             stack_top_address -= 8;
             *reinterpret_cast<u64*>(stack_top_address) = 0;
+        }
+
+        // Write null pointer to end of envp.
+        stack_top_address -= sizeof(char*);
+        *reinterpret_cast<char**>(stack_top_address) = nullptr;
+
+        // Write envp addresses to the stack.
+        for (auto it = envp_addresses.rbegin(); it != envp_addresses.rend(); ++it) {
+            stack_top_address -= sizeof(char*);
+            *reinterpret_cast<u64*>(stack_top_address) = *it;
         }
 
         // Write null pointer to end of argv.
