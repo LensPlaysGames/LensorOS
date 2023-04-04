@@ -636,6 +636,79 @@ struct formatter<_Type, _Char> {
 };
 
 
+#ifdef __lensor__
+// BEGIN LENSOR COLOR EXTENSIONS
+
+struct __FG_COLOR {
+    string_view __fg_specifier{""};
+
+    __FG_COLOR() = default;
+    __FG_COLOR(const string_view& __fg_spec) : __fg_specifier(__fg_spec){}
+};
+/// __FG_COLOR formatter
+template <typename _Char>
+struct formatter<__FG_COLOR, _Char> {
+    string_view __data{};
+    bool __clear_after{ true };
+
+    constexpr auto parse(basic_format_parse_context<_Char>& __ctx) {
+        // Just {} with __FG_COLOR means we should just set the terminal color to red.
+        if (*__ctx.begin() == '}') {
+            __clear_after = false;
+            return __ctx.begin();
+        }
+        size_t offset{ 0 };
+        auto __it = __ctx.begin();
+        for (; *__it && *__it != '}'; ++__it)
+            ++offset;
+        __data = string_view{__ctx.begin(), offset};
+        return __it;
+    }
+
+    template <typename _Ctx>
+    auto format(__FG_COLOR __fg_color, _Ctx& __ctx) {
+        __ctx.out().append(__fg_color.__fg_specifier);
+        if (__clear_after) {
+            __ctx.out().append(__data);
+            __ctx.out().append("\033[39m");
+        }
+        return __ctx.out();
+    }
+};
+
+#define __BG_BLACK "\033[40m"
+#define __BG_RED "\033[41m"
+#define __BG_GREEN "\033[42m"
+#define __BG_YELLOW "\033[43m"
+#define __BG_BLUE "\033[44m"
+#define __BG_MAGENTA "\033[45m"
+#define __BG_CYAN "\033[46m"
+#define __BG_WHITE "\033[47m"
+#define __BG_DEFAULT "\033[49m"
+
+#define __FG_BLACK "\033[30m"
+#define __FG_RED "\033[31m"
+#define __FG_GREEN "\033[32m"
+#define __FG_YELLOW "\033[33m"
+#define __FG_BLUE "\033[34m"
+#define __FG_MAGENTA "\033[35m"
+#define __FG_CYAN "\033[36m"
+#define __FG_WHITE "\033[37m"
+#define __FG_DEFAULT "\033[39m"
+
+#define __BLACK   std::__FG_COLOR{__FG_BLACK}
+#define __RED     std::__FG_COLOR{__FG_RED}
+#define __GREEN   std::__FG_COLOR{__FG_GREEN}
+#define __YELLOW  std::__FG_COLOR{__FG_YELLOW}
+#define __BLUE    std::__FG_COLOR{__FG_BLUE}
+#define __MAGENTA std::__FG_COLOR{__FG_MAGENTA}
+#define __CYAN    std::__FG_COLOR{__FG_CYAN}
+#define __WHITE   std::__FG_COLOR{__FG_WHITE}
+#define __DEFAULT std::__FG_COLOR{__FG_DEFAULT}
+
+#endif // END LENSOR COLOR EXTENSIONS
+
+
 /// ===========================================================================
 ///  Formatting functions – Implementation.
 /// ===========================================================================

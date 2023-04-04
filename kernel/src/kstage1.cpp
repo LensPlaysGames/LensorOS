@@ -174,8 +174,8 @@ void kstage1(BootInfo* bInfo) {
     // Setup serial communications chip to allow for debug messages as soon as possible.
     UART::initialize();
     std::print("\n"
-             "!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\n"
-             "\n");
+               "!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\n"
+               "\n");
 
     // Setup physical memory allocator from EFI memory map.
     Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
@@ -191,9 +191,9 @@ void kstage1(BootInfo* bInfo) {
     {// Initialize the Real Time Clock.
         gRTC = RTC();
         gRTC.set_periodic_int_enabled(true);
-        std::print("[kstage1]: \033[32mReal Time Clock (RTC) initialized\033[0m\n\033[1;33m"
-                   "Now is {}:{}:{} on {}-{}-{}"
-                   "\033[0m\n\n"
+        std::print("[kstage1]: {Real Time Clock (RTC) initialized}\n"
+                   "\033[1;33mNow is {}:{}:{} on {}-{}-{}\033[0m\n\n"
+                   , __GREEN
                    , gRTC.Time.hour
                    , gRTC.Time.minute
                    , gRTC.Time.second
@@ -206,7 +206,7 @@ void kstage1(BootInfo* bInfo) {
     // Create basic framebuffer renderer.
     std::print("[kstage1]: Setting up Graphics Output Protocol Renderer\n");
     gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
-    std::print("  \033[32mSetup Successful\033[0m\n\n");
+    std::print("  {Setup Successful}\n\n", __GREEN);
     draw_boot_gfx();
     // Create basic text renderer for the keyboard.
     Keyboard::gText = Keyboard::BasicTextRenderer();
@@ -230,7 +230,7 @@ void kstage1(BootInfo* bInfo) {
     bool supportCPUID = static_cast<bool>(cpuid_support());
     if (supportCPUID) {
         SystemCPU->set_cpuid_capable();
-        std::print("[kstage1]: \033[32mCPUID is supported\033[0m\n");
+        std::print("[kstage1]: {CPUID is supported}\n", __GREEN);
         char* cpuVendorID = cpuid_string(0);
         SystemCPU->set_vendor_id(cpuVendorID);
         std::print("  CPU Vendor ID: {}\n", std::string_view{SystemCPU->get_vendor_id(), 12});
@@ -342,8 +342,8 @@ void kstage1(BootInfo* bInfo) {
     // Make sure SSE is enabled.
 #ifdef __SSE__
     if (!SystemCPU->sse_enabled()) {
-        std::print("[kstage1]: \033[31mSSE is not enabled!\033[0m\n");
-        std::print("[kstage1]: \033[31mYour CPU doesn’t support SSE. Please recompile the kernel without SSE support.\033[0m\n");
+        std::print("[kstage1]: {SSE is not enabled!}\n", __RED);
+        std::print("[kstage1]: {Your CPU doesn’t support SSE. Please recompile the kernel without SSE support.}\n", __RED);
         for (;;) asm volatile ("hlt");
     }
 #endif
@@ -558,11 +558,16 @@ void kstage1(BootInfo* bInfo) {
 
     // Initialize the Programmable Interval Timer.
     gPIT = PIT();
-    std::print("[kstage1]: \033[32mProgrammable Interval Timer Initialized\033[0m\n"
-           "  Channel 0, H/L Bit Access\n"
-           "  Rate Generator, BCD Disabled\n"
-           "  Periodic interrupts at \033[33m{}hz\033[0m.\n"
-           "\n", static_cast<double>(PIT_FREQUENCY));
+    std::print("[kstage1]: {Programmable Interval Timer Initialized}\n"
+               "  Channel 0, H/L Bit Access\n"
+               "  Rate Generator, BCD Disabled\n"
+               "  Periodic interrupts at {}{}hz{}.\n"
+               "\n"
+               , __GREEN
+               , __YELLOW
+               , static_cast<double>(PIT_FREQUENCY)
+               , __FG_DEFAULT
+               );
 
 
     for (auto& dev : SYSTEM->Devices) {
@@ -683,5 +688,5 @@ void kstage1(BootInfo* bInfo) {
     // Allow interrupts to trigger.
     std::print("[kstage1]: Enabling interrupts\n");
     asm ("sti");
-    //std::print("[kstage1]: \033[32mInterrupts enabled\033[0m\n");
+    //std::print("[kstage1]: {Interrupts enabled}\n", __GREEN);
 }
