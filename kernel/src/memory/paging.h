@@ -75,13 +75,13 @@ namespace Memory {
     class PageDirectoryEntry {
     public:
         u64 address()  {
-            return (Value & 0x000ffffffffff000) >> 12;
+            return Value & 0x000ffffffffff000;
         }
 
         void set_address(u64 addr)  {
-            addr  &= 0x000000ffffffffff;
+            addr  &= 0x000ffffffffff000;
             Value &= 0xfff0000000000fff;
-            Value |= (addr << 12);
+            Value |= addr;
         }
 
         bool flag(PageTableFlag flag)  {

@@ -82,7 +82,7 @@ namespace Memory {
         if (!PDE.flag(PageTableFlag::Present)) {
             PDP = (PageTable*)request_page();
             memset(PDP, 0, PAGE_SIZE);
-            PDE.set_address((u64)PDP >> 12);
+            PDE.set_address((u64)PDP);
         }
         PDE.or_flag_if(PageTableFlag::Present,       present);
         PDE.or_flag_if(PageTableFlag::ReadWrite,     write);
@@ -95,14 +95,14 @@ namespace Memory {
         PDE.or_flag_if(PageTableFlag::Global,        global);
         //PDE.or_flag_if(PageTableFlag::NX,            noExecute);
         pageMapLevelFour->entries[indexer.page_directory_pointer()] = PDE;
-        PDP = (PageTable*)((u64)PDE.address() << 12);
+        PDP = (PageTable*)PDE.address();
 
         PDE = PDP->entries[indexer.page_directory()];
         PageTable* PD;
         if (!PDE.flag(PageTableFlag::Present)) {
             PD = (PageTable*)request_page();
             memset(PD, 0, PAGE_SIZE);
-            PDE.set_address((u64)PD >> 12);
+            PDE.set_address((u64)PD);
         }
         PDE.or_flag_if(PageTableFlag::Present,       present);
         PDE.or_flag_if(PageTableFlag::ReadWrite,     write);
@@ -115,14 +115,14 @@ namespace Memory {
         PDE.or_flag_if(PageTableFlag::Global,        global);
         //PDE.or_flag_if(PageTableFlag::NX,            noExecute);
         PDP->entries[indexer.page_directory()] = PDE;
-        PD = (PageTable*)((u64)PDE.address() << 12);
+        PD = (PageTable*)PDE.address();
 
         PDE = PD->entries[indexer.page_table()];
         PageTable* PT;
         if (!PDE.flag(PageTableFlag::Present)) {
             PT = (PageTable*)request_page();
             memset(PT, 0, PAGE_SIZE);
-            PDE.set_address((u64)PT >> 12);
+            PDE.set_address((u64)PT);
         }
         PDE.or_flag_if(PageTableFlag::Present,       present);
         PDE.or_flag_if(PageTableFlag::ReadWrite,     write);
@@ -135,10 +135,10 @@ namespace Memory {
         PDE.or_flag_if(PageTableFlag::Global,        global);
         //PDE.or_flag_if(PageTableFlag::NX,            noExecute);
         PD->entries[indexer.page_table()] = PDE;
-        PT = (PageTable*)((u64)PDE.address() << 12);
+        PT = (PageTable*)PDE.address();
 
         PDE = PT->entries[indexer.page()];
-        PDE.set_address((u64)physicalAddress >> 12);
+        PDE.set_address((u64)physicalAddress);
         PDE.set_flag(PageTableFlag::Present,       present);
         PDE.set_flag(PageTableFlag::ReadWrite,     write);
         PDE.set_flag(PageTableFlag::UserSuper,     user);
@@ -179,11 +179,11 @@ namespace Memory {
         PageMapIndexer indexer((u64)virtualAddress);
         PageDirectoryEntry PDE;
         PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
-        auto* PDP = (PageTable*)((u64)PDE.address() << 12);
+        auto* PDP = (PageTable*)PDE.address();
         PDE = PDP->entries[indexer.page_directory()];
-        auto* PD = (PageTable*)((u64)PDE.address() << 12);
+        auto* PD = (PageTable*)PDE.address();
         PDE = PD->entries[indexer.page_table()];
-        auto* PT = (PageTable*)((u64)PDE.address() << 12);
+        auto* PT = (PageTable*)PDE.address();
         PDE = PT->entries[indexer.page()];
         PDE.set_flag(PageTableFlag::Present, false);
         PT->entries[indexer.page()] = PDE;
@@ -238,7 +238,7 @@ namespace Memory {
                 return nullptr;
             }
             memset(newPDP, 0, PAGE_SIZE);
-            auto* oldTable = (Memory::PageTable*)((u64)PDE.address() << 12);
+            auto* oldTable = (Memory::PageTable*)PDE.address();
             for (u64 j = 0; j < 512; ++j) {
                 PDE = oldTable->entries[j];
                 if (PDE.flag(Memory::PageTableFlag::Present) == false)
@@ -250,7 +250,7 @@ namespace Memory {
                     return nullptr;
                 }
                 memset(newPD, 0, PAGE_SIZE);
-                auto* oldPD = (Memory::PageTable*)((u64)PDE.address() << 12);
+                auto* oldPD = (Memory::PageTable*)PDE.address();
                 for (u64 k = 0; k < 512; ++k) {
                     PDE = oldPD->entries[k];
                     if (PDE.flag(Memory::PageTableFlag::Present) == false)
@@ -262,7 +262,7 @@ namespace Memory {
                         return nullptr;
                     }
                     memset(newPT, 0, PAGE_SIZE);
-                    auto* oldPT = (Memory::PageTable*)((u64)PDE.address() << 12);
+                    auto* oldPT = (Memory::PageTable*)PDE.address();
                     //memcpy(newPT, oldPT, PAGE_SIZE);
                     for (u64 l = 0; l < 512; ++l) {
                         PDE = oldPT->entries[l];
@@ -311,7 +311,7 @@ namespace Memory {
             if (!PDE.flag(PageTableFlag::Present))
                 continue;
 
-            auto* PDP = (PageTable*)((u64)PDE.address() << 12);
+            auto* PDP = (PageTable*)PDE.address();
             // For some reason a ton of these addresses have all garbage in them...
             if ((usz)PDP == 0x000ffffffffff000 || (usz)PDP > Memory::total_ram() || (usz)PDP % PAGE_SIZE != 0)
                 continue;
@@ -323,7 +323,7 @@ namespace Memory {
                 if (!PDE.flag(PageTableFlag::Present))
                     continue;
 
-                auto* PD = (PageTable*)((u64)PDE.address() << 12);
+                auto* PD = (PageTable*)PDE.address();
                 if ((usz)PD == 0x000ffffffffff000 || (usz)PD > Memory::total_ram() || (usz)PD % PAGE_SIZE != 0)
                     continue;
 
@@ -334,7 +334,7 @@ namespace Memory {
                     if (!PDE.flag(PageTableFlag::Present))
                         continue;
 
-                    auto* PT = (PageTable*)((u64)PDE.address() << 12);
+                    auto* PT = (PageTable*)PDE.address();
                     if ((usz)PT == 0x000ffffffffff000 || (usz)PT > Memory::total_ram() || (usz)PT % PAGE_SIZE != 0)
                         continue;
 
