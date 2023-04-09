@@ -55,6 +55,7 @@
 #include <tss.h>
 #include <uart.h>
 
+#include <bit>
 #include <format>
 
 u8 idt_storage[0x1000];
@@ -683,8 +684,73 @@ void kstage1(BootInfo* bInfo) {
 
     SYSTEM->print();
 
+    struct EthernetFrameHeader {
+        u8 MACDestination[6];
+        u8 MACSource[6];
+        u16 Ethertype;
+    } __attribute__((packed));
+
+    struct ARPData {
+        /// HTYPE
+        u16 HardwareType;
+        /// PTYPE
+        u16 ProtocolType;
+        /// HLEN
+        u8 HardwareLength;
+        /// PLEN
+        u8 ProtocolLength;
+        /// OPER
+        /// 1 == request
+        /// 2 == reply
+        u16 Operation;
+        /// SHA
+        u8 SenderHardwareAddress[6];
+        /// SPA
+        /// "Internetwork address"
+        u8 SenderProtocolAddress[4];
+        u8 TargetHardwareAddress[6];
+        u8 TargetProtocolAddress[4];
+    } __attribute__((packed));
+
+    EthernetFrameHeader header;
+    ARPData arp;
+
+    /// Set Ethertype to ARP (address resolution protocol)
+    memset(&header.MACDestination, 0xff, 6);
+    memcpy(&header.MACSource, &gE1000.MACAddress, 6);
+    /// host to network byte order (ntohl)
+    header.Ethertype = std::byteswap(u16(0x0806));
+
+    /// Ethernet HTYPE is 1.
+    arp.HardwareType = std::byteswap(u16(1));
+    /// IPv4 is 0x8000.
+    arp.ProtocolType = std::byteswap(u16(0x0800));
+    /// Length of MAC address is 6 octets.
+    arp.HardwareLength = 6;
+    /// Length of IPv4 address is 4 octets.
+    arp.ProtocolLength = 4;
+    /// Request Operation is 1.
+    arp.Operation = std::byteswap(u16(1));
+
+    memcpy(arp.SenderHardwareAddress, &gE1000.MACAddress, 6);
+    arp.TargetProtocolAddress[0] = 192;
+    arp.TargetProtocolAddress[1] = 168;
+    arp.TargetProtocolAddress[2] = 1;
+    arp.TargetProtocolAddress[3] = 1;
+
+    constexpr usz buffer_size = sizeof(EthernetFrameHeader) + sizeof(ARPData);
+    u8* buffer = new u8[buffer_size];
+    memcpy(buffer, &header, sizeof(EthernetFrameHeader));
+    memcpy(buffer + sizeof(EthernetFrameHeader), &arp, sizeof(ARPData));
+
     // Allow interrupts to trigger.
     std::print("[kstage1]: Enabling interrupts\n");
     asm ("sti");
+
+    gE1000.write_raw(buffer, buffer_size);
+
+    delete[] buffer;
+
+
     //std::print("[kstage1]: {Interrupts enabled}\n", __GREEN);
 }
