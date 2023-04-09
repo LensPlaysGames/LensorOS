@@ -3,6 +3,25 @@
 #+description: What the fuck we should be doing for LensorOS in 2023
 #+created: <2023-01-12 Thu>
 
+* TODO Sockets for interprocess communication
+
+Basically, UNIX sockets.
+
+Here's the idea:
+- The Window Server opens a unix socket.
+- The Window Server binds the opened socket to ~/window~ or something similar.
+- The Window Server listens on the opened socket.
+- The Window Server waits for a connection to accept.
+- A GUI program opens a unix socket.
+- A GUI program connects the opened socket to ~/window~.
+- The Window Server accepts the connection
+- A GUI program writes a "new window" request.
+- The Window Server reads a new window request, and writes back the data pertaining to the window's framebuffer.
+- A GUI program now has it's window information; a framebuffer to write to, size, etc. New requests for size changes, position changes, and more could be made. It can also receive data from The Window Server (like events).
+
+
+[2023-04-09 Sun 13:33]
+
 * DONE E1000 :: Test interrupts
 
 Basically, there is an interrupt handler installed and supposedly some interrupts are enabled; it'd be great if we could somehow test this, but I don't know enough about networking to actually figure out how to trigger an interrupt.... lmao.
