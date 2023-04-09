@@ -855,7 +855,7 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 #define IMASK_LINK_STATUS_CHANGE (1 << 2)
 #define IMASK_RX_SEQUENCE_ERROR (1 << 3)
 #define IMASK_RX_DESC_MIN_THRESHOLD_HIT (1 << 4)
-#define IMASK_RX_FIFO_OVERRUN (1 << 6)
+#define IMASK_RX_OVERRUN (1 << 6)
 #define IMASK_RX_TIMER_INTERRUPT (1 << 7)
 #define IMASK_MDIO_ACCESS_COMPLETE (1 << 9)
 #define IMASK_RX_C_ORDERED_SETS (1 << 10)
@@ -2338,7 +2338,7 @@ E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
     write_command(REG_IMASK_CLEAR, 0xffffffff);
     write_command(REG_IMASK,
                   IMASK_RX_TIMER_INTERRUPT
-                  | IMASK_RX_FIFO_OVERRUN
+                  | IMASK_RX_OVERRUN
                   | IMASK_RX_DESC_MIN_THRESHOLD_HIT
                   | IMASK_RX_SEQUENCE_ERROR
                   | IMASK_LINK_STATUS_CHANGE
