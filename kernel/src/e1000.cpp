@@ -213,6 +213,9 @@
  * Extended Device Control Register (CTRL_EXT.EE_RST). This action will
  * also cause a reset.
  *
+ *
+ * HARDWARE OWNS ALL DESCRIPTORS BETWEEN [HEAD AND TAIL]. Any
+ * descriptor not in this range is owned by software.
  */
 
 /// VendorID for all: 8086
@@ -2143,6 +2146,8 @@ void E1000::initialise_rx() {
     /// descriptor in the descriptor ring and tail should point to one
     /// descriptor beyond the last valid descriptor in the descriptor
     /// ring.
+    /// HARDWARE OWNS ALL DESCRIPTORS BETWEEN [HEAD AND TAIL]. Any
+    /// descriptor not in this range is owned by software.
     write_command(REG_RXDESCHEAD, 0);
     write_command(REG_RXDESCTAIL, RXDescCount);
 
@@ -2262,26 +2267,45 @@ void E1000::handle_interrupt() {
         // descriptors that are no longer needed.
 
     }
+    /// Set when hardware processes a transmit descriptor with the RS
+    /// bit set (and possibly IDE set). If using delayed interrupts
+    /// (IDE set), the interrupt occurs after the timer expires.
     if (status & ICR_TX_DESC_WRITTEN_BACK) {
         status &= ~ICR_TX_DESC_WRITTEN_BACK;
         std::print("[E1000]: TX Written Back\n");
     }
+
+    /// Indicates that the descriptor ring has reached the threshold
+    /// specified in the Transmit Descriptor Control register.
     if (status & ICR_TX_DESC_LOW_THRESHOLD_HIT) {
         status &= ~ICR_TX_DESC_LOW_THRESHOLD_HIT;
         std::print("[E1000]: TX Low Threshold Hit\n");
     }
 
     /// Link Status Change
+    /// This bit is set each time the link status changes (either from
+    /// up to down, or from down to up). This bit is affected by the
+    /// internal link indication when configured for internal PHY mode.
     if (status & ICR_LINK_STATUS_CHANGE) {
         status &= ~ICR_LINK_STATUS_CHANGE;
+        // TODO: I don't know if this is right, but I've seen it in
+        // 01000101's example driver.
         write_command(REG_CTRL, (read_command(REG_CTRL) | CTRL_SET_LINK_UP));
-        std::print("[E1000]: Link status changed!\n");
+        std::print("[E1000]: Link status changed! New link setup\n");
     }
 
     if (status & ICR_RX_OVERRUN) {
         status &= ~ICR_RX_OVERRUN;
         std::print("[E1000]: RX Overrun!\n");
     }
+
+    /// In TBI mode/internal SerDes1, incoming packets with a bad
+    /// delimiter sequence set this bit. In other 802.3 implementations,
+    /// this would be classified as a framing error. A valid sequence
+    /// consists of:
+    ///     idle -> SOF -> data -> pad (opt) EOF -> fill (opt) -> idle
+    /// This is a reserved bit for the 82541xx, 82547GI, 82547GIEI, 82540EP, and
+    /// 82540EM. Set to 0b.
     if (status & ICR_RX_SEQUENCE_ERROR) {
         status &= ~ICR_RX_SEQUENCE_ERROR;
         std::print("[E1000]: RX Sequence Error!\n");
