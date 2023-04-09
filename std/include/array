@@ -1,21 +1,21 @@
 /* Copyright 2022, Contributors To LensorOS.
-* All rights reserved.
-*
-* This file is part of LensorOS.
-*
-* LensorOS is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* LensorOS is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with LensorOS. If not, see <https://www.gnu.org/licenses
-*/
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
 
 #ifndef _LENSOROS_LIBC_ARRAY_
 #define _LENSOROS_LIBC_ARRAY_
@@ -24,14 +24,10 @@
 
 namespace std {
 template <typename _T, size_t _Sz>
-class array {
+struct array {
     _T __elems[_Sz ? _Sz : 1];
 
-public:
     using value_type = _T;
-
-    template <typename... _Args>
-    constexpr array(_Args&&... __args) : __elems{std::forward<_Args>(__args)...} {}
 
     constexpr _T* data() noexcept { return __elems; }
     constexpr const _T* data() const noexcept { return __elems; }
