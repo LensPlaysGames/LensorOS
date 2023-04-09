@@ -10,6 +10,8 @@
 #include <pci.h>
 #include <stdint.h>
 
+#include <array>
+#include <bit>
 #include <format>
 
 /* TODO: Move all this into documentation of some sort, somewhere else.
@@ -2363,7 +2365,31 @@ void E1000::handle_interrupt() {
             volatile RXDesc* rxDesc = RXDescPhysical + RXHead;
             if (rxDesc->Status & RXDesc::DONE
                 && rxDesc->Status & RXDesc::END_OF_PACKET) {
-                std::print("[E1000]: Packet received! (desc {})\n", RXHead);
+                std::array<u8,6> macDst;
+                std::copy((u8*)rxDesc->Address, ((u8*)rxDesc->Address) + 6, macDst.begin());
+                std::array<u8,6> macSrc;
+                std::copy((u8*)rxDesc->Address + 6, ((u8*)rxDesc->Address) + 12, macSrc.begin());
+                u16 ethertype = *((u16*)(rxDesc->Address + 12));
+                // TODO: ntohl  network to host byte order!
+                ethertype = std::byteswap(ethertype);
+
+                usz length = rxDesc->Length;
+
+                std::print("[E1000]: Packet received! (desc {})\n"
+                           "  Length: {}\n"
+                           "  Destination: {:2x}:{:2x}:{:2x}:{:2x}:{:2x}:{:2x}\n"
+                           "  Source:      {:2x}:{:2x}:{:2x}:{:2x}:{:2x}:{:2x}\n"
+                           "  Ethertype:   0x{:4x}\n"
+                           , RXHead
+                           , length
+                           , macDst.data()[0],macDst.data()[1]
+                           , macDst.data()[2],macDst.data()[3]
+                           , macDst.data()[4],macDst.data()[5]
+                           , macSrc.data()[0],macSrc.data()[1]
+                           , macSrc.data()[2],macSrc.data()[3]
+                           , macSrc.data()[4],macSrc.data()[5]
+                           , ethertype
+                           );
             }
 
             if (!(rxDesc->Status & RXDesc::DONE) || rxDesc->Errors) {
