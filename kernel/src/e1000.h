@@ -43,6 +43,12 @@ class E1000 {
         /// Should be written with 0b for future compatibility.
         volatile u8 ChecksumOffset;
         volatile u8 Command;
+        enum Status {
+            DONE = (1 << 0),
+            EXCESS_COLLISIONS = (1 << 1),
+            LATE_COLLISION = (1 << 2),
+            UNDERRUN = (1 << 3),
+        };
         volatile u8 Status;
         /// The Checksum start field (TDESC.CSS) indicates where to begin computing
         /// the checksum. The software must compute this offset to back out the bytes

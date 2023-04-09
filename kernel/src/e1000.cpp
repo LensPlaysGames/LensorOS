@@ -808,12 +808,12 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 #define ICR_TX_QUEUE_EMPTY (1 << 1)
 #define ICR_LINK_STATUS_CHANGE (1 << 2)
 #define ICR_RX_SEQUENCE_ERROR (1 << 3)
-#define ICR_RX_DESC_MINIMUM_THRESHOLD_REACHED (1 << 4)
+#define ICR_RX_DESC_MIN_THRESHOLD_HIT (1 << 4)
 #define ICR_RX_OVERRUN (1 << 6)
 #define ICR_RX_TIMER_INTERRUPT (1 << 7)
 #define ICR_MDIO_ACCESS_COMLETE (1 << 9)
 #define ICR_RX_CONFIGURATION (1 << 10)
-#define ICR_TX_DESC_LOW_THRESHOLD_HIT (1 << 15)
+#define ICR_TX_DESC_MIN_THRESHOLD_HIT (1 << 15)
 #define ICR_SMALL_RECEIVE_PACKET (1 << 16)
 /// Category:    Interrupt
 /// Permissions: R/W
@@ -863,7 +863,7 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 #define IMASK_MDIO_ACCESS_COMPLETE (1 << 9)
 #define IMASK_RX_C_ORDERED_SETS (1 << 10)
 #define IMASK_PHY_INTERRUPT (1 << 12)
-#define IMASK_TX_DESC_LOW_THRESHOLD_HIT (1 << 15)
+#define IMASK_TX_DESC_MIN_THRESHOLD_HIT (1 << 15)
 #define IMASK_RX_SMALL_PACKET_DETECTION (1 << 16)
 
 /// Category:    Interrupt
@@ -1081,6 +1081,9 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// Category:    Receive
 /// Permissions: R/W
 /// RDLEN  Receive Descriptor Length
+/// This value must be a multiple of 128 (the maximum cache line size).
+/// Since each descriptor is 16 bytes in length, the total number of
+/// receive descriptors is always a multiple of 8.
 #define REG_RXDESCLEN 0x2808
 /// Category:    Receive
 /// Permissions: R/W
@@ -1089,6 +1092,9 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// Category:    Receive
 /// Permissions: R/W
 /// RDT  Receive Descriptor Tail
+/// "...tail points to the location where software writes the first new descriptor."
+/// Must be less than the value programmed in REG_RXDESCLEN divided by sixteen.
+///     REG_RXDESCTAIL < (REG_RXDESCLEN / 16)
 #define REG_RXDESCTAIL 0x2818
 /// Category:    Receive
 /// Permissions: R/W
@@ -1133,6 +1139,9 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// Category:    Transmit
 /// Permissions: R/W
 /// TDLEN  Transmit Descriptor Length
+/// This value must be a multiple of 128 (the maximum cache line size).
+/// Since each descriptor is 16 bytes in length, the total number of
+/// receive descriptors is always a multiple of 8.
 #define REG_TXDESCLEN 0x3808
 /// Category:    Transmit
 /// Permissions: R/W
@@ -1141,6 +1150,9 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// Category:    Transmit
 /// Permissions: R/W
 /// TDT  Transmit Descriptor Tail
+/// "...tail points to the location where software writes the first new descriptor."
+/// Must be less than the value programmed in REG_TXDESCLEN divided by sixteen.
+///     REG_TXDESCTAIL < (REG_TXDESCLEN / 16)
 #define REG_TXDESCTAIL 0x3818
 /// Category:    Transmit
 /// Permissions: R/W
@@ -2262,32 +2274,64 @@ void E1000::handle_interrupt() {
     /// (IDE set), the interrupt occurs after the timer expires.
     if (status & ICR_TX_DESC_WRITTEN_BACK) {
         status &= ~ICR_TX_DESC_WRITTEN_BACK;
-        std::print("[E1000]: TX Written Back\n");
-    }
 
-    /// The last descriptor block for a transmit queue has been used.
-    if (status & ICR_TX_QUEUE_EMPTY) {
-        status &= ~ICR_TX_QUEUE_EMPTY;
-        std::print("[E1000]: TX Queue Empty\n");
-    }
+        u32 tail = TXHead;
+        u32 newTail = read_command(REG_TXDESCHEAD);
+        for (; tail < newTail; ++tail) {
+            volatile TXDesc* txDesc = TXDescPhysical + tail;
 
-    /// Indicates that the descriptor ring has reached the threshold
-    /// specified in the Transmit Descriptor Control register.
-    if (status & ICR_TX_DESC_LOW_THRESHOLD_HIT) {
-        status &= ~ICR_TX_DESC_LOW_THRESHOLD_HIT;
-        std::print("[E1000]: TX Low Threshold Hit\n");
-    }
+            /// DD
+            /// Indicates that the descriptor is finished and is written back
+            /// either after the descriptor has been processed (with CMD_RS set) or
+            /// for the 82544GC and 82544EI, after the packet has been transmitted
+            /// on the wire (with RPS set).
+            if (txDesc->Status & E1000::TXDesc::DONE) {
+                std::print("[E1000]: Packet transmitted!\n");
+            }
 
-    /// Link Status Change
-    /// This bit is set each time the link status changes (either from
-    /// up to down, or from down to up). This bit is affected by the
-    /// internal link indication when configured for internal PHY mode.
-    if (status & ICR_LINK_STATUS_CHANGE) {
-        status &= ~ICR_LINK_STATUS_CHANGE;
-        // TODO: I don't know if this is right, but I've seen it in
-        // 01000101's example driver.
-        write_command(REG_CTRL, (read_command(REG_CTRL) | CTRL_SET_LINK_UP));
-        std::print("[E1000]: Link status changed! New link setup\n");
+            /// EC
+            /// Indicates that the packet has experienced more than the maximum
+            /// excessive collisions as defined by TCTL.CT control field and was
+            /// not transmitted. It has no meaning while working in full-duplex
+            /// mode.
+            /// LC
+            /// Indicates that late collision occurred while working in half-duplex
+            /// mode. It has no meaning while working in full-duplex mode. Note
+            /// that the collision window is speed dependent: 64 bytes for 10/100
+            /// Mb/s and 512 bytes for 1000 Mb/s operation.
+            if (!(txDesc->Status & E1000::TXDesc::DONE)
+                || txDesc->Status & E1000::TXDesc::EXCESS_COLLISIONS
+                || txDesc->Status & E1000::TXDesc::LATE_COLLISION) {
+                std::print("[E1000]: Packet dropped.\n");
+            }
+
+            /// TU/RSV
+            /// Indicates a transmit underrun event occurred. Transmit Underrun might occur if Early
+            /// Transmits are enabled (based on ETT.Txthreshold value) and the
+            /// 82544GC/EI was not able to complete the early transmission of the
+            /// packet due to lack of data in the packet buffer. This does not
+            /// necessarily mean the packet failed to be eventually transmitted.
+            /// The packet is successfully re-transmitted if the TCTL.NRTU bit is
+            /// cleared (and excessive collisions do not occur).
+            /// This bit is reserved and should be programmed to 0b for all
+            /// Ethernet controllers except the 82544GC/EI.
+            // TODO: Do something about an underrun.
+            if (txDesc->Status & E1000::TXDesc::UNDERRUN) {
+                std::print("[E1000]: TX Underrun\n");
+            }
+
+            // Reset descriptor so that it can be used again.
+            usz pages = 0;
+            if (txDesc->Length % PAGE_SIZE)
+                pages = 1 + (txDesc->Length / PAGE_SIZE);
+            else pages = txDesc->Length / PAGE_SIZE;
+            Memory::free_pages((void*)txDesc->Address, pages);
+            txDesc->Address = 0;
+            txDesc->Command = 0;
+            txDesc->Length = 0;
+            txDesc->Status = 0;
+        }
+
     }
 
     /// ICR_RX_OVERRUN
@@ -2310,6 +2354,28 @@ void E1000::handle_interrupt() {
 
     }
 
+    /// The last descriptor block for a transmit queue has been used.
+    /// In the current implementation, we don't need to worry about
+    /// this interrupt: we set the CMD_RS bit in each transmitted
+    /// descriptor (causing TXDW: Transmit Descriptor Written Back
+    /// interrupt), and we use 1-descriptor per "packet".
+    if (status & ICR_TX_QUEUE_EMPTY) {
+        status &= ~ICR_TX_QUEUE_EMPTY;
+        //std::print("[E1000]: TX Queue Empty\n");
+    }
+
+    /// Link Status Change
+    /// This bit is set each time the link status changes (either from
+    /// up to down, or from down to up). This bit is affected by the
+    /// internal link indication when configured for internal PHY mode.
+    if (status & ICR_LINK_STATUS_CHANGE) {
+        status &= ~ICR_LINK_STATUS_CHANGE;
+        // TODO: I don't know if this is right, but I've seen it in
+        // 01000101's example driver.
+        write_command(REG_CTRL, (read_command(REG_CTRL) | CTRL_SET_LINK_UP));
+        std::print("[E1000]: Link status changed! New link setup\n");
+    }
+
     /// In TBI mode/internal SerDes1, incoming packets with a bad
     /// delimiter sequence set this bit. In other 802.3 implementations,
     /// this would be classified as a framing error. A valid sequence
@@ -2323,11 +2389,18 @@ void E1000::handle_interrupt() {
     }
 
     /// Indicates that the minimum number of receive descriptors are available and software should load more receive descriptors.
-    if (status & ICR_RX_DESC_MINIMUM_THRESHOLD_REACHED) {
-        status &= ~ICR_RX_DESC_MINIMUM_THRESHOLD_REACHED;
+    if (status & ICR_RX_DESC_MIN_THRESHOLD_HIT) {
+        status &= ~ICR_RX_DESC_MIN_THRESHOLD_HIT;
         std::print("[E1000]: RX Descriptors minimum threshold reached (free RX descriptors as there aren't many left)!\n");
         // TODO: actually try to free recieve descriptors; maybe "realloc"?
 
+    }
+
+    /// Indicates that the minimum number of transmit descriptors are available and software should load more transmit descriptors.
+    if (status & ICR_TX_DESC_MIN_THRESHOLD_HIT) {
+        status &= ~ICR_TX_DESC_MIN_THRESHOLD_HIT;
+        std::print("[E1000]: TX Descriptors minimum threshold reached (free TX descriptors as there aren't many left)!\n");
+        // TODO: actually try to free transmit descriptors; maybe "realloc"?
     }
 
     if (status) std::print("[E1000]: Unhandled interrupt(s)!! status=0x{:x}\n", status);
@@ -2386,6 +2459,8 @@ E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
                   | IMASK_RX_SEQUENCE_ERROR
                   | IMASK_LINK_STATUS_CHANGE
                   | IMASK_TX_QUEUE_EMPTY
+                  | IMASK_TX_DESC_WRITTEN_BACK
+                  | IMASK_TX_DESC_MIN_THRESHOLD_HIT
                   );
     /// Clear pending interrupts
     read_command(REG_ICR);
