@@ -2288,7 +2288,7 @@ void E1000::handle_interrupt() {
             /// for the 82544GC and 82544EI, after the packet has been transmitted
             /// on the wire (with RPS set).
             if (txDesc->Status & E1000::TXDesc::DONE) {
-                std::print("[E1000]: Packet transmitted!\n");
+                std::print("[E1000]: Packet transmitted! (desc {})\n", TXHead);
             }
 
             /// EC
@@ -2304,7 +2304,7 @@ void E1000::handle_interrupt() {
             if (!(txDesc->Status & E1000::TXDesc::DONE)
                 || txDesc->Status & E1000::TXDesc::EXCESS_COLLISIONS
                 || txDesc->Status & E1000::TXDesc::LATE_COLLISION) {
-                std::print("[E1000]: Packet dropped.\n");
+                std::print("[E1000]: Transmitted packet dropped. (desc {})\n", TXHead);
             }
 
             /// TU/RSV
@@ -2346,12 +2346,33 @@ void E1000::handle_interrupt() {
     /// an interrupt event when enabled.
     if (status & ICR_RX_OVERRUN || status & ICR_RX_TIMER_INTERRUPT) {
         status &= ~(ICR_RX_OVERRUN | ICR_RX_TIMER_INTERRUPT);
-        std::print("[E1000]: Packet(s) received!\n");
 
-        // TODO: Actually handle receiving of packet. We need to
-        // increment the last-known receive head index until we reach
-        // the hardware head, each descriptor being it's own incoming
-        // packet.
+        /// Increment the last-known receive head index until we reach
+        /// the hardware head.
+
+        // TODO: For each run of descriptors terminated by a descriptor
+        // with DONE and END_OF_PACKET bit set in the status field,
+        // append to a buffer corresponding to the entire packet.
+        // For now, each descriptor is assumed to be a complete packet, and is dropped if it isn't.
+
+        u32 head = read_command(REG_RXDESCHEAD);
+        for (; RXHead < head; ++RXHead) {
+            // It's a ring buffer. Wrap indices over capacity.
+            if (RXHead >= RXDescCount) RXHead = 0;
+
+            volatile RXDesc* rxDesc = RXDescPhysical + RXHead;
+            if (rxDesc->Status & RXDesc::DONE
+                && rxDesc->Status & RXDesc::END_OF_PACKET) {
+                std::print("[E1000]: Packet received! (desc {})\n", RXHead);
+            }
+
+            if (!(rxDesc->Status & RXDesc::DONE) || rxDesc->Errors) {
+                std::print("[E1000]: Received packet dropped. (desc {})\n", RXHead);
+            }
+
+            rxDesc->Status = 0;
+            rxDesc->Errors = 0;
+        }
 
     }
 
