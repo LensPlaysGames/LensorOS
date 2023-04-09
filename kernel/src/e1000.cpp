@@ -1966,21 +1966,14 @@ u32 E1000::read_command(u16 address) {
 }
 
 void E1000::detect_eeprom() {
-    ASSERT(State >= E1000::BASE_ADDRESS_DECODED,
-           "[E1000]: Base address must be decoded before detecting EEPROM!");
-
     /// EEPROM is explicitly missing from 82544GC and 82544EI cards.
-    if (PCIHeader->Header.VendorID == 0x1107 || PCIHeader->Header.VendorID == 0x1112) {
-        State = E1000::UNRECOVERABLE;
+    if (PCIHeader->Header.VendorID == 0x1107 || PCIHeader->Header.VendorID == 0x1112)
         return;
-    }
 
     /// Otherwise, it's as simple as checking whether or not the EECD.EE_PRES bit is set.
-    /// FIXME: Decide whether or not to include the actual read and success check below.
     EEPROMExists = read_command(REG_EECD) & EECD_EEPROM_PRESENT;
-    State = E1000::EEPROM_PROBED;
     return;
-
+    /*
     /// Attempt a read from the EEPROM using EERD (EEPROM Read Register).
     write_command(REG_EEPROM, 1);
     io_wait();
@@ -1996,12 +1989,10 @@ void E1000::detect_eeprom() {
         }
     }
     EEPROMExists = false;
+    */
 }
 
 u16 E1000::read_eeprom(u8 address) {
-    ASSERT(State >= E1000::EEPROM_PROBED,
-           "[E1000]: EEPROM must be probed before reading from it!");
-
     u32 calculatedAddress = 0;
     u32 successMask = 0;
     if (is_82541xx(PCIHeader->Header.DeviceID) || is_82547_GI_EI(PCIHeader->Header.DeviceID)) {
@@ -2035,9 +2026,6 @@ u16 E1000::read_eeprom(u8 address) {
 }
 
 void E1000::get_mac_address() {
-    ASSERT(State >= E1000::EEPROM_PROBED,
-           "[E1000]: EEPROM must be probed before attempting to get MAC Address!");
-
     if (EEPROMExists) {
         u16 value = 0;
         // FIXME: Assumes little-endian architecture.
@@ -2058,7 +2046,6 @@ void E1000::get_mac_address() {
         if (!MACAddress[0] && !MACAddress[1] && !MACAddress[2] && !MACAddress[3])
             std::print("[E1000]:\033[31mERROR:\033[m First four bytes of MACAddress are zero!\n");
     }
-    State = E1000::MAC_ADDRESS_DECODED;
 }
 
 void E1000::decode_base_address() {
@@ -2084,7 +2071,6 @@ void E1000::decode_base_address() {
         BARIOAddress = PCIHeader->BAR0 & ~usz(1);
         std::print("[E1000]: BAR0 is IO! addr={}\n", (void*)BARIOAddress);
     }
-    State = E1000::BASE_ADDRESS_DECODED;
 }
 
 void E1000::configure_device() {
@@ -2204,6 +2190,7 @@ void E1000::initialise_tx() {
     /// both these registers to ensure this.
     write_command(REG_TXDESCHEAD, 0);
     write_command(REG_TXDESCTAIL, 0);
+    TXHead = 0;
 
     /// Later: set the Enable (TCTL.EN) bit to 1b for normal operation.
     /// Set the Pad Short Packets (TCTL.PSP) bit to 1b.
@@ -2269,6 +2256,11 @@ void E1000::handle_interrupt() {
     if (status & ICR_TX_QUEUE_EMPTY) {
         status &= ~ICR_TX_QUEUE_EMPTY;
         std::print("[E1000]: TX Queue Empty\n");
+
+        // TODO: Utilise difference in recorded TXHead and hardware TX
+        // head to delete all memory associated with the transmit
+        // descriptors that are no longer needed.
+
     }
     if (status & ICR_TX_DESC_WRITTEN_BACK) {
         status &= ~ICR_TX_DESC_WRITTEN_BACK;
@@ -2296,16 +2288,24 @@ void E1000::handle_interrupt() {
     }
 
     if (status) std::print("[E1000]: Unhandled interrupt(s)!! status=0x{:x}\n", status);
+
+    // FIXME: We already read once to get the bits; do we need to read
+    // again? This is made more complicated by the fact that the
+    // hardware may be holding the interrupt line high still, meaning
+    // even after we read the interrupt and the bit is cleared, it just
+    // gets set again right away.
+    /// All register bits are cleared upon read. As a result, reading
+    /// this register implicitly acknowledges any pending interrupt
+    /// events. Writing a 1b to any bit in the register also clears
+    /// that bit.
+    read_command(REG_ICR);
 }
 
 __attribute__((interrupt))
 void e1000_interrupt_handler(InterruptFrame* frame);
 
 E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
-    if (!PCIHeader) {
-        State = E1000::UNRECOVERABLE;
-        return;
-    }
+    if (!PCIHeader) return;
 
     decode_base_address();
 

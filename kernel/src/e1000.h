@@ -56,19 +56,6 @@ class E1000 {
         volatile u16 Special;
     } __attribute__((packed));
 
-    enum E1000State {
-        UNRECOVERABLE,
-        UNINITIALISED,
-        BASE_ADDRESS_DECODED,
-        RESET,
-        EEPROM_PROBED,
-        MAC_ADDRESS_DECODED,
-        RX_DESCS_INITIALISED,
-        TX_DESCS_INITIALISED,
-        INTERRUPTS_ENABLED,
-        INITIALISED,
-    } State {E1000::UNINITIALISED};
-
     PCI::PCIHeader0* PCIHeader { nullptr };
 
     uint RXDescCount { 0 };
@@ -114,12 +101,18 @@ class E1000 {
     void initialise_rx();
     void initialise_tx();
 
+    /// The known "head" index of the transmit descriptor ring buffer.
+    /// This number will trail behind the hardware head index; for
+    /// every index that is incremented past until the hardware head
+    /// index is reached, that transmit descriptor will be deleted.
+    /// This will occur every time we get a TX queue empty interrupt.
+    uint TXHead {0};
+
 public:
     u8 MACAddress[6] {0};
 
     E1000() {}
     E1000(PCI::PCIHeader0* header);
-    E1000State state() { return State; }
     void handle_interrupt();
     uint irq_number();
     uint interrupt_line();
