@@ -36,10 +36,23 @@ class E1000 {
     struct TXDesc {
         volatile u64 Address;
         volatile u16 Length;
-        volatile u8 CSO;
+        /// The Checksum offset field indicates where, relative to the start of the packet,
+        /// to insert a TCP checksum if this mode is enabled (Insert Checksum bit (IC) is set in TDESC.CMD).
+        /// Hardware ignores CSO unless EOP is set in TDESC.CMD. CSO is provided in unit of bytes and must be
+        /// in the range of the data provided to the Ethernet controller in the descriptor. (CSO < length - 1).
+        /// Should be written with 0b for future compatibility.
+        volatile u8 ChecksumOffset;
         volatile u8 Command;
         volatile u8 Status;
-        volatile u8 CSS;
+        /// The Checksum start field (TDESC.CSS) indicates where to begin computing
+        /// the checksum. The software must compute this offset to back out the bytes
+        /// that should not be included in the TCP checksum. CSS is provided in units
+        /// of bytes and must be in the range of data provided to the Ethernet controller
+        /// in the descriptor (CSS < length). For short packets that ar padded by the
+        /// software, CSS must be in the range of the unpadded data length. A value of
+        /// 0b corresponds to the first byte in the packet.
+        /// CSS must be set in the first descriptor of the packet.
+        volatile u8 ChecksumStartField;
         volatile u16 Special;
     } __attribute__((packed));
 
@@ -84,8 +97,6 @@ class E1000 {
     /// EE_PRES == EEPROM Present (bit 8)
     void detect_eeprom();
 
-    u8 MACAddress[6] {0};
-
     void write_command(u16 address, u32 value);
     u32 read_command(u16 address);
 
@@ -104,11 +115,15 @@ class E1000 {
     void initialise_tx();
 
 public:
+    u8 MACAddress[6] {0};
+
     E1000() {}
     E1000(PCI::PCIHeader0* header);
     E1000State state() { return State; }
     void handle_interrupt();
-    uint interrupt_line() { return PCIHeader->InterruptLine; }
+    uint irq_number();
+    uint interrupt_line();
+    void write_raw(void* data, usz length);
 };
 
 extern E1000 gE1000;

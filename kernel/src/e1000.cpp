@@ -2231,14 +2231,53 @@ void E1000::initialise_tx() {
     write_command(REG_TIPG, TIPG_IPGT(10) | TIPG_IPGR1(4) | TIPG_IPGR2(6));
 }
 
+void E1000::write_raw(void* data, usz length) {
+    volatile E1000::TXDesc* desc = TXDescPhysical;
+    u32 tail = read_command(REG_TXDESCTAIL);
+    desc += tail;
+
+    // Allocate physical memory, copy into it.
+    usz pages = 0;
+    if (length % PAGE_SIZE)
+        pages = 1 + (length / PAGE_SIZE);
+    else pages = length / PAGE_SIZE;
+
+    // FIXME: This is a memory leak (free in interrupt handler)
+    desc->Address = u64(Memory::request_pages(pages));
+    //std::print("Copying {} pages from virtual {} to physical {}\n", pages, data, (void*)desc->Address);
+    memcpy((void*)desc->Address, data, length);
+    /// Maximum allowed packet size (16288 bytes).
+    if (length > 16288) {
+        std::print("[E1000]:write_raw(): Length larger than maximum allowed size (16288 bytes)...\n");
+        length = 0b1111111111111111;
+    }
+    desc->Length = length;
+    desc->Command = CMD_EOP | CMD_IFCS | CMD_RS;
+    desc->Status = 0;
+
+    ++tail;
+    u32 tx_desc_count = read_command(REG_TXDESCLEN) / sizeof(E1000::TXDesc);
+    if (tx_desc_count) tail %= tx_desc_count;
+    write_command(REG_TXDESCTAIL, tail);
 }
 
 void E1000::handle_interrupt() {
     /// Read status of pending interrupt
     u32 status = read_command(REG_ICR);
 
-    /// Clear transmit interrupt bits.
-    status &= ~(ICR_TX_DESC_WRITTEN_BACK | ICR_TX_QUEUE_EMPTY);
+    /// QUEUE EMPTY means that all pending transmissions have completed.
+    if (status & ICR_TX_QUEUE_EMPTY) {
+        status &= ~ICR_TX_QUEUE_EMPTY;
+        std::print("[E1000]: TX Queue Empty\n");
+    }
+    if (status & ICR_TX_DESC_WRITTEN_BACK) {
+        status &= ~ICR_TX_DESC_WRITTEN_BACK;
+        std::print("[E1000]: TX Written Back\n");
+    }
+    if (status & ICR_TX_DESC_LOW_THRESHOLD_HIT) {
+        status &= ~ICR_TX_DESC_LOW_THRESHOLD_HIT;
+        std::print("[E1000]: TX Low Threshold Hit\n");
+    }
 
     /// Link Status Change
     if (status & ICR_LINK_STATUS_CHANGE) {
@@ -2247,18 +2286,20 @@ void E1000::handle_interrupt() {
         std::print("[E1000]: Link status changed!\n");
     }
 
-    // FIXME: Is this necessary?
-    read_command(REG_ICR);
+    if (status & ICR_RX_OVERRUN) {
+        status &= ~ICR_RX_OVERRUN;
+        std::print("[E1000]: RX Overrun!\n");
+    }
+    if (status & ICR_RX_SEQUENCE_ERROR) {
+        status &= ~ICR_RX_SEQUENCE_ERROR;
+        std::print("[E1000]: RX Sequence Error!\n");
+    }
+
+    if (status) std::print("[E1000]: Unhandled interrupt(s)!! status=0x{:x}\n", status);
 }
 
-void e1000_interrupt_handler(InterruptFrame* frame) {
-    std::print("[E1000]: Interrupt!\n");
-    // TODO: Get pointer to network device; maybe somehow store a
-    // mapping of interrupt vectors to void* that can be set when
-    // registering an interrupt.
-    gE1000.handle_interrupt();
-    end_of_interrupt(gE1000.interrupt_line());
-}
+__attribute__((interrupt))
+void e1000_interrupt_handler(InterruptFrame* frame);
 
 E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
     if (!PCIHeader) {
@@ -2267,12 +2308,17 @@ E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
     }
 
     decode_base_address();
+
+    // Enable bus mastering.
+    PCIHeader->Header.Command |= (1 << 2);
+    // Ensure interrupts are not disabled.
+    PCIHeader->Header.Command &= ~(1 << 10);
+
     detect_eeprom();
 
     get_mac_address();
     std::print("[E1000]:MACAddress: ");
-    for (u8 c : MACAddress)
-        std::print("{:x}-", c);
+    for (u8 c : MACAddress) std::print("{:x}:", c);
     std::print("\n");
 
     configure_device();
@@ -2281,23 +2327,30 @@ E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
     initialise_tx();
 
     /// Register interrupt handler in IDT!!
-    std::print("[E1000]: Interrupt line: 0x{:x}\n", PCIHeader->InterruptLine);
-    gIDT.install_handler((u64)e1000_interrupt_handler, PCIHeader->InterruptLine);
+    std::print("[E1000]: Interrupt line: 0x{:x} (0x{:x})\n", interrupt_line(), irq_number());
+    gIDT.install_handler((u64)e1000_interrupt_handler, interrupt_line());
+    gIDT.flush();
+    enable_interrupt(irq_number());
 
     /// Program the Interrupt Mask Set/Read (IMS) register to enable any
     /// interrupt the software driver wants to be notified of when the event
     /// occurs. Suggested bits include RXT, RXO, RXDMT, RXSEQ, and LSC.
     write_command(REG_IMASK_CLEAR, 0xffffffff);
     write_command(REG_IMASK,
-                  read_command(REG_IMASK)
-                  | IMASK_RX_TIMER_INTERRUPT
+                  IMASK_RX_TIMER_INTERRUPT
                   | IMASK_RX_FIFO_OVERRUN
                   | IMASK_RX_DESC_MIN_THRESHOLD_HIT
                   | IMASK_RX_SEQUENCE_ERROR
                   | IMASK_LINK_STATUS_CHANGE
+                  | IMASK_TX_QUEUE_EMPTY
                   );
     /// Clear pending interrupts
     read_command(REG_ICR);
 
     write_command(REG_RX_CONTROL, read_command(REG_RX_CONTROL) | RCTL_ENABLE);
+    /// Set the Enable (TCTL.EN) bit to 1b for normal operation.
+    write_command(REG_TCTL, read_command(REG_TCTL) | TCTL_EN);
 }
+
+uint E1000::irq_number() { return PCIHeader->InterruptLine; }
+uint E1000::interrupt_line() { return PIC_IRQ_VECTOR_OFFSET + PCIHeader->InterruptLine; }

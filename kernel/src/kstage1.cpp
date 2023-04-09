@@ -17,7 +17,6 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-
 #include <acpi.h>
 #include <ahci.h>
 #include <basic_renderer.h>
@@ -169,6 +168,7 @@ void kstage1(BootInfo* bInfo) {
 
     // Prepare Interrupt Descriptor Table.
     prepare_interrupts();
+    disable_all_interrupts();
 
     // Setup serial communications chip to allow for debug messages as soon as possible.
     UART::initialize();
@@ -668,7 +668,6 @@ void kstage1(BootInfo* bInfo) {
     init_ps2_mouse();
 
     // Enable IRQ interrupts that will be used.
-    disable_all_interrupts();
     enable_interrupt(IRQ_SYSTEM_TIMER);
     enable_interrupt(IRQ_PS2_KEYBOARD);
     enable_interrupt(IRQ_CASCADED_PIC);

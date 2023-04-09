@@ -69,7 +69,7 @@ struct IDTEntry {
     u16 Offset1;
     u32 Offset2;
     u32 Ignore;
-  
+
     void SetOffset(u64 offset);
     u64 GetOffset();
 } __attribute__((packed));;

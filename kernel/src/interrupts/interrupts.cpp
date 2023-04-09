@@ -521,6 +521,13 @@ void remap_pic() {
     io_wait();
 }
 
+#include <e1000.h>
+__attribute__((interrupt))
+void e1000_interrupt_handler(InterruptFrame* frame) {
+    gE1000.handle_interrupt();
+    end_of_interrupt(gE1000.irq_number());
+}
+
 #include <scheduler.h>
 __attribute__((no_caller_saved_registers))
 void scheduler_switch(CPUState* cpu) {
