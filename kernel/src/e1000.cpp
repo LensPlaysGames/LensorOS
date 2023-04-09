@@ -1109,6 +1109,12 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// Permissions: R/W
 /// TIPG  Transmit IPG
 #define REG_TIPG 0x0410
+#define TIPG_IPGT_MASK (0b1111111111)
+#define TIPG_IPGT(x) ((x << 0) & TIPG_IPGT_MASK)
+#define TIPG_IPGR1_MASK (0b1111111111 << 10)
+#define TIPG_IPGR1(x) ((x << 10) & TIPG_IPGR1_MASK)
+#define TIPG_IPGR2_MASK (0b1111111111 << 20)
+#define TIPG_IPGR2(x) ((x << 20) & TIPG_IPGR2_MASK)
 /// Category:    Transmit
 /// Permissions: R/W
 /// AIFS  Adaptive IFS Throttle - AIT
@@ -1116,23 +1122,23 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// Category:    Transmit
 /// Permissions: R/W
 /// TDBAL  Transmit Descriptor Base Low
-#define REG_TDBAL 0x3800
+#define REG_TXDESCLO 0x3800
 /// Category:    Transmit
 /// Permissions: R/W
 /// TDBAH  Transmit Descriptor Base High
-#define REG_TDBAH 0x3804
+#define REG_TXDESCHI 0x3804
 /// Category:    Transmit
 /// Permissions: R/W
 /// TDLEN  Transmit Descriptor Length
-#define REG_TDLEN 0x3808
+#define REG_TXDESCLEN 0x3808
 /// Category:    Transmit
 /// Permissions: R/W
 /// TDH  Transmit Descriptor Head
-#define REG_TDHEAD 0x3810
+#define REG_TXDESCHEAD 0x3810
 /// Category:    Transmit
 /// Permissions: R/W
 /// TDT  Transmit Descriptor Tail
-#define REG_TDTAIL 0x3818
+#define REG_TXDESCTAIL 0x3818
 /// Category:    Transmit
 /// Permissions: R/W
 /// TIDV  Transmit Interrupt Delay Value
@@ -1585,14 +1591,25 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// writing back the descriptor. The interrupt delay timer is cleared.
 #define CMD_IDE   (1 << 7)
 
+/// TXCMD/TDESC.CMD  Transmit command
+/// Extension (0b for legacy mode).
+/// Should be written with 0b for future compatibility
+#define CMD_DEXT (1 << 5)
+
 /// Transmit Enable
 #define TCTL_EN          (1 << 1)
 /// Pad Short Packets
 #define TCTL_PSP         (1 << 3)
 /// Collision Threshold
-#define TCTL_CT_SHIFT    4
+#define TCTL_COLLISION_THRESHOLD_SHIFT 4
+#define TCTL_COLLISION_THRESHOLD_MASK (0b11111111 << TCTL_COLLISION_THRESHOLD_SHIFT)
+#define TCTL_COLLISION_THRESHOLD(x) (((u32)(x) << TCTL_COLLISION_THRESHOLD_SHIFT) & (TCTL_COLLISION_THRESHOLD_MASK))
+#define TCTL_COLLISION_THRESHOLD_DEFAULT TCTL_COLLISION_THRESHOLD(0x10)
 /// Collision Distance
-#define TCTL_COLD_SHIFT  12
+#define TCTL_COLLISION_DISTANCE_SHIFT 12
+#define TCTL_COLLISION_DISTANCE_MASK (0b1111111111 << TCTL_COLLISION_DISTANCE_SHIFT)
+#define TCTL_COLLISION_DISTANCE(x) (((u32)(x) << TCTL_COLLISION_DISTANCE_SHIFT) & TCTL_COLLISION_DISTANCE_MASK)
+#define TCTL_COLLISION_DISTANCE_DEFAULT TCTL_COLLISION_DISTANCE(0x40)
 /// Software XOFF transmission
 #define TCTL_SWXOFF      (1 << 22)
 /// Re-transmit on Late Collision
@@ -2166,7 +2183,54 @@ void E1000::initialise_rx() {
 }
 
 void E1000::initialise_tx() {
-    ;
+    /// Allocate a region of memory for the transmit descriptor list.
+    /// Software should insure this memory is aligned on a paragraph
+    /// (16-byte) boundary. Program the Transmit Descriptor Base Address
+    /// (TDBAL/TDBAH) register(s) with the address of the region.
+    /// TDBAL is used for 32-bit addresses and both TDBAL and TDBAH are
+    /// used for 64-bit addresses.
+    static constexpr uint pageCount = 1;
+    static constexpr uint TXDescCountMax = (pageCount * PAGE_SIZE) / sizeof(E1000::TXDesc);
+    TXDescCount = TXDescCountMax;
+    TXDescPhysical = (volatile E1000::TXDesc*)Memory::request_pages(pageCount);
+    u32 addressLowBytes = uintptr_t(TXDescPhysical) & 0xffffffff;
+    u32 addressHighBytes = uintptr_t(TXDescPhysical) >> 32;
+    write_command(REG_TXDESCLO, addressLowBytes);
+    write_command(REG_TXDESCHI, addressHighBytes);
+    write_command(REG_TXDESCLEN, TXDescCount * sizeof(E1000::TXDesc));
+    /// The Transmit Descriptor Head and Tail (TDH/TDT) registers are
+    /// initialized (by hardware) to 0b after a power-on or a software
+    /// initiated Ethernet controller reset. Software should write 0b to
+    /// both these registers to ensure this.
+    write_command(REG_TXDESCHEAD, 0);
+    write_command(REG_TXDESCTAIL, 0);
+
+    /// Later: set the Enable (TCTL.EN) bit to 1b for normal operation.
+    /// Set the Pad Short Packets (TCTL.PSP) bit to 1b.
+    /// Configure the Collision Threshold (TCTL.CT) to the desired value.
+    /// Ethernet standard is 10h. This setting only has meaning in half
+    /// duplex mode.
+    /// Configure the Collision Distance (TCTL.COLD) to its expected value.
+    /// For full duplex operation, this value should be set to 40h. For
+    /// gigabit half duplex, this value should be set to 200h. For 10/100
+    /// half duplex, this value should be set to 40h. Program the Transmit
+    /// IPG (TIPG) register with the following decimal values to get the
+    /// minimum legal Inter Packet Gap:
+    ///        FIBER   COPPER   FIBER (82544GC/EI)   COPPER(82544GC/EI)
+    /// IPGT      10       10                    6                    8
+    /// IPGR1     10       10                   8a                   8a
+    /// IPGR2     10       10                   6a                   6a
+    /// Where a == applicable to the 82541xx and 82547GI/EI.
+    /// Note: IPGR1 and IPGR2 are not needed in full duplex, but are
+    /// easier to always program to the values shown.
+    write_command(REG_TCTL,
+                  TCTL_PSP
+                  | TCTL_COLLISION_THRESHOLD_DEFAULT
+                  | TCTL_COLLISION_DISTANCE_DEFAULT
+                  );
+    write_command(REG_TIPG, TIPG_IPGT(10) | TIPG_IPGR1(4) | TIPG_IPGR2(6));
+}
+
 }
 
 void E1000::handle_interrupt() {
@@ -2223,6 +2287,7 @@ E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
     /// Program the Interrupt Mask Set/Read (IMS) register to enable any
     /// interrupt the software driver wants to be notified of when the event
     /// occurs. Suggested bits include RXT, RXO, RXDMT, RXSEQ, and LSC.
+    write_command(REG_IMASK_CLEAR, 0xffffffff);
     write_command(REG_IMASK,
                   read_command(REG_IMASK)
                   | IMASK_RX_TIMER_INTERRUPT
