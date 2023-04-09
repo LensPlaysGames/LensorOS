@@ -1,0 +1,51 @@
+/* Copyright 2022, Contributors To LensorOS.
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
+
+
+#ifndef _LENSOR_OS_BIT_H
+#define _LENSOR_OS_BIT_H
+
+#include <algorithm>
+#include <bits/decls.h>
+#include <stdint.h>
+#include <type_traits>
+
+__BEGIN_DECLS__
+void* memcpy(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n);
+__END_DECLS__
+
+namespace std {
+
+template <typename _To, typename _From>
+requires (sizeof(_To) == sizeof(_From))
+constexpr _To bit_cast(const _From& __from) {
+    return __builtin_bit_cast(_To, __from);
+}
+
+template<class _T>
+constexpr _T byteswap(_T n) noexcept {
+    //static_assert(std::has_unique_object_representations_v<_T>, "T may not have padding bits");
+    auto repr = std::bit_cast<std::array<uint8_t, sizeof(_T)>>(n);
+    std::reverse(repr.begin(), repr.end());
+    return std::bit_cast<_T>(repr);
+}
+
+} // namespace std
+
+#endif /* _LENSOR_OS_BIT_H */
