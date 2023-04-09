@@ -246,6 +246,12 @@ constexpr void iter_swap(_ForwardIt1 __a, _ForwardIt2 __b) {
     swap(*__a, *__b);
 }
 
+template<class _BidiIt>
+constexpr void reverse(_BidiIt __begin, _BidiIt __end) {
+    for (; __begin != __end; ++__begin, --__end)
+        std::iter_swap(__begin, __end - 1);
+}
+
 template<class _ForwardIt1, class _ForwardIt2>
 constexpr _ForwardIt2 swap_ranges(_ForwardIt1 __first1, _ForwardIt1 __last1, _ForwardIt2 __first2) {
     for (; __first1 != __last1; ++__first1, ++__first2)
