@@ -733,10 +733,10 @@ void kstage1(BootInfo* bInfo) {
     arp.Operation = std::byteswap(u16(1));
 
     memcpy(arp.SenderHardwareAddress, &gE1000.MACAddress, 6);
-    arp.TargetProtocolAddress[0] = 192;
-    arp.TargetProtocolAddress[1] = 168;
-    arp.TargetProtocolAddress[2] = 1;
-    arp.TargetProtocolAddress[3] = 1;
+    arp.TargetProtocolAddress[0] = 10;
+    arp.TargetProtocolAddress[1] = 0;
+    arp.TargetProtocolAddress[2] = 2;
+    arp.TargetProtocolAddress[3] = 2;
 
     constexpr usz buffer_size = sizeof(EthernetFrameHeader) + sizeof(ARPData);
     u8* buffer = new u8[buffer_size];
