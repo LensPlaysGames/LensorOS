@@ -2257,22 +2257,18 @@ void E1000::handle_interrupt() {
     /// Read status of pending interrupt
     u32 status = read_command(REG_ICR);
 
-    /// QUEUE EMPTY means that all pending transmissions have completed.
-    if (status & ICR_TX_QUEUE_EMPTY) {
-        status &= ~ICR_TX_QUEUE_EMPTY;
-        std::print("[E1000]: TX Queue Empty\n");
-
-        // TODO: Utilise difference in recorded TXHead and hardware TX
-        // head to delete all memory associated with the transmit
-        // descriptors that are no longer needed.
-
-    }
     /// Set when hardware processes a transmit descriptor with the RS
     /// bit set (and possibly IDE set). If using delayed interrupts
     /// (IDE set), the interrupt occurs after the timer expires.
     if (status & ICR_TX_DESC_WRITTEN_BACK) {
         status &= ~ICR_TX_DESC_WRITTEN_BACK;
         std::print("[E1000]: TX Written Back\n");
+    }
+
+    /// The last descriptor block for a transmit queue has been used.
+    if (status & ICR_TX_QUEUE_EMPTY) {
+        status &= ~ICR_TX_QUEUE_EMPTY;
+        std::print("[E1000]: TX Queue Empty\n");
     }
 
     /// Indicates that the descriptor ring has reached the threshold
@@ -2294,9 +2290,24 @@ void E1000::handle_interrupt() {
         std::print("[E1000]: Link status changed! New link setup\n");
     }
 
-    if (status & ICR_RX_OVERRUN) {
-        status &= ~ICR_RX_OVERRUN;
-        std::print("[E1000]: RX Overrun!\n");
+    /// ICR_RX_OVERRUN
+    /// Set on receive data FIFO overrun. Could be caused either
+    /// because there are no available receive buffers or because PCI
+    /// receive bandwidth is inadequate.
+    /// ICR_RX_TIMER_INTERRUPT
+    /// Set when the receiver timer expires.
+    /// The receiver timer is used for receiver descriptor packing.
+    /// Timer expiration flushes any accumulated descriptors and sets
+    /// an interrupt event when enabled.
+    if (status & ICR_RX_OVERRUN || status & ICR_RX_TIMER_INTERRUPT) {
+        status &= ~(ICR_RX_OVERRUN | ICR_RX_TIMER_INTERRUPT);
+        std::print("[E1000]: Packet(s) received!\n");
+
+        // TODO: Actually handle receiving of packet. We need to
+        // increment the last-known receive head index until we reach
+        // the hardware head, each descriptor being it's own incoming
+        // packet.
+
     }
 
     /// In TBI mode/internal SerDes1, incoming packets with a bad
@@ -2309,6 +2320,14 @@ void E1000::handle_interrupt() {
     if (status & ICR_RX_SEQUENCE_ERROR) {
         status &= ~ICR_RX_SEQUENCE_ERROR;
         std::print("[E1000]: RX Sequence Error!\n");
+    }
+
+    /// Indicates that the minimum number of receive descriptors are available and software should load more receive descriptors.
+    if (status & ICR_RX_DESC_MINIMUM_THRESHOLD_REACHED) {
+        status &= ~ICR_RX_DESC_MINIMUM_THRESHOLD_REACHED;
+        std::print("[E1000]: RX Descriptors minimum threshold reached (free RX descriptors as there aren't many left)!\n");
+        // TODO: actually try to free recieve descriptors; maybe "realloc"?
+
     }
 
     if (status) std::print("[E1000]: Unhandled interrupt(s)!! status=0x{:x}\n", status);
