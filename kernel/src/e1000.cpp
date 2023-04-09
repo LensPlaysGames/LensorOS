@@ -2275,10 +2275,12 @@ void E1000::handle_interrupt() {
     if (status & ICR_TX_DESC_WRITTEN_BACK) {
         status &= ~ICR_TX_DESC_WRITTEN_BACK;
 
-        u32 tail = TXHead;
-        u32 newTail = read_command(REG_TXDESCHEAD);
-        for (; tail < newTail; ++tail) {
-            volatile TXDesc* txDesc = TXDescPhysical + tail;
+        u32 head = read_command(REG_TXDESCHEAD);
+        for (; TXHead < head; ++TXHead) {
+            // It's a ring buffer. Wrap indices over capacity.
+            if (TXHead >= TXDescCount) TXHead = 0;
+
+            volatile TXDesc* txDesc = TXDescPhysical + TXHead;
 
             /// DD
             /// Indicates that the descriptor is finished and is written back
@@ -2331,7 +2333,6 @@ void E1000::handle_interrupt() {
             txDesc->Length = 0;
             txDesc->Status = 0;
         }
-
     }
 
     /// ICR_RX_OVERRUN
