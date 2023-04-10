@@ -57,6 +57,12 @@ struct FileMetadata {
     auto device_driver() -> std::shared_ptr<StorageDeviceDriver>  { return DeviceDriver; }
     auto file_size() -> u64 { return FileSize; }
     auto driver_data() -> void* { return DriverData; }
+    /// Update driver data with the address given, and return the old address.
+    auto set_driver_data(void* newData) -> void* {
+        void* oldData = DriverData;
+        DriverData = newData;
+        return oldData;
+    }
 
 private:
     std::string Name;
