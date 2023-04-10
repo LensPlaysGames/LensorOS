@@ -42,11 +42,37 @@ void SocketDriver::close(FileMetadata* meta) {
 }
 
 ssz SocketDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
+    SocketData* data = (SocketData*)meta->driver_data();
+    switch (data->Type) {
+    case SocketType::LENSOR:
+        switch (data->ClientServer) {
+        case SocketData::CLIENT:
+            // TODO: Read from TXBuffer.
+            break;
+        case SocketData::SERVER:
+            // TODO: Read from RXBuffer.
+            break;
+        }
+        break;
+    }
     std::print("[SOCK]:TODO: Implement `SocketDriver::read()`");
     return -1;
 }
 
 ssz SocketDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
+    SocketData* data = (SocketData*)meta->driver_data();
+    switch (data->Type) {
+    case SocketType::LENSOR:
+        switch (data->ClientServer) {
+        case SocketData::CLIENT:
+            // TODO: write to RXBuffer.
+            break;
+        case SocketData::SERVER:
+            // TODO: Write to TXBuffer.
+            break;
+        }
+        break;
+    }
     std::print("[SOCK]:TODO: Implement `SocketDriver::write()`");
     return -1;
 }

@@ -55,40 +55,90 @@
 /// return value means the socket should be closed. To attempt a retry,
 /// open a new socket.
 
+template <usz N>
+struct FIFOBuffer {
+    u8 Data[N] {0};
+    usz Size {N};
+    /// This index is the index that incoming data will be written to.
+    usz Offset {0};
+    /// List of PIDs of processes who are waiting to write into the
+    /// txbuffer as it is full.
+    std::vector<pid_t> PIDsWaitingUntilRead;
+    /// List of PIDs of processes who are waiting to read from the
+    /// txbuffer as it is empty.
+    std::vector<pid_t> PIDsWaitingUntilWrite;
+
+    void clear() {
+        memset(&Data[0], 0, sizeof(Data));
+        Offset = 0;
+        // TODO: We may want to run any processes in these lists.
+        PIDsWaitingUntilRead.clear();
+        PIDsWaitingUntilWrite.clear();
+    }
+
+    /// Read `byteCount` bytes from this FIFOBuffer, writing them into `buffer`.
+    /// \param pid
+    ///   The ID of the process that is performing the read.
+    /// \retval >=0  Success, amount of bytes read.
+    /// \retval -1   Failure
+    /// \retval -2   Should block (will unblock when written to)
+    ssz read(pid_t pid, usz byteCount, u8* buffer) {
+        if (Offset == 0) {
+            PIDsWaitingUntilWrite.push_back(pid);
+            return -2;
+        }
+
+        // Truncate reads that are larger than possible.
+        if (byteCount > Offset)
+            byteCount = Offset;
+
+        // Transfer the data from the FIFO buffer to the given buffer.
+        memcpy(buffer, Data, byteCount);
+
+        // "Pop" data off the front of the FIFO buffer.
+        memmove(&Data[0], &Data[byteCount], Size - byteCount);
+        Offset -= byteCount;
+
+        return byteCount;
+    }
+
+    /// Write `byteCount` bytes to this FIFOBuffer from `buffer`.
+    /// \param pid
+    ///   The ID of the process that is performing the write.
+    /// \retval >=0  Success, amount of bytes written.
+    /// \retval -1   Failure
+    /// \retval -2   Should block (will unblock when read from)
+    ssz write(pid_t pid, usz byteCount, u8* buffer) {
+        if (Offset == 0 || Offset + byteCount > Size) {
+            PIDsWaitingUntilRead.push_back(pid);
+            return -2;
+        }
+
+        // Transfer the data from the given buffer to the FIFO buffer.
+        memcpy(Data + Offset, buffer, byteCount);
+
+        // Move write offset for next time.
+        Offset += byteCount;
+
+        return byteCount;
+    }
+};
+
 #define SOCKET_TX_BUFFER_SIZE 1024
 #define SOCKET_RX_BUFFER_SIZE 1024
 struct SocketBuffers {
     /// FIFO buffer for transmissions from the server.
     /// Server writes to this buffer.
     /// Client reads from this buffer.
-    u8 TXBuffer[SOCKET_TX_BUFFER_SIZE] {0};
-    /// This index is the index that incoming data will be written to.
-    usz TXOffset {0};
-    /// List of PIDs of processes who are waiting to write into the
-    /// txbuffer as it is full.
-    std::vector<pid_t> PIDsWaitingTXFull;
-    /// List of PIDs of processes who are waiting to read from the
-    /// txbuffer as it is empty.
-    std::vector<pid_t> PIDsWaitingTXEmpty;
-
+    FIFOBuffer<SOCKET_TX_BUFFER_SIZE> TXBuffer;
     /// FIFO buffer for receiving data from a client.
     /// Server reads from this buffer.
     /// Client writes to this buffer.
-    u8 RXBuffer[SOCKET_RX_BUFFER_SIZE] {0};
-    usz RXOffset {0};
-    std::vector<pid_t> PIDsWaitingRXFull;
-    std::vector<pid_t> PIDsWaitingRXEmpty;
+    FIFOBuffer<SOCKET_RX_BUFFER_SIZE> RXBuffer;
 
     void clear() {
-        memset(&TXBuffer[0], 0, sizeof(TXBuffer));
-        TXOffset = 0;
-        PIDsWaitingTXFull.clear();
-        PIDsWaitingTXEmpty.clear();
-
-        memset(&RXBuffer[0], 0, sizeof(RXBuffer));
-        RXOffset = 0;
-        PIDsWaitingRXFull.clear();
-        PIDsWaitingRXEmpty.clear();
+        TXBuffer.clear();
+        RXBuffer.clear();
     }
 };
 
@@ -100,6 +150,10 @@ enum class SocketType {
 
 struct SocketData {
     SocketType Type;
+    enum {
+        CLIENT,
+        SERVER
+    } ClientServer;
     // We *could* make this a base class and have each socket type
     // implement it's own read, write, etc but I think the `void*` is
     // fine for now.
