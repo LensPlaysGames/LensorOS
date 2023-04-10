@@ -37,6 +37,7 @@ __attribute__((no_caller_saved_registers))
 void panic(InterruptFrameError*, const char* panicMessage);
 
 #define ASSERT(cond, msg) if (!(cond)) panic("Assertion \"" #cond "\" failed: " msg)
+#define UNREACHABLE(msg) ASSERT(0, "UNREACHABLE  " msg); hang()
 
 [[noreturn]]
 void hang();
