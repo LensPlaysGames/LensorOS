@@ -17,12 +17,15 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <storage/device_drivers/socket.h>
+
+#include <scheduler.h>
 #include <storage/file_metadata.h>
 #include <storage/storage_device_driver.h>
-#include <storage/device_drivers/socket.h>
 #include <system.h>
 
 #include <memory>
+
 
 std::shared_ptr<FileMetadata> SocketDriver::open(std::string_view path) {
     SocketData* data = new SocketData;
@@ -30,49 +33,57 @@ std::shared_ptr<FileMetadata> SocketDriver::open(std::string_view path) {
 }
 
 void SocketDriver::close(FileMetadata* meta) {
-    if (meta->driver_data()) {
-        SocketData* data = (SocketData*)meta->driver_data();
+    if (!meta) return;
+    SocketData* data = (SocketData*)meta->driver_data();
+    if (data) {
         switch (data->Type) {
-        case SocketType::LENSOR:
-            delete (SocketBuffers*)data->Data;
-            break;
+        case SocketType::LENSOR: {
+            SocketBuffers* buffers = (SocketBuffers*)data->Data;
+            buffers->RefCount -= 1;
+            if (buffers->RefCount == 0)
+                delete buffers;
+        } break;
         }
         delete data;
     }
 }
 
 ssz SocketDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
+    if (!meta) return -1;
     SocketData* data = (SocketData*)meta->driver_data();
+    if (!data) return -1;
     switch (data->Type) {
-    case SocketType::LENSOR:
+    case SocketType::LENSOR: {
+        SocketBuffers* buffers = (SocketBuffers*)data->Data;
+        if (!buffers) return -1;
         switch (data->ClientServer) {
         case SocketData::CLIENT:
-            // TODO: Read from TXBuffer.
-            break;
+            return buffers->TXBuffer.read(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
         case SocketData::SERVER:
-            // TODO: Read from RXBuffer.
-            break;
+            return buffers->RXBuffer.read(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
         }
-        break;
+        UNREACHABLE();
     }
-    std::print("[SOCK]:TODO: Implement `SocketDriver::read()`");
+    }
     return -1;
 }
 
 ssz SocketDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
+    if (!meta) return -1;
     SocketData* data = (SocketData*)meta->driver_data();
+    if (!data) return -1;
     switch (data->Type) {
-    case SocketType::LENSOR:
+    case SocketType::LENSOR: {
+        SocketBuffers* buffers = (SocketBuffers*)data->Data;
+        if (!buffers) return -1;
         switch (data->ClientServer) {
         case SocketData::CLIENT:
-            // TODO: write to RXBuffer.
-            break;
+            return buffers->RXBuffer.write(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
         case SocketData::SERVER:
-            // TODO: Write to TXBuffer.
-            break;
+            return buffers->TXBuffer.write(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
         }
-        break;
+        UNREACHABLE();
     }
-    std::print("[SOCK]:TODO: Implement `SocketDriver::write()`");
+    }
     return -1;
 }

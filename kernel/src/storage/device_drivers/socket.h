@@ -55,7 +55,7 @@
 /// return value means the socket should be closed. To attempt a retry,
 /// open a new socket.
 
-template <usz N>
+template <usz N = KiB(1)>
 struct FIFOBuffer {
     u8 Data[N] {0};
     usz Size {N};
@@ -124,8 +124,8 @@ struct FIFOBuffer {
     }
 };
 
-#define SOCKET_TX_BUFFER_SIZE 1024
-#define SOCKET_RX_BUFFER_SIZE 1024
+#define SOCKET_TX_BUFFER_SIZE (PAGE_SIZE / 2)
+#define SOCKET_RX_BUFFER_SIZE ((PAGE_SIZE / 2) - sizeof(usz))
 struct SocketBuffers {
     /// FIFO buffer for transmissions from the server.
     /// Server writes to this buffer.
@@ -135,6 +135,8 @@ struct SocketBuffers {
     /// Server reads from this buffer.
     /// Client writes to this buffer.
     FIFOBuffer<SOCKET_RX_BUFFER_SIZE> RXBuffer;
+
+    usz RefCount {1};
 
     void clear() {
         TXBuffer.clear();
@@ -148,8 +150,21 @@ enum class SocketType {
     LENSOR,
 };
 
+#define SOCKET_ADDRESS_MAX_SIZE 16
+struct SocketAddress {
+    enum {
+        // 16 bytes; simply a unique identifier which is memcmp'd
+        // Used by LENSOR type sockets.
+        LENSOR16,
+    } Type;
+    u8 Data[SOCKET_ADDRESS_MAX_SIZE];
+};
+
+/// Each FileMetadata associated with an open socket has this struct at
+/// it's `driver_data()`.
 struct SocketData {
     SocketType Type;
+    SocketAddress Address;
     enum {
         CLIENT,
         SERVER
