@@ -29,6 +29,7 @@
 #include <storage/device_drivers/dbgout.h>
 #include <storage/device_drivers/input.h>
 #include <storage/device_drivers/pipe.h>
+#include <storage/device_drivers/socket.h>
 #include <scheduler.h>
 #include <vfs_forward.h>
 
@@ -88,6 +89,7 @@ struct VFS {
     std::shared_ptr<InputDriver> StdinDriver;
     std::shared_ptr<DbgOutDriver> StdoutDriver;
     std::shared_ptr<PipeDriver> PipesDriver;
+    std::shared_ptr<SocketDriver> SocketsDriver;
 
     VFS() {
         StdinDriver    = std::make_shared<InputDriver>();

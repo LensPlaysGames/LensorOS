@@ -102,6 +102,7 @@ add_executable(
   src/storage/device_drivers/input.cpp
   src/storage/device_drivers/pipe.cpp
   src/storage/device_drivers/port_controller.cpp
+  src/storage/device_drivers/socket.cpp
   src/storage/filesystem_drivers/file_allocation_table.cpp
   src/system.cpp
   src/tss.cpp
