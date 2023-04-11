@@ -39,9 +39,9 @@ void SocketDriver::close(FileMetadata* meta) {
         switch (data->Type) {
         case SocketType::LENSOR: {
             SocketBuffers* buffers = (SocketBuffers*)data->Data;
+            if (!buffers) break;
             buffers->RefCount -= 1;
-            if (buffers->RefCount == 0)
-                delete buffers;
+            if (buffers->RefCount == 0) delete buffers;
         } break;
         }
         delete data;
@@ -86,4 +86,17 @@ ssz SocketDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
     }
     }
     return -1;
+}
+
+auto SocketDriver::socket(SocketType domain, int type, int protocol) -> std::shared_ptr<FileMetadata> {
+    switch (domain) {
+    case SocketType::LENSOR: {
+        auto f = open("");
+        if (!f) return {};
+        SocketBuffers* buffers = new SocketBuffers;
+        f->set_driver_data((void*)buffers);
+        return f;
+    }
+    }
+    return {};
 }

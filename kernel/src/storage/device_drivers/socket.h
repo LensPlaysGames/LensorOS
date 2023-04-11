@@ -179,6 +179,8 @@ struct SocketDriver final : StorageDeviceDriver {
     void close(FileMetadata* meta) final;
     auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
 
+    auto socket(SocketType domain, int type, int protocol) -> std::shared_ptr<FileMetadata>;
+
     ssz read(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
     ssz read_raw(usz, usz, void*) final { return -1; };
     ssz write(FileMetadata* meta, usz, usz byteCount, void* buffer) final;

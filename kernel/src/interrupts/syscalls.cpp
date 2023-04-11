@@ -31,6 +31,7 @@
 #include <rtc.h>
 #include <scheduler.h>
 #include <system.h>
+#include <storage/device_drivers/socket.h>
 #include <time.h>
 #include <virtual_filesystem.h>
 #include <vfs_forward.h>
@@ -505,8 +506,7 @@ ProcFD sys$16_dup(ProcessFileDescriptor fd) {
     DBGMSG("  fd: {}\n", fd);
     auto* process = Scheduler::CurrentProcess->value();
     auto fds = SYSTEM->virtual_filesystem().dup(process, fd);
-    if (fds.invalid())
-        std::print("  ERROR OCCURED: dup failed\n");
+    if (fds.invalid()) std::print("[SYS$]:dup:ERROR: VFS.dup() failed...\n");
     return fds.Process;
 }
 
@@ -516,6 +516,101 @@ void sys$17_uart(void* buffer, size_t size) {
     DBGMSG("  buffer: {}  size: {}\n", buffer, size);
     // TODO: Validate buffer pointer.
     std::print("{}", std::string_view((const char*)buffer, size));
+}
+
+/// domain:
+///   AF_LENSOR == 0  Local communication (IPC)
+/// type:
+///   SOCK_RAW == 0  Raw protocol access (should only be used with AF_LENSOR)
+/// protocol:
+///       Specifies a particular protocol to be used with the socket.
+///   Normally only a single protocol exists to support a particular
+///   socket type within a given protocol family, in which case
+///   protocol can be specified as 0.
+ProcFD sys$18_socket(int domain, int type, int protocol) {
+    DBGMSG(sys$_dbgfmt, 18, "socket");
+    auto vfs = SYSTEM->virtual_filesystem();
+    auto socket = vfs.SocketsDriver->socket((SocketType)domain, type, protocol);
+    if (!socket) {
+        std::print("[SYS$]:socket:ERROR: Could not open new socket!\n");
+        return ProcFD::Invalid;
+    }
+    auto* process = Scheduler::CurrentProcess->value();
+    auto fds = vfs.add_file(socket, process);
+    if (fds.invalid()) std::print("[SYS$]:socket:ERROR: Could not register new socket in VFS.\n");
+    return fds.Process;
+}
+
+/// Bind the socket referred to by socketFD to the given local address.
+int sys$19_bind(ProcFD socketFD, const SocketAddress* address, usz addressLength) {
+    static constexpr const int success {0};
+    static constexpr const int error {-1};
+    DBGMSG(sys$_dbgfmt, 19, "bind");
+    if (!address) return error;
+    auto file = SYSTEM->virtual_filesystem().file(socketFD);
+    if (!file) {
+        std::print("[SYS$]:bind:ERROR: File descriptor invalid.\n");
+        return error;
+    }
+    // Validate that socketFD actually refers to a socket.
+    if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
+        std::print("[SYS$]:bind:ERROR: File descriptor does not appear to refer to a socket!\n");
+        return error;
+    }
+    SocketData* data = (SocketData*)file->driver_data();
+    data->Address = *address;
+    std::print("[SYS$]:bind: socket bound to address!\n");
+    return success;
+}
+
+/// Set the Client/Server flag in the socket referred to by socketFD to
+/// SERVER.
+int sys$20_listen(ProcFD socketFD, int backlog) {
+    static constexpr const int success {0};
+    static constexpr const int error {-1};
+    DBGMSG(sys$_dbgfmt, 20, "listen");
+
+    // TODO: support backlog (amount of connections allowed at once
+    // before we start refusing them automatically).
+    (void)backlog;
+
+    auto file = SYSTEM->virtual_filesystem().file(socketFD);
+    if (!file) {
+        std::print("[SYS$]:bind:ERROR: File descriptor invalid.\n");
+        return error;
+    }
+    // Validate that socketFD actually refers to a socket.
+    if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
+        std::print("[SYS$]:bind:ERROR: File descriptor does not appear to refer to a socket!\n");
+        return error;
+    }
+    SocketData* data = (SocketData*)file->driver_data();
+    data->ClientServer = SocketData::SERVER;
+    std::print("[SYS$]:bind: socket bound to address!\n");
+    return success;
+}
+
+int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLength) {
+    static constexpr const int success {0};
+    static constexpr const int error {-1};
+    DBGMSG(sys$_dbgfmt, 21, "connect");
+
+    auto file = SYSTEM->virtual_filesystem().file(socketFD);
+    if (!file) {
+        std::print("[SYS$]:bind:ERROR: File descriptor invalid.\n");
+        return error;
+    }
+    // Validate that socketFD actually refers to a socket.
+    if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
+        std::print("[SYS$]:bind:ERROR: File descriptor does not appear to refer to a socket!\n");
+        return error;
+    }
+    SocketData* data = (SocketData*)file->driver_data();
+    (void)data;
+    (void)success;
+
+    std::print("[SYS$]:connect:TODO connect socket to address!\n");
+    return error;
 }
 
 // TODO: Reorder this
@@ -555,4 +650,9 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     (void*)sys$16_dup,
 
     (void*)sys$17_uart,
+
+    (void*)sys$18_socket,
+    (void*)sys$19_bind,
+    (void*)sys$20_listen,
+    (void*)sys$21_connect,
 };
