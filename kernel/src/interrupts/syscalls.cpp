@@ -559,7 +559,7 @@ int sys$19_bind(ProcFD socketFD, const SocketAddress* address, usz addressLength
     }
     SocketData* data = (SocketData*)file->driver_data();
     data->Address = *address;
-    std::print("[SYS$]:bind: socket bound to address!\n");
+    std::print("[SYS$]:bind: socket {} bound to address!\n", socketFD);
     return success;
 }
 
@@ -576,17 +576,17 @@ int sys$20_listen(ProcFD socketFD, int backlog) {
 
     auto file = SYSTEM->virtual_filesystem().file(socketFD);
     if (!file) {
-        std::print("[SYS$]:bind:ERROR: File descriptor invalid.\n");
+        std::print("[SYS$]:listen:ERROR: File descriptor invalid.\n");
         return error;
     }
     // Validate that socketFD actually refers to a socket.
     if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
-        std::print("[SYS$]:bind:ERROR: File descriptor does not appear to refer to a socket!\n");
+        std::print("[SYS$]:listen:ERROR: File descriptor does not appear to refer to a socket!\n");
         return error;
     }
     SocketData* data = (SocketData*)file->driver_data();
     data->ClientServer = SocketData::SERVER;
-    std::print("[SYS$]:bind: socket bound to address!\n");
+    std::print("[SYS$]:listen: socket {} now listening!\n", socketFD);
     return success;
 }
 
@@ -597,21 +597,44 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLen
 
     auto file = SYSTEM->virtual_filesystem().file(socketFD);
     if (!file) {
-        std::print("[SYS$]:bind:ERROR: File descriptor invalid.\n");
+        std::print("[SYS$]:connect:ERROR: File descriptor invalid.\n");
         return error;
     }
     // Validate that socketFD actually refers to a socket.
     if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
-        std::print("[SYS$]:bind:ERROR: File descriptor does not appear to refer to a socket!\n");
+        std::print("[SYS$]:connect:ERROR: File descriptor does not appear to refer to a socket!\n");
         return error;
     }
     SocketData* data = (SocketData*)file->driver_data();
     (void)data;
     (void)success;
 
-    std::print("[SYS$]:connect:TODO connect socket to address!\n");
+    std::print("[SYS$]:connect:TODO connect socket {} to address!\n", socketFD);
     return error;
 }
+
+ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* addressLength) {
+    DBGMSG(sys$_dbgfmt, 22, "accept");
+
+    if (!address || !addressLength) return ProcFD::Invalid;
+
+    auto file = SYSTEM->virtual_filesystem().file(socketFD);
+    if (!file) {
+        std::print("[SYS$]:accept:ERROR: File descriptor invalid.\n");
+        return ProcFD::Invalid;
+    }
+    // Validate that socketFD actually refers to a socket.
+    if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
+        std::print("[SYS$]:accept:ERROR: File descriptor does not appear to refer to a socket!\n");
+        return ProcFD::Invalid;
+    }
+    SocketData* data = (SocketData*)file->driver_data();
+    (void)data;
+
+    std::print("[SYS$]:accept:TODO implement accept (socket {})...\n", socketFD);
+    return ProcFD::Invalid
+}
+
 
 // TODO: Reorder this
 // FIXME: Make it easier to reorder this (maybe separate the number
@@ -655,4 +678,5 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     (void*)sys$19_bind,
     (void*)sys$20_listen,
     (void*)sys$21_connect,
+    (void*)sys$22_accept,
 };
