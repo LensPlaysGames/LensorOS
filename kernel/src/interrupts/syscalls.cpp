@@ -558,6 +558,7 @@ int sys$19_bind(ProcFD socketFD, const SocketAddress* address, usz addressLength
         return error;
     }
     SocketData* data = (SocketData*)file->driver_data();
+    // TODO: Handle `addressLength` properly...
     data->Address = *address;
     std::print("[SYS$]:bind: socket {} bound to address!\n", socketFD);
     return success;
@@ -587,6 +588,9 @@ int sys$20_listen(ProcFD socketFD, int backlog) {
     SocketData* data = (SocketData*)file->driver_data();
     data->ClientServer = SocketData::SERVER;
     std::print("[SYS$]:listen: socket {} now listening!\n", socketFD);
+
+    // TODO: Actually setup ConnectionQueue
+
     return success;
 }
 
@@ -594,6 +598,8 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLen
     static constexpr const int success {0};
     static constexpr const int error {-1};
     DBGMSG(sys$_dbgfmt, 21, "connect");
+
+    if (!address) return error;
 
     auto file = SYSTEM->virtual_filesystem().file(socketFD);
     if (!file) {
@@ -608,6 +614,9 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLen
     SocketData* data = (SocketData*)file->driver_data();
     (void)data;
     (void)success;
+
+    // TODO: Push this client socket onto the ConnectionQueue of the
+    // socket bound to the given address. Block until it is accepted.
 
     std::print("[SYS$]:connect:TODO connect socket {} to address!\n", socketFD);
     return error;
@@ -631,8 +640,13 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
     SocketData* data = (SocketData*)file->driver_data();
     (void)data;
 
+    // TODO: If ConnectionQueue is populated, pop the first connection
+    // off the queue, and return a file descriptor that references it's
+    // socket. If ConnectionQueue is empty, block this process until a
+    // connection is made to this socket.
+
     std::print("[SYS$]:accept:TODO implement accept (socket {})...\n", socketFD);
-    return ProcFD::Invalid
+    return ProcFD::Invalid;
 }
 
 
