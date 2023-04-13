@@ -225,14 +225,14 @@ public:
         if (__pos > end() || __pos < begin()) { /* TODO: Crash horribly */ }
         const auto __idx = __pos - __ptr;
         if (__sz == __cap) { reserve(__cap == 0 ? 1 : __cap * 2); }
-        for (size_type i = __sz; i > __idx; --i) { __ptr[i] = __ptr[i - 1]; }
+        for (difference_type i = __sz; i > __idx; --i) { __ptr[i] = __ptr[i - 1]; }
         __ptr[__idx] = move(__val);
         ++__sz;
         return __ptr + __idx;
     }
 
     iterator insert(const_iterator __pos, const value_type& __val) {
-        insert(__pos, value_type(__val));
+        return insert(__pos, value_type(__val));
     }
 
     template<typename _It>
