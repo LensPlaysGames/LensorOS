@@ -160,10 +160,6 @@ auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename
         // "foo.a"      -> "FOO     A  "
         // "clienttest" -> "clienttest" but in u16
 
-        // TODO: What about multiple '.' in filename?
-        // TODO: What about over-long extension? How does that interact
-        // with LFN?
-
         std::string name;
         std::string extension;
 
@@ -202,10 +198,64 @@ auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename
         } else {
             // If no '.' in filename, ensure it's length is less than or equal to 8 bytes.
 
-            // If it is longer than eight bytes, make computer-generated filename...
+            // If it is longer than eight bytes, return original but in utf16 and hope for LFN.
             if (path.size() > 8) {
-                // Path short, name long, no extension. Just return original path in hopes of LFN.
-                return raw_filename;
+                // Path short, name long, no extension.
+                std::string filename_utf16;
+                auto append_utf16_codepoint = [&filename_utf16](u16 codepoint) {
+                    // Hack to append literal bytes of codepoint onto string.
+                    auto* codepoint_bytes = reinterpret_cast<const char*>(&codepoint);
+                    filename_utf16 += *codepoint_bytes++;
+                    filename_utf16 += *codepoint_bytes;
+                };
+                for (size_t i = 0; i < raw_filename.size(); ++i) {
+                    const u8 c = raw_filename[i];
+                    /// One byte
+                    if (!(c & 0b10000000)) {
+                        filename_utf16 += c;
+                        filename_utf16 += '\0';
+                        continue;
+                    }
+                    /// Four byte (starts with 0b11110)
+                    if ((c & 0b11111000) == 0b11110000) {
+                        /// Ignore if there aren't enough bytes left.
+                        if (!(i + 3 < raw_filename.size())) break;
+                        u32 codepoint = (raw_filename[i++] & 0b00000111) << 18;
+                        // NOTE: 0b0011111 is because "continuation bytes" in utf8 must have "0b10xxxxxx" format.
+                        codepoint |= (raw_filename[i++] & 0b00111111) << 12;
+                        codepoint |= (raw_filename[i++] & 0b00111111) << 6;
+                        codepoint |= raw_filename[i] & 0b00111111;
+                        u32 codepoint_adjusted = codepoint - 0x10000;
+                        u16 leading = 0xd800 + (codepoint_adjusted & (0b1111111111 << 10));
+                        u16 trailing = 0xdc00 + (codepoint_adjusted & 0b1111111111);
+                        append_utf16_codepoint(leading);
+                        append_utf16_codepoint(trailing);
+                        continue;
+                    }
+                    /// Three byte (starts with 0b1110)
+                    if ((c & 0b11110000) == 0b11100000) {
+                        /// Ignore if there aren't enough bytes left.
+                        if (!(i + 2 < raw_filename.size())) break;
+                        u16 codepoint = (raw_filename[i++] & 0b00001111) << 12;
+                        codepoint |= (raw_filename[i++] & 0b00111111) << 6;
+                        codepoint |= raw_filename[i] & 0b00111111;
+                        append_utf16_codepoint(codepoint);
+                        continue;
+                    }
+                    /// Two byte (starts with 0b110)
+                    if ((c & 0b11100000) == 0b11000000) {
+                        /// Ignore if there aren't enough bytes left.
+                        if (!(i + 1 < raw_filename.size())) break;
+                        u16 codepoint = (raw_filename[i++] & 0b00011111) << 6;
+                        codepoint |= raw_filename[i] & 0b00111111;
+                        append_utf16_codepoint(codepoint);
+                        continue;
+                    }
+                    // Trailing byte (shouldn't happen, but malformed input exists)
+                    //if ((c & 0b11000000) == 0b10000000) continue;
+                }
+                DBGMSG("[FAT]: Path short but filename too long, returning original in utf16 in hopes of LFN: \"{}\"\n", filename_utf16);
+                return filename_utf16;
             }
 
             // Pad filename with spaces to reach full 11-byte 8.3 filename length.
@@ -324,7 +374,11 @@ auto FileAllocationTableDriver::DirIteratorHelper::Iterator::operator++() -> Ite
             // Remove 0xff and then two 0x00 from end of longFileName.
             ClearLFN = true;
             Entry.FileName = std::string_view{reinterpret_cast<char*>(Entry.CE->FileName), 11};
-            Entry.LongFileName.__remove_trailing({"\xff\0", 2});
+            // Remove 0xff bytes (padding bytes at end of LFN in filesystem).
+            Entry.LongFileName.__remove_trailing("\xff");
+            // Remove the NUL terminating utf16 codepoint (two bytes).
+            size_t lfnSize = Entry.LongFileName.size();
+            if (lfnSize > 2) Entry.LongFileName = Entry.LongFileName.substr(0, lfnSize - 2);
 
 #ifdef DEBUG_FAT
             std::string fileType;
@@ -376,9 +430,9 @@ std::shared_ptr<FileMetadata> FileAllocationTableDriver::traverse_path(std::stri
     DBGMSG("[FAT]:open(): Translated filename \"{}\" from \"{}\"\n", filename, raw_filename);
 
     for (const auto& Entry : for_each_dir_entry_in(directoryCluster)) {
+        if (Entry.FileName != filename && Entry.LongFileName != filename) continue;
         // If path and raw_filename are equal, we can not resolve any more
         // filenames from full path; we have found the file.
-        if (Entry.FileName != filename && (Entry.LongFileName.empty() || Entry.LongFileName != filename)) continue;
         if (path == raw_filename) {
             DBGMSG("  Found file at {}!\n"
                    "    Name: \"{}\"\n"
