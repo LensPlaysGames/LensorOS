@@ -2248,7 +2248,6 @@ void E1000::write_raw(void* data, usz length) {
         pages = 1 + (length / PAGE_SIZE);
     else pages = length / PAGE_SIZE;
 
-    // FIXME: This is a memory leak (free in interrupt handler)
     desc->Address = u64(Memory::request_pages(pages));
     //std::print("Copying {} pages from virtual {} to physical {}\n", pages, data, (void*)desc->Address);
     memcpy((void*)desc->Address, data, length);
