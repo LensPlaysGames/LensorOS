@@ -156,8 +156,9 @@ auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename
 
         return path;
     } else if (path.size() <= 12) {
-        // "blazeit" -> "BLAZEIT    "
-        // "foo.a"   -> "FOO     A  "
+        // "blazeit"    -> "BLAZEIT    "
+        // "foo.a"      -> "FOO     A  "
+        // "clienttest" -> "clienttest"
 
         // TODO: What about multiple '.' in filename?
         // TODO: What about over-long extension? How does that interact
@@ -202,9 +203,9 @@ auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename
             // If no '.' in filename, ensure it's length is less than or equal to 8 bytes.
 
             // If it is longer than eight bytes, make computer-generated filename...
-            if (path.size() > 11) {
-                std::print("[FAT]: TODO: translate_filename() computer-generated 8.3 filenames... (path short, name long, no extension)\n");
-                return "INVALID_TRANSLATION";
+            if (path.size() > 8) {
+                // Path short, name long, no extension. Just return original path in hopes of LFN.
+                return raw_filename;
             }
 
             // Pad filename with spaces to reach full 11-byte 8.3 filename length.
