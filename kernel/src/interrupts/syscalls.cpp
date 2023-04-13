@@ -537,7 +537,12 @@ ProcFD sys$18_socket(int domain, int type, int protocol) {
     }
     auto* process = Scheduler::CurrentProcess->value();
     auto fds = vfs.add_file(socket, process);
-    if (fds.invalid()) std::print("[SYS$]:socket:ERROR: Could not register new socket in VFS.\n");
+    if (fds.invalid()) {
+        // TODO: More gracefully handle this case. Cleanup created
+        // socket, check if only one of the fds is invalid and in that
+        // case cleanup the valid one, etc.
+        std::print("[SYS$]:socket:ERROR: Could not register new socket in VFS.\n");
+    }
     return fds.Process;
 }
 
@@ -560,6 +565,11 @@ int sys$19_bind(ProcFD socketFD, const SocketAddress* address, usz addressLength
     SocketData* data = (SocketData*)file->driver_data();
     // TODO: Handle `addressLength` properly...
     data->Address = *address;
+
+    // TODO: Add an address->socket mapping in the driver
+    // (or somewhere) so that this socket can be referred to by the
+    // bound address. Also ensure no duplicate bindings.
+
     std::print("[SYS$]:bind: socket {} bound to address!\n", socketFD);
     return success;
 }
@@ -601,25 +611,39 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLen
 
     if (!address) return error;
 
-    auto file = SYSTEM->virtual_filesystem().file(socketFD);
-    if (!file) {
-        std::print("[SYS$]:connect:ERROR: File descriptor invalid.\n");
+    Process* process = Scheduler::CurrentProcess->value();
+    {
+        auto file = SYSTEM->virtual_filesystem().file(socketFD);
+        if (!file) {
+            std::print("[SYS$]:connect:ERROR: File descriptor invalid.\n");
+            return error;
+        }
+        // Validate that socketFD actually refers to a socket.
+        if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
+            std::print("[SYS$]:connect:ERROR: File descriptor does not appear to refer to a socket!\n");
+            return error;
+        }
+        SocketData* data = (SocketData*)file->driver_data();
+        if (data->ClientServer != SocketData::CLIENT) {
+            std::print("[SYS$]:connect:ERROR: Socket is not a client socket.\n");
+            return error;
+        }
+
+        // TODO: Get server socket from address.
+        //SocketData* serverData = nullptr;
+        //serverData->ConnectionQueue.push_back(SocketConnection{data->Address, file, process->ProcessID});
+
+        // TODO: Unblock server socket's corresponding process, if needed.
+
+        std::print("[SYS$]:connect:TODO: connect socket {} to address!\n", socketFD);
         return error;
     }
-    // Validate that socketFD actually refers to a socket.
-    if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
-        std::print("[SYS$]:connect:ERROR: File descriptor does not appear to refer to a socket!\n");
-        return error;
-    }
-    SocketData* data = (SocketData*)file->driver_data();
-    (void)data;
-    (void)success;
 
-    // TODO: Push this client socket onto the ConnectionQueue of the
-    // socket bound to the given address. Block until it is accepted.
+    // Set return value for when we are unblocked.
+    process->CPU.RAX = success;
+    Scheduler::yield();
 
-    std::print("[SYS$]:connect:TODO connect socket {} to address!\n", socketFD);
-    return error;
+    return success;
 }
 
 ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* addressLength) {
