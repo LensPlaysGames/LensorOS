@@ -29,11 +29,15 @@ class SinglyLinkedList;
 
 template <typename T>
 class SinglyLinkedListNode {
-    typedef T DataType;
+    using DataType = T;
 
     friend SinglyLinkedList<DataType>;
 
+    DataType Data;
+    SinglyLinkedListNode* Next { nullptr };
+
 public:
+
     explicit SinglyLinkedListNode(const DataType& value
                                   , SinglyLinkedListNode* next = nullptr)
         : Data(value), Next(next) {}
@@ -41,19 +45,57 @@ public:
     DataType& value()             { return Data; }
     const DataType& value() const { return Data; }
     SinglyLinkedListNode* next()  { return Next; }
-
-private:
-    DataType Data;
-    SinglyLinkedListNode* Next { nullptr };
 };
 
 
 template <typename T>
 class SinglyLinkedList {
-    typedef T DataType;
-    typedef SinglyLinkedListNode<DataType> Node;
+    using DataType = T;
+    using Node = SinglyLinkedListNode<DataType>;
 
 public:
+    struct Iterator {
+        Node* node;
+
+        Iterator(Node* n) : node(n) {}
+
+        Iterator& operator++() {
+            if (node) node = node->next();
+            return *this;
+        }
+        Iterator operator++(int) {
+            if (node) return {node->next()};
+            return *this;
+        }
+
+        bool operator== (const Iterator& other) const {
+            return node == other.node;
+        }
+        bool operator!= (const Iterator& other) const {
+            return !(operator==(other));
+        }
+
+        DataType& operator* () const {
+            return node->value();
+        }
+    };
+
+    Iterator begin() {
+        return {Head};
+    }
+    Iterator end() {
+        return {nullptr};
+    }
+
+    DataType& front() {
+        if (Head) return Head->value();
+        return {};
+    }
+    DataType& back() {
+        if (Head) return Head->value();
+        return {};
+    }
+
     ~SinglyLinkedList() {
         while (Head) {
             Node* tmp = Head;

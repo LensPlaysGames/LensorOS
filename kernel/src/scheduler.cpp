@@ -70,9 +70,9 @@ void Process::destroy(int status) {
     }
     // Free memory regions. This includes mmap()ed memory as
     // well as loaded program regions, the stack, etc.
-    Memories.for_each([](SinglyLinkedListNode<Memory::Region>* it){
-        Memory::free_pages(it->value().paddr, it->value().pages);
-    });
+    for(const auto& region : Memories) {
+        Memory::free_pages(region.paddr, region.pages);
+    }
     // Clear memories list.
     while (Memories.remove(0))
         ;
@@ -378,8 +378,7 @@ pid_t CopyUserspaceProcess(Process* original) {
     //std::print("[SCHED]: Allocated new process {} at {}\n", newProcess->ProcessID, (void*)newProcess);
 
     // Copy each memory region's contents into newly allocated memory.
-    for (SinglyLinkedListNode<Memory::Region>* it = original->Memories.head(); it; it = it->next()) {
-        Memory::Region& memory = it->value();
+    for (const auto& memory : original->Memories) {
         Memory::Region newMemory{memory};
         // FIXME: NO reason these have to be physically contiguous.
         usz newMemoryPages = usz(Memory::request_pages(memory.pages));

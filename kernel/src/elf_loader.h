@@ -343,9 +343,9 @@ namespace ELF {
         }
 
         // Unmap and free old process memory, if header is valid and things look good to go.
-        for (SinglyLinkedListNode<Memory::Region>* it = process->Memories.head(); it; it = it->next()) {
-            Memory::unmap_pages(process->CR3, it->value().vaddr, it->value().pages, Memory::ShowDebug::No);
-            Memory::free_pages(it->value().paddr, it->value().pages);
+        for (const auto& region : process->Memories) {
+            Memory::unmap_pages(process->CR3, region.vaddr, region.pages, Memory::ShowDebug::No);
+            Memory::free_pages(region.paddr, region.pages);
         }
         // Clear memories list.
         while (process->Memories.remove(0));

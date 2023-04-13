@@ -162,6 +162,16 @@ struct Process {
     ///   Used iff setReturn is true.
     ///   The value that the process being run will see as the return
     ///   value.
+    ///
+    /// Examples:
+    /// `unblock()` simply sets the process running, no change to
+    /// existing CPU state.
+    /// `unblock(false)` and `unblock(false, x)` are both equal to
+    /// passing zero arguments, the case just above.
+    /// `unblock(true)` will set the return value to 0, as well as set
+    /// the process running.
+    /// `unblock(true, x)` will set the return value to x, as well as
+    /// set the process running.
     void unblock(bool setReturn = false, usz returnValue = 0) {
         if (setReturn) set_return_value(returnValue);
         State = RUNNING;
