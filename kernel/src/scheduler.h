@@ -97,7 +97,7 @@ struct Process {
 
     /// Keep track of opened files that may be freed when the process
     /// exits, if no other process has it open.
-    std::sparse_vector<SysFD, -1, ProcFD> FileDescriptors;
+    std::sparse_vector<SysFD, SysFD::Invalid, ProcFD> FileDescriptors;
 
     std::string ExecutablePath { "" };
     std::string WorkingDirectory { "" };
