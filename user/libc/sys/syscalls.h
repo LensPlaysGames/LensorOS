@@ -42,7 +42,12 @@
 #define SYS_pwd     15
 #define SYS_dup     16
 #define SYS_uart    17
-#define SYS_MAXSYSCALL 17
+#define SYS_socket  18
+#define SYS_bind    19
+#define SYS_listen  20
+#define SYS_connect 21
+#define SYS_accept  22
+#define SYS_MAXSYSCALL 22
 #else
 #define SYS_read  0
 #define SYS_write 1
