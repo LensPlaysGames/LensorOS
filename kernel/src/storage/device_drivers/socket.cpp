@@ -41,24 +41,35 @@ std::shared_ptr<FileMetadata> SocketDriver::open(std::string_view path) {
 void SocketDriver::close(FileMetadata* meta) {
     if (!meta) return;
     SocketData* data = (SocketData*)meta->driver_data();
-    if (data) {
-        // If bound, remove binding for this socket from list of bindings.
-        if (data->Address.Type != SocketAddress::UNBOUND) {
-            const SocketAddress& addr = data->Address;
-            std::erase_if(Bindings, [&addr](const SocketBinding& binding) {
-                return binding == addr;
-            });
-        }
-        switch (data->Type) {
-        case SocketType::LENSOR: {
-            SocketBuffers* buffers = (SocketBuffers*)data->Data;
-            if (!buffers) break;
-            buffers->RefCount -= 1;
-            if (buffers->RefCount == 0) delete buffers;
-        } break;
-        }
-        delete data;
+    if (!data) return;
+    // If bound, remove binding for this socket from list of bindings.
+    if (data->Address.Type != SocketAddress::UNBOUND) {
+        std::print("  socket bound; removing binding\n");
+        const SocketAddress& addr = data->Address;
+        std::erase_if(Bindings, [&addr](const SocketBinding& binding) {
+            return binding == addr;
+        });
     }
+    switch (data->Type) {
+    case SocketType::LENSOR: {
+        std::print("  LENSOR type socket; decrementing buffers refcount\n");
+        SocketBuffers* buffers = (SocketBuffers*)data->Data;
+        if (!buffers) break;
+        data->Data = nullptr;
+        // TODO: refcount doesn't work, I don't think. Maybe a shared
+        // ptr would be better, but that means we'd have to do base
+        // class instead of void*.
+        // FIXME: THIS IS A MEMORY LEAK, WE NEED TO DELETE `buffers`.
+        /*
+        buffers->RefCount -= 1;
+        if (buffers->RefCount == 0) {
+            std::print("  refcount zero, freeing buffers\n");
+            delete buffers;
+        }
+        */
+    } break;
+    }
+    delete data;
 }
 
 ssz SocketDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
