@@ -158,7 +158,7 @@ auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename
     } else if (path.size() <= 12) {
         // "blazeit"    -> "BLAZEIT    "
         // "foo.a"      -> "FOO     A  "
-        // "clienttest" -> "clienttest"
+        // "clienttest" -> "clienttest" but in u16
 
         // TODO: What about multiple '.' in filename?
         // TODO: What about over-long extension? How does that interact
@@ -324,7 +324,7 @@ auto FileAllocationTableDriver::DirIteratorHelper::Iterator::operator++() -> Ite
             // Remove 0xff and then two 0x00 from end of longFileName.
             ClearLFN = true;
             Entry.FileName = std::string_view{reinterpret_cast<char*>(Entry.CE->FileName), 11};
-            Entry.LongFileName.__remove_trailing("\xff\0");
+            Entry.LongFileName.__remove_trailing({"\xff\0", 2});
 
 #ifdef DEBUG_FAT
             std::string fileType;
