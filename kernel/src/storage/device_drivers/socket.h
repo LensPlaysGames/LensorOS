@@ -159,7 +159,7 @@ struct SocketAddress {
         // 16 bytes; simply a unique identifier which is memcmp'd
         // Used by LENSOR type sockets.
         LENSOR16,
-    } Type;
+    } Type { UNBOUND };
     u8 Data[SOCKET_ADDRESS_MAX_SIZE];
 
     bool operator== (const SocketAddress& other) const {
@@ -176,12 +176,12 @@ struct SocketAddress {
 };
 
 struct SocketConnection {
-    SocketAddress Address;
+    SocketAddress Address{};
     /// This metadata refers to the client socket.
     std::shared_ptr<FileMetadata> FileMeta;
     /// ID of process that should be unblocked when connection is
     /// accepted.
-    pid_t PID;
+    pid_t PID { pid_t(-1) };
 };
 
 /// Each FileMetadata associated with an open socket has this struct at
@@ -192,7 +192,7 @@ struct SocketData {
     /// server sockets, so that they can be unblocked upon an incoming
     /// request.
     pid_t PID { pid_t(-1) };
-    SocketAddress Address { SocketAddress::UNBOUND, { 0 } };
+    SocketAddress Address{};
     /// `true` iff PID is waiting to accept an incoming connection.
     bool WaitingOnConnection { false };
     std::deque<SocketConnection> ConnectionQueue;
@@ -203,7 +203,7 @@ struct SocketData {
     // We *could* make this a base class and have each socket type
     // implement it's own read, write, etc but I think the `void*` is
     // fine for now.
-    void* Data;
+    void* Data { nullptr };
 };
 
 struct SocketBinding {
