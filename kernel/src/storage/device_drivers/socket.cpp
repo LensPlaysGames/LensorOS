@@ -29,6 +29,7 @@
 
 std::shared_ptr<FileMetadata> SocketDriver::open(std::string_view path) {
     SocketData* data = new SocketData;
+    if (!data) return {};
     return std::make_shared<FileMetadata>("new_socket", sdd(SYSTEM->virtual_filesystem().SocketsDriver), 0, data);
 }
 
@@ -93,8 +94,8 @@ auto SocketDriver::socket(SocketType domain, int type, int protocol) -> std::sha
     case SocketType::LENSOR: {
         auto f = open("");
         if (!f) return {};
-        SocketBuffers* buffers = new SocketBuffers;
-        f->set_driver_data((void*)buffers);
+        SocketData* data = (SocketData*)f->driver_data();
+        data->Data = new SocketBuffers;
         return f;
     }
     }
