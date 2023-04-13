@@ -30,6 +30,11 @@
 std::shared_ptr<FileMetadata> SocketDriver::open(std::string_view path) {
     SocketData* data = new SocketData;
     if (!data) return {};
+    // FIXME: We aren't *entirely* sure that the "current process" is
+    // the one opening things. Only way to fix this is to pass Process/
+    // PID as an argument to every single storage device driver, which is
+    // probably a good idea honestly.
+    data->PID = Scheduler::CurrentProcess->value()->ProcessID;
     return std::make_shared<FileMetadata>("new_socket", sdd(SYSTEM->virtual_filesystem().SocketsDriver), 0, data);
 }
 

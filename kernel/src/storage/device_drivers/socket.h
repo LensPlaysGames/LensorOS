@@ -23,6 +23,7 @@
 #include <integers.h>
 #include <scheduler.h>
 
+#include <deque>
 #include <vector>
 
 /// A socket FileMetadata, when opened, is basically just an empty
@@ -160,11 +161,27 @@ struct SocketAddress {
     u8 Data[SOCKET_ADDRESS_MAX_SIZE];
 };
 
+struct SocketConnection {
+    SocketAddress Address;
+    /// This metadata refers to the client socket.
+    std::shared_ptr<FileMetadata> FileMeta;
+    /// ID of process that should be unblocked when connection is
+    /// accepted.
+    pid_t PID;
+};
+
 /// Each FileMetadata associated with an open socket has this struct at
 /// it's `driver_data()`.
 struct SocketData {
+    /// The ID of the process that opened this socket; mainly used for
+    /// server sockets, so that they can be unblocked upon an incoming
+    /// request.
+    pid_t PID { pid_t(-1) };
     SocketType Type;
     SocketAddress Address;
+    /// `true` iff PID is waiting to accept an incoming connection.
+    bool WaitingOnConnection { false };
+    std::deque<SocketConnection> ConnectionQueue;
     enum {
         CLIENT,
         SERVER
