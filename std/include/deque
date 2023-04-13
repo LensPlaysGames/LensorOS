@@ -30,6 +30,13 @@ __END_DECLS__
 
 namespace std {
 
+/// NOTE: This is NOT a standard-compliant implementation of deque.
+/// This is just what I came up with on my own for a simple double
+/// ended queue, without thinking about the strict requirements of the
+/// standard. It isn't perfect, but it matches the API rather well;
+/// most importantly, invalidation is not consistent with the standard's
+/// requirements, so be weary of keeping references to elements across
+/// push/pop boundaries, or at all really.
 template <class _T>
 struct __deque_impl {
     using value_type = _T;
