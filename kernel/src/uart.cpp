@@ -161,6 +161,13 @@ u8 read() {
 }
 
 void out(u8 byte) {
+    if (byte == '\0') {
+        out_raw('\\');
+        out_raw('0');
+        //out_raw('N');
+        //out_raw('U');
+        //out_raw('L');
+    }
     if (byte == '\n') out_raw('\r');
     out_raw(byte);
 }
