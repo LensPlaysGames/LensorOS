@@ -529,7 +529,7 @@ void sys$17_uart(void* buffer, size_t size) {
 ///   protocol can be specified as 0.
 ProcFD sys$18_socket(int domain, int type, int protocol) {
     DBGMSG(sys$_dbgfmt, 18, "socket");
-    auto vfs = SYSTEM->virtual_filesystem();
+    auto& vfs = SYSTEM->virtual_filesystem();
     auto socket = vfs.SocketsDriver->socket((SocketType)domain, type, protocol);
     if (!socket) {
         std::print("[SYS$]:socket:ERROR: Could not open new socket!\n");
@@ -552,7 +552,7 @@ int sys$19_bind(ProcFD socketFD, const SocketAddress* address, usz addressLength
     static constexpr const int error {-1};
     DBGMSG(sys$_dbgfmt, 19, "bind");
     if (!address) return error;
-    auto vfs = SYSTEM->virtual_filesystem();
+    auto& vfs = SYSTEM->virtual_filesystem();
     auto file = vfs.file(socketFD);
     if (!file) {
         std::print("[SYS$]:bind:ERROR: File descriptor invalid.\n");
