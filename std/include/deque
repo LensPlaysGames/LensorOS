@@ -147,7 +147,7 @@ struct __deque_impl {
     }
 
     reference front() {
-        return &__data[__head];
+        return __data[__head];
     }
     const_reference front() const {
         return &__data[__head];
