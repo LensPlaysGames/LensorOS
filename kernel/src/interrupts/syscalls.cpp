@@ -552,7 +552,8 @@ int sys$19_bind(ProcFD socketFD, const SocketAddress* address, usz addressLength
     static constexpr const int error {-1};
     DBGMSG(sys$_dbgfmt, 19, "bind");
     if (!address) return error;
-    auto file = SYSTEM->virtual_filesystem().file(socketFD);
+    auto vfs = SYSTEM->virtual_filesystem();
+    auto file = vfs.file(socketFD);
     if (!file) {
         std::print("[SYS$]:bind:ERROR: File descriptor invalid.\n");
         return error;
@@ -563,12 +564,15 @@ int sys$19_bind(ProcFD socketFD, const SocketAddress* address, usz addressLength
         return error;
     }
     SocketData* data = (SocketData*)file->driver_data();
-    // TODO: Handle `addressLength` properly...
-    data->Address = *address;
 
-    // TODO: Add an address->socket mapping in the driver
+    // Add an address->socket mapping in the driver
     // (or somewhere) so that this socket can be referred to by the
     // bound address. Also ensure no duplicate bindings.
+    // FIXME/TODO: Handle `addressLength` properly...
+    if (!vfs.SocketsDriver->bind(data, *address)) {
+        std::print("[SYS$]:bind: Socket driver failed to bind socket {}\n", socketFD);
+        return error;
+    }
 
     std::print("[SYS$]:bind: socket {} bound to address!\n", socketFD);
     return success;
@@ -629,13 +633,21 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLen
             return error;
         }
 
-        // TODO: Get server socket from address.
-        //SocketData* serverData = nullptr;
-        //serverData->ConnectionQueue.push_back(SocketConnection{data->Address, file, process->ProcessID});
+        // Get server socket from address.
+        // TODO: Handle addressLength properly.
+        SocketData* serverData = SYSTEM->virtual_filesystem().SocketsDriver->get_bound_socket(*address);
+        serverData->ConnectionQueue.push_back(SocketConnection{data->Address, file, process->ProcessID});
 
-        // TODO: Unblock server socket's corresponding process, if needed.
+        // Unblock server socket's corresponding process, if needed.
+        if (serverData->WaitingOnConnection) {
+            auto* serverProcess = Scheduler::process(serverData->PID);
+            // FIXME: We should just add the new file descriptor to the
+            // server process and use that as our return value, instead of
+            // returning the "retry" return value.
+            if (serverProcess) serverProcess->unblock(true, -2);
+        }
 
-        std::print("[SYS$]:connect:TODO: connect socket {} to address!\n", socketFD);
+        std::print("[SYS$]:connect: socket {} connected to address!\n", socketFD);
         return error;
     }
 
@@ -651,23 +663,37 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
 
     if (!address || !addressLength) return ProcFD::Invalid;
 
-    auto file = SYSTEM->virtual_filesystem().file(socketFD);
-    if (!file) {
-        std::print("[SYS$]:accept:ERROR: File descriptor invalid.\n");
-        return ProcFD::Invalid;
+    SocketData* data = nullptr;
+    {
+        auto file = SYSTEM->virtual_filesystem().file(socketFD);
+        if (!file) {
+            std::print("[SYS$]:accept:ERROR: File descriptor invalid.\n");
+            return ProcFD::Invalid;
+        }
+        // Validate that socketFD actually refers to a socket.
+        if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
+            std::print("[SYS$]:accept:ERROR: File descriptor does not appear to refer to a socket!\n");
+            return ProcFD::Invalid;
+        }
+        data = (SocketData*)file->driver_data();
+        // TODO: Only server type sockets can accept incoming connections.
+        // TODO: Only bound sockets can accept incoming connections.
     }
-    // Validate that socketFD actually refers to a socket.
-    if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
-        std::print("[SYS$]:accept:ERROR: File descriptor does not appear to refer to a socket!\n");
-        return ProcFD::Invalid;
-    }
-    SocketData* data = (SocketData*)file->driver_data();
-    (void)data;
+    if (!data) return ProcFD::Invalid;
 
-    // TODO: If ConnectionQueue is populated, pop the first connection
-    // off the queue, and return a file descriptor that references it's
-    // socket. If ConnectionQueue is empty, block this process until a
-    // connection is made to this socket.
+    if (data->ConnectionQueue.size()) {
+        // TODO: Pop the first connection off the queue, and return a file
+        // descriptor that references it's socket.
+    } else {
+        // Block this process until a connection is made to this socket.
+        data->WaitingOnConnection = true;
+        // Set return value to invalid fd just in case we are unblocked
+        // for some reason other than an incoming connection.
+        auto* process = Scheduler::CurrentProcess->value();
+        process->set_return_value(usz(ProcFD::Invalid));
+        process->State = Process::SLEEPING;
+        Scheduler::yield();
+    }
 
     std::print("[SYS$]:accept:TODO implement accept (socket {})...\n", socketFD);
     return ProcFD::Invalid;

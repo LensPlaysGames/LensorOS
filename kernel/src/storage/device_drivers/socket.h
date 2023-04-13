@@ -24,6 +24,7 @@
 #include <scheduler.h>
 
 #include <deque>
+#include <format>
 #include <vector>
 
 /// A socket FileMetadata, when opened, is basically just an empty
@@ -154,11 +155,24 @@ enum class SocketType {
 #define SOCKET_ADDRESS_MAX_SIZE 16
 struct SocketAddress {
     enum {
+        UNBOUND,
         // 16 bytes; simply a unique identifier which is memcmp'd
         // Used by LENSOR type sockets.
         LENSOR16,
     } Type;
     u8 Data[SOCKET_ADDRESS_MAX_SIZE];
+
+    bool operator== (const SocketAddress& other) const {
+        if (Type != other.Type) return false;
+        switch (Type) {
+        case UNBOUND: return true;
+        case LENSOR16: return memcmp(Data, other.Data, 16) == 0;
+        }
+        return false;
+    }
+    bool operator!= (const SocketAddress& other) const {
+        return !(operator==(other));
+    }
 };
 
 struct SocketConnection {
@@ -173,12 +187,12 @@ struct SocketConnection {
 /// Each FileMetadata associated with an open socket has this struct at
 /// it's `driver_data()`.
 struct SocketData {
+    SocketType Type { SocketType::LENSOR };
     /// The ID of the process that opened this socket; mainly used for
     /// server sockets, so that they can be unblocked upon an incoming
     /// request.
     pid_t PID { pid_t(-1) };
-    SocketType Type;
-    SocketAddress Address;
+    SocketAddress Address { SocketAddress::UNBOUND, { 0 } };
     /// `true` iff PID is waiting to accept an incoming connection.
     bool WaitingOnConnection { false };
     std::deque<SocketConnection> ConnectionQueue;
@@ -192,15 +206,50 @@ struct SocketData {
     void* Data;
 };
 
+struct SocketBinding {
+    SocketAddress Address;
+    SocketData* Data;
+
+    bool operator== (const SocketAddress& addr) const {
+        return Address == addr;
+    }
+    bool operator!= (const SocketAddress& addr) const {
+        return !(operator==(addr));
+    }
+};
+
 struct SocketDriver final : StorageDeviceDriver {
     void close(FileMetadata* meta) final;
     auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
 
     auto socket(SocketType domain, int type, int protocol) -> std::shared_ptr<FileMetadata>;
 
+    /// Return true iff socket successfully bound.
+    bool bind(SocketData* sock, SocketAddress address) {
+        if (std::find(Bindings.begin(), Bindings.end(), address)) {
+            std::print("[SOCK]: Binding already exists, denying...\n");
+            return false;
+        }
+        sock->Address = address;
+        Bindings.push_back({address, sock});
+        return true;
+    }
+    /// Return a pointer to the socket bound to the given address, or
+    /// nullptr if no socket is bound.
+    SocketData* get_bound_socket(SocketAddress address) {
+        auto existing = std::find_if(Bindings.begin(), Bindings.end(), [&address](const SocketBinding& binding) {
+            return binding == address;
+        });
+        if (existing != Bindings.end()) return existing->Data;
+        return nullptr;
+    }
+
     ssz read(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
     ssz read_raw(usz, usz, void*) final { return -1; };
     ssz write(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
+
+private:
+    std::vector<SocketBinding> Bindings;
 };
 
 #endif /* LENSOR_OS_SOCKET_DRIVER_H */

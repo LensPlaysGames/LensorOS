@@ -42,6 +42,13 @@ void SocketDriver::close(FileMetadata* meta) {
     if (!meta) return;
     SocketData* data = (SocketData*)meta->driver_data();
     if (data) {
+        // If bound, remove binding for this socket from list of bindings.
+        if (data->Address.Type != SocketAddress::UNBOUND) {
+            const SocketAddress& addr = data->Address;
+            std::erase_if(Bindings, [&addr](const SocketBinding& binding) {
+                return binding == addr;
+            });
+        }
         switch (data->Type) {
         case SocketType::LENSOR: {
             SocketBuffers* buffers = (SocketBuffers*)data->Data;
