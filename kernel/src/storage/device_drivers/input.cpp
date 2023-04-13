@@ -115,8 +115,7 @@ ssz InputDriver::write(FileMetadata* file, usz, usz bytes, void* buffer) {
         if (!process) continue;
         DBGMSG("[INPUT]:  write()  Unblocking process {}  input buffer at {}\n", pid, (void*)input);
         // Set return value of process to retry syscall.
-        process->CPU.RAX = usz(-2);
-        process->State = Process::RUNNING;
+        process->unblock(true, -2);
     }
     input->PIDsWaiting.clear();
 

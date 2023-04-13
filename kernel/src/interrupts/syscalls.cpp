@@ -640,7 +640,7 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLen
     }
 
     // Set return value for when we are unblocked.
-    process->CPU.RAX = success;
+    process->set_return_value(success);
     Scheduler::yield();
 
     return success;

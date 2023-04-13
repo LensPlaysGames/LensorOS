@@ -61,8 +61,7 @@ void PipeDriver::close(FileMetadata* meta) {
                 continue;
             }
             //std::print("[PIPE]: close()  Unblocking process {}  pipeEnd={} pipeBuffer={}\n", pid, (void*)pipe, (void*)pipeBuffer);
-            process->CPU.RAX = usz(-1);
-            process->State = Process::RUNNING;
+            process->unblock(true, -1);
         }
         pipeBuffer->PIDsWaiting.clear();
     }
@@ -185,8 +184,7 @@ ssz PipeDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
         if (!process) continue;
         //std::print("[PIPE]: write()  Unblocking process {}  pipeEnd={} pipeBuffer={}\n", pid, (void*)pipe, (void*)pipe->Buffer);
         // Set return value of process to retry syscall.
-        process->CPU.RAX = usz(-2);
-        process->State = Process::RUNNING;
+        process->unblock(true, -2);
     }
     pipe->Buffer->PIDsWaiting.clear();
 

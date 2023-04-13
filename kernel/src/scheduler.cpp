@@ -65,8 +65,7 @@ void Process::destroy(int status) {
         if (waitingProcess) {
             // Set return value of CPU state that will be restored when process is run.
             //std::print("[SCHED]: Setting return value of waiting PID {} to {}\n", pid, status);
-            waitingProcess->CPU.RAX = status;
-            waitingProcess->State = Process::ProcessState::RUNNING;
+            waitingProcess->unblock(true, status);
         }
     }
     // Free memory regions. This includes mmap()ed memory as
@@ -75,7 +74,8 @@ void Process::destroy(int status) {
         Memory::free_pages(it->value().paddr, it->value().pages);
     });
     // Clear memories list.
-    while (Memories.remove(0));
+    while (Memories.remove(0))
+        ;
 
     // Close open files.
     // NOTE: There *should* be none; libc should close all open files on destruction.
@@ -448,7 +448,7 @@ pid_t CopyUserspaceProcess(Process* original) {
     newProcess->CPU = original->CPU;
     newProcess->next_region_vaddr = original->next_region_vaddr;
     // Set child return value for `fork()`.
-    newProcess->CPU.RAX = 0;
+    newProcess->set_return_value(0);
 
     newProcess->State = Process::ProcessState::RUNNING;
 

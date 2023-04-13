@@ -148,6 +148,25 @@ struct Process {
         }
     }
 
+    /// Set the return value within CPU state.
+    void set_return_value(usz value) {
+        CPU.RAX = value;
+    }
+
+    /// Set the process state to running.
+    /// @param setReturn
+    ///   When true, update the CPU state before running so that the
+    ///   process will see the return value given as it's return value.
+    ///   On x86_64, just sets RAX.
+    /// @param returnValue
+    ///   Used iff setReturn is true.
+    ///   The value that the process being run will see as the return
+    ///   value.
+    void unblock(bool setReturn = false, usz returnValue = 0) {
+        if (setReturn) set_return_value(returnValue);
+        State = RUNNING;
+    }
+
     /// @param status Relays exit status to all waiting processes (i.e. via `waitpid`).
     void destroy(int status);
 };
