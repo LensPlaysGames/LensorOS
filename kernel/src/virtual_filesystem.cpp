@@ -174,7 +174,7 @@ bool VFS::close(Process* process, ProcFD procfd) {
     }
 
     DBGMSG("[VFS]: Unmapping {} (pid {})  \"{}\".\n", procfd, process->ProcessID, f->name());
-    free_fd(fd, procfd);
+    free_fd(process, fd, procfd);
     return true;
 }
 
@@ -217,7 +217,7 @@ ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
     }
     if (!meta) return -1;
 
-    DBGMSG("  file offset:     {}\n", f.get()->offset);
+    DBGMSG("  file offset:     {}\n", meta->offset);
 
     return meta->device_driver()->read(meta, byteOffset + meta->offset, byteCount, buffer);
 }

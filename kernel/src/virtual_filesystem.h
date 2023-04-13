@@ -95,6 +95,7 @@ struct VFS {
         StdinDriver    = std::make_shared<InputDriver>();
         StdoutDriver   = std::make_shared<DbgOutDriver>();
         PipesDriver    = std::make_shared<PipeDriver>();
+        SocketsDriver  = std::make_shared<SocketDriver>();
     }
 
     void mount(std::string path, std::shared_ptr<FilesystemDriver>&& fs) {

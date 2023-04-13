@@ -24,6 +24,7 @@
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
 #include <string>
+#include <format>
 
 struct FileMetadata {
     FileMetadata()
@@ -44,10 +45,7 @@ struct FileMetadata {
 
     ~FileMetadata() {
         //std::print("Closing FileMetadata \"{}\"\n", Name);
-        if (DriverData) {
-            //std::print("  Closing on device driver...\n");
-            DeviceDriver->close(this);
-        }
+        if (DeviceDriver && DriverData) DeviceDriver->close(this);
     }
 
     usz offset { 0 };
