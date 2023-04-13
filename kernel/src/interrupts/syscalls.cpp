@@ -682,8 +682,16 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
     if (!data) return ProcFD::Invalid;
 
     if (data->ConnectionQueue.size()) {
-        // TODO: Pop the first connection off the queue, and return a file
-        // descriptor that references it's socket.
+        /// Pop the first connection off the queue
+        SocketConnection connexion = data->ConnectionQueue.front();
+        data->ConnectionQueue.pop_front();
+        /// Return a file descriptor that references it's socket.
+        auto fds = SYSTEM->virtual_filesystem().add_file(connexion.FileMeta);
+        if (fds.invalid()) {
+            std::print("[SYS$]:accept:ERROR: Could not add file to accept connection, sorry.\n");
+            return ProcFD::Invalid;
+        }
+        return fds.Process;
     } else {
         // Block this process until a connection is made to this socket.
         data->WaitingOnConnection = true;
