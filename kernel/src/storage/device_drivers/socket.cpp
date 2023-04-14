@@ -56,17 +56,12 @@ void SocketDriver::close(FileMetadata* meta) {
         SocketBuffers* buffers = (SocketBuffers*)data->Data;
         if (!buffers) break;
         data->Data = nullptr;
-        // TODO: refcount doesn't work, I don't think. Maybe a shared
-        // ptr would be better, but that means we'd have to do base
-        // class instead of void*.
-        // FIXME: THIS IS A MEMORY LEAK, WE NEED TO DELETE `buffers`.
-        /*
+        // FIXME: If we `dup` a socket fd, we're going to have a bad time.
         buffers->RefCount -= 1;
         if (buffers->RefCount == 0) {
             std::print("  refcount zero, freeing buffers\n");
             delete buffers;
         }
-        */
     } break;
     }
     delete data;
