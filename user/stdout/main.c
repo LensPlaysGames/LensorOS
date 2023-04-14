@@ -372,6 +372,18 @@ void run_program_waitpid(const char *const filepath, const char **args) {
   }
 }
 
+/// @param filepath Passed to `exec` syscall
+/// @param args
+///   NULL-terminated array of pointers to NULL-terminated strings.
+///   Passed to `exec` syscall
+void run_background_program(const char *const filepath, const char **args) {
+  pid_t cpid = fork();
+  //printf("pid: %d\n", cpid);
+  if (cpid == 0) {
+    syscall(SYS_exec, filepath, args);
+  }
+}
+
 int main(int argc, const char **argv) {
   // TODO: If arguments are there, we should init framebuffer, draw to
   // it, etc. If it's not there, we should also be able to gracefully
@@ -547,6 +559,29 @@ int main(int argc, const char **argv) {
     if (strcmp(parsed_command, "quit") == 0) {
       puts("Shell quitting, baiBAI!");
       fflush(NULL);
+      break;
+    }
+
+    if (strcmp(parsed_command, "bg") == 0) {
+      const char fs0_prefix[] = "/fs0/bin/";
+      const size_t prefix_length = sizeof(fs0_prefix) - 1;
+      const size_t first_argument_length = strlen(args[0]);
+      // Includes null terminator
+      const size_t path_length = sizeof(fs0_prefix) + first_argument_length;
+      char *const path = malloc(path_length);
+      if (!path) break;
+      memcpy(path, fs0_prefix, prefix_length);
+      memcpy(path + prefix_length, args[0], path_length - prefix_length);
+      path[path_length - 1] = '\0';
+
+      FILE *exists = fopen(path, "r");
+      if (exists) {
+        fclose(exists);
+        run_background_program(path, (const char **)&args[1]);
+        free(path);
+        continue;
+      }
+      free(path);
       break;
     }
 
