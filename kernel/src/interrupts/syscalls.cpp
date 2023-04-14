@@ -605,11 +605,10 @@ int sys$20_listen(ProcFD socketFD, int backlog) {
     return success;
 }
 
+// TODO: Currently non-blocking; we need to somehow support certain
+// socket types blocking and others not; i.e. TCP needs to block until
+// 3-way-handshake is completed.
 int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLength) {
-    CPUState* cpu = nullptr;
-    asm volatile ("mov %%r11, %0\n"
-                  : "=r"(cpu)
-                  );
     static constexpr const int success {0};
     static constexpr const int error {-1};
     DBGMSG(sys$_dbgfmt, 21, "connect");
@@ -659,11 +658,7 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLen
         }
     }
 
-    memcpy(&process->CPU, cpu, sizeof(CPUState));
-    // Set return value for when we are unblocked.
-    process->set_return_value(success);
-    process->State = Process::SLEEPING;
-    Scheduler::yield();
+    return success;
 }
 
 ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* addressLength) {
@@ -705,9 +700,6 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
             std::print("[SYS$]:accept:ERROR: Could not get connecting process at PID {} (maybe it was closed)...\n", connexion.Socket->PID);
             return ProcFD::Invalid;
         }
-        // Unblock the client process, as it is waiting for the connection to
-        // be accepted, and we just accepted this connection.
-        clientProcess->unblock();
 
         // Make a shallow copy of the client socket.
         SocketData* data = new SocketData;
