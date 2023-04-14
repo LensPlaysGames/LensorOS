@@ -551,6 +551,7 @@ int sys$19_bind(ProcFD socketFD, const SocketAddress* address, usz addressLength
     static constexpr const int success {0};
     static constexpr const int error {-1};
     DBGMSG(sys$_dbgfmt, 19, "bind");
+    // TODO: validate address pointer
     if (!address) return error;
     auto& vfs = SYSTEM->virtual_filesystem();
     auto file = vfs.file(socketFD);
@@ -609,6 +610,7 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLen
     static constexpr const int error {-1};
     DBGMSG(sys$_dbgfmt, 21, "connect");
 
+    // TODO: validate address pointer
     if (!address) return error;
 
     Process* process = Scheduler::CurrentProcess->value();
@@ -643,28 +645,27 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLen
         // Unblock server socket's corresponding process, if needed.
         if (serverData->WaitingOnConnection) {
             auto* serverProcess = Scheduler::process(serverData->PID);
-            // FIXME: We should just add the new file descriptor to the
-            // server process and use that as our return value, instead of
-            // returning the "retry" return value.
             if (serverProcess) {
+                std::print("[SYS$]:connect: unblocked server socket {} as it was waiting for a connection!\n", socketFD);
+                // FIXME: We should just add the new file descriptor to the
+                // server process and set the server process' return value
+                // to that, instead of returning the "retry" return value.
                 serverProcess->unblock(true, -2);
-                // TODO: Return without yielding.
+                return success;
             }
         }
     }
-
 
     // Set return value for when we are unblocked.
     process->set_return_value(success);
     process->State = Process::SLEEPING;
     Scheduler::yield();
-
-    return success;
 }
 
 ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* addressLength) {
     DBGMSG(sys$_dbgfmt, 22, "accept");
 
+    // TODO: validate address pointer
     if (!address || !addressLength) return ProcFD::Invalid;
 
     SocketData* data = nullptr;
@@ -698,13 +699,6 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
         data->ClientServer = SocketData::SERVER;
 
         /// Return a file descriptor that references it's socket.
-        /// TODO/FIXME: In the current implementation, there is no way to
-        /// actually tell which side is client and which side is address; they'll
-        /// both end up pointing to the same socketdata and therefore won't
-        /// really work well. To be honest, we should open a new socket (with
-        /// socket) of the same type and everything as the existing one, and
-        /// then set it's socket data to the same one. This way it's Type field
-        /// could differ.
         auto f = std::make_shared<FileMetadata>("client_socket", sdd(SYSTEM->virtual_filesystem().SocketsDriver), 0, data);
         auto fds = SYSTEM->virtual_filesystem().add_file(f);
         if (fds.invalid()) {
