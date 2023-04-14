@@ -42,14 +42,7 @@ void SocketDriver::close(FileMetadata* meta) {
     if (!meta) return;
     SocketData* data = (SocketData*)meta->driver_data();
     if (!data) return;
-    // If bound, remove binding for this socket from list of bindings.
-    if (data->Address.Type != SocketAddress::UNBOUND) {
-        std::print("  socket bound; removing binding\n");
-        const SocketAddress& addr = data->Address;
-        std::erase_if(Bindings, [&addr](const SocketBinding& binding) {
-            return binding == addr;
-        });
-    }
+
     switch (data->Type) {
     case SocketType::LENSOR: {
         std::print("  LENSOR type socket; decrementing buffers refcount\n");
@@ -60,7 +53,14 @@ void SocketDriver::close(FileMetadata* meta) {
         // Or if we `fork` while one is open; that may also get sketchy.
         buffers->RefCount -= 1;
         if (buffers->RefCount == 0) {
-            std::print("  refcount zero, freeing buffers\n");
+            std::print("  Unbinding and deleting SocketBuffers\n");
+            // If bound, remove binding for this socket from list of bindings.
+            if (data->Address.Type != SocketAddress::UNBOUND) {
+                const SocketAddress& addr = data->Address;
+                std::erase_if(Bindings, [&addr](const SocketBinding& binding) {
+                    return binding == addr;
+                });
+            }
             delete buffers;
         }
     } break;
