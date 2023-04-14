@@ -606,6 +606,10 @@ int sys$20_listen(ProcFD socketFD, int backlog) {
 }
 
 int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLength) {
+    CPUState* cpu = nullptr;
+    asm volatile ("mov %%r11, %0\n"
+                  : "=r"(cpu)
+                  );
     static constexpr const int success {0};
     static constexpr const int error {-1};
     DBGMSG(sys$_dbgfmt, 21, "connect");
@@ -656,6 +660,7 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLen
         }
     }
 
+    memcpy(&process->CPU, cpu, sizeof(CPUState));
     // Set return value for when we are unblocked.
     process->set_return_value(success);
     process->State = Process::SLEEPING;
@@ -663,6 +668,10 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLen
 }
 
 ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* addressLength) {
+    CPUState* cpu = nullptr;
+    asm volatile ("mov %%r11, %0\n"
+                  : "=r"(cpu)
+                  );
     DBGMSG(sys$_dbgfmt, 22, "accept");
 
     // TODO: validate address pointer
@@ -712,6 +721,7 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
         // Set return value to invalid fd just in case we are unblocked
         // for some reason other than an incoming connection.
         auto* process = Scheduler::CurrentProcess->value();
+        memcpy(&process->CPU, cpu, sizeof(CPUState));
         process->set_return_value(usz(ProcFD::Invalid));
         process->State = Process::SLEEPING;
         Scheduler::yield();
