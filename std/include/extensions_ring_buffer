@@ -1,0 +1,109 @@
+/* Copyright 2022, Contributors To LensorOS.
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
+
+#ifndef _LENSOROS_EXTENSIONS_RING_BUFFER_H
+#define _LENSOROS_EXTENSIONS_RING_BUFFER_H
+
+#include <stddef.h>
+#include <stdint.h>
+
+namespace std {
+
+template <typename _T,
+          size_t _Size>
+struct ring_buffer {
+
+    struct iterator {
+        ring_buffer& __ring;
+        size_t __current;
+
+        iterator(ring_buffer& __r, size_t __i) : __ring(__r), __current(__i) {}
+
+        iterator& operator++() {
+            ++__current;
+            if (__current >= _Size) {
+                __current = 0;
+            }
+            return *this;
+        }
+        iterator operator++(int) {
+            iterator __out{__ring, __current};
+            ++__out.__current;
+            if (__out.current >= _Size)
+                __out.current = 0;
+            return __out;
+        }
+        iterator& operator--() {
+            if (!__current) __current = _Size - 1;
+            else --__current;
+            return *this;
+        }
+        iterator operator--(int) {
+            iterator __out{__ring, __current};
+            if (!__current) --__out.__current = _Size - 1;
+            else --__out.__current;
+            return __out;
+        }
+        bool operator==(const iterator& __rhs) const {
+            return __ring == __rhs.__ring && __current == __rhs.__current;
+        }
+        bool operator!=(const iterator& __rhs) const {
+            return !(operator==(__rhs));
+        }
+    };
+
+    _T __data[_Size];
+    size_t __head{0};
+    size_t __tail{0};
+
+    size_t size() const {
+        // From head to tail is full.
+        if (__tail > __head)
+            return __tail - __head;
+        // From head to the end is full, as well as from beginning to tail.
+        return (_Size - __head) + __tail;
+    };
+
+    void push_back(_T __value) {
+        __data[__tail] = __value;
+        // If head and tail are equal after incrementing tail, that means the
+        // ring buffer is full and we need to "drop" one element by
+        // incrementing head.
+        if (__tail++ == __head) __head++;
+    }
+    void pop_front() {
+        __head++;
+    }
+
+    _T front() {
+        _T out = __data[__head++];
+        return out;
+    }
+
+    iterator begin() {
+        return {*this, __head};
+    }
+    iterator end() {
+        return {*this, __tail};
+    }
+};
+
+}
+
+#endif /* _LENSOROS_EXTENSIONS_RING_BUFFER_H */

@@ -25,9 +25,11 @@
 #define _LENSOROS_EXTENSIONS
 
 #include <algorithm>
+#include <bits/colours.h>
 #include <vector>
 
 #include <extensions_sparse_vector>
+#include <extensions_ring_buffer>
 
 namespace std {
 template <typename _Container, typename _Predicate>
