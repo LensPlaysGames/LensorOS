@@ -585,10 +585,6 @@ int sys$20_listen(ProcFD socketFD, int backlog) {
     static constexpr const int error {-1};
     DBGMSG(sys$_dbgfmt, 20, "listen");
 
-    // TODO: support backlog (amount of connections allowed at once
-    // before we start refusing them automatically).
-    (void)backlog;
-
     auto file = SYSTEM->virtual_filesystem().file(socketFD);
     if (!file) {
         std::print("[SYS$]:listen:ERROR: File descriptor invalid.\n");
@@ -642,21 +638,25 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLen
         }
         serverData->ConnectionQueue.push_back(SocketConnection{data->Address, data, process->ProcessID});
 
+        std::print("[SYS$]:connect: socket {} connected to address!\n", socketFD);
+
         // Unblock server socket's corresponding process, if needed.
         if (serverData->WaitingOnConnection) {
             auto* serverProcess = Scheduler::process(serverData->PID);
             // FIXME: We should just add the new file descriptor to the
             // server process and use that as our return value, instead of
             // returning the "retry" return value.
-            if (serverProcess) serverProcess->unblock(true, -2);
+            if (serverProcess) {
+                serverProcess->unblock(true, -2);
+                // TODO: Return without yielding.
+            }
         }
-
-        std::print("[SYS$]:connect: socket {} connected to address!\n", socketFD);
-        return error;
     }
+
 
     // Set return value for when we are unblocked.
     process->set_return_value(success);
+    process->State = Process::SLEEPING;
     Scheduler::yield();
 
     return success;
