@@ -655,7 +655,6 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLen
                 // server process and set the server process' return value
                 // to that, instead of returning the "retry" return value.
                 serverProcess->unblock(true, -2);
-                return success;
             }
         }
     }
@@ -696,12 +695,25 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
     if (!data) return ProcFD::Invalid;
 
     if (data->ConnectionQueue.size()) {
+        std::print("[SYS$]:accept: Connection already exists, returning immediately\n");
         /// Pop the first connection off the queue
         SocketConnection connexion = data->ConnectionQueue.front();
         data->ConnectionQueue.pop_front();
-        // LENSOR sockets have an intrusive refcount...
+
+        auto* clientProcess = Scheduler::process(connexion.Socket->PID);
+        if (!clientProcess) {
+            std::print("[SYS$]:accept:ERROR: Could not get connecting process at PID {} (maybe it was closed)...\n", connexion.Socket->PID);
+            return ProcFD::Invalid;
+        }
+        // Unblock the client process, as it is waiting for the connection to
+        // be accepted, and we just accepted this connection.
+        clientProcess->unblock();
+
+        // Make a shallow copy of the client socket.
         SocketData* data = new SocketData;
         *data = *connexion.Socket;
+
+        // LENSOR sockets have an intrusive refcount...
         if (data->Type == SocketType::LENSOR)
             ((SocketBuffers*)data->Data)->RefCount++;
 
@@ -715,7 +727,9 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
             return ProcFD::Invalid;
         }
         return fds.Process;
+
     } else {
+        std::print("[SYS$]:accept: No waiting connections, blocking\n");
         // Block this process until a connection is made to this socket.
         data->WaitingOnConnection = true;
         // Set return value to invalid fd just in case we are unblocked

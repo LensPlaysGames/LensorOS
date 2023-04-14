@@ -60,7 +60,6 @@
 template <usz N = KiB(1)>
 struct FIFOBuffer {
     u8 Data[N] {0};
-    usz Size {N};
     /// This index is the index that incoming data will be written to.
     usz Offset {0};
     /// List of PIDs of processes who are waiting to write into the
@@ -86,22 +85,35 @@ struct FIFOBuffer {
     /// \retval -2   Should block (will unblock when written to)
     ssz read(pid_t pid, usz byteCount, u8* buffer) {
         if (Offset == 0) {
+            std::print("[SOCK]: Process {} waiting until write\n", pid);
             PIDsWaitingUntilWrite.push_back(pid);
             return -2;
         }
-
         // Truncate reads that are larger than possible.
         if (byteCount > Offset)
             byteCount = Offset;
+
+        std::print("[SOCK]: Reading {} bytes from FIFO into buffer at {}\n", byteCount, (void*)buffer);
 
         // Transfer the data from the FIFO buffer to the given buffer.
         memcpy(buffer, Data, byteCount);
 
         // "Pop" data off the front of the FIFO buffer.
-        memmove(&Data[0], &Data[byteCount], Size - byteCount);
+        memmove(&Data[0], &Data[byteCount], N - byteCount);
         Offset -= byteCount;
 
-        return byteCount;
+        // Run processes waiting until aread from this socket with a
+        // return value indicating that the syscall should be retried.
+        for (pid_t pid : PIDsWaitingUntilRead) {
+            auto* process = Scheduler::process(pid);
+            if (!process) continue;
+            //std::print("[SOCK]: read()  Unblocking process {}\n", pid);
+            // Set return value of process to retry syscall.
+            process->unblock(true, -2);
+        }
+        PIDsWaitingUntilRead.clear();
+
+        return ssz(byteCount);
     }
 
     /// Write `byteCount` bytes to this FIFOBuffer from `buffer`.
@@ -111,10 +123,14 @@ struct FIFOBuffer {
     /// \retval -1   Failure
     /// \retval -2   Should block (will unblock when read from)
     ssz write(pid_t pid, usz byteCount, u8* buffer) {
-        if (Offset == 0 || Offset + byteCount > Size) {
+        // Block until a write can be performed.
+        if (Offset + byteCount > N) {
+            std::print("[SOCK]: Process {} waiting until read\n", pid);
             PIDsWaitingUntilRead.push_back(pid);
             return -2;
         }
+
+        std::print("[SOCK]: Writing {} bytes to FIFO from buffer at {}\n", byteCount, (void*)buffer);
 
         // Transfer the data from the given buffer to the FIFO buffer.
         memcpy(Data + Offset, buffer, byteCount);
@@ -122,7 +138,18 @@ struct FIFOBuffer {
         // Move write offset for next time.
         Offset += byteCount;
 
-        return byteCount;
+        // Run processes waiting until a write from this socket with a
+        // return value indicating that the syscall should be retried.
+        for (pid_t pid : PIDsWaitingUntilWrite) {
+            auto* process = Scheduler::process(pid);
+            if (!process) continue;
+            //std::print("[SOCK]: write()  Unblocking process {}\n", pid);
+            // Set return value of process to retry syscall.
+            process->unblock(true, -2);
+        }
+        PIDsWaitingUntilWrite.clear();
+
+        return ssz(byteCount);
     }
 };
 

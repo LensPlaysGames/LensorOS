@@ -85,7 +85,7 @@ ssz SocketDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
         UNREACHABLE();
     }
     }
-    return -1;
+    UNREACHABLE();
 }
 
 ssz SocketDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {

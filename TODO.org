@@ -22,6 +22,16 @@ Here's the idea:
 
 [2023-04-09 Sun 13:33]
 
+Well, we are getting there, but it's not perfect. A lot of the infrastructure is in place, but it's not all meshing together correctly (yet).
+
+Right now, after the server calls ~listen~ the socket is being closed, somehow. I'm not really sure why, since it /should/ still be in the VFS' list of files, and therefore a shared_ptr to it should exist. It's odd.
+
+[2023-04-13 Thu 18:30]
+
+Well, local sockets /appear/ to be working, at least for server-to-client communications. POGGERS! Only took me a week, lol.
+
+[2023-04-14 Fri 10:45]
+
 * DONE E1000 :: Test interrupts
 
 Basically, there is an interrupt handler installed and supposedly some interrupts are enabled; it'd be great if we could somehow test this, but I don't know enough about networking to actually figure out how to trigger an interrupt.... lmao.
