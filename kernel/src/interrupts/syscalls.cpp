@@ -640,7 +640,7 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLen
             std::print("[SYS$]:connect: There is no socket bound to the given address, sorry\n");
             return error;
         }
-        serverData->ConnectionQueue.push_back(SocketConnection{data->Address, file, process->ProcessID});
+        serverData->ConnectionQueue.push_back(SocketConnection{data->Address, data, process->ProcessID});
 
         // Unblock server socket's corresponding process, if needed.
         if (serverData->WaitingOnConnection) {
@@ -690,11 +690,23 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
         SocketConnection connexion = data->ConnectionQueue.front();
         data->ConnectionQueue.pop_front();
         // LENSOR sockets have an intrusive refcount...
-        auto* data = (SocketData*)connexion.FileMeta->driver_data();
+        SocketData* data = new SocketData;
+        *data = *connexion.Socket;
         if (data->Type == SocketType::LENSOR)
             ((SocketBuffers*)data->Data)->RefCount++;
+
+        data->ClientServer = SocketData::SERVER;
+
         /// Return a file descriptor that references it's socket.
-        auto fds = SYSTEM->virtual_filesystem().add_file(connexion.FileMeta);
+        /// TODO/FIXME: In the current implementation, there is no way to
+        /// actually tell which side is client and which side is address; they'll
+        /// both end up pointing to the same socketdata and therefore won't
+        /// really work well. To be honest, we should open a new socket (with
+        /// socket) of the same type and everything as the existing one, and
+        /// then set it's socket data to the same one. This way it's Type field
+        /// could differ.
+        auto f = std::make_shared<FileMetadata>("client_socket", sdd(SYSTEM->virtual_filesystem().SocketsDriver), 0, data);
+        auto fds = SYSTEM->virtual_filesystem().add_file(f);
         if (fds.invalid()) {
             std::print("[SYS$]:accept:ERROR: Could not add file to accept connection, sorry.\n");
             return ProcFD::Invalid;

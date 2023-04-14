@@ -175,10 +175,11 @@ struct SocketAddress {
     }
 };
 
+struct SocketData;
+
 struct SocketConnection {
     SocketAddress Address{};
-    /// This metadata refers to the client socket.
-    std::shared_ptr<FileMetadata> FileMeta;
+    SocketData* Socket;
     /// ID of process that should be unblocked when connection is
     /// accepted.
     pid_t PID { pid_t(-1) };
@@ -200,9 +201,7 @@ struct SocketData {
         CLIENT,
         SERVER
     } ClientServer {CLIENT};
-    // We *could* make this a base class and have each socket type
-    // implement it's own read, write, etc but I think the `void*` is
-    // fine for now.
+    // FIXME: This should be a shared ptr.
     void* Data { nullptr };
 };
 
