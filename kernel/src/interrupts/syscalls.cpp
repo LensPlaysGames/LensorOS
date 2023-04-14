@@ -636,6 +636,10 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLen
         // Get server socket from address.
         // TODO: Handle addressLength properly.
         SocketData* serverData = SYSTEM->virtual_filesystem().SocketsDriver->get_bound_socket(*address);
+        if (!serverData) {
+            std::print("[SYS$]:connect: There is no socket bound to the given address, sorry\n");
+            return error;
+        }
         serverData->ConnectionQueue.push_back(SocketConnection{data->Address, file, process->ProcessID});
 
         // Unblock server socket's corresponding process, if needed.
@@ -685,6 +689,10 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
         /// Pop the first connection off the queue
         SocketConnection connexion = data->ConnectionQueue.front();
         data->ConnectionQueue.pop_front();
+        // LENSOR sockets have an intrusive refcount...
+        auto* data = (SocketData*)connexion.FileMeta->driver_data();
+        if (data->Type == SocketType::LENSOR)
+            ((SocketBuffers*)data->Data)->RefCount++;
         /// Return a file descriptor that references it's socket.
         auto fds = SYSTEM->virtual_filesystem().add_file(connexion.FileMeta);
         if (fds.invalid()) {

@@ -57,6 +57,7 @@ void SocketDriver::close(FileMetadata* meta) {
         if (!buffers) break;
         data->Data = nullptr;
         // FIXME: If we `dup` a socket fd, we're going to have a bad time.
+        // Or if we `fork` while one is open; that may also get sketchy.
         buffers->RefCount -= 1;
         if (buffers->RefCount == 0) {
             std::print("  refcount zero, freeing buffers\n");
