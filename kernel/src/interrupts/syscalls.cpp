@@ -597,7 +597,7 @@ int sys$20_listen(ProcFD socketFD, int backlog) {
     }
     SocketData* data = (SocketData*)file->driver_data();
     data->ClientServer = SocketData::SERVER;
-    data->ConnectionQueue.resize(backlog);
+    data->ConnectionQueue.reserve(backlog);
 
     std::print("[SYS$]:listen: socket {} now listening!\n", socketFD);
 

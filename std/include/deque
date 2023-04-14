@@ -162,6 +162,10 @@ struct __deque_impl {
         __head += 1;
     }
 
+    void reserve(size_type __count) {
+        __data.reserve(__count);
+    }
+
     void resize(size_type __count) {
         __data.resize(__count);
     }
