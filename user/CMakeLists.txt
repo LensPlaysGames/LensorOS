@@ -57,6 +57,8 @@ endfunction()
 add_userspace_program( blazeit )
 add_userspace_program( pwd )
 add_userspace_program( stdout )
+add_userspace_program( clienttest )
+add_userspace_program( servertest )
 add_cxx_userspace_program( xish )
 add_cxx_userspace_program( echo )
 
