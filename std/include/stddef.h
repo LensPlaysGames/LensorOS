@@ -23,14 +23,6 @@
 
 #include <bits/decls.h>
 
-#ifdef __cplusplus
-#   define NULL nullptr
-typedef decltype(nullptr) nullptr_t;
-#else
-#   define NULL ((void*)0)
-    typedef __WCHAR_TYPE__ wchar_t;
-#endif
-
 #define offsetof(type, member) __builtin_offsetof(type, member)
 
 __BEGIN_DECLS__
@@ -43,6 +35,18 @@ typedef struct {
     long long __ll __attribute__((__aligned__(__alignof__(long long))));
     long double __ld __attribute__((__aligned__(__alignof__(long double))));
 } max_align_t;
+
+#ifdef __cplusplus
+#   define NULL nullptr
+namespace std {
+typedef decltype(nullptr) nullptr_t;
+using size_t = size_t;
+using ptrdiff_t = ptrdiff_t;
+} // namespace std
+#else
+#   define NULL ((void*)0)
+    typedef __WCHAR_TYPE__ wchar_t;
+#endif
 
 __END_DECLS__
 
