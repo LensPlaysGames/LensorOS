@@ -20,6 +20,9 @@
 #ifndef LENSOR_OS_X86_64_CPU_H
 #define LENSOR_OS_X86_64_CPU_H
 
+#include <integers.h>
+#include <interrupts/interrupts.h>
+
 struct CPUState {
     u64 RSP;
     u64 RBX;

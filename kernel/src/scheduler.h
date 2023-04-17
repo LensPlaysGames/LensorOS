@@ -32,7 +32,6 @@
 #include <vector>
 #include <extensions>
 #include <vfs_forward.h>
-
 #include <x86_64/cpu.h>
 
 namespace Memory {
