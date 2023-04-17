@@ -20,8 +20,11 @@
 #ifndef _SYSCALLS_H
 #define _SYSCALLS_H
 
-#include <stdint.h>
 #include <bits/decls.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <sys/types.h>
 
 #ifdef __lensor__
 #define SYS_open    0
@@ -151,6 +154,29 @@ inline __a __syscall6(__a __n, __a __1, __a __2, __a __3, __a __4, __a __5, __a 
 #undef _R5
 #undef _R6
 
+#define SOCK_ADDR_MAX_SIZE 16
+typedef struct sockaddr {
+    enum {
+        UNBOUND,
+        // 16 bytes; simply a unique identifier which is memcmp'd
+        // Used by LENSOR type sockets.
+        LENSOR16,
+    } type;
+    uint8_t data[SOCK_ADDR_MAX_SIZE];
+} sockaddr;
+
+typedef struct tm {
+    int seconds;                  // seconds,  0--59
+    int minutes;                  // minutes,  0--59
+    int hours;                    // hours, 0 to 23
+    int day_of_month;             // day of the month, 1--31
+    int month;                    // month, 0--11
+    int years_since_1900;         // The number of years since 1900
+    int day_of_week;              // day of the week, 0--6
+    int day_of_year;              // day in the year, 0--365
+    int is_daylight_savings_time; // daylight saving time
+} tm;
+
 __END_DECLS__
 
 
@@ -197,6 +223,82 @@ _Generic((_VA_FIRST(__VA_ARGS__ __VA_OPT__(,) _EMPTY_VAL)),     \
     (_Sys __VA_OPT__(, (uintptr_t)) __VA_ARGS__)
 
 
+typedef uint64_t ProcessFileDescriptor;
+typedef ProcessFileDescriptor ProcFD;
+
+ProcFD sys_open(const char* path) {
+    return (ProcFD)syscall(SYS_open, (uintptr_t)path);
+}
+void sys_close(ProcFD fd) {
+    syscall(SYS_close, (uintptr_t)fd);
+}
+int sys_read(ProcFD fd, uint8_t* buffer, uint64_t byteCount) {
+    return (int)syscall(SYS_read, (uintptr_t)fd, (uintptr_t)buffer, (uintptr_t)byteCount);
+}
+int sys_write(ProcFD fd, uint8_t* buffer, uint64_t byteCount) {
+    return (int)syscall(SYS_write, (uintptr_t)fd, (uintptr_t)buffer, (uintptr_t)byteCount);
+}
+void sys_poke() {
+    syscall(SYS_poke);
+}
+void sys_exit(int status) {
+    syscall(SYS_exit, (uintptr_t)status);
+}
+void* sys_map(void* address, size_t size, uint64_t flags) {
+    return (void*)syscall(SYS_map, (uintptr_t)address, (uintptr_t)size, (uintptr_t)flags);
+}
+void sys_unmap(void* address) {
+    syscall(SYS_unmap, (uintptr_t)address);
+}
+void sys_time(tm* time) {
+    syscall(SYS_time, (uintptr_t)time);
+}
+int sys_waitpid(pid_t pid) {
+    return (int)syscall(SYS_waitpid, (uintptr_t)pid);
+}
+pid_t sys_fork() {
+    return (pid_t)syscall(SYS_fork);
+}
+void sys_exec(const char *path, const char **args) {
+    syscall(SYS_exec, (uintptr_t)path, (uintptr_t)args);
+}
+void sys_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
+    syscall(SYS_repfd, (uintptr_t)fd, (uintptr_t)replaced);
+}
+void sys_pipe(ProcessFileDescriptor *fds) {
+    syscall(SYS_pipe, (uintptr_t)fds);
+}
+/// SEEK_CUR == 0 == OFFSET is based off of current offset (relative).
+/// SEEK_END == 1 == OFFSET is from end of file (must be negative).
+/// SEEK_SET == 2 == OFFSET is from beginning of file (must be positive).
+int sys_seek(ProcessFileDescriptor fd, ssize_t offset, int whence) {
+    return (int)syscall(SYS_seek, (uintptr_t)fd, (uintptr_t)offset, (uintptr_t)whence);
+}
+bool sys_pwd(char *buffer, size_t numBytes) {
+    return (bool)syscall(SYS_pwd, (uintptr_t)buffer, (uintptr_t)numBytes);
+}
+ProcFD sys_dup(ProcessFileDescriptor fd) {
+    return (ProcFD)syscall(SYS_dup, (uintptr_t)fd);
+}
+void sys_uart(void* buffer, size_t size) {
+    syscall(SYS_uart, (uintptr_t)buffer, (uintptr_t)size);
+}
+ProcFD sys_socket(int domain, int type, int protocol) {
+    return (ProcFD)syscall(SYS_socket, (uintptr_t)domain, (uintptr_t)type, (uintptr_t)protocol);
+}
+int sys_bind(ProcFD socketFD, const sockaddr* address, size_t addressLength) {
+    return (int)syscall(SYS_bind, (uintptr_t)socketFD, (uintptr_t)address, (uintptr_t)addressLength);
+}
+int sys_listen(ProcFD socketFD, int backlog) {
+    return (int)syscall(SYS_listen, (uintptr_t)socketFD, (uintptr_t)backlog);
+}
+int sys_connect(ProcFD socketFD, const sockaddr* address, size_t addressLength) {
+    return (int)syscall(SYS_connect, (uintptr_t)socketFD, (uintptr_t)address, (uintptr_t)addressLength);
+}
+ProcFD sys_accept(ProcFD socketFD, const sockaddr* address, size_t* addressLength) {
+    return (ProcFD)syscall(SYS_accept, (uintptr_t)socketFD, (uintptr_t)address, (uintptr_t)addressLength);
+}
+
 /// ===========================================================================
 ///  C++ Interface.
 /// ===========================================================================
@@ -204,7 +306,9 @@ _Generic((_VA_FIRST(__VA_ARGS__ __VA_OPT__(,) _EMPTY_VAL)),     \
 
 #include <type_traits>
 
-namespace std::__detail {
+namespace std {
+namespace __detail {
+
 /// Perform a system call.
 template <
     typename _Ret = uintptr_t,
@@ -224,10 +328,91 @@ inline _Ret syscall(uintptr_t __sys, _Args&& ...__args) {
     __elif (sizeof...(_Args) == 5) return _Ret(__syscall5(__sys, (uintptr_t)__args...));
     __elif (sizeof...(_Args) == 6) return _Ret(__syscall6(__sys, (uintptr_t)__args...));
     __else __builtin_unreachable();
-}
+
 }
 
+} // namespace __detail
+
+using ProcessFileDescriptor = uint64_t;
+using ProcFD = ProcessFileDescriptor;
+
+inline ProcFD sys_open(const char* path) {
+    return std::__detail::syscall<ProcFD>(SYS_open, path);
+}
+inline void sys_close(ProcFD fd) {
+    std::__detail::syscall(SYS_close, (uintptr_t)fd);
+}
+inline int sys_read(ProcFD fd, uint8_t* buffer, uint64_t byteCount) {
+    return std::__detail::syscall<int>(SYS_read, (uintptr_t)fd, (uintptr_t)buffer, (uintptr_t)byteCount);
+}
+inline int sys_write(ProcFD fd, uint8_t* buffer, uint64_t byteCount) {
+    return std::__detail::syscall<int>(SYS_write, (uintptr_t)fd, (uintptr_t)buffer, (uintptr_t)byteCount);
+}
+inline void sys_poke() {
+    std::__detail::syscall(SYS_poke);
+}
+inline void sys_exit(int status) {
+    std::__detail::syscall(SYS_exit, (uintptr_t)status);
+}
+inline void* sys_map(void* address, size_t size, uint64_t flags) {
+    return std::__detail::syscall<void*>(SYS_map, (uintptr_t)address, (uintptr_t)size, (uintptr_t)flags);
+}
+inline void sys_unmap(void* address) {
+    std::__detail::syscall(SYS_unmap, (uintptr_t)address);
+}
+inline void sys_time(tm* time) {
+    std::__detail::syscall(SYS_time, (uintptr_t)time);
+}
+inline int sys_waitpid(pid_t pid) {
+    return std::__detail::syscall<int>(SYS_waitpid, (uintptr_t)pid);
+}
+inline pid_t sys_fork() {
+    return std::__detail::syscall<pid_t>(SYS_fork);
+}
+inline void sys_exec(const char *path, const char **args) {
+    std::__detail::syscall(SYS_exec, (uintptr_t)path, (uintptr_t)args);
+}
+inline void sys_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
+    std::__detail::syscall(SYS_repfd, (uintptr_t)fd, (uintptr_t)replaced);
+}
+inline void sys_pipe(ProcessFileDescriptor *fds) {
+    std::__detail::syscall(SYS_pipe, (uintptr_t)fds);
+}
+/// SEEK_CUR == 0 == OFFSET is based off of current offset  (relative).
+/// SEEK_END == 1 == OFFSET is from end of file (must be negative).
+/// SEEK_SET == 2 == OFFSET is from beginning of file (must be positive).
+inline int sys_seek(ProcessFileDescriptor fd, ssize_t offset, int whence) {
+    return std::__detail::syscall<int>(SYS_seek, (uintptr_t)fd, (uintptr_t)offset, (uintptr_t)whence);
+}
+inline bool sys_pwd(char *buffer, size_t numBytes) {
+    return std::__detail::syscall<bool>(SYS_pwd, (uintptr_t)buffer, (uintptr_t)numBytes);
+}
+inline ProcFD sys_dup(ProcessFileDescriptor fd) {
+    return std::__detail::syscall<ProcFD>(SYS_dup, (uintptr_t)fd);
+}
+inline void sys_uart(void* buffer, size_t size) {
+    std::__detail::syscall(SYS_uart, (uintptr_t)buffer, (uintptr_t)size);
+}
+inline ProcFD sys_socket(int domain, int type, int protocol) {
+    return std::__detail::syscall<ProcFD>(SYS_socket, (uintptr_t)domain, (uintptr_t)type, (uintptr_t)protocol);
+}
+inline int sys_bind(ProcFD socketFD, const sockaddr* address, size_t addressLength) {
+    return std::__detail::syscall<int>(SYS_bind, (uintptr_t)socketFD, (uintptr_t)address, (uintptr_t)addressLength);
+}
+inline int sys_listen(ProcFD socketFD, int backlog) {
+    return std::__detail::syscall<int>(SYS_listen, (uintptr_t)socketFD, (uintptr_t)backlog);
+}
+inline int sys_connect(ProcFD socketFD, const sockaddr* address, size_t addressLength) {
+    return std::__detail::syscall<int>(SYS_connect, (uintptr_t)socketFD, (uintptr_t)address, (uintptr_t)addressLength);
+}
+inline ProcFD sys_accept(ProcFD socketFD, const sockaddr* address, size_t* addressLength) {
+    return std::__detail::syscall<ProcFD>(SYS_accept, (uintptr_t)socketFD, (uintptr_t)address, (uintptr_t)addressLength);
+}
+
+} // namespace std
+
 using std::__detail::syscall;
+
 #endif /* #if defined (__cplusplus) */
 
 #endif /* #ifndef _SYSCALLS_H */

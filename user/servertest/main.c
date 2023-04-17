@@ -7,18 +7,10 @@
 
 #define SOCK_ADDR_MAX_SIZE 16
 
-typedef struct sockaddr {
-  enum {
-    UNBOUND,
-    LENSOR16,
-  } type;
-  unsigned char data[SOCK_ADDR_MAX_SIZE];
-} sockaddr;
-
 int main(int argc, char **argv) {
   printf("server starting...\n");
   fflush(stdout);
-  int sockFD = syscall(SYS_socket, 0, 0, 0);
+  int sockFD = sys_socket(0, 0, 0);
 
   sockaddr addr;
   addr.type = LENSOR16;
@@ -26,9 +18,9 @@ int main(int argc, char **argv) {
   memset(addr.data, 0, SOCK_ADDR_MAX_SIZE);
   memcpy(addr.data, &socket_path, sizeof(socket_path) - 1);
   // bind (set our address)
-  syscall(SYS_bind, sockFD, &addr, sizeof(sockaddr));
+  sys_bind(sockFD, &addr, sizeof(sockaddr));
   // listen (mark self as server)
-  syscall(SYS_listen, sockFD, 32);
+  sys_listen(sockFD, 32);
 
   printf("Waiting for a connection to come in...\n");
   sockaddr connected_addr;
@@ -38,7 +30,7 @@ int main(int argc, char **argv) {
     printf("Accepting...\n");
     fflush(stdout);
     // We will block here until a connection is made.
-    clientFD = syscall(SYS_accept, sockFD, &connected_addr, &connected_addrlen);
+    clientFD = sys_accept(sockFD, &connected_addr, &connected_addrlen);
     printf("  accept returned %d\n", clientFD);
     fflush(stdout);
   }
