@@ -1,0 +1,126 @@
+/* Copyright 2022, Contributors To LensorOS.
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
+
+#ifndef _LENSOROS_FUNCTIONAL_H
+#define _LENSOROS_FUNCTIONAL_H
+
+#include <stddef.h>
+#include <stdint.h>
+
+#include <bit>
+
+namespace std {
+
+namespace __detail {
+
+uint32_t __hash_32bit(uint32_t __x) {
+    __x = ((__x >> 16) ^ __x) * 0x45d9f3b;
+    __x = ((__x >> 16) ^ __x) * 0x45d9f3b;
+    __x = (__x >> 16) ^ __x;
+    return __x;
+}
+uint64_t __hash_64bit(uint64_t __x) {
+    __x = (__x ^ (__x >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);
+    __x = (__x ^ (__x >> 27)) * UINT64_C(0x94d049bb133111eb);
+    __x = __x ^ (__x >> 31);
+    return __x;
+}
+size_t __hash_ptr(void* __ptr) {
+    static_assert(sizeof(void*) == 8, "Sorry, std::hash requires an 8-byte address size");
+    return __hash_64bit(uint64_t(__ptr));
+}
+
+} // namespace __detail
+
+template <class _Key>
+struct hash;
+
+template<>
+struct hash<std::nullptr_t> {
+    using argument_type = std::nullptr_t;
+    using result_type = size_t;
+    result_type operator() (argument_type __key) const noexcept {
+        return std::__detail::__hash_ptr((void*)__key);
+    }
+};
+
+template <class _T>
+struct hash<_T*> {
+    using argument_type = _T*;
+    using result_type = size_t;
+    result_type operator() (argument_type __key) const noexcept {
+        return std::__detail::__hash_ptr(__key);
+    }
+};
+
+#define _IntegerHashImpl(__t) using argument_type = __t;                \
+    using result_type = size_t;                                         \
+    result_type operator() (argument_type __key) const noexcept {       \
+        if constexpr (sizeof(argument_type) <= 4) return std::__detail::__hash_32bit(__key);     \
+        if constexpr (sizeof(argument_type) <= 8) return std::__detail::__hash_64bit(__key); \
+        static_assert(sizeof(argument_type) <= 8, "Unsupported "#__t" size, sorry"); \
+    }
+
+template<> struct hash<int> { _IntegerHashImpl(int) };
+template<> struct hash<unsigned int> { _IntegerHashImpl(unsigned int) };
+template<> struct hash<short> { _IntegerHashImpl(short) };
+template<> struct hash<unsigned short> { _IntegerHashImpl(unsigned short) };
+template<> struct hash<long> { _IntegerHashImpl(long) };
+template<> struct hash<unsigned long> { _IntegerHashImpl(unsigned long) };
+template<> struct hash<long long> { _IntegerHashImpl(long long) };
+template<> struct hash<unsigned long long> { _IntegerHashImpl(unsigned long long) };
+template<> struct hash<bool> { _IntegerHashImpl(bool); };
+template<> struct hash<char> { _IntegerHashImpl(char); };
+template<> struct hash<signed char> { _IntegerHashImpl(signed char); };
+template<> struct hash<unsigned char> { _IntegerHashImpl(unsigned char); };
+template<> struct hash<char8_t> { _IntegerHashImpl(char8_t); };
+template<> struct hash<char16_t> { _IntegerHashImpl(char16_t); };
+template<> struct hash<char32_t> { _IntegerHashImpl(char32_t); };
+template<> struct hash<wchar_t> { _IntegerHashImpl(wchar_t); };
+
+template<> struct hash<float> {
+    using argument_type = float;
+    using result_type = size_t;
+    result_type operator() (argument_type __key) const noexcept {
+        static_assert(sizeof(argument_type) == 4, "Sorry, float must be 4 bytes for current implementation of std::hash");
+        return std::__detail::__hash_32bit(std::bit_cast<uint32_t>(__key));
+    }
+};
+template<> struct hash<double> {
+    using argument_type = double;
+    using result_type = size_t;
+    result_type operator() (argument_type __key) const noexcept {
+        static_assert(sizeof(argument_type) == 8, "Sorry, double must be 8 bytes for current implementation of std::hash");
+        return std::__detail::__hash_64bit(std::bit_cast<uint64_t>(__key));
+    }
+};
+// TODO
+template<> struct hash<long double>;
+
+
+template<class _T = void>
+struct equal_to {
+    constexpr bool operator() (const _T& __lhs, const _T& __rhs) const {
+        return __lhs == __rhs;
+    };
+};
+
+} // namespace std
+
+#endif // _LENSOROS_FUNCTIONAL_H
