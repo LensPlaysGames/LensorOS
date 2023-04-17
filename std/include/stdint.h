@@ -55,6 +55,32 @@ extern "C" {
   typedef __INT_LEAST32_TYPE__ int_least32_t;
   typedef __INT_LEAST64_TYPE__ int_least64_t;
 
+#define INT8_C(c)   c
+#define INT16_C(c)  c
+#define INT32_C(c)  c
+#if __WORDSIZE == 64
+#   define INT64_C(c) c ## L
+#else
+#   define INT64_C(c) c ## LL
+#endif
+
+#define UINT8_C(c) c
+#define UINT16_C(c) c
+#define UINT32_C(c) c ## U
+#if __WORDSIZE == 64
+#   define UINT64_C(c) c ## UL
+#else
+#   define UINT64_C(c) c ## ULL
+#endif
+
+#if __WORDSIZE == 64
+#   define INTMAX_C(c) c ## L
+#   define UINTMAX_C(c) c ## UL
+#else
+#   define INTMAX_C(c) c ## LL
+#   define UINTMAX_C(c) c ## ULL
+#endif
+
 #define __int8_t_defined 1
 #define __uint8_t_defined 1
 #define __int16_t_defined 1
@@ -63,15 +89,6 @@ extern "C" {
 #define __uint32_t_defined 1
 #define __int64_t_defined 1
 #define __uint64_t_defined 1
-
-#define INT8_C(x) x
-#define UINT8_C(x) x
-
-#define INT16_C(x) x
-#define UINT16_C(x) x
-
-#define INT32_C(x) x
-#define UINT32_C(x) x##U
 
   typedef __UINTPTR_TYPE__ uintptr_t;
   typedef __INTPTR_TYPE__ intptr_t;
@@ -134,6 +151,44 @@ extern "C" {
 
 #define PTRDIFF_MAX __PTRDIFF_MAX__
 #define PTRDIFF_MIN (-__PTRDIFF_MAX__ - 1)
+
+#define INT8_WIDTH 8
+#define UINT8_WIDTH 8
+#define INT16_WIDTH 16
+#define UINT16_WIDTH 16
+#define INT32_WIDTH 32
+#define UINT32_WIDTH 32
+#define INT64_WIDTH 64
+#define UINT64_WIDTH 64
+
+#define INT_LEAST8_WIDTH 8
+#define UINT_LEAST8_WIDTH 8
+#define INT_LEAST16_WIDTH 16
+#define UINT_LEAST16_WIDTH 16
+#define INT_LEAST32_WIDTH 32
+#define UINT_LEAST32_WIDTH 32
+#define INT_LEAST64_WIDTH 64
+#define UINT_LEAST64_WIDTH 64
+
+#define INT_FAST8_WIDTH 8
+#define UINT_FAST8_WIDTH 8
+#define INT_FAST16_WIDTH __WORDSIZE
+#define UINT_FAST16_WIDTH __WORDSIZE
+#define INT_FAST32_WIDTH __WORDSIZE
+#define UINT_FAST32_WIDTH __WORDSIZE
+#define INT_FAST64_WIDTH 64
+#define UINT_FAST64_WIDTH 64
+
+#define INTPTR_WIDTH __WORDSIZE
+#define UINTPTR_WIDTH __WORDSIZE
+
+#define INTMAX_WIDTH 64
+#define UINTMAX_WIDTH 64
+
+#define PTRDIFF_WIDTH __WORDSIZE
+#define SIZE_WIDTH __WORDSIZE
+#define WCHAR_WIDTH 32
+#define WINT_WIDTH 32
 
 #if defined (__cplusplus)
 } /* extern "C" */
