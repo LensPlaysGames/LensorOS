@@ -17,8 +17,8 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#ifndef _LENSOROS_MAP_H
-#define _LENSOROS_MAP_H
+#ifndef _LENSOROS_UNORDERED_MAP
+#define _LENSOROS_UNORDERED_MAP
 
 #include <stddef.h>
 #include <stdint.h>
@@ -389,4 +389,4 @@ using unordered_map = __unordered_map_impl<_Key, _T, _Hash, _KeyEqual>;
 
 } // namespace std
 
-#endif /* _LENSOROS_MAP_H */
+#endif /* _LENSOROS_UNORDERED_MAP */
