@@ -33,38 +33,14 @@
 #include <extensions>
 #include <vfs_forward.h>
 
+#include <x86_64/cpu.h>
+
 namespace Memory {
     class PageTable;
 }
 
 /// Interrupt handler function found in `scheduler.asm`
 extern "C" void irq0_handler();
-
-/* TODO: Take into account different CPU architectures.
- *  This can be done by including ${ARCH}/ directory
- *  with the build system, and putting this there.
- */
-struct CPUState {
-    u64 RSP;
-    u64 RBX;
-    u64 RCX;
-    u64 RDX;
-    u64 RSI;
-    u64 RDI;
-    u64 RBP;
-    u64 R8;
-    u64 R9;
-    u64 R10;
-    u64 R11;
-    u64 R12;
-    u64 R13;
-    u64 R14;
-    u64 R15;
-    u64 FS;
-    u64 GS;
-    u64 RAX;
-    InterruptFrame Frame;
-} __attribute__((packed));
 
 typedef u64 pid_t;
 
@@ -102,17 +78,17 @@ struct Process {
     std::string ExecutablePath { "" };
     std::string WorkingDirectory { "" };
 
-    // TODO: x86_64 specific things should be somehow platform specific.
-    // We may want to have a Process with virtual methods and then just
-    // leave it to each platform to implement it, but that may just be
-    // a level of abstraction that's not needed, and a simpler solution
-    // would be more ideal.
-
     /// Used to save/restore CPU state when a context switch occurs.
     CPUState CPU;
 
-    /// Data for extra CPU info (fxsave, etc).
-    /// NOTE: fxsave and friends leave bytes 464:511 available for software use.
+    /// TODO: We need to figure out how each architecture can affect the
+    /// process structure. Maybe defines for each function definition,
+    /// or just leave the bulk of the process implementation to the
+    /// architecture and have a simpler ProcessBase that is inherited
+    /// from.
+
+    /* Data for extra CPU info (fxsave, etc). */
+    /* NOTE: fxsave and friends leave bytes 464:511 available for software use. */
     alignas(16) u8 CPUExtra[512] = {0};
     bool CPUExtraSet = false;
 
