@@ -114,12 +114,44 @@ template<> struct hash<double> {
 template<> struct hash<long double>;
 
 
-template<class _T = void>
-struct equal_to {
-    constexpr bool operator() (const _T& __lhs, const _T& __rhs) const {
-        return __lhs == __rhs;
-    };
-};
+#define _DefineBinaryOperatorFunctionObject(name, op) template <class _T = void> \
+    struct name {                                                       \
+        constexpr _T operator() (const _T& __lhs, const _T& __rhs) const { \
+            return __lhs op __rhs;                                      \
+        };                                                              \
+    }
+
+#define _DefineUnaryOperatorFunctionObject(name, op) template <class _T = void> \
+    struct name {                                                       \
+        constexpr _T operator() (const _T& __value) const {           \
+            return op __value;                                          \
+        };                                                              \
+    }
+
+
+_DefineBinaryOperatorFunctionObject(plus, +);
+_DefineBinaryOperatorFunctionObject(minus, -);
+_DefineBinaryOperatorFunctionObject(multiplies, *);
+_DefineBinaryOperatorFunctionObject(divides, /);
+_DefineBinaryOperatorFunctionObject(modulus, %);
+_DefineUnaryOperatorFunctionObject(negate, -);
+
+_DefineBinaryOperatorFunctionObject(equal_to, ==);
+_DefineBinaryOperatorFunctionObject(not_equal_to, !=);
+_DefineBinaryOperatorFunctionObject(greater, >);
+_DefineBinaryOperatorFunctionObject(lesser, <);
+_DefineBinaryOperatorFunctionObject(greater_equal, >=);
+_DefineBinaryOperatorFunctionObject(lesser_equal, <=);
+
+_DefineBinaryOperatorFunctionObject(logical_and, &&);
+_DefineBinaryOperatorFunctionObject(logical_or, ||);
+_DefineUnaryOperatorFunctionObject(logical_not, !);
+
+_DefineBinaryOperatorFunctionObject(bit_and, &);
+_DefineBinaryOperatorFunctionObject(bit_or, |);
+_DefineBinaryOperatorFunctionObject(bit_xor, ^);
+_DefineUnaryOperatorFunctionObject(bit_not, ~);
+
 
 } // namespace std
 
