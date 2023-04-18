@@ -31,17 +31,14 @@ void EventManager::notify(const Event& event) {
     for (auto pid : Listeners[event.Type]) {
         Process* process = Scheduler::process(pid);
         if (!process) continue;
+
         // For each event queue in the process, check if it's filter has this
         // event type enabled.
-        // If it does, we push this event to the event queue.
-        // If it doesn't, we move on.
-        // If none of the event queue's had this filter, then that means the
-        // book-keeping went wrong and we should remove this process from this
-        // Listeners[event.Type] vector.
-
         bool found = false;
         for (auto queue : process->EventQueues) {
+            // If it doesn't, we move on.
             if (!queue.listens(event.Type)) continue;
+            // If it does, we push this event to the event queue.
             if (event.Type == EventType::READY_TO_READ || event.Type == EventType::READY_TO_WRITE) {
                 auto* event_data = std::bit_cast<EventData_ReadyToReadWrite*>(&event.Data);
                 event_data->ProcessFD = process->sysfd_to_procfd(event_data->SystemFD);
@@ -49,6 +46,9 @@ void EventManager::notify(const Event& event) {
             queue.push(event);
             found = true;
         }
+        // If none of the event queue's had this filter, then that means the
+        // book-keeping went wrong and we should remove this process from this
+        // Listeners[event.Type] vector.
         if (!found) unregister_listener(event.Type, pid);
     }
 }

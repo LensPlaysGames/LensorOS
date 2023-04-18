@@ -100,8 +100,8 @@ struct EventQueue {
         return Filter[(size_t)e];
     }
 
-    void push(Event&& e) {
-        Events.push_back(std::move(e));
+    void push(const Event& e) {
+        Events.push_back(e);
     }
 
     Event pop() {

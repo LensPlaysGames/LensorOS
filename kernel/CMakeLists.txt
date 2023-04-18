@@ -74,6 +74,7 @@ add_executable(
   src/devices/devices.cpp
   src/e1000.cpp
   src/efi_memory.cpp
+  src/event.cpp
   src/gdt.cpp
   src/gpt.cpp
   src/hpet.cpp
