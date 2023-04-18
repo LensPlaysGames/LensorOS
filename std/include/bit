@@ -21,6 +21,7 @@
 #ifndef _LENSOR_OS_BIT_H
 #define _LENSOR_OS_BIT_H
 
+#include <array>
 #include <algorithm>
 #include <bits/decls.h>
 #include <stdint.h>
