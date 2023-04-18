@@ -69,30 +69,32 @@ struct hash<_T*> {
     }
 };
 
-#define _IntegerHashImpl(__t) using argument_type = __t;                \
+#define _IntegerHashImpl(__t) template<> struct hash<__t> {             \
+    using argument_type = __t;                                          \
     using result_type = size_t;                                         \
     result_type operator() (argument_type __key) const noexcept {       \
-        if constexpr (sizeof(argument_type) <= 4) return std::__detail::__hash_32bit(__key);     \
+        if constexpr (sizeof(argument_type) <= 4) return std::__detail::__hash_32bit(__key); \
         if constexpr (sizeof(argument_type) <= 8) return std::__detail::__hash_64bit(__key); \
         static_assert(sizeof(argument_type) <= 8, "Unsupported "#__t" size, sorry"); \
+    }                                                                   \
     }
 
-template<> struct hash<int> { _IntegerHashImpl(int) };
-template<> struct hash<unsigned int> { _IntegerHashImpl(unsigned int) };
-template<> struct hash<short> { _IntegerHashImpl(short) };
-template<> struct hash<unsigned short> { _IntegerHashImpl(unsigned short) };
-template<> struct hash<long> { _IntegerHashImpl(long) };
-template<> struct hash<unsigned long> { _IntegerHashImpl(unsigned long) };
-template<> struct hash<long long> { _IntegerHashImpl(long long) };
-template<> struct hash<unsigned long long> { _IntegerHashImpl(unsigned long long) };
-template<> struct hash<bool> { _IntegerHashImpl(bool); };
-template<> struct hash<char> { _IntegerHashImpl(char); };
-template<> struct hash<signed char> { _IntegerHashImpl(signed char); };
-template<> struct hash<unsigned char> { _IntegerHashImpl(unsigned char); };
-template<> struct hash<char8_t> { _IntegerHashImpl(char8_t); };
-template<> struct hash<char16_t> { _IntegerHashImpl(char16_t); };
-template<> struct hash<char32_t> { _IntegerHashImpl(char32_t); };
-template<> struct hash<wchar_t> { _IntegerHashImpl(wchar_t); };
+_IntegerHashImpl(int);
+_IntegerHashImpl(unsigned int);
+_IntegerHashImpl(short);
+_IntegerHashImpl(unsigned short);
+_IntegerHashImpl(long);
+_IntegerHashImpl(unsigned long);
+_IntegerHashImpl(long long);
+_IntegerHashImpl(unsigned long long);
+_IntegerHashImpl(bool);
+_IntegerHashImpl(char);
+_IntegerHashImpl(signed char);
+_IntegerHashImpl(unsigned char);
+_IntegerHashImpl(char8_t);
+_IntegerHashImpl(char16_t);
+_IntegerHashImpl(char32_t);
+_IntegerHashImpl(wchar_t);
 
 template<> struct hash<float> {
     using argument_type = float;
@@ -121,9 +123,16 @@ template<> struct hash<long double>;
         };                                                              \
     }
 
+#define _DefineBinaryComparisonFunctionObject(name, op) template <class _T = void> \
+    struct name {                                                       \
+        constexpr bool operator() (const _T& __lhs, const _T& __rhs) const { \
+            return __lhs op __rhs;                                      \
+        };                                                              \
+    }
+
 #define _DefineUnaryOperatorFunctionObject(name, op) template <class _T = void> \
     struct name {                                                       \
-        constexpr _T operator() (const _T& __value) const {           \
+        constexpr _T operator() (const _T& __value) const {             \
             return op __value;                                          \
         };                                                              \
     }
@@ -136,12 +145,12 @@ _DefineBinaryOperatorFunctionObject(divides, /);
 _DefineBinaryOperatorFunctionObject(modulus, %);
 _DefineUnaryOperatorFunctionObject(negate, -);
 
-_DefineBinaryOperatorFunctionObject(equal_to, ==);
-_DefineBinaryOperatorFunctionObject(not_equal_to, !=);
-_DefineBinaryOperatorFunctionObject(greater, >);
-_DefineBinaryOperatorFunctionObject(lesser, <);
-_DefineBinaryOperatorFunctionObject(greater_equal, >=);
-_DefineBinaryOperatorFunctionObject(lesser_equal, <=);
+_DefineBinaryComparisonFunctionObject(equal_to, ==);
+_DefineBinaryComparisonFunctionObject(not_equal_to, !=);
+_DefineBinaryComparisonFunctionObject(greater, >);
+_DefineBinaryComparisonFunctionObject(lesser, <);
+_DefineBinaryComparisonFunctionObject(greater_equal, >=);
+_DefineBinaryComparisonFunctionObject(lesser_equal, <=);
 
 _DefineBinaryOperatorFunctionObject(logical_and, &&);
 _DefineBinaryOperatorFunctionObject(logical_or, ||);
