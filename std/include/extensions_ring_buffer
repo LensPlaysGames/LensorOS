@@ -87,10 +87,13 @@ struct ring_buffer {
         // ring buffer is full and we need to "drop" one element by
         // incrementing head.
         if (__tail == __head) __head++;
+        if (__tail >= _Size) __tail = 0;
     }
     /// NOTE: Calling on empty ring buffer is UB.
     _T pop_front() {
-        return __data[__head++];
+        _T __out = __data[__head++];
+        if (__head >= _Size) __head = 0;
+        return __out;
     }
 
     /// NOTE: Calling on empty ring buffer is UB.
