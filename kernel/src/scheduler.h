@@ -20,6 +20,7 @@
 #ifndef LENSOR_OS_SCHEDULER_H
 #define LENSOR_OS_SCHEDULER_H
 
+#include <event.h>
 #include <integers.h>
 #include <interrupts/interrupts.h>
 #include <linked_list.h>
@@ -73,6 +74,17 @@ struct Process {
     /// Keep track of opened files that may be freed when the process
     /// exits, if no other process has it open.
     std::sparse_vector<SysFD, SysFD::Invalid, ProcFD> FileDescriptors;
+
+    ProcFD sysfd_to_procfd(SysFD predicate_sysfd) {
+        for (const auto& [procfd, sysfd] : FileDescriptors.pairs())
+            if (sysfd == predicate_sysfd) return procfd;
+        return ProcFD::Invalid;
+    }
+
+    // FIXME: Use something that doesn't have iterator invalidation,
+    // that way we can get rid of the id integer member in the event
+    // queue and just return an index as the opaque handle.
+    std::vector<EventQueue<32>> EventQueues { 8 };
 
     std::string ExecutablePath { "" };
     std::string WorkingDirectory { "" };
