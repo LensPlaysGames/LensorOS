@@ -25,15 +25,16 @@
 
 namespace std {
 
-template <typename _T,
-          size_t _Size>
+template <typename _T, size_t _Size>
 struct ring_buffer {
+
+    using size_type = std::size_t;
 
     struct iterator {
         ring_buffer& __ring;
-        size_t __current;
+        size_type __current;
 
-        iterator(ring_buffer& __r, size_t __i) : __ring(__r), __current(__i) {}
+        iterator(ring_buffer& __r, size_type __i) : __ring(__r), __current(__i) {}
 
         iterator& operator++() {
             ++__current;
@@ -69,31 +70,32 @@ struct ring_buffer {
     };
 
     _T __data[_Size];
-    size_t __head{0};
-    size_t __tail{0};
+    size_type __head{0};
+    size_type __tail{0};
 
-    size_t size() const {
+    size_type size() const {
         // From head to tail is full.
-        if (__tail > __head)
+        if (__tail >= __head)
             return __tail - __head;
         // From head to the end is full, as well as from beginning to tail.
         return (_Size - __head) + __tail;
     };
 
     void push_back(_T __value) {
-        __data[__tail] = __value;
+        __data[__tail++] = __value;
         // If head and tail are equal after incrementing tail, that means the
         // ring buffer is full and we need to "drop" one element by
         // incrementing head.
-        if (__tail++ == __head) __head++;
+        if (__tail == __head) __head++;
     }
-    void pop_front() {
-        __head++;
+    /// NOTE: Calling on empty ring buffer is UB.
+    _T pop_front() {
+        return __data[__head++];
     }
 
-    _T front() {
-        _T out = __data[__head++];
-        return out;
+    /// NOTE: Calling on empty ring buffer is UB.
+    _T& front() {
+        return __data[__head];
     }
 
     iterator begin() {
