@@ -20,6 +20,7 @@
 #ifndef LENSOR_OS_EVENT_H
 #define LENSOR_OS_EVENT_H
 
+#include <algorithm>
 #include <functional>
 #include <integers.h>
 #include <memory.h>
@@ -32,12 +33,15 @@
 
 typedef u64 pid_t;
 
+
 /// NOTE: Each one of these (except invalid) should have a struct
 /// defined that the "data" field of the event can be cast to.
 enum struct EventType : u32 {
     INVALID,
-    // For sockets/pipes
+    // For server-type listening sockets: connections waiting to be accepted.
+    // For sockets/pipes: data is available to read.
     READY_TO_READ,
+    // For sockets/pipes: space is available in the FIFO to write to.
     READY_TO_WRITE,
     COUNT
 };
@@ -53,62 +57,7 @@ template<> struct hash<EventType> {
 };
 }
 
-#define EVENT_MAX_SIZE 128
-struct Event {
-    EventType Type;
-    u8 Data[EVENT_MAX_SIZE];
-};
-
-/// Both READY_TO_READ and READY_TO_WRITE events have this data sent with them.
-struct EventData_ReadyToReadWrite {
-    size_t BytesAvailable;
-    SysFD SystemFD;
-    // Assigned by notify, as it has access to the process being notified
-    // and it's file table.
-    ProcFD ProcessFD;
-};
-
-template <size_t N>
-struct EventQueue {
-    // For now, used as a handle to find this particular event queue
-    // within a process. In the future, we shouldn't need this, and
-    // the handle should just be an index into some data structure,
-    // or something.
-    usz ID { 0 };
-    pid_t PID { pid_t(-1) };
-    std::ring_buffer<Event, N> Events;
-    std::vector<bool> Filter { (size_t)EventType::COUNT };
-
-    EventQueue() {
-        memset(Filter.data(), 0, (size_t)EventType::COUNT);
-    }
-
-    void register_listening(EventType e) {
-        Filter[(size_t)e] = true;
-        // TODO: Add PID to kernel event queue for this event type
-        //gEvents.register_listener(e, PID);
-    }
-
-    void unregister_listening(EventType e) {
-        Filter[(size_t)e] = false;
-        // TODO: Remove PID from kernel event queue for this event type
-        //gEvents.unregister_listener(e, PID);
-    }
-
-    bool listens(EventType e) {
-        if (e >= EventType::COUNT) return false;
-        return Filter[(size_t)e];
-    }
-
-    void push(const Event& e) {
-        Events.push_back(e);
-    }
-
-    Event pop() {
-        return Events.pop_front();
-    }
-};
-
+struct Event;
 struct EventManager {
     /// A map of event_type -> vector of pids of processes that have
     /// event queues that are listening to this event type.
@@ -131,6 +80,83 @@ struct EventManager {
     }
 
     void notify(const Event& event);
+};
+
+extern EventManager gEvents;
+
+union EventFilter {
+    // Used by READY_TO_READ and READY_TO_WRITE event types.
+    struct {
+        pid_t PID;
+        ProcFD FD;
+    } PIDFD;
+
+    bool operator== (const EventFilter& other) const {
+        return memcmp(this, &other, sizeof(EventFilter)) == 0;
+    }
+};
+
+#define EVENT_MAX_SIZE 128
+struct Event {
+    EventType Type = EventType::INVALID;
+    EventFilter Filter = {};
+    u8 Data[EVENT_MAX_SIZE] = { 0 };
+};
+
+/// Both READY_TO_READ and READY_TO_WRITE events have this data sent with them.
+struct EventData_ReadyToReadWrite {
+    size_t BytesAvailable;
+    // Assigned by notify, as it has access to the process being notified
+    // and it's file table.
+    ProcFD ProcessFD;
+};
+
+template <size_t N>
+struct EventQueue {
+    // For now, used as a handle to find this particular event queue
+    // within a process. In the future, we shouldn't need this, and
+    // the handle should just be an index into some data structure,
+    // or something.
+    usz ID { 0 };
+    pid_t PID { pid_t(-1) };
+    std::ring_buffer<Event, N> Events;
+    // Yes, this is an array of vectors. The array index is the event
+    // type as a size_t. This provides constant O(1) lookup on event
+    // type. Then, we have a vector to store all of the filters that
+    // are being listened to of that event type.
+    std::vector<EventFilter> Filter[(size_t)EventType::COUNT];
+
+    EventQueue() {
+        memset(Filter, 0, sizeof(Filter));
+    }
+
+    void register_listening(EventType e, EventFilter efilt) {
+        if (e >= EventType::COUNT) return;
+        Filter[(size_t)e].push_back(efilt);
+        // Add PID to kernel event queue for this event type
+        gEvents.register_listener(e, PID);
+    }
+
+    void unregister_listening(EventType e, EventFilter efilt) {
+        if (e >= EventType::COUNT) return;
+        std::erase(Filter[(size_t)e], efilt);
+        // Remove PID from kernel event queue for this event type
+        gEvents.unregister_listener(e, PID);
+    }
+
+    bool listens(EventType e, EventFilter efilt) const {
+        if (e >= EventType::COUNT) return false;
+        return Filter[(size_t)e].size() != 0 && std::find(Filter[(size_t)e].begin(), Filter[(size_t)e].end(), efilt) != Filter[(size_t)e].end();
+    }
+
+    void push(const Event& e) {
+        Events.push_back(e);
+    }
+
+    Event pop() {
+        if (Events.size()) return Events.pop_front();
+        return { EventType::INVALID, { nullptr }, { 0 } };
+    }
 };
 
 #endif /* LENSOR_OS_EVENT_H */

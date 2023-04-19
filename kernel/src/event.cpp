@@ -26,8 +26,11 @@
 #include <scheduler.h>
 #include <vector>
 
+EventManager gEvents;
+
 void EventManager::notify(const Event& event) {
     if (event.Type >= EventType::COUNT) return;
+
     for (auto pid : Listeners[event.Type]) {
         Process* process = Scheduler::process(pid);
         if (!process) continue;
@@ -37,12 +40,8 @@ void EventManager::notify(const Event& event) {
         bool found = false;
         for (auto queue : process->EventQueues) {
             // If it doesn't, we move on.
-            if (!queue.listens(event.Type)) continue;
+            if (!queue.listens(event.Type, event.Filter)) continue;
             // If it does, we push this event to the event queue.
-            if (event.Type == EventType::READY_TO_READ || event.Type == EventType::READY_TO_WRITE) {
-                auto* event_data = std::bit_cast<EventData_ReadyToReadWrite*>(&event.Data);
-                event_data->ProcessFD = process->sysfd_to_procfd(event_data->SystemFD);
-            }
             queue.push(event);
             found = true;
         }

@@ -22,6 +22,7 @@
 
 #include <debug.h>
 #include <elf_loader.h>
+#include <event.h>
 #include <file.h>
 #include <linked_list.h>
 #include <memory/common.h>
@@ -608,53 +609,61 @@ int sys$20_listen(ProcFD socketFD, int backlog) {
 // TODO: Currently non-blocking; we need to somehow support certain
 // socket types blocking and others not; i.e. TCP needs to block until
 // 3-way-handshake is completed.
-int sys$21_connect(ProcFD socketFD, const SocketAddress* address, usz addressLength) {
+int sys$21_connect(ProcFD socketFD, const SocketAddress* givenAddress, usz addressLength) {
     static constexpr const int success {0};
     static constexpr const int error {-1};
     DBGMSG(sys$_dbgfmt, 21, "connect");
 
     // TODO: validate address pointer
-    if (!address) return error;
+    if (!givenAddress) return error;
+
+    SocketAddress address;
+    memcpy(&address, givenAddress, addressLength);
 
     Process* process = Scheduler::CurrentProcess->value();
-    {
-        auto file = SYSTEM->virtual_filesystem().file(socketFD);
-        if (!file) {
-            std::print("[SYS$]:connect:ERROR: File descriptor invalid.\n");
-            return error;
-        }
-        // Validate that socketFD actually refers to a socket.
-        if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
-            std::print("[SYS$]:connect:ERROR: File descriptor does not appear to refer to a socket!\n");
-            return error;
-        }
-        SocketData* data = (SocketData*)file->driver_data();
-        if (data->ClientServer != SocketData::CLIENT) {
-            std::print("[SYS$]:connect:ERROR: Socket is not a client socket.\n");
-            return error;
-        }
+    auto file = SYSTEM->virtual_filesystem().file(socketFD);
+    if (!file) {
+        std::print("[SYS$]:connect:ERROR: File descriptor invalid.\n");
+        return error;
+    }
+    // Validate that socketFD actually refers to a socket.
+    if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
+        std::print("[SYS$]:connect:ERROR: File descriptor does not appear to refer to a socket!\n");
+        return error;
+    }
+    SocketData* data = (SocketData*)file->driver_data();
+    if (data->ClientServer != SocketData::CLIENT) {
+        std::print("[SYS$]:connect:ERROR: Socket is not a client socket.\n");
+        return error;
+    }
 
-        // Get server socket from address.
-        // TODO: Handle addressLength properly.
-        SocketData* serverData = SYSTEM->virtual_filesystem().SocketsDriver->get_bound_socket(*address);
-        if (!serverData) {
-            std::print("[SYS$]:connect: There is no socket bound to the given address, sorry\n");
-            return error;
-        }
-        serverData->ConnectionQueue.push_back(SocketConnection{data->Address, data, process->ProcessID});
+    // Get server socket from address.
+    // TODO: Handle addressLength properly.
+    SocketData* serverData = SYSTEM->virtual_filesystem().SocketsDriver->get_bound_socket(address);
+    if (!serverData) {
+        std::print("[SYS$]:connect: There is no socket bound to the given address, sorry\n");
+        return error;
+    }
+    serverData->ConnectionQueue.push_back(SocketConnection{data->Address, data, process->ProcessID});
 
-        std::print("[SYS$]:connect: socket {} connected to address!\n", socketFD);
+    std::print("[SYS$]:connect: socket {} connected to address!\n", socketFD);
 
-        // Unblock server socket's corresponding process, if needed.
-        if (serverData->WaitingOnConnection) {
-            auto* serverProcess = Scheduler::process(serverData->PID);
-            if (serverProcess) {
-                std::print("[SYS$]:connect: unblocked server socket {} as it was waiting for a connection!\n", socketFD);
-                // FIXME: We should just add the new file descriptor to the
-                // server process and set the server process' return value
-                // to that, instead of returning the "retry" return value.
-                serverProcess->unblock(true, -2);
-            }
+    // READY_TO_READ for a listening socket means a connection is waiting to be accepted.
+    Event e;
+    e.Type = EventType::READY_TO_READ;
+    EventData_ReadyToReadWrite edata;
+    memcpy(e.Data, &edata, sizeof(EventData_ReadyToReadWrite));
+    gEvents.notify(e);
+
+    // Unblock server socket's corresponding process, if needed.
+    if (serverData->WaitingOnConnection) {
+        auto* serverProcess = Scheduler::process(serverData->PID);
+        if (serverProcess) {
+            std::print("[SYS$]:connect: unblocked server socket {} as it was waiting for a connection!\n", socketFD);
+            // FIXME: We should just add the new file descriptor to the
+            // server process and set the server process' return value
+            // to that, instead of returning the "retry" return value.
+            serverProcess->unblock(true, -2);
         }
     }
 
