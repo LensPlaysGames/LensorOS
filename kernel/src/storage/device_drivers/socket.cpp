@@ -53,7 +53,7 @@ void SocketDriver::close(FileMetadata* meta) {
         // Or if we `fork` while one is open; that may also get sketchy.
         buffers->RefCount -= 1;
         if (buffers->RefCount == 0) {
-            std::print("  Unbinding and deleting SocketBuffers\n");
+            std::print("  Unbinding and deleting SocketBuffers at {}\n", (void*)buffers);
             // If bound, remove binding for this socket from list of bindings.
             if (data->Address.Type != SocketAddress::UNBOUND) {
                 const SocketAddress& addr = data->Address;

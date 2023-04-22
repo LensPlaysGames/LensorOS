@@ -3,7 +3,7 @@
 #+description: What the fuck we should be doing for LensorOS in 2023
 #+created: <2023-01-12 Thu>
 
-* TODO Sockets for interprocess communication
+* DONE Sockets for interprocess communication
 
 Basically, UNIX sockets.
 
@@ -19,7 +19,6 @@ Here's the idea:
 - The Window Server reads a new window request, and writes back the data pertaining to the window's framebuffer.
 - A GUI program now has it's window information; a framebuffer to write to, size, etc. New requests for size changes, position changes, and more could be made. It can also receive data from The Window Server (like events).
 
-
 [2023-04-09 Sun 13:33]
 
 Well, we are getting there, but it's not perfect. A lot of the infrastructure is in place, but it's not all meshing together correctly (yet).
@@ -31,6 +30,14 @@ Right now, after the server calls ~listen~ the socket is being closed, somehow. 
 Well, local sockets /appear/ to be working, at least for server-to-client communications. POGGERS! Only took me a week, lol.
 
 [2023-04-14 Fri 10:45]
+
+- FIXME When closing a client-type, connected socket we need to remove it from ConnectionQueue of the server socket it's connected to. When closing a server-type socket that has connections pending, we need to decide how to handle them; should we process them and only then close the socket once the queue is empty, or should we discard them?
+
+[2023-04-14 Fri 12:06]
+
+There's still issues, but I'm calling it "working" now.
+
+DONE [2023-04-22 Sat 11:31]
 
 * DONE E1000 :: Test interrupts
 

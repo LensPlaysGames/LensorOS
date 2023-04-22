@@ -159,7 +159,8 @@ void* sys$6_map(void* address, usz size, u64 flags) {
     usz pages = 0;
     if ((size % PAGE_SIZE) == 0) {
         pages = size / PAGE_SIZE;
-    } else {
+    }
+    else {
         pages = 1 + (size / PAGE_SIZE);
     }
 
@@ -731,7 +732,7 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
 
         data->ClientServer = SocketData::SERVER;
 
-        /// Return a file descriptor that references it's socket.
+        /// Return a file descriptor that references the client's socket data, but is a new file metadata.
         auto f = std::make_shared<FileMetadata>("client_socket", sdd(SYSTEM->virtual_filesystem().SocketsDriver), 0, data);
         auto fds = SYSTEM->virtual_filesystem().add_file(f);
         if (fds.invalid()) {
@@ -739,27 +740,23 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
             return ProcFD::Invalid;
         }
         return fds.Process;
-
-    } else {
-        std::print("[SYS$]:accept: No waiting connections, blocking\n");
-        // Block this process until a connection is made to this socket.
-        data->WaitingOnConnection = true;
-        // Set return value to invalid fd just in case we are unblocked
-        // for some reason other than an incoming connection.
-        auto* process = Scheduler::CurrentProcess->value();
-        memcpy(&process->CPU, cpu, sizeof(CPUState));
-        process->set_return_value(usz(ProcFD::Invalid));
-        process->State = Process::SLEEPING;
-        Scheduler::yield();
     }
-
-    std::print("[SYS$]:accept:TODO implement accept (socket {})...\n", socketFD);
-    return ProcFD::Invalid;
+    std::print("[SYS$]:accept: No waiting connections, blocking\n");
+    // Block this process until a connection is made to this socket.
+    data->WaitingOnConnection = true;
+    // Set return value to invalid fd just in case we are unblocked
+    // for some reason other than an incoming connection.
+    auto* process = Scheduler::CurrentProcess->value();
+    memcpy(&process->CPU, cpu, sizeof(CPUState));
+    process->set_return_value(usz(ProcFD::Invalid));
+    process->State = Process::SLEEPING;
+    Scheduler::yield();
 }
 
 
 EventQueueHandle sys$23_kqueue() {
     DBGMSG(sys$_dbgfmt, 23, "kqueue");
+
     auto* process = Scheduler::CurrentProcess->value();
 
     /// Choose a handle
