@@ -235,21 +235,21 @@ namespace Scheduler {
         No = 1,
     };
 
-    inline SinglyLinkedListNode<Process*>* find_next_viable_process_after
+    SinglyLinkedListNode<Process*>* find_next_viable_process_after
     (SinglyLinkedListNode<Process*>* startProcess
      , IncludeGivenProcess include = IncludeGivenProcess::No)
     {
         auto* NextProcess = startProcess;
-        while (NextProcess != nullptr)
-        {
-            if (include == IncludeGivenProcess::Yes) {
-                NextProcess = startProcess;
-                include = IncludeGivenProcess::No;
-            }
-            else NextProcess = NextProcess->next();
-            if (NextProcess != nullptr && NextProcess->value()->State == Process::RUNNING)
-                break;
+
+        if (NextProcess && include == IncludeGivenProcess::No)
+            NextProcess = NextProcess->next();
+
+        while (NextProcess && NextProcess->value()) {
+            if (NextProcess->value()->State == Process::RUNNING) break;
+            // Advance process pointer.
+            NextProcess = NextProcess->next();
         }
+
         return NextProcess;
     }
 
