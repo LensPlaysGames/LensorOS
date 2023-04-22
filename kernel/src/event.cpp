@@ -30,24 +30,39 @@ EventManager gEvents;
 
 void EventManager::notify(const Event& event) {
     if (event.Type >= EventType::COUNT) return;
-
+    static_assert((usz)EventType::COUNT == 3, "Exhaustive handling of process-specific event types in all-process notify().");
+    if (event.Type == EventType::READY_TO_READ || event.Type == EventType::READY_TO_WRITE) {
+        std::print("[Events]: Event manager refuses to notify all processes for process-specific events.\n"
+                   "  This is likely an error in the LensorOS kernel; please submit a bug report with as much information as possible.\n");
+        return;
+    }
     for (auto pid : Listeners[event.Type]) {
         Process* process = Scheduler::process(pid);
-        if (!process) continue;
-
-        // For each event queue in the process, check if it's filter has this
-        // event type enabled.
-        bool found = false;
-        for (auto queue : process->EventQueues) {
-            // If it doesn't, we move on.
-            if (!queue.listens(event.Type, event.Filter)) continue;
-            // If it does, we push this event to the event queue.
-            queue.push(event);
-            found = true;
-        }
-        // If none of the event queue's had this filter, then that means the
-        // book-keeping went wrong and we should remove this process from this
-        // Listeners[event.Type] vector.
-        if (!found) unregister_listener(event.Type, pid);
+        notify(event, process);
     }
 }
+
+void EventManager::notify(const Event& event, Process* process) {
+    if (!process || event.Type >= EventType::COUNT) return;
+
+    // For each event queue in the process, check if it's filter has this
+    // event type enabled.
+    bool found = false;
+    for (auto queue : process->EventQueues) {
+        // If it doesn't, we move on.
+        if (!queue.listens(event.Type, event.Filter)) continue;
+        // If it does, we push this event to the event queue.
+        queue.push(event);
+        found = true;
+    }
+    // If none of the event queue's had this filter, then that means the
+    // book-keeping went wrong and we should remove this process from this
+    // Listeners[event.Type] vector.
+    if (!found) unregister_listener(event.Type, process->ProcessID);
+}
+
+void EventManager::notify(const Event& event, pid_t pid) {
+    auto* process = Scheduler::process(pid);
+    return notify(event, process);
+}
+

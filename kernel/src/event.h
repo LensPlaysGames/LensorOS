@@ -33,7 +33,6 @@
 
 typedef u64 pid_t;
 
-
 /// NOTE: Each one of these (except invalid) should have a struct
 /// defined that the "data" field of the event can be cast to.
 enum struct EventType : u32 {
@@ -58,20 +57,22 @@ template<> struct hash<EventType> {
 }
 
 struct Event;
+struct Process;
 struct EventManager {
     /// A map of event_type -> vector of pids of processes that have
     /// event queues that are listening to this event type.
-    /// FIXME: Maybe it's a better idea to keep a reference directly to
-    /// the event queue that is listening, not just the processes. This
-    /// would mean that A. we don't have to look up the process every
-    /// time from PID and B. each process's event queue's wouldn't have
-    /// to be iterated to find the one listening for the fired event.
-    /// Either way, it should be a set and not a vector.
+    // FIXME: Maybe it's a better idea to keep a reference directly to
+    // the event queue that is listening, not just the processes. This
+    // would mean that A. we don't have to look up the process every
+    // time from PID and B. each process's event queue's wouldn't have
+    // to be iterated to find the one listening for the fired event.
+    // FIXME: The list of pids should be a set, not a vector.
     std::unordered_map<EventType, std::vector<pid_t>> Listeners;
 
     void register_listener(EventType event_type, pid_t new_listener) {
         if (event_type >= EventType::COUNT) return;
-        Listeners[event_type].push_back(new_listener);
+        if (std::find(Listeners[event_type].begin(), Listeners[event_type].end(), new_listener) != Listeners[event_type].end())
+            Listeners[event_type].push_back(new_listener);
     }
 
     bool unregister_listener(EventType event_type, pid_t new_listener) {
@@ -80,16 +81,24 @@ struct EventManager {
     }
 
     void notify(const Event& event);
+
+    void notify(const Event& event, Process* process);
+    void notify(const Event& event, pid_t pid);
 };
 
 extern EventManager gEvents;
 
 union EventFilter {
+    // NOTE: THE FIRST NAMED MEMBER MUST BE THE LARGEST!!
+
     // Used by READY_TO_READ and READY_TO_WRITE event types.
-    struct {
+    ProcFD ProcessFD { ProcFD::Invalid };
+    /*
+    struct PIDFD_T {
         pid_t PID;
         ProcFD FD;
     } PIDFD;
+    */
 
     bool operator== (const EventFilter& other) const {
         return memcmp(this, &other, sizeof(EventFilter)) == 0;
@@ -106,10 +115,9 @@ struct Event {
 /// Both READY_TO_READ and READY_TO_WRITE events have this data sent with them.
 struct EventData_ReadyToReadWrite {
     size_t BytesAvailable;
-    // Assigned by notify, as it has access to the process being notified
-    // and it's file table.
-    ProcFD ProcessFD;
 };
+
+enum struct EventQueueHandle : usz { Invalid = static_cast<usz>(-1) };
 
 template <size_t N>
 struct EventQueue {
@@ -117,7 +125,7 @@ struct EventQueue {
     // within a process. In the future, we shouldn't need this, and
     // the handle should just be an index into some data structure,
     // or something.
-    usz ID { 0 };
+    EventQueueHandle ID { EventQueueHandle::Invalid };
     pid_t PID { pid_t(-1) };
     std::ring_buffer<Event, N> Events;
     // Yes, this is an array of vectors. The array index is the event
@@ -140,8 +148,10 @@ struct EventQueue {
     void unregister_listening(EventType e, EventFilter efilt) {
         if (e >= EventType::COUNT) return;
         std::erase(Filter[(size_t)e], efilt);
-        // Remove PID from kernel event queue for this event type
-        gEvents.unregister_listener(e, PID);
+        // Remove PID from kernel event queue for this event type if there are
+        // no filters left.
+        if (!Filter[(size_t)e].size())
+            gEvents.unregister_listener(e, PID);
     }
 
     bool listens(EventType e, EventFilter efilt) const {
@@ -155,7 +165,11 @@ struct EventQueue {
 
     Event pop() {
         if (Events.size()) return Events.pop_front();
-        return { EventType::INVALID, { nullptr }, { 0 } };
+        return { EventType::INVALID, {}, { 0 } };
+    }
+
+    bool has_events() {
+        return Events.size();
     }
 };
 

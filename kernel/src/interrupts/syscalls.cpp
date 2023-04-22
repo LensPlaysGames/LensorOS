@@ -638,33 +638,40 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* givenAddress, usz addre
     }
 
     // Get server socket from address.
-    // TODO: Handle addressLength properly.
     SocketData* serverData = SYSTEM->virtual_filesystem().SocketsDriver->get_bound_socket(address);
     if (!serverData) {
         std::print("[SYS$]:connect: There is no socket bound to the given address, sorry\n");
         return error;
     }
-    serverData->ConnectionQueue.push_back(SocketConnection{data->Address, data, process->ProcessID});
+    // FIXME: This is flawed. A socket may be open by multiple
+    // processes, and it may not be the same one it was created in...
+    auto* serverProcess = Scheduler::process(serverData->PID);
+    if (!serverProcess) {
+        std::print("[SYS$]:connect: process associated with socket bound to address has closed; sorry!\n");
+        return error;
+    }
+    ProcFD serverProcFD = serverData->FD;
 
+
+    serverData->ConnectionQueue.push_back(SocketConnection{data->Address, data, process->ProcessID});
     std::print("[SYS$]:connect: socket {} connected to address!\n", socketFD);
 
     // READY_TO_READ for a listening socket means a connection is waiting to be accepted.
     Event e;
     e.Type = EventType::READY_TO_READ;
+    e.Filter.ProcessFD = serverProcFD;
     EventData_ReadyToReadWrite edata;
     memcpy(e.Data, &edata, sizeof(EventData_ReadyToReadWrite));
-    gEvents.notify(e);
+    gEvents.notify(e, serverProcess);
 
     // Unblock server socket's corresponding process, if needed.
     if (serverData->WaitingOnConnection) {
-        auto* serverProcess = Scheduler::process(serverData->PID);
-        if (serverProcess) {
-            std::print("[SYS$]:connect: unblocked server socket {} as it was waiting for a connection!\n", socketFD);
-            // FIXME: We should just add the new file descriptor to the
-            // server process and set the server process' return value
-            // to that, instead of returning the "retry" return value.
-            serverProcess->unblock(true, -2);
-        }
+
+        std::print("[SYS$]:connect: unblocked server socket {} as it was waiting for a connection!\n", socketFD);
+        // FIXME: We should just add the new file descriptor to the
+        // server process and set the server process' return value
+        // to that, instead of returning the "retry" return value.
+        serverProcess->unblock(true, -2);
     }
 
     return success;
@@ -747,6 +754,68 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
 }
 
 
+EventQueueHandle sys$23_kqueue() {
+    DBGMSG(sys$_dbgfmt, 23, "kqueue");
+    auto* process = Scheduler::CurrentProcess->value();
+
+    /// Choose a handle
+    // TODO: Better way of choosing handle.
+    auto handle = EventQueueHandle::Invalid;
+    if (!process->EventQueues.size()) handle = EventQueueHandle(1);
+    else handle = EventQueueHandle((usz)process->EventQueues.back().ID + 1);
+
+    /// Add an event queue with the chosen handle to the process' event queues.
+    if (handle != EventQueueHandle::Invalid) {
+        EventQueue<Process::EventQueueSize> queue;
+        queue.ID = handle;
+        process->EventQueues.push_back(std::move(queue));
+    }
+
+    return handle;
+}
+
+int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChanges, Event* eventlist, int maxEvents) {
+    DBGMSG(sys$_dbgfmt, 24, "kevent");
+
+    static constexpr const int success {0};
+    static constexpr const int error {-1};
+
+    // TODO: Validate changelist and eventlist pointers.
+    if (handle == EventQueueHandle::Invalid || !changelist || !eventlist)
+        return error;
+
+    auto* process = Scheduler::CurrentProcess->value();
+
+    // Find queue that is referenced by this handle for this process.
+    EventQueue<Process::EventQueueSize>* queue = std::find_if(process->EventQueues.begin(), process->EventQueues.end(), [&](const auto& q) {
+        return q.ID == handle;
+    });
+    if (!queue) return error;
+
+    // Apply changes from changelist, if any.
+    // TODO: Allow for unregistering, we need a special event type for that.
+    for (int i = 0; i < numChanges; ++i) {
+        const EventType type = changelist[i].Type;
+        const EventFilter change = changelist[i].Filter;
+        queue->register_listening(type, change);
+    }
+
+    if (!queue->has_events()) {
+        // TODO:
+        // If there are no events in the queue, we must block until an
+        // event is ready in this queue. However, if there are no
+        // events being listened to by the queue, return.
+        return error;
+    }
+    // If there are events in the event queue already, we can fill the
+    // event list with up to maxEvents events, popping them off the event
+    // queue.
+    for (int i = 0; i < maxEvents && queue->has_events(); ++i)
+        *eventlist++ = queue->pop();
+
+    return success;
+}
+
 // TODO: Reorder this
 // FIXME: Make it easier to reorder this (maybe separate the number
 // from the name? I don't know, something to make this easier...)
@@ -790,4 +859,7 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     (void*)sys$20_listen,
     (void*)sys$21_connect,
     (void*)sys$22_accept,
+
+    (void*)sys$23_kqueue,
+    (void*)sys$24_kevent,
 };
