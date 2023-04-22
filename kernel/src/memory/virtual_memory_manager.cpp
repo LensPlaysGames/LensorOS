@@ -479,19 +479,19 @@ namespace Memory {
             if (PDE.flag(Memory::PageTableFlag::Present) == false)
                 continue;
 
-            auto* oldTable = (Memory::PageTable*)((u64)PDE.address() << 12);
+            auto* oldTable = (Memory::PageTable*)(PDE.address());
             for (u64 j = 0; j < 512; ++j) {
                 PDE = oldTable->entries[j];
                 if (PDE.flag(Memory::PageTableFlag::Present) == false)
                     continue;
 
-                auto* oldPD = (Memory::PageTable*)((u64)PDE.address() << 12);
+                auto* oldPD = (Memory::PageTable*)(PDE.address());
                 for (u64 k = 0; k < 512; ++k) {
                     PDE = oldPD->entries[k];
                     if (PDE.flag(Memory::PageTableFlag::Present) == false)
                         continue;
 
-                    auto* oldPT = (Memory::PageTable*)((u64)PDE.address() << 12);
+                    auto* oldPT = (Memory::PageTable*)(PDE.address());
                     for (u64 l = 0; l < 512; ++l) {
                         PDE = oldPT->entries[l];
 
