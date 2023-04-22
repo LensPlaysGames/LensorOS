@@ -278,9 +278,10 @@ struct __unordered_map_impl {
     }
 
     [[nodiscard]]
-    size_type __get_index(const key_type& __key) const {
+    size_type __get_index(const key_type& __key) {
+        if (!__data.capacity()) __data.reserve(512);
         size_type __hash = __hash_function(__key);
-        return __hash % __data.size();
+        return __hash % __data.capacity();
     }
 
     [[nodiscard]]
