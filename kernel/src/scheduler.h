@@ -85,7 +85,7 @@ struct Process {
     // that way we can get rid of the id integer member in the event
     // queue and just return an index as the opaque handle.
     static constexpr usz EventQueueSize = 32;
-    std::vector<EventQueue<EventQueueSize>> EventQueues { 8 };
+    std::vector<EventQueue<EventQueueSize>> EventQueues;
 
     std::string ExecutablePath { "" };
     std::string WorkingDirectory { "" };

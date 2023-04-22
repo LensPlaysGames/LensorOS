@@ -50,7 +50,9 @@
 #define SYS_listen  20
 #define SYS_connect 21
 #define SYS_accept  22
-#define SYS_MAXSYSCALL 22
+#define SYS_kqueue  23
+#define SYS_kevent  24
+#define SYS_MAXSYSCALL 24
 #else
 #define SYS_read  0
 #define SYS_write 1
@@ -298,6 +300,37 @@ int sys_connect(ProcFD socketFD, const sockaddr* address, size_t addressLength) 
 ProcFD sys_accept(ProcFD socketFD, const sockaddr* address, size_t* addressLength) {
     return (ProcFD)syscall(SYS_accept, (uintptr_t)socketFD, (uintptr_t)address, (uintptr_t)addressLength);
 }
+
+typedef enum EventType {
+    EVENTTYPE_INVALID,
+    // For server-type listening sockets: connections waiting to be accepted.
+    // For sockets/pipes: data is available to read.
+    EVENTTYPE_READY_TO_READ,
+    // For sockets/pipes: space is available in the FIFO to write to.
+    EVENTTYPE_READY_TO_WRITE,
+    EVENTTYPE_COUNT
+} EventType;
+typedef union EventFilter {
+  ProcFD ProcessFD;
+} EventFilter;
+#define EVENT_MAX_SIZE 128
+typedef struct Event {
+    EventType Type;
+    EventFilter Filter;
+    uint8_t Data[EVENT_MAX_SIZE];
+} Event;
+/// Both READY_TO_READ and READY_TO_WRITE events have this data sent with them.
+typedef struct EventData_ReadyToReadWrite {
+    size_t BytesAvailable;
+} EventData_ReadyToReadWrite;
+int sys_kqueue() {
+  return (int)syscall(SYS_kqueue);
+}
+int sys_kevent(int handle, const Event* changelist, int numChanges, Event* eventlist, int maxEvents) {
+  return (int)syscall(SYS_kevent, handle, changelist, numChanges, eventlist, maxEvents);
+}
+
+
 
 /// ===========================================================================
 ///  C++ Interface.

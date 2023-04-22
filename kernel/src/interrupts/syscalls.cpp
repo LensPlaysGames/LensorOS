@@ -536,6 +536,7 @@ ProcFD sys$18_socket(int domain, int type, int protocol) {
         std::print("[SYS$]:socket:ERROR: Could not open new socket!\n");
         return ProcFD::Invalid;
     }
+
     auto* process = Scheduler::CurrentProcess->value();
     auto fds = vfs.add_file(socket, process);
     if (fds.invalid()) {
@@ -544,6 +545,11 @@ ProcFD sys$18_socket(int domain, int type, int protocol) {
         // case cleanup the valid one, etc.
         std::print("[SYS$]:socket:ERROR: Could not register new socket in VFS.\n");
     }
+
+    // FIXME: This is probably terrible.
+    SocketData* data = (SocketData*)socket->driver_data();
+    data->FD = fds.Process;
+
     return fds.Process;
 }
 
@@ -660,8 +666,6 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* givenAddress, usz addre
     Event e;
     e.Type = EventType::READY_TO_READ;
     e.Filter.ProcessFD = serverProcFD;
-    EventData_ReadyToReadWrite edata;
-    memcpy(e.Data, &edata, sizeof(EventData_ReadyToReadWrite));
     gEvents.notify(e, serverProcess);
 
     // Unblock server socket's corresponding process, if needed.
@@ -762,7 +766,7 @@ EventQueueHandle sys$23_kqueue() {
     // TODO: Better way of choosing handle.
     auto handle = EventQueueHandle::Invalid;
     if (!process->EventQueues.size()) handle = EventQueueHandle(1);
-    else handle = EventQueueHandle((usz)process->EventQueues.back().ID + 1);
+    else handle = EventQueueHandle((int)process->EventQueues.back().ID + 1);
 
     /// Add an event queue with the chosen handle to the process' event queues.
     if (handle != EventQueueHandle::Invalid) {
@@ -780,13 +784,12 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
     static constexpr const int success {0};
     static constexpr const int error {-1};
 
-    // TODO: Validate changelist and eventlist pointers.
-    if (handle == EventQueueHandle::Invalid || !changelist || !eventlist)
+    // TODO: Validate changelist and eventlist pointers, if needed.
+    if (handle == EventQueueHandle::Invalid || (numChanges && !changelist) || (maxEvents && !eventlist))
         return error;
 
-    auto* process = Scheduler::CurrentProcess->value();
-
     // Find queue that is referenced by this handle for this process.
+    auto* process = Scheduler::CurrentProcess->value();
     EventQueue<Process::EventQueueSize>* queue = std::find_if(process->EventQueues.begin(), process->EventQueues.end(), [&](const auto& q) {
         return q.ID == handle;
     });
@@ -795,9 +798,7 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
     // Apply changes from changelist, if any.
     // TODO: Allow for unregistering, we need a special event type for that.
     for (int i = 0; i < numChanges; ++i) {
-        const EventType type = changelist[i].Type;
-        const EventFilter change = changelist[i].Filter;
-        queue->register_listening(type, change);
+        queue->register_listening(changelist[i].Type, changelist[i].Filter);
     }
 
     if (!queue->has_events()) {

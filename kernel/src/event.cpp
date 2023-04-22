@@ -48,10 +48,11 @@ void EventManager::notify(const Event& event, Process* process) {
     // For each event queue in the process, check if it's filter has this
     // event type enabled.
     bool found = false;
-    for (auto queue : process->EventQueues) {
+    for (auto& queue : process->EventQueues) {
         // If it doesn't, we move on.
         if (!queue.listens(event.Type, event.Filter)) continue;
         // If it does, we push this event to the event queue.
+        std::print("Pushing event to event queue\n");
         queue.push(event);
         found = true;
     }

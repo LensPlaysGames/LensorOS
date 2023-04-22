@@ -31,6 +31,11 @@
 #include <extensions>
 #include <unordered_map>
 
+
+// WARNING: Changes to data structures in this file likely also need
+// reflected in `user/libc/sys/syscalls.h`.
+
+
 typedef u64 pid_t;
 
 /// NOTE: Each one of these (except invalid) should have a struct
@@ -117,7 +122,7 @@ struct EventData_ReadyToReadWrite {
     size_t BytesAvailable;
 };
 
-enum struct EventQueueHandle : usz { Invalid = static_cast<usz>(-1) };
+enum struct EventQueueHandle : int { Invalid = static_cast<int>(-1) };
 
 template <size_t N>
 struct EventQueue {
