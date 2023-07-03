@@ -95,6 +95,10 @@ long long int llabs(long long int);
 lldiv_t lldiv(long long, long long);
 
 /// Multibyte characters
+#ifndef __cplusplus
+  typedef __WCHAR_TYPE__ wchar_t;
+#endif
+
 #define MB_CUR_MAX 4
 #define MB_LEN_MAX 16
 int mblen(char const*, size_t);
