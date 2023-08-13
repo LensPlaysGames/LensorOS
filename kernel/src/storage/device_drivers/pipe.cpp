@@ -129,10 +129,8 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
 
     //std::print("[PIPE]: Reading from pipe buffer at {}\n", (void*)pipe);
 
-    // TODO: Support "wait until there is something to read".
-    // I'm hesitant to just stick a while loop here because most
-    // likely we are in a syscall and no other processes are actually
-    // running...
+    // If there is nothing to read, we either return EOF or block the
+    // process until there is something to read.
     if (pipe->Buffer->Offset == 0) {
         // return EOF when write end of pipe is completely closed.
         if (pipe->Buffer->WriteClosed) {
@@ -148,9 +146,10 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
 
     // TODO: Read in a loop to fill buffers larger than what is currently written.
     // For now, truncate read if it is too large.
-    if (byteCount > pipe->Buffer->Offset)
+    if (byteCount > pipe->Buffer->Offset) {
+        std::print("[PIPE]:WARN: Read too large; truncating...");
         byteCount = pipe->Buffer->Offset;
-
+    }
     // Read data
     memcpy(buffer, pipe->Buffer->Data, byteCount);
 

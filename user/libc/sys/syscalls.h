@@ -337,7 +337,9 @@ int sys_kevent(int handle, const Event* changelist, int numChanges, Event* event
 /// ===========================================================================
 #else
 
+#include <string>
 #include <type_traits>
+#include <vector>
 
 namespace std {
 namespace __detail {
@@ -404,6 +406,11 @@ inline pid_t sys_fork() {
 }
 inline void sys_exec(const char *path, const char **args) {
     std::__detail::syscall(SYS_exec, (uintptr_t)path, (uintptr_t)args);
+}
+inline void sys_exec(std::string_view path, std::vector<const char*> args) {
+    /// Add a null entry to the args vector if it is not already present.
+    if (!args.size() || args.back() != nullptr) args.push_back(nullptr);
+    std::__detail::syscall(SYS_exec, (uintptr_t)path.data(), (uintptr_t)args.data());
 }
 inline void sys_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
     std::__detail::syscall(SYS_repfd, (uintptr_t)fd, (uintptr_t)replaced);

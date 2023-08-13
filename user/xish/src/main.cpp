@@ -68,7 +68,9 @@ int run_program_waitpid(const char *const filepath, const char **args) {
 int main(int argc, char **argv) {
     FILE *input = stdin;
     // FIXME: This *might* be better as a vector<char>
-    std::string input_command;
+    std::string input_command{};
+
+    std::print("Welcome to XiSH\n");
 
     int rc = 0;
 
@@ -81,7 +83,9 @@ int main(int argc, char **argv) {
         int c = 0;
         while ((c = getc(input)) != '\n') {
             // If we get end of file, spin!
-            // NOTE: We should probably just quit/finish command here.
+            // NOTE: We should probably just quit/finish command here, but LensorOS
+            // kernel had a quirk where it would return EOF when no input was
+            // happening...
             if (c == EOF || feof(input)) continue;
             // Handle escape sequences
 
@@ -91,8 +95,7 @@ int main(int argc, char **argv) {
                 got_backslash = false;
                 if (c == '\n') continue;
                 input_command += c;
-                // TODO: vt100/ansi escape sequence to set cursor, draw character.
-                std::print("{}{}{}\n", rc, prompt, input_command);
+                std::print("{}", (char)c);
                 continue;
             }
             if (c == '\\') {
@@ -104,13 +107,12 @@ int main(int argc, char **argv) {
             if (c == '\b') {
                 if (input_command.empty()) continue;
                 input_command.erase(input_command.size() - 1);
-                std::print("{}{}{}\n", rc, prompt, input_command);
+                std::print("{}", (char)c);
                 continue;
             }
             if (c == '\r') continue;
             input_command += c;
-            // TODO: vt100/ansi escape sequence to set cursor, draw character.
-            std::print("{}{}{}\n", rc, prompt, input_command);
+            std::print("{}", (char)c);
         }
 
         static constexpr char separators[] = " \r\n\t&;";
@@ -156,23 +158,26 @@ int main(int argc, char **argv) {
         }
 
         {
-            std::print("got command: \"{}\"\n", command);
+            std::print("[XiSH]: got command: \"{}\"\n", command);
             size_t index = 0;
             for (const auto& arg : arguments) {
-                std::print("arg{}: \"{}\"\n", index, arg);
+                std::print("  arg{}: \"{}\"\n", index, arg);
                 ++index;
             }
         }
 
+        // TODO: BUILTINS
+
+        // NOT A BUILTIN, DELEGATE TO SYSTEM COMMAND
         std::vector<const char *> argv;
         for (const auto& arg : arguments) {
             argv.push_back(arg.data());
         }
         argv.push_back(nullptr);
 
-        if (std::filesystem::exists(std::filesystem::path{command.data()})) {
+        if (std::filesystem::exists(std::filesystem::path{command.data()}))
             rc = run_program_waitpid(command.data(), argv.data());
-        } else std::print("Error: \"{}\" does not exist\n", command);
+        else std::print("XiSH Error: \"{}\" does not exist\n", command);
     }
     return 0;
 }

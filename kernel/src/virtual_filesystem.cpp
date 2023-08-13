@@ -217,7 +217,7 @@ ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
     }
     if (!meta) return -1;
 
-    DBGMSG("  file offset:     {}\n", meta->offset);
+    DBGMSG("  file offset:       {}\n", meta->offset);
 
     return meta->device_driver()->read(meta, byteOffset + meta->offset, byteCount, buffer);
 }
@@ -305,5 +305,5 @@ FileDescriptors VFS::add_file(std::shared_ptr<FileMetadata> file, Process* proc)
 
     /// Return the fds.
     DBGMSG("[VFS]: Mapped {} (pid {}) to {}\n", procfd, proc->ProcessID, fd);
-    return {static_cast<ProcFD>(procfd), static_cast<SysFD>(fd)};
+    return { static_cast<ProcFD>(procfd), static_cast<SysFD>(fd) };
 }

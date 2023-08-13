@@ -17,6 +17,17 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+// WITHIN syscalls:
+// 0 returned from called function == success
+// -1 returned from called function == failure
+// -2 returned from called function == block/yield
+
+// USING syscalls:
+// 0 returned from called function == success
+// -1 returned from called function == failure
+// -2 returned from called function == retry
+
+
 #include <algorithm>
 #include <interrupts/syscalls.h>
 
@@ -133,10 +144,11 @@ void sys$5_exit(int status) {
     {
         pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
         bool success = Scheduler::remove_process(pid, status);
-        if (!success)
-            std::print("[EXIT]: Failure to remove process\n");
+        if (!success){
+            std::print("[SYS$]:exit: Failure to remove process\n");
+        }
         else {
-            DBGMSG("[SYS$]: exit({}) -- Removed process {}\n", status, pid);
+            DBGMSG("[SYS$]:exit({}) -- Removed process {}\n", status, pid);
         }
     }
 

@@ -21,6 +21,7 @@
 
 #include "bits/cdtors.h"
 #include "bits/file_struct.h"
+#include "bits/io_defs.h"
 #include "bits/stub.h"
 #include "errno.h"
 #include "extensions"
