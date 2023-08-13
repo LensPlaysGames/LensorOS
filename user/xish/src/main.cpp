@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <sys/syscalls.h>
 #include <unistd.h>
+#include <bits/io_defs.h>
 
 constexpr const char prompt[] = "  $:";
 
@@ -66,6 +67,9 @@ int run_program_waitpid(const char *const filepath, const char **args) {
 }
 
 int main(int argc, char **argv) {
+    // Set stdout unbuffered so the user can see updates as they type.
+    setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
+
     FILE *input = stdin;
     // FIXME: This *might* be better as a vector<char>
     std::string input_command{};
