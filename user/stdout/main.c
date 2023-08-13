@@ -27,24 +27,9 @@
 #include <sys/syscalls.h>
 #include <unistd.h>
 
-#include "framebuffer.h"
-
-/// Unsigned Integer Alias Declaration
-typedef unsigned int uint;
-
-/// Fixed-Width Unsigned Integer Alias Declarations
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
-typedef uintptr_t usz;
-
-/// Fixed-Width Signed Integer Alias Declarations
-typedef int8_t s8;
-typedef int16_t s16;
-typedef int32_t s32;
-typedef int64_t s64;
-typedef intptr_t ssz;
+#include <framebuffer.h>
+#include <ints.h>
+#include <psf.h>
 
 #ifndef MAX_COMMAND_LENGTH
 # define MAX_COMMAND_LENGTH 4096
@@ -59,7 +44,12 @@ typedef intptr_t ssz;
 # define MAX_OUTPUT_LINES 32
 #endif
 
+// FIXME: This is a hack and should be removed
+static Framebuffer g_framebuffer;
+static PSF1_FONT g_font;
+void draw_prompt(Framebuffer fb, const PSF1_FONT font);
 
+// TODO: This is an ungodly amount of globals and is sinful at this point. Purely stupid.
 static char command[MAX_COMMAND_LENGTH];
 static char command_output[MAX_OUTPUT_LENGTH];
 static usz command_output_it = 0;
@@ -75,6 +65,9 @@ static usz args_it = 0;
 // then a bunch of weird things happen and there is data corruption
 // with the command output. It seems to somehow be losing data when
 // scrolling along.
+// TODO: Update this to work on an input string, not a char. This will
+// allow for much better performance when it comes to reading large
+// batches of output from programs.
 void write_command_output(char c) {
   command_output[command_output_it++] = c;
   if (c == '\n') ++command_output_line_count;
@@ -98,6 +91,14 @@ void write_command_output(char c) {
     else last_command_output_it = 0;
     command_output_line_count -= lines_scrolled;
   }
+
+  if (command_output_it < last_command_output_it)
+    last_command_output_it = command_output_it;
+  printf("%s", command_output + last_command_output_it);
+  last_command_output_it = command_output_it;
+
+  // TODO: Only draw what's newly written.
+  draw_prompt(g_framebuffer, g_font);
 }
 
 #define ESCAPE     0x01
@@ -187,34 +188,6 @@ size_t hexstring_to_number(const char *str) {
   return out;
 }
 
-
-#define PSF1_MAGIC0 0x36
-#define PSF1_MAGIC1 0x04
-typedef struct PSF1_HEADER {
-  // Magic bytes to indicate PSF1 font type
-  u8 magic[2];
-  u8 mode;
-  u8 character_size;
-} PSF1_HEADER;
-typedef struct PSF1_FONT {
-  PSF1_HEADER header;
-  void* glyph_buffer;
-} PSF1_FONT;
-void psf1_delete(const PSF1_FONT font) {
-  free(font.glyph_buffer);
-}
-u8 psf1_width(const PSF1_FONT font) {
-  return 8;
-}
-u8 psf1_height(const PSF1_FONT font) {
-  return font.header.character_size;
-}
-/// bitmap size is as follows: (8, font.header->character_size)
-/// @return address of beginning of bitmap pertaining to given character.
-u8* psf1_char_bitmap(const PSF1_FONT font, const u8 c) {
-  return (u8*)font.glyph_buffer + (c * psf1_height(font));
-}
-
 void draw_psf1_char(const Framebuffer fb, const PSF1_FONT font, size_t position_x, size_t position_y, const u8 c) {
   const u32 fg_color = mkpixel(fb.format, 0xff, 0xff, 0xff, 0xff);
   const u32 bg_color = mkpixel(fb.format, 22,23,24,0xff);
@@ -296,10 +269,13 @@ static const char prompt[] = "  $:";
 void draw_prompt(Framebuffer fb, const PSF1_FONT font) {
   size_t x = prompt_start_x;
   size_t y = prompt_start_y;
+  // DRAW OUTPUT OF PREVIOUSLY RUN COMMANDS
   draw_psf1_string_view(fb, font, &x, &y, command_output, command_output_it);
   // TODO: Make it clear when newline isn't present at end of command output, somehow.
   if (command_output_it == 0 || command_output[command_output_it - 1] != '\n')
     draw_psf1_string(fb, font, &x, &y, "\n");
+  // DRAW PROMPT LINE(s)
+  // DRAW LAST COMMAND RETURN STATUS
   draw_psf1_int(fb, font, &x, &y, command_status);
   draw_psf1_string(fb, font, &x, &y, prompt);
   draw_psf1_string(fb, font, &x, &y, command);
@@ -335,8 +311,9 @@ void run_program_waitpid(const char *const filepath, const char **args) {
     //printf("Reading from pipe!\n");
     //fflush(stdout);
 
-    char c;
-    while (read(fds[0], &c, 1) != EOF && c)
+    char c = 0;
+    // If we could tell how much there was to read, that would be nice.
+    while (read(fds[0], &c, 1) != EOF)
       write_command_output(c);
 
     //printf("PARENT: Closing read end...\n");
@@ -408,6 +385,7 @@ int main(int argc, const char **argv) {
   fb.pixels_per_scanline = hexstring_to_number(argv[5]);
   // TODO: Pass format from kernel (which gets format passed from bootloader)
   fb.format = FB_FORMAT_DEFAULT;
+  g_framebuffer = fb;
 
   // clear screen
   const uint32_t black = mkpixel(fb.format, 22,23,24,0xff);
@@ -459,6 +437,7 @@ int main(int argc, const char **argv) {
 
   fclose(fontfile);
 
+  g_font = font;
   printf("Successfully loaded PSF1 font from \"%s\"\n", fontpath);
 
   // TODO: Very basic text editor implementation (GNU readline equivalent, basically).
@@ -571,7 +550,7 @@ int main(int argc, const char **argv) {
       char *const path = malloc(path_length);
       if (!path) break;
       memcpy(path, fs0_prefix, prefix_length);
-      memcpy(path + prefix_length, args[0], path_length - prefix_length);
+      memcpy(path + prefix_length, args[0], path_length - prefix_length + 1);
       path[path_length - 1] = '\0';
 
       FILE *exists = fopen(path, "r");

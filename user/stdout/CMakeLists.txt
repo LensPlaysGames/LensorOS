@@ -26,4 +26,5 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS on )
 
 project( stdout VERSION ${stdout_VERSION} LANGUAGES ${stdout_LANGUAGES} )
 
-add_executable( stdout framebuffer.c main.c )
+add_executable( stdout framebuffer.c main.c psf.c )
+target_include_directories( stdout PRIVATE . )
