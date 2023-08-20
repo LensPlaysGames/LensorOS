@@ -57,6 +57,8 @@
 
 #include <bit>
 #include <format>
+#include <unordered_map>
+#include <extensions>
 
 u8 idt_storage[0x1000];
 void prepare_interrupts() {
@@ -108,122 +110,206 @@ void draw_boot_gfx() {
 //   512-byte region of memory before use.
 u8 fxsave_region[512] __attribute__((aligned(16)));
 
-void kstage1(BootInfo* bInfo) {
-    /* This function is monstrous, so the functionality is outlined here.
-     *     - Disable interrupts (if they weren't already)
-     *     - Ensure BootInfo pointer is valid (non-null)
-     * x86 - Load Global Descriptor Table
-     * x86 - Load Interrupt Descriptor Table
-     *     - Prepare UART serial communications driver
-     *     - Prepare physical/virtual memory
-     *       - Initialize Physical Memory Manager
-     *       - Initialize Virtual Memory Manager
-     *       - Prepare the heap (`new` and `delete`)
-     *     - Prepare Real Time Clock (RTC)
-     *     - Setup graphical renderers  -- these will change, and soon
-     *       - BasicRenderer      -- drawing pixels to linear framebuffer
-     *       - BasicTextRenderer  -- draw keyboard input on screen,
-     *                               keep track of text cursor, etc
-     *     - Determine and cache information about CPU(s)
-     *     - Initialize ACPI
-     *     - Enumerate PCI
-     *     - Prepare non-PCI devices
-     *       - High Precision Event Timer (HPET)
-     *       - PS2 Mouse
-     *     - Prepare Programmable Interval Timer (PIT)
-     * x86 - Setup TSS
-     *     - Setup scheduler
-     * x86 - Clear (IRQ) interrupt masks in PIC for used interrupts
-     *     - Print information about the system to serial output
-     *     - Enable interrupts
-     *
-     * x86 = The step is inherently x86-only (not implementation based).
-     *
-     * TODO:
-     * |-- Update the above list: it's close, but not exact anymore.
-     * `-- A lot of hardware is just assumed to be there;
-     *     figure out how to better probe for their existence,
-     *     and gracefully handle the case that they aren't there.
-     *
-     *
-     */
-
-    // Disable interrupts while doing sensitive
-    //   operations (like setting up interrupts :^).
-    asm ("cli");
-
-    // Don't even attempt to boot unless boot info exists.
-    if (bInfo == nullptr)
-        hang();
-
-    /* Tell x86_64 CPU where the GDT is located by
-     * populating and loading a GDT descriptor.
-     * The global descriptor table contains information about
-     * memory segments (like privilege level of executing code,
-     * or privilege level needed to access data).
-     */
-    setup_gdt();
-    gGDTD.Size = sizeof(GDT) - 1;
-    gGDTD.Offset = V2P((u64)&gGDT);
-    LoadGDT((GDTDescriptor*)V2P(&gGDTD));
-
-    // Prepare Interrupt Descriptor Table.
-    prepare_interrupts();
-    disable_all_interrupts();
-
-    // Setup serial communications chip to allow for debug messages as soon as possible.
-    UART::initialize();
-    std::print("\n"
-               "!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\n"
-               "\n");
-
-    // Setup physical memory allocator from EFI memory map.
-    Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
-    // Setup virtual memory (map entire address space as well as kernel).
-    Memory::init_virtual();
-    // Setup dynamic memory allocation (`new`, `delete`).
-    init_heap();
-
-    Memory::print_physmem();
-
-    SYSTEM = new System();
-
-    {// Initialize the Real Time Clock.
-        gRTC = RTC();
-        gRTC.set_periodic_int_enabled(true);
-        std::print("[kstage1]: {Real Time Clock (RTC) initialized}\n"
-                   "\033[1;33mNow is {}:{}:{} on {}-{}-{}\033[0m\n\n"
-                   , __GREEN
-                   , gRTC.Time.hour
-                   , gRTC.Time.minute
-                   , gRTC.Time.second
-                   , gRTC.Time.year
-                   , gRTC.Time.month
-                   , gRTC.Time.date
-                   );
+void find_pci_devices() {
+    // Find Memory-mapped ConFiguration Table in order to find PCI devices.
+    // Storage devices like AHCIs will be detected here.
+    auto* mcfg = (ACPI::MCFGHeader*)ACPI::find_table("MCFG");
+    if (mcfg) {
+        std::print("[kstage1]: Found Memory-mapped Configuration Space (MCFG) ACPI Table\n"
+                   "  Address: {}\n\n", static_cast<void*>(mcfg));
+        PCI::enumerate_pci(mcfg);
     }
+}
 
-    // Create basic framebuffer renderer.
-    std::print("[kstage1]: Setting up Graphics Output Protocol Renderer\n");
-    gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
-    std::print("  {Setup Successful}\n\n", __GREEN);
-    draw_boot_gfx();
-    // Create basic text renderer for the keyboard.
-    Keyboard::gText = Keyboard::BasicTextRenderer();
+// Initialise recognised system devices that need it.
+void probe_system_devices() {
+    for (usz i = 0; i < SYSTEM->Devices.size(); ++i) {
+        auto dev = SYSTEM->Devices[i];
+        if (dev->major() == SYSDEV_MAJOR_STORAGE
+            && dev->minor() == SYSDEV_MINOR_AHCI_CONTROLLER
+            && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
+        {
+            std::print("[kstage1]: Probing AHCI Controller\n");
+            auto controller = static_cast<Devices::AHCIController*>(dev.get());
+            auto* ABAR = reinterpret_cast<AHCI::HBAMemory*>(u64(controller->Header->BAR5));
 
-    {// Setup random number generators.
-        const RTCData& tm = gRTC.Time;
-        u64 someNumber =
-            tm.century + tm.year
-            + tm.month   + tm.date
-            + tm.weekday + tm.hour
-            + tm.minute  + tm.second;
-        gRandomLCG = LCG();
-        gRandomLCG.seed(someNumber);
-        gRandomLFSR = LFSR();
-        gRandomLFSR.seed(gRandomLCG.get(), gRandomLCG.get());
+            // TODO: Better MMIO!! It should be separate from regular virtual mappings, I think.
+
+            // Okay, this bug just showed me how stupid the current system is.
+            // VIRTUAL MEMORY MANAGER NEEDS ANOTHER LEVEL OF ABSTRACTION TO THE API
+            // I need to add something like `map_sized` that takes in a
+            // page table, virtual address, physical address, size of
+            // thing at those addresses, and then flags... THEN DO ALL THIS
+            // MULTI-PAGE CALCULATION IN THAT FUNCTION. Because having to deal
+            // with this everywhere there *might* be a misaligned
+            // pointer or a large struct is really hard to do correctly.
+
+            void* containing_page = (void*)((usz)ABAR - ((usz)ABAR % PAGE_SIZE));
+            Memory::map(containing_page, containing_page
+                        , (u64)Memory::PageTableFlag::Present
+                          | (u64)Memory::PageTableFlag::ReadWrite
+                        );
+
+            // Handle case where ABAR spans two pages, in which case we have to map both.
+            void* next_page = (void*)((usz)containing_page + PAGE_SIZE);
+            if (((usz)ABAR + sizeof(AHCI::HBAMemory)) >= (u64)next_page)
+                Memory::map(next_page, next_page
+                            , (u64)Memory::PageTableFlag::Present
+                              | (u64)Memory::PageTableFlag::ReadWrite
+                            );
+
+            // Handle case where ABAR spans three pages, in which case we have to map a third.
+            next_page = (void*)((usz)next_page + PAGE_SIZE);
+            if (((usz)ABAR + sizeof(AHCI::HBAMemory)) >= (u64)next_page)
+                Memory::map(next_page, next_page
+                            , (u64)Memory::PageTableFlag::Present
+                              | (u64)Memory::PageTableFlag::ReadWrite
+                            );
+
+            u32 ports = ABAR->PortsImplemented;
+            for (uint i = 0; i < 32; ++i) {
+                if (ports & (1u << i)) {
+                    AHCI::HBAPort* port = &ABAR->Ports[i];
+                    AHCI::PortType type = get_port_type(port);
+                    if (type != AHCI::PortType::None) {
+                        SYSTEM->create_device<Devices::AHCIPort>(std::static_pointer_cast<Devices::AHCIController>(dev), type, i, port);
+                    }
+                } else break;
+            }
+            // Don't search AHCI controller any further, already found all ports.
+            dev->set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
+        }
     }
+}
 
+void discover_partitions() {
+    /* Find partitions
+     * A storage device may be partitioned (i.e. GUID Partition Table).
+     * These partitions are to be detected and new system devices created.
+     */
+    for (usz i = 0; i < SYSTEM->Devices.size(); ++i) {
+        auto dev = SYSTEM->Devices[i];
+        if (dev->major() == SYSDEV_MAJOR_STORAGE
+            && dev->minor() == SYSDEV_MINOR_AHCI_PORT
+            && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
+        {
+            auto port = static_cast<Devices::AHCIPort*>(dev.get());
+            std::print("[kstage1]: Searching AHCI port {} for a GPT\n", port->Driver->port_number());
+            if (GPT::is_gpt_present(port->Driver.get())) {
+                std::print("  GPT is present!\n");
+                GPT::Header gptHeader;
+                u8 sector[512];
+                port->Driver->read_raw(512, sizeof gptHeader, &gptHeader);
+                for (u32 i = 0; i < gptHeader.NumberOfPartitionsTableEntries; ++i) {
+                    u64 byteOffset = gptHeader.PartitionsTableEntrySize * i;
+                    u32 partSector = gptHeader.PartitionsTableLBA + (byteOffset / 512);
+                    byteOffset %= 512;
+                    port->Driver->read_raw(partSector * 512, 512, sector);
+                    auto* part = reinterpret_cast<GPT::PartitionEntry*>(sector + byteOffset);
+                    if (part->should_ignore())
+                        continue;
+
+                    if (part->TypeGUID == GPT::NullGUID)
+                        continue;
+
+                    if (part->EndLBA < part->StartLBA)
+                        continue;
+
+                    std::print("      Partition {}: {}:\n"
+                               "        Type GUID: {}\n"
+                               "        Unique GUID: {}\n"
+                               "        Sector Offset: {}\n"
+                               "        Sector Count: {}\n"
+                               "        Attributes: {}\n",
+                               i, std::string_view((const char *)part->Name, sizeof(GPT::PartitionEntry) - 0x38),
+                               GUID(part->TypeGUID),
+                               GUID(part->UniqueGUID),
+                               u64(part->StartLBA),
+                               part->size_in_sectors(),
+                               u64(part->Attributes));
+
+
+                    // Don't touch partitions with known GUIDs, except for a select few.
+                    bool known = false;
+                    GUID known_guid;
+                    for (auto* reserved_guid = &GPT::ReservedPartitionGUIDs[0]; *reserved_guid != GPT::NullGUID; reserved_guid++) {
+                        if (part->TypeGUID == *reserved_guid) {
+                            known_guid = *reserved_guid;
+                            known = true;
+                            break;
+                        }
+                    }
+                    if (!known) SYSTEM->create_device<Devices::GPTPartition>(std::static_pointer_cast<Devices::AHCIPort>(dev), *part);
+                }
+
+                /* Don't search port any further, we figured
+                 * out it's storage media that is GPT partitioned
+                 * and devices have been created for those
+                 * (that will themselves be searched for filesystems).
+                 */
+                dev->set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
+            }
+        }
+    }
+}
+
+void discover_filesystems() {
+    /* Detect filesystems
+     * For every storage device we know how to read/write from,
+     * check if a recognized filesystem resides on it.
+     */
+    VFS& vfs = SYSTEM->virtual_filesystem();
+    for (usz i = 0; i < SYSTEM->Devices.size(); ++i) {
+        auto dev = SYSTEM->Devices[i];
+        if (dev->major() == SYSDEV_MAJOR_STORAGE
+            && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
+        {
+            if (dev->minor() == SYSDEV_MINOR_GPT_PARTITION) {
+                auto* partition = static_cast<Devices::GPTPartition*>(dev.get());
+                if (partition) {
+                    std::print("[kstage1]: GPT Partition:\n"
+                               "  Type GUID: {}\n"
+                               "  Unique GUID: {}\n",
+                               partition->Driver->type_guid(),
+                               partition->Driver->unique_guid());
+                    if (auto FAT = FileAllocationTableDriver::try_create(sdd(partition->Driver))) {
+                        std::print("  Found valid File Allocation Table filesystem\n");
+                        static bool foundEFI = false;
+                        std::string mountPath;
+                        if (!foundEFI && partition->Partition.TypeGUID == GPT::PartitionType$EFISystem) {
+                            mountPath = "/efi";
+                            foundEFI = true;
+                        } else mountPath = std::format("/fs{}", vfs.mounts().size());
+
+                        vfs.mount(mountPath, std::move(FAT));
+
+                        // Done searching GPT partition, found valid filesystem.
+                        dev->set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
+                    }
+                }
+            } else if (dev->minor() == SYSDEV_MINOR_AHCI_PORT) {
+                auto* controller = static_cast<Devices::AHCIPort*>(dev.get());
+                if (controller->Driver) {
+                    std::print("[kstage1]: AHCI port {}:\n", controller->Driver->port_number());
+                    std::print("  Checking for valid File Allocation Table filesystem\n");
+                    if (auto FAT = FileAllocationTableDriver::try_create(sdd(controller->Driver))) {
+                        std::print("  Found valid File Allocation Table filesystem\n");
+                        // TODO: Name EFI SYSTEM partition something else to make it separate from
+                        // regular partitions. Eventually should probably also disallow writing to
+                        // EFI SYSTEM mount path unless in very specific circumstances controlled
+                        // by the kernel.
+                        vfs.mount(std::format("/fs{}", vfs.mounts().size()), std::move(FAT));
+
+                        // Done searching AHCI port, found valid filesystem.
+                        dev->set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
+                    }
+                }
+            }
+        }
+    }
+}
+
+void probe_cpu() {
     // Store feature set of CPU (capabilities).
     CPUDescription* SystemCPU = &SYSTEM->cpu();
     // Check for CPUID availability ('ID' bit in rflags register modifiable)
@@ -353,210 +439,109 @@ void kstage1(BootInfo* bInfo) {
     CPU cpu = CPU(SystemCPU);
     SystemCPU->add_cpu(cpu);
     SystemCPU->print_debug();
+}
+
+void kstage2(BootInfo* bInfo) {
+    /* This function is monstrous, so the functionality is outlined here.
+     *     - Prepare Real Time Clock (RTC)
+     *     - Setup graphical renderers  -- these will change, and soon
+     *       - BasicRenderer      -- drawing pixels to linear framebuffer
+     *       - BasicTextRenderer  -- draw keyboard input on screen,
+     *                               keep track of text cursor, etc
+     *     - Determine and cache information about CPU(s)
+     *     - Initialize ACPI
+     *     - Enumerate PCI
+     *     - Prepare non-PCI devices
+     *       - High Precision Event Timer (HPET)
+     *       - PS2 Mouse
+     *     - Prepare Programmable Interval Timer (PIT)
+     * x86 - Setup TSS
+     *     - Setup scheduler
+     * x86 - Clear (IRQ) interrupt masks in PIC for used interrupts
+     *     - Print information about the system to serial output
+     *     - Enable interrupts
+     *
+     * x86 = The step is inherently x86-only (not implementation based).
+     *
+     * TODO:
+     * |-- Update the above list: it's close, but not exact anymore.
+     * `-- A lot of hardware is just assumed to be there;
+     *     figure out how to better probe for their existence,
+     *     and gracefully handle the case that they aren't there.
+     */
+
+    SYSTEM = new System();
+
+    // FIXME: We just assume the system has an RTC.
+    {// Initialize the Real Time Clock.
+        gRTC = RTC();
+        gRTC.set_periodic_int_enabled(true);
+        std::print("[kstage1]: {Real Time Clock (RTC) initialized}\n"
+                   "\033[1;33mNow is {}:{}:{} on {}-{}-{}\033[0m\n\n"
+                   , __GREEN
+                   , gRTC.Time.hour
+                   , gRTC.Time.minute
+                   , gRTC.Time.second
+                   , gRTC.Time.year
+                   , gRTC.Time.month
+                   , gRTC.Time.date
+                   );
+
+        // TODO: Register RTC as a real time clock timer device within system.
+    }
+
+    // Create basic framebuffer renderer.
+    std::print("[kstage1]: Setting up Graphics Output Protocol Renderer\n");
+    gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
+    std::print("  {Setup Successful}\n\n", __GREEN);
+    draw_boot_gfx();
+
+    // Create basic text renderer for the keyboard.
+    // TODO: This is outdated; before, it was useful for the kernel to be
+    // able to draw user input to the screen. Now, this should almost never be
+    // needed except for during kernel panic.
+    Keyboard::gText = Keyboard::BasicTextRenderer();
+
+    // FIXME: Do ... do we need random number generators in the kernel... ?
+    {// Setup random number generators.
+        // FIXME: Just assumes RTC exists. Doesn't use system timer device API.
+        const RTCData& tm = gRTC.Time;
+        u64 someNumber =
+            tm.century + tm.year
+            + tm.month   + tm.date
+            + tm.weekday + tm.hour
+            + tm.minute  + tm.second;
+        gRandomLCG = LCG();
+        gRandomLCG.seed(someNumber);
+        gRandomLFSR = LFSR();
+        gRandomLFSR.seed(gRandomLCG.get(), gRandomLCG.get());
+    }
+
+    probe_cpu();
 
     // Initialize Advanced Configuration and Power Management Interface.
     ACPI::initialize(bInfo->rsdp);
 
     // Find Memory-mapped ConFiguration Table in order to find PCI devices.
     // Storage devices like AHCIs will be detected here.
-    auto* mcfg = (ACPI::MCFGHeader*)ACPI::find_table("MCFG");
-    if (mcfg) {
-        std::print("[kstage1]: Found Memory-mapped Configuration Space (MCFG) ACPI Table\n"
-                   "  Address: {}\n\n", static_cast<void*>(mcfg));
-        PCI::enumerate_pci(mcfg);
-    }
+    find_pci_devices();
 
-    /* Probe storage devices
-     *
-     * Most storage devices handle multiple
-     * storage media hardware devices; for example,
-     * a single AHCI controller has multiple ports,
-     * each one referring to its own device.
-     */
-    for (usz i = 0; i < SYSTEM->Devices.size(); ++i) {
-        auto dev = SYSTEM->Devices[i];
-        if (dev->major() == SYSDEV_MAJOR_STORAGE
-            && dev->minor() == SYSDEV_MINOR_AHCI_CONTROLLER
-            && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
-        {
-            std::print("[kstage1]: Probing AHCI Controller\n");
-            auto controller = static_cast<Devices::AHCIController*>(dev.get());
-            auto* ABAR = reinterpret_cast<AHCI::HBAMemory*>(u64(controller->Header->BAR5));
+    // Detect, establish connection, and initialise hardware devices
+    // detected on the system.
+    probe_system_devices();
 
-            // TODO: Better MMIO!! It should be separate from regular virtual mappings, I think.
+    // Storage devices often manage multiple storage media, as well as each
+    // of those mediums being possibly split into partitions (MBR or GPT).
+    discover_partitions();
 
-            // Okay, this bug just showed me how stupid the current system is.
-            // VIRTUAL MEMORY MANAGER NEEDS ANOTHER LEVEL OF ABSTRACTION TO THE API
-            // I need to add something like `map_sized` that takes in a
-            // page table, virtual address, physical address, size of
-            // thing at those addresses, and then flags... THEN DO ALL THIS
-            // MULTI-PAGE CALCULATION IN THAT FUNCTION. Because having to deal
-            // with this everywhere there *might* be a misaligned
-            // pointer or a large struct is really hard to do correctly.
+    // For every storage device we know how to read/write from, check if a recognised filesystem resides on it.
+    discover_filesystems();
 
-            void* containing_page = (void*)((usz)ABAR - ((usz)ABAR % PAGE_SIZE));
-            Memory::map(containing_page, containing_page
-                        , (u64)Memory::PageTableFlag::Present
-                          | (u64)Memory::PageTableFlag::ReadWrite
-                        );
-
-            // Handle case where ABAR spans two pages, in which case we have to map both.
-            void* next_page = (void*)((usz)containing_page + PAGE_SIZE);
-            if (((usz)ABAR + sizeof(AHCI::HBAMemory)) >= (u64)next_page)
-                Memory::map(next_page, next_page
-                            , (u64)Memory::PageTableFlag::Present
-                              | (u64)Memory::PageTableFlag::ReadWrite
-                            );
-
-            // Handle case where ABAR spans three pages, in which case we have to map a third.
-            next_page = (void*)((usz)next_page + PAGE_SIZE);
-            if (((usz)ABAR + sizeof(AHCI::HBAMemory)) >= (u64)next_page)
-                Memory::map(next_page, next_page
-                            , (u64)Memory::PageTableFlag::Present
-                              | (u64)Memory::PageTableFlag::ReadWrite
-                            );
-
-            u32 ports = ABAR->PortsImplemented;
-            for (uint i = 0; i < 32; ++i) {
-                if (ports & (1u << i)) {
-                    AHCI::HBAPort* port = &ABAR->Ports[i];
-                    AHCI::PortType type = get_port_type(port);
-                    if (type != AHCI::PortType::None) {
-                        SYSTEM->create_device<Devices::AHCIPort>(std::static_pointer_cast<Devices::AHCIController>(dev), type, i, port);
-                    }
-                } else break;
-            }
-            // Don't search AHCI controller any further, already found all ports.
-            dev->set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
-        }
-    }
-
-    /* Find partitions
-     * A storage device may be partitioned (i.e. GUID Partition Table).
-     * These partitions are to be detected and new system devices created.
-     */
-    for (usz i = 0; i < SYSTEM->Devices.size(); ++i) {
-        auto dev = SYSTEM->Devices[i];
-        if (dev->major() == SYSDEV_MAJOR_STORAGE
-            && dev->minor() == SYSDEV_MINOR_AHCI_PORT
-            && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
-        {
-            auto port = static_cast<Devices::AHCIPort*>(dev.get());
-            std::print("[kstage1]: Searching AHCI port {} for a GPT\n", port->Driver->port_number());
-            if (GPT::is_gpt_present(port->Driver.get())) {
-                std::print("  GPT is present!\n");
-                GPT::Header gptHeader;
-                u8 sector[512];
-                port->Driver->read_raw(512, sizeof gptHeader, &gptHeader);
-                for (u32 i = 0; i < gptHeader.NumberOfPartitionsTableEntries; ++i) {
-                    u64 byteOffset = gptHeader.PartitionsTableEntrySize * i;
-                    u32 partSector = gptHeader.PartitionsTableLBA + (byteOffset / 512);
-                    byteOffset %= 512;
-                    port->Driver->read_raw(partSector * 512, 512, sector);
-                    auto* part = reinterpret_cast<GPT::PartitionEntry*>(sector + byteOffset);
-                    if (part->should_ignore())
-                        continue;
-
-                    if (part->TypeGUID == GPT::NullGUID)
-                        continue;
-
-                    if (part->EndLBA < part->StartLBA)
-                        continue;
-
-                    std::print("      Partition {}: {}:\n"
-                               "        Type GUID: {}\n"
-                               "        Unique GUID: {}\n"
-                               "        Sector Offset: {}\n"
-                               "        Sector Count: {}\n"
-                               "        Attributes: {}\n",
-                               i, std::string_view((const char *)part->Name, sizeof(GPT::PartitionEntry) - 0x38),
-                               GUID(part->TypeGUID),
-                               GUID(part->UniqueGUID),
-                               u64(part->StartLBA),
-                               part->size_in_sectors(),
-                               u64(part->Attributes));
-
-
-                    // Don't touch partitions with known GUIDs, except for a select few.
-                    bool known = false;
-                    GUID known_guid;
-                    for (auto* reserved_guid = &GPT::ReservedPartitionGUIDs[0]; *reserved_guid != GPT::NullGUID; reserved_guid++) {
-                        if (part->TypeGUID == *reserved_guid) {
-                            known_guid = *reserved_guid;
-                            known = true;
-                            break;
-                        }
-                    }
-                    if (!known) SYSTEM->create_device<Devices::GPTPartition>(std::static_pointer_cast<Devices::AHCIPort>(dev), *part);
-                }
-
-                /* Don't search port any further, we figured
-                 * out it's storage media that is GPT partitioned
-                 * and devices have been created for those
-                 * (that will themselves be searched for filesystems).
-                 */
-                dev->set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
-            }
-        }
-    }
-
-    /* Detect filesystems
-     * For every storage device we know how to read/write from,
-     * check if a recognized filesystem resides on it.
-     */
-    VFS& vfs = SYSTEM->virtual_filesystem();
-    for (usz i = 0; i < SYSTEM->Devices.size(); ++i) {
-        auto dev = SYSTEM->Devices[i];
-        if (dev->major() == SYSDEV_MAJOR_STORAGE
-            && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
-        {
-            if (dev->minor() == SYSDEV_MINOR_GPT_PARTITION) {
-                auto* partition = static_cast<Devices::GPTPartition*>(dev.get());
-                if (partition) {
-                    std::print("[kstage1]: GPT Partition:\n"
-                               "  Type GUID: {}\n"
-                               "  Unique GUID: {}\n",
-                               partition->Driver->type_guid(),
-                               partition->Driver->unique_guid());
-                    if (auto FAT = FileAllocationTableDriver::try_create(sdd(partition->Driver))) {
-                        std::print("  Found valid File Allocation Table filesystem\n");
-                        static bool foundEFI = false;
-                        std::string mountPath;
-                        if (!foundEFI && partition->Partition.TypeGUID == GPT::PartitionType$EFISystem) {
-                            mountPath = "/efi";
-                            foundEFI = true;
-                        } else mountPath = std::format("/fs{}", vfs.mounts().size());
-
-                        vfs.mount(mountPath, std::move(FAT));
-
-                        // Done searching GPT partition, found valid filesystem.
-                        dev->set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
-                    }
-                }
-            } else if (dev->minor() == SYSDEV_MINOR_AHCI_PORT) {
-                auto* controller = static_cast<Devices::AHCIPort*>(dev.get());
-                if (controller->Driver) {
-                    std::print("[kstage1]: AHCI port {}:\n", controller->Driver->port_number());
-                    std::print("  Checking for valid File Allocation Table filesystem\n");
-                    if (auto FAT = FileAllocationTableDriver::try_create(sdd(controller->Driver))) {
-                        std::print("  Found valid File Allocation Table filesystem\n");
-                        // TODO: Name EFI SYSTEM partition something else to make it separate from
-                        // regular partitions. Eventually should probably also disallow writing to
-                        // EFI SYSTEM mount path unless in very specific circumstances controlled
-                        // by the kernel.
-                        vfs.mount(std::format("/fs{}", vfs.mounts().size()), std::move(FAT));
-
-                        // Done searching AHCI port, found valid filesystem.
-                        dev->set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
-                    }
-                }
-            }
-        }
-    }
-
+    auto& vfs = SYSTEM->virtual_filesystem();
     vfs.print_debug();
 
     // Initialize the Programmable Interval Timer.
+    // FIXME: Just assumes PIT exists.
     gPIT = PIT();
     std::print("[kstage1]: {Programmable Interval Timer Initialized}\n"
                "  Channel 0, H/L Bit Access\n"
@@ -569,7 +554,7 @@ void kstage1(BootInfo* bInfo) {
                , __FG_DEFAULT
                );
 
-
+    // Setup network device(s)
     for (auto& dev : SYSTEM->Devices) {
         if (dev->major() == SYSDEV_MAJOR_NETWORK
             && dev->minor() == SYSDEV_MINOR_E1000) {
@@ -582,6 +567,9 @@ void kstage1(BootInfo* bInfo) {
     // The Task State Segment in x86_64 is used
     // for switches between privilege levels.
     TSS::initialize();
+
+    // The scheduler is the system in place that switches between processes
+    // while a CPU is running.
     Scheduler::initialize();
 
     if (!vfs.mounts().empty()) {
@@ -684,6 +672,31 @@ void kstage1(BootInfo* bInfo) {
 
     SYSTEM->print();
 
+    // From here on is testing, basically.
+
+    std::print("Colour Test:\n"
+               "  This is {black}.\n"
+               "  This is {red}.\n"
+               "  But, on this line {}red begins but never ends\n"
+               "  This is {green}\n"
+               "  This is {YELLow}\n"
+               "  This is {blue :(}\n"
+               "  This is {magenta}\n"
+               "  This is {cyan!}\n"
+               "  This is {white}\n"
+               "  This is {}back to default\n"
+               , __BLACK
+               , __RED
+               , __RED
+               , __GREEN
+               , __YELLOW
+               , __BLUE
+               , __MAGENTA
+               , __CYAN
+               , __WHITE
+               , __DEFAULT
+               );
+
     struct EthernetFrameHeader {
         u8 MACDestination[6];
         u8 MACSource[6];
@@ -751,6 +764,84 @@ void kstage1(BootInfo* bInfo) {
 
     delete[] buffer;
 
+    std::unordered_map<int, char> myMap;
+    myMap.insert({4, 'a'});
+    myMap[8] = 'b';
+
+    for (auto p : myMap)
+        std::print("  {}:'{}'\n", p.first, p.second);
+
+    std::ring_buffer<int, 512> myRing;
+    myRing.push_back(42);
+    myRing.push_back(69);
+
+    while (myRing.size()) {
+        int value = myRing.pop_front();
+        std::print(":> {}\n", value);
+    }
 
     //std::print("[kstage1]: {Interrupts enabled}\n", __GREEN);
+}
+
+void kstage1(BootInfo* bInfo) {
+    /* This function is monstrous, so the functionality is outlined here.
+     *     - Disable interrupts (if they weren't already)
+     *     - Ensure BootInfo pointer is valid (non-null)
+     * x86 - Load Global Descriptor Table
+     * x86 - Load Interrupt Descriptor Table
+     *     - Prepare UART serial communications driver
+     *     - Prepare physical/virtual memory
+     *       - Initialize Physical Memory Manager
+     *       - Initialize Virtual Memory Manager
+     *       - Prepare the heap (`new` and `delete`)
+     *
+     * x86 = The step is inherently x86-only (not implementation based).
+     *
+     * TODO:
+     * `-- A lot of hardware is just assumed to be there;
+     *     figure out how to better probe for their existence,
+     *     and gracefully handle the case that they aren't there.
+     */
+
+    // Disable interrupts while doing sensitive
+    //   operations (like setting up interrupts :^).
+    // TODO: Make architecture agnostic.
+    asm ("cli");
+
+    // Don't even attempt to boot unless boot info exists.
+    if (bInfo == nullptr) hang();
+
+    /* Tell x86_64 CPU where the GDT is located by populating and loading a
+     * GDT descriptor. The global descriptor table contains information about
+     * memory segments (like privilege level of executing code, or privilege
+     * level needed to access data).
+     */
+    setup_gdt();
+    gGDTD.Size = sizeof(GDT) - 1;
+    gGDTD.Offset = V2P((u64)&gGDT);
+    LoadGDT((GDTDescriptor*)V2P(&gGDTD));
+
+    // Prepare Interrupt Descriptor Table.
+    prepare_interrupts();
+    disable_all_interrupts();
+
+    // Setup serial communications chip to allow for debug messages as soon as possible.
+    UART::initialize();
+
+    // Fancy boot message, because why not.
+    std::print("\n"
+               "!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\n"
+               "\n");
+
+    // Setup physical memory allocator from EFI memory map.
+    Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    // Setup virtual memory (map entire address space as well as kernel).
+    Memory::init_virtual();
+    // Setup dynamic memory allocation (`new`, `delete`).
+    init_heap();
+
+    // Informational/debug physical memory printout
+    Memory::print_physmem();
+
+    kstage2(bInfo);
 }
