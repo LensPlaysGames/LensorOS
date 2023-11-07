@@ -210,7 +210,7 @@ if ( QEMU_PROGRAM )
     )
   else()
     list( APPEND QEMU_FLAGS
-      -audiodev oss,id=audio_device
+      -audiodev alsa,id=audio_device
       -machine pcspk-audiodev=audio_device
     )
   endif()
