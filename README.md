@@ -183,12 +183,13 @@ executable is transformed into a PE32+ executable with the proper
 subsystem for an EFI application. Luckily, all of this is handled by the
 build system.
 
-Build the bootloader and it's dependencies (target exists on *Unix only*):
+If you already have a build system, you can use the following to update
+the bootloader (target exists on *Unix only*):
 ```sh
 cmake --build bld --target bootloader
 ```
 
-Alternatively, you can run the bootloader build system manually.
+When starting fresh, you can run the bootloader build system manually.
 
 Build the dependencies for the bootloader:
 ```sh

@@ -58,9 +58,18 @@ sudo apt install build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev t
 
 Next, simply run the included `toolchain.sh` script with bash to
   download, patch, configure, build, and install the toolchain.
+
+NOTE: This is quite resource-intensive, and has often led my Linux
+systems to crash without proper precautions; running Fedora 38, I had
+to make a swap subvolume + file in btrfs and then use `swapon` to turn
+it on, as I only had 8g of zram swap space available, as shown
+[here](https://wiki.archlinux.org/title/btrfs#Swap_file). For non-btrfs
+systems, see [here](https://wiki.archlinux.org/title/swap#Swap_file).
+
 ```bash
 bash toolchain.sh
 ```
+
 At this point you are done. [See the Using section](#using-the-toolchain).
 
 You'll find the `/toolchain/cross/` directory of the repo has been filled
