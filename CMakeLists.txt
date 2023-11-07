@@ -33,7 +33,7 @@ if (CMAKE_HOST_UNIX)
     bootloader
     COMMAND make
     COMMAND make bootloader
-    WORKING_DIRECTORY gnu-efi
+    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/gnu-efi
     USES_TERMINAL
     VERBATIM
   )
