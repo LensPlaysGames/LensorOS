@@ -291,7 +291,7 @@ ssize_t _IO_File::read(char* __restrict__ buf, const size_t size) {
 }
 
 bool _IO_File::read_until(char* __restrict__ buf, const size_t size, char until) {
-/// TODO: Check if the stream is readable.
+    /// TODO: Check if the stream is readable.
     /// If we have an ungotten character, store that in the buffer first.
     size_t rest = size;
     if (has_ungotten()) {
@@ -336,7 +336,7 @@ size_t _IO_File::copy_from_read_buffer(char* __restrict__ buf, size_t size) {
 
     /// Copy the data.
     size_t to_copy = std::min(size, stream_rem);
-    memcpy(buf, __rdbuf.__buf, to_copy);
+    memcpy(buf, __rdbuf.__buf + __rdbuf.__start, to_copy);
 
     /// If we've copied all the data, reset the buffer.
     if (stream_rem == to_copy) {
