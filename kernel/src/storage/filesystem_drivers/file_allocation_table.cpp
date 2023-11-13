@@ -189,9 +189,11 @@ auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename
             // Truncate to three bytes (over-long extension).
             extension = extension.substr(0, 3);
 
-            name = path.substr(0, 8);
+            name = path.substr(0, last_dot);
 
             DBGMSG("[FAT]: Got name \"{}\" and extension \"{}\"\n", name, extension);
+
+            while (name.size() < 8) name += ' ';
 
             return name + extension;
 
