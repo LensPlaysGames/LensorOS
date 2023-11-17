@@ -52,7 +52,6 @@
 #include <storage/filesystem_drivers/file_allocation_table.h>
 #include <storage/storage_device_driver.h>
 #include <system.h>
-#include <tss.h>
 #include <uart.h>
 
 #include <bit>
@@ -60,10 +59,15 @@
 #include <unordered_map>
 #include <extensions>
 
+#ifdef x86_64
 u8 idt_storage[0x1000];
+#endif
+
 void prepare_interrupts() {
     // REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
     remap_pic();
+
+#ifdef x86_64
     // CREATE INTERRUPT DESCRIPTOR TABLE.
     gIDT = IDTR(0x0fff, (u64)&idt_storage[0]);
     // POPULATE TABLE.
@@ -82,6 +86,7 @@ void prepare_interrupts() {
     gIDT.install_handler((u64)system_call_handler_asm,          0x80
                          , IDT_TA_UserInterruptGate);
     gIDT.flush();
+#endif
 }
 
 void draw_boot_gfx() {
@@ -106,8 +111,8 @@ void draw_boot_gfx() {
     gRend.swap();
 }
 
-// FXSAVE/FXRSTOR instructions require a pointer to a
-//   512-byte region of memory before use.
+// FXSAVE/FXRSTOR instructions require a pointer to a 512-byte region of
+// memory before use. THIS IS THAT MEMORY.
 u8 fxsave_region[512] __attribute__((aligned(16)));
 
 void find_pci_devices() {
@@ -321,6 +326,7 @@ void probe_cpu() {
         SystemCPU->set_vendor_id(cpuVendorID);
         std::print("  CPU Vendor ID: {}\n", std::string_view{SystemCPU->get_vendor_id(), 12});
 
+#ifdef x86_64
         CPUIDRegisters regs;
         cpuid(1, regs);
 
@@ -423,11 +429,15 @@ void probe_cpu() {
             }
         }
     }
+#endif
+
     std::print("\n");
 
-    // Make sure SSE is enabled.
+    // If the kernel was compiled with SSE but it is not enabled, there will
+    // be errors. To prevent any catastrophic system failures or data loss, we
+    // hang while we still can.
 #ifdef __SSE__
-    if (!SystemCPU->sse_enabled()) {
+    if (not SystemCPU->sse_enabled()) {
         std::print("[kstage1]: {SSE is not enabled!}\n", __RED);
         std::print("[kstage1]: {Your CPU doesn’t support SSE. Please recompile the kernel without SSE support.}\n", __RED);
         hang();
@@ -435,7 +445,7 @@ void probe_cpu() {
 #endif
 
     // TODO: Parse CPUs from ACPI MADT table.
-    //       For now we only support single core.
+    //       For now we only support single core operation.
     CPU cpu = CPU(SystemCPU);
     SystemCPU->add_cpu(cpu);
     SystemCPU->print_debug();
@@ -455,7 +465,6 @@ void kstage2(BootInfo* bInfo) {
      *       - High Precision Event Timer (HPET)
      *       - PS2 Mouse
      *     - Prepare Programmable Interval Timer (PIT)
-     * x86 - Setup TSS
      *     - Setup scheduler
      * x86 - Clear (IRQ) interrupt masks in PIC for used interrupts
      *     - Print information about the system to serial output
@@ -534,7 +543,8 @@ void kstage2(BootInfo* bInfo) {
     // of those mediums being possibly split into partitions (MBR or GPT).
     discover_partitions();
 
-    // For every storage device we know how to read/write from, check if a recognised filesystem resides on it.
+    // For every storage device we know how to read/write from, check if a
+    // recognised filesystem resides on it.
     discover_filesystems();
 
     auto& vfs = SYSTEM->virtual_filesystem();
@@ -563,39 +573,11 @@ void kstage2(BootInfo* bInfo) {
             }
     }
 
-
-    // The Task State Segment in x86_64 is used
-    // for switches between privilege levels.
-    TSS::initialize();
-
     // The scheduler is the system in place that switches between processes
     // while a CPU is running.
     Scheduler::initialize();
 
     if (!vfs.mounts().empty()) {
-        constexpr const char* filePath = "/fs0/bin/blazeit";
-        std::print("Opening {} with VFS\n", filePath);
-        auto fds = vfs.open(filePath);
-
-        std::print("  Got FileDescriptors. {}, {}\n", fds.Process, fds.Global);
-        vfs.print_debug();
-
-        std::print("  Reading first few bytes: ");
-        char tmpBuffer[11]{};
-        vfs.read(fds.Process, reinterpret_cast<u8*>(tmpBuffer), 11);
-        std::print("{}\n", std::string_view{tmpBuffer, 11});
-        if (fds.valid()) {
-            std::vector<std::string_view> argv;
-            argv.push_back(filePath);
-            if (ELF::CreateUserspaceElf64Process(fds.Process, argv))
-                std::print("Successfully created new process from `{}`\n", filePath);
-
-            std::print("Closing FileDescriptor {}\n", fds.Process);
-            vfs.close(fds.Process);
-            std::print("FileDescriptor {} closed\n", fds.Process);
-            vfs.print_debug();
-        }
-
         // Another userspace program
         constexpr const char *const programTwoFilePath = "/fs0/bin/stdout";
 
@@ -612,7 +594,7 @@ void kstage2(BootInfo* bInfo) {
         argv.push_back(std::format("{:x}", (usz)bInfo->framebuffer->PixelsPerScanLine));
 
         std::print("Opening {} with VFS\n", programTwoFilePath);
-        fds = vfs.open(programTwoFilePath);
+        auto fds = vfs.open(programTwoFilePath);
         std::print("  Got FileDescriptors. {}, {}\n", fds.Process, fds.Global);
         if (fds.valid()) {
             if (ELF::CreateUserspaceElf64Process(fds.Process, argv))
@@ -756,10 +738,6 @@ void kstage2(BootInfo* bInfo) {
     memcpy(buffer, &header, sizeof(EthernetFrameHeader));
     memcpy(buffer + sizeof(EthernetFrameHeader), &arp, sizeof(ARPData));
 
-    // Allow interrupts to trigger.
-    std::print("[kstage1]: Enabling interrupts\n");
-    asm ("sti");
-
     gE1000.write_raw(buffer, buffer_size);
 
     delete[] buffer;
@@ -780,6 +758,9 @@ void kstage2(BootInfo* bInfo) {
         std::print(":> {}\n", value);
     }
 
+    // Allow interrupts to trigger.
+    std::print("[kstage1]: Enabling interrupts\n");
+    asm ("sti");
     //std::print("[kstage1]: {Interrupts enabled}\n", __GREEN);
 }
 
@@ -803,14 +784,17 @@ void kstage1(BootInfo* bInfo) {
      *     and gracefully handle the case that they aren't there.
      */
 
+#ifdef x86_64
     // Disable interrupts while doing sensitive
     //   operations (like setting up interrupts :^).
     // TODO: Make architecture agnostic.
     asm ("cli");
+#endif
 
     // Don't even attempt to boot unless boot info exists.
     if (bInfo == nullptr) hang();
 
+#ifdef x86_64
     /* Tell x86_64 CPU where the GDT is located by populating and loading a
      * GDT descriptor. The global descriptor table contains information about
      * memory segments (like privilege level of executing code, or privilege
@@ -820,8 +804,10 @@ void kstage1(BootInfo* bInfo) {
     gGDTD.Size = sizeof(GDT) - 1;
     gGDTD.Offset = V2P((u64)&gGDT);
     LoadGDT((GDTDescriptor*)V2P(&gGDTD));
+#endif
 
-    // Prepare Interrupt Descriptor Table.
+    // Prepare system interrupts.
+    // On x86_64, prepare Interrupt Descriptor Table.
     prepare_interrupts();
     disable_all_interrupts();
 

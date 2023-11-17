@@ -32,6 +32,10 @@
 #include <vfs_forward.h>
 #include <system.h>
 
+#ifdef x86_64
+#    include <tss.h>
+#endif
+
 /// External symbol definitions for `scheduler.asm`
 void(*scheduler_switch_process)(CPUState*)
     __attribute__((no_caller_saved_registers));
@@ -207,14 +211,23 @@ namespace Scheduler {
     }
 
     bool initialize() {
-        // IRQ handler in assembly increments PIT ticks counter using this function.
+#ifdef x86_64
+        // The Task State Segment in x86_64 is used
+        // for switches between privilege levels.
+        TSS::initialize();
+#endif
+
+        // IRQ handler in assembly increments PIT ticks counter using this
+        // function.
         timer_tick = pit_tick;
         // IRQ handler in assembly switches processes using this function.
         scheduler_switch_process = scheduler_switch;
-        // Setup currently executing code as the start process.
+
+        // Setup currently executing code as the start process with PID 0.
         StartupProcess.CR3 = Memory::active_page_map();
         StartupProcess.State = Process::RUNNING;
         StartupProcess.ProcessID = 0;
+
         // Create the process queue and add the startup process to it.
         ProcessQueue = new SinglyLinkedList<Process*>;
         if (ProcessQueue == nullptr) {
@@ -223,10 +236,15 @@ namespace Scheduler {
         }
         ProcessQueue->add(&StartupProcess);
         CurrentProcess = ProcessQueue->head();
-        // Install IRQ0 handler found in `scheduler.asm` (over-write default system timer handler).
+
+#ifdef x86_64
+        // Install IRQ0 handler found in `scheduler.asm` (over-write default
+        // system timer handler).
         gIDT.install_handler((u64)irq0_handler, PIC_IRQ0);
         gIDT.flush();
         std::print("Flushed IDT after installing new IRQ0 handler\n");
+#endif
+
         return true;
     }
 
