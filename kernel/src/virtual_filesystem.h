@@ -166,7 +166,7 @@ struct VFS {
         // Files table, this means that the process' FileDescriptor
         // still maps to the same SysFD. It's just the data stored *at*
         // that SysFD that changes. This may change in the future, and
-        // the proc->FileDesriptors mappings may need altered.
+        // the proc->FileDescriptors mappings may need altered.
         return true;
     }
 
