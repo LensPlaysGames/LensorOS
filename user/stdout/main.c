@@ -445,16 +445,35 @@ int main(int argc, const char **argv) {
 
   last_command_output_it = command_output_it;
 
+  // This is the loop of the shell itself; each iteration of this loop
+  // gathers input from the user and proceeds to run zero or more shell
+  // operations, such as builtins or system commands.
   for (;;) {
     memset(command, 0, MAX_COMMAND_LENGTH);
     //fill_color(fb, black);
 
+    // If command output iterator `command_output_it` is less than the command
+    // output iterator on the last iteration of this loop, than we have
+    // "scrolled" the command output, and all iterators have been invalidated.
+    // As such, we revert back to the default state with the last command
+    // output iterator being equal to the current command output iterator.
     if (command_output_it < last_command_output_it)
       last_command_output_it = command_output_it;
+
+    // Print everything past the last command output iterator
+    // `last_command_output_it`; the last command output iterator stores the
+    // position at which we have already output up to, so this prints
+    // everything we haven't yet printed while skipping everything we have
+    // already printed.
     printf("%s", command_output + last_command_output_it);
+
+    // Print a newline at the end of the command output, even if one wasn't
+    // present. This prints the prompt at the start of the line, rather than
+    // off the end of the last command's output.
     // TODO: Make it clear when newline isn't present at end of command output, somehow.
     if (command_output_it == 0 || command_output[command_output_it - 1] != '\n')
       putchar('\n');
+
     last_command_output_it = command_output_it;
 
     print_command_line();
@@ -492,6 +511,11 @@ int main(int argc, const char **argv) {
 
     // Finish printing command line.
     fputc('\n', stdout);
+
+    // TODO: At some point here, now that we have "finished" the input command
+    // line, we should write the prompt + input command line into the command
+    // output, so as to save it in the scrolling history. Hopefully that makes
+    // sense.
 
     // TODO: Lex, parse, sema, etc. Don't just treat every command as a single string.
 
