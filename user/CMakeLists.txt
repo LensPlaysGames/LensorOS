@@ -61,4 +61,4 @@ add_userspace_program( clienttest )
 add_userspace_program( servertest )
 add_cxx_userspace_program( xish )
 add_cxx_userspace_program( echo )
-
+add_cxx_userspace_program( cat )

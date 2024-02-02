@@ -48,6 +48,7 @@ execute_process(COMMAND mmd -i ${IMAGE_DIR}/LensorOSData.img ::/res/fonts)
 execute_process(COMMAND mmd -i ${IMAGE_DIR}/LensorOSData.img ::/res/fonts/psf1)
 execute_process(COMMAND mmd -i ${IMAGE_DIR}/LensorOSData.img ::/inc)
 execute_process(COMMAND mmd -i ${IMAGE_DIR}/LensorOSData.img ::/lib)
+mcopy_file(${REPO_DIR}/hello.txt /res)
 mcopy_file(${IMAGE_DIR}/dfltfont.psf /res/fonts/psf1)
 mcopy_glob(${REPO_DIR}/user/bin/* /bin)
 # TODO: This should really be done but it makes things take a long time
