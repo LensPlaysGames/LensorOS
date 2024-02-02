@@ -354,11 +354,7 @@ void run_program_waitpid(const char *const filepath, const char **args) {
 ///   NULL-terminated array of pointers to NULL-terminated strings.
 ///   Passed to `exec` syscall
 void run_background_program(const char *const filepath, const char **args) {
-  pid_t cpid = fork();
-  //printf("pid: %d\n", cpid);
-  if (cpid == 0) {
-    syscall(SYS_exec, filepath, args);
-  }
+  if (fork() == 0) syscall(SYS_exec, filepath, args);
 }
 
 int main(int argc, const char **argv) {
