@@ -139,8 +139,8 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
         return -1;
     }
 
-    std::print("[PIPE]: read()  Reading {} bytes from pipe buffer at {} (process {})\n", byteCount, (void*)pipe, Scheduler::CurrentProcess->value()->ProcessID);
-    std::print("    pipe->Buffer->Offset = {}\n", pipe->Buffer->Offset);
+    //std::print("[PIPE]: read()  Reading {} bytes from pipe buffer at {} (process {})\n", byteCount, (void*)pipe, Scheduler::CurrentProcess->value()->ProcessID);
+    //std::print("    pipe->Buffer->Offset = {}\n", pipe->Buffer->Offset);
 
     // If there is nothing to read, we either return EOF or block the
     // process until there is something to read.
@@ -148,12 +148,12 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
         // When there is nothing more to read, return EOF when write end of pipe
         // is completely closed.
         if (pipe->Buffer->WriteClosed) {
-            std::print("[PIPE]: read()  Returning EOF because write end is closed and pipe is empty\n");
+            //std::print("[PIPE]: read()  Returning EOF because write end is closed and pipe is empty\n");
             return -1;
         }
 
         auto* process = Scheduler::CurrentProcess->value();
-        std::print("[PIPE]: read()  Blocking process {}  pipeEnd={} pipeBuffer={}\n", process->ProcessID, (void*)pipe, (void*)pipe->Buffer);
+        //std::print("[PIPE]: read()  Blocking process {}  pipeEnd={} pipeBuffer={}\n", process->ProcessID, (void*)pipe, (void*)pipe->Buffer);
         pipe->Buffer->PIDsWaitingOnWriteToRead.push_back(process->ProcessID);
         return -2;
     }
@@ -168,13 +168,13 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
     // Read data
     memcpy(buffer, pipe->Buffer->Data, byteCount);
 
-    std::print("[PIPE]: read()  Read {} bytes from data buffer\n", byteCount);
+    //std::print("[PIPE]: read()  Read {} bytes from data buffer\n", byteCount);
 
     // Ensure pipe data starts at beginning for next read.
     memmove(pipe->Buffer->Data, pipe->Buffer->Data + byteCount, PIPE_BUFSZ - byteCount);
     pipe->Buffer->Offset -= byteCount;
 
-    std::print("[PIPE]: read()  Data shuffled to front: new offset = {}\n", pipe->Buffer->Offset);
+    //std::print("[PIPE]: read()  Data shuffled to front: new offset = {}\n", pipe->Buffer->Offset);
 
     // Run processes waiting to write to this pipe with a return value
     // indicating that the syscall should be retried, now that we have read
@@ -182,7 +182,7 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
     for (pid_t pid : pipe->Buffer->PIDsWaitingOnReadToWrite) {
         auto* process = Scheduler::process(pid);
         if (!process) continue;
-        std::print("[PIPE]: read()  Unblocking process {}  pipeEnd={} pipeBuffer={}\n", pid, (void*)pipe, (void*)pipe->Buffer);
+        //std::print("[PIPE]: read()  Unblocking process {}  pipeEnd={} pipeBuffer={}\n", pid, (void*)pipe, (void*)pipe->Buffer);
         // Set return value of process to retry syscall.
         process->unblock(true, -2);
     }
@@ -199,8 +199,8 @@ ssz PipeDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
 
     if (byteCount == 0) return 0;
 
-    std::print("[PIPE]: write()  Writing {} bytes to pipe buffer at {}\n", byteCount, (void*)pipe);
-    std::print("    pipe->Buffer->Offset = {}\n", pipe->Buffer->Offset);
+    //std::print("[PIPE]: write()  Writing {} bytes to pipe buffer at {}\n", byteCount, (void*)pipe);
+    //std::print("    pipe->Buffer->Offset = {}\n", pipe->Buffer->Offset);
 
     // TODO: Don't truncate, figure out how to actually achieve this.
     if (byteCount > PIPE_BUFSZ) {
@@ -211,7 +211,7 @@ ssz PipeDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
     if (pipe->Buffer->Offset + byteCount > PIPE_BUFSZ) {
         // Support "wait if full".
         auto* process = Scheduler::CurrentProcess->value();
-        std::print("[PIPE]: write()  Pipe full, blocking process {}  pipeEnd={} pipeBuffer={}\n", process->ProcessID, (void*)pipe, (void*)pipe->Buffer);
+        //std::print("[PIPE]: write()  Pipe full, blocking process {}  pipeEnd={} pipeBuffer={}\n", process->ProcessID, (void*)pipe, (void*)pipe->Buffer);
         pipe->Buffer->PIDsWaitingOnReadToWrite.push_back(process->ProcessID);
         return -2;
     }
@@ -219,7 +219,7 @@ ssz PipeDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
     memcpy(pipe->Buffer->Data + pipe->Buffer->Offset, buffer, byteCount);
     pipe->Buffer->Offset += byteCount;
 
-    std::print("[PIPE]: write()  Wrote {} bytes; new offset = {}\n", byteCount, pipe->Buffer->Offset);
+    //std::print("[PIPE]: write()  Wrote {} bytes; new offset = {}\n", byteCount, pipe->Buffer->Offset);
 
     // Run processes waiting to read from this pipe with a return value
     // indicating that the syscall should be retried.
