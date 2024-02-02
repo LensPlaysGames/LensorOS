@@ -107,7 +107,7 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
 
     // NOTE: nothing in this flow may call yield itself, as the above file
     // metadata shared pointer would become dangling and never get cleaned up.
-    ssz rc = SYSTEM->virtual_filesystem().read(fd, buffer, byteCount, 0);
+    ssz rc = vfs.read(fd, buffer, byteCount, 0);
     if (rc == -2) {
         // Save CPU state so that we will return to the right spot when
         // the process is run again.
@@ -124,10 +124,8 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
 
     // If data was read, move the "cursor" of the file metadata forward, so
     // that next time we read we will get new data.
-    if (rc > 0) {
-        if (not meta) return rc;
+    if (rc > 0)
         meta->offset += rc;
-    }
 
     return rc;
 }
@@ -148,9 +146,11 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
            );
     // FIXME: Validate buffer pointer.
 
+    VFS& vfs = SYSTEM->virtual_filesystem();
+
     // Save CPU state in case write blocks, aka calls yield.
     memcpy(&Scheduler::CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
-    ssz rc = SYSTEM->virtual_filesystem().write(fd, buffer, byteCount, 0);
+    ssz rc = vfs.write(fd, buffer, byteCount, 0);
     if (rc == -2) {
         // Set state to SLEEPING so that after we yield, the scheduler
         // won't switch back to us until the file has been written to,
@@ -159,6 +159,13 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
 
         // Bye!
         Scheduler::yield();
+    }
+
+    // If data was read, move the "cursor" of the file metadata forward, so
+    // that next time we read we will get new data.
+    if (rc > 0) {
+        auto meta = vfs.file(fd);
+        meta->offset += rc;
     }
 
     return rc;
