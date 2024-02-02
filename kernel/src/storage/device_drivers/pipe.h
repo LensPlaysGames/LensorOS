@@ -50,7 +50,8 @@ struct PipeBuffer {
     usz Offset{0};
     bool ReadClosed{false};
     bool WriteClosed{false};
-    std::vector<pid_t> PIDsWaiting;
+    std::vector<pid_t> PIDsWaitingOnReadToWrite;
+    std::vector<pid_t> PIDsWaitingOnWriteToRead;
 
     constexpr PipeBuffer() = default;
     ~PipeBuffer() = default;
@@ -63,7 +64,8 @@ struct PipeBuffer {
     PipeBuffer(PipeBuffer&&) = delete;
 
     void clear() {
-        PIDsWaiting.clear();
+        PIDsWaitingOnReadToWrite.clear();
+        PIDsWaitingOnWriteToRead.clear();
         memset(&Data[0], 0, sizeof(Data));
         Offset = 0;
         ReadClosed = false;

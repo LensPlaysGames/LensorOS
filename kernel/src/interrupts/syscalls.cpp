@@ -103,6 +103,7 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
         // won't switch back to us until the file has been written to,
         // or something of that nature.
         process->State = Process::SLEEPING;
+
         // Bye!
         Scheduler::yield();
     }
@@ -127,7 +128,18 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
 
     // Save CPU state in case write blocks, aka calls yield.
     memcpy(&Scheduler::CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
-    return SYSTEM->virtual_filesystem().write(fd, buffer, byteCount, 0);
+    ssz rc = SYSTEM->virtual_filesystem().write(fd, buffer, byteCount, 0);
+    if (rc == -2) {
+        // Set state to SLEEPING so that after we yield, the scheduler
+        // won't switch back to us until the file has been written to,
+        // or something of that nature.
+        Scheduler::CurrentProcess->value()->State = Process::SLEEPING;
+
+        // Bye!
+        Scheduler::yield();
+    }
+
+    return rc;
 }
 
 void sys$4_poke() {
