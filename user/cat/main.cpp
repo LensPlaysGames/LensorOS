@@ -18,11 +18,8 @@ int main(int argc, char** argv) {
     size_t bytes_read;
     while ((bytes_read = fread(&c[0], 1, bytes_to_read, f)) > 0) {
         if (feof(f) or ferror(f) || bytes_read != bytes_to_read) break;
-        printf("\nbytes_read: %i  | ", bytes_read);
         fwrite(&c[0], 1, bytes_read, stdout);
     }
-
-    printf("\nSo long, gay bowser\n");
 
     return 0;
 }
