@@ -91,8 +91,22 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
            );
     // FIXME: Validate buffer pointer.
 
+    VFS& vfs = SYSTEM->virtual_filesystem();
+    auto meta = vfs.file(fd);
+
+    // If we have read the entire file, offset will be equal to (or greater
+    // than) the file's size. This means there is nothing to possibly read.
+    if (meta->offset >= meta->file_size())
+        return 0;
+
+    // Truncate a read that would attempt to read past the end of the file.
+    if (meta->offset + byteCount > meta->file_size())
+        byteCount = meta->file_size() - meta->offset;
+
     auto* process = Scheduler::CurrentProcess->value();
 
+    // NOTE: nothing in this flow may call yield itself, as the above file
+    // metadata shared pointer would become dangling and never get cleaned up.
     ssz rc = SYSTEM->virtual_filesystem().read(fd, buffer, byteCount, 0);
     if (rc == -2) {
         // Save CPU state so that we will return to the right spot when
@@ -107,6 +121,14 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
         // Bye!
         Scheduler::yield();
     }
+
+    // If data was read, move the "cursor" of the file metadata forward, so
+    // that next time we read we will get new data.
+    if (rc > 0) {
+        if (not meta) return rc;
+        meta->offset += rc;
+    }
+
     return rc;
 }
 
