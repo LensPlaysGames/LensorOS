@@ -78,6 +78,10 @@ void write_command_output(char c) {
     size_t lines_scrolled = 0;
     for (; lines_scrolled < scroll_amount; ++lines_scrolled) {
       size_t next_newline = strcspn(command_output, "\n") + 1;
+      // TODO: What if no newline? What if command outputs one really long line,
+      // longer than the command output buffer? Basically, we need a check that
+      // if there is not another newline here then we just clear the whole
+      // output back to nothing.
       if (skip_bytes + next_newline >= MAX_OUTPUT_LENGTH) break;
       skip_bytes += next_newline;
     }
@@ -258,7 +262,8 @@ void draw_psf1_string(Framebuffer fb, const PSF1_FONT font, size_t *x, size_t *y
 }
 
 void draw_psf1_int(Framebuffer fb, const PSF1_FONT font, size_t *x, size_t *y, int val) {
-  char numstr[32] = {0};
+  char numstr[32];
+  memset(numstr, 0, 32);
   sprintf(numstr, "%d", val);
   draw_psf1_string(fb, font, x, y, numstr);
 }
@@ -305,15 +310,13 @@ void run_program_waitpid(const char *const filepath, const char **args) {
     //puts("Parent");
     //printf("PARENT: Closing write end...\n");
     //fflush(stdout);
-
     close(fds[1]);
 
     //printf("Reading from pipe!\n");
     //fflush(stdout);
-
     char c = 0;
-    // If we could tell how much there was to read, that would be nice.
-    while (read(fds[0], &c, 1) != EOF)
+    ssize_t bytes_read = 0;
+    while ((bytes_read = read(fds[0], &c, 1)) && bytes_read != EOF)
       write_command_output(c);
 
     //printf("PARENT: Closing read end...\n");
@@ -512,10 +515,20 @@ int main(int argc, const char **argv) {
     // Finish printing command line.
     fputc('\n', stdout);
 
-    // TODO: At some point here, now that we have "finished" the input command
-    // line, we should write the prompt + input command line into the command
-    // output, so as to save it in the scrolling history. Hopefully that makes
-    // sense.
+    // Now that we have "finished" the input command line, we should write the
+    // prompt + input command line into the command output, so as to save it
+    // in the scrolling history. Hopefully that makes sense.
+    char buffer[32];
+    memset(buffer, 0, 32);
+    sprintf(buffer, "%d", command_status);
+    for (char *c = buffer; *c; ++c)
+      write_command_output(*c);
+    for (char *c = prompt; *c; ++c)
+      write_command_output(*c);
+    for (int i = 0; i < offset; ++i)
+      write_command_output(command[i]);
+    write_command_output('\n');
+    last_command_output_it = command_output_it;
 
     // TODO: Lex, parse, sema, etc. Don't just treat every command as a single string.
 
@@ -595,8 +608,8 @@ int main(int argc, const char **argv) {
     }
 
     // If file exists, attempt to load it as an executable (pass to exec).
-    // TODO: To prevent failures, we should check valid elf64 file header, as well.
     if (parsed_command_length) {
+      // FIXME: This is our version of $PATH right now...
       const char fs0_prefix[] = "/fs0/bin/";
       const size_t prefix_length = sizeof(fs0_prefix) - 1;
       // Includes null terminator
