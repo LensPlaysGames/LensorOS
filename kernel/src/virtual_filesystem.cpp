@@ -206,10 +206,6 @@ ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
     //      that indicates whether or not we should yield; take the
     //      shared_ptr in a nested scope, call read, then outside of
     //      that scope, conditionally call yield.
-
-    // Discussed with Sirraide: I think that we should pass a weak_ptr
-    // to the `read` device driver virtual function, and it locks it as
-    // long as it needs it, unlocks it when it doesn't.
     FileMetadata* meta = nullptr;
     {
         auto f = file(fd);
