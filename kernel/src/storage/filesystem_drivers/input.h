@@ -26,7 +26,7 @@
 #include <vector>
 
 #include <memory/common.h>
-#include <storage/storage_device_driver.h>
+#include <storage/filesystem_driver.h>
 #include <storage/file_metadata.h>
 #include <scheduler.h>
 
@@ -55,7 +55,7 @@ struct NamedInputBuffer {
     InputBuffer* Buffer;
 };
 
-struct InputDriver final : StorageDeviceDriver {
+struct InputDriver final : FilesystemDriver {
     void close(FileMetadata* file) final;
     std::shared_ptr<FileMetadata> open(std::string_view path) final;
 
@@ -63,6 +63,13 @@ struct InputDriver final : StorageDeviceDriver {
     ssz read(FileMetadata* file, usz, usz bytes, void* buffer);
 
     ssz write(FileMetadata* file, usz, usz bytes, void* buffer) final;
+
+    auto device() -> std::shared_ptr<StorageDeviceDriver> final {
+        return {};
+    };
+    auto name() -> const char* final {
+        return "Input";
+    };
 
 private:
     std::vector<NamedInputBuffer> InputBuffers;

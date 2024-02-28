@@ -17,7 +17,7 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <storage/device_drivers/input.h>
+#include <storage/filesystem_drivers/input.h>
 
 #include <storage/file_metadata.h>
 #include <system.h>
@@ -56,7 +56,7 @@ std::shared_ptr<FileMetadata> InputDriver::open(std::string_view path) {
         input = FreeInputBuffers.back();
         FreeInputBuffers.pop_back();
     }
-    auto f = std::make_shared<FileMetadata>(FileMetadata::FileType::Regular, path, sdd(SYSTEM->virtual_filesystem().StdinDriver), INPUT_BUFSZ, input);
+    auto f = std::make_shared<FileMetadata>(FileMetadata::FileType::Regular, path, fsd(SYSTEM->virtual_filesystem().StdinDriver), INPUT_BUFSZ, input);
     InputBuffers.push_back({f, path, input});
     return f;
 }

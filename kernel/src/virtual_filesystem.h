@@ -27,7 +27,7 @@
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
 #include <storage/filesystem_drivers/dbgout.h>
-#include <storage/device_drivers/input.h>
+#include <storage/filesystem_drivers/input.h>
 #include <storage/device_drivers/pipe.h>
 #include <storage/device_drivers/socket.h>
 #include <scheduler.h>
