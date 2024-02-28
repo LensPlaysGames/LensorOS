@@ -24,9 +24,9 @@
 #include <string>
 
 struct FilesystemDriver : StorageDeviceDriver {
-    virtual ssz read(FileMetadata* file, usz offs, usz size, void* buffer);
-    virtual ssz write(FileMetadata* file, usz offset, usz size, void* buffer);
-    virtual ssz flush(FileMetadata* file);
+    virtual ssz read(FileMetadata* file, usz offs, usz size, void* buffer) = 0;
+    virtual ssz write(FileMetadata* file, usz offset, usz size, void* buffer) = 0;
+    virtual ssz flush(FileMetadata* file) = 0;
 
     virtual auto device() -> std::shared_ptr<StorageDeviceDriver> = 0;
     virtual auto name() -> const char* = 0;

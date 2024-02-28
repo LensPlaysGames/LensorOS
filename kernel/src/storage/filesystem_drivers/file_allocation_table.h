@@ -146,6 +146,8 @@ public:
         return Device->write(file, usz(file->driver_data()) + offset, size, buffer);
     }
 
+    ssz flush(FileMetadata* file) final { return -1; };
+
     const char* name() final { return "File Allocation Table"; }
 
     auto device() -> std::shared_ptr<StorageDeviceDriver> final { return Device; }

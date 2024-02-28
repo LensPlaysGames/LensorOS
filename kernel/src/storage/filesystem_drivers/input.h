@@ -60,9 +60,11 @@ struct InputDriver final : FilesystemDriver {
     std::shared_ptr<FileMetadata> open(std::string_view path) final;
 
     ssz read_raw(usz, usz, void*) final { return -1; }
-    ssz read(FileMetadata* file, usz, usz bytes, void* buffer);
+    ssz flush(FileMetadata* file) final { return -1; };
 
+    ssz read(FileMetadata* file, usz, usz bytes, void* buffer) final;
     ssz write(FileMetadata* file, usz, usz bytes, void* buffer) final;
+
 
     auto device() -> std::shared_ptr<StorageDeviceDriver> final {
         return {};

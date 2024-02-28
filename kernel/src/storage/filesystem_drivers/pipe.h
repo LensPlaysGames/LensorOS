@@ -106,6 +106,7 @@ struct PipeDriver final : FilesystemDriver {
     ssz read(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
     ssz read_raw(usz, usz, void*) final { return -1; };
     ssz write(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
+    ssz flush(FileMetadata* file) final { return -1; };
 
     auto device() -> std::shared_ptr<StorageDeviceDriver> final {
         return {};

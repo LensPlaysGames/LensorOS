@@ -213,9 +213,10 @@ ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
     }
     if (!meta) return -1;
 
-    DBGMSG("  file offset:       {}\n", meta->offset);
+    DBGMSG("  file offset:     {}\n", meta->offset);
+    DBGMSG("  file size:       {}\n", meta->file_size());
 
-    return meta->device_driver()->read(meta, byteOffset + meta->offset, byteCount, buffer);
+    return meta->filesystem_driver()->read(meta, byteOffset + meta->offset, byteCount, buffer);
 }
 
 ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
@@ -255,7 +256,7 @@ ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
            , meta->offset
            );
 
-    return meta->device_driver()->write(meta, byteOffset + meta->offset, byteCount, buffer);
+    return meta->filesystem_driver()->write(meta, byteOffset + meta->offset, byteCount, buffer);
 }
 
 void VFS::print_debug() {
@@ -280,7 +281,7 @@ void VFS::print_debug() {
         std::print("    Open File {}:\n"
                    "      Driver Address: {}\n"
                    , i
-                   , (void*) f->device_driver().get()
+                   , (void*) f->filesystem_driver().get()
         );
         i++;
     }

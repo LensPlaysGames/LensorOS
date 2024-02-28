@@ -447,7 +447,7 @@ std::shared_ptr<FileMetadata> FileAllocationTableDriver::traverse_path(std::stri
             return std::make_shared<FileMetadata>
                        (ftype,
                         std::move(filename),
-                        sdd(This.lock()),
+                        fsd(This.lock()),
                         u32(Entry.CE->FileSizeInBytes),
                         (void*) Entry.ByteOffset
                         );
