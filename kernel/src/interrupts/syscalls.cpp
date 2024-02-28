@@ -895,9 +895,8 @@ int sys$25_directory_data(ProcessFileDescriptor fd, DirectoryEntry* dirp, usz co
 
     // Starting at `directory_file->offset` entries into the directory, read
     // up to `count` directory entries from the directory.
-    // TODO: We are going to need to "pull" read, write, open, close, etc up
-    // into FilesystemDriver from StorageDeviceDriver where they are now.
-    // Also, we are going to need to create a new API as part of the
+
+    // TODO: We are going to need to create a new API as part of the
     // FilesystemDriver virtuals, which is some sort of API that will deal
     // with gathering directory entries.
 
