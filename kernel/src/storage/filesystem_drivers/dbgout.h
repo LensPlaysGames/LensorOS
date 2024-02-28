@@ -22,18 +22,35 @@
 
 #include <debug.h>
 #include <integers.h>
-#include <storage/storage_device_driver.h>
+#include <storage/filesystem_driver.h>
 
-struct DbgOutDriver final : StorageDeviceDriver {
-    /// Required by the interface but not valid for this driver.
-    void close(FileMetadata*) final { }
-    auto open(std::string_view) -> std::shared_ptr<FileMetadata> final;
+struct DbgOutDriver final : FilesystemDriver {
+    ssz read_raw(usz offs, usz bytes, void* buffer) final {
+        return -1;
+    };
+    ssz read(FileMetadata* file, usz offset, usz size, void* buffer) final {
+        return -1;
+    }
+    ssz flush(FileMetadata* file) final {
+        return -1;
+    };
+    std::shared_ptr<FileMetadata> open(std::string_view path) final {
+        return {};
+    };
+    void close(FileMetadata* file) final {
+        return;
+    };
 
-    ssz read(FileMetadata*, usz, usz, void*) final { return -1; };
-    ssz read_raw(usz, usz, void*) final { return -1; };
-    ssz write(FileMetadata*, usz offs, usz bytes, void* buffer) final {
-        dbgmsg_buf(reinterpret_cast<u8*>(buffer) + offs, bytes);
-        return ssz(bytes);
+    ssz write(FileMetadata* file, usz offset, usz size, void* buffer) final {
+        dbgmsg_buf(reinterpret_cast<u8*>(buffer) + offset, size);
+        return ssz(size);
+    };
+
+    auto device() -> std::shared_ptr<StorageDeviceDriver> final {
+        return nullptr;
+    };
+    auto name() -> const char* final {
+        return "DbgOut";
     };
 };
 

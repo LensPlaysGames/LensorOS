@@ -99,7 +99,6 @@ add_executable(
   src/rtc.cpp
   src/scheduler.cpp
   src/spinlock.cpp
-  src/storage/device_drivers/dbgout.cpp
   src/storage/device_drivers/input.cpp
   src/storage/device_drivers/pipe.cpp
   src/storage/device_drivers/port_controller.cpp

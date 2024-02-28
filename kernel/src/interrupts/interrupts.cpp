@@ -149,7 +149,7 @@ static void handle_direct_input(char input) {
             auto fd = static_cast<ProcFD>(0);
             auto sysfd = init->FileDescriptors[fd];
             auto f = SYSTEM->virtual_filesystem().file(*sysfd);
-            if (f) f->device_driver()->write(f.get(), 0, sizeof(char), &input);
+            if (f) f->filesystem_driver()->write(f.get(), 0, sizeof(char), &input);
             return;
         }
     }

@@ -621,11 +621,14 @@ int sys$19_bind(ProcFD socketFD, const SocketAddress* address, usz addressLength
         std::print("[SYS$]:bind:ERROR: File descriptor invalid.\n");
         return error;
     }
+
     // Validate that socketFD actually refers to a socket.
-    if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
-        std::print("[SYS$]:bind:ERROR: File descriptor does not appear to refer to a socket!\n");
-        return error;
-    }
+    // FIXME: Should use FileMetadata FileType enum rather than this, most likely.
+    // if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
+    //     std::print("[SYS$]:bind:ERROR: File descriptor does not appear to refer to a socket!\n");
+    //     return error;
+    // }
+
     SocketData* data = (SocketData*)file->driver_data();
 
     // Add an address->socket mapping in the driver
@@ -653,11 +656,13 @@ int sys$20_listen(ProcFD socketFD, int backlog) {
         std::print("[SYS$]:listen:ERROR: File descriptor invalid.\n");
         return error;
     }
-    // Validate that socketFD actually refers to a socket.
-    if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
-        std::print("[SYS$]:listen:ERROR: File descriptor does not appear to refer to a socket!\n");
-        return error;
-    }
+    // TODO: Validate that socketFD actually refers to a socket.
+    // FIXME: Should use FileMetadata FileType enum rather than this, most likely.
+    // if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
+    //     std::print("[SYS$]:listen:ERROR: File descriptor does not appear to refer to a socket!\n");
+    //     return error;
+    // }
+
     SocketData* data = (SocketData*)file->driver_data();
     data->ClientServer = SocketData::SERVER;
     data->ConnectionQueue.reserve(backlog);
@@ -687,11 +692,9 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* givenAddress, usz addre
         std::print("[SYS$]:connect:ERROR: File descriptor invalid.\n");
         return error;
     }
-    // Validate that socketFD actually refers to a socket.
-    if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
-        std::print("[SYS$]:connect:ERROR: File descriptor does not appear to refer to a socket!\n");
-        return error;
-    }
+
+    // TODO: Validate that socketFD actually refers to a socket.
+
     SocketData* data = (SocketData*)file->driver_data();
     if (data->ClientServer != SocketData::CLIENT) {
         std::print("[SYS$]:connect:ERROR: Socket is not a client socket.\n");
@@ -753,11 +756,9 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
             std::print("[SYS$]:accept:ERROR: File descriptor invalid.\n");
             return ProcFD::Invalid;
         }
-        // Validate that socketFD actually refers to a socket.
-        if (file->device_driver().get() != SYSTEM->virtual_filesystem().SocketsDriver.get()) {
-            std::print("[SYS$]:accept:ERROR: File descriptor does not appear to refer to a socket!\n");
-            return ProcFD::Invalid;
-        }
+
+        // TODO: Validate that socketFD actually refers to a socket.
+
         data = (SocketData*)file->driver_data();
         // TODO: Only server type sockets can accept incoming connections.
         // TODO: Only bound sockets can accept incoming connections.
@@ -787,13 +788,15 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
         data->ClientServer = SocketData::SERVER;
 
         /// Return a file descriptor that references the client's socket data, but is a new file metadata.
-        auto f = std::make_shared<FileMetadata>("client_socket", sdd(SYSTEM->virtual_filesystem().SocketsDriver), 0, data);
-        auto fds = SYSTEM->virtual_filesystem().add_file(f);
-        if (fds.invalid()) {
-            std::print("[SYS$]:accept:ERROR: Could not add file to accept connection, sorry.\n");
-            return ProcFD::Invalid;
-        }
-        return fds.Process;
+        // TODO/FIXME: Uncomment this once socket driver has successfully been
+        // made a FilesystemDriver instead of an SDD.
+        // auto f = std::make_shared<FileMetadata>(FileMetadata::FileType::Regular, "client_socket", SYSTEM->virtual_filesystem().SocketsDriver, 0, data);
+        // auto fds = SYSTEM->virtual_filesystem().add_file(f);
+        // if (fds.invalid()) {
+        //     std::print("[SYS$]:accept:ERROR: Could not add file to accept connection, sorry.\n");
+        //     return ProcFD::Invalid;
+        // }
+        // return fds.Process;
     }
     std::print("[SYS$]:accept: No waiting connections, blocking\n");
     // Block this process until a connection is made to this socket.

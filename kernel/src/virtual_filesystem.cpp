@@ -143,12 +143,12 @@ FileDescriptors VFS::open(std::string_view path) {
                    "    Name: {}\n"
                    "    File Size: {}\n"
                    "    Driver Data: {}\n"
-                   "    Device Driver: {}\n"
+                   "    Filesystem Driver: {}\n"
                    "    Invalid: {}\n"
                    , meta->name()
                    , meta->file_size()
                    , meta->driver_data()
-                   , (void*) meta->device_driver().get()
+                   , (void*) meta->filesystem_driver().get()
                    , meta->invalid()
             );
             return add_file(std::move(meta));
