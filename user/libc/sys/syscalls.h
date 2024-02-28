@@ -52,7 +52,8 @@
 #define SYS_accept  22
 #define SYS_kqueue  23
 #define SYS_kevent  24
-#define SYS_MAXSYSCALL 24
+#define SYS_directory_data 25
+#define SYS_MAXSYSCALL 25
 #else
 #define SYS_read  0
 #define SYS_write 1

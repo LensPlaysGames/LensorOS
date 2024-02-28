@@ -27,19 +27,25 @@
 #include <format>
 
 struct FileMetadata {
+    enum class FileType {
+        Regular,
+        Directory,
+        // TODO: More file types (device, etc)
+    };
+
     FileMetadata()
         : Name(""), Invalid(true)
         , DeviceDriver(nullptr)
         , FileSize(-1ull)
         , DriverData(nullptr) {}
 
-    FileMetadata(std::string name
                  , std::shared_ptr<StorageDeviceDriver> dev_driver
+    FileMetadata(FileType type, std::string name
                  , u64 file_size
                  , void* driver_data
                  )
-        : Name(std::move(name)), Invalid(false)
         , DeviceDriver(std::move(dev_driver))
+        : Type(type), Name(std::move(name)), Invalid(false)
         , FileSize(file_size)
         , DriverData(driver_data) {}
 
@@ -56,8 +62,12 @@ struct FileMetadata {
     auto file_size() -> u64 { return FileSize; }
     auto driver_data() -> void* { return DriverData; }
 
+    bool is_regular() { return Type == FileType::Regular; }
+    bool is_directory() { return Type == FileType::Directory; }
+
 private:
-    std::string Name;
+    FileType Type { FileType::Regular };
+    std::string Name { "" };
     bool Invalid = true;
     // The device driver is used for reading and writing from and to
     // the file.
@@ -65,6 +75,11 @@ private:
     usz FileSize { -1ull };
     // Driver-specific data.
     void* DriverData { nullptr };
+};
+
+struct DirectoryEntry {
+    FileMetadata::FileType type;
+    char name[256];
 };
 
 #endif /* LENSOR_OS_FILE_METADATA_H */

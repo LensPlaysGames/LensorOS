@@ -24,8 +24,20 @@
 #include <string>
 
 struct FilesystemDriver : StorageDeviceDriver {
+    virtual ssz read(FileMetadata* file, usz offs, usz size, void* buffer);
+    virtual ssz write(FileMetadata* file, usz offset, usz size, void* buffer);
+    virtual ssz flush(FileMetadata* file);
+
     virtual auto device() -> std::shared_ptr<StorageDeviceDriver> = 0;
     virtual auto name() -> const char* = 0;
 };
+
+/// Helper function to convert a Driver to a FilesystemDriver.
+template <typename Derived>
+auto fsd(Derived&& derived) -> std::shared_ptr<FilesystemDriver> {
+    if constexpr (std::is_same_v<std::remove_cvref_t<Derived>, std::shared_ptr<FilesystemDriver>>)
+        return derived;
+    else return std::static_pointer_cast<FilesystemDriver>(std::forward<Derived>(derived));
+}
 
 #endif /* LENSOR_OS_FILESYSTEM_DRIVER_H */

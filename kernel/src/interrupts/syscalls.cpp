@@ -29,12 +29,13 @@
 
 
 #include <algorithm>
-#include <interrupts/syscalls.h>
+#include <memory>
 
 #include <debug.h>
 #include <elf_loader.h>
 #include <event.h>
 #include <file.h>
+#include <interrupts/syscalls.h>
 #include <linked_list.h>
 #include <memory/common.h>
 #include <memory/paging.h>
@@ -44,10 +45,10 @@
 #include <scheduler.h>
 #include <system.h>
 #include <storage/device_drivers/socket.h>
+#include <storage/file_metadata.h>
 #include <time.h>
 #include <virtual_filesystem.h>
 #include <vfs_forward.h>
-#include <memory>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_SYSCALLS
@@ -867,6 +868,39 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
     return success;
 }
 
+// DirectoryEntry defined in `/kernel/src/storage/file_metadata.cpp`
+int sys$25_directory_data(ProcessFileDescriptor fd, DirectoryEntry* dirp, usz count) {
+    DBGMSG(sys$_dbgfmt, 25, "directory_data");
+
+    if (not count) return 0;
+
+    // TODO: Validate `dirp` pointer
+
+    // Get FileMetadata of file pointed to by `fd`.
+    auto& vfs = SYSTEM->virtual_filesystem();
+    auto directory_file = vfs.file(fd);
+    if (!directory_file) {
+        std::print("[SYS$]:directory_data:ERROR: File descriptor invalid.\n");
+        return 0;
+    }
+
+    // Ensure FileMetadata of file pointed to by `fd` is a directory file.
+    if (not directory_file->is_directory()) {
+        std::print("[SYS$]:directory_data:ERROR: File descriptor does not refer to a directory.\n");
+        return 0;
+    }
+
+    // Starting at `directory_file->offset` entries into the directory, read
+    // up to `count` directory entries from the directory.
+    // TODO: We are going to need to "pull" read, write, open, close, etc up
+    // into FilesystemDriver from StorageDeviceDriver where they are now.
+    // Also, we are going to need to create a new API as part of the
+    // FilesystemDriver virtuals, which is some sort of API that will deal
+    // with gathering directory entries.
+
+    return 0;
+}
+
 // TODO: Reorder this
 // FIXME: Make it easier to reorder this (maybe separate the number
 // from the name? I don't know, something to make this easier...)
@@ -913,4 +947,6 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
 
     (void*)sys$23_kqueue,
     (void*)sys$24_kevent,
+
+    (void*)sys$25_directory_data,
 };

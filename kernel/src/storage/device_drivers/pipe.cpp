@@ -123,7 +123,7 @@ auto PipeDriver::open(std::string_view path) -> std::shared_ptr<FileMetadata> {
         FreePipeBuffers.pop_back();
         //std::print("[PIPE]: Re-used existing pipe buffer at {}\n", (void*)pipe);
     }
-    auto meta = std::make_shared<FileMetadata>(path, sdd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, pipe);
+    auto meta = std::make_shared<FileMetadata>(FileMetadata::FileType::Regular, path, sdd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, pipe);
     PipeBuffers.push_back({meta, path, pipe});
     return meta;
 }
@@ -255,8 +255,8 @@ auto PipeDriver::lay_pipe() -> PipeMetas {
     static usz counter = 0;
     std::string path = std::format("panon{}", ++counter);
 
-    auto readMeta = std::make_shared<FileMetadata>(path, sdd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, readEnd);
-    auto writeMeta = std::make_shared<FileMetadata>(path, sdd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, writeEnd);
+    auto readMeta = std::make_shared<FileMetadata>(FileMetadata::FileType::Regular, path, sdd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, readEnd);
+    auto writeMeta = std::make_shared<FileMetadata>(FileMetadata::FileType::Regular, path, sdd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, writeEnd);
 
     //std::print("[PIPE]: lay_pipe()  \"{}\"  buffer={}  read={}  write={}\n", path, (void*)pipe, (void*)readEnd, (void*)writeEnd);
 

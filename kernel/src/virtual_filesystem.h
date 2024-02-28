@@ -86,6 +86,7 @@ struct FileDescriptors {
 };
 
 struct VFS {
+    // TODO: Make all of these FilesystemDrivers rather than StorageDeviceDrivers
     std::shared_ptr<InputDriver> StdinDriver;
     std::shared_ptr<DbgOutDriver> StdoutDriver;
     std::shared_ptr<PipeDriver> PipesDriver;
