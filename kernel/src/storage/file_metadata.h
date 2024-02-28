@@ -35,30 +35,30 @@ struct FileMetadata {
 
     FileMetadata()
         : Name(""), Invalid(true)
-        , DeviceDriver(nullptr)
+        , FileDriver(nullptr)
         , FileSize(-1ull)
         , DriverData(nullptr) {}
 
-                 , std::shared_ptr<StorageDeviceDriver> dev_driver
     FileMetadata(FileType type, std::string name
+                 , std::shared_ptr<FilesystemDriver> file_driver
                  , u64 file_size
                  , void* driver_data
                  )
-        , DeviceDriver(std::move(dev_driver))
         : Type(type), Name(std::move(name)), Invalid(false)
+        , FileDriver(std::move(file_driver))
         , FileSize(file_size)
         , DriverData(driver_data) {}
 
     ~FileMetadata() {
         //std::print("Closing FileMetadata \"{}\"\n", Name);
-        if (DeviceDriver && DriverData) DeviceDriver->close(this);
+        if (FileDriver) FileDriver->close(this);
     }
 
     usz offset { 0 };
 
     auto name() -> std::string_view { return Name; }
     auto invalid() -> bool { return Invalid; }
-    auto device_driver() -> std::shared_ptr<StorageDeviceDriver> { return DeviceDriver; }
+    auto filesystem_driver() -> std::shared_ptr<FilesystemDriver> { return FileDriver; }
     auto file_size() -> u64 { return FileSize; }
     auto driver_data() -> void* { return DriverData; }
 
@@ -69,9 +69,8 @@ private:
     FileType Type { FileType::Regular };
     std::string Name { "" };
     bool Invalid = true;
-    // The device driver is used for reading and writing from and to
-    // the file.
-    std::shared_ptr<StorageDeviceDriver> DeviceDriver { nullptr };
+    // The driver is used for reading and writing from and to the file.
+    std::shared_ptr<FilesystemDriver> FileDriver { nullptr };
     usz FileSize { -1ull };
     // Driver-specific data.
     void* DriverData { nullptr };
