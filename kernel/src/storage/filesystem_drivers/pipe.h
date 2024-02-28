@@ -99,13 +99,20 @@ struct NamedPipeBuffer {
     PipeBuffer *pipe;
 };
 
-struct PipeDriver final : StorageDeviceDriver {
+struct PipeDriver final : FilesystemDriver {
     void close(FileMetadata* meta) final;
     auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
 
     ssz read(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
     ssz read_raw(usz, usz, void*) final { return -1; };
     ssz write(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
+
+    auto device() -> std::shared_ptr<StorageDeviceDriver> final {
+        return {};
+    };
+    auto name() -> const char* final {
+        return "Pipe";
+    };
 
     PipeMetas lay_pipe();
 
