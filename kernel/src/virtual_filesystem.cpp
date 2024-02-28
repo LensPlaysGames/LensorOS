@@ -25,7 +25,7 @@
 #include <scheduler.h>
 
 // Uncomment the following directive for extra debug information output.
-//#define DEBUG_VFS
+// #define DEBUG_VFS
 
 #ifdef DEBUG_VFS
 #   define DBGMSG(...) std::print(__VA_ARGS__)
@@ -219,7 +219,7 @@ ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
     return meta->filesystem_driver()->read(meta, byteOffset + meta->offset, byteCount, buffer);
 }
 
-ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
+ssz VFS::write(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
     /*
     DBGMSG("[VFS]: write11111111111111111\n"
            "  file descriptor: {}\n"
@@ -241,6 +241,7 @@ ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
     }
     if (!meta) return -1;
 
+    /*
     DBGMSG("[VFS]: write\n"
            "  name:            {}\n"
            "  file descriptor: {}\n"
@@ -255,6 +256,7 @@ ssz VFS::write(ProcFD fd, u8* buffer, u64 byteCount, u64 byteOffset) {
            , byteOffset
            , meta->offset
            );
+    */
 
     return meta->filesystem_driver()->write(meta, byteOffset + meta->offset, byteCount, buffer);
 }
@@ -290,6 +292,7 @@ void VFS::print_debug() {
 
 FileDescriptors VFS::add_file(std::shared_ptr<FileMetadata> file, Process* proc) {
     if (!proc) proc = Scheduler::CurrentProcess->value();
+
     DBGMSG("[VFS]: Creating file descriptor mapping\n");
 
     /// Add the file descriptor to the global file table.
