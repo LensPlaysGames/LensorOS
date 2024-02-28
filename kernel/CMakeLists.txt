@@ -99,11 +99,11 @@ add_executable(
   src/rtc.cpp
   src/scheduler.cpp
   src/spinlock.cpp
+  src/storage/device_drivers/port_controller.cpp
+  src/storage/filesystem_drivers/file_allocation_table.cpp
   src/storage/filesystem_drivers/input.cpp
   src/storage/filesystem_drivers/pipe.cpp
-  src/storage/device_drivers/port_controller.cpp
-  src/storage/device_drivers/socket.cpp
-  src/storage/filesystem_drivers/file_allocation_table.cpp
+  src/storage/filesystem_drivers/socket.cpp
   src/system.cpp
   src/tss.cpp
   src/uart.cpp

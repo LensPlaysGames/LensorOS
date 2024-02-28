@@ -44,7 +44,7 @@
 #include <rtc.h>
 #include <scheduler.h>
 #include <system.h>
-#include <storage/device_drivers/socket.h>
+#include <storage/filesystem_drivers/socket.h>
 #include <storage/file_metadata.h>
 #include <time.h>
 #include <virtual_filesystem.h>

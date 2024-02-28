@@ -255,7 +255,7 @@ struct SocketBinding {
     }
 };
 
-struct SocketDriver final : StorageDeviceDriver {
+struct SocketDriver final : FilesystemDriver {
     void close(FileMetadata* meta) final;
     auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
 
@@ -284,6 +284,14 @@ struct SocketDriver final : StorageDeviceDriver {
     ssz read(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
     ssz read_raw(usz, usz, void*) final { return -1; };
     ssz write(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
+    ssz flush(FileMetadata* file) final { return -1; };
+
+    auto device() -> std::shared_ptr<StorageDeviceDriver> final {
+        return {};
+    };
+    auto name() -> const char* final {
+        return "Socket";
+    };
 
 private:
     std::vector<SocketBinding> Bindings;
