@@ -211,6 +211,9 @@ public:
 
         ssz count = 0;
         for (const auto& Entry : for_each_dir_entry_in(directory_cluster_number)) {
+            // Skip volume label(s).
+            if (Entry.CE->volume_id()) continue;
+
             // Copy file name into entry name.
             // Use long file name if it exists, otherwise use regular file name.
             if (Entry.LongFileName.size())
