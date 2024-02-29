@@ -174,7 +174,7 @@ size_t hexstring_to_number(const char *str) {
     out <<= 4;
     out |= val;
 
-    fprint_hexnibble(val, stdout);
+    //fprint_hexnibble(val, stdout);
 
     c = *(str++);
     if (c >= '0' && c <= '9') val = c - '0';
@@ -185,9 +185,9 @@ size_t hexstring_to_number(const char *str) {
     out <<= 4;
     out |= val;
 
-    fprint_hexnibble(val, stdout);
+    //fprint_hexnibble(val, stdout);
   }
-  putc('\n', stdout);
+  //putc('\n', stdout);
 
   return out;
 }
@@ -377,13 +377,13 @@ int main(int argc, const char **argv) {
     uint32_t type;
     char name[248];
   } DirectoryEntry;
-  DirectoryEntry entries[4] = {0};
-  int entry_count = syscall(SYS_directory_data, "/fs0", &entries[0], 4);
+  DirectoryEntry entries[8] = {0};
+  int entry_count = syscall(SYS_directory_data, "/fs0", &entries[0], 8);
   if (entry_count != -1) {
     for (int i = 0; i < entry_count; ++i) {
-      const char* indent = (i + 1 == entry_count ? "`--" : "|--");
+      const char* indent = (i + 1 == entry_count ? "`-- " : "|-- ");
       const char* dir_mark = (entries[i].type == 1 ? "(D) " : "");
-      printf("%s %s%s\n", indent, dir_mark, entries[i].name);
+      printf("%s%s%s\n", indent, dir_mark, entries[i].name);
     }
   } else puts("bad bad");
 
