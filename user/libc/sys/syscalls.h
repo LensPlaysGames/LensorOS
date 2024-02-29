@@ -180,6 +180,11 @@ typedef struct tm {
     int is_daylight_savings_time; // daylight saving time
 } tm;
 
+struct DirectoryEntry {
+    uint32_t file_type;
+    char file_name[248];
+};
+
 __END_DECLS__
 
 
@@ -187,6 +192,8 @@ __END_DECLS__
 ///  C Interface.
 /// ===========================================================================
 #ifndef __cplusplus
+
+typedef struct DirectoryEntry DirectoryEntry;
 
 /// Abandon all hope, ye who enter here.
 typedef struct {int __unused;}* __empty_type_t;
@@ -330,7 +337,9 @@ int sys_kqueue() {
 int sys_kevent(int handle, const Event* changelist, int numChanges, Event* eventlist, int maxEvents) {
   return (int)syscall(SYS_kevent, handle, changelist, numChanges, eventlist, maxEvents);
 }
-
+int sys_directory_data(const char* path, DirectoryEntry* entries, int maxEntries) {
+    return (int)syscall(SYS_directory_data, path, entries, maxEntries);
+}
 
 
 /// ===========================================================================
@@ -448,6 +457,10 @@ inline int sys_connect(ProcFD socketFD, const sockaddr* address, size_t addressL
 }
 inline ProcFD sys_accept(ProcFD socketFD, const sockaddr* address, size_t* addressLength) {
     return std::__detail::syscall<ProcFD>(SYS_accept, (uintptr_t)socketFD, (uintptr_t)address, (uintptr_t)addressLength);
+}
+// TODO: kqueue, kevent
+inline int sys_directory_data(const char* path, DirectoryEntry* entries, int maxEntries) {
+    return std::__detail::syscall<int>(SYS_directory_data, (uintptr_t)path, (uintptr_t)entries, (uintptr_t)maxEntries);
 }
 
 } // namespace std
