@@ -191,9 +191,6 @@ struct VFS {
     ssz directory_data(std::string_view path, usz entry_count, DirectoryEntry* dirents) {
         if (not entry_count) return 0;
 
-        // Validate path somewhat
-        if (not path.starts_with("/")) return -1;
-
         if (not path.size() or path == std::string_view("/")) {
             // Fill dirents with MountPoint prefixes (iterate Mounts)
             usz count = 0;
@@ -206,6 +203,9 @@ struct VFS {
             }
             return count;
         }
+
+        // If path doesn't point to root, validate it somewhat.
+        if (not path.starts_with("/")) return -1;
 
         // Get FilesystemDriver from MountPoint by matching prefix, then hand it
         // over to the FSD.
