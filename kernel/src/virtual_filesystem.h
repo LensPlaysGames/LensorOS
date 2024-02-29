@@ -192,11 +192,10 @@ struct VFS {
         if (not entry_count) return 0;
 
         // Validate path somewhat
-        if (not path.size()) return -1;
         if (not path.starts_with("/")) return -1;
 
-        if (path == std::string_view("/")) {
-            // TODO: Fill dirents with MountPoint prefixes (iterate Mounts)
+        if (not path.size() or path == std::string_view("/")) {
+            // Fill dirents with MountPoint prefixes (iterate Mounts)
             usz count = 0;
             for (auto mount : Mounts) {
                 // Copy mount prefix into directory entry name field.
@@ -208,8 +207,16 @@ struct VFS {
             return count;
         }
 
-        // TODO: Get FilesystemDriver from MountPoint by matching prefix, then
-        // hand it over to the FSD.
+        // Get FilesystemDriver from MountPoint by matching prefix, then hand it
+        // over to the FSD.
+        for (auto mount : Mounts) {
+            /// It makes no sense to search file systems whose mount point does not
+            /// match the beginning of the path. And even if they’re mounted twice,
+            /// we’ll still find the second mount.
+            if (!path.starts_with(mount.Path)) continue;
+            auto fs_path = path.substr(mount.Path.size());
+            return mount.FS->directory_data(fs_path, entry_count, dirents);
+        }
         return -1;
     }
 

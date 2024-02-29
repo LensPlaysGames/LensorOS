@@ -47,7 +47,7 @@ struct DbgOutDriver final : FilesystemDriver {
         return ssz(size);
     };
 
-    ssz directory_data(const char* path, usz max_entry_count, DirectoryEntry* out) final {
+    ssz directory_data(std::string_view path, usz max_entry_count, DirectoryEntry* out) final {
         return -1;
     }
 

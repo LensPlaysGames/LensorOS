@@ -121,6 +121,48 @@ class FileAllocationTableDriver final : public FilesystemDriver {
     auto for_each_dir_entry() -> DirIteratorHelper { return DirIteratorHelper{*this}; }
     auto for_each_dir_entry_in(u32 directoryCluster) -> DirIteratorHelper { return DirIteratorHelper{*this, directoryCluster}; }
 
+    /// Given "/foo/bar/baz.txt" return "foo" and overwrite parameter to "bar/baz.txt"
+    /// Given "/" return "/"
+    auto pop_filename_from_front_of_path(std::string &raw_path) -> std::string;
+
+    // Takes a path that points to a directory and returns the directory
+    // cluster for that directory, otherwise it returns -1.
+    // NOTE: Returns -1 for not-a-directory problems.
+    ssz traverse_path_for_cluster(std::string_view raw_path, u32 directory_cluster = -1) {
+        std::string path(raw_path);
+        auto raw_filename = pop_filename_from_front_of_path(path);
+        auto filename = translate_filename(raw_filename);
+        for (const auto& Entry : for_each_dir_entry_in(directory_cluster)) {
+            // Skip unrelated entries.
+            if (Entry.FileName != filename and Entry.LongFileName != filename) continue;
+
+            // From this point on, we know we are dealing with an entry that refers to
+            // the front component of the path that was just popped off.
+
+            // If path and raw_filename are equal, we can not resolve any more
+            // filenames from full path; we have found the file the path points to.
+            if (path == raw_filename) {
+                // If path was valid but doesn't point to directory, we can't get
+                // directory data from a non-directory.
+                if (not Entry.CE->directory()) return -1;
+                // Return the directory cluster.
+                return Entry.CE->get_cluster_number();
+            }
+
+            // Otherwise, there is more in the path to traverse, and we've just
+            // matched a part from the beginning. We need to further recurse into this
+            // directory; if it isn't a directory, then the path doesn't make sense
+            // and we error out.
+            if (!Entry.CE->directory()) return -1;
+
+            // Recurse into directory...
+            return traverse_path_for_cluster(path, Entry.CE->get_cluster_number());
+        }
+        // Didn't find front component of path in directory pointed to by given
+        // directory cluster.
+        return -1;
+    }
+
     /// NOTE: If directoryCluster == -1 (default), it will be replaced
     /// with the directory cluster of the root directory.
     std::shared_ptr<FileMetadata> traverse_path(std::string_view raw_path, u32 directoryCluster = -1);
@@ -149,24 +191,39 @@ public:
 
     ssz flush(FileMetadata* file) final { return -1; };
 
-    ssz directory_data(const char* path, usz max_entry_count, DirectoryEntry* out) final {
-        if (not path) return -1;
+    ssz directory_data(std::string_view path, usz max_entry_count, DirectoryEntry* out) final {
         if (not max_entry_count) return 0;
         if (not out) return -1;
 
         // Basically, we are doing a path traversal but not ever opening the files
         // we encounter, instead building dir entries corresponding to them.
-        // TODO/FIXME: Currently returns root entries no matter what. We need to
-        // get the directory cluster number of the directory at the given path.
+
+        // Begin with traversing root directory
         usz directory_cluster_number = BR.sector_to_cluster(BR.first_root_directory_sector());
+
+        // If path isn't empty and isn't root, traverse path and ensure we end up
+        // in a directory.
+        // FIXME: This is basically three-quarters of `traverse_path`, but it
+        // doesn't return a FileMetadata, just a directory cluster number. Could
+        // abstract easily.
+        if (path.size() and path != std::string_view("/"))
+            directory_cluster_number = traverse_path_for_cluster(path);
+
         ssz count = 0;
         for (const auto& Entry : for_each_dir_entry_in(directory_cluster_number)) {
             // Copy file name into entry name.
-            memcpy(&out[count].name[0], Entry.LongFileName.data(), std::min(Entry.LongFileName.size(), sizeof(out[count].name)));
+            // Use long file name if it exists, otherwise use regular file name.
+            if (Entry.LongFileName.size())
+                memcpy(&out[count].name[0], Entry.LongFileName.data(), std::min(Entry.LongFileName.size(), sizeof(out[count].name)));
+            else memcpy(&out[count].name[0], Entry.FileName.data(), std::min(Entry.FileName.size(), sizeof(out[count].name)));
+
             // Set directory vs regular file type.
             out[count].type = Entry.CE->directory() ? FileMetadata::FileType::Directory : FileMetadata::FileType::Regular;
-            ++count;
+
+            // Ensure we don't write too many entries.
+            if (usz(++count) >= max_entry_count) break;
         }
+
         return count;
     }
 

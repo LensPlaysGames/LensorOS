@@ -31,13 +31,7 @@ struct FilesystemDriver : StorageDeviceDriver {
     virtual ssz write(FileMetadata* file, usz offset, usz size, void* buffer) = 0;
     virtual ssz flush(FileMetadata* file) = 0;
 
-    // auto root_dir = open("/", "r");
-    // DirectoryEntry dirents[4] = {0};
-    // auto entry_count = directory_data(root_dir, 4, &dirents[0]);
-    // for (usz i = 0; i < entry_count; ++i) {
-    //     puts(dirents[i].name);
-    // }
-    virtual ssz directory_data(const char* path, usz max_entry_count, DirectoryEntry* out) = 0;
+    virtual ssz directory_data(std::string_view path, usz max_entry_count, DirectoryEntry* out) = 0;
 
     virtual auto device() -> std::shared_ptr<StorageDeviceDriver> = 0;
     virtual auto name() -> const char* = 0;

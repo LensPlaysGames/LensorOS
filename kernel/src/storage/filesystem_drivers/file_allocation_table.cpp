@@ -35,9 +35,7 @@
 #   define DBGMSG(...)
 #endif
 
-/// Given "/foo/bar/baz.txt" return "foo" and set path to "bar/baz.txt"
-/// Given "/" return "/"
-std::string pop_filename_from_front_of_path(std::string& raw_path) {
+std::string FileAllocationTableDriver::pop_filename_from_front_of_path(std::string& raw_path) {
     /// Strip leading slash.
     std::string path = raw_path;
     if (path.starts_with("/")) path = path.substr(1);

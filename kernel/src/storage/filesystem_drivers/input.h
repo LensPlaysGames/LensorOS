@@ -65,7 +65,7 @@ struct InputDriver final : FilesystemDriver {
     ssz read(FileMetadata* file, usz, usz bytes, void* buffer) final;
     ssz write(FileMetadata* file, usz, usz bytes, void* buffer) final;
 
-    ssz directory_data(const char* path, usz max_entry_count, DirectoryEntry* out) final {
+    ssz directory_data(std::string_view path, usz max_entry_count, DirectoryEntry* out) final {
         return -1;
     }
 

@@ -27,7 +27,7 @@
 #include <format>
 
 struct FileMetadata {
-    enum class FileType {
+    enum class FileType : u32 {
         Regular,
         Directory,
         // TODO: More file types (device, etc)
