@@ -37,7 +37,7 @@ struct FilesystemDriver : StorageDeviceDriver {
     // for (usz i = 0; i < entry_count; ++i) {
     //     puts(dirents[i].name);
     // }
-    virtual ssz directory_data(FileMetadata* file, usz max_entry_count, DirectoryEntry* out) = 0;
+    virtual ssz directory_data(const char* path, usz max_entry_count, DirectoryEntry* out) = 0;
 
     virtual auto device() -> std::shared_ptr<StorageDeviceDriver> = 0;
     virtual auto name() -> const char* = 0;

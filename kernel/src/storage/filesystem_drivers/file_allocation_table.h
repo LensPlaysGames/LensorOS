@@ -149,16 +149,15 @@ public:
 
     ssz flush(FileMetadata* file) final { return -1; };
 
-    ssz directory_data(FileMetadata* file, usz max_entry_count, DirectoryEntry* out) final {
-        if (!out) return -1;
+    ssz directory_data(const char* path, usz max_entry_count, DirectoryEntry* out) final {
+        if (not path) return -1;
+        if (not max_entry_count) return 0;
+        if (not out) return -1;
 
         // Basically, we are doing a path traversal but not ever opening the files
         // we encounter, instead building dir entries corresponding to them.
-
         // TODO/FIXME: Currently returns root entries no matter what. We need to
-        // get the directory cluster number of the directory pointed to by the
-        // given FileMetadata. Basically we need the full path stored in the
-        // FileMetadata, which sounds like a good idea anyway.
+        // get the directory cluster number of the directory at the given path.
         usz directory_cluster_number = BR.sector_to_cluster(BR.first_root_directory_sector());
         ssz count = 0;
         for (const auto& Entry : for_each_dir_entry_in(directory_cluster_number)) {

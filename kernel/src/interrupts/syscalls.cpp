@@ -872,30 +872,16 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
 }
 
 // DirectoryEntry defined in `/kernel/src/storage/file_metadata.cpp`
-int sys$25_directory_data(ProcessFileDescriptor fd, DirectoryEntry* dirp, usz count) {
+int sys$25_directory_data(const char* path, DirectoryEntry* dirp, usz count) {
     DBGMSG(sys$_dbgfmt, 25, "directory_data");
 
     if (not count) return 0;
 
+    // TODO: Validate `path` pointer
     // TODO: Validate `dirp` pointer
 
-    // Get FileMetadata of file pointed to by `fd`.
     auto& vfs = SYSTEM->virtual_filesystem();
-    auto directory_file = vfs.file(fd);
-    if (!directory_file) {
-        std::print("[SYS$]:directory_data:ERROR: File descriptor invalid.\n");
-        return 0;
-    }
-
-    // Ensure FileMetadata of file pointed to by `fd` is a directory file.
-    if (not directory_file->is_directory()) {
-        std::print("[SYS$]:directory_data:ERROR: File descriptor does not refer to a directory.\n");
-        return 0;
-    }
-
-    // Starting at `directory_file->offset` entries into the directory, read
-    // up to `count` directory entries from the directory.
-    return directory_file->filesystem_driver()->directory_data(directory_file.get(), count, dirp);
+    return vfs.directory_data(path, count, dirp);
 }
 
 // TODO: Reorder this

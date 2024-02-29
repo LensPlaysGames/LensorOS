@@ -188,6 +188,31 @@ struct VFS {
     auto file(ProcFD fd) -> std::shared_ptr<FileMetadata>;
     auto file(SysFD fd) -> std::shared_ptr<FileMetadata>;
 
+    ssz directory_data(std::string_view path, usz entry_count, DirectoryEntry* dirents) {
+        if (not entry_count) return 0;
+
+        // Validate path somewhat
+        if (not path.size()) return -1;
+        if (not path.starts_with("/")) return -1;
+
+        if (path == std::string_view("/")) {
+            // TODO: Fill dirents with MountPoint prefixes (iterate Mounts)
+            usz count = 0;
+            for (auto mount : Mounts) {
+                // Copy mount prefix into directory entry name field.
+                memcpy(&dirents[count].name[0], mount.Path.data(), mount.Path.size());
+                // Root of mount is always a directory
+                dirents[count].type = FileMetadata::FileType::Directory;
+                ++count;
+            }
+            return count;
+        }
+
+        // TODO: Get FilesystemDriver from MountPoint by matching prefix, then
+        // hand it over to the FSD.
+        return -1;
+    }
+
 private:
     std::sparse_vector<std::shared_ptr<FileMetadata>, nullptr, SysFD> Files;
     std::vector<MountPoint> Mounts;
