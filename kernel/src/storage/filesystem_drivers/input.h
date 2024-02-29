@@ -65,6 +65,9 @@ struct InputDriver final : FilesystemDriver {
     ssz read(FileMetadata* file, usz, usz bytes, void* buffer) final;
     ssz write(FileMetadata* file, usz, usz bytes, void* buffer) final;
 
+    ssz directory_data(FileMetadata* file, usz max_entry_count, DirectoryEntry* out) final {
+        return -1;
+    }
 
     auto device() -> std::shared_ptr<StorageDeviceDriver> final {
         return {};

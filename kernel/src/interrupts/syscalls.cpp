@@ -895,12 +895,7 @@ int sys$25_directory_data(ProcessFileDescriptor fd, DirectoryEntry* dirp, usz co
 
     // Starting at `directory_file->offset` entries into the directory, read
     // up to `count` directory entries from the directory.
-
-    // TODO: We are going to need to create a new API as part of the
-    // FilesystemDriver virtuals, which is some sort of API that will deal
-    // with gathering directory entries.
-
-    return 0;
+    return directory_file->filesystem_driver()->directory_data(directory_file.get(), count, dirp);
 }
 
 // TODO: Reorder this

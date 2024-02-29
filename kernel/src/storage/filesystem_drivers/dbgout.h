@@ -46,6 +46,10 @@ struct DbgOutDriver final : FilesystemDriver {
         return ssz(size);
     };
 
+    ssz directory_data(FileMetadata* file, usz max_entry_count, DirectoryEntry* out) final {
+        return -1;
+    }
+
     auto device() -> std::shared_ptr<StorageDeviceDriver> final {
         return nullptr;
     };

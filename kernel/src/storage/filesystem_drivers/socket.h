@@ -286,6 +286,10 @@ struct SocketDriver final : FilesystemDriver {
     ssz write(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
     ssz flush(FileMetadata* file) final { return -1; };
 
+    ssz directory_data(FileMetadata* file, usz max_entry_count, DirectoryEntry* out) final {
+        return -1;
+    }
+
     auto device() -> std::shared_ptr<StorageDeviceDriver> final {
         return {};
     };

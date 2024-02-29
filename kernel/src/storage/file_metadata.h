@@ -78,7 +78,7 @@ private:
 
 struct DirectoryEntry {
     FileMetadata::FileType type;
-    char name[256];
+    char name[248];
 };
 
 #endif /* LENSOR_OS_FILE_METADATA_H */

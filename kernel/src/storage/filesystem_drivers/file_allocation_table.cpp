@@ -413,6 +413,7 @@ std::shared_ptr<FileMetadata> FileAllocationTableDriver::traverse_path(std::stri
         directoryCluster = BR.sector_to_cluster(BR.first_root_directory_sector());
 
     /// Strip leading slash.
+    // FIXME: If it's just a slash, return the root directory.
     if (raw_path.starts_with("/")) raw_path = raw_path.substr(1);
     if (raw_path.size() < 1) {
         DBGMSG("[FAT]:open(): Invalid path: {}\n", raw_path);
