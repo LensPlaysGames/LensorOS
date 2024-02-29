@@ -24,6 +24,7 @@
 #include <storage/file_metadata.h>
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
+#include <utf.h>
 #include <string>
 #include <vector>
 
@@ -225,8 +226,29 @@ public:
             // Use long file name if it exists, otherwise use regular file name.
             if (Entry.LongFileName.size()) {
                 // TODO: LongFileName is utf-16, need to do conversion
-                memcpy(&out[count].name[0], Entry.LongFileName.data(), std::min(Entry.LongFileName.size(), sizeof(out[count].name)));
-            } else memcpy(&out[count].name[0], Entry.FileName.data(), std::min(Entry.FileName.size(), sizeof(out[count].name)));
+                auto lfn = utf16_to_utf8(Entry.LongFileName);
+                memcpy(&out[count].name[0], lfn.data(), std::min(lfn.size(), sizeof(out[count].name)));
+            } else {
+                auto filename = Entry.FileName;
+                if (filename.size() == 11) {
+                    // tolower
+                    for (unsigned int i = 0; i < 11; ++i) {
+                        char c = filename.data()[i];
+                        if (c >= 'A' and c <= 'Z')
+                            filename.data()[i] += 'a' - 'A';
+                    }
+                    // strip spaces off end of filename and extension.
+                    auto name = filename.substr(0, 8);
+                    auto extension = filename.substr(8, 3);
+                    while (name.back() == ' ') name.erase(name.size() - 1);
+                    while (extension.back() == ' ') extension.erase(extension.size() - 1);
+                    // If extension isn't just spaces, add a period inbetween name and extension
+                    if (extension.size())
+                        filename = name + "." + extension;
+                    else filename = name;
+                }
+                memcpy(&out[count].name[0], filename.data(), std::min(filename.size(), sizeof(out[count].name)));
+            }
 
             // Set directory vs regular file type.
             out[count].type = Entry.CE->directory() ? FileMetadata::FileType::Directory : FileMetadata::FileType::Regular;
