@@ -42,7 +42,8 @@ struct DbgOutDriver final : FilesystemDriver {
     };
 
     ssz write(FileMetadata* file, usz offset, usz size, void* buffer) final {
-        dbgmsg_buf(reinterpret_cast<u8*>(buffer) + offset, size);
+        // NOTE: offset is ignored (no offset into dbgout)
+        dbgmsg_buf(reinterpret_cast<u8*>(buffer), size);
         return ssz(size);
     };
 
