@@ -48,7 +48,7 @@ void append_codepoint_as_utf8(std::string &appendee, u32 codepoint) {
 
 // utf16 -> utf8
 // Fairly lax, will ignore most invalid utf16 in a best effort approach.
-auto utf16_to_utf8(std::string utf16) -> std::string {
+auto utf16_to_utf8(std::string_view utf16) -> std::string {
     std::string out{};
     // Iterate over code units (NOT codepoints) of input utf16, 2 bytes at a time.
     for (usz i = 0; i + 1 < utf16.size(); i += 2) {
@@ -56,11 +56,6 @@ auto utf16_to_utf8(std::string utf16) -> std::string {
         u8 lower = utf16.data()[i];
         u8 upper = utf16.data()[i + 1];
         u16 code_unit = u16(lower) | (u16(upper) << 8);
-        // If the code unit is U+D800 to U+DFFF, this is the beginning of a
-        // surrogate pair.
-        if (code_unit >= 0xd800 and code_unit <= 0xdfff) {
-            // TODO
-        }
         // If the code unit is U+0000 to U+D7FF or U+E000 to U+FFFF, then it is
         // numerically equivalent to a codepoint.
         if (code_unit <= 0xd7ff or code_unit > 0xe000) {
