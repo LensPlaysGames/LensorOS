@@ -82,7 +82,7 @@ extern "C" void kmain(BootInfo* bInfo) {
     // in this loop.
     for (;;) {
         // Free pages which previously housed page maps (or portions thereof).
-        if (Scheduler::PageMapsToFree.size() > 1) {
+        if (Scheduler::PageMapsToFree.size() > 15) {
             // TODO: Abstract x86_64
             // Disable interrupts; we do this to prevent a timer interrupt causing a
             // yield away from this thread, which could invalidate the iterator in the
