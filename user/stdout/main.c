@@ -371,24 +371,6 @@ int main(int argc, const char **argv) {
   fflush(NULL);
   */
 
-
-
-  typedef struct DirectoryEntry {
-    uint32_t type;
-    char name[248];
-  } DirectoryEntry;
-  DirectoryEntry entries[8] = {0};
-  int entry_count = syscall(SYS_directory_data, "/fs0", &entries[0], 8);
-  if (entry_count != -1) {
-    for (int i = 0; i < entry_count; ++i) {
-      const char* indent = (i + 1 == entry_count ? "`-- " : "|-- ");
-      const char* dir_mark = (entries[i].type == 1 ? "(D) " : "");
-      printf("%s%s%s\n", indent, dir_mark, entries[i].name);
-    }
-  } else puts("bad bad");
-
-
-
   if (argc != 6) {
     printf("[INIT]: argc is not valid: %d\n", argc);
     return 1;
