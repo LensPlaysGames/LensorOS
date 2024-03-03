@@ -78,8 +78,29 @@ extern "C" void kmain(BootInfo* bInfo) {
     gPIT.wait();                                           // Rest
     gPIT.play_sound(392, MACCYS_STEP_LENGTH_MILLISECONDS); // G4
 
-    for (;;)
-        ;
+    // Tasks that need done by a kernel thread and done frequently should go
+    // in this loop.
+    for (;;) {
+        // Free pages which previously housed page maps (or portions thereof).
+        if (Scheduler::PageMapsToFree.size() > 1) {
+            // TODO: Abstract x86_64
+            asm ("cli");
+            std::print("[KERNEL]: Disabled interrupts; freeing {} page tables\n", Scheduler::PageMapsToFree.size());
+
+            for (Memory::PageTable* table : Scheduler::PageMapsToFree) {
+                std::print("Freeing page table at {}\n", (void*)table);
+                Memory::free_page_map(table);
+            }
+
+            // Once we free a page map, we no longer need to free it.
+            Scheduler::PageMapsToFree.clear();
+
+            // TODO: Abstract x86_64
+            // Enable interrupts (allow yielding away as it now won't cause iterator invalidation or anything)
+            std::print("[KERNEL]: Enabling interrupts\n");
+            asm ("sti");
+        }
+    }
 
     // KERNEL INACTIVE
     hang();
