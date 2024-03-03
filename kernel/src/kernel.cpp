@@ -84,11 +84,14 @@ extern "C" void kmain(BootInfo* bInfo) {
         // Free pages which previously housed page maps (or portions thereof).
         if (Scheduler::PageMapsToFree.size() > 1) {
             // TODO: Abstract x86_64
+            // Disable interrupts; we do this to prevent a timer interrupt causing a
+            // yield away from this thread, which could invalidate the iterator in the
+            // following loop.
             asm ("cli");
-            std::print("[KERNEL]: Disabled interrupts; freeing {} page tables\n", Scheduler::PageMapsToFree.size());
+            //std::print("[KERNEL]: Disabled interrupts; freeing {} page tables\n", Scheduler::PageMapsToFree.size());
 
             for (Memory::PageTable* table : Scheduler::PageMapsToFree) {
-                std::print("Freeing page table at {}\n", (void*)table);
+                //std::print("[KERNEL]: Freeing page table at {}\n", (void*)table);
                 Memory::free_page_map(table);
             }
 
@@ -97,7 +100,7 @@ extern "C" void kmain(BootInfo* bInfo) {
 
             // TODO: Abstract x86_64
             // Enable interrupts (allow yielding away as it now won't cause iterator invalidation or anything)
-            std::print("[KERNEL]: Enabling interrupts\n");
+            //std::print("[KERNEL]: Enabling interrupts after freeing page tables\n");
             asm ("sti");
         }
     }
