@@ -667,7 +667,7 @@ int sys$20_listen(ProcFD socketFD, int backlog) {
     data->ClientServer = SocketData::SERVER;
     data->ConnectionQueue.reserve(backlog);
 
-    std::print("[SYS$]:listen: socket {} now listening!\n", socketFD);
+    std::print("[SYS$]:listen: socket {} in process {} is now listening!\n", socketFD, Scheduler::CurrentProcess->value()->ProcessID);
 
     return success;
 }
@@ -693,8 +693,8 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* givenAddress, usz addre
         return error;
     }
 
-    // TODO: Validate that socketFD actually refers to a socket.
-
+    // TODO: Validate that socketFD actually refers to a socket in a non
+    // driver-pointer-comparison way.
     SocketData* data = (SocketData*)file->driver_data();
     if (data->ClientServer != SocketData::CLIENT) {
         std::print("[SYS$]:connect:ERROR: Socket is not a client socket.\n");
@@ -711,11 +711,10 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* givenAddress, usz addre
     // processes, and it may not be the same one it was created in...
     auto* serverProcess = Scheduler::process(serverData->PID);
     if (!serverProcess) {
-        std::print("[SYS$]:connect: process associated with socket bound to address has closed; sorry!\n");
+        std::print("[SYS$]:connect: server process associated with socket bound to address has closed; sorry!\n");
         return error;
     }
     ProcFD serverProcFD = serverData->FD;
-
 
     serverData->ConnectionQueue.push_back(SocketConnection{data->Address, data, process->ProcessID});
     std::print("[SYS$]:connect: socket {} connected to address!\n", socketFD);
@@ -787,16 +786,15 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
 
         data->ClientServer = SocketData::SERVER;
 
-        /// Return a file descriptor that references the client's socket data, but is a new file metadata.
-        // TODO/FIXME: Uncomment this once socket driver has successfully been
-        // made a FilesystemDriver instead of an SDD.
-        // auto f = std::make_shared<FileMetadata>(FileMetadata::FileType::Regular, "client_socket", SYSTEM->virtual_filesystem().SocketsDriver, 0, data);
-        // auto fds = SYSTEM->virtual_filesystem().add_file(f);
-        // if (fds.invalid()) {
-        //     std::print("[SYS$]:accept:ERROR: Could not add file to accept connection, sorry.\n");
-        //     return ProcFD::Invalid;
-        // }
-        // return fds.Process;
+        /// Return a file descriptor that references the client's socket data, but
+        /// is a new file metadata.
+        auto f = std::make_shared<FileMetadata>(FileMetadata::FileType::Regular, "client_socket", fsd(SYSTEM->virtual_filesystem().SocketsDriver), 0, data);
+        auto fds = SYSTEM->virtual_filesystem().add_file(f);
+        if (fds.invalid()) {
+            std::print("[SYS$]:accept:ERROR: Could not add file to accept connection, sorry.\n");
+            return ProcFD::Invalid;
+        }
+        return fds.Process;
     }
     std::print("[SYS$]:accept: No waiting connections, blocking\n");
     // Block this process until a connection is made to this socket.
