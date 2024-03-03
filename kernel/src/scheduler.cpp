@@ -75,6 +75,7 @@ void Process::destroy(int status) {
     // Free memory regions. This includes mmap()ed memory as
     // well as loaded program regions, the stack, etc.
     for(const auto& region : Memories) {
+        // FIXME: Should we unmap virtual as well?
         Memory::free_pages(region.paddr, region.pages);
     }
     // Clear memories list.
@@ -84,7 +85,7 @@ void Process::destroy(int status) {
     // Close open files.
     // NOTE: There *should* be none; libc should close all open files on destruction.
     for (const auto& [procfd, fd] : FileDescriptors.pairs()) {
-        std::print("Process {} leaked {}, closing...\n", ProcessID, procfd);
+        std::print("Process {} leaked file descriptor {}, closing...\n", ProcessID, procfd);
         SYSTEM->virtual_filesystem().close(this, procfd);
     }
 
