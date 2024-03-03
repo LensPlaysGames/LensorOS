@@ -53,6 +53,7 @@
 #include <storage/storage_device_driver.h>
 #include <system.h>
 #include <uart.h>
+#include <utf.h>
 
 #include <bit>
 #include <format>
@@ -220,13 +221,20 @@ void discover_partitions() {
                     if (part->EndLBA < part->StartLBA)
                         continue;
 
+                    // FIXME: Encoding of partition name appears to be UTF-16,
+                    // but I'm not sure if it will always be or just for FAT
+                    // partitions.
+                    auto name_in_utf8 = utf16_to_utf8(std::string_view((const char*)part->Name, sizeof(part->Name)));
+                    // Remove spaces from end of the name.
+                    while (name_in_utf8.back() == ' ') name_in_utf8.erase(name_in_utf8.size() - 1);
+
                     std::print("      Partition {}: {}:\n"
                                "        Type GUID: {}\n"
                                "        Unique GUID: {}\n"
                                "        Sector Offset: {}\n"
                                "        Sector Count: {}\n"
                                "        Attributes: {}\n",
-                               i, std::string_view((const char *)part->Name, sizeof(GPT::PartitionEntry) - 0x38),
+                               i, name_in_utf8,
                                GUID(part->TypeGUID),
                                GUID(part->UniqueGUID),
                                u64(part->StartLBA),
