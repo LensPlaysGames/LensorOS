@@ -230,11 +230,20 @@ auto _IO_File::tell(_IO_off_t& offset) const -> _IO_off_t{
 /// ===========================================================================
 ssize_t _IO_File::read(char* __restrict__ buf, const size_t size) {
     /// TODO: Check if the stream is readable.
+
+    // Can't read from a stream that has errored.
+    if (has_error()) return EOF;
+
+    if (at_eof()) return EOF;
+
     /// If we have an ungotten character, store that in the buffer first.
     size_t rest = size;
     if (has_ungotten()) {
-        buf[0] = __ungotten;
+        *buf = __ungotten;
         __f_has_ungotten = false;
+
+        if (rest == 1) return 1;
+
         buf++;
         rest--;
     }
@@ -243,12 +252,18 @@ ssize_t _IO_File::read(char* __restrict__ buf, const size_t size) {
     if (__rdbuf.__offs > __rdbuf.__start) {
         auto copied = copy_from_read_buffer(buf, rest);
 
-        /// If we've copied all the data, return.
-        if (copied == rest) { return size; }
-    }
+        // FIXME: Assert copied <= rest.
+        if (copied > rest) {
+            __f_error = true;
+            return EOF;
+        }
 
-    /// Return if we're at end of file.
-    if (at_eof()) { return EOF; }
+        /// If we've copied all the data, return.
+        if (copied == rest) return ssize_t(size);
+
+        // Update rest to be everything we haven't yet copied.
+        rest -= copied;
+    }
 
     /// Read from the file descriptor.
     ///
@@ -264,10 +279,16 @@ ssize_t _IO_File::read(char* __restrict__ buf, const size_t size) {
             __f_error = true;
             return EOF;
         }
-
         /// If we've reached end of file, set the flag.
-        if (n_read == 0) { __f_eof = true; }
-        __rdbuf.__offs = n_read;
+        else if (n_read == 0) {
+            __f_eof = true;
+            // While we have reached EOF, we may have been able to empty the read
+            // buffer or get an ungotten character up above.
+            return ssize_t(size - rest);
+        }
+
+        __rdbuf.__start = 0;
+        __rdbuf.__offs = size_t(n_read);
 
         /// Copy the data.
         auto copied = copy_from_read_buffer(buf, rest);
@@ -283,9 +304,9 @@ ssize_t _IO_File::read(char* __restrict__ buf, const size_t size) {
             __f_error = true;
             return EOF;
         }
-
         /// If we've reached end of file, set the flag.
         if (n_read == 0) { __f_eof = true; }
+
         return ssize_t(size - rest + n_read);
     }
 }
@@ -305,7 +326,7 @@ bool _IO_File::read_until(char* __restrict__ buf, const size_t size, char until)
     /// Copy data from the read buffer.
     if (__rdbuf.__offs > __rdbuf.__start) {
         auto [copied, done] = copy_until_from_read_buffer(buf, rest, until);
-        if (done || at_eof()) return true;
+        if (done or at_eof()) return true;
         rest -= copied;
     }
 
@@ -320,6 +341,7 @@ bool _IO_File::read_until(char* __restrict__ buf, const size_t size, char until)
 
         /// If we've reached end of file, set the flag.
         if (n_read == 0) { __f_eof = true; }
+        __rdbuf.__start = 0;
         __rdbuf.__offs = n_read;
 
         /// Copy the data.
@@ -331,6 +353,15 @@ bool _IO_File::read_until(char* __restrict__ buf, const size_t size, char until)
 }
 
 size_t _IO_File::copy_from_read_buffer(char* __restrict__ buf, size_t size) {
+    // Copying nothing is easy: do nothing.
+    if (size == 0) return 0;
+
+    // Confidence check; should never be possible to have offset less than
+    // start.
+    // Small optimisation to also include equal check here, which means the
+    // buffer has nothing in it and we can't copy anything from it anyway.
+    if (__rdbuf.__offs <= __rdbuf.__start) return 0;
+
     /// We can copy at most __offs - __start many bytes.
     size_t stream_rem = __rdbuf.__offs - __rdbuf.__start;
 
@@ -518,8 +549,8 @@ _PushIgnoreWarning("-Wprio-ctor-dtor")
 
 /// Initialise the standard streams.
 [[gnu::constructor(_CDTOR_STDIO)]] void __stdio_init() {
-    stdin = FILE::create(STDIN_FILENO);
-    stdout = FILE::create(STDOUT_FILENO);
+    stdin = FILE::create(STDIN_FILENO, LineBuffered);
+    stdout = FILE::create(STDOUT_FILENO, LineBuffered);
     stderr = FILE::create(STDERR_FILENO, Unbuffered);
     __stdio_destructed = false;
 }
@@ -729,7 +760,7 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
 
                 constexpr const size_t max_digits = 32;
                 static_assert(max_digits != 0, "Can not print into zero-length buffer");
-                char digits[max_digits] = {0};
+                char digits[max_digits];
 
                 size_t i = max_digits;
                 for (size_t tmp_val = val; tmp_val && i; tmp_val /= radix, --i)
@@ -737,12 +768,12 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
 
                 if (i == max_digits) digits[--i] = '0';
 
-                for (const char *it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
+                for (const char *it = &digits[i]; it < &digits[0] + max_digits; ++it)
                     fputc(*it, stream);
 
             } continue;
 
-            case 'i':
+            case 'i': [[fallthrough]];
             case 'd': {
                 int val = va_arg(args, int);
                 bool negative = val < 0;
@@ -753,7 +784,7 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
 
                 constexpr const size_t max_digits = 32;
                 static_assert(max_digits != 0, "Can not print into zero-length buffer");
-                char digits[max_digits] = {0};
+                char digits[max_digits];
 
                 size_t i = max_digits;
                 for (size_t tmp_val = negative ? -val : val; tmp_val && i; tmp_val /= radix, --i)
@@ -762,7 +793,7 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
                 if (i == max_digits) digits[--i] = '0';
 
                 if (negative) fputc('-', stream);
-                for (const char *it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
+                for (const char *it = &digits[i]; it < &digits[0] + max_digits; ++it)
                     fputc(*it, stream);
 
             } continue;
@@ -965,10 +996,15 @@ size_t fread(void* __restrict__ ptr, size_t size, size_t nmemb, FILE* __restrict
     /// Lock the file.
     LOCK(stream);
 
-    /// Read the data. We assume that we don't overflow here because it would be
-    /// physically impossible to allocate a buffer of that size anyway.
+    /// Read the data. We assume that the result of the multiplication doesn't
+    /// overflow here because it would be physically impossible to allocate a
+    /// buffer of that size anyway.
     auto ret = stream->read(static_cast<char*>(ptr), size * nmemb);
-    return ret / size;
+
+    // EOF/error handling.
+    if (stream->at_eof() or ret == EOF or ret < 0) return 0;
+
+    return size_t(ret) / size;
 }
 
 size_t fwrite(const void* __restrict__ ptr, size_t size, size_t nmemb, FILE* __restrict__ stream) {
@@ -977,8 +1013,9 @@ size_t fwrite(const void* __restrict__ ptr, size_t size, size_t nmemb, FILE* __r
     /// Lock the file.
     LOCK(stream);
 
-    /// Write the data. We assume that we don't overflow here because it would be
-    /// physically impossible to allocate a buffer of that size anyway.
+    /// Write the data. We assume that the result of the multiplication doesn't
+    /// overflow here because it would be physically impossible to allocate a
+    /// buffer of that size anyway.
     auto ret = stream->write(reinterpret_cast<const char* __restrict__>(ptr), size * nmemb);
     return ret == EOF ? 0 : nmemb;
 }
