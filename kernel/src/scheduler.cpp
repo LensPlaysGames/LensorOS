@@ -90,6 +90,7 @@ void Process::destroy(int status) {
     }
 
     // FIXME: Abstract x86_64 specific stuff!!
+    // TODO/FIXME: Actually free or use these somewhere, or something.
     Scheduler::PageMapsToFree.push_back(CR3);
 }
 

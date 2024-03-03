@@ -30,6 +30,7 @@
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
+#include <memory/virtual_memory_manager.h>
 #include <pit.h>
 #include <rtc.h>
 #include <scheduler.h>
@@ -77,14 +78,8 @@ extern "C" void kmain(BootInfo* bInfo) {
     gPIT.wait();                                           // Rest
     gPIT.play_sound(392, MACCYS_STEP_LENGTH_MILLISECONDS); // G4
 
-    for (;;) {
-        // Tasks that need done frequently should go here.
-        for (Memory::PageTable* table : Scheduler::PageMapsToFree) {
-            //std::print("Freeing page table at {}\n", (void*)table);
-            Memory::free_page_map(table);
-        }
-        Scheduler::PageMapsToFree.clear();
-    }
+    for (;;)
+        ;
 
     // KERNEL INACTIVE
     hang();

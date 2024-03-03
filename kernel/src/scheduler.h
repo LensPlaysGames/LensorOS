@@ -36,7 +36,7 @@
 #include <x86_64/cpu.h>
 
 namespace Memory {
-    class PageTable;
+    struct PageTable;
 }
 
 /// Interrupt handler function found in `scheduler.asm`
