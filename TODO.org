@@ -5,6 +5,11 @@
 
 * TODO Redo entire vfs implementation, sort of
 
+NOTE: Something broke background processes entirely, and now just causes a page fault from the kernel, in the scheduler within =find_next_viable_process_after()=.
+Based on debug printouts, it appears files are being closed when they shouldn't be.
+Probably something to do with the terrible design of files and their storage/ownership right now, as well as the lifting of the major drivers from device to filesystem.
+So, let's fix the shit-show (not that we can, but it will keep me from blowing my brains out for another month (maybe)).
+
 #+begin_example
 Process 0 (Kernel Thread) Open Files
 `-- No open files
@@ -50,7 +55,7 @@ Process 2 Open Files (CURRENTLY a "sparse vector" of SysFD to ProcFD; seems like
 I spot a few problems here. First of all, a "non-standard" container
 type. BOO! Hard to understand, never explained in comments or code.
 Whoever wrote this must have been a real full-of-himself asshole.
-
+pp
 My problems with the current implementation, in no particular order:
 
 - Non-standard container type
