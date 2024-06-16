@@ -102,7 +102,7 @@ struct FIFOBuffer {
         memmove(&Data[0], &Data[byteCount], N - byteCount);
         Offset -= byteCount;
 
-        // Run processes waiting until aread from this socket with a
+        // Run processes waiting until a read from this socket with a
         // return value indicating that the syscall should be retried.
         for (pid_t pid : PIDsWaitingUntilRead) {
             auto* process = Scheduler::process(pid);

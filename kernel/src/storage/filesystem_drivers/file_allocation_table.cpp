@@ -443,7 +443,7 @@ std::shared_ptr<FileMetadata> FileAllocationTableDriver::traverse_path(std::stri
                    , Entry.LongFileName
                    );
             FileMetadata::FileType ftype = Entry.CE->directory() ? FileMetadata::FileType::Directory : FileMetadata::FileType::Regular;
-            return std::make_shared<FileMetadata>
+            return FileMetadata::Make
                        (ftype,
                         std::move(filename),
                         fsd(This.lock()),

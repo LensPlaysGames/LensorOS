@@ -221,6 +221,9 @@ struct VFS {
     }
 
 private:
+    // It is a shared_ptr so that we can easily keep references to individual
+    // elements past this vector's index and iterator invalidation.
+    /// NOTE: Just a vector, nothing to see here.
     std::sparse_vector<std::shared_ptr<FileMetadata>, nullptr, SysFD> Files;
     std::vector<MountPoint> Mounts;
 

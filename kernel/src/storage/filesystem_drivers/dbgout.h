@@ -22,6 +22,7 @@
 
 #include <debug.h>
 #include <integers.h>
+#include <storage/file_metadata.h>
 #include <storage/filesystem_driver.h>
 
 struct DbgOutDriver final : FilesystemDriver {

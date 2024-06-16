@@ -54,6 +54,14 @@ struct FileMetadata {
         if (FileDriver) FileDriver->close(this);
     }
 
+    static std::shared_ptr<FileMetadata> Make(FileType type, std::string name,
+                                              std::shared_ptr<FilesystemDriver> file_driver,
+                                              u64 file_size,
+                                              void *driver_data
+                                              ) {
+        return std::make_shared<FileMetadata>(type, name, file_driver, file_size, driver_data);
+    }
+
     usz offset { 0 };
 
     auto name() -> std::string_view { return Name; }

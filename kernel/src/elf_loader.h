@@ -400,7 +400,7 @@ namespace ELF {
         // Open stdin.
         vfs.add_file(vfs.StdinDriver->open("stdin"), process);
         // Open stdout and stderr
-        auto outmeta = std::make_shared<FileMetadata>(FileMetadata::FileType::Regular, "stdout", fsd(vfs.StdoutDriver), 0, nullptr);
+        auto outmeta = FileMetadata::Make(FileMetadata::FileType::Regular, "stdout", fsd(vfs.StdoutDriver), 0, nullptr);
         vfs.add_file(outmeta, process);
         vfs.add_file(std::move(outmeta), process);
         vfs.print_debug();

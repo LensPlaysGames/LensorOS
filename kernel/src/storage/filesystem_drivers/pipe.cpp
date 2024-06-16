@@ -110,22 +110,22 @@ auto PipeDriver::open(std::string_view path) -> std::shared_ptr<FileMetadata> {
     panic("TODO: Support opening named pipes");
     hang();
 
-    PipeBuffer* pipe = nullptr;
-    for (auto& existing_pipe : PipeBuffers)
-        if (std::string_view(existing_pipe.name) == path)
-            return existing_pipe.meta.lock();
-
-    if (FreePipeBuffers.empty()) {
-        pipe = new PipeBuffer();
-        //std::print("[PIPE]: Allocated new pipe buffer at {}\n", (void*)pipe);
-    } else {
-        pipe = FreePipeBuffers.back();
-        FreePipeBuffers.pop_back();
-        //std::print("[PIPE]: Re-used existing pipe buffer at {}\n", (void*)pipe);
-    }
-    auto meta = std::make_shared<FileMetadata>(FileMetadata::FileType::Regular, path, fsd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, pipe);
-    PipeBuffers.push_back({meta, path, pipe});
-    return meta;
+    //PipeBuffer* pipe = nullptr;
+    //for (auto& existing_pipe : PipeBuffers)
+    //    if (std::string_view(existing_pipe.name) == path)
+    //        return existing_pipe.meta.lock();
+    //
+    //if (FreePipeBuffers.empty()) {
+    //    pipe = new PipeBuffer();
+    //    //std::print("[PIPE]: Allocated new pipe buffer at {}\n", (void*)pipe);
+    //} else {
+    //    pipe = FreePipeBuffers.back();
+    //    FreePipeBuffers.pop_back();
+    //    //std::print("[PIPE]: Re-used existing pipe buffer at {}\n", (void*)pipe);
+    //}
+    //auto meta = FileMetadata::Make(FileMetadata::FileType::Regular, path, fsd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, pipe);
+    //PipeBuffers.push_back({meta, path, pipe});
+    //return meta;
 }
 
 ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
@@ -255,8 +255,8 @@ auto PipeDriver::lay_pipe() -> PipeMetas {
     static usz counter = 0;
     std::string path = std::format("panon{}", ++counter);
 
-    auto readMeta = std::make_shared<FileMetadata>(FileMetadata::FileType::Regular, path, fsd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, readEnd);
-    auto writeMeta = std::make_shared<FileMetadata>(FileMetadata::FileType::Regular, path, fsd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, writeEnd);
+    auto readMeta = FileMetadata::Make(FileMetadata::FileType::Regular, path, fsd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, readEnd);
+    auto writeMeta = FileMetadata::Make(FileMetadata::FileType::Regular, path, fsd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, writeEnd);
 
     //std::print("[PIPE]: lay_pipe()  \"{}\"  buffer={}  read={}  write={}\n", path, (void*)pipe, (void*)readEnd, (void*)writeEnd);
 

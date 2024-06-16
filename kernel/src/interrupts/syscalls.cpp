@@ -499,31 +499,31 @@ int sys$14_seek(ProcessFileDescriptor fd, ssz offset, int whence) {
     DBGMSG("[SYS$]:seek(): {}, offset={}, whence={}\n", fd, offset, get_seek_string(whence));
 
     VFS& vfs = SYSTEM->virtual_filesystem();
-    std::shared_ptr<FileMetadata> file = vfs.file(fd);
+    auto file = vfs.file(fd);
     if (!file) return 1;
 
     switch (whence) {
     case SEEK_CUR: {
         if (offset == 0) return 0;
-        usz current_offset = file.get()->offset;
+        usz current_offset = file->offset;
         // Cannot seek behind beginning of file...
         if (offset < 0 && ((usz)(-offset) > current_offset)) return 1;
         // FIXME: Cannot seek past end of file...
-        else if (current_offset + offset > file.get()->file_size()) return 1;
-        file.get()->offset += offset;
+        else if (current_offset + offset > file->file_size()) return 1;
+        file->offset += offset;
     } return 0;
 
     case SEEK_END: {
         // FIXME: Cannot seek past end of file...
         if (offset > 0) return 1;
-        file.get()->offset = file.get()->file_size() + offset;
+        file->offset = file->file_size() + offset;
     } return 0;
 
     case SEEK_SET: {
         if (offset < 0) return 1;
         // FIXME: Cannot seek past end of file...
-        if ((usz)offset >= file.get()->file_size()) return 1;
-        file.get()->offset = offset;
+        if ((usz)offset >= file->file_size()) return 1;
+        file->offset = offset;
     } return 0;
 
     default: break;
@@ -788,7 +788,7 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
 
         /// Return a file descriptor that references the client's socket data, but
         /// is a new file metadata.
-        auto f = std::make_shared<FileMetadata>(FileMetadata::FileType::Regular, "client_socket", fsd(SYSTEM->virtual_filesystem().SocketsDriver), 0, data);
+        auto f = FileMetadata::Make(FileMetadata::FileType::Regular, "client_socket", fsd(SYSTEM->virtual_filesystem().SocketsDriver), 0, data);
         auto fds = SYSTEM->virtual_filesystem().add_file(f);
         if (fds.invalid()) {
             std::print("[SYS$]:accept:ERROR: Could not add file to accept connection, sorry.\n");
