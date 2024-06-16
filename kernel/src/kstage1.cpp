@@ -52,6 +52,7 @@
 #include <storage/filesystem_drivers/file_allocation_table.h>
 #include <storage/storage_device_driver.h>
 #include <system.h>
+#include <tests.h>
 #include <uart.h>
 #include <utf.h>
 
@@ -653,6 +654,9 @@ void kstage2(BootInfo* bInfo) {
     enable_interrupt(IRQ_UART_COM1);
     enable_interrupt(IRQ_REAL_TIMER);
     enable_interrupt(IRQ_PS2_MOUSE);
+
+    // TODO: only if we want to, or whatever.
+    run_tests();
 
     //Memory::print_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     Memory::print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);

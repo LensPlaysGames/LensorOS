@@ -105,6 +105,7 @@ add_executable(
   src/storage/filesystem_drivers/pipe.cpp
   src/storage/filesystem_drivers/socket.cpp
   src/system.cpp
+  src/tests.cpp
   src/tss.cpp
   src/uart.cpp
   src/utf.cpp
