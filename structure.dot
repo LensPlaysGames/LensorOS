@@ -1,0 +1,116 @@
+digraph LensorOS {
+    graph [ rankdir=LR, overlap=scale ];
+
+    sys_open -> "VFS::open()";
+    sys_close -> "VFS::close()";
+    sys_read -> "VFS::read()";
+    sys_read -> "Scheduler::yield()"[style="dotted"];
+    sys_write -> "VFS::write()";
+    sys_write -> "Scheduler::yield()"[style="dotted"];
+#    sys_poke;
+    sys_exit -> "Scheduler::remove_process()";
+    sys_exit -> "Scheduler::yield()";
+    sys_map -> "Memory::map_pages()";
+    sys_map -> "Memory::request_pages()";
+    sys_unmap -> "Memory::unmap_pages()";
+    sys_unmap -> "Memory::free_pages()";
+#    sys_time;
+    sys_waitpid -> "Scheduler::yield()"[style="dotted"];
+    sys_fork -> "Scheduler::add_process()";
+    sys_fork -> "Memory::map_pages()";
+    sys_fork -> "Memory::request_pages()";
+    sys_fork -> "VFS::add_file()";
+    sys_exec -> "Scheduler::add_process()";
+    sys_exec -> "VFS::open()";
+    sys_exec -> "VFS::close()";
+    sys_exec -> "VFS::read()";
+    sys_exec -> "Memory::request_pages()";
+    sys_exec -> "Memory::map_pages()";
+    sys_exec -> "Scheduler::yield()";
+    sys_repfd -> "VFS::dup2()";
+    sys_pipe -> "VFS::add_file()";
+#    sys_seek;
+#    sys_pwd;
+    sys_dup -> "VFS::dup()";
+#    sys_uart;
+    sys_socket -> "VFS::add_file()";
+#    sys_bind;
+#    sys_listen;
+#    sys_connect;
+    sys_accept -> "VFS::add_file()";
+    sys_accept -> "Scheduler::yield()"[style="dotted"];
+#    sys_kqueue;
+#    sys_kevent;
+    sys_directory_data -> "VFS::directory_data()";
+
+    "Scheduler::remove_process()" -> "Process::destroy()";
+
+    "Process::destroy()" -> "Memory::free_pages()";
+    "Process::destroy()" -> "VFS::close()"[style="dotted"];
+
+    subgraph cluster_userspace {
+        label="Userspace";
+        sys_open;
+        sys_close;
+        sys_read;
+        sys_write;
+#        sys_poke;
+        sys_exit;
+        sys_map;
+        sys_unmap;
+#        sys_time;
+        sys_waitpid;
+        sys_fork;
+        sys_exec;
+        sys_repfd;
+        sys_pipe;
+#        sys_seek;
+#        sys_pwd;
+        sys_dup;
+#        sys_uart;
+        sys_socket;
+#        sys_bind;
+#        sys_listen;
+#        sys_connect;
+        sys_accept;
+#        sys_kqueue;
+#        sys_kevent;
+        sys_directory_data;
+    }
+
+    subgraph cluster_vfs {
+        label="Virtual File System";
+        "VFS::open()";
+        "VFS::close()";
+        "VFS::read()";
+        "VFS::write()";
+        "VFS::directory_data()";
+        "VFS::add_file()";
+        "VFS::dup()";
+        "VFS::dup2()";
+    }
+
+    subgraph cluster_sched {
+        label="Scheduler";
+        "Scheduler::add_process()";
+        "Scheduler::remove_process()";
+        "Scheduler::yield()";
+    }
+
+    subgraph cluster_proc {
+        label="Process";
+        "Process::destroy()";
+    }
+
+    subgraph cluster_pmm {
+        label="Physical Memory Manager";
+        "Memory::request_pages()";
+        "Memory::free_pages()";
+    }
+
+    subgraph cluster_vmm {
+        label="Virtual Memory Manager";
+        "Memory::map_pages()";
+        "Memory::unmap_pages()";
+    }
+}
