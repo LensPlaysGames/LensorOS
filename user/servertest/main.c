@@ -8,7 +8,7 @@
 #define SOCK_ADDR_MAX_SIZE 16
 
 int main(int argc, char **argv) {
-  printf("server starting...\n");
+  printf("[SERVE]: starting...\n");
   fflush(stdout);
   int sockFD = sys_socket(0, 0, 0);
 
@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
   changelist[0].Filter.ProcessFD = sockFD;
   sys_kevent(listen_queue, changelist, 1, NULL, 0);
 
-  printf("Waiting for a READY_TO_READ event to come in on the listen_queue...\n");
+  printf("[SERVE]: Waiting for a READY_TO_READ event to come in on the listen_queue...\n");
   fflush(stdout);
   const size_t eventlist_size = 4;
   Event eventlist[eventlist_size];
@@ -47,30 +47,30 @@ int main(int argc, char **argv) {
   while ((status = sys_kevent(listen_queue, NULL, 0, eventlist, eventlist_size)) != 0)
     ;
 
-  printf("Waiting for a connection to come in...\n");
+  printf("[SERVE]: Waiting for a connection to come in...\n");
   sockaddr connected_addr;
   size_t connected_addrlen = sizeof(sockaddr);
   int clientFD = -1;
   do {
-    printf("Accepting...\n");
+    printf("[SERVE]: Accepting...\n");
     fflush(stdout);
     // We will block here until a connection is made.
     clientFD = sys_accept(sockFD, &connected_addr, &connected_addrlen);
-    printf("  accept returned %d\n", clientFD);
+    printf("[SERVE]: accept returned %d\n", clientFD);
     fflush(stdout);
   }
   while (clientFD == -2)
     ;
   if (clientFD < 0) {
     close(sockFD);
-    printf("`accept` failed: %d\n", clientFD);
+    printf("[SERVE]: `accept` failed: %d\n", clientFD);
     return 1;
   }
-  printf("Connection accepted: clientFD=%d\n", clientFD);
+  printf("[SERVE]: Connection accepted: clientFD=%d\n", clientFD);
 
   uint64_t payload[2] = {69, 420};
 
-  printf("Server writing...\n");
+  printf("[SERVE]: writing...\n");
   fflush(stdout);
 
   write(clientFD, payload, sizeof(payload));
@@ -78,16 +78,16 @@ int main(int argc, char **argv) {
   unsigned char data[512];
   int bytes_read = 0;
 
-  printf("Server reading...\n");
+  printf("[SERVE]: reading...\n");
   fflush(stdout);
   bytes_read += read(clientFD, data, 512);
 
-  printf("Server read %d bytes from socket\n", bytes_read);
+  printf("[SERVE]: read %d bytes from socket\n", bytes_read);
   fflush(stdout);
 
   close(clientFD);
 
-  printf("Server shutting down\n");
+  printf("[SERVE]: shutting down\n");
   close(sockFD);
 
   return 0;
