@@ -1,0 +1,379 @@
+#+title: LensorOS TODO 2023
+#+author: Lens
+#+description: What the fuck we should be doing for LensorOS in 2023
+#+created: <2023-01-12 Thu>
+
+* DONE Sockets for interprocess communication
+
+Basically, UNIX sockets.
+
+Here's the idea:
+- The Window Server opens a unix socket.
+- The Window Server binds the opened socket to ~/window~ or something similar.
+- The Window Server listens on the opened socket.
+- The Window Server waits for a connection to accept.
+- A GUI program opens a unix socket.
+- A GUI program connects the opened socket to ~/window~.
+- The Window Server accepts the connection
+- A GUI program writes a "new window" request.
+- The Window Server reads a new window request, and writes back the data pertaining to the window's framebuffer.
+- A GUI program now has it's window information; a framebuffer to write to, size, etc. New requests for size changes, position changes, and more could be made. It can also receive data from The Window Server (like events).
+
+[2023-04-09 Sun 13:33]
+
+Well, we are getting there, but it's not perfect. A lot of the infrastructure is in place, but it's not all meshing together correctly (yet).
+
+Right now, after the server calls ~listen~ the socket is being closed, somehow. I'm not really sure why, since it /should/ still be in the VFS' list of files, and therefore a shared_ptr to it should exist. It's odd.
+
+[2023-04-13 Thu 18:30]
+
+Well, local sockets /appear/ to be working, at least for server-to-client communications. POGGERS! Only took me a week, lol.
+
+[2023-04-14 Fri 10:45]
+
+- FIXME When closing a client-type, connected socket we need to remove it from ConnectionQueue of the server socket it's connected to. When closing a server-type socket that has connections pending, we need to decide how to handle them; should we process them and only then close the socket once the queue is empty, or should we discard them?
+
+[2023-04-14 Fri 12:06]
+
+There's still issues, but I'm calling it "working" now.
+
+DONE [2023-04-22 Sat 11:31]
+
+* DONE E1000 :: Test interrupts
+
+Basically, there is an interrupt handler installed and supposedly some interrupts are enabled; it'd be great if we could somehow test this, but I don't know enough about networking to actually figure out how to trigger an interrupt.... lmao.
+
+[2023-04-01 Sat 12:55]
+
+It works! We are even getting an ARP reply :)
+
+[2023-04-09 Sun 13:26]
+
+* DONE E1000 :: Add `State` member and slowly walk states upward
+
+#+begin_src c
+  enum {
+      UNINITIALISED,
+      BASE_ADDRESS_DECODED,
+      RESET,
+      EEPROM_PROBED,
+      MAC_ADDRESS_DECODED,
+      RX_DESCS_INITIALISED,
+      TX_DESCS_INITIALISED,
+      INTERRUPTS_ENABLED,
+      INITIALISED,
+  }
+#+end_src
+
+Then, we can assert or something at the beginning of a function that expects up to one of these to be done. For example, in `read_eeprom`, we can assert that the current state is `EEPROM_PROBED` or greater. In `read_command` and `write_command`, we assert that the current state is `BASE_ADDRESS_DECODED` or greater. Or something of that nature.
+
+[2023-03-30 Thu 12:36]
+
+* TODO Use ~[[gnu::packed]]~ instead of ~__attribute__((packed))~
+
+[2023-03-29 Wed 12:51]
+
+* DONE Processes, Files, and Concurrency
+
+Deadlocks is hard, mmkay?
+
+Basically, C++ doesn't clean up or call dtors or anything when calling a noreturn function...
+
+So basically we have to do this ourselves.
+
+Currently, this is causing issues in the PipeDriver. The PipeDriver::read() may call `yield`, a noreturn function. However, in the VFS::read() function, we take a shared_ptr to the file. When the pipe driver yields, the shared_ptr *doesn't* get cleaned up, and it becomes a dangling reference, causing the file to never be freed.
+
+[2023-03-24 Fri 09:22]
+
+Alright, we /are/ now freeing pipes! Hurray. It /was/ the issue described above: yield never cleaning up, meaning things didn't get cleaned up. HOWEVER! There is still /some/ sort of bug, evident in the fact that a deadlock occurs when a shell starts a shell that starts a process. Basically, I think what's happening is that `dup2` *doesn't* close the file description it's replacing. This means that that file descriptor never gets closed, and it's corresponding shared_ptr in the Files table of the VFS never gets cleaned up, and therefore the underlying pipe can never truly close the write end, meaning the read end will forever block. One trick we could use is to just silently open a new fd and move the replaced fd into that one, that way, upon process clean-up, it would be closed. This isn't ideal. A better system would be to maybe close the replaced file somehow?
+
+[2023-03-25 Sat 08:56]
+
+I believe this is resolved now! Pipes now block-on-read then run-on-write. Even the input driver got the same upgrade. Thinking about it: in the future, it may even be beneficial to actually put this blocking mechanism at the level of file descriptions in the kernel that are modified by the VFS. So ~FileMetadata~ would gain a ~std::vector<WaitEntry> Waiting~ member, where each ~WaitEntry~ contains a PID describing the waiting process as well as some mix of file events it is waiting for. Then the VFS could just handle this, as the device drivers that block could just return -2 or some other specific value to signify they should block.
+
+DONE [2023-04-04 Tue 12:08]
+
+* DONE ~waitpid~ isn't implemented right
+
+Basically, ~waitpid~ is /supposed/ to be able to return the status of a child process *even if it has already exited*. This currently doesn't work, because as soon as a process calls `exit`, it is completely cleaned up, in it's entirety.
+
+We need the concept of zombies. So basically each process needs two new members: a pointer to a parent process and a vector of ZombieState structures, each of which contain a PID and a return status. When a process exits, it needs to add a a zombie state entry into the parent process. This entry will contain it's pid and return status, which is enough information for waitpid to be implemented.
+
+[2023-03-22 Wed 15:26]
+
+I've added zombies. waitpid more or less has the function we need it to, now.
+
+[2023-03-24 Fri 09:22]
+
+* DONE C++ string SSO breaks when appending a single character to a 22/23 byte string
+
+[2023-03-21 Tue 17:54]
+
+It was actually fixed yesterday, on stream by Sirraide. Thank God, I
+probably never would have found this.
+
+DONE [2023-03-22 Wed 14:57]
+
+* TODO C++ Posix Shell (xish)
+
+This just needs expanded in a lot of ways.
+
+** TODO Write a proper lexer
+
+Being able to lex "stream-wise" where we gather a token which has a type and value (tagged union) will make parsing 100% easier.
+
+** TODO Actually search something akin to PATH to find executables to run!
+
+Currently, we just pass the command directly through to ~exec~.
+
+[2023-03-21 Tue 17:11]
+
+* DONE C++ programs in userspace break to all hell
+
+They are trying to link with ~-lstdc++~ and ~-lm~...
+
+[2023-03-19 Sun 11:22]
+
+In ~gcc-12.1.0/libstdc++-v3/crossconfig.m4~, the LensorOS toolchain adds the following.
+#+begin_src diff
+diff -bruN -x '*.cache' untouched/gcc-12.1.0/libstdc++-v3/crossconfig.m4 gcc-12.1.0/libstdc++-v3/crossconfig.m4
+--- untouched/gcc-12.1.0/libstdc++-v3/crossconfig.m4	2022-05-06 00:31:00.000000000 -0700
++++ gcc-12.1.0/libstdc++-v3/crossconfig.m4	2022-10-26 13:04:28.979947700 -0700
+@@ -183,6 +183,12 @@
+ 	;;
+     esac
+     ;;
++  *-lensor*)
++    GLIBCXX_CHECK_COMPILER_FEATURES
++    GLIBCXX_CHECK_LINKER_FEATURES
++    GLIBCXX_CHECK_MATH_SUPPORT
++    GLIBCXX_CHECK_STDLIB_SUPPORT
++    ;;
+   *-linux* | *-uclinux* | *-gnu* | *-kfreebsd*-gnu | *-cygwin* | *-solaris*)
+     GLIBCXX_CHECK_COMPILER_FEATURES
+     GLIBCXX_CHECK_LINKER_FEATURES
+#+end_src
+
+I /believe/ the ~GLIBCXX_CHECK_MATH_SUPPORT~ is causing libstdc++-v3 to search the sysroot for =libm=. There is currently no =libm= in the sysroot, which causes GCC to want to use GLIBC/GNU libm. GNU libm is then expected to be on the target (LensorOS), even though it isn't, which means at compile-time, when we try to use G++, it assumes it must use GNU libm, which can't be found, and that causes errors.
+
+Presumably, the same thing is happening with the ~GLIBCXX_CHECK_STDLIB_SUPPORT~.
+
+[2023-03-19 Sun 14:42]
+
+The problem had more to do with the fact that g++ just links with those things by default.
+
+We fixed it by providing both libm and libstdc++ in the sysroot :&.
+
+O! And don't let me forget: I also added ~-fno-stack-protector~, ~-fno-exceptions~, ~-fno-rtti~
+
+DONE [2023-03-21 Tue 17:09]
+
+* DONE Actually install `root` subdirectory onto the system root...
+
+One interesting thing to note: We may have to hardcode some basic symlinks for now in the "mount prefix" level of things in the VFS in order for `/inc` to access what will actually amount to `/fs0/inc`, or something similar.
+
+[2023-03-12 Sun 12:21]
+
+There is now `mcopy_glob` which helps a ton with things like this.
+
+NOTE: We don't /actually/ install the sysroot yet, as it adds a lot of time to the build process, and until we build software from within LensorOS for LensorOS, this won't be a problem. Or until dynamic linking, when shared object files must be able to be resolved at runtime.
+
+DONE [2023-03-19 Sun 14:48]
+
+* DONE Free Physical Memory
+
+Kind of embarrassing, but ~request_pages()~ never actually resets the page it's looking for memory, so it just keeps getting bigger until it's too big... Even though we have `free_pages`, it isn't interacting in any way.
+
+[2023-03-08 Wed 23:50]
+
+I did it! It was really hard, but it turns out I was assuming ~Memory::request_pages()~ would return zeroed memory; it doesn't. Fixing that made reclaiming physical memory quite easy.
+
+DONE [2023-03-19 Sun 14:50]
+
+* TODO Time Syscall(s)
+
+Something to get realtime would be a minimum, I think.
+
+[2023-03-01 Wed 20:19]
+
+We have /one/... It gets the realtime using the RTC chip.
+
+Really what would let me mark this as "done" is a way to get a UNIX timestamp, or something of that nature.
+
+[2023-03-19 Sun 14:50]
+
+* DONE Directory Traversal (syscalls, or something)
+
+Maybe reading a directory doesn't return anything filesystem specific; rather, it builds a custom structure containing basic data of all files within that directory and returns that in a specified format. So the file would still be opened, could still be fread(), but it would contain the list of filesystem entries in the directory.
+
+[2023-03-01 Wed 20:15]
+
+We've now got the ~directory_data~ syscall and a new pure virtual in ~FileSystemDriver~, and a basic ~ls~ has been implemented using it!
+
+[2024-03-03 Sun 13:33]
+
+* DONE LensorOS partition needs fleshing out
+
+First and foremost: a lot of the boot media that we used to support *doesn't* support multiple partitions. For example: booting from the raw EFI image, booting from an El-Torito ISO cd, etc... So we will need to begin to separate two paths the kernel takes: one when the LensorOS partition is present, and one when it isn't. The one when it isn't will have to reduce it's expectations about how to boot the system: we should only try to open files present in the EFI partition. This is currently "hackily" done by having =blazeit= and =stdout= executables in the top level of both partitions...
+
+[2023-02-23 Thu 16:44]
+
+This has been resolved, I think.
+
+DONE [2023-03-19 Sun]
+
+* DONE FAT driver is a joke
+
+It doesn't traverse directories, it doesn't do any caching, and it's all stuffed into one big function. Needs refactored so that the directory iteration can happen on any directory, first of all.
+
+[2023-02-10 Fri 15:23]
+
+Sirraide helped immensely with directory iteration. The driver is still measly and horrible, can't even write things, but it's doing better than it was...
+
+[2023-03-08 Wed 23:47]
+
+* TODO Power Off, Sleep
+
+I've already done a lot of "grunt work" to define ACPI table header structures and such, so it should be relatively easy to get the FADT (fixed ACPI descriptor table). From there, we can start checking it's fields. I even wrote great docs on what each field is and what it's used for, so this really should be as easy as writing an API to interact with this and then using it.
+
+This would be a good time to use the kernel renderer, in order to draw over userspace and confirm that the user would like to shut down.
+
+[2023-02-07 Tue 11:07]
+
+Well, it turns out this is harder than it seems. To restart it's actually not too bad (just parse FADT table, read a few members, bish, bash, bosh). But to shutdown requires interpreting AML (ACPI Machine Language), which means writing an interpreter for this language, a parser, etc... This is because the values needed to actually shutdown the PC are stored in AML within the DSDT which is found in the FADT.
+
+[2023-04-04 Tue 12:10]
+
+https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/07_Power_and_Performance_Mgmt/oem-supplied-system-level-control-methods.html
+
+Basically, we need to call ~_TTS~ (transition to sleep) followed by ~_PTS~ (prepare to sleep), and then we send some bytes on the bus and we are good to go.
+
+https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/16_Waking_and_Sleeping/Waking_and_Sleeping.html
+
+Interesting quote from above:
+#+begin_quote
+Prior to entering a sleeping state (S1-S4), OSPM will execute OEM-specific AML/ASL code contained in the _PTS (Prepare To Sleep) control method. One use of the _PTS control method is that it can indicate to the embedded controller what sleeping state the system will enter. The embedded controller can then respond by executing the proper power-plane sequencing upon sleep state entry.
+#+end_quote
+
+So, this is saying that, to shutdown, we don't /really/ need to call ~_PTS~, since shutdown is state five (S5).
+
+HOWEVER, In a previous section (7.4.1 \_PTS (Prepare To Sleep)) it states:
+#+begin_quote
+The _PTS control method is executed by the OS during the sleep transition process for S1, S2, S3, S4, and for orderly S5 shutdown.
+#+end_quote
+
+So, it /wants/ you to call ~_PTS~ for "orderly" S5 shutdown. This seems like the hardware implementation will decide whether or not to allow for a disorderly shutdown or not. To be safe, we /should/ call it.
+
+Here's what I'm going to do, I think:
+- Make a "you may now turn the power off" screen or something from the kernel when shut down after all devices are closed safely (disk caches flushed, etc).
+- Fry, cry, and die inside because I'll never be able to interpret AML most likely
+- Put AML interpreter, parsing of DSDT, and call Prepare To Sleep before actual automatic shutdown on the backburner.
+
+https://github.com/openbsd/src/blob/master/sys/dev/acpi/dsdt.c
+
+OpenBSD has implemented their own AML interpreter, the code of which is incredibly useful in figuring out even what kind of language AML is.
+It appears AML is (mostly) a declarative langauge with recursively nested definition structures, all of which define /named things/ that go into a /namespace/.
+
+So, the AML interpreter has an environment where things may be defined into and/or referenced from; this reminds me of a LISP environment.
+
+[2024-03-03 Sun 13:43]
+
+* DONE LensorOS Simple Data Partition
+
+Have another partition installed onto the GPT disk by default, other than the EFI system one. This one should be used for data and userspace stuff separate from the bootloader/kernel. At first, we really just need to store a font there for userspace to load, and subsequently use to display user input...
+
+Reasons for this:
+
+1. ext2 is a long-term goal, but not achievable now. At any point, we can switch to ext2, migrate codebases to use directories longer than eight bytes, etc.
+2. Quick to implement (mtools + creategpt is enough)
+3. Provides a "root" filesystem that can be messed around in without messing with bootloader/kernel. This will be important when we gain AHCI write capabilities, as one could technically botch the kernel itself and make it impossible to reboot. Then, in file-handling syscalls, we could validate that `/fs0` isn't the path, so only the kernel can read/write itself, effectively.
+
+[2023-02-07 Tue 10:41]
+
+We are able to generate a data partition and boot with it installed on a disk, along with the EFI system partition. All still goes well. There *does* still need to be some work done, but that's covered in above TODOs.
+
+DONE [2023-02-23 Thu 16:41]
+
+* DONE Fix bug in ~<format>~ OR SOMEWHERE that is causing graphical issues (fix #18)
+
+[2023-01-12 Thu 10:07]
+
+NOTE: This is A. no longer causing graphical issues: the kernel no longer deals with the graphical framebuffer after boot and B. "fixed" (by avoiding the cause of the problem) using ~-mno-sse~, ~-mno-sse2~, AND ~-fno-tree-vectorize~ on BOTH the interrupts and kernel targets.
+
+[2023-02-07 Tue 10:40]
+
+* DONE Stabilise forking/execcing of programs; it's currently "working" but scuffed.
+
+This one is going to take a long while, as I suspect there's been a slowly but ever growing pile of bugs, memory related and logic related, that has accumulated in the codebase as I've written it without extensively using large parts of it (we are just now able to really start using the ELF loader and scheduler how they are supposed to, VFS is miles behind what it will be, etc).
+
+[2023-01-12 Thu 10:07]
+
+It's definitely working a lot better than it was before, but there are still occasional errors with it. Ideally, this whole "pipeline" would be very solid and dependable.
+
+[2023-02-07 Tue 10:39]
+
+It is **much** better than it was before, as of today.
+
+[2023-03-01 Wed 20:16]
+
+* DONE Improve scheduler context switch to include any extra registers that are present according to ~cpuid~ and such.
+
+Basically, there *isn't* any context switching for anything other than general purpose registers, and it would be great to fix that.
+
+[2023-01-12 Thu 10:08]
+
+Luckily, we can kind of do this incrementally: because we know how to write C code that only uses general registers, we can save the current state of general registers, do whatever we need to save/restore the fancy registers from C using general registers. Then we can update the general registers from the context we are switching to. This reduces the complexity of having to do the conditional checks from assembly; it can all happen from C(++).
+
+[2023-02-07 Tue 10:38]
+
+I've added the ability to save/restore using ~fxsave64~ and friends. This, however, unearthed a HUGE glaring problem in the current kernel heap: there is no way to actually align things. So yeah, it'd be great to be able to ask for aligned memory. HOWEVER! This is a huge stupid problems because it means that `split` may actually need to create a header before as well as a header after, in order to properly return an aligned address for the payload.
+
+[2023-03-08 Wed 23:49]
+
+We can now actually align things! Hurray :&
+
+DONE [2023-04-04 Tue 12:11]
+
+* DONE Make basic shell program that is run as init process, or whatever.
+
+There are a few pieces to this, really.
+
+1. Gather input from user, use it to ~fork~ current and ~exec~ a new program
+
+   We already have a "demo" of this in the ~stdout~ user program.
+
+   It just works on characters; all we have to do is make it collect characters into a command buffer until a newline is reached, in which case we can actually run the command in the command buffer, clear it, then go back.
+
+   [2023-01-12 Thu 10:15]
+
+2. Show the user the data, somehow.
+
+   Really, it would be ideal if we could draw to the screen (a graphical terminal).
+
+   However, it may be easier (at first) to simply use UART with terminal escape codes to properly redraw a prompt and such. Not ideal, but a start.
+
+   For graphical, we would need to pass a framebuffer address and it's two dimensional size, and then the program writes into that. This also means we need to map the framebuffer in the program's page table, when loading the executable. For now, we can do this for every process, but it'd be ideal if it was only mapped for GUI applications (I can see why Windows has the COFF subsystem thing, now).
+
+   It may be a smart idea to abstract display to it's own API, that way it can be implemented for either a framebuffer or a text terminal.
+
+  [2023-01-12 Thu 10:18]
+
+3. Pipes
+
+   Pipes are a way for a parent process and a child process to "communicate".
+
+   Basically, we want the parent to open a pipe before forking, then the child can open the write end and the parent can open the read end.
+
+   INNER DONE: It would be really cool if the shell could update what the process is writing to stdout *as it's running* instead of only once the program exits. Just a thought.
+
+   Anyway, then we can redirect stdout as the write end of the pipe, and exec into the program the user command signals. This way the shell will be able to collect all ~stdout~ and show it to the user, as well. We should almost definitely also handle stderr in this same way.
+
+   [2023-01-12 Thu 10:20]
+
+
+
+Okay; this is done now. We even pass graphical framebuffer information.
+
+Only took a month :Þ
+
+[2023-02-07 Tue 10:35]
