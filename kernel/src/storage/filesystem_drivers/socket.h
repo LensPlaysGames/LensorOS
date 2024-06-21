@@ -153,6 +153,7 @@ struct FIFOBuffer {
     }
 };
 
+// NOTE: We are trying to keep "SocketBuffers" as a single page of memory.
 #define SOCKET_TX_BUFFER_SIZE (PAGE_SIZE / 2)
 #define SOCKET_RX_BUFFER_SIZE ((PAGE_SIZE / 2) - sizeof(usz))
 struct SocketBuffers {
@@ -233,6 +234,7 @@ struct SocketData {
     bool WaitingOnConnection { false };
 
     // TODO: Use ring buffer instead?
+    // NOTE: This is not a real deque, it's a container I falsely named a deque.
     std::deque<SocketConnection> ConnectionQueue;
 
     enum {

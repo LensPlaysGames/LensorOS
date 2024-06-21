@@ -35,7 +35,9 @@ std::shared_ptr<FileMetadata> SocketDriver::open(std::string_view path) {
     // PID as an argument to every single storage device driver, which is
     // probably a good idea honestly.
     data->PID = Scheduler::CurrentProcess->value()->ProcessID;
-    return FileMetadata::Make(FileMetadata::FileType::Regular, "new_socket", fsd(SYSTEM->virtual_filesystem().SocketsDriver), 0, data);
+    // NOTE: File size has to be non-zero to make sure we don't return early
+    // from `read` syscall or any other similar file size checks.
+    return FileMetadata::Make(FileMetadata::FileType::Regular, "new_socket", fsd(SYSTEM->virtual_filesystem().SocketsDriver), SOCKET_RX_BUFFER_SIZE, data);
 }
 
 void SocketDriver::close(FileMetadata* meta) {
