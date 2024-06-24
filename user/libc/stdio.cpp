@@ -59,26 +59,27 @@ _IO_File::_IO_File(_IO_fd_t fd, Buffering buffering_mode) {
     __f_eof = 0;
     __f_has_ungotten = 0;
 
-    /// Write buffer.
-    ///
-    /// We use `malloc()` instead of `new` for the buffers because we might
-    /// need to `realloc()` them later on.
-    /// TODO: Only allocate a write buffer if the stream is open for writing.
+    // TODO: Only allocate buffers if the stream is open for that particular
+    // buffer's purpose (i.e. reading, writing). For now, we allocate all
+    // buffers.
+
+    /// Write Buffer
+    // We use `malloc()` instead of `new` for the buffers because we might
+    // need to `realloc()` them later on. Oh, and because it's just better.
     __wbuf.__buf = static_cast<char*>(malloc(BUFSIZ));
     __wbuf.__cap = BUFSIZ;
     __wbuf.__offs = 0;
 
-    /// Read buffer.
-    /// TODO: Only allocate a read buffer if the stream is open for reading.
+    /// Read Buffer
     __rdbuf.__buf = static_cast<char*>(malloc(BUFSIZ));
     __rdbuf.__cap = BUFSIZ;
     __rdbuf.__start = 0;
     __rdbuf.__offs = 0;
 
-    /// File descriptor.
+    /// File Descriptor
     __fd = fd;
 
-    /// Flags.
+    /// Flags
     _PushIgnoreWarning("-Wconversion")
     __f_buffering = buffering_mode;
     _PopWarnings()
