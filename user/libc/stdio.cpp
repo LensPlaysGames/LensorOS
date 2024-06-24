@@ -541,6 +541,12 @@ ssize_t _IO_File::write_internal(const char* __restrict__ buffer, size_t count) 
     return ssize_t(count);
 }
 
+constexpr static char __digit_from_value(auto value) {
+    if (value < 10) return (char)('0' + (unsigned char)value);
+    if (value < 16) return (char)('a' + (unsigned char)value);
+    return '_';
+}
+
 /// ===========================================================================
 ///  C Interface.
 /// ===========================================================================
@@ -725,12 +731,6 @@ int sscanf(const char* __restrict__ str, const char* __restrict__ format, ...) {
     auto ret = vsscanf(str, format, args);
     va_end(args);
     return ret;
-}
-
-constexpr static char __digit_from_value(auto value) {
-    if (value < 10) return (char)('0' + (unsigned char)value);
-    if (value < 16) return (char)('a' + (unsigned char)value);
-    return '_';
 }
 
 int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list args) {
