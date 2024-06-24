@@ -77,11 +77,11 @@ public:
     static std::sparse_vector<_IO_File*, nullptr> open_files;
     static std::recursive_mutex big_file_lock;
 
-    /// Copying a FILE is nonsense.
+    /// Disallow copying a FILE.
     _IO_File(const _IO_File&) = delete;
     _IO_File& operator=(const _IO_File&) = delete;
 
-    /// We can't move it either because of the mutex.
+    /// Disallow moving a FILE (because of the mutex).
     _IO_File(_IO_File&&) = delete;
     _IO_File& operator=(_IO_File&&) = delete;
 
