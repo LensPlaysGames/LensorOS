@@ -186,8 +186,8 @@ void sys$5_exit(int status) {
     {
         pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
         bool success = Scheduler::remove_process(pid, status);
-        if (!success){
-            std::print("[SYS$]:exit: Failure to remove process\n");
+        if (not success){
+            std::print("[SYS$]:exit: Failure to remove process {}\n", pid);
         }
         else {
             DBGMSG("[SYS$]:exit({}) -- Removed process {}\n", status, pid);
@@ -223,7 +223,7 @@ void* sys$6_map(void* address, usz size, u64 flags) {
     void* paddr = Memory::request_pages(pages);
 
     // If address is NULL, pick an address to place memory at.
-    if (!address) {
+    if (not address) {
         address = (void*)process->next_region_vaddr;
         process->next_region_vaddr += pages * PAGE_SIZE;
     }
@@ -270,7 +270,7 @@ void sys$7_unmap(void* address) {
     // TODO: If a single program is freeing invalid addresses over and
     // over, it's a good sign they are a bad actor and should maybe
     // just be stopped. Maybe keep count in process struct?
-    if (!region) return;
+    if (not region) return;
 
     // Unmap memory from current process page table.
     // Don't forget to unmap all pages!
@@ -293,7 +293,7 @@ void sys$8_time(Time::tm* time) {
            "\n"
            , (void*) time
            );
-    if (!time) { return; }
+    if (not time) return;
     // FIXME: Validate time pointer
     Time::fill_tm(time);
 }
@@ -328,7 +328,7 @@ int sys$9_waitpid(pid_t pid) {
     // may be returned by the waited-upon process. We need to return
     // something here or signify somehow before returning that waitpid had
     // this failure.
-    if (!process) {
+    if (not process) {
         std::print("[SYS$]:ERROR:waitpid: Could not find process at PID {}\n", pid);
         return -1;
     }
@@ -380,7 +380,7 @@ void sys$11_exec(const char *path, const char **args) {
                   : "=r"(cpu)
                   );
     DBGMSG(sys$_dbgfmt, 11, "exec");
-    if (!path) {
+    if (not path) {
         std::print("[EXEC]: Can not execute NULL path\n");
         return;
     }
@@ -393,7 +393,7 @@ void sys$11_exec(const char *path, const char **args) {
                , path
                );
     usz i = 0;
-    for (const char **args_it = args; args_it && *args_it; ++args_it)
+    for (const char **args_it = args; args_it and *args_it; ++args_it)
         std::print("    {}: \"{}\"\n", i++, *args_it);
     std::print("  endargs\n");
 #endif
@@ -412,7 +412,7 @@ void sys$11_exec(const char *path, const char **args) {
         {   // We create copies of the userspace buffer(s), because during
             // replacing the userspace process, any data within it is
             // invalidated.
-            for (const char **args_it = args; args_it && *args_it; ++args_it)
+            for (const char **args_it = args; args_it and *args_it; ++args_it)
                 args_vector_impl.push_back(*args_it);
 
             for (const auto& s : args_vector_impl)
@@ -421,7 +421,7 @@ void sys$11_exec(const char *path, const char **args) {
 
         // Replace current process with new process.
         bool success = ELF::ReplaceUserspaceElf64Process(process, fds.Process, args_vector);
-        if (!success) {
+        if (not success) {
             // TODO: ... Unrecoverable, terminate the program, somehow.
             std::print("[EXEC]: Failed to replace process and parent is now unrecoverable, terminating.\n");
             // TODO: Mark for destruction (halt and catch fire).
@@ -445,7 +445,7 @@ void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
     DBGMSG("  fd: {}, replaced: {}\n\n", fd, replaced);
     Process* process = Scheduler::CurrentProcess->value();
     bool result = SYSTEM->virtual_filesystem().dup2(process, fd, replaced);
-    if (!result) {
+    if (not result) {
         std::print("  ERROR OCCURED: repfd failed (pid={}  fd={}  replaced={})\n", process->ProcessID, fd, replaced);
         for (const auto& [procfd, sysfd] : process->FileDescriptors.pairs())
             std::print("  {}: {}\n", procfd, sysfd);
@@ -483,7 +483,7 @@ static const char * seek_strings[] = {
     [SEEK_SET] = "BEGINNING",
 };
 const char *get_seek_string(int whence) {
-    if (whence < 0 || whence > SEEK_SET) return "INVALID";
+    if (whence < 0 or whence > SEEK_SET) return "INVALID";
     return seek_strings[whence];
 }
 
@@ -500,14 +500,14 @@ int sys$14_seek(ProcessFileDescriptor fd, ssz offset, int whence) {
 
     VFS& vfs = SYSTEM->virtual_filesystem();
     auto file = vfs.file(fd);
-    if (!file) return 1;
+    if (not file) return 1;
 
     switch (whence) {
     case SEEK_CUR: {
         if (offset == 0) return 0;
         usz current_offset = file->offset;
         // Cannot seek behind beginning of file...
-        if (offset < 0 && ((usz)(-offset) > current_offset)) return 1;
+        if (offset < 0 and ((usz)(-offset) > current_offset)) return 1;
         // FIXME: Cannot seek past end of file...
         else if (current_offset + offset > file->file_size()) return 1;
         file->offset += offset;
@@ -540,7 +540,7 @@ bool sys$15_pwd(char *buffer, usz numBytes) {
     DBGMSG(sys$_dbgfmt, 15, "pwd");
     DBGMSG("[SYS$]:pwd(): buffer={}, numBytes={}\n", (void*)buffer, numBytes);
 
-    if (!buffer || !numBytes)
+    if (not buffer or not numBytes)
         return false;
 
     Process *process = Scheduler::CurrentProcess->value();
@@ -587,7 +587,7 @@ ProcFD sys$18_socket(int domain, int type, int protocol) {
     DBGMSG(sys$_dbgfmt, 18, "socket");
     auto& vfs = SYSTEM->virtual_filesystem();
     auto socket = vfs.SocketsDriver->socket((SocketType)domain, type, protocol);
-    if (!socket) {
+    if (not socket) {
         std::print("[SYS$]:socket:ERROR: Could not open new socket!\n");
         return ProcFD::Invalid;
     }
@@ -614,10 +614,10 @@ int sys$19_bind(ProcFD socketFD, const SocketAddress* address, usz addressLength
     static constexpr const int error {-1};
     DBGMSG(sys$_dbgfmt, 19, "bind");
     // TODO: validate address pointer
-    if (!address) return error;
+    if (not address) return error;
     auto& vfs = SYSTEM->virtual_filesystem();
     auto file = vfs.file(socketFD);
-    if (!file) {
+    if (not file) {
         std::print("[SYS$]:bind:ERROR: File descriptor invalid.\n");
         return error;
     }
@@ -635,7 +635,7 @@ int sys$19_bind(ProcFD socketFD, const SocketAddress* address, usz addressLength
     // (or somewhere) so that this socket can be referred to by the
     // bound address. Also ensure no duplicate bindings.
     // FIXME/TODO: Handle `addressLength` properly...
-    if (!vfs.SocketsDriver->bind(data, *address)) {
+    if (not vfs.SocketsDriver->bind(data, *address)) {
         std::print("[SYS$]:bind: Socket driver failed to bind socket {}\n", socketFD);
         return error;
     }
@@ -652,7 +652,7 @@ int sys$20_listen(ProcFD socketFD, int backlog) {
     DBGMSG(sys$_dbgfmt, 20, "listen");
 
     auto file = SYSTEM->virtual_filesystem().file(socketFD);
-    if (!file) {
+    if (not file) {
         std::print("[SYS$]:listen:ERROR: File descriptor invalid.\n");
         return error;
     }
@@ -692,14 +692,14 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* givenAddress, usz addre
     DBGMSG(sys$_dbgfmt, 21, "connect");
 
     // TODO: validate address pointer
-    if (!givenAddress) return error;
+    if (not givenAddress) return error;
 
     SocketAddress address;
     memcpy(&address, givenAddress, addressLength);
 
     Process* process = Scheduler::CurrentProcess->value();
     auto file = SYSTEM->virtual_filesystem().file(socketFD);
-    if (!file) {
+    if (not file) {
         std::print("[SYS$]:connect:ERROR: File descriptor invalid.\n");
         return error;
     }
@@ -714,14 +714,14 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* givenAddress, usz addre
 
     // Get server socket from address.
     SocketData* serverData = SYSTEM->virtual_filesystem().SocketsDriver->get_bound_socket(address);
-    if (!serverData) {
+    if (not serverData) {
         std::print("[SYS$]:connect: There is no socket bound to the given address, sorry\n");
         return error;
     }
     // FIXME: This is flawed. A socket may be open by multiple
     // processes, and it may not be the same one it was created in...
     auto* serverProcess = Scheduler::process(serverData->PID);
-    if (!serverProcess) {
+    if (not serverProcess) {
         std::print("[SYS$]:connect: server process associated with socket bound to address has closed; sorry!\n");
         return error;
     }
@@ -757,12 +757,12 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
     DBGMSG(sys$_dbgfmt, 22, "accept");
 
     // TODO: validate address pointer
-    if (!address || !addressLength) return ProcFD::Invalid;
+    if (not address or not addressLength) return ProcFD::Invalid;
 
     SocketData* data = nullptr;
     {
         auto file = SYSTEM->virtual_filesystem().file(socketFD);
-        if (!file) {
+        if (not file) {
             std::print("[SYS$]:accept:ERROR: File descriptor invalid.\n");
             return ProcFD::Invalid;
         }
@@ -773,7 +773,7 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
         // TODO: Only server type sockets can accept incoming connections.
         // TODO: Only bound sockets can accept incoming connections.
     }
-    if (!data) return ProcFD::Invalid;
+    if (not data) return ProcFD::Invalid;
 
     if (data->ConnectionQueue.size()) {
         std::print("[SYS$]:accept: Connection already exists, returning immediately\n");
@@ -782,7 +782,7 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
         data->ConnectionQueue.pop_front();
 
         auto* clientProcess = Scheduler::process(connexion.Socket->PID);
-        if (!clientProcess) {
+        if (not clientProcess) {
             std::print("[SYS$]:accept:ERROR: Server could not get connecting client process at PID {} (maybe it was closed)...\n", connexion.Socket->PID);
             return ProcFD::Invalid;
         }
@@ -828,7 +828,7 @@ EventQueueHandle sys$23_kqueue() {
     /// Choose a handle
     // TODO: Better way of choosing handle.
     auto handle = EventQueueHandle::Invalid;
-    if (!process->EventQueues.size()) handle = EventQueueHandle(1);
+    if (not process->EventQueues.size()) handle = EventQueueHandle(1);
     else handle = EventQueueHandle((int)process->EventQueues.back().ID + 1);
 
     /// Add an event queue with the chosen handle to the process' event queues.
@@ -848,7 +848,7 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
     static constexpr const int error {-1};
 
     // TODO: Validate changelist and eventlist pointers, if needed.
-    if (handle == EventQueueHandle::Invalid || (numChanges && !changelist) || (maxEvents && !eventlist))
+    if (handle == EventQueueHandle::Invalid or (numChanges and not changelist) or (maxEvents and not eventlist))
         return error;
 
     // Find queue that is referenced by this handle for this process.
@@ -856,7 +856,7 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
     EventQueue<Process::EventQueueSize>* queue = std::find_if(process->EventQueues.begin(), process->EventQueues.end(), [&](const auto& q) {
         return q.ID == handle;
     });
-    if (!queue) return error;
+    if (not queue) return error;
 
     // Apply changes from changelist, if any.
     // TODO: Allow for unregistering, we need a special event type for that.
@@ -864,7 +864,7 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
         queue->register_listening(changelist[i].Type, changelist[i].Filter);
     }
 
-    if (!queue->has_events()) {
+    if (not queue->has_events()) {
         // TODO:
         // If there are no events in the queue, we must block until an
         // event is ready in this queue. However, if there are no
@@ -874,7 +874,7 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
     // If there are events in the event queue already, we can fill the
     // event list with up to maxEvents events, popping them off the event
     // queue.
-    for (int i = 0; i < maxEvents && queue->has_events(); ++i)
+    for (int i = 0; i < maxEvents and queue->has_events(); ++i)
         *eventlist++ = queue->pop();
 
     return success;
