@@ -1,0 +1,13 @@
+* `bg servertest`, `clienttest` on startup triple faults
+Posted [2024-06-24 Mon 16:22]
+
+Running `bg servertest` and then `clienttest` as the first and second commands upon boot, respectively, triple faults after the client? exits.
+
+Now, this wouldn't be so weird if all of the following didn't work just fine:
+- Calling any other program(s) (like `ls`) as the first or several first command(s) and then calling `bg servertest` then `clienttest`.
+- Calling `bg servertest` as the first command, then calling one or more other programs (like `ls`), then calling `clienttest`.
+- The mixture of the above two cases, calling another program, then `bg servertest`, then another program, then `clienttest`.
+
+Since all of those work, it's quite confusing as to what the nature of the bug actually is. I suspect that this will just magically go away one day as bugs get fixed, code gets rewritten, etc.
+
+What's for certain is it's all an absolute mess right now, and I'm surprised it functions at all.
