@@ -265,7 +265,7 @@ struct SocketDriver final : FilesystemDriver {
 
     /// Return true iff socket successfully bound.
     bool bind(SocketData* sock, SocketAddress address) {
-        if (std::find(Bindings.begin(), Bindings.end(), address)) {
+        if (std::find(Bindings.begin(), Bindings.end(), address) != Bindings.end()) {
             std::print("[SOCK]: Binding already exists, denying...\n");
             return false;
         }
