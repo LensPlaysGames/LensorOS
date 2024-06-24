@@ -664,6 +664,17 @@ int sys$20_listen(ProcFD socketFD, int backlog) {
     // }
 
     SocketData* data = (SocketData*)file->driver_data();
+
+    // Disallow listen()ing on an unbound socket.
+    // NOTE/FIXME: I /think/ the usual behavior is to pick an "ephemeral port"
+    // and just bind to that. See https://stackoverflow.com/a/12763313/18615069
+    if (data->Address.Type == SocketAddress::UNBOUND) {
+        std::print("[SYS$]:listen:ERROR: socket {} in process {} is unbound "
+                   "and therefore we cannot listen() on it.\n",
+                   socketFD, Scheduler::CurrentProcess->value()->ProcessID);
+        return error;
+    }
+
     data->ClientServer = SocketData::SERVER;
     data->ConnectionQueue.reserve(backlog);
 
