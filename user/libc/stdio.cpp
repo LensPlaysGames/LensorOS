@@ -122,6 +122,9 @@ void _IO_File::erase() {
     close();
 
     /// Remove it from the list of open files.
+
+    // But, first lock the big file lock so we are nice to any other processes
+    // also trying to do file stuffs.
     std::unique_lock lock(big_file_lock);
 
 #ifdef __lensor__
@@ -135,7 +138,7 @@ void _IO_File::erase() {
     if (element && *element == this) { open_files.erase(index); }
     else
 #endif
-        open_files.erase(std::find(open_files, this));
+    open_files.erase(std::find(open_files, this));
 }
 
 bool _IO_File::flush() {
@@ -187,7 +190,7 @@ _IO_File* _IO_File::create(_IO_fd_t fd, Buffering buffering_mode) {
 /// ===========================================================================
 int _IO_File::unget(char c) {
     /// TODO: unget() isn't possible if the stream isn't open for reading.
-    if (!may_unget()) { return EOF; }
+    if (not may_unget()) { return EOF; }
 
     __f_has_ungotten = true;
     __ungotten = c;
@@ -206,9 +209,9 @@ int _IO_File::seek(_IO_off_t offset, int whence) {
     __f_eof = false;
 
     /// Flush the stream.
-    if (!flush()) return -1;
+    if (not flush()) return -1;
 
-    // TODO: seek syscall
+    // seek syscall
     return (int)syscall(SYS_seek, __fd, offset, whence);
 }
 
@@ -332,7 +335,7 @@ bool _IO_File::read_until(char* __restrict__ buf, const size_t size, char until)
 
     /// Read from the file descriptor.
     /// If we ever get here, then the read buffer is empty.
-    while (!at_eof()) {
+    while (not at_eof()) {
         ssize_t n_read = ::read(__fd, __rdbuf.__buf, __rdbuf.__cap);
         if (n_read == -1) {
             __f_error = true;
@@ -411,7 +414,7 @@ std::pair<size_t, bool> _IO_File::copy_until_from_read_buffer(
 /// ===========================================================================
 bool _IO_File::setbuf(Buffering buffering, size_t size) {
     /// Flush the stream.
-    if (!flush()) return false;
+    if (not flush()) return false;
 
     /// Set the buffer.
     switch (buffering) {
@@ -449,7 +452,7 @@ bool _IO_File::setbuf(Buffering buffering, size_t size) {
             /// Realloc the read buffer. Make sure we don't lose any data.
             if (__rdbuf.__cap != size) {
                 /// Buffer is empty; just extend it.
-                if (!__rdbuf.__offs) {
+                if (not __rdbuf.__offs) {
                     __rdbuf.__cap = size;
                     __rdbuf.__buf = (char*) __mextend(__rdbuf.__buf, size);
                 }
@@ -496,7 +499,7 @@ ssize_t _IO_File::write(const char* __restrict__ str, size_t sz) {
                 sz -= nl_sz;
 
                 /// Flush the stream.
-                if (!flush()) return written;
+                if (not flush()) return written;
                 written += n_put;
             }
 
@@ -512,12 +515,14 @@ ssize_t _IO_File::write(const char* __restrict__ str, size_t sz) {
     }
 }
 
-bool _IO_File::write(char c) { return write(&c, 1) == 1; }
+bool _IO_File::write(char c) {
+    return write(&c, 1) == 1;
+}
 
 ssize_t _IO_File::write_internal(const char* __restrict__ buffer, size_t count) {
-    /// TODO: Check if the stream is open for writing.
     /// Flush the buffer if this operation would overflow it.
-    if (__wbuf.__offs + count > __wbuf.__cap && !flush()) { return EOF; }
+    if (__wbuf.__offs + count > __wbuf.__cap and not flush())
+        return EOF;
 
     /// Write data directly to the stream if it doesn't fit in the buffer.
     if (count > __wbuf.__cap) {
@@ -592,17 +597,17 @@ int fclose(FILE* stream) {
 
 int fflush(FILE* stream) {
     /// Flush all streams if `stream` is nullptr.
-    if (!stream) {
+    if (not stream) {
         std::unique_lock file_list_lock{FILE::big_file_lock};
         for (auto f : FILE::open_files) {
             LOCK(f);
-            if (!f->flush()) return EOF;
+            if (not f->flush()) return EOF;
         }
         return 0;
     }
 
     LOCK(stream);
-    if (!stream->flush()) return EOF;
+    if (not stream->flush()) return EOF;
 
     return 0;
 }
@@ -620,7 +625,7 @@ FILE* freopen(const char* __restrict__ filename, const char* __restrict__ mode, 
     /// If the filename is nullptr, the mode of the stream is changed to the mode specified by `mode`.
     /// What mode changes are possible is implementation-defined, so currently, we always fail.
     (void)mode;
-    if (!filename) { return nullptr; }
+    if (not filename) { return nullptr; }
 
     /// Open the new file.
     auto fd = open(filename, 0, 0);
@@ -647,13 +652,13 @@ int setvbuf(FILE* __restrict__ stream, char* __restrict__, int mode, size_t size
     /// Set the buffer.
     switch (mode) {
         case _IONBF:
-            if (!stream->setbuf(Unbuffered, 0)) return -1;
+            if (not stream->setbuf(Unbuffered, 0)) return -1;
             break;
         case _IOLBF:
-            if (!stream->setbuf(LineBuffered, size)) return -1;
+            if (not stream->setbuf(LineBuffered, size)) return -1;
             break;
         case _IOFBF:
-            if (!stream->setbuf(FullyBuffered, size)) return -1;
+            if (not stream->setbuf(FullyBuffered, size)) return -1;
             break;
         default: return -1;
     }
@@ -955,7 +960,7 @@ int fputc(int c, FILE* stream) {
 
     /// Perform the write.
     auto ch = static_cast<char>(c);
-    if (!stream->write(ch)) return EOF;
+    if (not stream->write(ch)) return EOF;
     return ch;
 }
 
@@ -1087,7 +1092,7 @@ int feof(FILE* stream) {
 
     /// We're logically at EOF if we're physically at EOF and there is no ungotten
     /// character and the read buffer is empty.
-    return stream->at_eof() && !stream->has_ungotten() && stream->__rdbuf.__offs == 0;
+    return stream->at_eof() && not stream->has_ungotten() && stream->__rdbuf.__offs == 0;
 }
 
 int ferror(FILE* stream) {
@@ -1111,7 +1116,7 @@ void perror(const char* str) {
 _PushIgnoreWarning("-Wunused-parameter")
 char *ctermid(char *s) {
     static char empty_string = 0;
-    if (!s) return &empty_string;
+    if (not s) return &empty_string;
     *s = 0;
     return s;
 }
@@ -1159,7 +1164,7 @@ int getchar_unlocked() {
 
 int putc_unlocked(int c, FILE *stream) {
     auto ch = static_cast<char>(c);
-    if (!stream->write(ch)) return EOF;
+    if (not stream->write(ch)) return EOF;
     return ch;
 }
 
