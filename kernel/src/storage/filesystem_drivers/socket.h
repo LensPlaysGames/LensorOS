@@ -253,7 +253,7 @@ struct SocketBinding {
         return Address == addr;
     }
     bool operator!= (const SocketAddress& addr) const {
-        return !(operator==(addr));
+        return not (operator==(addr));
     }
 };
 
@@ -273,6 +273,14 @@ struct SocketDriver final : FilesystemDriver {
         Bindings.push_back({address, sock});
         return true;
     }
+
+    /// Return true iff binding was found and removed.
+    bool unbind(const SocketAddress& addr) {
+        return std::erase_if(Bindings, [&addr](const SocketBinding &binding) {
+            return binding == addr;
+        });
+    }
+
     /// Return a pointer to the socket bound to the given address, or
     /// nullptr if no socket is bound.
     SocketData* get_bound_socket(SocketAddress address) {

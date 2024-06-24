@@ -41,27 +41,29 @@ std::shared_ptr<FileMetadata> SocketDriver::open(std::string_view path) {
 }
 
 void SocketDriver::close(FileMetadata* meta) {
-    if (!meta) return;
+    if (not meta) return;
     SocketData* data = (SocketData*)meta->driver_data();
-    if (!data) return;
+    if (not data) return;
 
     switch (data->Type) {
     case SocketType::LENSOR: {
-        std::print("  LENSOR type socket; decrementing buffers refcount\n");
+        std::print("[SOCK]:close: LENSOR type socket; decrementing buffers refcount\n");
         SocketBuffers* buffers = (SocketBuffers*)data->Data;
-        if (!buffers) break;
+        if (not buffers) break;
         data->Data = nullptr;
         // FIXME: If we `dup` a socket fd, we're going to have a bad time.
         // Or if we `fork` while one is open; that may also get sketchy.
         buffers->RefCount -= 1;
         if (buffers->RefCount == 0) {
-            std::print("  Unbinding and deleting SocketBuffers at {}\n", (void*)buffers);
+            std::print("[SOCK]:close: Unbinding  and deleting SocketBuffers at {}\n", (void*)buffers);
             // If bound, remove binding for this socket from list of bindings.
             if (data->Address.Type != SocketAddress::UNBOUND) {
                 const SocketAddress& addr = data->Address;
-                std::erase_if(Bindings, [&addr](const SocketBinding& binding) {
-                    return binding == addr;
-                });
+                auto did_unbind = unbind(addr);
+                if (not did_unbind) {
+                    std::string_view addr_view{(const char*)addr.Data, sizeof(addr.Data)};
+                    std::print("[SOCK]:close: Failed to unbind address {}\n", addr_view);
+                }
             }
             delete buffers;
         }
