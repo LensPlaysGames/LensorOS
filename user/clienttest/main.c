@@ -35,27 +35,27 @@ int main(int argc, char **argv) {
   int bytes_read = 0;
   bytes_read += read(sockFD, data, 16);
 
-  printf("Read %d bytes from socket\n", bytes_read);
+  printf("[CLIENT]: Read %d bytes from socket\n", bytes_read);
   fflush(stdout);
 
   uint64_t* data_it = (uint64_t*)data;
   uint64_t leading = *data_it++;
   uint64_t trailing = *data_it;
 
-  printf("  got %u and %u\n", leading, trailing);
+  printf("[CLIENT]:  got %u and %u\n", leading, trailing);
   fflush(stdout);
 
   write(sockFD, data, 16);
 
-  printf("  client written\n");
+  printf("[CLIENT]:  client written\n");
   fflush(stdout);
 
-  printf("  closing client socket\n");
+  printf("[CLIENT]:  closing client socket\n");
   fflush(stdout);
 
   close(sockFD);
 
-  printf("  closed client socket\n");
+  printf("[CLIENT]:  closed client socket\n");
   fflush(stdout);
 
   return 0;
