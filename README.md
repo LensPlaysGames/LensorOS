@@ -314,3 +314,20 @@ cmake --build bld --target runhda_qemu
 Work on LensorOS began on January 9th, 2022.
 
 ---
+
+### Directory Explanation
+
+- OVMFbin -- UEFI (Emulator) Firmware
+- base -- The sysroot is initialised with the contents of this directory (by `scripts/sysroot.sh`).
+- bin -- Various build artifacts.
+- gnu-efi -- Bootloader code from the 90s. Eventually we will transition to being able to also use RADII.
+- kernel -- The LensorOS kernel.
+- kernel/res -- The contents of this directory are made available to the kernel.
+- kernel/src -- The LensorOS kernel source code.
+- root -- [Sysroot](https://wiki.osdev.org/Meaty_Skeleton#System_Root)
+- scripts -- Helper scripts, mostly automatically invoked when building the toolchain or by the build system
+- std -- A C++ standard library implementation. Yes, really.
+- toolchain -- LensorOS is a new OS and therefore requires a at least a new target triple to be introduced to the compiler, and the corresponding configuration that goes with it; contains patches, build scripts, and eventually the built toolchain(s).
+- user -- Userspace libraries and programs
+
+---
