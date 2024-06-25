@@ -23,7 +23,7 @@
 #include <integers.h>
 #include <scheduler.h>
 
-#include <deque>
+#include <extensions_double_ended_queue>
 #include <format>
 #include <vector>
 
@@ -234,8 +234,7 @@ struct SocketData {
     bool WaitingOnConnection { false };
 
     // TODO: Use ring buffer instead?
-    // NOTE: This is not a real deque, it's a container I falsely named a deque.
-    std::deque<SocketConnection> ConnectionQueue;
+    std::double_ended_queue<SocketConnection> ConnectionQueue;
 
     enum {
         CLIENT,

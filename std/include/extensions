@@ -28,8 +28,9 @@
 #include <bits/colours.h>
 #include <vector>
 
-#include <extensions_sparse_vector>
+#include <extensions_double_ended_queue>
 #include <extensions_ring_buffer>
+#include <extensions_sparse_vector>
 
 namespace std {
 template <typename _Container, typename _Predicate>
