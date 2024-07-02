@@ -1,4 +1,11 @@
-* `bg servertest`, `clienttest` on startup triple faults
+* =ls /fs0/bin/= doesn't work
+Posted [2024-07-02 Tue 13:44]
+
+Running =/fs0/bin/ls /fs0/bin/= doesn't work, I think because of the trailing slash. So, either =ls= user program or =directory_data= syscall has an issue handling the trailing slash. Maybe even just the FAT driver implementation.
+
+Update [2024-07-02 Tue 14:09]: It's definitely within the FAT implementation.
+
+* =bg servertest=, =clienttest= on startup triple faults
 Posted [2024-06-24 Mon 16:22]
 
 Running `bg servertest` and then `clienttest` as the first and second commands upon boot, respectively, triple faults after the client? exits.
