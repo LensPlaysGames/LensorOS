@@ -170,10 +170,8 @@ auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename
             // the filename can fit in the eight bytes allotted to it.
             // Need to return computer-generated filename or the LFN,
             // or something.
-            if (last_dot > 8) {
-                std::print("[FAT]: TODO: translate_filename() computer-generated 8.3 filenames... (path short, name long)\n");
-                return "INVALID_TRANSLATION";
-            }
+            if (last_dot > 8)
+                return raw_filename;
 
             // If it exists, the three bytes following it are the
             // extension.
