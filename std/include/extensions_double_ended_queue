@@ -1,0 +1,196 @@
+/* Copyright 2022, Contributors To LensorOS.
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
+
+#ifndef _LENSOROS_DEQUE_H
+#define _LENSOROS_DEQUE_H
+
+#include <stdint.h>
+
+#include <bits/decls.h>
+
+__BEGIN_DECLS__
+void* memmove(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n);
+__END_DECLS__
+
+namespace std {
+
+/// NOTE: This is NOT a standard-compliant implementation of deque.
+/// This is just what I came up with on my own for a simple double
+/// ended queue, without thinking about the strict requirements of the
+/// standard. It isn't perfect, but it matches the API rather well;
+/// most importantly, invalidation is not consistent with the standard's
+/// requirements, so be weary of keeping references to elements across
+/// push/pop boundaries, or at all really.
+template <class _T>
+struct __deque_impl {
+    using value_type = _T;
+    using reference = value_type&;
+    using const_reference = const value_type&;
+    using size_type = size_t;
+    using difference_type = ptrdiff_t;
+    using iterator = _T*;
+    using const_iterator = const _T*;
+
+    std::vector<_T> __data;
+    size_type __head{0};
+
+    iterator begin() noexcept {
+        return __data.begin() + __head;
+    }
+    const_iterator begin() const noexcept {
+        return __data.begin() + __head;
+    }
+    iterator end() noexcept {
+        return __data.end();
+    }
+    const_iterator end() const noexcept {
+        return __data.end();
+    }
+
+    bool __index_valid(size_type __index) {
+        return __head + __index < __data.size();
+    }
+
+    reference operator[] (size_type __index) {
+        return &__data[__head + __index];
+    }
+    const_reference operator[] (size_type __index) const {
+        return &__data[__head + __index];
+    }
+
+    reference at(size_type __index) {
+        if (!__index_valid(__index)) {
+            // TODO: throw std::out_of_range, once we support exceptions.
+            return {};
+        }
+        return operator[](__index);
+    }
+    const_reference at(size_type __index) const {
+        if (!__index_valid(__index)) {
+            // TODO: throw std::out_of_range, once we support exceptions.
+            return {};
+        }
+        return operator[](__index);
+    }
+
+    [[nodiscard]] bool empty() const noexcept {
+        return __head == __data.size();
+    }
+
+    size_type size() const noexcept {
+        return __data.size() - __head;
+    }
+
+    size_type max_size() const noexcept {
+        return SIZE_MAX;
+    }
+
+    void shrink_to_fit() {
+        // Move elements to beginning of memory representation.
+        if (!empty())
+            memmove(__data.data(), __data.data() + __head, size());
+        __data.shrink_to_fit();
+    }
+
+    void clear() noexcept {
+        __data.clear();
+        __head = 0;
+    }
+
+    iterator insert(const_iterator __pos, value_type&& __value) {
+        __data.insert(__pos, __value);
+        // Move head back if we are inserting before it.
+        if (__pos == __data.data() + __head) --__head;
+        return __pos;
+    }
+    iterator insert(const_iterator __pos, const value_type& __value) {
+        __data.insert(__pos, __value);
+        // Move head back if we are inserting before it.
+        if (__pos == __data.data() + __head) --__head;
+        return __pos;
+    }
+
+    iterator erase(const_iterator __pos) {
+        __data.erase(__pos);
+    }
+
+    reference back() {
+        return __data.back();
+    }
+    const_reference back() const {
+        return __data.back();
+    }
+    void push_back(value_type&& __value) {
+        __data.push_back(__value);
+    }
+    void push_back(const value_type& __value) {
+        __data.push_back(__value);
+    }
+    void pop_back() {
+        __data.pop_back();
+    }
+
+    reference front() {
+        return __data[__head];
+    }
+    const_reference front() const {
+        return &__data[__head];
+    }
+    void push_front(value_type&& __value) {
+        __data.insert(__data.begin() + __head, __value);
+    }
+    void push_front(const value_type& __value) {
+        __data.insert(__data.begin() + __head, __value);
+    }
+    void pop_front() {
+        __head += 1;
+    }
+
+    void reserve(size_type __count) {
+        __data.reserve(__count);
+    }
+
+    void resize(size_type __count) {
+        __data.resize(__count);
+    }
+    void resize(size_type __count, const value_type& __value) {
+        __data.resize(__count, __value);
+    }
+};
+
+template <typename _T>
+using double_ended_queue = __deque_impl<_T>;
+
+template<class _T>
+bool operator== (const std::double_ended_queue<_T>& __lhs, const std::double_ended_queue<_T>& __rhs) {
+    if (__lhs.size() != __rhs.size()) return false;
+    // Compare each element
+    for (size_t i = 0; i < __lhs.size(); ++i) {
+        if (__lhs[i] != __rhs[i]) return false;
+    }
+    return true;
+}
+template<class _T>
+bool operator!= (const std::double_ended_queue<_T>& __lhs, const std::double_ended_queue<_T>& __rhs) {
+    return !(operator==(__lhs, __rhs));
+}
+
+}
+
+#endif /* _LENSOROS_DEQUE_H */
