@@ -47,6 +47,8 @@ std::string FileAllocationTableDriver::pop_filename_from_front_of_path(std::stri
 
     std::string out = path.substr(0, first_sep);
     raw_path = path.substr(first_sep);
+    // Special handling of trailing directory separator.
+    if (raw_path == "/") raw_path = out;
     return out;
 }
 

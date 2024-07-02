@@ -123,6 +123,7 @@ class FileAllocationTableDriver final : public FilesystemDriver {
     auto for_each_dir_entry_in(u32 directoryCluster) -> DirIteratorHelper { return DirIteratorHelper{*this, directoryCluster}; }
 
     /// Given "/foo/bar/baz.txt" return "foo" and overwrite parameter to "bar/baz.txt"
+    /// Given "/bar/" return "bar" and overwrite parameter to "bar"
     /// Given "/" return "/"
     auto pop_filename_from_front_of_path(std::string &raw_path) -> std::string;
 
