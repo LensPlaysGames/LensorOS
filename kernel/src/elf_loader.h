@@ -21,7 +21,8 @@
 #define LENSOR_OS_ELF_LOADER_H
 
 #include <format>
-#include <string>
+#include <string_view>
+#include <vector>
 
 #include <elf.h>
 #include <file.h>
