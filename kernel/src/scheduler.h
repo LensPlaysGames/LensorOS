@@ -73,6 +73,8 @@ struct Process {
 
     /// Keep track of opened files that may be freed when the process
     /// exits, if no other process has it open.
+    /// NOTE: Just a vector of SysFDs with indexes of type ProcFD, nothing to
+    /// see here. A map of ProcFD to SysFD, if you will.
     std::sparse_vector<SysFD, SysFD::Invalid, ProcFD> FileDescriptors;
 
     ProcFD sysfd_to_procfd(SysFD predicate_sysfd) {
@@ -134,6 +136,20 @@ struct Process {
         if (region_it) {
             Memories.remove(index);
         }
+    }
+
+    bool valid_address(const void* vaddr) {
+        // nullptr is always invalid.
+        if (not vaddr) return false;
+        auto* region_it = Memories.head();
+        while (region_it) {
+            auto* begin = region_it->value().vaddr;
+            auto* end = (void*)((u8*)begin + region_it->value().length);
+            if (vaddr >= begin and vaddr < end)
+                return true;
+            region_it = region_it->next();
+        }
+        return false;
     }
 
     /// Set the return value within CPU state.

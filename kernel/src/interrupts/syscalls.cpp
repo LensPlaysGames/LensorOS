@@ -67,7 +67,11 @@ constexpr const char* sys$_dbgfmt = "[SYS$]: {} -- {}\n";
 
 ProcessFileDescriptor sys$0_open(const char* path) {
     DBGMSG(sys$_dbgfmt, 0, "open");
-    // FIXME: Validate path pointer.
+    // Validate path pointer.
+    if (not Scheduler::CurrentProcess->value()->valid_address(path)) {
+        std::print("[SYS$]:read:ERROR: path address invalid: {}\n", (void*)path);
+        return ProcFD::Invalid;
+    }
     return SYSTEM->virtual_filesystem().open(path).Process;
 }
 
@@ -90,7 +94,12 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
            , (void*) buffer
            , byteCount
            );
-    // FIXME: Validate buffer pointer.
+
+    // Validate buffer pointer.
+    if (not Scheduler::CurrentProcess->value()->valid_address(buffer)) {
+        std::print("[SYS$]:read:ERROR: buffer address invalid: {}\n", (void*)buffer);
+        return 0;
+    }
 
     VFS& vfs = SYSTEM->virtual_filesystem();
     auto meta = vfs.file(fd);
@@ -145,7 +154,12 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
            , (void*) buffer
            , byteCount
            );
-    // FIXME: Validate buffer pointer.
+
+    // Validate buffer pointer.
+    if (not Scheduler::CurrentProcess->value()->valid_address(buffer)) {
+        std::print("[SYS$]:write:ERROR: buffer address invalid: {}\n", (void*)buffer);
+        return 0;
+    }
 
     VFS& vfs = SYSTEM->virtual_filesystem();
 
@@ -294,7 +308,11 @@ void sys$8_time(Time::tm* time) {
            , (void*) time
            );
     if (not time) return;
-    // FIXME: Validate time pointer
+    // Validate time pointer.
+    if (not Scheduler::CurrentProcess->value()->valid_address(time)) {
+        std::print("[SYS$]:time:ERROR: time struct address invalid: {}\n", (void*)time);
+        return;
+    }
     Time::fill_tm(time);
 }
 
@@ -456,10 +474,15 @@ void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
 
 /// Create two file descriptors. One of which can be read from, and the
 /// other which can be written to.
-void sys$13_pipe(ProcessFileDescriptor *fds) {
+int sys$13_pipe(ProcessFileDescriptor *fds) {
     DBGMSG(sys$_dbgfmt, 13, "pipe");
-    // TODO: Validate pointer.
     Process* process = Scheduler::CurrentProcess->value();
+    // Validate pointer.
+    if (not process->valid_address(fds)) {
+        std::print("[SYS$]:pipe:ERROR: Invalid address: {}\n", (void *)fds);
+        // Return error code.
+        return -1;
+    }
     VFS& vfs = SYSTEM->virtual_filesystem();
     // Lay down a new pipe.
     auto pipeEnds = vfs.PipesDriver->lay_pipe();
@@ -468,8 +491,9 @@ void sys$13_pipe(ProcessFileDescriptor *fds) {
     // Write fds.
     fds[0] = readFDs.Process;
     fds[1] = writeFDs.Process;
+    // Return success code.
+    return 0;
 }
-
 
 /// OFFSET is based off of current offset (relative).
 #define SEEK_CUR 0
@@ -570,8 +594,9 @@ ProcFD sys$16_dup(ProcessFileDescriptor fd) {
 void sys$17_uart(void* buffer, size_t size) {
     DBGMSG(sys$_dbgfmt, 17, "uart");
     DBGMSG("  buffer: {}  size: {}\n", buffer, size);
-    // TODO: Validate buffer pointer.
-    std::print("{}", std::string_view((const char*)buffer, size));
+    // Only print iff buffer pointer is valid in calling process.
+    if (Scheduler::CurrentProcess->value()->valid_address(buffer))
+        std::print("{}", std::string_view((const char*)buffer, size));
 }
 
 /// domain:
@@ -613,8 +638,11 @@ int sys$19_bind(ProcFD socketFD, const SocketAddress* address, usz addressLength
     static constexpr const int success {0};
     static constexpr const int error {-1};
     DBGMSG(sys$_dbgfmt, 19, "bind");
-    // TODO: validate address pointer
-    if (not address) return error;
+    // Validate address pointer.
+    if (not Scheduler::CurrentProcess->value()->valid_address(address)) {
+        std::print("[SYS$]:bind:ERROR: Invalid address: {}\n", (void*)address);
+        return error;
+    }
     auto& vfs = SYSTEM->virtual_filesystem();
     auto file = vfs.file(socketFD);
     if (not file) {
@@ -691,13 +719,17 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* givenAddress, usz addre
     static constexpr const int error {-1};
     DBGMSG(sys$_dbgfmt, 21, "connect");
 
-    // TODO: validate address pointer
-    if (not givenAddress) return error;
+    Process* process = Scheduler::CurrentProcess->value();
+
+    // Validate address pointer.
+    if (not process->valid_address(givenAddress)) {
+        std::print("[SYS$]:connect:ERROR: Invalid address: {}\n", (void*)givenAddress);
+        return error;
+    }
 
     SocketAddress address;
     memcpy(&address, givenAddress, addressLength);
 
-    Process* process = Scheduler::CurrentProcess->value();
     auto file = SYSTEM->virtual_filesystem().file(socketFD);
     if (not file) {
         std::print("[SYS$]:connect:ERROR: File descriptor invalid.\n");
@@ -756,8 +788,12 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
                   );
     DBGMSG(sys$_dbgfmt, 22, "accept");
 
-    // TODO: validate address pointer
-    if (not address or not addressLength) return ProcFD::Invalid;
+    Process* process = Scheduler::CurrentProcess->value();
+
+    // Validate address pointer.
+    if (not process->valid_address(address) or
+        not process->valid_address(addressLength))
+        return ProcFD::Invalid;
 
     SocketData* data = nullptr;
     {
@@ -812,7 +848,6 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
     data->WaitingOnConnection = true;
     // Set return value to invalid fd just in case we are unblocked
     // for some reason other than an incoming connection.
-    auto* process = Scheduler::CurrentProcess->value();
     memcpy(&process->CPU, cpu, sizeof(CPUState));
     process->set_return_value(usz(ProcFD::Invalid));
     process->State = Process::SLEEPING;
@@ -847,12 +882,24 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
     static constexpr const int success {0};
     static constexpr const int error {-1};
 
-    // TODO: Validate changelist and eventlist pointers, if needed.
-    if (handle == EventQueueHandle::Invalid or (numChanges and not changelist) or (maxEvents and not eventlist))
+    if (handle == EventQueueHandle::Invalid) {
+        std::print("[SYS$]:kevent: Invalid event queue handle\n");
         return error;
+    }
+
+    auto* process = Scheduler::CurrentProcess->value();
+
+    // Validate changelist and eventlist pointers, if needed.
+    if (numChanges and not process->valid_address(changelist)) {
+        std::print("[SYS$]:kevent:ERROR: Number of changes non-zero but changelist is not a valid address ({})\n", (void*)changelist);
+        return error;
+    }
+    if (maxEvents and not process->valid_address(eventlist)) {
+        std::print("[SYS$]:kevent:ERROR: Max events non-zero but eventlist is not a valid address ({})\n", (void*)eventlist);
+        return error;
+    }
 
     // Find queue that is referenced by this handle for this process.
-    auto* process = Scheduler::CurrentProcess->value();
     EventQueue<Process::EventQueueSize>* queue = std::find_if(process->EventQueues.begin(), process->EventQueues.end(), [&](const auto& q) {
         return q.ID == handle;
     });
@@ -886,8 +933,17 @@ int sys$25_directory_data(const char* path, DirectoryEntry* dirp, usz count) {
 
     if (not count) return 0;
 
-    // TODO: Validate `path` pointer
-    // TODO: Validate `dirp` pointer
+    auto* process = Scheduler::CurrentProcess->value();
+
+    // Validate `path` and `dirp` pointers
+    if (not process->valid_address(path)) {
+        std::print("[SYS$]:directory_data:ERROR: path address invalid: {}\n", (void*)path);
+        return -1;
+    }
+    if (not process->valid_address(dirp)) {
+        std::print("[SYS$]:directory_data:ERROR: directory entry address invalid: {}\n", (void*)dirp);
+        return -1;
+    }
 
     auto& vfs = SYSTEM->virtual_filesystem();
     return vfs.directory_data(path, count, dirp);
