@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 
     int rc = 0;
 
-    for (int i = 1; i; --i) {
+    for (;;) {
         input_command.clear();
 
         std::print("{}{}", rc, prompt);
@@ -118,6 +118,7 @@ int main(int argc, char **argv) {
             input_command += c;
             std::print("{}", (char)c);
         }
+        std::print("\n");
 
         static constexpr char separators[] = " \r\n\t&;";
         auto command_end = input_command.find_first_of(separators);
@@ -170,7 +171,9 @@ int main(int argc, char **argv) {
             }
         }
 
-        // TODO: BUILTINS
+        // BUILTINS
+        if (command == "quit")
+            break;
 
         // NOT A BUILTIN, DELEGATE TO SYSTEM COMMAND
         std::vector<const char *> argv;
@@ -181,7 +184,7 @@ int main(int argc, char **argv) {
 
         if (std::filesystem::exists(std::filesystem::path{command.data()}))
             rc = run_program_waitpid(command.data(), argv.data());
-        else std::print("XiSH Error: \"{}\" does not exist\n", command);
+        else std::print("[XiSH]:Error: \"{}\" does not exist\n", command);
     }
     return 0;
 }

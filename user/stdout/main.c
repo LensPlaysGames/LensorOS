@@ -31,79 +31,9 @@
 #include <ints.h>
 #include <psf.h>
 
-#ifndef MAX_COMMAND_LENGTH
-# define MAX_COMMAND_LENGTH 4096
-#endif
-#ifndef MAX_OUTPUT_LENGTH
-# define MAX_OUTPUT_LENGTH 4096
-#endif
-#ifndef MAX_ARG_COUNT
-# define MAX_ARG_COUNT 256
-#endif
-#ifndef MAX_OUTPUT_LINES
-# define MAX_OUTPUT_LINES 32
-#endif
-
 // FIXME: This is a hack and should be removed
 static Framebuffer g_framebuffer;
 static PSF1_FONT g_font;
-void draw_prompt(Framebuffer fb, const PSF1_FONT font);
-
-// TODO: This is an ungodly amount of globals and is sinful at this point. Purely stupid.
-static char command[MAX_COMMAND_LENGTH];
-static char command_output[MAX_OUTPUT_LENGTH];
-static usz command_output_it = 0;
-static usz last_command_output_it = 0;
-static usz command_output_line_count = 0;
-static int command_status = 0;
-static char *args[MAX_ARG_COUNT];
-static usz args_it = 0;
-
-// FIXME: I've identified a bug and tracked it down to this code, but
-// I'm not sure how it's broken.
-// When a program ends up outputting more lines than MAX_OUTPUT_LINES,
-// then a bunch of weird things happen and there is data corruption
-// with the command output. It seems to somehow be losing data when
-// scrolling along.
-// TODO: Update this to work on an input string, not a char. This will
-// allow for much better performance when it comes to reading large
-// batches of output from programs.
-void write_command_output(char c) {
-  command_output[command_output_it++] = c;
-  if (c == '\n') ++command_output_line_count;
-  if (command_output_line_count > MAX_OUTPUT_LINES ||
-      command_output_it >= MAX_OUTPUT_LENGTH - 1) {
-    const size_t scroll_amount = 1;
-    size_t skip_bytes = 0;
-    size_t lines_scrolled = 0;
-    for (; lines_scrolled < scroll_amount; ++lines_scrolled) {
-      size_t next_newline = strcspn(command_output, "\n") + 1;
-      // TODO: What if no newline? What if command outputs one really long line,
-      // longer than the command output buffer? Basically, we need a check that
-      // if there is not another newline here then we just clear the whole
-      // output back to nothing.
-      if (skip_bytes + next_newline >= MAX_OUTPUT_LENGTH) break;
-      skip_bytes += next_newline;
-    }
-    memmove(command_output, command_output + skip_bytes, MAX_OUTPUT_LENGTH - skip_bytes);
-    command_output[MAX_OUTPUT_LENGTH - skip_bytes - 1] = 0;
-    if (command_output_it >= skip_bytes)
-        command_output_it -= skip_bytes;
-    else command_output_it = 0;
-    if (last_command_output_it >= skip_bytes)
-        last_command_output_it -= skip_bytes;
-    else last_command_output_it = 0;
-    command_output_line_count -= lines_scrolled;
-  }
-
-  if (command_output_it < last_command_output_it)
-    last_command_output_it = command_output_it;
-  printf("%s", command_output + last_command_output_it);
-  last_command_output_it = command_output_it;
-
-  // TODO: Only draw what's newly written.
-  draw_prompt(g_framebuffer, g_font);
-}
 
 #define ESCAPE     0x01
 #define BACKSPACE  0x0e
@@ -268,31 +198,88 @@ void draw_psf1_int(Framebuffer fb, const PSF1_FONT font, size_t *x, size_t *y, i
   draw_psf1_string(fb, font, x, y, numstr);
 }
 
-static const size_t prompt_start_x = 0;
-static const size_t prompt_start_y = 0;
-static const char prompt[] = "  $:";
-void draw_prompt(Framebuffer fb, const PSF1_FONT font) {
-  size_t x = prompt_start_x;
-  size_t y = prompt_start_y;
-  // DRAW OUTPUT OF PREVIOUSLY RUN COMMANDS
-  draw_psf1_string_view(fb, font, &x, &y, command_output, command_output_it);
-  // TODO: Make it clear when newline isn't present at end of command output, somehow.
-  if (command_output_it == 0 || command_output[command_output_it - 1] != '\n')
-    draw_psf1_string(fb, font, &x, &y, "\n");
-  // DRAW PROMPT LINE(s)
-  // DRAW LAST COMMAND RETURN STATUS
-  draw_psf1_int(fb, font, &x, &y, command_status);
-  draw_psf1_string(fb, font, &x, &y, prompt);
-  draw_psf1_string(fb, font, &x, &y, command);
-  draw_psf1_string(fb, font, &x, &y, "\n");
-}
+typedef struct Cursor {
+  size_t x;
+  size_t y;
+} Cursor;
+typedef struct CharacterBuffer {
+  uint32_t* data;
+  Cursor cursor;
+  size_t width;
+  size_t height;
+} CharacterBuffer;
 
-void print_command_line() {
-  printf("\033[2K" //> Erase entire line
-         "\033[1G" //> Move cursor to first column
-         "%d%s%s",
-         command_status, prompt, command);
-  fflush(stdout);
+// width and height in amount of characters.
+CharacterBuffer charbuf_create(size_t width, size_t height) {
+  CharacterBuffer out = {};
+  out.width = width;
+  out.height = height;
+
+  out.cursor.x = 0;
+  out.cursor.y = 0;
+
+  // TODO: handle allocation failure
+  out.data = malloc(width * height + 1);
+
+  return out;
+}
+void charbuf_delete(CharacterBuffer charbuf) {
+  if (charbuf.data)
+    free(charbuf.data);
+  charbuf.data = NULL;
+}
+uint32_t *charbuf_at(const CharacterBuffer *charbuf, const size_t x, const size_t y) {
+  return &charbuf->data[charbuf->width * y + x];
+}
+void charbuf_write(const CharacterBuffer *charbuf, const size_t x, const size_t y, const uint32_t c) {
+  *charbuf_at(charbuf, x, y) = c;
+}
+void charbuf_putc(CharacterBuffer *charbuf, const uint32_t c) {
+  if (c == '\b') {
+    if (charbuf->cursor.x) {
+      // Decrement cursor position
+      charbuf->cursor.x -= 1;
+      // Draw space over current cursor position
+      charbuf_putc(charbuf, ' ');
+      // Decrement cursor position (undo increment from writing space)
+      charbuf->cursor.x -= 1;
+    } else if (!charbuf->cursor.y) {
+      // Backspace at very beginning of character buffer (replace first character with space).
+      charbuf_putc(charbuf, ' ');
+      charbuf->cursor.x = 0;
+    } else {
+      // TODO: At beginning of line, move cursor to end of last line.
+      puts("\n[stdout]: TODO: backspace newline\n");
+    }
+  }
+  else if (c == '\r') {
+    charbuf->cursor.x = 0;
+  } else if (c == '\n') {
+    charbuf->cursor.y += 1;
+    charbuf->cursor.x = 0;
+    if (charbuf->cursor.y >= charbuf->height) {
+      // FIXME: Hack for now to scroll entire character buffer.
+      charbuf->cursor.y = 0;
+      const uint32_t black = mkpixel(g_framebuffer.format, 22,23,24,0xff);
+      fill_color(g_framebuffer, black);
+    }
+    // FIXME: We probably have to draw spaces to the rest of the line in the
+    // character buffer.
+  } else {
+    // Write character into character buffer.
+    charbuf_write(charbuf, charbuf->cursor.x, charbuf->cursor.y, c);
+
+    // Draw graphical character into framebuffer at x, y position
+    draw_psf1_char(g_framebuffer, g_font, charbuf->cursor.x * psf1_width(g_font), charbuf->cursor.y * psf1_height(g_font), c);
+
+    // Update cursor position.
+    charbuf->cursor.x += 1;
+  }
+}
+void charbuf_puts(CharacterBuffer *charbuf, const uint32_t* s) {
+  if (!s) return;
+  while (*s)
+    charbuf_putc(charbuf, *s);
 }
 
 
@@ -300,7 +287,7 @@ void print_command_line() {
 /// @param args
 ///   NULL-terminated array of pointers to NULL-terminated strings.
 ///   Passed to `exec` syscall
-void run_program_waitpid(const char *const filepath, const char **args) {
+void run_program_waitpid(const char *const filepath, const char **args, CharacterBuffer* charbuf) {
   u64 fds[2] = {-1,-1};
   syscall(SYS_pipe, fds);
 
@@ -316,8 +303,11 @@ void run_program_waitpid(const char *const filepath, const char **args) {
     //fflush(stdout);
     char c = 0;
     ssize_t bytes_read = 0;
-    while ((bytes_read = read(fds[0], &c, 1)) && bytes_read != EOF)
-      write_command_output(c);
+    while ((bytes_read = read(fds[0], &c, 1)) && bytes_read != EOF) {
+      // Draw output to stdout (probably DbgOutDriver, AKA UART).
+      putc(c, stdout);
+      charbuf_putc(charbuf, c);
+    }
 
     //printf("PARENT: Closing read end...\n");
     //fflush(stdout);
@@ -330,7 +320,7 @@ void run_program_waitpid(const char *const filepath, const char **args) {
     // failing status. Maybe have some other way to check? Or wrap this in
     // libc that sets errno (that always goes well).
     fflush(NULL);
-    command_status = (int)syscall(SYS_waitpid, cpid);
+    int command_status = (int)syscall(SYS_waitpid, cpid);
     if (command_status == -1) {
       printf("`waitpid` failure! pid=%d\n", (int)cpid);
       return;
@@ -361,6 +351,11 @@ void run_background_program(const char *const filepath, const char **args) {
 }
 
 int main(int argc, const char **argv) {
+  // FIXME: Only do this when terminal is not graphical.
+  // Set stdout unbuffered so the user can see updates as they type.
+  // NOTE: Probably not very efficient for the terminal's output to be unbuffered.
+  setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+
   // TODO: If arguments are there, we should init framebuffer, draw to
   // it, etc. If it's not there, we should also be able to gracefully
   // handle that case.
@@ -399,7 +394,7 @@ int main(int argc, const char **argv) {
     printf("Could not open font at %s\n", fontpath);
     return 1;
   }
-  printf("Successfully loaded font at %s\n", fontpath);
+  printf("Successfully opened font at %s\n", fontpath);
 
   PSF1_FONT font;
   size_t bytes_read = 0;
@@ -439,208 +434,17 @@ int main(int argc, const char **argv) {
   g_font = font;
   printf("Successfully loaded PSF1 font from \"%s\"\n", fontpath);
 
-  // TODO: Very basic text editor implementation (GNU readline equivalent, basically).
-  // |-- Moveable Cursor
-  // |-- Insert/Delete byte at cursor
-  // `-- GUI layout: place prompt always at bottom of screen, clear before redraw, etc.
+  CharacterBuffer charbuf = charbuf_create(psf1_width(g_font), psf1_height(g_font));
 
-  memset(args, 0, sizeof(args));
+  const char* sh_args[1] = {NULL};
+  run_program_waitpid("/fs0/bin/xish", sh_args, &charbuf);
 
-  last_command_output_it = command_output_it;
+  // TODO: Uhhh, init shell exited. Should we try to reboot into another shell?
+  // Hang for now
+  for (;;)
+    ;
 
-  // This is the loop of the shell itself; each iteration of this loop
-  // gathers input from the user and proceeds to run zero or more shell
-  // operations, such as builtins or system commands.
-  for (;;) {
-    memset(command, 0, MAX_COMMAND_LENGTH);
-    //fill_color(fb, black);
-
-    // If command output iterator `command_output_it` is less than the command
-    // output iterator on the last iteration of this loop, than we have
-    // "scrolled" the command output, and all iterators have been invalidated.
-    // As such, we revert back to the default state with the last command
-    // output iterator being equal to the current command output iterator.
-    if (command_output_it < last_command_output_it)
-      last_command_output_it = command_output_it;
-
-    // Print everything past the last command output iterator
-    // `last_command_output_it`; the last command output iterator stores the
-    // position at which we have already output up to, so this prints
-    // everything we haven't yet printed while skipping everything we have
-    // already printed.
-    printf("%s", command_output + last_command_output_it);
-
-    // Print a newline at the end of the command output, even if one wasn't
-    // present. This prints the prompt at the start of the line, rather than
-    // off the end of the last command's output.
-    // TODO: Make it clear when newline isn't present at end of command output, somehow.
-    if (command_output_it == 0 || command_output[command_output_it - 1] != '\n')
-      putchar('\n');
-
-    last_command_output_it = command_output_it;
-
-    print_command_line();
-    draw_prompt(fb, font);
-
-    // Get line from standard input.
-    int c;
-    int offset = 0;
-    while ((c = getchar()) != '\n') {
-      if (c == EOF) continue;
-      if (c == '\b') {
-        if (offset > 0) {
-          command[--offset] = '\0';
-          // Echo command to standard out.
-          print_command_line();
-          draw_prompt(fb, font);
-        }
-        continue;
-      }
-      if (offset >= MAX_COMMAND_LENGTH) {
-        puts("\nReached max command length, discarding command.\n");
-        offset = 0;
-        command[0] = '\0';
-        print_command_line();
-        draw_prompt(fb, font);
-        continue;
-      }
-      command[offset++] = c;
-      command[offset] = '\0';
-      // Echo command to standard out.
-      print_command_line();
-      draw_prompt(fb, font);
-    }
-    command[offset] = '\0';
-
-    // Finish printing command line.
-    fputc('\n', stdout);
-
-    // Now that we have "finished" the input command line, we should write the
-    // prompt + input command line into the command output, so as to save it
-    // in the scrolling history. Hopefully that makes sense.
-    char buffer[32];
-    memset(buffer, 0, 32);
-    sprintf(buffer, "%d", command_status);
-    for (char *c = buffer; *c; ++c)
-      write_command_output(*c);
-    for (char *c = prompt; *c; ++c)
-      write_command_output(*c);
-    for (int i = 0; i < offset; ++i)
-      write_command_output(command[i]);
-    write_command_output('\n');
-    last_command_output_it = command_output_it;
-
-    // TODO: Lex, parse, sema, etc. Don't just treat every command as a single string.
-
-    static const char *const whitespace = "; \t\r\n";
-    char *parsed_command = NULL;
-    // find first whitespace, expression separator, or null character;
-    // that's the end of "parsed_command".
-    size_t parsed_command_length = strcspn(command, whitespace);
-
-    parsed_command = malloc(parsed_command_length + 1);
-    memcpy(parsed_command, command, parsed_command_length);
-    parsed_command[parsed_command_length] = '\0';
-    // command = "echo"
-
-    // Free all strings in args array
-    for (char **str = args; *str; ++str) {
-      free(*str);
-      *str = NULL;
-    }
-
-    args_it = 0;
-    char *arg_start = command + parsed_command_length;
-    for (;;) {
-      // Skip expression delimiters/whitespace at beginning of arg.
-      arg_start += strspn(arg_start, whitespace);
-      size_t parsed_arg_length = strcspn(arg_start, whitespace);
-      if (!parsed_arg_length) break;
-
-      char *arg = malloc(parsed_arg_length + 1);
-      if (!arg) break;
-      memcpy(arg, arg_start, parsed_arg_length);
-      arg[parsed_arg_length] = '\0';
-
-      args[args_it++] = arg;
-
-      arg_start += parsed_arg_length;
-    }
-    args[args_it] = NULL;
-
-    if (strcmp(parsed_command, "quit") == 0) {
-      puts("Shell quitting, baiBAI!");
-      fflush(NULL);
-      break;
-    }
-
-    if (strcmp(parsed_command, "bg") == 0) {
-      const char fs0_prefix[] = "/fs0/bin/";
-      const size_t prefix_length = sizeof(fs0_prefix) - 1;
-      const size_t first_argument_length = strlen(args[0]);
-      // Includes null terminator
-      const size_t path_length = sizeof(fs0_prefix) + first_argument_length;
-      char *const path = malloc(path_length);
-      if (!path) break;
-      memcpy(path, fs0_prefix, prefix_length);
-      memcpy(path + prefix_length, args[0], path_length - prefix_length + 1);
-      path[path_length - 1] = '\0';
-
-      FILE *exists = fopen(path, "r");
-      if (exists) {
-        fclose(exists);
-        run_background_program(path, (const char **)&args[1]);
-        free(path);
-        continue;
-      }
-      free(path);
-      break;
-    }
-
-    // If parsed_command is recognized and supported syscall, make the syscall.
-    // TODO: Maybe some syntax for this would be better? Or just a
-    // utility program that does this i.e. "syscall poke" would run
-    // syscall with poke as an argument.
-    if (strcmp(parsed_command, "poke") == 0) {
-      syscall(SYS_poke);
-      command_status = 0;
-      continue;
-    }
-
-    // If file exists, attempt to load it as an executable (pass to exec).
-    if (parsed_command_length) {
-      // FIXME: This is our version of $PATH right now...
-      const char fs0_prefix[] = "/fs0/bin/";
-      const size_t prefix_length = sizeof(fs0_prefix) - 1;
-      // Includes null terminator
-      const size_t path_length = sizeof(fs0_prefix) + parsed_command_length;
-      char *const path = malloc(path_length);
-      if (path) {
-        memcpy(path, fs0_prefix, prefix_length);
-        memcpy(path + prefix_length, parsed_command, path_length - prefix_length);
-        path[path_length - 1] = '\0';
-
-        FILE *exists = fopen(path, "r");
-        if (exists) {
-          fclose(exists);
-          run_program_waitpid(path, (const char **)args);
-          free(path);
-          continue;
-        }
-        free(path);
-      }
-    }
-
-    command_status = 0;
-    const char *const unrecognized_str =
-      "Unrecognized command, sorry!\n"
-      "  Try `blazeit` or `quit`\n";
-    last_command_output_it = command_output_it;
-    for (const char* c = unrecognized_str; *c; ++c)
-      write_command_output(*c);
-    continue;
-  }
-
+  charbuf_delete(charbuf);
   psf1_delete(font);
 
   return 0;
