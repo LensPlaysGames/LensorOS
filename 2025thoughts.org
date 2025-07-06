@@ -1,0 +1,28 @@
+* Userspace needs process, hardware, and kernel introspection...
+
+=ps=, basically. Once we can start listing processes, we can then further investigate the processes that are running. i.e. what is using how much memory, how much CPU time it's getting from the scheduler, how many and what files it has open, etc. This would also allow the user of the OS to see what processes are running (if any), how the hardware is being utilized, and more.
+
+* Learnin' Notes
+
+** What is a Terminal?
+
+A terminal is a GRAPHICAL HELPER, that is all. It converts text-based process output into pixel-based graphical output. THAT IS ALL A TERMINAL DOES!
+
+A terminal does NOT:
+- Run commands,
+- take user input (well, sort of),
+- or do anything except display "stdout" to the screen.
+
+Okay, so what /does/ run commands, I hear you asking. Ah, see that is where a /shell/ comes in. A shell most often runs "/in/" a terminal, so that the user can see their input and the output of any commands they run. But, why this distinction? Why not have it all be one program (beyond just to separate codebases)?
+
+Well, in LensorOS' opinion, we separate them because LensorOS provides terminal functionality out of the box. That is, LensorOS comes with a terminal. If you wanted just a single userspace process that runs in that terminal, say, a game or something, you could set it up like that. Now, most versions of LensorOS will /also/ provide a shell. But, if you wanted, you could change what shell you use.
+
+So, in most cases, every terminal will be running a shell program inside it, so that the user has full access to system commands, and things like that. But, it's not required, and that's important. If someone wanted to utilize the hardware differently, they could.
+
+So, a terminal is just a program that displays textual information to the user. A shell is a program that runs commands based on user input, and /usually/ displays that information (and sometimes more) to the user /through/ a terminal program.
+
+** How does a terminal interact with a GUI?
+
+This one is actually very interesting. What do we do when a process wants to display arbitrary visuals, instead of just textual? Do we break out of the terminal? Does the terminal /also/ handle arbitrary display of pixels? What happens if we print to the terminal; does the terminal draw over the graphical program?
+
+I think, my first inclination, is that there should be a "tab" sort of system, where the terminal is always accessible in some way in another tab. So, even if a program is graphical, you can switch to the terminal and view it's textual output. This differs from Windows, where a program "switches" using it's COFF subsystem to a console application or a graphical one. The executable itself is hard-coded to use one or the other. I'd prefer the terminal always be accessible, so the Windows sort of system wouldn't work for LensorOS. After-all, the process hierarchy remains, and the terminal is generally at the top. If all processes run under the terminal, all processes should be able to use the terminal. Now, as far as how that works exactly, we'll have to figure out.
