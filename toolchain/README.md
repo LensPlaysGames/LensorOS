@@ -92,20 +92,20 @@ By default, pre-built `libc` binaries are provided to
 #### 1.) Obtain the source code of the following GNU packages
 NOTE: The following steps are a manual version of what is accomplished automatically using the `toolchain.sh` script.
 
-[GNU Compiler Collection](https://www.gnu.org/software/gcc/) **Version 11.2.0** \
-[Binutils](https://www.gnu.org/software/binutils/) **Version 2.38**
+[GNU Compiler Collection](https://www.gnu.org/software/gcc/) **Version 16.2.0** \
+[Binutils](https://www.gnu.org/software/binutils/) **Version 2.47**
 
 I recommend downloading the source code archives into this toolchain directory. \
 Choose a mirror that is closest to you and gives reasonable download speeds.
 ```bash
-curl https://mirrors.kernel.org/gnu/binutils/binutils-2.38.tar.xz --output binutils-2.38.tar.xz
-curl https://mirrors.kernel.org/gnu/gcc/gcc-11.2.0/gcc-11.2.0.tar.xz --output gcc-11.2.0.tar.xz
+curl https://mirrors.kernel.org/gnu/binutils/binutils-2.47.tar.xz --output binutils-2.47.tar.xz
+curl https://mirrors.kernel.org/gnu/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz --output gcc-16.2.0.tar.xz
 ```
 
 The download will be compressed; extract the archives to get the source code:
 ```bash
-tar -xf binutils-2.38.tar.xz -C .
-tar -xf gcc-11.2.0.tar.xz -C .
+tar -xf binutils-2.47.tar.xz -C .
+tar -xf gcc-16.2.0.tar.xz -C .
 ```
 
 NOTE: It is possible to over-ride your system's compiler collection
@@ -116,12 +116,36 @@ NOTE: It is possible to over-ride your system's compiler collection
 A patch file for Binutils and another for GCC
   is included in the unified `diff` format.
 Simply invoke `patch` like so from the toolchain directory
-  (assuming `gcc-11.2.0` is a subdirectory with GCC source
+  (assuming `gcc-16.2.0` is a subdirectory with GCC source
   code extracted inside of it, as shown above).
 ```bash
-patch -s -u -p0 < binutils-2.38-lensor.patch
-patch -s -u -p0 < gcc-11.2.0-lensor.patch
+patch -s -u -p0 < binutils-2.47-lensor.patch
+patch -s -u -p0 < gcc-16.2.0-lensor.patch
 ```
+
+##### Binutils
+
+- `config.sub` -> Allow `lensor` as OS.
+- `bfd/config.bfd` -> Map arch + OS triple (`x86_64-*-lensor`) to emitted file format (ELF).
+- `gas/configure.tgt` -> Map triple to ELF format, emulating GNU standards.
+- `ld/Makefile.am` -> Auto-generated C file needs included in build system (produces Makefile.in upon configure).
+  This file is used by `automake` to generate `ld/Makefile.in`, which is
+  then used by `configure` to generate the actual Makefile. Due to strict
+  (and annoying) autoconf version constraints, we just apply the edits to
+  Makefile.in manually.
+- `ld/configure.tgt` -> Map target triple to actual target. Also set native include directories, if needed.
+- `ld/emulparams/elf_x86_64_lensor.sh` -> Put emulation specific stuff here, if needed (currently empty).
+
+##### GCC
+
+- `config.sub` -> Allow `lensor` as OS.
+- `fixincludes/mkfixinc.sh` -> Generate no-op include fixer.
+- `gcc/config/i386/t-lensor` -> Lensor Makefile fragment.
+  NOTE: no red zone option *may* only be required for kernel toolchain.
+- `gcc/config/lensor.h` -> Tell GCC some basics about LensorOS.
+- `gcc/config.gcc` -> Specify included header files and Makefile fragments.
+- `libgcc/config.host` -> Specify included object files and Makefile fragments.
+- `libstdc++-v3/crossconfig.m4` -> Specify cross-compiler checks to perform.
 
 #### 3.) Create a Sysroot <a name="create-sysroot"></a>
 A sysroot, or system root, is a folder that the cross compiler
@@ -180,7 +204,7 @@ mkdir -p cross
 Next, from within the Binutils build directory, run the configure script supplied by the Binutils source code with the following command line flags and options:
 ```bash
 cd build-binutils
-../binutils-2.38/configure \
+../binutils-2.47/configure \
     --target=$TARGET \
     --prefix="$PREFIX" \
     --with-sysroot="$SYSROOT" \
@@ -210,12 +234,13 @@ GCC must be configured, much like Binutils.
 cd Path/to/LensorOS/toolchain
 mkdir -p build-gcc
 cd build-gcc
-../gcc-11.2.0/configure \
+../gcc-16.2.0/configure \
     --target=$TARGET \
     --prefix="$PREFIX" \
     --disable-nls \
     --enable-languages=c,c++ \
     --with-sysroot="$SYSROOT"
+    --disable-gcov
 ```
 
 This should generate a Makefile, among other things, that will be used to build GCC in the next step.
@@ -224,9 +249,10 @@ Flags:
 - `--disable-nls` disables native language support (English-only reduces build size and times).
 - `--enable-languages` disables all other languages except for what is stated here (reduces size and build times).
 - `--with-sysroot` specifies that GCC can find system headers and libraries at the path specified by the `SYSROOT` variable.
+- `--disable-gcov` TEMPORARY required until `unistd.h` provides `execv` and friends...
 
 #### 8.) Build the GNU Compiler Collection
-Warning: This step takes a long time. Utilize the `-j` option if you have more than a single core CPU.
+Warning: This step takes a long time. Utilize the `-j` option **with a number of cores specified** if you have more than a single core CPU. You need to specify the number of cores or your system will likely run out of memory and things will not go well.
 
 Within the `toolchain/build-gcc/` directory, run the following:
 ```bash

@@ -1,0 +1,144 @@
+diff -ruN untouched/gcc-16.2.0/config.sub gcc-16.2.0/config.sub
+--- untouched/gcc-16.2.0/config.sub	2026-08-07 00:46:05.304676553 -0700
++++ gcc-16.2.0/config.sub	2026-08-09 10:46:37.627793972 -0700
+@@ -4,7 +4,7 @@
+ 
+ # shellcheck disable=SC2006,SC2268 # see below for rationale
+ 
+-timestamp='2021-10-27'
++timestamp='2026-08-09'
+ 
+ # This file is free software; you can redistribute it and/or modify it
+ # under the terms of the GNU General Public License as published by
+@@ -1719,7 +1719,7 @@
+ 	# The portable systems comes first.
+ 	# Each alternative MUST end in a * to match a version number.
+ 	gnu* | android* | bsd* | mach* | minix* | genix* | ultrix* | irix* \
+-	     | *vms* | esix* | aix* | cnk* | sunos | sunos[34]* \
++	     | *vms* | esix* | aix* | cnk* | lensor* | sunos | sunos[34]* \
+ 	     | hpux* | unos* | osf* | luna* | dgux* | auroraux* | solaris* \
+ 	     | sym* |  plan9* | psp* | sim* | xray* | os68k* | v88r* \
+ 	     | hiux* | abug | nacl* | netware* | windows* \
+diff -ruN untouched/gcc-16.2.0/fixincludes/mkfixinc.sh gcc-16.2.0/fixincludes/mkfixinc.sh
+--- untouched/gcc-16.2.0/fixincludes/mkfixinc.sh	2026-08-07 00:46:05.348677236 -0700
++++ gcc-16.2.0/fixincludes/mkfixinc.sh	2026-08-09 10:51:55.470120530 -0700
+@@ -11,6 +11,8 @@
+ 
+ # Check for special fix rules for particular targets
+ case $machine in
++    *-lensor* | \
++    *-*-lensor* | \
+     i?86-*-cygwin* | \
+     *-mingw32* | \
+     powerpc-*-eabisim* | \
+diff -ruN untouched/gcc-16.2.0/gcc/config/i386/t-lensor gcc-16.2.0/gcc/config/i386/t-lensor
+--- untouched/gcc-16.2.0/gcc/config/i386/t-lensor	1969-12-31 16:00:00.000000000 -0800
++++ gcc-16.2.0/gcc/config/i386/t-lensor	2026-08-09 10:59:15.576266913 -0700
+@@ -0,0 +1,2 @@
++MULTILIB_OPTIONS    += mno-red-zone
++MULTILIB_DIRNAMES   += no-red-zone
+diff -ruN untouched/gcc-16.2.0/gcc/config/lensor.h gcc-16.2.0/gcc/config/lensor.h
+--- untouched/gcc-16.2.0/gcc/config/lensor.h	1969-12-31 16:00:00.000000000 -0800
++++ gcc-16.2.0/gcc/config/lensor.h	2026-08-09 11:00:42.569272485 -0700
+@@ -0,0 +1,43 @@
++#undef TARGET_LENSOR
++#define TARGET_LENSOR 1
++
++/* Default arguments
++ * `-- `-lc`
++ *         Link to C Standard Library
++ */
++#undef LIB_SPEC
++#define LIB_SPEC "-lc"
++
++/* Default linker arguments
++ * `-- `-z max-page-size=4096`
++ *        Use 4KiB pages by default, even on 64-bit systems.
++ */
++#undef LINK_SPEC
++#define LINK_SPEC "-z max-page-size=4096"
++
++/* Files that are linked before user code.
++ * The prefix is to match one of Binutils'
++ * /ld/configure.tgt `NATIVE_LIB_DIRS`.
++ * The %s tells GCC to look for these files in the library directory.
++ */
++#undef STANDARD_STARTFILE_PREFIX
++#define STANDARD_STARTFILE_PREFIX "/lib/"
++#undef STARTFILE_SPEC
++#define STARTFILE_SPEC "crt0.o%s crti.o%s crtbegin.o%s"
++
++/* Files that are linked after user code. */
++#undef ENDFILE_SPEC
++#define ENDFILE_SPEC "crtend.o%s crtn.o%s"
++
++/* Additional predefined macros. */
++#undef TARGET_OS_CPP_BUILTINS
++#define TARGET_OS_CPP_BUILTINS()                \
++  do {                                          \
++    builtin_define ("__lensor__");              \
++    builtin_define ("__lensoros__");            \
++    builtin_define ("__unix__");                \
++    builtin_assert ("system=lensor");           \
++    builtin_assert ("system=lensoros");         \
++    builtin_assert ("system=unix");             \
++    builtin_assert ("system=posix");            \
++  } while(0);
+diff -ruN untouched/gcc-16.2.0/gcc/config.gcc gcc-16.2.0/gcc/config.gcc
+--- untouched/gcc-16.2.0/gcc/config.gcc	2026-08-07 00:46:05.819684556 -0700
++++ gcc-16.2.0/gcc/config.gcc	2026-08-09 11:14:54.918027716 -0700
+@@ -776,6 +776,13 @@
+ 
+ # Common parts for widely ported systems.
+ case ${target} in
++*-*-lensor*)
++  gas=yes
++  gnu_ld=yes
++  default_use_cxa_atexit=yes
++  uss_gcc_stdint=wrap
++  native_system_header_dir=/inc
++  ;;
+ *-*-darwin*)
+   tmake_file="t-darwin "
+   tm_file="${tm_file} darwin.h"
+@@ -1236,6 +1243,10 @@
+ esac
+ 
+ case ${target} in
++x86_64-*-lensor*)
++	tmake_file="${tmake_file} i386/t-lensor"
++	tm_file="${tm_file} i386/unix.h i386/att.h elfos.h glibc-stdint.h i386/i386elf.h i386/x86-64.h lensor.h"
++	;;
+ aarch64*-*-elf | aarch64*-*-fuchsia* | aarch64*-*-rtems*)
+ 	tm_file="${tm_file} elfos.h newlib-stdint.h"
+ 	tm_file="${tm_file} aarch64/aarch64-elf.h aarch64/aarch64-errata.h aarch64/aarch64-elf-raw.h"
+diff -ruN untouched/gcc-16.2.0/libgcc/config.host gcc-16.2.0/libgcc/config.host
+--- untouched/gcc-16.2.0/libgcc/config.host	2026-08-07 00:46:09.988749343 -0700
++++ gcc-16.2.0/libgcc/config.host	2026-08-09 11:06:27.832253990 -0700
+@@ -773,6 +773,10 @@
+ 	tmake_file="${tmake_file} i386/t-freebsd i386/t-crtstuff"
+ 	md_unwind_header=i386/freebsd-unwind.h
+ 	;;
++x86_64-*-lensor*)
++	extra_parts="$extra_parts crti.o crtbegin.o crtend.o crtn.o"
++	tmake_file="${tmake_file} i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
++	;;
+ i[34567]86-*-netbsdelf*)
+ 	tmake_file="${tmake_file} i386/t-crtstuff"
+ 	;;
+diff -ruN untouched/gcc-16.2.0/libstdc++-v3/crossconfig.m4 gcc-16.2.0/libstdc++-v3/crossconfig.m4
+--- untouched/gcc-16.2.0/libstdc++-v3/crossconfig.m4	2026-08-07 00:46:10.784761713 -0700
++++ gcc-16.2.0/libstdc++-v3/crossconfig.m4	2026-08-09 11:07:15.432359185 -0700
+@@ -174,6 +174,12 @@
+ 
+     GCC_CHECK_TLS
+     ;;
++  *-lensor*)
++    GLIBCXX_CHECK_COMPILER_FEATURES
++    GLIBCXX_CHECK_LINKER_FEATURES
++    GLIBCXX_CHECK_MATH_SUPPORT
++    GLIBCXX_CHECK_STDLIB_SUPPORT
++    ;;
+   *-linux* | *-uclinux* | *-gnu* | *-kfreebsd*-gnu | *-cygwin* | *-solaris*)
+     GLIBCXX_CHECK_COMPILER_FEATURES
+     GLIBCXX_CHECK_LINKER_FEATURES

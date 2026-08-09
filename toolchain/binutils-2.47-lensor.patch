@@ -1,0 +1,97 @@
+diff -ruN untouched/binutils-2.47/bfd/config.bfd binutils-2.47/bfd/config.bfd
+--- untouched/binutils-2.47/bfd/config.bfd	2026-07-25 16:00:00.000000000 -0700
++++ binutils-2.47/bfd/config.bfd	2026-08-09 10:08:34.724307614 -0700
+@@ -243,6 +243,11 @@
+ case "${targ}" in
+ # START OF targmatch.h
+ #ifdef BFD64
++  x86_64-*-lensor*)
++    targ_defvec=x86_64_elf64_vec
++    targ_selvecs=
++    want64=true
++    ;;
+   aarch64-*-darwin*)
+     targ_defvec=aarch64_mach_o_vec
+     targ_selvecs="arm_mach_o_vec mach_o_le_vec mach_o_be_vec mach_o_fat_vec"
+diff -ruN untouched/binutils-2.47/config.sub binutils-2.47/config.sub
+--- untouched/binutils-2.47/config.sub	2026-07-25 16:00:00.000000000 -0700
++++ binutils-2.47/config.sub	2026-08-09 10:13:56.347699451 -0700
+@@ -4,7 +4,7 @@
+ 
+ # shellcheck disable=SC2006,SC2268,SC2162 # see below for rationale
+ 
+-timestamp='2025-07-10'
++timestamp='2026-08-09'
+ 
+ # This file is free software; you can redistribute it and/or modify it
+ # under the terms of the GNU General Public License as published by
+@@ -2031,6 +2031,7 @@
+ 	| isc* \
+ 	| its* \
+ 	| l4re* \
++	| lensor* \
+ 	| libertybsd* \
+ 	| lites* \
+ 	| lnews* \
+diff -ruN untouched/binutils-2.47/gas/configure.tgt binutils-2.47/gas/configure.tgt
+--- untouched/binutils-2.47/gas/configure.tgt	2026-07-25 16:00:00.000000000 -0700
++++ binutils-2.47/gas/configure.tgt	2026-08-09 10:15:35.617980729 -0700
+@@ -241,6 +241,7 @@
+     case ${cpu}-${os} in
+       x86_64*-linux-gnux32)		arch=x86_64:32 ;;
+     esac ;;
++  i386-*-lensor*)			fmt=elf em=gnu ;;
+   i386-*-lynxos*)			fmt=elf em=lynx ;;
+   i386-*-redox*)			fmt=elf ;;
+   i386-*-solaris*)			fmt=elf em=solaris ;;
+diff -ruN untouched/binutils-2.47/ld/configure.tgt binutils-2.47/ld/configure.tgt
+--- untouched/binutils-2.47/ld/configure.tgt	2026-07-25 16:00:00.000000000 -0700
++++ binutils-2.47/ld/configure.tgt	2026-08-09 10:48:08.713892803 -0700
+@@ -942,6 +942,10 @@
+ x86_64-*-haiku*)	targ_emul=elf_x86_64_haiku
+ 			targ_extra_emuls="elf_x86_64 elf_i386_haiku"
+ 			;;
++x86_64-*-lensor*)
++			targ_emul=elf_x86_64_lensor
++			targ_extra_emuls="elf_x86_64"
++			;;
+ x86_64-*-linux-gnux32)	targ_emul=elf32_x86_64
+ 			targ_extra_libpath="elf_i386 elf_x86_64"
+ 			tdir_elf_i386=`echo ${targ_alias} | sed -e 's/x86_64/i386/' -e 's/-linux-gnux32/-linux-gnu/'`
+@@ -1067,6 +1071,9 @@
+   NATIVE_LIB_DIRS='/usr/lib /usr/lib/w32api'
+   ;;
+ 
++*-*-lensor*)
++  ;;
++
+ *-*-linux*)
+   ;;
+ 
+diff -ruN untouched/binutils-2.47/ld/emulparams/elf_x86_64_lensor.sh binutils-2.47/ld/emulparams/elf_x86_64_lensor.sh
+--- untouched/binutils-2.47/ld/emulparams/elf_x86_64_lensor.sh	1969-12-31 16:00:00.000000000 -0800
++++ binutils-2.47/ld/emulparams/elf_x86_64_lensor.sh	2026-08-09 10:20:29.629737255 -0700
+@@ -0,0 +1 @@
++. ${srcdir}/emulparams/elf_x86_64.sh
+diff -ruN untouched/binutils-2.47/ld/Makefile.am binutils-2.47/ld/Makefile.am
+--- untouched/binutils-2.47/ld/Makefile.am	2026-07-25 16:00:00.000000000 -0700
++++ binutils-2.47/ld/Makefile.am	2026-08-09 10:23:09.144402999 -0700
+@@ -457,6 +457,7 @@
+ 	eelf_x86_64.c \
+ 	eelf_x86_64_fbsd.c \
+ 	eelf_x86_64_haiku.c \
++	eelf_x86_64_lensor.c \
+ 	eelf_x86_64_sol2.c \
+ 	ehppa64linux.c \
+ 	ei386pep.c \
+diff -ruN untouched/binutils-2.47/ld/Makefile.in binutils-2.47/ld/Makefile.in
+--- untouched/binutils-2.47/ld/Makefile.in	2026-07-25 16:00:00.000000000 -0700
++++ binutils-2.47/ld/Makefile.in	2026-08-09 10:38:09.224098967 -0700
+@@ -971,6 +971,7 @@
+ 	eelf_x86_64.c \
+ 	eelf_x86_64_fbsd.c \
+ 	eelf_x86_64_haiku.c \
++	eelf_x86_64_lensor.c \
+ 	eelf_x86_64_sol2.c \
+ 	ehppa64linux.c \
+ 	ei386pep.c \
