@@ -7,7 +7,7 @@
 
 #if defined(_WIN32)
 #define DIR_SEP '\\'
-#elif defined(__lensor__) || defined(__unix__)
+#else
 #define DIR_SEP '/'
 #endif
 
@@ -74,7 +74,7 @@ public:
     /// Move constructor. Constructs a path whose pathname, in both
     /// native and generic formats, is the same as that of __source,
     /// __source is left in valid but unspecified state.
-    __path(__path&& __other) noexcept : __str(std::move<__other.str>) {}
+    __path(__path&& __other) noexcept : __str(std::move<__other.__str>) {}
 
     __path& operator=(const __path& __other) {
         if (this == addressof(__other)) { return *this; }

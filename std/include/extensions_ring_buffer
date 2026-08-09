@@ -46,8 +46,8 @@ struct ring_buffer {
         iterator operator++(int) {
             iterator __out{__ring, __current};
             ++__out.__current;
-            if (__out.current >= _Size)
-                __out.current = 0;
+            if (__out.__current >= _Size)
+                __out.__current = 0;
             return __out;
         }
         iterator& operator--() {

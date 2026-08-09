@@ -164,7 +164,7 @@ struct __unordered_map_impl {
             _T* __next_it = __prev;
             __prev = nullptr;
             while ((__it = __next_it) && __n--) {
-                __next_it = __it.__prev;
+                __next_it = __it->__prev;
                 delete __it;
             }
         }
@@ -176,7 +176,7 @@ struct __unordered_map_impl {
         /// [A]<->[C]
         void erase() {
             if (__prev) __prev->__next = __next;
-            if (__next) __next->prev = __prev;
+            if (__next) __next->__prev = __prev;
         }
 
         size_type length() {
