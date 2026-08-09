@@ -79,7 +79,9 @@ __BEGIN_DECLS__
 #define _R5 "r8"
 #define _R6 "r9"
 #define _SYSCALL "int $0x80"
+#define _SYSCALL_CLOBBERS
 #elif defined(__linux__)
+// TODO: We need to clobber rcx and r10 on every syscall on linux
 #define _R1 "D"
 #define _R2 "S"
 #define _R3 "d"
@@ -87,8 +89,9 @@ __BEGIN_DECLS__
 #define _R5 "r8"
 #define _R6 "r9"
 #define _SYSCALL "syscall"
+#define _SYSCALL_CLOBBERS , "rcx", "r11"
 #else
-#error "Unsupported platform."
+#error "Unsupported platform (syscall argument registers)."
 #endif
 
 #define _DEFINE_SYSCALL(_N, _Args, ...)                                                 \
@@ -98,7 +101,7 @@ __BEGIN_DECLS__
             (_SYSCALL "\n"                                                              \
              : "=a"(__result)                                                           \
              : "a"(__n) __VA_OPT__(, ) __VA_ARGS__                                      \
-             : "memory"                                                                 \
+             : "memory" _SYSCALL_CLOBBERS                                               \
         );                                                                              \
         return __result;                                                                \
     }
@@ -113,39 +116,39 @@ _DEFINE_SYSCALL(3, _DEFINE_SYSCALL_ARGS(__a __1, __a __2, __a __3), _R1(__1), _R
 __attribute__((__always_inline__, __artificial__))
 inline __a __syscall4(__a __n, __a __1, __a __2, __a __3, __a __4) {
     __a __result;
+    register __a __r4 asm(_R4) = __4;
     __asm__ __volatile__
-        ("movq %0, %%" _R4 "\n"
-         _SYSCALL "\n"
+        (_SYSCALL "\n"
          : "=a"(__result)
-         : "a"(__n), _R1(__1), _R2(__2), _R3(__3), "r"(__4)
-         : "memory", _R4);
+         : "a"(__n), _R1(__1), _R2(__2), _R3(__3), "r"(__r4)
+         : "memory" _SYSCALL_CLOBBERS);
     return __result;
 }
 
 __attribute__((__always_inline__, __artificial__))
 inline __a __syscall5(__a __n, __a __1, __a __2, __a __3, __a __4, __a __5) {
     __a __result;
+    register __a __r4 asm(_R4) = __4;
+    register __a __r5 asm(_R5) = __5;
     __asm__ __volatile__
-        ("movq %0, %%" _R4 "\n"
-         "movq %1, %%" _R5 "\n"
-         _SYSCALL "\n"
+        (_SYSCALL "\n"
          : "=a"(__result)
-         : "a"(__n), _R1(__1), _R2(__2), _R3(__3), "r"(__4), "r"(__5)
-         : "memory", _R4, _R5);
+         : "a"(__n), _R1(__1), _R2(__2), _R3(__3), "r"(__r4), "r"(__r5)
+         : "memory" _SYSCALL_CLOBBERS);
     return __result;
 }
 
 __attribute__((__always_inline__, __artificial__))
 inline __a __syscall6(__a __n, __a __1, __a __2, __a __3, __a __4, __a __5, __a __6) {
     __a __result;
+    register __a __r4 asm(_R4) = __4;
+    register __a __r5 asm(_R5) = __5;
+    register __a __r6 asm(_R6) = __6;
     __asm__ __volatile__
-        ("movq %0, %%" _R4 "\n"
-         "movq %1, %%" _R5 "\n"
-         "movq %2, %%" _R6 "\n"
-         _SYSCALL "\n"
+        (_SYSCALL "\n"
          : "=a"(__result)
-         : "a"(__n), _R1(__1), _R2(__2), _R3(__3), "r"(__4), "r"(__5), "r"(__6)
-         : "memory", _R4, _R5, _R6);
+         : "a"(__n), _R1(__1), _R2(__2), _R3(__3), "r"(__r4), "r"(__r5), "r"(__r6)
+         : "memory" _SYSCALL_CLOBBERS);
     return __result;
 }
 
@@ -195,43 +198,29 @@ __END_DECLS__
 
 typedef struct DirectoryEntry DirectoryEntry;
 
-/// Abandon all hope, ye who enter here.
-typedef struct {int __unused;}* __empty_type_t;
-#define _VA_FIRST(_First, ...) _First
-#define _VA_REST(_X, ...) __VA_ARGS__
-#define _EMPTY_VAL ((__empty_type_t)0)
+// The Map macro: It recursively applies a macro (M) to every argument
+#define _MAP(M, ...) __VA_OPT__(_MAP_1(M, __VA_ARGS__))
+#define _MAP_1(M, x, ...) M(x) __VA_OPT__(, _MAP_2(M, __VA_ARGS__))
+#define _MAP_2(M, x, ...) M(x) __VA_OPT__(, _MAP_3(M, __VA_ARGS__))
+#define _MAP_3(M, x, ...) M(x) __VA_OPT__(, _MAP_4(M, __VA_ARGS__))
+#define _MAP_4(M, x, ...) M(x) __VA_OPT__(, _MAP_5(M, __VA_ARGS__))
+#define _MAP_5(M, x, ...) M(x) __VA_OPT__(, _MAP_6(M, __VA_ARGS__))
+#define _MAP_6(M, x, ...) M(x)
 
-#define __syscall_at_least5(...)                                \
-_Generic((_VA_FIRST(__VA_ARGS__ __VA_OPT__(,) _EMPTY_VAL)),     \
-     __empty_type_t: __syscall5,                                \
-     default:        __syscall6)
+// The Counter macro: Maps the number of arguments to a suffix number
+#define _COUNT(...) _COUNT_I(__VA_ARGS__ __VA_OPT__(,) 6, 5, 4, 3, 2, 1, 0)
+#define _COUNT_I(_1, _2, _3, _4, _5, _6, N, ...) N
 
-#define __syscall_at_least4(...)                                \
-_Generic((_VA_FIRST(__VA_ARGS__ __VA_OPT__(,) _EMPTY_VAL)),     \
-     __empty_type_t: __syscall4,                                \
-     default:        __syscall_at_least5(_VA_REST(__VA_ARGS__)))
+// Glue macros to safely build token names (like __syscall3)
+#define _GLUE(A, B) A##B
+#define _EVAL(A, B) _GLUE(A, B)
 
-#define __syscall_at_least3(...)                                \
-_Generic((_VA_FIRST(__VA_ARGS__ __VA_OPT__(,) _EMPTY_VAL)),     \
-     __empty_type_t: __syscall3,                                \
-     default:        __syscall_at_least4(_VA_REST(__VA_ARGS__)))
+// The transformation we want to apply to each argument
+#define _TO_UINT(x) (uintptr_t)(x)
 
-#define __syscall_at_least2(...)                                \
-_Generic((_VA_FIRST(__VA_ARGS__ __VA_OPT__(,) _EMPTY_VAL)),     \
-     __empty_type_t: __syscall2,                                \
-     default:        __syscall_at_least3(_VA_REST(__VA_ARGS__)))
-
-#define __syscall_at_least1(...)                                \
-_Generic((_VA_FIRST(__VA_ARGS__ __VA_OPT__(,) _EMPTY_VAL)),     \
-     __empty_type_t: __syscall1,                                \
-     default:        __syscall_at_least2(_VA_REST(__VA_ARGS__)))
-
-#define syscall(_Sys, ...)                                      \
-_Generic((_VA_FIRST(__VA_ARGS__ __VA_OPT__(,) _EMPTY_VAL)),     \
-    __empty_type_t: __syscall0,                                 \
-    default:        __syscall_at_least1(_VA_REST(__VA_ARGS__))) \
-    (_Sys __VA_OPT__(, (uintptr_t)) __VA_ARGS__)
-
+// The clean entry point
+#define syscall(sys, ...) \
+    _EVAL(__syscall, _COUNT(__VA_ARGS__))(sys __VA_OPT__(,) _MAP(_TO_UINT, __VA_ARGS__))
 
 typedef uint64_t ProcessFileDescriptor;
 typedef ProcessFileDescriptor ProcFD;
