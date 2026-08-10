@@ -1,0 +1,52 @@
+#ifndef _INITIALIZER_LIST_H
+#define _INITIALIZER_LIST_H
+
+#include <stddef.h>
+
+namespace std {
+    template<class _E>
+    class initializer_list {
+    public:
+        using value_type      = _E;
+        using reference       = const _E&;
+        using const_reference = const _E&;
+        using size_type       = size_t; // Match your target size_t
+        using iterator        = const _E*;
+        using const_iterator  = const _E*;
+
+    private:
+        iterator  _M_array;
+        size_type _M_len;
+
+        // CRITICAL: The compiler needs a private/internal way to construct this.
+        // GCC and Clang expect a constructor that takes the raw pointer and size.
+        constexpr initializer_list(const_iterator __a, size_type __l) noexcept
+        : _M_array(__a), _M_len(__l) {}
+
+    public:
+        // Default constructor creates an empty list
+        constexpr initializer_list() noexcept
+        : _M_array(nullptr), _M_len(0) {}
+
+        // Capacity queries
+        constexpr size_type size() const noexcept { return _M_len; }
+
+        // Element access via iterators
+        constexpr const_iterator begin() const noexcept { return _M_array; }
+        constexpr const_iterator end() const noexcept { return _M_array + _M_len; }
+    };
+
+    // Non-member functions required by the standard for loops and algorithms
+    template<class _E>
+    constexpr const _E* begin(initializer_list<_E> __il) noexcept {
+        return __il.begin();
+    }
+
+    template<class _E>
+    constexpr const _E* end(initializer_list<_E> __il) noexcept {
+        return __il.end();
+    }
+
+} // namespace std
+
+#endif // _INITIALIZER_LIST_H

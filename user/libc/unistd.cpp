@@ -34,9 +34,10 @@ extern "C" {
     }
 
     /// FIXME: close() should return an int.
-    void close(int fd) {
+    int close(int fd) {
         /// TODO: check return value and set errno.
         syscall(SYS_close, fd);
+        return 0;
     }
 
     ssize_t read(int fd, const void* buffer, size_t count) {

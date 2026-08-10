@@ -32,7 +32,7 @@ __BEGIN_DECLS__
 #define STDERR_FILENO 2
 
 int open(const char* path, int flags, int mode);
-void close(int fd);
+int close(int fd);
 
 ssize_t read(int fd, const void* buffer, size_t count);
 ssize_t write(int fd, const void* buffer, size_t count);

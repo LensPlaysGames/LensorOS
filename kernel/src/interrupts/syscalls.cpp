@@ -422,6 +422,8 @@ void sys$11_exec(const char *path, const char **args) {
             return;
         }
 
+        // TODO: What if path is a directory?? What if it isn't an executable? Currently, things kind of explode.
+
         process->ExecutablePath = path;
 
         std::vector<std::string> args_vector_impl;
@@ -434,16 +436,17 @@ void sys$11_exec(const char *path, const char **args) {
                 args_vector_impl.push_back(*args_it);
 
             for (const auto& s : args_vector_impl)
-            args_vector.push_back(s);
+                args_vector.push_back(s);
         }
 
         // Replace current process with new process.
         bool success = ELF::ReplaceUserspaceElf64Process(process, fds.Process, args_vector);
         if (not success) {
-            // TODO: ... Unrecoverable, terminate the program, somehow.
+            // ... Unrecoverable, terminate the program, somehow.
             std::print("[EXEC]: Failed to replace process and parent is now unrecoverable, terminating.\n");
             // TODO: Mark for destruction (halt and catch fire).
             // FIXME: We should figure out how to exit the scope, so that everything is freed properly.
+            // FIXME: Also the fact that we opened a file at path, but never close it.
             process->State = Process::ProcessState::SLEEPING;
             Scheduler::yield();
         }

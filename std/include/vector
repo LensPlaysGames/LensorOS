@@ -28,6 +28,7 @@
 #include <iterator>
 #include <memory>
 #include <type_traits>
+#include <initializer_list>
 #include <utility>
 
 namespace std {
@@ -63,26 +64,37 @@ public:
     __vector() noexcept = default;
 
     /// Construct a __vector with a given size.
-    explicit __vector(size_type __n) : __sz(__n), __cap(__n) { __ptr = new value_type[__n]; }
+    explicit __vector(size_type __n) : __sz(__n), __cap(__n) { __ptr = new value_type[__cap]; }
 
     /// Construct a __vector with __n copies of __val.
     __vector(size_type __n, const value_type& __val) : __sz(__n), __cap(__n) {
-        __ptr = new value_type[__n];
+        __ptr = new value_type[__cap];
         for (size_type i = 0; i < __n; ++i) { __ptr[i] = __val; }
     }
 
     /// Construct a __vector with the contents of the range [__first, __last).
     template<typename _It>
     __vector(_It __first, _It __last) : __sz(__last - __first), __cap(__last - __first) {
-        __ptr = new value_type[__sz];
+        __ptr = new value_type[__cap];
         for (size_type i = 0; i < __sz; ++i) { __ptr[i] = *__first++; }
+    }
+
+    // The Initializer List Constructor
+    __vector(std::initializer_list<value_type> __il)
+    : __sz(__il.size()), __cap(__il.size())
+    {
+        // Allocate space for the incoming elements
+        __ptr = new value_type[__cap];
+
+        // Alternatively, if you have a custom std::copy:
+        std::copy(__il.begin(), __il.end(), __ptr);
     }
 
     /// =======================================================================
     ///  Copy and move constructors, assignment operators, and destructor.
     /// =======================================================================
     __vector(const __vector& __other) : __sz(__other.__sz), __cap(__other.__cap) {
-        __ptr = new value_type[__sz];
+        __ptr = new value_type[__cap];
         for (size_type i = 0; i < __sz; ++i) { __ptr[i] = __other.__ptr[i]; }
     }
 

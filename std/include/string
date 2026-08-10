@@ -94,6 +94,7 @@ public:
     constexpr basic_string_view() {}
     constexpr basic_string_view(const _Char* __data, size_t __size) : __data(__data), __size(__size) {}
     constexpr basic_string_view(const _Char* __data) : __data(__data), __size(__constexpr_strlen(__data)) {}
+    constexpr basic_string_view(_Char* __data) : __data(__data), __size(__constexpr_strlen(__data)) {}
 
     template <size_t __N>
     constexpr basic_string_view(const _Char (&__data)[__N]) : __data(__data), __size(__N - 1) {}
@@ -104,6 +105,7 @@ public:
 
     constexpr const _Char* data() const { return __data; }
     constexpr size_t size() const { return __size; }
+    constexpr bool empty() const noexcept { return __size == 0;}
 
     _Nodiscard int compare(_View __sv) const {
         int __cmp = memcmp(__data, __sv.__data, __size < __sv.__size ? __size : __sv.__size);
@@ -616,6 +618,21 @@ public:
     }
 
     void erase(iterator __first) { erase(__first, __first + 1); }
+
+    constexpr void pop_back() {
+        if (empty()) return;
+        auto __new_sz = size() - 1;
+        if (!__is_large()) {
+            __small.__data[__new_sz] = 0;
+            _PushIgnoreWarning("-Wconversion");
+            __small.__rem_cap += 1;
+            _PopWarnings();
+        } else {
+            __large.__data[__new_sz] = 0;
+            __large.__sz = __new_sz;
+        }
+        return;
+    }
 
     /// =======================================================================
     ///  Comparisons, searches, and checks.
