@@ -8,10 +8,7 @@
 #include <sys/wait.h>
 
 #ifdef __lensor__
-#include <sys/syscalls.h>
 #include <bits/io_defs.h>
-#elif __unix__
-#include <sys/syscall.h>
 #endif
 
 constexpr const char prompt[] = "  $:";
@@ -38,8 +35,8 @@ void run_program_quiet_nowait(const char *const filepath, char* const *args) {
 ///   NULL-terminated array of pointers to NULL-terminated strings.
 ///   Passed to `exec` syscall
 int run_program_waitpid(const char *const filepath, const char **args) {
-    size_t fds[2] = {size_t(-1), size_t(-1)};
-    syscall(SYS_pipe, fds);
+    int fds[2] = {-1, -1};
+    pipe(fds);
     //std::print("[XiSh]: Created pipe: ({}, {})\n", fds[0], fds[1]);
 
     pid_t cpid = fork();
@@ -244,8 +241,6 @@ int main(int argc, char **argv) {
         }
         argv.push_back(nullptr);
 
-        // TODO: If command doesn't exist by itself, check if command is valid
-        // within pwd (sys_pwd).
         bool found{false};
         for (auto &p : PATH) {
             auto e = p / command.data();
