@@ -293,7 +293,7 @@ void heap_print_debug() {
                "  Regions:\n"
                , heapSize, sHeapStart, sHeapEnd);
     u64 i = 0;
-    u64 usedCount = 0;
+    // u64 usedCount = 0;
     auto* it = (HeapSegmentHeader*)sHeapStart;
     while (it) {
         std::print("    Region {}:\n"
@@ -307,7 +307,7 @@ void heap_print_debug() {
                    , it->length + sizeof(HeapSegmentHeader)
                    , (void*) it
                    , (void*)(u64(it) + sizeof(HeapSegmentHeader)));
-        if (!it->free) usedCount++;
+        // if (!it->free) usedCount++;
         ++i;
         it = it->next;
     };
@@ -326,13 +326,13 @@ void heap_print_debug_summed() {
                "  Regions:\n"
                , heapSize, sHeapStart, sHeapEnd);
     u64 i = 0;
-    u64 usedCount = 0;
+    // u64 usedCount = 0;
     auto* it = (HeapSegmentHeader*)sHeapStart;
     while (it) {
         auto* start_it = it;
         u64 payload_total = it->length;
         u64 total_length = it->length + sizeof(HeapSegmentHeader);
-        if (!it->free) ++usedCount;
+        // if (!it->free) ++usedCount;
         u64 start_i = i;
         bool free = it->free;
         while ((it = it->next)) {
@@ -340,7 +340,7 @@ void heap_print_debug_summed() {
             if (it->free != free) break;
             payload_total += it->length;
             total_length += it->length + sizeof(HeapSegmentHeader);
-            if (!it->free) ++usedCount;
+            // if (!it->free) ++usedCount;
         }
         if (i - start_i == 1 || i - start_i == 0)
             std::print("    Region {}:\n", start_i);
