@@ -4,8 +4,10 @@
 #include <vector>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <errno.h>
 
 #ifdef __lensor__
 #include <bits/io_defs.h>
@@ -35,21 +37,57 @@ void run_program_quiet_nowait(const char *const filepath, char* const *args) {
 ///   NULL-terminated array of pointers to NULL-terminated strings.
 ///   Passed to `exec` syscall
 int run_program_waitpid(const char *const filepath, const char **args) {
+    if (not filepath or not args) {
+        std::print("[XiSh]: internal error: null arguments\n");
+        exit(1);
+    }
+
+    std::print("[XiSh]: running command: {}", filepath);
+    for (auto arg = args; *arg; ++arg)
+        std::print(" {}", *arg);
+    std::print("\n");
+
+    errno = 0;
+
     int fds[2] = {-1, -1};
-    pipe(fds);
-    //std::print("[XiSh]: Created pipe: ({}, {})\n", fds[0], fds[1]);
+    auto pipe_rc = pipe(fds);
+    if (pipe_rc != 0) {
+        std::print("Failed to create pipe: rc={} errno={}\n", pipe_rc, errno);
+        return -1;
+    }
+    // std::print("[XiSh]: Created pipe: ({}, {})\n", fds[0], fds[1]);
 
     pid_t cpid = fork();
+    if (cpid == -1) {
+        std::print("Failed to fork process: rc={} errno={}\n", cpid, errno);
+        return -1;
+    }
     //printf("pid: %d\n", cpid);
     if (cpid) {
         //puts("Parent");
-        close(fds[1]);
+        {
+            auto close_rc = close(fds[1]);
+            if (close_rc != 0) {
+                std::print("Failed to close write end of pipe in parent: rc={} errno={}\n", close_rc, errno);
+                return -1;
+            }
+        }
 
-        char c;
-        while (read(fds[0], &c, 1) != EOF && c)
+        char c{0};
+        int bytes_read{0};
+        while ((bytes_read = read(fds[0], &c, 1)) > 0)
             std::print("{}", c);
 
-        close(fds[0]);
+        if (bytes_read < 0)
+            std::print("[XiSh]: Failed to read output from command (errno={})\n", errno);
+
+        {
+            auto close_rc = close(fds[0]);
+            if (close_rc != 0) {
+                std::print("Failed to close read end of pipe in parent: rc={} errno={}\n", close_rc, errno);
+                return -1;
+            }
+        }
 
         // TODO: waitpid needs to reserve some uncommon error code for
         // itself so that it is clear what is a failure from waitpid or just a
@@ -57,9 +95,9 @@ int run_program_waitpid(const char *const filepath, const char **args) {
         // libc that sets errno (that always goes well).
         fflush(NULL);
         int command_status{};
-        waitpid(cpid, &command_status, 0);
-        if (errno != -1) {
-            std::print("`waitpid` failure!\n");
+        auto wait_rc = waitpid(cpid, &command_status, 0);
+        if (wait_rc == -1) {
+            std::print("`waitpid` failure! on pid {}\n", cpid);
             return -1;
         }
 
@@ -76,7 +114,8 @@ int run_program_waitpid(const char *const filepath, const char **args) {
         close(fds[1]);
 
         fflush(NULL);
-        execv(filepath, (char**)args);
+        execv(filepath, (char **)args);
+        exit(1);
     }
 
     // FIXME: Unreachable
@@ -236,6 +275,7 @@ int main(int argc, char **argv) {
 
         // NOT A BUILTIN, DELEGATE TO SYSTEM COMMAND
         std::vector<const char *> argv;
+        argv.push_back(command.data());
         for (const auto& arg : arguments) {
             argv.push_back(arg.data());
         }
@@ -246,6 +286,7 @@ int main(int argc, char **argv) {
             auto e = p / command.data();
             if (std::filesystem::exists(e)){
                 found = true;
+                std::print("[XiSh]: found command at {}\n", e.c_str());
                 rc = run_program_waitpid(e.c_str(), argv.data());
                 break;
             }
