@@ -1,13 +1,34 @@
 #include <filesystem>
 #include <format>
+#include <print>
 #include <vector>
 
 #include <stdio.h>
-#include <sys/syscalls.h>
 #include <unistd.h>
+#include <sys/wait.h>
+
+#ifdef __lensor__
+#include <sys/syscalls.h>
 #include <bits/io_defs.h>
+#elif __unix__
+#include <sys/syscall.h>
+#endif
 
 constexpr const char prompt[] = "  $:";
+
+// DON'T redirect stdout of the program being run to a pipe.
+// DON'T wait for the program being run to exit before returning to the
+// main shell loop.
+// Effect: the output from the program being run is completely invisible,
+// and the user is free to run other programs.
+// Most often used to start up a server of some sort.
+// TODO: It would be nice to keep track of programs run in this way, so
+// that we may check up on them later to see if they are still running,
+// what their stdout/stderr look like, etc.
+void run_program_quiet_nowait(const char *const filepath, char* const *args) {
+    if (fork() == 0) execv(filepath, args);
+}
+
 
 // FIXME: May want to do ErrorOr or some type of variant so that we can
 // tell when run_program_waitpid itself failed vs the program that was
@@ -38,8 +59,9 @@ int run_program_waitpid(const char *const filepath, const char **args) {
         // failing status. Maybe have some other way to check? Or wrap this in
         // libc that sets errno (that always goes well).
         fflush(NULL);
-        int command_status = syscall<int>(SYS_waitpid, cpid);
-        if (command_status == -1) {
+        int command_status{};
+        waitpid(cpid, &command_status, 0);
+        if (errno != -1) {
             std::print("`waitpid` failure!\n");
             return -1;
         }
@@ -47,18 +69,17 @@ int run_program_waitpid(const char *const filepath, const char **args) {
         //puts("Parent waited");
         //fflush(NULL);
 
-        return command_status;
-
+        return WEXITSTATUS(command_status);
     } else {
         //puts("Child");;
         close(fds[0]);
 
         // Redirect stdout to write end of pipe.
-        syscall(SYS_repfd, fds[1], STDOUT_FILENO);
+        dup2(fds[1], STDOUT_FILENO);
         close(fds[1]);
 
         fflush(NULL);
-        syscall(SYS_exec, filepath, args);
+        execv(filepath, (char**)args);
     }
 
     // FIXME: Unreachable
@@ -67,16 +88,29 @@ int run_program_waitpid(const char *const filepath, const char **args) {
 }
 
 int main(int argc, char **argv) {
-    // Set stdout unbuffered so the user can see updates as they type.
+    // Set stdout for this program to unbuffered so the user can see updates
+    // as they type.
     setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
 
     FILE *input = stdin;
-    // FIXME: This *might* be better as a vector<char>
+    // FIXME: This *might* be better as a vector<char>, seeing as we only add/
+    // remove from the end.
     std::string input_command{};
 
     std::print("Welcome to XiSH\n");
+    std::print("  XiSH is the main userspace shell for LensorOS.\n");
+    std::print("  Try \"/fs0/bin/ls /fs0/bin\"\n");
 
     int rc = 0;
+
+    std::vector<std::filesystem::path> PATH{""};
+#if defined(__unix__)
+    PATH.emplace_back("/usr/local/bin/");
+    PATH.emplace_back("/usr/bin/");
+    PATH.emplace_back("/bin/");
+#elif defined(__lensor__)
+    PATH.emplace_back("/fs0/bin/");
+#endif
 
     for (;;) {
         input_command.clear();
@@ -159,6 +193,7 @@ int main(int argc, char **argv) {
         for (;;) {
             auto arg = collect_arg(the_rest);
             if (!arg.size()) break;
+            // TODO: Process argument (glob expansions, variable replacement, etc)
             arguments.push_back({arg.data(), arg.size()});
         }
 
@@ -175,6 +210,33 @@ int main(int argc, char **argv) {
         if (command == "quit")
             break;
 
+        // TODO: "help"
+
+        if (command == "bg") {
+            if (arguments.empty()) {
+                std::print("[XiSH]:Error:builtin_background: No arguments given, so no command to run in background\n");
+                continue;
+            }
+
+            command = arguments.at(0);
+            arguments.erase(arguments.begin());
+
+            if (std::filesystem::exists(std::filesystem::path{command.data()})) {
+                // Prepare arguments for exec syscall
+                std::vector<char *> argv;
+                for (const auto& arg : arguments) {
+                    argv.push_back((char*)arg.data());
+                }
+                argv.push_back(nullptr);
+
+                run_program_quiet_nowait(command.data(), argv.data());
+                std::print("[XiSH]: Ran \"{}\" in background\n", command);
+            }
+            else std::print("[XiSH]:Error:builtin_background: \"{}\" does not exist\n", command);
+
+            continue;
+        }
+
         // NOT A BUILTIN, DELEGATE TO SYSTEM COMMAND
         std::vector<const char *> argv;
         for (const auto& arg : arguments) {
@@ -182,9 +244,19 @@ int main(int argc, char **argv) {
         }
         argv.push_back(nullptr);
 
-        if (std::filesystem::exists(std::filesystem::path{command.data()}))
-            rc = run_program_waitpid(command.data(), argv.data());
-        else std::print("[XiSH]:Error: \"{}\" does not exist\n", command);
+        // TODO: If command doesn't exist by itself, check if command is valid
+        // within pwd (sys_pwd).
+        bool found{false};
+        for (auto &p : PATH) {
+            auto e = p / command.data();
+            if (std::filesystem::exists(e)){
+                found = true;
+                rc = run_program_waitpid(e.c_str(), argv.data());
+                break;
+            }
+        }
+        if (not found)
+            std::print("[XiSH]:Error: \"{}\" does not exist\n", command);
     }
     return 0;
 }

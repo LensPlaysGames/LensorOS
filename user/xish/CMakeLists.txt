@@ -22,7 +22,9 @@ set( xish_VERSION 0.0.1 )
 set( xish_LANGUAGES CXX )
 
 # Export compilation database in JSON format.
-set( CMAKE_EXPORT_COMPILE_COMMANDS on )
+set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project( xish VERSION ${xish_VERSION} LANGUAGES ${xish_LANGUAGES} )
 
