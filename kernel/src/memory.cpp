@@ -37,45 +37,42 @@ extern "C" int memcmp(const void* aPtr, const void* bPtr, size_t numBytes) {
     return 0;
 }
 
-// The signed comparison does limit `numBytes` to ~9 billion.
-// I think I'm okay with that, as nobody will be moving 8192 pebibytes
-//   around in memory any time soon. If you are, rewrite this, nerd :^)
 extern "C" void* memcpy(void* __restrict__ dest, const void* __restrict__ src, size_t numBytes) {
-    if (src == dest)
-        return dest;
+    void* result = dest;
 
-    s64 i = 0;
-    for (; i <= (s64)numBytes - 2048; i += 2048)
-        *(u16384*)((u64)dest + i) = *(u16384*)((u64)src + i);
-    for (; i <= (s64)numBytes - 128; i += 128)
-        *(u1024*)((u64)dest + i) = *(u1024*)((u64)src + i);
-    for (; i <= (s64)numBytes - 32; i += 32)
-        *(u256*)((u64)dest + i) = *(u256*)((u64)src + i);
-    for (; i <= (s64)numBytes - 8; i += 8)
-        *(u64*)((u64)dest + i) = *(u64*)((u64)src + i);
-    for (; i < (s64)numBytes; ++i)
-        *(u8*)((u64)dest + i) = *(u8*)((u64)src + i);
+    asm volatile (
+        "shrq $3, %%rcx\n\t"          // Divide byte count by 8 to get QWORD count
+        "rep movsq\n\t"               // Copy 8-byte blocks. Modifies RDI and RSI.
 
-    return dest;
+        "movq %[numBytes], %%rcx\n\t" // Reload original byte count
+        "andq $7, %%rcx\n\t"          // Extract trailing bytes (numBytes % 8)
+        "rep movsb\n\t"               // Copy remaining bytes. Modifies RDI and RSI.
+
+        : "+D"(dest), "+S"(src)       // Tells compiler RDI and RSI are modified in-place
+        : "c"(numBytes), [numBytes]"r"(numBytes) // Pass size into RCX ("c") and another GPR
+        : "memory"                    // Memory barrier to protect cache sequencing
+    );
+
+    return result;
 }
 
 extern "C" void memset(void* start, u8 value, u64 numBytes) {
+    u64 i = 0;
     if (numBytes >= 256) {
-        u64 qWordValue = 0;
-        qWordValue |= (u64)value << 0;
-        qWordValue |= (u64)value << 8;
-        qWordValue |= (u64)value << 16;
-        qWordValue |= (u64)value << 24;
-        qWordValue |= (u64)value << 32;
-        qWordValue |= (u64)value << 40;
-        qWordValue |= (u64)value << 48;
-        qWordValue |= (u64)value << 56;
-        u64 i = 0;
-        for (; i <= numBytes - 8; i += 8)
-            *(u64*)((u64)start + i) = qWordValue;
+        u64 qWordValue = value * 0x0101010101010101ull;
+        // qWordValue |= (u64)value << 0;
+        // qWordValue |= (u64)value << 8;
+        // qWordValue |= (u64)value << 16;
+        // qWordValue |= (u64)value << 24;
+        // qWordValue |= (u64)value << 32;
+        // qWordValue |= (u64)value << 40;
+        // qWordValue |= (u64)value << 48;
+        // qWordValue |= (u64)value << 56;
+        for (; i + 8 <= numBytes; i += 8)
+            *(u64*)((u8*)start + i) = qWordValue;
     }
-    for (u64 i = 0; i < numBytes; ++i)
-        *(u8*)((u64)start + i) = value;
+    for (; i < numBytes; ++i)
+        *(u8*)((u8*)start + i) = value;
 }
 
 extern "C" void* memmove(void* dst, const void* src, size_t num) {
