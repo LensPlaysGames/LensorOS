@@ -53,6 +53,28 @@ extern "C" {
         return rc;
     }
 
+    int pipe(int out[2]) {
+        size_t fds[2] = {size_t(-1), size_t(-1)};
+
+        syscall(SYS_pipe, fds);
+        // TODO: Error checking
+
+        if (fds[0] == size_t(-1) or fds[1] == size_t(-1)){
+            errno = EFAULT;
+            return -1;
+        }
+
+        // TODO: How bad is this cast?
+        out[0] = (int)fds[0];
+        out[1] = (int)fds[1];
+        return 0;
+    }
+
+    int dup2(int oldfd, int newfd) {
+        syscall(SYS_repfd, oldfd, newfd);
+        return newfd;
+    }
+
     pid_t fork(void) {
         // Flush all libc file buffers. This is necessary because, as
         // you can imagine, it isn't ideal when the two processes after
@@ -69,6 +91,12 @@ extern "C" {
         // return value, we should set errno to EAGAIN or ENOMEM,
         // depending on the failure case.
         return child_pid;
+    }
+
+    pid_t execv(const char *file, char *const argv[]) {
+        syscall(SYS_exec, file, argv);
+        // Obviously this will never happen...
+        return 0;
     }
 
     char *getcwd(char *buf, size_t size) {

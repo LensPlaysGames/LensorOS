@@ -23,6 +23,7 @@
 
 #include <bits/decls.h>
 #include "sys/types.h"
+#include "sys/wait.h"
 
 __BEGIN_DECLS__
 
@@ -36,7 +37,14 @@ void close(int fd);
 ssize_t read(int fd, const void* buffer, size_t count);
 ssize_t write(int fd, const void* buffer, size_t count);
 
+int pipe(int fds[2]);
+
+/// The second file descriptor given will be associated with the file
+/// description of the first.
+int dup2(int oldfd, int newfd);
+
 pid_t fork(void);
+pid_t execv(const char* file, char *const argv[]);
 
 /// On success, `buf` will be filled with the absolute path of the
 /// current process' working directory.

@@ -1,7 +1,12 @@
 cmake_minimum_required( VERSION 3.20 )
 project( LensorOS VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGES} )
 
-set( USERSPACE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin CACHE PATH "This is where built userspace libraries and programs will be installed." )
+set(
+  USERSPACE_OUTPUT_DIRECTORY
+  ${CMAKE_CURRENT_LIST_DIR}/bin
+  CACHE PATH
+  "This is where built userspace libraries and programs will be installed."
+)
 
 add_custom_target( userspace-libraries )
 add_custom_target( userspace )

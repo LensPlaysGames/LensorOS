@@ -10,6 +10,8 @@
 set( LensorOS_VERSION   0.0.2 )
 set( LensorOS_LANGUAGES ASM ASM_NASM C CXX )
 
+set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
+set( CMAKE_CXX_STANDARD_REQUIRED 23 )
 
 # Use `ccache` if it is installed in system's PATH.
 find_program( CCACHE_PROGRAM ccache )
