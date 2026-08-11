@@ -33,7 +33,7 @@
 #include <system.h>
 
 #ifdef x86_64
-#    include <tss.h>
+#include <x86_64/tss.h>
 #endif
 
 /// External symbol definitions for `scheduler.asm`

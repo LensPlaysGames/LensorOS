@@ -106,10 +106,10 @@ add_executable(
   src/storage/filesystem_drivers/socket.cpp
   src/system.cpp
   src/tests.cpp
-  src/tss.cpp
   src/uart.cpp
   src/utf.cpp
   src/virtual_filesystem.cpp
+  src/x86_64/tss.cpp
 )
 set_target_properties( Kernel PROPERTIES OUTPUT_NAME kernel.elf )
 target_compile_definitions(

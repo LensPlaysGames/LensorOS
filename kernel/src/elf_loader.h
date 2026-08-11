@@ -36,8 +36,11 @@
 #include <scheduler.h>
 #include <storage/file_metadata.h>
 #include <system.h>
-#include <tss.h>
 #include <virtual_filesystem.h>
+
+#ifdef x86_64
+#include <x86_64/tss.h>
+#endif
 
 // Uncomment the following directive for extra debug output.
 //#define DEBUG_ELF

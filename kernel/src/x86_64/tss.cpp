@@ -19,11 +19,11 @@
 
 #include <format>
 
-#include <tss.h>
+#include <x86_64/tss.h>
 
+#include <gdt.h>
 #include <link_definitions.h>
 #include <memory.h>
-#include <gdt.h>
 
 TSSEntry tssEntry;
 // USED IN `userswitch.asm` `jump_to_userland_function` AS EXTERNAL SYMBOL.
@@ -38,22 +38,22 @@ void TSS::initialize() {
     gGDT.TSS.set_limit(limit);
     // Set base address to address of TSS Entry.
     u64 base = V2P((u64)&tssEntry);
-    //u64 base = (u64)&tssEntry;
+    // u64 base = (u64)&tssEntry;
     gGDT.TSS.set_base(base);
     std::print("[TSS]: Initialized\n"
                "  Base:  {:#016x}\n"
-               "  Limit: {:#08x}\n"
-               , gGDT.TSS.base()
-               , gGDT.TSS.limit()
-               );
+               "  Limit: {:#08x}\n",
+               gGDT.TSS.base(),
+               gGDT.TSS.limit());
     // Store current stack pointer in TSS entry.
-    u64 stackPointer { 0 };
-    asm("movq %%rsp, %0\n\t"
-        : "=m"(stackPointer)
-        );
+    // FIXME: WHY WOULD WE DO THAT THOUGH??? WHY WOULD WE WANT TO RETURN TO
+    // THE STACK IN TSS::initialize()???
+    u64 stackPointer{0};
+    asm volatile("movq %%rsp, %0\n\t"
+                 : "=m"(stackPointer));
     tssEntry.set_stack(stackPointer);
-    asm("mov $0x28, %%ax\n\t"
-        "ltr %%ax\n\t"
-        ::: "rax"
-        );
+    // 0x28 -> offset of TSS in GDT (I think).
+    asm volatile("mov $0x28, %%ax\n\t"
+                 "ltr %%ax\n\t" ::: "rax");
+    std::print("  Stack Pointer:  {:016x}\n", stackPointer);
 }
