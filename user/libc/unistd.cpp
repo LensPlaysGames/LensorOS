@@ -95,6 +95,11 @@ extern "C" {
     }
 
     pid_t execv(const char *file, char *const argv[]) {
+#ifdef __lensor__
+        // LensorOS exec syscall adds executable filepath argument itself, but
+        // linux style exec* functions require it to be there already.
+        argv += 1;
+#endif
         syscall(SYS_exec, file, argv);
         // Obviously this will never happen...
         return 0;
