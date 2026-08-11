@@ -81,7 +81,7 @@ class FileAllocationTableDriver final : public FilesystemDriver {
             const u64 ClusterSize = Driver.BR.BPB.NumSectorsPerCluster * Driver.BR.BPB.NumBytesPerSector;
 
             /// Iteration data.
-            std::vector<u8> ClusterContents{ClusterSize};
+            std::vector<u8> ClusterContents = std::vector<u8>(ClusterSize);
             u64 LastFATSector = 0;
             bool MoreClusters = true;
             bool ClearLFN = false;

@@ -39,6 +39,7 @@ std::string FileAllocationTableDriver::pop_filename_from_front_of_path(std::stri
     /// Strip leading slash.
     std::string path = raw_path;
     if (path.starts_with("/")) path = path.substr(1);
+    // If there was nothing past the leading slash, return the leading slash.
     if (path.size() < 1) return raw_path;
 
     raw_path = path;
