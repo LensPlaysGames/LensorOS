@@ -144,7 +144,7 @@ public:
 
         // Join this path and other path with a separator inbetween.
         if (__str.size() and not __str.ends_with(__sep))
-            __str += DIR_SEP;
+            __str += __sep;
         __str += __other;
 
         return *this;
