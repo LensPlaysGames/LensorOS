@@ -20,9 +20,9 @@
 #ifndef LENSOR_OS_LINKED_LIST_H
 #define LENSOR_OS_LINKED_LIST_H
 
+#include <bits/terminate.h>
 #include <debug.h>
 #include <memory/heap.h>
-#include <bits/terminate.h>
 
 template <typename T>
 class SinglyLinkedList;
@@ -151,43 +151,36 @@ public:
     }
 
     bool remove(u64 index) {
-        if (index >= Length)
+        if (index >= Length or Head == nullptr)
             return false;
 
         // Handle head removal
         if (index == 0) {
-            if (Head != nullptr) {
-                Node* old = Head;
-                Head = Head->next();
-                Length -= 1;
-                delete old;
-            }
-            // If head is nullptr, ensure tail is as well.
-            else Tail = nullptr;
+            Node* old = Head;
+            Head = Head->next();
+            Length -= 1;
+            delete old;
+
+            if (Length == 0)
+                Tail = nullptr;
+
             return true;
         }
 
         Node* prev = Head;
-        Node* current = Head;
-        Node* next = Head->next();
-        u64 i = 1;
-        while (current) {
-            current = current->next();
-            if (current)
-                next = current->next();
+        for (u64 i = 0; i < index - 1; ++i)
+            prev = prev->next();
 
-            if (i >= index)
-                break;
+        // NOTE: prev cannot be nullptr if Length was valid.
+        Node* current = prev->next();
 
-            prev = current;
-            i++;
-        }
-        // Set Tail if removing last item.
-        if (next == nullptr) Tail = prev;
-
-        prev->Next = next;
+        prev->Next = current->Next;
         Length -= 1;
         delete current;
+
+        if (current == Tail)
+            Tail = prev;
+
         return true;
     }
 
