@@ -206,23 +206,18 @@ LoadUserspaceElf64Process(
         // for the duration of the process, and should only be freed
         // when it exits.
         process->add_memory_region((void*)virtual_page, physical_page, PAGE_SIZE, stack_flags);
-        // MAP THIS FOR THE KERNEL SO WE ACTUALLY WRITE TO THE RIGHT PLACE FOR
-        // THIS PARTICULAR USER STACK.
-        Memory::map((void*)virtual_page, physical_page, stack_flags);
     }
 
     // TODO: Max argument length? Maximum environment length?
 
+    // Switch to process' virtual address space while we are writing to the
+    // process' stack; the kernel is higher-half mapped in every page table,
+    // so it "should run smoothly".
+    auto cr3 = Memory::active_page_map();
+    Memory::flush_page_map(pageTable);
+
     // Copy environment contents to the stack, keeping track of addresses.
     uintptr_t stack_top_address = virtual_stack_top;
-    for (auto virtual_page = virtual_stack_bottom; virtual_page < virtual_stack_top; virtual_page += PAGE_SIZE) {
-        auto physical_page = Memory::request_page();
-        if (physical_page == 0) {
-            std::print("[ELF]: Couldn't allocate stack for new userspace process\n");
-            return false;
-        }
-        Memory::map((void*)virtual_page, physical_page, stack_flags);
-    }
     std::vector<usz> envp_addresses;
     for (auto str : env) {
         usz size = str.size() + 1;
@@ -297,6 +292,8 @@ LoadUserspaceElf64Process(
     }
 #endif
 
+    Memory::flush_page_map(cr3);
+
     if (stack_top_address % 16 != 0) {
         if (stack_top_address % 8 != 0) {
             panic("STACK UNALIGNED\n");
@@ -304,12 +301,6 @@ LoadUserspaceElf64Process(
             panic("STACK 8-BYTE ALIGNED\n");
         }
     }
-
-    // Unmap the user stack in kernel memory, as we will not be writing to it.
-    // for (auto virtual_page = virtual_stack_bottom; virtual_page < virtual_stack_top; virtual_page += PAGE_SIZE)
-    //     Memory::unmap((void*)virtual_page);
-
-    // TODO: Abstract x86_64 specific stuff, somehow.
 
     // New stack.
     process->CPU.RBP = (u64)(stack_top_address);
