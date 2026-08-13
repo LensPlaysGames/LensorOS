@@ -387,8 +387,6 @@ pid_t sys$10_fork() {
                  : "=r"(cpu));
     DBGMSG(sys$_dbgfmt, 10, "fork");
     Process* process = Scheduler::CurrentProcess->value();
-    // Use userspace stack pointer instead of kernel stack pointer
-    cpu->RSP = cpu->Frame.sp;
     // Save cpu state into process cache so that it will be set
     // properly for the forked process.
     memcpy(&process->CPU, cpu, sizeof(CPUState));
