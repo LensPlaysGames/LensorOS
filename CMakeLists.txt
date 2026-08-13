@@ -25,6 +25,7 @@ include( toolchain/config.cmake )
 if ( ARCH STREQUAL "" )
   message(FATAL_ERROR "[31;5mERROR: `toolchain/config.cmake` MUST SET `ARCH` variable to non-empty string![m")
 endif()
+add_compile_definitions(${ARCH})
 
 cmake_minimum_required( VERSION 3.20 )
 project( LensorOS VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGES} )
