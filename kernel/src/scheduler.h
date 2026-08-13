@@ -63,6 +63,8 @@ struct Process {
 
     pid_t ParentProcess{(pid_t)-1};
 
+    uintptr_t kernel_stack{};
+
     /// A list of programs waiting to be set to `RUNNING` when this
     /// program exits.
     std::vector<pid_t> WaitingList;
