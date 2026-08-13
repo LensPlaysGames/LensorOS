@@ -97,7 +97,7 @@ struct Process {
 
     /// Used to save/restore CPU state when a context switch occurs.
 #ifdef x86_64
-    CPUState CPU;
+    CPUState CPU{};
     Memory::PageTable* CR3{nullptr};
 
     /* Data for extra CPU info (fxsave, etc). */
@@ -200,9 +200,11 @@ extern Process StartupProcess;
 bool initialize();
 
 /// Get a process ID number that is unique.
+[[nodiscard]]
 pid_t request_pid();
 
 /// Get the process with PID if it is within list of processes, otherwise return NULL.
+[[nodiscard]]
 Process* process(pid_t);
 
 /* Switch to the next available task.
@@ -217,6 +219,7 @@ void switch_process(CPUState*);
 /// Creates and assigns a unique PID.
 pid_t add_process(Process*);
 
+[[nodiscard]]
 Process* last_process();
 
 /// Remove the process with PID from the scheduler's list of viable
@@ -237,9 +240,13 @@ void print_debug();
 /// Stop the current process, and start the next.
 void yield(CPUState*);
 
+[[nodiscard]]
+Process* request_process(pid_t parent_pid);
+
 // Call `map_pages` with the given data on every process in the
 // process queue.
 void map_pages_in_all_processes(void* virtualAddress, void* physicalAddress, u64 mappingFlags, size_t pages, Memory::ShowDebug d = Memory::ShowDebug::No);
+
 }  // namespace Scheduler
 
 __attribute__((no_caller_saved_registers)) void scheduler_switch(CPUState*);

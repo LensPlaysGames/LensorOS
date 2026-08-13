@@ -374,6 +374,9 @@ void switch_process(CPUState* cpu) {
     // TODO: Check all processes that called `wait(ms)`, and run/
     // unstop them if the timestamp is greater than the calculated
     // one.
+    // for (auto* p : time_waitlist)
+    //     if (p->wait_until > now)
+    //         p->unblock();
 
     switch_process_impl(cpu);
 }
@@ -386,43 +389,65 @@ void yield(CPUState* cpu) {
     CurrentProcess->value()->kernel_stack = cpu->RSP;
 
     switch_process(cpu);
-    // iretq to the new process, bb.
-    yield_asm(cpu);
-}
-}  // namespace Scheduler
 
-pid_t CopyUserspaceProcess(Process* original) {
+    auto& next_cpu = CurrentProcess->value()->CPU;
+    // iretq to the new process, bb.
+    yield_asm(&next_cpu);
+}
+
+Process* request_process(pid_t parent_pid) {
     // Allocate process before cloning page table in case it causes
     // heap to expand.
-    Process* newProcess = new Process;
-    newProcess->State = Process::ProcessState::SLEEPING;
-    Scheduler::add_process(newProcess);
-    newProcess->ParentProcess = original->ProcessID;
+    auto* process = new Process{};
+    process->ParentProcess = parent_pid;
+    process->State = Process::ProcessState::SLEEPING;
+    pid_t pid = Scheduler::add_process(process);
 
     // Copy current page table (fork)
     // TODO: Use clone_pag_map_copy_on_write, and remove "copy each
     // memory region" section below. Or put it behind #ifdef
     // LENSOR_OS_NO_COPY_ON_WRITE or smth
-    auto* newPageTable = Memory::clone_page_map(original->CR3);
+    auto* newPageTable = Memory::clone_active_page_map();
     if (newPageTable == nullptr) {
         std::print("Failed to clone current page map for new process page map.\n");
-        Scheduler::remove_process(newProcess->ProcessID, -1);
-        return -1;
+        Scheduler::remove_process(pid, -1);
+        return nullptr;
     }
-    newProcess->CR3 = newPageTable;
-    // Map new page table in itself.
+    process->CR3 = newPageTable;
+
     Memory::map(
         newPageTable,
         newPageTable,
         newPageTable,
         (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
 
+    constexpr size_t KernelStackSizePages = 2;
+    constexpr size_t KernelStackSize = KernelStackSizePages * PAGE_SIZE;
+    constexpr auto KernelStackFlags = (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite;
+    auto physical_stack_base = Memory::request_pages(KernelStackSizePages);
+    if (physical_stack_base == 0) {
+        std::print("[ELF]: Couldn't allocate stack for new userspace process (kernel stack)\n");
+        return nullptr;
+    }
+    memset(physical_stack_base, 0, KernelStackSize);
+    auto physical_stack_top = ((uintptr_t)physical_stack_base) + KernelStackSize;
+    process->add_memory_region(physical_stack_base, physical_stack_base, KernelStackSize, KernelStackFlags);
+    process->kernel_stack = physical_stack_top;
+
+    return process;
+}
+
+}  // namespace Scheduler
+
+pid_t CopyUserspaceProcess(Process* original) {
+    auto* newProcess = Scheduler::request_process(original->ProcessID);
+
     // std::print("[SCHED]: Allocated new process {} at {}\n", newProcess->ProcessID, (void*)newProcess);
 
     // Copy each memory region's contents into newly allocated memory.
     for (const auto& memory : original->Memories) {
         Memory::Region newMemory{memory};
-        // FIXME: NO reason these have to be physically contiguous.
+        // FIXME: NO reason these *have* to be physically contiguous.
         usz newMemoryPages = usz(Memory::request_pages(memory.pages));
         if (!newMemoryPages) {
             // Out of memory.
@@ -445,7 +470,7 @@ pid_t CopyUserspaceProcess(Process* original) {
 
         // Map virtual addresses to new physical addresses.
         Memory::map_pages(
-            newPageTable,
+            newProcess->CR3,
             newMemory.vaddr,
             newMemory.paddr,
             (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite | (u64)Memory::PageTableFlag::UserSuper,

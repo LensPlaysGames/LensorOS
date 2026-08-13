@@ -367,48 +367,12 @@ CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::str
         return false;
     }
 
-    auto* process = new Process{};
-    process->ParentProcess = Scheduler::CurrentProcess->value()->ProcessID;
-    process->State = Process::ProcessState::SLEEPING;
-    pid_t pid = Scheduler::add_process(process);
+    pid_t parent_pid = Scheduler::CurrentProcess ? Scheduler::CurrentProcess->value()->ProcessID : pid_t(-1);
+    auto* process = Scheduler::request_process(parent_pid);
 
-    // Copy current page table (fork)
-    auto* newPageTable = Memory::clone_active_page_map();
-    if (newPageTable == nullptr) {
-        std::print("Failed to clone current page map for new process page map.\n");
-        Scheduler::remove_process(pid, -1);
-        return false;
-    }
-    process->CR3 = newPageTable;
-
-    Memory::map(
-        newPageTable,
-        newPageTable,
-        newPageTable,
-        (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
-
-    constexpr size_t KernelStackSizePages = 2;
-    constexpr size_t KernelStackSize = KernelStackSizePages * PAGE_SIZE;
-    constexpr uintptr_t virtual_kernel_stack_bottom = 0xfffff11700000000;
-    constexpr uintptr_t virtual_kernel_stack_top = virtual_kernel_stack_bottom + KernelStackSize;
-    for (auto virtual_page = virtual_kernel_stack_bottom; virtual_page < virtual_kernel_stack_top; virtual_page += PAGE_SIZE) {
-        auto physical_page = Memory::request_page();
-        if (physical_page == 0) {
-            std::print("[ELF]: Couldn't allocate stack for new userspace process (kernel stack)\n");
-            return false;
-        }
-        constexpr auto kernel_stack_flags = (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite;
-        Memory::map(newPageTable, (void*)virtual_page, physical_page, kernel_stack_flags);
-        // Keep track of stack, as it is a memory region that remains
-        // for the duration of the process, and should only be freed
-        // when it exits.
-        process->add_memory_region((void*)virtual_page, physical_page, PAGE_SIZE, kernel_stack_flags);
-    }
-    process->kernel_stack = virtual_kernel_stack_top;
-
-    if (!LoadUserspaceElf64Process(process, newPageTable, fd, elfHeader, args)) {
+    if (!LoadUserspaceElf64Process(process, process->CR3, fd, elfHeader, args)) {
         // Remove process from process list
-        Scheduler::remove_process(pid, -1);
+        Scheduler::remove_process(process->ProcessID, -1);
         return false;
     }
 
@@ -428,9 +392,6 @@ CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::str
         n++;
     }
 #endif
-
-    // New page map.
-    process->CR3 = newPageTable;
 
     process->ExecutablePath = args[0];
     process->WorkingDirectory = process->ExecutablePath.substr(0, process->ExecutablePath.find_last_of("/"));
