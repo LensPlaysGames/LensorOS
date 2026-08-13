@@ -27,11 +27,9 @@
  *
  */
 
-#include <interrupts/interrupts.h>
-
 #include <basic_renderer.h>
 #include <cstr.h>
-#include <format>
+#include <interrupts/interrupts.h>
 #include <io.h>
 #include <keyboard.h>
 #include <keyboard_scancode_translation.h>
@@ -45,6 +43,8 @@
 #include <system.h>
 #include <uart.h>
 #include <vfs_forward.h>
+
+#include <format>
 
 /// Use this when called from an interrupt handler.
 __attribute__((no_caller_saved_registers))
