@@ -27,10 +27,6 @@
 // -1 returned from called function == failure
 // -2 returned from called function == retry
 
-
-#include <algorithm>
-#include <memory>
-
 #include <debug.h>
 #include <elf_loader.h>
 #include <event.h>
@@ -43,12 +39,15 @@
 #include <memory/virtual_memory_manager.h>
 #include <rtc.h>
 #include <scheduler.h>
-#include <system.h>
-#include <storage/filesystem_drivers/socket.h>
 #include <storage/file_metadata.h>
+#include <storage/filesystem_drivers/socket.h>
+#include <system.h>
 #include <time.h>
-#include <virtual_filesystem.h>
 #include <vfs_forward.h>
+#include <virtual_filesystem.h>
+
+#include <algorithm>
+#include <memory>
 
 // Uncomment the following directive for extra debug information output.
 //#define DEBUG_SYSCALLS
@@ -119,17 +118,24 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
     // metadata shared pointer would become dangling and never get cleaned up.
     ssz rc = vfs.read(fd, buffer, byteCount, 0);
     if (rc == -2) {
-        // Save CPU state so that we will return to the right spot when
-        // the process is run again.
-        memcpy(&process->CPU, cpu, sizeof(CPUState));
-
         // Set state to SLEEPING so that after we yield, the scheduler
         // won't switch back to us until the file has been written to,
         // or something of that nature.
         process->State = Process::SLEEPING;
 
+        uintptr_t cpu_sp = process->CPU.RSP;
+        std::print("Process({})::CPU.RSP=0x{:016x}\n", process->ProcessID, cpu_sp);
+        uintptr_t frame_sp = cpu->Frame.sp;
+        std::print("Process({})::CPU.Frame.sp=0x{:016x}\n", process->ProcessID, frame_sp);
+        u64 current_sp{0};
+        asm volatile("movq %%rsp, %0\n\t"
+                     : "=m"(current_sp));
+        std::print("Current RSP: 0x{:016x}\n", current_sp);
+
         // Bye!
-        Scheduler::yield();
+        Scheduler::yield(cpu);
+
+        std::print("[SYS$]:read: yield returned\n");
     }
 
     // If data was read, move the "cursor" of the file metadata forward, so
@@ -173,7 +179,9 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
         Scheduler::CurrentProcess->value()->State = Process::SLEEPING;
 
         // Bye!
-        Scheduler::yield();
+        Scheduler::yield(cpu);
+
+        std::print("[SYS$]:write: yield returned\n");
     }
 
     // If data was read, move the "cursor" of the file metadata forward, so
@@ -192,23 +200,32 @@ void sys$4_poke() {
 }
 
 void sys$5_exit(int status) {
+    CPUState* cpu = nullptr;
+    asm volatile("mov %%r11, %0\n"
+                 : "=r"(cpu));
     DBGMSG(sys$_dbgfmt, 5, "exit");
-    DBGMSG("  status: {}\n"
-           "\n"
-           , status
-           );
+    DBGMSG(
+        "  status: {}\n"
+        "\n",
+        status);
+    // std::print("[SYS$]:exit({}) -- Going to remove process {}\n", status, Scheduler::CurrentProcess->value()->ProcessID);
+    auto process = Scheduler::CurrentProcess->value();
     {
-        pid_t pid = Scheduler::CurrentProcess->value()->ProcessID;
+        pid_t pid = process->ProcessID;
         bool success = Scheduler::remove_process(pid, status);
-        if (not success){
+        if (not success) {
             std::print("[SYS$]:exit: Failure to remove process {}\n", pid);
-        }
-        else {
-            DBGMSG("[SYS$]:exit({}) -- Removed process {}\n", status, pid);
+        } else {
+            std::print("[SYS$]:exit({}) -- Removed process {}\n", status, pid);
         }
     }
 
-    Scheduler::yield();
+    std::print("[SYS$]:exit: yielding...\n");
+
+    Scheduler::yield(cpu);
+
+    std::print("[SYS$]:exit: yield returned...\n");
+    hang();
 }
 
 void* sys$6_map(void* address, usz size, u64 flags) {
@@ -340,7 +357,7 @@ int sys$9_waitpid(pid_t pid) {
         return returnStatus;
     }
 
-    Process *process = Scheduler::process(pid);
+    Process* process = Scheduler::process(pid);
     // Return immediately if PID isn't valid.
     // FIXME: Return meaningful value here, or something. Basically, -1
     // may be returned by the waited-upon process. We need to return
@@ -355,11 +372,13 @@ int sys$9_waitpid(pid_t pid) {
     // Add to WAITING list of process that we are waiting for.
     process->WaitingList.push_back(thisPID);
 
-    // Save cpu state into process cache so that we return to the
-    // proper place when set off running again.
-    memcpy(&thisProcess->CPU, cpu, sizeof(CPUState));
+    // Wait until we are woken up.
     thisProcess->State = Process::ProcessState::SLEEPING;
-    Scheduler::yield();
+    Scheduler::yield(cpu);
+
+    std::print("[SYS$]:waitpid: yield returned\n");
+
+    return pid;
 }
 
 /// Copy the current process, resuming execution in both just after the
@@ -443,12 +462,13 @@ void sys$11_exec(const char *path, const char **args) {
         bool success = ELF::ReplaceUserspaceElf64Process(process, fds.Process, args_vector);
         if (not success) {
             // ... Unrecoverable, terminate the program, somehow.
-            std::print("[EXEC]: Failed to replace process and parent is now unrecoverable, terminating.\n");
+            std::print("[SYS$]:exec: Failed to replace process and parent is now unrecoverable, terminating.\n");
             // TODO: Mark for destruction (halt and catch fire).
             // FIXME: We should figure out how to exit the scope, so that everything is freed properly.
             // FIXME: Also the fact that we opened a file at path, but never close it.
             process->State = Process::ProcessState::SLEEPING;
-            Scheduler::yield();
+            Scheduler::yield(cpu);
+            std::print("[SYS$]:exec: yield returned (0)\n");
         }
 
         //Scheduler::print_debug();
@@ -456,7 +476,9 @@ void sys$11_exec(const char *path, const char **args) {
     }
 
     *cpu = process->CPU;
-    Scheduler::yield();
+    // TODO: Do we need to yield, or can we just use the syscall return now that cpu state is fixed up?
+    // Scheduler::yield(cpu);
+    // std::print("[SYS$]:exec: yield returned (1)");
 }
 
 /// The second file descriptor given will be associated with the file
@@ -851,12 +873,13 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
     data->WaitingOnConnection = true;
     // Set return value to invalid fd just in case we are unblocked
     // for some reason other than an incoming connection.
-    memcpy(&process->CPU, cpu, sizeof(CPUState));
     process->set_return_value(usz(ProcFD::Invalid));
     process->State = Process::SLEEPING;
-    Scheduler::yield();
-}
+    Scheduler::yield(cpu);
 
+    std::print("[SYS$]:accept: yield returned\n");
+    return ProcFD(-2);
+}
 
 EventQueueHandle sys$23_kqueue() {
     DBGMSG(sys$_dbgfmt, 23, "kqueue");
