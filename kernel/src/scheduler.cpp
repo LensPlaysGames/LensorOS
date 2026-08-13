@@ -326,7 +326,7 @@ void switch_process_impl(CPUState* cpu) {
     // Update kernel stack that will be returned to with this process' saved
     // kernel stack.
     std::print("Setting TSS RSP to 0x{:016x} (was 0x{:016x})\n", CurrentProcess->value()->kernel_stack, TSS::tssEntry.get_stack());
-    // TSS::tssEntry.set_stack(CurrentProcess->value()->kernel_stack);
+    TSS::tssEntry.set_stack(CurrentProcess->value()->kernel_stack);
 
     // Update state of CPU that will be restored.
     memcpy(cpu, &CurrentProcess->value()->CPU, sizeof(CPUState));
