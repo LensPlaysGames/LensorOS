@@ -17,19 +17,25 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <format>
-
-#include <x86_64/tss.h>
-
 #include <gdt.h>
 #include <link_definitions.h>
 #include <memory.h>
+#include <memory/common.h>
+#include <memory/paging.h>
+#include <memory/physical_memory_manager.h>
+#include <memory/virtual_memory_manager.h>
+#include <scheduler.h>
+#include <x86_64/tss.h>
 
-TSSEntry tssEntry;
+#include <print>
+
 // USED IN `userswitch.asm` `jump_to_userland_function` AS EXTERNAL SYMBOL.
 void* tss;
 
-void TSS::initialize() {
+namespace TSS {
+TSSEntry tssEntry;
+
+void initialize() {
     tss = &tssEntry;
     // Zero out TSS entry.
     memset(&tssEntry, 0, sizeof(TSSEntry));
@@ -38,22 +44,33 @@ void TSS::initialize() {
     gGDT.TSS.set_limit(limit);
     // Set base address to address of TSS Entry.
     u64 base = V2P((u64)&tssEntry);
-    // u64 base = (u64)&tssEntry;
     gGDT.TSS.set_base(base);
-    std::print("[TSS]: Initialized\n"
-               "  Base:  {:#016x}\n"
-               "  Limit: {:#08x}\n",
-               gGDT.TSS.base(),
-               gGDT.TSS.limit());
-    // Store current stack pointer in TSS entry.
-    // FIXME: WHY WOULD WE DO THAT THOUGH??? WHY WOULD WE WANT TO RETURN TO
-    // THE STACK IN TSS::initialize()???
-    u64 stackPointer{0};
-    asm volatile("movq %%rsp, %0\n\t"
-                 : "=m"(stackPointer));
-    tssEntry.set_stack(stackPointer);
+    std::print(
+        "[TSS]: Initialized\n"
+        "  Base:  {:#016x}\n"
+        "  Limit: {:#08x}\n",
+        gGDT.TSS.base(),
+        gGDT.TSS.limit());
     // 0x28 -> offset of TSS in GDT (I think).
-    asm volatile("mov $0x28, %%ax\n\t"
-                 "ltr %%ax\n\t" ::: "rax");
-    std::print("  Stack Pointer:  {:016x}\n", stackPointer);
+    asm volatile(
+        "mov $0x28, %%ax\n\t"
+        "ltr %%ax\n\t" ::: "rax");
+
+    // Allocate an interrupt kernel stack
+    constexpr size_t stack_flags = (size_t)Memory::PageTableFlag::Present
+                                   | (size_t)Memory::PageTableFlag::ReadWrite;
+    constexpr size_t KernelInterruptStackPages = 2;
+    constexpr size_t KernelInterruptStackSize = KernelInterruptStackPages * PAGE_SIZE;
+    // FIXME: why this address
+    constexpr uintptr_t KernelInterruptStackBase = 0xfffff77f00f00000;
+    constexpr uintptr_t KernelInterruptStackTop = KernelInterruptStackBase + KernelInterruptStackSize;
+    for (size_t i = 0; i < KernelInterruptStackPages; ++i) {
+        auto physical_page = Memory::request_page();
+        auto virtual_page = (void*)(KernelInterruptStackBase + (i * PAGE_SIZE));
+        Memory::map(virtual_page, physical_page, stack_flags);
+    }
+    std::print("  Stack: 0x{:016x}\n", KernelInterruptStackTop);
+    Scheduler::StartupProcess.kernel_stack = KernelInterruptStackTop;
+    tssEntry.set_stack(KernelInterruptStackTop);
 }
+}  // namespace TSS

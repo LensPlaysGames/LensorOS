@@ -39,88 +39,114 @@ struct TSSEntry {
         Seven = 7,
     };
 
-    u32 Reserved0 { 0 };
-    u32 l_RSP0 { 0 };
-    u32 h_RSP0 { 0 };
-    u32 l_RSP1 { 0 };
-    u32 h_RSP1 { 0 };
-    u32 l_RSP2 { 0 };
-    u32 h_RSP2 { 0 };
-    u64 Reserved1 { 0 };
-    u32 l_IST1 { 0 };
-    u32 h_IST1 { 0 };
-    u32 l_IST2 { 0 };
-    u32 h_IST2 { 0 };
-    u32 l_IST3 { 0 };
-    u32 h_IST3 { 0 };
-    u32 l_IST4 { 0 };
-    u32 h_IST4 { 0 };
-    u32 l_IST5 { 0 };
-    u32 h_IST5 { 0 };
-    u32 l_IST6 { 0 };
-    u32 h_IST6 { 0 };
-    u32 l_IST7 { 0 };
-    u32 h_IST7 { 0 };
-    u64 Reserved2 { 0 };
-    u16 Reserved3 { 0 };
-    u16 IOMapBaseAddress { 0 };
+    u32 Reserved0{0};
+    u32 l_RSP0{0};
+    u32 h_RSP0{0};
+    u32 l_RSP1{0};
+    u32 h_RSP1{0};
+    u32 l_RSP2{0};
+    u32 h_RSP2{0};
+    u64 Reserved1{0};
+    u32 l_IST1{0};
+    u32 h_IST1{0};
+    u32 l_IST2{0};
+    u32 h_IST2{0};
+    u32 l_IST3{0};
+    u32 h_IST3{0};
+    u32 l_IST4{0};
+    u32 h_IST4{0};
+    u32 l_IST5{0};
+    u32 h_IST5{0};
+    u32 l_IST6{0};
+    u32 h_IST6{0};
+    u32 l_IST7{0};
+    u32 h_IST7{0};
+    u64 Reserved2{0};
+    u16 Reserved3{0};
+    u16 IOMapBaseAddress{0};
 
     void set_stack(u64 rsp, RSP stackToSet = RSP::Zero) {
         switch (stackToSet) {
-        default:
-        case RSP::Zero:
-            l_RSP0 = rsp;
-            h_RSP0 = rsp >> 32;
-            break;
-        case RSP::One:
-            l_RSP1 = rsp;
-            h_RSP1 = rsp >> 32;
-            break;
-        case RSP::Two:
-            l_RSP2 = rsp;
-            h_RSP2 = rsp >> 32;
-            break;
+            default:
+            case RSP::Zero:
+                l_RSP0 = rsp;
+                h_RSP0 = rsp >> 32;
+                break;
+            case RSP::One:
+                l_RSP1 = rsp;
+                h_RSP1 = rsp >> 32;
+                break;
+            case RSP::Two:
+                l_RSP2 = rsp;
+                h_RSP2 = rsp >> 32;
+                break;
         }
     }
 
+    u64 get_stack(RSP stackToGet = RSP::Zero) {
+        u64 rsp{};
+        switch (stackToGet) {
+            default:
+            case RSP::Zero:
+                rsp = h_RSP0;
+                rsp <<= 32;
+                rsp |= l_RSP0;
+                break;
+            case RSP::One:
+                rsp = h_RSP1;
+                rsp <<= 32;
+                rsp |= l_RSP1;
+                break;
+            case RSP::Two:
+                rsp = h_RSP2;
+                rsp <<= 32;
+                rsp |= l_RSP2;
+                break;
+        }
+        return rsp;
+    }
+
     void set_ist(u64 ist, IST indexToSet = IST::One) {
-        switch(indexToSet) {
-        default:
-        case IST::One:
-            l_IST1 = ist;
-            h_IST1 = ist >> 32;
-            break;
-        case IST::Two:
-            l_IST2 = ist;
-            h_IST2 = ist >> 32;
-            break;
-        case IST::Three:
-            l_IST3 = ist;
-            h_IST3 = ist >> 32;
-            break;
-        case IST::Four:
-            l_IST4 = ist;
-            h_IST4 = ist >> 32;
-            break;
-        case IST::Five:
-            l_IST5 = ist;
-            h_IST5 = ist >> 32;
-            break;
-        case IST::Six:
-            l_IST6 = ist;
-            h_IST6 = ist >> 32;
-            break;
-        case IST::Seven:
-            l_IST7 = ist;
-            h_IST7 = ist >> 32;
-            break;
+        switch (indexToSet) {
+            default:
+            case IST::One:
+                l_IST1 = ist;
+                h_IST1 = ist >> 32;
+                break;
+            case IST::Two:
+                l_IST2 = ist;
+                h_IST2 = ist >> 32;
+                break;
+            case IST::Three:
+                l_IST3 = ist;
+                h_IST3 = ist >> 32;
+                break;
+            case IST::Four:
+                l_IST4 = ist;
+                h_IST4 = ist >> 32;
+                break;
+            case IST::Five:
+                l_IST5 = ist;
+                h_IST5 = ist >> 32;
+                break;
+            case IST::Six:
+                l_IST6 = ist;
+                h_IST6 = ist >> 32;
+                break;
+            case IST::Seven:
+                l_IST7 = ist;
+                h_IST7 = ist >> 32;
+                break;
         }
     }
 } __attribute__((packed));
 
+static_assert(sizeof(TSSEntry) == 104);
+
 namespace TSS {
-    void initialize();
-}
+void initialize();
+extern TSSEntry tssEntry;
+}  // namespace TSS
 
 extern "C" void jump_to_userland_function(void* functionAddress);
 
