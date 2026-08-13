@@ -34,26 +34,23 @@ class SinglyLinkedListNode {
     friend SinglyLinkedList<DataType>;
 
     DataType Data;
-    SinglyLinkedListNode* Next { nullptr };
+    SinglyLinkedListNode* Next{nullptr};
 
-public:
-
-    explicit SinglyLinkedListNode(const DataType& value
-                                  , SinglyLinkedListNode* next = nullptr)
+   public:
+    explicit SinglyLinkedListNode(const DataType& value, SinglyLinkedListNode* next = nullptr)
         : Data(value), Next(next) {}
 
-    DataType& value()             { return Data; }
+    DataType& value() { return Data; }
     const DataType& value() const { return Data; }
-    SinglyLinkedListNode* next()  { return Next; }
+    SinglyLinkedListNode* next() { return Next; }
 };
-
 
 template <typename T>
 class SinglyLinkedList {
     using DataType = T;
     using Node = SinglyLinkedListNode<DataType>;
 
-public:
+   public:
     struct Iterator {
         Node* node;
 
@@ -68,14 +65,14 @@ public:
             return *this;
         }
 
-        bool operator== (const Iterator& other) const {
+        bool operator==(const Iterator& other) const {
             return node == other.node;
         }
-        bool operator!= (const Iterator& other) const {
+        bool operator!=(const Iterator& other) const {
             return !(operator==(other));
         }
 
-        DataType& operator* () const {
+        DataType& operator*() const {
             return node->value();
         }
     };
@@ -129,8 +126,8 @@ public:
     }
 
     DataType& at(u64 index) {
-        Node* it { Head };
-        Node* out { nullptr };
+        Node* it{Head};
+        Node* out{nullptr};
         index += 1;
         while (it && index--) {
             out = it;
@@ -192,17 +189,17 @@ public:
     Node* tail() { return Tail; }
     const Node* tail() const { return Tail; }
 
-    DataType& operator [] (u64 index) {
+    DataType& operator[](u64 index) {
         return at(index);
     }
 
-    const DataType& operator [] (u64 index) const {
+    const DataType& operator[](u64 index) const {
         return at(index);
     }
 
-private:
-    u64 Length { 0 };
-    Node* Head { nullptr };
-    Node* Tail { nullptr };
+   private:
+    u64 Length{0};
+    Node* Head{nullptr};
+    Node* Tail{nullptr};
 };
 #endif

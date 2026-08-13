@@ -17,11 +17,9 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-
 #include <basic_renderer.h>
 #include <boot.h>
 #include <cstr.h>
-#include <format>
 #include <hpet.h>
 #include <kernel.h>
 #include <keyboard.h>
@@ -34,6 +32,8 @@
 #include <pit.h>
 #include <rtc.h>
 #include <scheduler.h>
+
+#include <print>
 
 void print_memory_info(Vector2<u64>& position) {
     u32 startOffset = position.x;
@@ -53,13 +53,16 @@ void print_memory_info(Vector2<u64>& position) {
 void print_now(Vector2<u64>& position) {
     const RTCData& tm = gRTC.Time;
     u32 startOffset = position.x;
-    gRend.puts(position, std::format("Now is {}:{}:{} on {}/{}/{}",
-        tm.hour,
-        tm.minute,
-        tm.second,
-        tm.date,
-        tm.month,
-        tm.year));
+    gRend.puts(
+        position,
+        std::format(
+            "Now is {}:{}:{} on {}/{}/{}",
+            tm.hour,
+            tm.minute,
+            tm.second,
+            tm.date,
+            tm.month,
+            tm.year));
     gRend.crlf(position, startOffset);
 }
 
@@ -69,14 +72,14 @@ extern "C" void kmain(BootInfo* bInfo) {
     // I'm lovin' it :^) (Plays Maccy's theme).
     constexpr usz MACCYS_BPM = 125;
     constexpr usz MACCYS_STEP_LENGTH_MILLISECONDS = (60 * 1000 / MACCYS_BPM) / 4;
-    gPIT.play_sound(262, MACCYS_STEP_LENGTH_MILLISECONDS); // C4
-    gPIT.play_sound(294, MACCYS_STEP_LENGTH_MILLISECONDS); // D4
-    gPIT.wait();                                           // Rest
-    gPIT.play_sound(330, MACCYS_STEP_LENGTH_MILLISECONDS); // E4
-    gPIT.wait();                                           // Rest
-    gPIT.play_sound(440, MACCYS_STEP_LENGTH_MILLISECONDS); // A4
-    gPIT.wait();                                           // Rest
-    gPIT.play_sound(392, MACCYS_STEP_LENGTH_MILLISECONDS); // G4
+    gPIT.play_sound(262, MACCYS_STEP_LENGTH_MILLISECONDS);  // C4
+    gPIT.play_sound(294, MACCYS_STEP_LENGTH_MILLISECONDS);  // D4
+    gPIT.wait();                                            // Rest
+    gPIT.play_sound(330, MACCYS_STEP_LENGTH_MILLISECONDS);  // E4
+    gPIT.wait();                                            // Rest
+    gPIT.play_sound(440, MACCYS_STEP_LENGTH_MILLISECONDS);  // A4
+    gPIT.wait();                                            // Rest
+    gPIT.play_sound(392, MACCYS_STEP_LENGTH_MILLISECONDS);  // G4
 
     // Tasks that need done by a kernel thread and done frequently should go
     // in this loop.
@@ -87,11 +90,11 @@ extern "C" void kmain(BootInfo* bInfo) {
             // Disable interrupts; we do this to prevent a timer interrupt causing a
             // yield away from this thread, which could invalidate the iterator in the
             // following loop.
-            asm ("cli");
             //std::print("[KERNEL]: Disabled interrupts; freeing {} page tables\n", Scheduler::PageMapsToFree.size());
+            asm("cli");
 
             for (Memory::PageTable* table : Scheduler::PageMapsToFree) {
-                //std::print("[KERNEL]: Freeing page table at {}\n", (void*)table);
+                // std::print("[KERNEL]: Freeing page table at {}\n", (void*)table);
                 Memory::free_page_map(table);
             }
 
@@ -101,7 +104,7 @@ extern "C" void kmain(BootInfo* bInfo) {
             // TODO: Abstract x86_64
             // Enable interrupts (allow yielding away as it now won't cause iterator invalidation or anything)
             //std::print("[KERNEL]: Enabling interrupts after freeing page tables\n");
-            asm ("sti");
+            asm("sti");
         }
     }
 

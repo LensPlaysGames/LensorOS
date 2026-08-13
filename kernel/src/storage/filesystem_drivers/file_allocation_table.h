@@ -208,13 +208,12 @@ public:
         // in a directory.
         // FIXME: This is basically three-quarters of `traverse_path`, but it
         // doesn't return a FileMetadata, just a directory cluster number. Could
-        // abstract easily.
+        // abstract.
         if (path.size() and path != std::string_view("/")) {
             u32 new_directory_cluster = traverse_path_for_cluster(path, directory_cluster);
             if (new_directory_cluster == u32(-1)) return -1;
             directory_cluster = new_directory_cluster;
         }
-
 
         ssz count = 0;
         for (const auto& Entry : for_each_dir_entry_in(directory_cluster)) {

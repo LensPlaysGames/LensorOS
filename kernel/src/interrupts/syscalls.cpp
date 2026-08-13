@@ -50,12 +50,12 @@
 #include <memory>
 
 // Uncomment the following directive for extra debug information output.
-//#define DEBUG_SYSCALLS
+// #define DEBUG_SYSCALLS
 
 #ifdef DEBUG_SYSCALLS
-#   define DBGMSG(...) std::print(__VA_ARGS__)
+#define DBGMSG(...) std::print(__VA_ARGS__)
 #else
-#   define DBGMSG(...)
+#define DBGMSG(...)
 #endif
 
 /// SYSCALL NAMING SCHEME:
@@ -68,7 +68,7 @@ ProcessFileDescriptor sys$0_open(const char* path) {
     DBGMSG(sys$_dbgfmt, 0, "open");
     // Validate path pointer.
     if (not Scheduler::CurrentProcess->value()->valid_address(path)) {
-        std::print("[SYS$]:read:ERROR: path address invalid: {}\n", (void*)path);
+        std::print("[SYS$]:open:ERROR: path address invalid: {}\n", (void*)path);
         return ProcFD::Invalid;
     }
     return SYSTEM->virtual_filesystem().open(path).Process;
@@ -81,18 +81,17 @@ void sys$1_close(ProcessFileDescriptor fd) {
 
 int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
     CPUState* cpu = nullptr;
-    asm volatile ("mov %%r11, %0\n"
-                  : "=r"(cpu)
-                  );
+    asm volatile("mov %%r11, %0\n"
+                 : "=r"(cpu));
     DBGMSG(sys$_dbgfmt, 2, "read");
-    DBGMSG("  file descriptor: {}\n"
-           "  buffer address:  {}\n"
-           "  byte count:      {}\n"
-           "\n"
-           , fd
-           , (void*) buffer
-           , byteCount
-           );
+    DBGMSG(
+        "  file descriptor: {}\n"
+        "  buffer address:  {}\n"
+        "  byte count:      {}\n"
+        "\n",
+        fd,
+        (void*)buffer,
+        byteCount);
 
     // Validate buffer pointer.
     if (not Scheduler::CurrentProcess->value()->valid_address(buffer)) {
@@ -148,18 +147,17 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
 
 int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
     CPUState* cpu = nullptr;
-    asm volatile ("mov %%r11, %0\n"
-                  : "=r"(cpu)
-                  );
+    asm volatile("mov %%r11, %0\n"
+                 : "=r"(cpu));
     DBGMSG(sys$_dbgfmt, 3, "write");
-    DBGMSG("  file descriptor: {}\n"
-           "  buffer address:  {}\n"
-           "  byte count:      {}\n"
-           "\n"
-           , fd
-           , (void*) buffer
-           , byteCount
-           );
+    DBGMSG(
+        "  file descriptor: {}\n"
+        "  buffer address:  {}\n"
+        "  byte count:      {}\n"
+        "\n",
+        fd,
+        (void*)buffer,
+        byteCount);
 
     // Validate buffer pointer.
     if (not Scheduler::CurrentProcess->value()->valid_address(buffer)) {
@@ -230,22 +228,21 @@ void sys$5_exit(int status) {
 
 void* sys$6_map(void* address, usz size, u64 flags) {
     DBGMSG(sys$_dbgfmt, 6, "map");
-    DBGMSG("  address: {}\n"
-           "  size:    {}\n"
-           "  flags:   {}\n"
-           "\n"
-           , address
-           , size
-           , flags
-           );
+    DBGMSG(
+        "  address: {}\n"
+        "  size:    {}\n"
+        "  flags:   {}\n"
+        "\n",
+        address,
+        size,
+        flags);
 
     Process* process = Scheduler::CurrentProcess->value();
 
     usz pages = 0;
     if ((size % PAGE_SIZE) == 0) {
         pages = size / PAGE_SIZE;
-    }
-    else {
+    } else {
         pages = 1 + (size / PAGE_SIZE);
     }
 
@@ -284,10 +281,10 @@ void* sys$6_map(void* address, usz size, u64 flags) {
 
 void sys$7_unmap(void* address) {
     DBGMSG(sys$_dbgfmt, 7, "unmap");
-    DBGMSG("  address: {}\n"
-           "\n"
-           , address
-           );
+    DBGMSG(
+        "  address: {}\n"
+        "\n",
+        address);
 
     Process* process = Scheduler::CurrentProcess->value();
 
@@ -301,7 +298,8 @@ void sys$7_unmap(void* address) {
     // TODO: If a single program is freeing invalid addresses over and
     // over, it's a good sign they are a bad actor and should maybe
     // just be stopped. Maybe keep count in process struct?
-    if (not region) return;
+    if (not region)
+        return;
 
     // Unmap memory from current process page table.
     // Don't forget to unmap all pages!
@@ -320,11 +318,12 @@ void sys$7_unmap(void* address) {
 
 void sys$8_time(Time::tm* time) {
     DBGMSG(sys$_dbgfmt, 8, "time");
-    DBGMSG("  tm: {}\n"
-           "\n"
-           , (void*) time
-           );
-    if (not time) return;
+    DBGMSG(
+        "  tm: {}\n"
+        "\n",
+        (void*)time);
+    if (not time)
+        return;
     // Validate time pointer.
     if (not Scheduler::CurrentProcess->value()->valid_address(time)) {
         std::print("[SYS$]:time:ERROR: time struct address invalid: {}\n", (void*)time);
@@ -333,14 +332,12 @@ void sys$8_time(Time::tm* time) {
     Time::fill_tm(time);
 }
 
-
 /// Wait for process with PID to terminate. If process with PID is
 /// invalid, return immediately.
 int sys$9_waitpid(pid_t pid) {
     CPUState* cpu = nullptr;
-    asm volatile ("mov %%r11, %0\n"
-                  : "=r"(cpu)
-                  );
+    asm volatile("mov %%r11, %0\n"
+                 : "=r"(cpu));
     DBGMSG(sys$_dbgfmt, 9, "waitpid");
 
     auto* thisProcess = Scheduler::CurrentProcess->value();
@@ -386,11 +383,10 @@ int sys$9_waitpid(pid_t pid) {
 /// zero, parent gets child's PID).
 pid_t sys$10_fork() {
     CPUState* cpu = nullptr;
-    asm volatile ("mov %%r11, %0\n"
-                  : "=r"(cpu)
-                  );
+    asm volatile("mov %%r11, %0\n"
+                 : "=r"(cpu));
     DBGMSG(sys$_dbgfmt, 10, "fork");
-    Process *process = Scheduler::CurrentProcess->value();
+    Process* process = Scheduler::CurrentProcess->value();
     // Use userspace stack pointer instead of kernel stack pointer
     cpu->RSP = cpu->Frame.sp;
     // Save cpu state into process cache so that it will be set
@@ -398,7 +394,7 @@ pid_t sys$10_fork() {
     memcpy(&process->CPU, cpu, sizeof(CPUState));
     // Copy current process.
     pid_t cpid = CopyUserspaceProcess(process);
-    DBGMSG("  CPID: {}\n", cpid);
+    DBGMSG("[FORK]: PPID: {}, CPID: {}\n", process->ProcessID, cpid);
     return cpid;
 }
 
@@ -411,11 +407,10 @@ pid_t sys$10_fork() {
 ///   NULL-terminated array of pointers to NULL-terminated string
 ///   arguments.
 // FIXME: This really needs to be updated to a type-safe API. This stinks like scanf().
-void sys$11_exec(const char *path, const char **args) {
+void sys$11_exec(const char* path, const char** args) {
     CPUState* cpu = nullptr;
-    asm volatile ("mov %%r11, %0\n"
-                  : "=r"(cpu)
-                  );
+    asm volatile("mov %%r11, %0\n"
+                 : "=r"(cpu));
     DBGMSG(sys$_dbgfmt, 11, "exec");
     if (not path) {
         std::print("[EXEC]: Can not execute NULL path\n");
@@ -423,16 +418,16 @@ void sys$11_exec(const char *path, const char **args) {
     }
     Process* process = Scheduler::CurrentProcess->value();
 
-    { // Nested scope so that dtors get called before yield
+    {  // Nested scope so that dtors get called before yield
 #if defined(DEBUG_SYSCALLS)
-    std::print("  path: {}\n"
-               "  args:\n"
-               , path
-               );
-    usz i = 0;
-    for (const char **args_it = args; args_it and *args_it; ++args_it)
-        std::print("    {}: \"{}\"\n", i++, *args_it);
-    std::print("  endargs\n");
+        std::print(
+            "  path: {}\n"
+            "  args:\n",
+            path);
+        usz i = 0;
+        for (const char** args_it = args; args_it and *args_it; ++args_it)
+            std::print("    {}: \"{}\"\n", i++, *args_it);
+        std::print("  endargs\n");
 #endif
         // Load executable at path with virtual filesystem.
         FileDescriptors fds = SYSTEM->virtual_filesystem().open(path);
@@ -448,10 +443,10 @@ void sys$11_exec(const char *path, const char **args) {
         std::vector<std::string> args_vector_impl;
         std::vector<std::string_view> args_vector;
         args_vector.push_back(process->ExecutablePath.data());
-        {   // We create copies of the userspace buffer(s), because during
+        {  // We create copies of the userspace buffer(s), because during
             // replacing the userspace process, any data within it is
             // invalidated.
-            for (const char **args_it = args; args_it and *args_it; ++args_it)
+            for (const char** args_it = args; args_it and *args_it; ++args_it)
                 args_vector_impl.push_back(*args_it);
 
             for (const auto& s : args_vector_impl)
@@ -471,7 +466,7 @@ void sys$11_exec(const char *path, const char **args) {
             std::print("[SYS$]:exec: yield returned (0)\n");
         }
 
-        //Scheduler::print_debug();
+        // Scheduler::print_debug();
         SYSTEM->virtual_filesystem().close(fds.Process);
     }
 
@@ -499,12 +494,12 @@ void sys$12_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
 
 /// Create two file descriptors. One of which can be read from, and the
 /// other which can be written to.
-int sys$13_pipe(ProcessFileDescriptor *fds) {
+int sys$13_pipe(ProcessFileDescriptor* fds) {
     DBGMSG(sys$_dbgfmt, 13, "pipe");
     Process* process = Scheduler::CurrentProcess->value();
     // Validate pointer.
     if (not process->valid_address(fds)) {
-        std::print("[SYS$]:pipe:ERROR: Invalid address: {}\n", (void *)fds);
+        std::print("[SYS$]:pipe:ERROR: Invalid address: {}\n", (void*)fds);
         // Return error code.
         return -1;
     }
@@ -526,13 +521,14 @@ int sys$13_pipe(ProcessFileDescriptor *fds) {
 #define SEEK_END 1
 /// OFFSET is from beginning of file (must be positive).
 #define SEEK_SET 2
-static const char * seek_strings[] = {
+static const char* seek_strings[] = {
     [SEEK_CUR] = "CURRENT",
     [SEEK_END] = "END",
     [SEEK_SET] = "BEGINNING",
 };
-const char *get_seek_string(int whence) {
-    if (whence < 0 or whence > SEEK_SET) return "INVALID";
+const char* get_seek_string(int whence) {
+    if (whence < 0 or whence > SEEK_SET)
+        return "INVALID";
     return seek_strings[whence];
 }
 
@@ -549,34 +545,44 @@ int sys$14_seek(ProcessFileDescriptor fd, ssz offset, int whence) {
 
     VFS& vfs = SYSTEM->virtual_filesystem();
     auto file = vfs.file(fd);
-    if (not file) return 1;
+    if (not file)
+        return 1;
 
     switch (whence) {
-    case SEEK_CUR: {
-        if (offset == 0) return 0;
-        usz current_offset = file->offset;
-        // Cannot seek behind beginning of file...
-        if (offset < 0 and ((usz)(-offset) > current_offset)) return 1;
-        // FIXME: Cannot seek past end of file...
-        else if (current_offset + offset > file->file_size()) return 1;
-        file->offset += offset;
-    } return 0;
+        case SEEK_CUR: {
+            if (offset == 0)
+                return 0;
+            usz current_offset = file->offset;
+            // Cannot seek behind beginning of file...
+            if (offset < 0 and ((usz)(-offset) > current_offset))
+                return 1;
+            // FIXME: Cannot seek past end of file...
+            else if (current_offset + offset > file->file_size())
+                return 1;
+            file->offset += offset;
+        }
+            return 0;
 
-    case SEEK_END: {
-        // FIXME: Cannot seek past end of file...
-        if (offset > 0) return 1;
-        file->offset = file->file_size() + offset;
-    } return 0;
+        case SEEK_END: {
+            // FIXME: Cannot seek past end of file...
+            if (offset > 0)
+                return 1;
+            file->offset = file->file_size() + offset;
+        }
+            return 0;
 
-    case SEEK_SET: {
-        if (offset < 0) return 1;
-        // FIXME: Cannot seek past end of file...
-        if ((usz)offset >= file->file_size()) return 1;
-        file->offset = offset;
-    } return 0;
+        case SEEK_SET: {
+            if (offset < 0)
+                return 1;
+            // FIXME: Cannot seek past end of file...
+            if ((usz)offset >= file->file_size())
+                return 1;
+            file->offset = offset;
+        }
+            return 0;
 
-    default: break;
-
+        default:
+            break;
     }
 
     return 1;
@@ -585,14 +591,14 @@ int sys$14_seek(ProcessFileDescriptor fd, ssz offset, int whence) {
 /// Write as much of the current working directory to the given buffer
 /// while not exceeding numBytes (including null terminator)
 /// Return true iff entire PWD was written.
-bool sys$15_pwd(char *buffer, usz numBytes) {
+bool sys$15_pwd(char* buffer, usz numBytes) {
     DBGMSG(sys$_dbgfmt, 15, "pwd");
     DBGMSG("[SYS$]:pwd(): buffer={}, numBytes={}\n", (void*)buffer, numBytes);
 
     if (not buffer or not numBytes)
         return false;
 
-    Process *process = Scheduler::CurrentProcess->value();
+    Process* process = Scheduler::CurrentProcess->value();
     bool entire = numBytes > process->WorkingDirectory.size();
 
     DBGMSG("  PID:{} pwd: \"{}\"\n", process->ProcessID, process->WorkingDirectory);
@@ -611,10 +617,10 @@ ProcFD sys$16_dup(ProcessFileDescriptor fd) {
     DBGMSG("  fd: {}\n", fd);
     auto* process = Scheduler::CurrentProcess->value();
     auto fds = SYSTEM->virtual_filesystem().dup(process, fd);
-    if (fds.invalid()) std::print("[SYS$]:dup:ERROR: VFS.dup() failed...\n");
+    if (fds.invalid())
+        std::print("[SYS$]:dup:ERROR: VFS.dup() failed...\n");
     return fds.Process;
 }
-
 
 void sys$17_uart(void* buffer, size_t size) {
     DBGMSG(sys$_dbgfmt, 17, "uart");
@@ -651,7 +657,6 @@ ProcFD sys$18_socket(int domain, int type, int protocol) {
         std::print("[SYS$]:socket:ERROR: Could not register new socket in VFS.\n");
     }
 
-    // FIXME: This is probably terrible.
     SocketData* data = (SocketData*)socket->driver_data();
     data->FD = fds.Process;
 
@@ -660,8 +665,8 @@ ProcFD sys$18_socket(int domain, int type, int protocol) {
 
 /// Bind the socket referred to by socketFD to the given local address.
 int sys$19_bind(ProcFD socketFD, const SocketAddress* address, usz addressLength) {
-    static constexpr const int success {0};
-    static constexpr const int error {-1};
+    static constexpr const int success{0};
+    static constexpr const int error{-1};
     DBGMSG(sys$_dbgfmt, 19, "bind");
     // Validate address pointer.
     if (not Scheduler::CurrentProcess->value()->valid_address(address)) {
@@ -700,8 +705,8 @@ int sys$19_bind(ProcFD socketFD, const SocketAddress* address, usz addressLength
 /// Set the Client/Server flag in the socket referred to by socketFD to
 /// SERVER.
 int sys$20_listen(ProcFD socketFD, int backlog) {
-    static constexpr const int success {0};
-    static constexpr const int error {-1};
+    static constexpr const int success{0};
+    static constexpr const int error{-1};
     DBGMSG(sys$_dbgfmt, 20, "listen");
 
     auto file = SYSTEM->virtual_filesystem().file(socketFD);
@@ -722,9 +727,11 @@ int sys$20_listen(ProcFD socketFD, int backlog) {
     // NOTE/FIXME: I /think/ the usual behavior is to pick an "ephemeral port"
     // and just bind to that. See https://stackoverflow.com/a/12763313/18615069
     if (data->Address.Type == SocketAddress::UNBOUND) {
-        std::print("[SYS$]:listen:ERROR: socket {} in process {} is unbound "
-                   "and therefore we cannot listen() on it.\n",
-                   socketFD, Scheduler::CurrentProcess->value()->ProcessID);
+        std::print(
+            "[SYS$]:listen:ERROR: socket {} in process {} is unbound "
+            "and therefore we cannot listen() on it.\n",
+            socketFD,
+            Scheduler::CurrentProcess->value()->ProcessID);
         return error;
     }
 
@@ -740,8 +747,8 @@ int sys$20_listen(ProcFD socketFD, int backlog) {
 // socket types blocking and others not; i.e. TCP needs to block until
 // 3-way-handshake is completed.
 int sys$21_connect(ProcFD socketFD, const SocketAddress* givenAddress, usz addressLength) {
-    static constexpr const int success {0};
-    static constexpr const int error {-1};
+    static constexpr const int success{0};
+    static constexpr const int error{-1};
     DBGMSG(sys$_dbgfmt, 21, "connect");
 
     Process* process = Scheduler::CurrentProcess->value();
@@ -795,7 +802,6 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* givenAddress, usz addre
 
     // Unblock server socket's corresponding process, if needed.
     if (serverData->WaitingOnConnection) {
-
         std::print("[SYS$]:connect: unblocked server socket {} as it was waiting for a connection!\n", socketFD);
         // FIXME: We should just add the new file descriptor to the
         // server process and set the server process' return value
@@ -808,16 +814,14 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* givenAddress, usz addre
 
 ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* addressLength) {
     CPUState* cpu = nullptr;
-    asm volatile ("mov %%r11, %0\n"
-                  : "=r"(cpu)
-                  );
+    asm volatile("mov %%r11, %0\n"
+                 : "=r"(cpu));
     DBGMSG(sys$_dbgfmt, 22, "accept");
 
     Process* process = Scheduler::CurrentProcess->value();
 
     // Validate address pointer.
-    if (not process->valid_address(address) or
-        not process->valid_address(addressLength))
+    if (not process->valid_address(address) or not process->valid_address(addressLength))
         return ProcFD::Invalid;
 
     SocketData* data = nullptr;
@@ -834,7 +838,8 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
         // TODO: Only server type sockets can accept incoming connections.
         // TODO: Only bound sockets can accept incoming connections.
     }
-    if (not data) return ProcFD::Invalid;
+    if (not data)
+        return ProcFD::Invalid;
 
     if (data->ConnectionQueue.size()) {
         std::print("[SYS$]:accept: Connection already exists, returning immediately\n");
@@ -889,8 +894,10 @@ EventQueueHandle sys$23_kqueue() {
     /// Choose a handle
     // TODO: Better way of choosing handle.
     auto handle = EventQueueHandle::Invalid;
-    if (not process->EventQueues.size()) handle = EventQueueHandle(1);
-    else handle = EventQueueHandle((int)process->EventQueues.back().ID + 1);
+    if (not process->EventQueues.size())
+        handle = EventQueueHandle(1);
+    else
+        handle = EventQueueHandle((int)process->EventQueues.back().ID + 1);
 
     /// Add an event queue with the chosen handle to the process' event queues.
     if (handle != EventQueueHandle::Invalid) {
@@ -905,8 +912,8 @@ EventQueueHandle sys$23_kqueue() {
 int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChanges, Event* eventlist, int maxEvents) {
     DBGMSG(sys$_dbgfmt, 24, "kevent");
 
-    static constexpr const int success {0};
-    static constexpr const int error {-1};
+    static constexpr const int success{0};
+    static constexpr const int error{-1};
 
     if (handle == EventQueueHandle::Invalid) {
         std::print("[SYS$]:kevent: Invalid event queue handle\n");
@@ -929,7 +936,8 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
     EventQueue<Process::EventQueueSize>* queue = std::find_if(process->EventQueues.begin(), process->EventQueues.end(), [&](const auto& q) {
         return q.ID == handle;
     });
-    if (not queue) return error;
+    if (not queue)
+        return error;
 
     // Apply changes from changelist, if any.
     // TODO: Allow for unregistering, we need a special event type for that.
@@ -957,7 +965,8 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
 int sys$25_directory_data(const char* path, DirectoryEntry* dirp, usz count) {
     DBGMSG(sys$_dbgfmt, 25, "directory_data");
 
-    if (not count) return 0;
+    if (not count)
+        return 0;
 
     auto* process = Scheduler::CurrentProcess->value();
 
