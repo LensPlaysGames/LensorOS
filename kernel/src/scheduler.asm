@@ -22,12 +22,6 @@
 extern scheduler_switch_process
 ;; A pointer to a function that increments timer ticks by one.
 extern timer_tick
-do_swapgs:
-    cmp QWORD [rsp + 0x8], 0x8
-    je skip_swap
-    swapgs
-skip_swap:
-    ret
 
 GLOBAL irq0_handler
 irq0_handler:
@@ -38,7 +32,10 @@ irq0_handler:
 ;; |-- Code Segment Selector
 ;; `-- Instruction Pointer (RIP)
 ;;; SAVE CPU STATE ON STACK
-    call do_swapgs
+    cmp QWORD [rsp + 0x8], 0x8
+    je skip_swap
+    swapgs
+skip_swap:
     push rax
     push gs
     push fs
@@ -60,7 +57,6 @@ irq0_handler:
 ;;; INCREMENT SYSTEM TIMER TICKS
     call [rel timer_tick]
 ;;; CALL C++ FUNCTION; ARGUMENT IN `rdi`
-;;#; FIXME: Does this only work because RSP is what's at the stack pointer? Should this be `lea` instead?
     mov rdi, rsp
     call [rel scheduler_switch_process]
 ;;; END INTERRUPT
@@ -86,7 +82,10 @@ yield_asm_impl:
     pop fs
     pop gs
     pop rax
-    call do_swapgs
+    cmp QWORD [rsp + 0x8], 0x8
+    je skip_swap1
+    swapgs
+skip_swap1:
     iretq
 
 GLOBAL yield_asm
