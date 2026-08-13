@@ -24,13 +24,6 @@
 extern syscalls             ; Table of system call functions declared in "syscalls.h"
 extern num_syscalls         ; Number of system call functions defined within syscalls table.
 
-do_swapgs:
-    cmp QWORD [rsp + 0x08], 0x08
-    je skip_swap
-    swapgs
-skip_swap:
-    ret
-
 ;;; System Call Handler
 ;;; Registers Used:
 ;;;   rax  --  System Call Code
@@ -41,8 +34,12 @@ system_call_handler_asm:
 ;;; Syscall code invalid if greater than or equal to total number of syscalls.
     cmp rax, [rel num_syscalls]
     jae invalid_syscall
+;;; do swapgs only if necessary
+    cmp QWORD [rsp + 0x08], 0x08
+    je skip_swap_syscall0
+    swapgs
+skip_swap_syscall0:
 ;;; Save CPU state to be restored after system call.
-    call do_swapgs
     push rax
     push gs
     push fs
@@ -88,8 +85,13 @@ system_call_handler_asm:
     pop r15
     pop fs
     pop gs
+;;; Return value of syscall is stored in RAX; we don't want to overwrite it.
     add rsp, 8                  ; Eat `rax` off the stack.
-    call do_swapgs
+;;; do swapgs only if necessary
+    cmp QWORD [rsp + 0x08], 0x08
+    je skip_swap_syscall1
+    swapgs
+skip_swap_syscall1:
 invalid_syscall:                ; If system call code is invalid, jump directly to exit.
     iretq                       ; iretq -> interrupt return quad word (64 bit)
 
