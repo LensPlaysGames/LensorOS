@@ -34,7 +34,7 @@
 #include <system.h>
 #include <virtual_filesystem.h>
 
-#include <format>
+#include <print>
 #include <string_view>
 #include <vector>
 
@@ -56,12 +56,23 @@ namespace ELF {
 inline bool
 VerifyElf64Header(const Elf64_Ehdr& ElfHeader) {
 #ifndef DEBUG_ELF
-    if (ElfHeader.e_ident[EI_MAG0] != ELFMAG0 || ElfHeader.e_ident[EI_MAG1] != ELFMAG1 || ElfHeader.e_ident[EI_MAG2] != ELFMAG2 || ElfHeader.e_ident[EI_MAG3] != ELFMAG3 || ElfHeader.e_ident[EI_CLASS] != ELFCLASS64 || ElfHeader.e_ident[EI_DATA] != ELFDATA2LSB || ElfHeader.e_type != ET_EXEC || ElfHeader.e_machine != EM_X86_64 || ElfHeader.e_version != EV_CURRENT) {
+    if (ElfHeader.e_ident[EI_MAG0] != ELFMAG0
+        or ElfHeader.e_ident[EI_MAG1] != ELFMAG1
+        or ElfHeader.e_ident[EI_MAG2] != ELFMAG2
+        or ElfHeader.e_ident[EI_MAG3] != ELFMAG3
+        or ElfHeader.e_ident[EI_CLASS] != ELFCLASS64
+        or ElfHeader.e_ident[EI_DATA] != ELFDATA2LSB
+        or ElfHeader.e_type != ET_EXEC
+        or ElfHeader.e_machine != EM_X86_64
+        or ElfHeader.e_version != EV_CURRENT) {
         return false;
     }
     return true;
 #else  /* #ifndef DEBUG_ELF */
-    if (ElfHeader.e_ident[EI_MAG0] != ELFMAG0 || ElfHeader.e_ident[EI_MAG1] != ELFMAG1 || ElfHeader.e_ident[EI_MAG2] != ELFMAG2 || ElfHeader.e_ident[EI_MAG3] != ELFMAG3) {
+    if (ElfHeader.e_ident[EI_MAG0] != ELFMAG0
+        or ElfHeader.e_ident[EI_MAG1] != ELFMAG1
+        or ElfHeader.e_ident[EI_MAG2] != ELFMAG2
+        or ElfHeader.e_ident[EI_MAG3] != ELFMAG3) {
         std::print(
             "[ELF]: Invalid ELF64 header: Magic bytes incorrect.\n"
             "  Bytes (given, expected):\n"
@@ -156,7 +167,7 @@ LoadUserspaceElf64Process(
             // into the page.
             u64 offset = phdr->p_vaddr % PAGE_SIZE;
             auto n_read = vfs.read(fd, loadedProgram + offset, phdr->p_filesz, phdr->p_offset);
-            if (n_read < 0 || size_t(n_read) != phdr->p_filesz) {
+            if (n_read < 0 or size_t(n_read) != phdr->p_filesz) {
                 std::print("[ELF] Could not read program data from file {}\n", fd);
                 return false;
             }
