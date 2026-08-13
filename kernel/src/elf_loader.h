@@ -125,10 +125,9 @@ LoadUserspaceElf64Process(
     const std::vector<std::string_view>& env = {}) {
     VFS& vfs = SYSTEM->virtual_filesystem();
 
-    size_t stack_flags = 0;
-    stack_flags |= (size_t)Memory::PageTableFlag::Present;
-    stack_flags |= (size_t)Memory::PageTableFlag::ReadWrite;
-    stack_flags |= (size_t)Memory::PageTableFlag::UserSuper;
+    size_t stack_flags = (size_t)Memory::PageTableFlag::Present
+                         | (size_t)Memory::PageTableFlag::ReadWrite
+                         | (size_t)Memory::PageTableFlag::UserSuper;
 
     // Load PT_LOAD program headers, mapping to vaddr as necessary.
     u64 programHeadersTableSize = elfHeader.e_phnum * elfHeader.e_phentsize;
