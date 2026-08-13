@@ -24,19 +24,20 @@
 #include <integers.h>
 #include <interrupts/interrupts.h>
 #include <linked_list.h>
-#include <memory/physical_memory_manager.h>
-#include <memory/virtual_memory_manager.h>
 #include <memory/paging.h>
+#include <memory/physical_memory_manager.h>
 #include <memory/region.h>
+#include <memory/virtual_memory_manager.h>
 #include <storage/file_metadata.h>
-#include <memory>
-#include <vector>
-#include <extensions>
 #include <vfs_forward.h>
 #include <x86_64/cpu.h>
 
+#include <extensions>
+#include <memory>
+#include <vector>
+
 namespace Memory {
-    struct PageTable;
+struct PageTable;
 }
 
 /// Interrupt handler function found in `scheduler.asm`
@@ -91,24 +92,19 @@ struct Process {
     static constexpr usz EventQueueSize = 32;
     std::vector<EventQueue<EventQueueSize>> EventQueues;
 
-    std::string ExecutablePath { "" };
-    std::string WorkingDirectory { "" };
+    std::string ExecutablePath{""};
+    std::string WorkingDirectory{""};
 
     /// Used to save/restore CPU state when a context switch occurs.
+#ifdef x86_64
     CPUState CPU;
-
-    /// TODO: We need to figure out how each architecture can affect the
-    /// process structure. Maybe defines for each function definition,
-    /// or just leave the bulk of the process implementation to the
-    /// architecture and have a simpler ProcessBase that is inherited
-    /// from.
+    Memory::PageTable* CR3{nullptr};
 
     /* Data for extra CPU info (fxsave, etc). */
     /* NOTE: fxsave and friends leave bytes 464:511 available for software use. */
     alignas(16) u8 CPUExtra[512] = {0};
     bool CPUExtraSet = false;
-
-    Memory::PageTable* CR3 { nullptr };
+#endif
 
     Process() = default;
 
@@ -188,71 +184,65 @@ struct Process {
 };
 
 /// External symbols for 'scheduler.asm', defined in `scheduler.cpp`
-extern void(*scheduler_switch_process)(CPUState*)
+extern void (*scheduler_switch_process)(CPUState*)
     __attribute__((no_caller_saved_registers));
-extern void(*timer_tick)();
+extern void (*timer_tick)();
 
 namespace Scheduler {
-    /// External symbol defined in `scheduler.cpp`
-    // The list node of the currently executing process.
-    extern SinglyLinkedListNode<Process*>* CurrentProcess;
+/// External symbol defined in `scheduler.cpp`
+// The list node of the currently executing process.
+extern SinglyLinkedListNode<Process*>* CurrentProcess;
 
-    extern std::vector<Memory::PageTable*> PageMapsToFree;
+extern std::vector<Memory::PageTable*> PageMapsToFree;
 
-    bool initialize();
+extern Process StartupProcess;
 
-    /// Get a process ID number that is unique.
-    pid_t request_pid();
+bool initialize();
 
-    /// Get the process with PID if it is within list of processes, otherwise return NULL.
-    Process* process(pid_t);
+/// Get a process ID number that is unique.
+pid_t request_pid();
 
-    /* Switch to the next available task.
-     * | Called by IRQ0 Handler (System Timer Interrupt).
-     * |-- Copy registers saved from IRQ0 to current process.
-     * |-- Update current process to next available process.
-     * `-- Manipulate stack to trick `iretq` into doing what we want.
-     */
-    void switch_process(CPUState*);
+/// Get the process with PID if it is within list of processes, otherwise return NULL.
+Process* process(pid_t);
 
-    /// Add an existing process to the list of processes.
-    /// Creates and assigns a unique PID.
-    pid_t add_process(Process*);
+/* Switch to the next available task.
+ * | Called by IRQ0 Handler (System Timer Interrupt).
+ * |-- Copy registers saved from IRQ0 to current process.
+ * |-- Update current process to next available process.
+ * `-- Manipulate stack to trick `iretq` into doing what we want.
+ */
+void switch_process(CPUState*);
 
-    Process* last_process();
+/// Add an existing process to the list of processes.
+/// Creates and assigns a unique PID.
+pid_t add_process(Process*);
 
-    /// Remove the process with PID from the scheduler's list of viable
-    /// processes to switch to. If not found, do nothing. Destroy the process.
-    /// NOTE: If passing pid of current process, be careful to stay in
-    /// kernel until calling yield. DO NOT try to return to a destroyed
-    /// process.
-    ///
-    /// @param status
-    ///     Used for relaying status to processes
-    ///     waiting on this process (i.e. via `waitpid`)
-    ///
-    /// @return true iff process with given PID is found, removed, and destroyed.
-    bool remove_process(pid_t, int status);
+Process* last_process();
 
-    void print_debug();
+/// Remove the process with PID from the scheduler's list of viable
+/// processes to switch to. If not found, do nothing. Destroy the process.
+/// NOTE: If passing pid of current process, be careful to stay in
+/// kernel until calling yield. DO NOT try to return to a destroyed
+/// process.
+///
+/// @param status
+///     Used for relaying status to processes
+///     waiting on this process (i.e. via `waitpid`)
+///
+/// @return true iff process with given PID is found, removed, and destroyed.
+bool remove_process(pid_t, int status);
 
-    /// Stop the current process, and start the next. NOTE: CPU state
-    /// is not saved by this function, so be sure the saved process CPU
-    /// state is valid and ready to be returned to.
-    [[noreturn]] void yield();
+void print_debug();
 
-    // Call `map_pages` with the given data on every process in the
-    // process queue.
-    void map_pages_in_all_processes
-    (void* virtualAddress
-     , void* physicalAddress
-     , u64 mappingFlags
-     , size_t pages
-     , Memory::ShowDebug d = Memory::ShowDebug::No);
-}
+/// Stop the current process, and start the next.
+void yield(CPUState*);
 
-__attribute__((no_caller_saved_registers))
-void scheduler_switch(CPUState*);
+// Call `map_pages` with the given data on every process in the
+// process queue.
+void map_pages_in_all_processes(void* virtualAddress, void* physicalAddress, u64 mappingFlags, size_t pages, Memory::ShowDebug d = Memory::ShowDebug::No);
+}  // namespace Scheduler
+
+__attribute__((no_caller_saved_registers)) void scheduler_switch(CPUState*);
 
 pid_t CopyUserspaceProcess(Process* original);
 
