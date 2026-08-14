@@ -27,11 +27,11 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (NOT LENSOR_OS_LIBC_BUILD_HOST)
-    message(STATUS "Cross compiling LensorOS libc")
+    message(STATUS "Cross compiling LensorOS libc to run on LensorOS")
     # Use cross compiler.
     set( CMAKE_TOOLCHAIN_FILE ../../toolchain/lensor_gnu_toolchain.cmake )
 else()
-    message(STATUS "Building LensorOS libc on host")
+    message(STATUS "Building LensorOS libc to run on host")
 endif()
 
 project(LensorOS_libc VERSION 0.0.1 LANGUAGES ASM CXX)
