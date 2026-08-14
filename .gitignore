@@ -55,11 +55,11 @@
 **/cmake-build-*/
 
 # Scripts at the top level
-*.cmake
-*.sh
-*.bat
-*.ps1
-*.py
+/*.cmake
+/*.sh
+/*.bat
+/*.ps1
+/*.py
 
 # Build stuff
 bin/

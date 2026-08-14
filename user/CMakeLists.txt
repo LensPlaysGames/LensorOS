@@ -11,6 +11,15 @@ set(
 add_custom_target( userspace-libraries )
 add_custom_target( userspace )
 
+add_custom_command(
+    TARGET userspace-libraries
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND}
+    "-DPROJECT_ROOT=${CMAKE_CURRENT_LIST_DIR}/.."
+    -P "${CMAKE_CURRENT_LIST_DIR}/../scripts/sysroot.cmake"
+    COMMENT "Installing sysroot"
+)
+
 
 # LIBRARIES
 
