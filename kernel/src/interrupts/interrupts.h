@@ -134,6 +134,8 @@ void page_fault_handler               (InterruptFrameError*);
 void simd_exception_handler           (InterruptFrame*);
 
 // HELPER FUNCTIONS TO TRIGGER HANDLERS FOR TESTING
+// TODO: This is *filled* with undefined behaviour. **rather rely on
+// assembly snippets.**
 void cause_div_by_zero(u8 one = 1);
 void cause_page_not_present();
 void cause_general_protection();
