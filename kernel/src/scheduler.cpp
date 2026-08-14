@@ -256,7 +256,7 @@ Process* request_process(pid_t parent_pid) {
 
     constexpr size_t KernelStackSizePages = 2;
     constexpr size_t KernelStackSize = KernelStackSizePages * PAGE_SIZE;
-    constexpr auto KernelStackFlags = (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite;
+    // constexpr auto KernelStackFlags = (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite;
     auto physical_stack_base = Memory::request_pages(KernelStackSizePages);
     if (physical_stack_base == 0) {
         std::print("[ELF]: Couldn't allocate stack for new userspace process (kernel stack)\n");
@@ -264,7 +264,7 @@ Process* request_process(pid_t parent_pid) {
     }
     memset(physical_stack_base, 0, KernelStackSize);
     auto physical_stack_top = ((uintptr_t)physical_stack_base) + KernelStackSize;
-    process->add_memory_region(physical_stack_base, physical_stack_base, KernelStackSize, KernelStackFlags);
+    // process->add_memory_region(physical_stack_base, physical_stack_base, KernelStackSize, KernelStackFlags);
     process->kernel_stack = physical_stack_top;
 
     return process;

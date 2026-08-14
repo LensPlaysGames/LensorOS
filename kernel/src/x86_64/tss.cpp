@@ -60,7 +60,7 @@ void initialize() {
     // Allocate an interrupt kernel stack
     constexpr size_t KernelInterruptStackSizePages = 2;
     constexpr size_t KernelInterruptStackSize = KernelInterruptStackSizePages * PAGE_SIZE;
-    constexpr auto KernelInterruptStackFlags = (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite;
+    // FIXME: Utilize higher half mapping??? P2V()?
     auto physical_stack_base = Memory::request_pages(KernelInterruptStackSizePages);
     if (physical_stack_base == 0) {
         std::print("[ELF]: Couldn't allocate stack for new userspace process (kernel stack)\n");
@@ -68,7 +68,7 @@ void initialize() {
     }
     memset(physical_stack_base, 0, KernelInterruptStackSize);
     auto physical_stack_top = ((uintptr_t)physical_stack_base) + KernelInterruptStackSize;
-    Scheduler::StartupProcess.add_memory_region(physical_stack_base, physical_stack_base, KernelInterruptStackSize, KernelInterruptStackFlags);
+    // Scheduler::StartupProcess.add_memory_region(physical_stack_base, physical_stack_base, KernelInterruptStackSize, KernelInterruptStackFlags);
     std::print("  Stack: 0x{:016x}\n", physical_stack_top);
 
     tssEntry.set_stack(physical_stack_top);
