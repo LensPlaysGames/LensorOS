@@ -19,6 +19,15 @@
 
 #include "stdlib.h"
 
+// clang-format off
+
+#include <algorithm>
+#include <bits/colours.h>
+
+// clang-format on
+
+#include <bits/abi.h>
+
 #include "assert.h"
 #include "bits/cdtors.h"
 #include "bits/file_struct.h"
@@ -28,10 +37,6 @@
 #include "string.h"
 #include "sys/syscalls.h"
 #include "unistd.h"
-
-#include <algorithm>
-#include <bits/abi.h>
-#include <bits/colours.h>
 
 /// ===========================================================================
 ///  STDLIB Implementation.
@@ -50,7 +55,7 @@ size_t heap_size;
 char* heap_ptr;
 
 /// Keep track of allocated blocks.
-struct alignas (max_align_t) alloc_header {
+struct alignas(max_align_t) alloc_header {
     char* ptr;
     size_t size;
     alloc_header* next;
@@ -271,29 +276,26 @@ __attribute__((__noreturn__)) void __assert_abort(
 
 /// Report a failed assertion, print a message, and abort.
 /// Report a failed assertion with a message.
-__attribute__((__noreturn__)) void __assert_abort_msg(
-    const char *expr,
-    const char *msg,
-    const char *file,
-    unsigned int line,
-    const char *func
-) {
+__attribute__((__noreturn__)) void
+__assert_abort_msg(
+    const char* expr, const char* msg, const char* file,
+    unsigned int line, const char* func) {
     if (!__stdio_destructed) {
-        //fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s: %s\n", file, func, line, expr, msg);
+        // fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s: %s\n",
+        // file, func, line, expr, msg);
         fputs(file, stderr);
         fputs(_Y ": " _RR "assertion failed" _N _Y ": " _R, stderr);
         fputs(expr, stderr);
         fputs(_Y "\n    in function " _G, stderr);
         fputs(func, stderr);
-        fputs(_Y "\n    message: " _B , stderr);
+        fputs(_Y "\n    message: " _B, stderr);
         fputs(msg, stderr);
         fputs(_N "\n", stderr);
         fflush(stderr);
     } else {
-        write(2, "Assertion failed: ", 18);
+        write(2, "LensorOS LibC Internal Assertion Failed: ", 41);
         __write(expr);
-        write(2, "\n", 1);
-        write(2, "Message: ", 9);
+        write(2, "\n| ", 3);
         __write(msg);
         write(2, "\n", 1);
     }
@@ -412,15 +414,25 @@ void free(void* ptr) {
     /// Find the block in the allocated list.
     auto block = find_alloc_block(ptr);
 
-    /// If it's the most recently allocated block, just decrement the heap pointer.
-    /// FIXME: I think this check is not correct.
-/*    if (block == alloc_list) {
+    /// If it's the block at the end of the heap, just decrement the heap pointer.
+    if (block and block->ptr + block->size == heap_ptr) {
         heap_ptr -= block->size;
-        alloc_list = block->next;
-        if (alloc_list) { alloc_list->prev = nullptr; }
+
+        // Remove the block from the allocated list.
+        if (block->prev) {
+            block->prev->next = block->next;
+        }
+        if (block->next) {
+            block->next->prev = block->prev;
+        }
+        if (alloc_list == block) {
+            alloc_list = block->next;
+        }
+
+        // Clean up the tracking header
         free_header(block);
         return;
-    }*/
+    }
 
     /// Make sure we have a valid pointer.
     if (!block) {
