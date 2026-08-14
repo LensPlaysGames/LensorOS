@@ -58,7 +58,6 @@ add_library(
   src/interrupts/syscalls.asm
   src/prekernel.asm
   src/scheduler.asm
-  src/userswitch.asm
 )
 string( APPEND CMAKE_ASM_NASM_COMPILE_OBJECT " -f elf64" )
 

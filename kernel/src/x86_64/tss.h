@@ -148,6 +148,4 @@ void initialize();
 extern TSSEntry tssEntry;
 }  // namespace TSS
 
-extern "C" void jump_to_userland_function(void* functionAddress);
-
 #endif

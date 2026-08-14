@@ -30,14 +30,10 @@
 
 #include <print>
 
-// USED IN `userswitch.asm` `jump_to_userland_function` AS EXTERNAL SYMBOL.
-void* tss;
-
 namespace TSS {
 TSSEntry tssEntry;
 
 void initialize() {
-    tss = &tssEntry;
     // Zero out TSS entry.
     memset(&tssEntry, 0, sizeof(TSSEntry));
     // Set byte limit of TSS Entry past base address.
