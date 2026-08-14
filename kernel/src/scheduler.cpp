@@ -345,7 +345,7 @@ SinglyLinkedListNode<Process*>* next_viable_process(SinglyLinkedListNode<Process
 /// Called from `irq0_handler` in `scheduler.asm`
 /// A stupid simple round-robin process switcher.
 extern "C" Process* switch_process(CPUState* cpu) {
-    std::print("switch_process()...\n");
+    // std::print("switch_process()...\n");
 
     // Save address of stack frame
     CurrentProcess->value()->kernel_stack = (uintptr_t)cpu;
@@ -365,11 +365,11 @@ extern "C" Process* switch_process(CPUState* cpu) {
 
     // From this point on, we are trying to restore program state from
     // CurrentProcess.
-    std::print("[SCHED]: Switching to process {}\n", CurrentProcess->value()->ProcessID);
+    // std::print("[SCHED]: Switching to process {}\n", CurrentProcess->value()->ProcessID);
 
     // Update kernel stack that will be returned to with this process' saved
     // kernel stack.
-    std::print("Setting TSS RSP to 0x{:016x} (was 0x{:016x})\n", CurrentProcess->value()->kernel_stack, TSS::tssEntry.get_stack());
+    // std::print("Setting TSS RSP to 0x{:016x} (was 0x{:016x})\n", CurrentProcess->value()->kernel_stack, TSS::tssEntry.get_stack());
     TSS::tssEntry.set_stack(CurrentProcess->value()->kernel_stack);
 
     // std::print("switch_process() done...\n");
