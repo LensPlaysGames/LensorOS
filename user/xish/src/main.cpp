@@ -1,13 +1,17 @@
+// clang-format off
+
 #include <filesystem>
 #include <format>
 #include <print>
 #include <vector>
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <sys/wait.h>
-#include <errno.h>
+#include <unistd.h>
+
+// clang-format on
 
 #ifdef __lensor__
 #include <bits/io_defs.h>
@@ -24,10 +28,9 @@ constexpr const char prompt[] = "  $:";
 // TODO: It would be nice to keep track of programs run in this way, so
 // that we may check up on them later to see if they are still running,
 // what their stdout/stderr look like, etc.
-void run_program_quiet_nowait(const char *const filepath, char* const *args) {
+void run_program_quiet_nowait(const char* const filepath, char* const* args) {
     if (fork() == 0) execv(filepath, args);
 }
-
 
 // FIXME: May want to do ErrorOr or some type of variant so that we can
 // tell when run_program_waitpid itself failed vs the program that was
@@ -36,7 +39,7 @@ void run_program_quiet_nowait(const char *const filepath, char* const *args) {
 /// @param args
 ///   NULL-terminated array of pointers to NULL-terminated strings.
 ///   Passed to `exec` syscall
-int run_program_waitpid(const char *const filepath, const char **args) {
+int run_program_waitpid(const char* const filepath, const char** args) {
     if (not filepath or not args) {
         std::print("[XiSh]: internal error: null arguments\n");
         exit(1);
@@ -62,9 +65,9 @@ int run_program_waitpid(const char *const filepath, const char **args) {
         std::print("Failed to fork process: rc={} errno={}\n", cpid, errno);
         return -1;
     }
-    //printf("pid: %d\n", cpid);
+    // printf("pid: %d\n", cpid);
     if (cpid) {
-        //puts("Parent");
+        // puts("Parent");
         {
             auto close_rc = close(fds[1]);
             if (close_rc != 0) {
@@ -101,12 +104,12 @@ int run_program_waitpid(const char *const filepath, const char **args) {
             return -1;
         }
 
-        //puts("Parent waited");
-        //fflush(NULL);
+        // puts("Parent waited");
+        // fflush(NULL);
 
         return WEXITSTATUS(command_status);
     } else {
-        //puts("Child");;
+        // puts("Child");;
         close(fds[0]);
 
         // Redirect stdout to write end of pipe.
@@ -114,7 +117,7 @@ int run_program_waitpid(const char *const filepath, const char **args) {
         close(fds[1]);
 
         fflush(NULL);
-        execv(filepath, (char **)args);
+        execv(filepath, (char**)args);
         exit(1);
     }
 
@@ -123,12 +126,12 @@ int run_program_waitpid(const char *const filepath, const char **args) {
     return -1;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     // Set stdout for this program to unbuffered so the user can see updates
     // as they type.
     setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
 
-    FILE *input = stdin;
+    FILE* input = stdin;
     // FIXME: This *might* be better as a vector<char>, seeing as we only add/
     // remove from the end.
     std::string input_command{};
@@ -197,8 +200,7 @@ int main(int argc, char **argv) {
         auto command = input_command.substr(0, command_end);
         auto the_rest = std::string_view{
             input_command.data() + command_end,
-            input_command.size() - command_end
-        };
+            input_command.size() - command_end};
 
         auto collect_arg = [](std::string_view& the_rest) -> std::string_view {
             // Skip all separators at beginning
@@ -259,7 +261,7 @@ int main(int argc, char **argv) {
 
             if (std::filesystem::exists(std::filesystem::path{command.data()})) {
                 // Prepare arguments for exec syscall
-                std::vector<char *> argv;
+                std::vector<char*> argv;
                 for (const auto& arg : arguments) {
                     argv.push_back((char*)arg.data());
                 }
@@ -267,14 +269,14 @@ int main(int argc, char **argv) {
 
                 run_program_quiet_nowait(command.data(), argv.data());
                 std::print("[XiSH]: Ran \"{}\" in background\n", command);
-            }
-            else std::print("[XiSH]:Error:builtin_background: \"{}\" does not exist\n", command);
+            } else
+                std::print("[XiSH]:Error:builtin_background: \"{}\" does not exist\n", command);
 
             continue;
         }
 
         // NOT A BUILTIN, DELEGATE TO SYSTEM COMMAND
-        std::vector<const char *> argv;
+        std::vector<const char*> argv;
         argv.push_back(command.data());
         for (const auto& arg : arguments) {
             argv.push_back(arg.data());
@@ -282,9 +284,9 @@ int main(int argc, char **argv) {
         argv.push_back(nullptr);
 
         bool found{false};
-        for (auto &p : PATH) {
+        for (auto& p : PATH) {
             auto e = p / command.data();
-            if (std::filesystem::exists(e)){
+            if (std::filesystem::exists(e)) {
                 found = true;
                 std::print("[XiSh]: found command at {}\n", e.c_str());
                 rc = run_program_waitpid(e.c_str(), argv.data());

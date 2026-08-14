@@ -57,9 +57,9 @@
 #include <utf.h>
 
 #include <bit>
+#include <extensions>
 #include <format>
 #include <unordered_map>
-#include <extensions>
 
 #ifdef x86_64
 u8 idt_storage[0x1000];
@@ -71,28 +71,28 @@ void prepare_interrupts() {
 
 #ifdef x86_64
     // CREATE INTERRUPT DESCRIPTOR TABLE.
-    gIDT = IDTR(0x0fff, (u64)&idt_storage[0]);
+    gIDT = IDTR(sizeof(idt_storage) - 1, (u64)&idt_storage[0]);
     // POPULATE TABLE.
     // NOTE: IRQ0 uses this handler by default, but scheduler over-rides this!
-    //gIDT.install_handler((u64)system_timer_handler,             PIC_IRQ0);
-    gIDT.install_handler((u64)keyboard_handler,                 PIC_IRQ1);
-    gIDT.install_handler((u64)uart_com1_handler,                PIC_IRQ4);
-    gIDT.install_handler((u64)rtc_handler,                      PIC_IRQ8);
-    gIDT.install_handler((u64)mouse_handler,                    PIC_IRQ12);
-    gIDT.install_handler((u64)divide_by_zero_handler,           0x00);
-    gIDT.install_handler((u64)double_fault_handler,             0x08);
-    gIDT.install_handler((u64)stack_segment_fault_handler,      0x0c);
+    // gIDT.install_handler((u64)system_timer_handler, PIC_IRQ0);
+    gIDT.install_handler((u64)keyboard_handler, PIC_IRQ1);
+    gIDT.install_handler((u64)uart_com1_handler, PIC_IRQ4);
+    gIDT.install_handler((u64)rtc_handler, PIC_IRQ8);
+    gIDT.install_handler((u64)mouse_handler, PIC_IRQ12);
+    gIDT.install_handler((u64)divide_by_zero_handler, 0x00);
+    gIDT.install_handler((u64)double_fault_handler, 0x08);
+    gIDT.install_handler((u64)stack_segment_fault_handler, 0x0c);
     gIDT.install_handler((u64)general_protection_fault_handler, 0x0d);
-    gIDT.install_handler((u64)page_fault_handler,               0x0e);
-    gIDT.install_handler((u64)simd_exception_handler,           0x13);
-    gIDT.install_handler((u64)system_call_handler_asm,          0x80
-                         , IDT_TA_UserInterruptGate);
+    gIDT.install_handler((u64)page_fault_handler, 0x0e);
+    gIDT.install_handler((u64)simd_exception_handler, 0x13);
+    gIDT.install_handler((u64)system_call_handler_asm, 0x80,
+                         IDT_TA_UserInterruptGate);
     gIDT.flush();
 #endif
 }
 
 void draw_boot_gfx() {
-    Vector2<u64> drawPosition = { 0, 0 };
+    Vector2<u64> drawPosition = {0, 0};
     gRend.puts(drawPosition, "<<<!===--- You are now booting into LensorOS ---===!>>>");
     // DRAW A FACE :)
     drawPosition = {420, 420};
@@ -122,8 +122,10 @@ void find_pci_devices() {
     // Storage devices like AHCIs will be detected here.
     auto* mcfg = (ACPI::MCFGHeader*)ACPI::find_table("MCFG");
     if (mcfg) {
-        std::print("[kstage1]: Found Memory-mapped Configuration Space (MCFG) ACPI Table\n"
-                   "  Address: {}\n\n", static_cast<void*>(mcfg));
+        std::print(
+            "[kstage1]: Found Memory-mapped Configuration Space (MCFG) ACPI Table\n"
+            "  Address: {}\n\n",
+            static_cast<void*>(mcfg));
         PCI::enumerate_pci(mcfg);
     }
 }
@@ -134,8 +136,7 @@ void probe_system_devices() {
         auto dev = SYSTEM->Devices[i];
         if (dev->major() == SYSDEV_MAJOR_STORAGE
             && dev->minor() == SYSDEV_MINOR_AHCI_CONTROLLER
-            && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
-        {
+            && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0) {
             std::print("[kstage1]: Probing AHCI Controller\n");
             auto controller = static_cast<Devices::AHCIController*>(dev.get());
             auto* ABAR = reinterpret_cast<AHCI::HBAMemory*>(u64(controller->Header->BAR5));
@@ -152,26 +153,21 @@ void probe_system_devices() {
             // pointer or a large struct is really hard to do correctly.
 
             void* containing_page = (void*)((usz)ABAR - ((usz)ABAR % PAGE_SIZE));
-            Memory::map(containing_page, containing_page
-                        , (u64)Memory::PageTableFlag::Present
-                          | (u64)Memory::PageTableFlag::ReadWrite
-                        );
+            Memory::map(containing_page, containing_page,
+                        (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
 
             // Handle case where ABAR spans two pages, in which case we have to map both.
             void* next_page = (void*)((usz)containing_page + PAGE_SIZE);
             if (((usz)ABAR + sizeof(AHCI::HBAMemory)) >= (u64)next_page)
-                Memory::map(next_page, next_page
-                            , (u64)Memory::PageTableFlag::Present
-                              | (u64)Memory::PageTableFlag::ReadWrite
-                            );
+                Memory::map(next_page, next_page,
+                            (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
 
             // Handle case where ABAR spans three pages, in which case we have to map a third.
             next_page = (void*)((usz)next_page + PAGE_SIZE);
             if (((usz)ABAR + sizeof(AHCI::HBAMemory)) >= (u64)next_page)
-                Memory::map(next_page, next_page
-                            , (u64)Memory::PageTableFlag::Present
-                              | (u64)Memory::PageTableFlag::ReadWrite
-                            );
+                Memory::map(
+                    next_page, next_page,
+                    (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
 
             u32 ports = ABAR->PortsImplemented;
             for (uint i = 0; i < 32; ++i) {
@@ -179,9 +175,12 @@ void probe_system_devices() {
                     AHCI::HBAPort* port = &ABAR->Ports[i];
                     AHCI::PortType type = get_port_type(port);
                     if (type != AHCI::PortType::None) {
-                        SYSTEM->create_device<Devices::AHCIPort>(std::static_pointer_cast<Devices::AHCIController>(dev), type, i, port);
+                        SYSTEM->create_device<Devices::AHCIPort>(
+                            std::static_pointer_cast<Devices::AHCIController>(dev),
+                            type, i, port);
                     }
-                } else break;
+                } else
+                    break;
             }
             // Don't search AHCI controller any further, already found all ports.
             dev->set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
@@ -198,10 +197,11 @@ void discover_partitions() {
         auto dev = SYSTEM->Devices[i];
         if (dev->major() == SYSDEV_MAJOR_STORAGE
             && dev->minor() == SYSDEV_MINOR_AHCI_PORT
-            && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
-        {
+            && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0) {
             auto port = static_cast<Devices::AHCIPort*>(dev.get());
-            std::print("[kstage1]: Searching AHCI port {} for a GPT\n", port->Driver->port_number());
+            std::print(
+                "[kstage1]: Searching AHCI port {} for a GPT\n",
+                port->Driver->port_number());
             if (GPT::is_gpt_present(port->Driver.get())) {
                 std::print("  GPT is present!\n");
                 GPT::Header gptHeader;
@@ -225,35 +225,42 @@ void discover_partitions() {
                     // FIXME: Encoding of partition name appears to be UTF-16,
                     // but I'm not sure if it will always be or just for FAT
                     // partitions.
-                    auto name_in_utf8 = utf16_to_utf8(std::string_view((const char*)part->Name, sizeof(part->Name)));
+                    auto name_in_utf8 = utf16_to_utf8(
+                        std::string_view((const char*)part->Name, sizeof(part->Name)));
                     // Remove spaces from end of the name.
-                    while (name_in_utf8.back() == ' ') name_in_utf8.erase(name_in_utf8.size() - 1);
+                    while (name_in_utf8.back() == ' ')
+                        name_in_utf8.erase(name_in_utf8.size() - 1);
 
-                    std::print("      Partition {}: {}:\n"
-                               "        Type GUID: {}\n"
-                               "        Unique GUID: {}\n"
-                               "        Sector Offset: {}\n"
-                               "        Sector Count: {}\n"
-                               "        Attributes: {}\n",
-                               i, name_in_utf8,
-                               GUID(part->TypeGUID),
-                               GUID(part->UniqueGUID),
-                               u64(part->StartLBA),
-                               part->size_in_sectors(),
-                               u64(part->Attributes));
-
+                    std::print(
+                        "      Partition {}: {}:\n"
+                        "        Type GUID: {}\n"
+                        "        Unique GUID: {}\n"
+                        "        Sector Offset: {}\n"
+                        "        Sector Count: {}\n"
+                        "        Attributes: {}\n",
+                        i, name_in_utf8,
+                        GUID(part->TypeGUID),
+                        GUID(part->UniqueGUID),
+                        u64(part->StartLBA),
+                        part->size_in_sectors(),
+                        u64(part->Attributes));
 
                     // Don't touch partitions with known GUIDs, except for a select few.
                     bool known = false;
                     GUID known_guid;
-                    for (auto* reserved_guid = &GPT::ReservedPartitionGUIDs[0]; *reserved_guid != GPT::NullGUID; reserved_guid++) {
+                    for (
+                        auto* reserved_guid = &GPT::ReservedPartitionGUIDs[0];
+                        *reserved_guid != GPT::NullGUID;
+                        reserved_guid++) {
                         if (part->TypeGUID == *reserved_guid) {
                             known_guid = *reserved_guid;
                             known = true;
                             break;
                         }
                     }
-                    if (!known) SYSTEM->create_device<Devices::GPTPartition>(std::static_pointer_cast<Devices::AHCIPort>(dev), *part);
+                    if (!known)
+                        SYSTEM->create_device<Devices::GPTPartition>(
+                            std::static_pointer_cast<Devices::AHCIPort>(dev), *part);
                 }
 
                 /* Don't search port any further, we figured
@@ -276,24 +283,26 @@ void discover_filesystems() {
     for (usz i = 0; i < SYSTEM->Devices.size(); ++i) {
         auto dev = SYSTEM->Devices[i];
         if (dev->major() == SYSDEV_MAJOR_STORAGE
-            && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0)
-        {
+            && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0) {
             if (dev->minor() == SYSDEV_MINOR_GPT_PARTITION) {
                 auto* partition = static_cast<Devices::GPTPartition*>(dev.get());
                 if (partition) {
-                    std::print("[kstage1]: GPT Partition:\n"
-                               "  Type GUID: {}\n"
-                               "  Unique GUID: {}\n",
-                               partition->Driver->type_guid(),
-                               partition->Driver->unique_guid());
+                    std::print(
+                        "[kstage1]: GPT Partition:\n"
+                        "  Type GUID: {}\n"
+                        "  Unique GUID: {}\n",
+                        partition->Driver->type_guid(),
+                        partition->Driver->unique_guid());
                     if (auto FAT = FileAllocationTableDriver::try_create(sdd(partition->Driver))) {
                         std::print("  Found valid File Allocation Table filesystem\n");
                         static bool foundEFI = false;
                         std::string mountPath;
-                        if (!foundEFI && partition->Partition.TypeGUID == GPT::PartitionType$EFISystem) {
+                        if (!foundEFI
+                            && partition->Partition.TypeGUID == GPT::PartitionType$EFISystem) {
                             mountPath = "/efi";
                             foundEFI = true;
-                        } else mountPath = std::format("/fs{}", vfs.mounts().size());
+                        } else
+                            mountPath = std::format("/fs{}", vfs.mounts().size());
 
                         vfs.mount(mountPath, std::move(FAT));
 
@@ -304,7 +313,9 @@ void discover_filesystems() {
             } else if (dev->minor() == SYSDEV_MINOR_AHCI_PORT) {
                 auto* controller = static_cast<Devices::AHCIPort*>(dev.get());
                 if (controller->Driver) {
-                    std::print("[kstage1]: AHCI port {}:\n", controller->Driver->port_number());
+                    std::print(
+                        "[kstage1]: AHCI port {}:\n",
+                        controller->Driver->port_number());
                     std::print("  Checking for valid File Allocation Table filesystem\n");
                     if (auto FAT = FileAllocationTableDriver::try_create(sdd(controller->Driver))) {
                         std::print("  Found valid File Allocation Table filesystem\n");
@@ -369,7 +380,7 @@ void probe_cpu() {
          */
         if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FXSR)) {
             SystemCPU->set_fxsr_capable();
-            asm volatile ("fxsave %0" :: "m"(fxsave_region));
+            asm volatile("fxsave %0" ::"m"(fxsave_region));
             SystemCPU->set_fxsr_enabled();
             // If FXSAVE/FXRSTOR is supported, setup FPU.
             if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_FPU)) {
@@ -379,21 +390,20 @@ void probe_cpu() {
                  * |- CR0.EM (bit 02) -- If set, FPU and vector operations will cause a #UD.
                  * `- CR0.TS (bit 03) -- Task switched. If set, all FPU and vector ops will cause a #NM.
                  */
-                asm volatile ("mov %%cr0, %%rdx\n"
-                              "mov $0b1100, %%ax\n"
-                              "not %%ax\n"
-                              "and %%ax, %%dx\n"
-                              "mov %%rdx, %%cr0\n"
-                              "fninit\n"
-                              ::: "rax", "rdx");
+                asm volatile(
+                    "mov %%cr0, %%rdx\n"
+                    "mov $0b1100, %%ax\n"
+                    "not %%ax\n"
+                    "and %%ax, %%dx\n"
+                    "mov %%rdx, %%cr0\n"
+                    "fninit\n" ::: "rax", "rdx");
                 SystemCPU->set_fpu_enabled();
-            }
-            else {
+            } else {
                 // FPU not supported, ensure it is disabled.
-                asm volatile ("mov %%cr0, %%rdx\n"
-                              "or $0b1100, %%dx\n"
-                              "mov %%rdx, %%cr0\n"
-                              ::: "rdx");
+                asm volatile(
+                    "mov %%cr0, %%rdx\n"
+                    "or $0b1100, %%dx\n"
+                    "mov %%rdx, %%cr0\n" ::: "rdx");
             }
             // If FXSAVE/FXRSTOR are supported and present, setup SSE.
             if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)) {
@@ -404,14 +414,14 @@ void probe_cpu() {
                  * |- Set CR4.OSFXSR bit (bit 9  -- OS provides FXSAVE/FXRSTOR functionality)
                  * `- Set CR4.OSXMMEXCPT (bit 10 -- OS provides #XM exception handler)
                  */
-                asm volatile ("mov %%cr0, %%rax\n"
-                              "and $0b1111111111110011, %%ax\n"
-                              "or $0b10, %%ax\n"
-                              "mov %%rax, %%cr0\n"
-                              "mov %%cr4, %%rax\n"
-                              "or $0b11000000000, %%rax\n"
-                              "mov %%rax, %%cr4\n"
-                              ::: "rax");
+                asm volatile(
+                    "mov %%cr0, %%rax\n"
+                    "and $0b1111111111110011, %%ax\n"
+                    "or $0b10, %%ax\n"
+                    "mov %%rax, %%cr0\n"
+                    "mov %%cr4, %%rax\n"
+                    "or $0b11000000000, %%rax\n"
+                    "mov %%rax, %%cr4\n" ::: "rax");
                 SystemCPU->set_sse_enabled();
             }
         }
@@ -420,20 +430,20 @@ void probe_cpu() {
             SystemCPU->set_xsave_capable();
             // Enable XSAVE feature set
             // `- Set CR4.OSXSAVE bit (bit 18  -- OS provides )
-            asm volatile ("mov %cr4, %rax\n"
-                          "or $0b1000000000000000000, %rax\n"
-                          "mov %rax, %cr4\n");
+            asm volatile(
+                "mov %cr4, %rax\n"
+                "or $0b1000000000000000000, %rax\n"
+                "mov %rax, %cr4\n");
             SystemCPU->set_xsave_enabled();
             // If SSE, AND XSAVE are supported, setup AVX feature set.
             if (regs.D & static_cast<u32>(CPUID_FEATURE::EDX_SSE)
-                && regs.C & static_cast<u32>(CPUID_FEATURE::ECX_AVX))
-            {
+                && regs.C & static_cast<u32>(CPUID_FEATURE::ECX_AVX)) {
                 SystemCPU->set_avx_capable();
-                asm volatile ("xor %%rcx, %%rcx\n"
-                              "xgetbv\n"
-                              "or $0b111, %%eax\n"
-                              "xsetbv\n"
-                              ::: "rax", "rcx", "rdx");
+                asm volatile(
+                    "xor %%rcx, %%rcx\n"
+                    "xgetbv\n"
+                    "or $0b111, %%eax\n"
+                    "xsetbv\n" ::: "rax", "rcx", "rdx");
                 SystemCPU->set_avx_enabled();
             }
         }
@@ -491,19 +501,13 @@ void kstage2(BootInfo* bInfo) {
     SYSTEM = new System();
 
     // FIXME: We just assume the system has an RTC.
-    {// Initialize the Real Time Clock.
+    {  // Initialize the Real Time Clock.
         gRTC = RTC();
         gRTC.set_periodic_int_enabled(true);
-        std::print("[kstage1]: {Real Time Clock (RTC) initialized}\n"
-                   "\033[1;33mNow is {}:{}:{} on {}-{}-{}\033[0m\n\n"
-                   , __GREEN
-                   , gRTC.Time.hour
-                   , gRTC.Time.minute
-                   , gRTC.Time.second
-                   , gRTC.Time.year
-                   , gRTC.Time.month
-                   , gRTC.Time.date
-                   );
+        std::print(
+            "[kstage1]: {Real Time Clock (RTC) initialized}\n"
+            "\033[1;33mNow is {}:{}:{:02} on {}-{}-{}\033[0m\n\n",
+            __GREEN, gRTC.Time.hour, gRTC.Time.minute, gRTC.Time.second, gRTC.Time.year, gRTC.Time.month, gRTC.Time.date);
 
         // TODO: Register RTC as a real time clock timer device within system.
     }
@@ -521,14 +525,13 @@ void kstage2(BootInfo* bInfo) {
     Keyboard::gText = Keyboard::BasicTextRenderer();
 
     // FIXME: Do ... do we need random number generators in the kernel... ?
-    {// Setup random number generators.
+    {  // Setup random number generators.
         // FIXME: Just assumes RTC exists. Doesn't use system timer device API.
         const RTCData& tm = gRTC.Time;
-        u64 someNumber =
-            tm.century + tm.year
-            + tm.month   + tm.date
-            + tm.weekday + tm.hour
-            + tm.minute  + tm.second;
+        u64 someNumber = tm.century + tm.year
+                         + tm.month + tm.date
+                         + tm.weekday + tm.hour
+                         + tm.minute + tm.second;
         gRandomLCG = LCG();
         gRandomLCG.seed(someNumber);
         gRandomLFSR = LFSR();
@@ -562,24 +565,21 @@ void kstage2(BootInfo* bInfo) {
     // Initialize the Programmable Interval Timer.
     // FIXME: Just assumes PIT exists.
     gPIT = PIT();
-    std::print("[kstage1]: {Programmable Interval Timer Initialized}\n"
-               "  Channel 0, H/L Bit Access\n"
-               "  Rate Generator, BCD Disabled\n"
-               "  Periodic interrupts at {}{}hz{}.\n"
-               "\n"
-               , __GREEN
-               , __YELLOW
-               , static_cast<double>(PIT_FREQUENCY)
-               , __FG_DEFAULT
-               );
+    std::print(
+        "[kstage1]: {Programmable Interval Timer Initialized}\n"
+        "  Channel 0, H/L Bit Access\n"
+        "  Rate Generator, BCD Disabled\n"
+        "  Periodic interrupts at {}{}hz{}.\n"
+        "\n",
+        __GREEN, __YELLOW, static_cast<double>(PIT_FREQUENCY), __FG_DEFAULT);
 
     // Setup network device(s)
     for (auto& dev : SYSTEM->Devices) {
         if (dev->major() == SYSDEV_MAJOR_NETWORK
             && dev->minor() == SYSDEV_MINOR_E1000) {
-                Devices::E1000Device* e1000Device = static_cast<Devices::E1000Device*>(dev.get());
-                gE1000 = {e1000Device->Header};
-            }
+            Devices::E1000Device* e1000Device = static_cast<Devices::E1000Device*>(dev.get());
+            gE1000 = {e1000Device->Header};
+        }
     }
 
     // The scheduler is the system in place that switches between processes
@@ -588,7 +588,7 @@ void kstage2(BootInfo* bInfo) {
 
     if (!vfs.mounts().empty()) {
         // Another userspace program
-        constexpr const char *const programTwoFilePath = "/fs0/bin/stdout";
+        constexpr const char* const programTwoFilePath = "/fs0/bin/stdout";
 
         // Userspace Framebuffer
         usz fb_phys_addr = (usz)bInfo->framebuffer->BaseAddress;
@@ -611,28 +611,27 @@ void kstage2(BootInfo* bInfo) {
             vfs.close(fds.Process);
         }
         // Get last process in queue from scheduler.
-        Process *process = Scheduler::last_process();
+        // TODO: We should have a better way of knowing the process we just
+        // created is the one we are referencing here...
+        Process* process = Scheduler::last_process();
 
-        usz flags = 0;
-        flags |= (usz)Memory::PageTableFlag::Present;
-        flags |= (usz)Memory::PageTableFlag::UserSuper;
-        flags |= (usz)Memory::PageTableFlag::ReadWrite;
+        constexpr usz flags
+            = (usz)Memory::PageTableFlag::Present
+              | (usz)Memory::PageTableFlag::UserSuper
+              | (usz)Memory::PageTableFlag::ReadWrite;
 
-        // TODO: We should probably pick this more betterer :Þ
         for (usz t = 0; t < bInfo->framebuffer->BufferSize; t += PAGE_SIZE) {
-            Memory::map(process->CR3
-                        , (void*)(fb_virt_addr + t)
-                        , (void*)(fb_phys_addr + t)
-                        , flags
-                        , Memory::ShowDebug::No
-                        );
+            Memory::map(
+                process->CR3,
+                (void*)(fb_virt_addr + t),
+                (void*)(fb_phys_addr + t),
+                flags, Memory::ShowDebug::No);
         }
-        process->add_memory_region((void*)fb_virt_addr
-                                   , (void*)fb_phys_addr
-                                   , bInfo->framebuffer->BufferSize
-                                   , flags
-                                   );
-
+        process->add_memory_region(
+            (void*)fb_virt_addr,
+            (void*)fb_phys_addr,
+            bInfo->framebuffer->BufferSize,
+            flags);
 
         SYSTEM->set_init(process);
 
@@ -658,9 +657,9 @@ void kstage2(BootInfo* bInfo) {
     // TODO: only if we want to, or whatever.
     run_tests();
 
-    //Memory::print_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
+    // Memory::print_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     Memory::print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
-    //heap_print_debug();
+    // heap_print_debug();
     heap_print_debug_summed();
     Memory::print_debug();
 
@@ -668,28 +667,19 @@ void kstage2(BootInfo* bInfo) {
 
     // From here on is testing, basically.
 
-    std::print("Colour Test:\n"
-               "  This is {black}.\n"
-               "  This is {red}.\n"
-               "  But, on this line {}red begins but never ends\n"
-               "  This is {green}\n"
-               "  This is {YELLow}\n"
-               "  This is {blue :(}\n"
-               "  This is {magenta}\n"
-               "  This is {cyan!}\n"
-               "  This is {white}\n"
-               "  This is {}back to default\n"
-               , __BLACK
-               , __RED
-               , __RED
-               , __GREEN
-               , __YELLOW
-               , __BLUE
-               , __MAGENTA
-               , __CYAN
-               , __WHITE
-               , __DEFAULT
-               );
+    std::print(
+        "Colour Test:\n"
+        "  This is {black}.\n"
+        "  This is {red}.\n"
+        "  But, on this line {}red begins but never ends\n"
+        "  This is {green}\n"
+        "  This is {YELLow}\n"
+        "  This is {blue :(}\n"
+        "  This is {magenta}\n"
+        "  This is {cyan!}\n"
+        "  This is {white}\n"
+        "  This is {}back to default\n",
+        __BLACK, __RED, __RED, __GREEN, __YELLOW, __BLUE, __MAGENTA, __CYAN, __WHITE, __DEFAULT);
 
     struct EthernetFrameHeader {
         u8 MACDestination[6];
@@ -772,8 +762,8 @@ void kstage2(BootInfo* bInfo) {
 
     // Allow interrupts to trigger.
     std::print("[kstage1]: Enabling interrupts\n");
-    asm ("sti");
-    //std::print("[kstage1]: {Interrupts enabled}\n", __GREEN);
+    asm("sti");
+    // std::print("[kstage1]: {Interrupts enabled}\n", __GREEN);
 }
 
 void kstage1(BootInfo* bInfo) {
@@ -800,7 +790,7 @@ void kstage1(BootInfo* bInfo) {
     // Disable interrupts while doing sensitive
     //   operations (like setting up interrupts :^).
     // TODO: Make architecture agnostic.
-    asm ("cli");
+    asm("cli");
 #endif
 
     // Don't even attempt to boot unless boot info exists.
@@ -827,9 +817,10 @@ void kstage1(BootInfo* bInfo) {
     UART::initialize();
 
     // Fancy boot message, because why not.
-    std::print("\n"
-               "!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\n"
-               "\n");
+    std::print(
+        "\n"
+        "!===--- You are now booting into \033[1;33mLensorOS\033[0m ---===!\n"
+        "\n");
 
     // Setup physical memory allocator from EFI memory map.
     Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);

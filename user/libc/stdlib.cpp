@@ -46,7 +46,7 @@ namespace {
 ///  Globals.
 /// ===========================================================================
 /// TODO: This MUST be thread-local.
-int __errno { 0 };
+int __errno{0};
 
 // NOTE: All of these should be initialised with libc, i.e. in
 // `__libc_init_malloc()`.
@@ -95,7 +95,8 @@ bool heap_has_space(size_t size) {
 
 /// Allocate a new pointer on the heap.
 __attribute__((malloc)) void* heap_alloc(size_t size) {
-    if (!heap_has_space(size)) return nullptr;
+    if (!heap_has_space(size))
+        return nullptr;
     void* ptr = heap_ptr;
     heap_ptr += size;
     return ptr;
@@ -135,7 +136,8 @@ void free_header(alloc_header* header) {
 alloc_header* find_free_block(size_t size) {
     auto block = free_list;
     while (block) {
-        if (block->size >= size) return block;
+        if (block->size >= size)
+            return block;
         block = block->next;
     }
     return nullptr;
@@ -145,7 +147,8 @@ alloc_header* find_free_block(size_t size) {
 alloc_header* find_alloc_block(void* ptr) {
     auto block = alloc_list;
     while (block) {
-        if (block->ptr == ptr) return block;
+        if (block->ptr == ptr)
+            return block;
         block = block->next;
     }
     return nullptr;
@@ -161,10 +164,14 @@ constexpr size_t align_to_max_align_t(size_t n) {
 /// Realloc implementation.
 template <bool copy_data>
 __attribute__((alloc_size(2))) void* realloc_impl(void* ptr, size_t size) {
-    if (!ptr) { return malloc(size); }
+    if (!ptr) {
+        return malloc(size);
+    }
 
     /// `realloc` with a size of 0 is implementation-defined. Just do nothing.
-    if (!size) { return ptr; }
+    if (!size) {
+        return ptr;
+    }
 
     /// Round up to the maximum alignment.
     size = align_to_max_align_t(size);
@@ -172,35 +179,39 @@ __attribute__((alloc_size(2))) void* realloc_impl(void* ptr, size_t size) {
     /// If the pointer was most recently allocated, we can just
     /// extend or truncate the block.
     /// FIXME: I think this check is not correct.
-/*    if (alloc_list && alloc_list->ptr == ptr) {
-        /// Extend the block if possible and requested.
-        if (size > alloc_list->size && heap_ptr - alloc_list->size + size <= heap_base + heap_size) {
-            heap_ptr += size - alloc_list->size;
-            alloc_list->size = size;
-            return ptr;
-        }
+    /*    if (alloc_list && alloc_list->ptr == ptr) {
+            /// Extend the block if possible and requested.
+            if (size > alloc_list->size && heap_ptr - alloc_list->size + size <=
+       heap_base + heap_size) { heap_ptr += size - alloc_list->size;
+                alloc_list->size = size;
+                return ptr;
+            }
 
-        /// Truncate the block if requested.
-        if (size < alloc_list->size) {
-            heap_ptr -= alloc_list->size - size;
-            alloc_list->size = size;
-            return ptr;
-        }
+            /// Truncate the block if requested.
+            if (size < alloc_list->size) {
+                heap_ptr -= alloc_list->size - size;
+                alloc_list->size = size;
+                return ptr;
+            }
 
-        /// If the size is the same, do nothing.
-        return ptr;
-    }*/
+            /// If the size is the same, do nothing.
+            return ptr;
+        }*/
 
     /// Find the block in the allocated list.
     auto block = find_alloc_block(ptr);
     __libc_assert(block, "realloc(): invalid pointer\n");
 
     /// If we're supposed to truncate the block, do nothing.
-    if (size <= block->size) { return ptr; }
+    if (size <= block->size) {
+        return ptr;
+    }
 
     /// Otherwise, allocate a new block.
     auto new_ptr = malloc(size);
-    if (!new_ptr) { return nullptr; }
+    if (!new_ptr) {
+        return nullptr;
+    }
 
     /// Copy the data from the old block to the new block.
     if constexpr (copy_data) {
@@ -214,7 +225,7 @@ __attribute__((alloc_size(2))) void* realloc_impl(void* ptr, size_t size) {
     return new_ptr;
 }
 
-} // namespace
+}  // namespace
 
 /// ===========================================================================
 ///  C Interface
@@ -243,22 +254,20 @@ void __libc_fini_malloc() {
     /// One could check for memory leaks here.
 }
 
-int* __errno_location(void) {
-    return &__errno;
-}
+int* __errno_location(void) { return &__errno; }
 
 /// ===========================================================================
 ///  Assert and Exit
 /// ===========================================================================
 /// Report a failed assertion and abort.
 __attribute__((__noreturn__)) void __assert_abort(
-    const char *expr,
-    const char *file,
+    const char* expr,
+    const char* file,
     unsigned line,
-    const char *func
-) {
+    const char* func) {
     if (!__stdio_destructed) {
-        //fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s\n", file, func, line, expr);
+        // fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s\n", file,
+        // func, line, expr);
         fputs(file, stderr);
         fputs(_Y ": " _RR "assertion failed" _N _Y ": " _R, stderr);
         fputs(func, stderr);
@@ -308,9 +317,7 @@ __attribute__((noreturn)) void __libc_quick_exit(int);
 
 __attribute__((noreturn)) void abort() { _Exit(-1); }
 
-__attribute__((__noreturn__)) void exit(int status) {
-    __libc_exit(status);
-}
+__attribute__((__noreturn__)) void exit(int status) { __libc_exit(status); }
 
 __attribute__((__noreturn__)) void quick_exit(int status) {
     __libc_quick_exit(status);
@@ -318,15 +325,19 @@ __attribute__((__noreturn__)) void quick_exit(int status) {
 
 __attribute__((__noreturn__)) void _Exit(int status) {
     syscall(SYS_exit, status);
-    for (;;) asm volatile ("");
+    for (;;)
+        asm volatile("");
 }
 
 int atexit(void function()) {
-    __cxa_atexit([](void* _arg){
-        if (__in_quick_exit) return;
-        auto arg = reinterpret_cast<void(*)()>(_arg);
-        arg();
-    }, reinterpret_cast<void*>(function), nullptr);
+    __cxa_atexit(
+        [](void* _arg) {
+            if (__in_quick_exit)
+                return;
+            auto arg = reinterpret_cast<void (*)()>(_arg);
+            arg();
+        },
+        reinterpret_cast<void*>(function), nullptr);
     return 0;
 }
 
@@ -350,14 +361,22 @@ __attribute__((malloc, alloc_size(1))) void* malloc(size_t bytes) {
     auto free_ptr = find_free_block(bytes);
     if (free_ptr) {
         /// Remove the block from the free list.
-        if (free_ptr->prev) { free_ptr->prev->next = free_ptr->next; }
-        if (free_ptr->next) { free_ptr->next->prev = free_ptr->prev; }
-        if (free_list == free_ptr) { free_list = free_ptr->next; }
+        if (free_ptr->prev) {
+            free_ptr->prev->next = free_ptr->next;
+        }
+        if (free_ptr->next) {
+            free_ptr->next->prev = free_ptr->prev;
+        }
+        if (free_list == free_ptr) {
+            free_list = free_ptr->next;
+        }
 
         /// Add the block to the allocated list.
         free_ptr->prev = nullptr;
         free_ptr->next = alloc_list;
-        if (alloc_list) { alloc_list->prev = free_ptr; }
+        if (alloc_list) {
+            alloc_list->prev = free_ptr;
+        }
         alloc_list = free_ptr;
 
         return free_ptr->ptr;
@@ -373,7 +392,9 @@ __attribute__((malloc, alloc_size(1))) void* malloc(size_t bytes) {
 
     /// Allocate memory for the block.
     auto block = allocate_header();
-    if (!block) { return nullptr; }
+    if (!block) {
+        return nullptr;
+    }
 
     /// Allocate the memory.
     auto ptr = heap_alloc(bytes);
@@ -387,15 +408,20 @@ __attribute__((malloc, alloc_size(1))) void* malloc(size_t bytes) {
     block->size = bytes;
     block->prev = nullptr;
     block->next = alloc_list;
-    if (alloc_list) { alloc_list->prev = block; }
+    if (alloc_list) {
+        alloc_list->prev = block;
+    }
     alloc_list = block;
 
     /// Return the pointer to the allocated memory.
     return ptr;
 }
+
 __attribute__((malloc, alloc_size(1, 2))) void* calloc(size_t n, size_t size) {
     auto ptr = malloc(n * size);
-    if (ptr) { memset(ptr, 0, n * size); }
+    if (ptr) {
+        memset(ptr, 0, n * size);
+    }
     return ptr;
 }
 
@@ -409,7 +435,9 @@ __attribute__((alloc_size(2))) void* realloc(void* ptr, size_t size) {
 
 void free(void* ptr) {
     /// If the pointer is null, do nothing.
-    if (!ptr) { return; }
+    if (!ptr) {
+        return;
+    }
 
     /// Find the block in the allocated list.
     auto block = find_alloc_block(ptr);
@@ -438,21 +466,31 @@ void free(void* ptr) {
     if (!block) {
         auto head = free_list;
         while (head) {
-            if (head->ptr == ptr) { __libc_assert(false, "free(): double free"); }
+            if (head->ptr == ptr) {
+                __libc_assert(false, "free(): double free");
+            }
             head = head->next;
         }
         __libc_assert(false, "free(): invalid pointer");
     }
 
     /// Otherwise, remove the block from the allocated list.
-    if (block->prev) { block->prev->next = block->next; }
-    if (block->next) { block->next->prev = block->prev; }
-    if (alloc_list == block) { alloc_list = block->next; }
+    if (block->prev) {
+        block->prev->next = block->next;
+    }
+    if (block->next) {
+        block->next->prev = block->prev;
+    }
+    if (alloc_list == block) {
+        alloc_list = block->next;
+    }
 
     /// And add it to the free list.
     block->prev = nullptr;
     block->next = free_list;
-    if (free_list) { free_list->prev = block; }
+    if (free_list) {
+        free_list->prev = block;
+    }
     free_list = block;
 }
 

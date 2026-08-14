@@ -37,7 +37,7 @@ struct GDTDescriptor {
 ///       See "Section 5.2: Fields and Flags Used for Segment-Level and Page-Level Protection" and
 ///         "Figure 5-1: Descriptor Fields Used for Protection" of the Intel Software Manual, Volume 3-A.
 struct GDTEntry {
-public:
+   public:
     GDTEntry() {}
     GDTEntry(u32 base, u32 limit, u8 access, u8 flags) {
         set_base(base);
@@ -48,13 +48,13 @@ public:
 
     u32 base() {
         return Base0
-            | Base1 << 16
-            | Base2 << 24;
+               | (Base1 << 16)
+               | (Base2 << 24);
     }
 
     u32 limit() {
         return Limit0
-            | (Limit1_Flags & 0xf) << 16;
+               | ((Limit1_Flags & 0xf) << 16);
     }
 
     u8 access() {
@@ -92,13 +92,13 @@ public:
         Limit1_Flags |= limitNibble;
     }
 
-private:
+   private:
     /// Limit 15:0
-    u16 Limit0 { 0 };
+    u16 Limit0{0};
     /// Base 15:0
-    u16 Base0 { 0 };
+    u16 Base0{0};
     /// Base 23:16
-    u8 Base1 { 0 };
+    u8 Base1{0};
     /// 0b00000000
     ///          =  Accessed
     ///         =   Readable/Writable
@@ -107,30 +107,29 @@ private:
     ///      =      Descriptor Type
     ///    ==       Descriptor Privilege Level
     ///   =         Segment Present
-    u8 AccessByte { 0 };
+    u8 AccessByte{0};
     /// 0b00000000
     ///       ==== Limit 19:16
     ///      =     Available
     ///     =      64-bit segment
     ///    =       Default Operation Size
     ///   =        Granularity (set means limit in 4kib pages)
-    u8 Limit1_Flags { 0 };
+    u8 Limit1_Flags{0};
     /// Base 31:24
-    u8 Base2 { 0 };
+    u8 Base2{0};
 } __attribute__((packed));
 
 class TSS_GDTEntry : public GDTEntry {
-public:
+   public:
     TSS_GDTEntry() {}
     TSS_GDTEntry(GDTEntry entry)
-        : GDTEntry(entry)
-    {
+        : GDTEntry(entry) {
         Reserved = 0;
     }
 
     u64 base() {
         return GDTEntry::base()
-            | (u64)Base3 << 32;
+               | (u64)Base3 << 32;
     }
 
     void set_base(u64 base) {
@@ -138,10 +137,10 @@ public:
         Base3 = base >> 32;
     }
 
-private:
+   private:
     /// Base 63:32
-    u32 Base3 { 0 };
-    u32 Reserved { 0 };
+    u32 Base3{0};
+    u32 Reserved{0};
 } __attribute__((packed));
 
 /// Global Descriptor Table

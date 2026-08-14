@@ -23,20 +23,20 @@
 #include <integers.h>
 
 /// IA-32e System Descriptor Types
-#define SYSTEM_DESCRIPTOR_TYPE_LDT              0b0010
-#define SYSTEM_DESCRIPTOR_TYPE_TSS_AVAILABLE    0b1001
-#define SYSTEM_DESCRIPTOR_TYPE_TSS_BUSY         0b1011
-#define SYSTEM_DESCRIPTOR_TYPE_CALL_GATE        0b1100
-#define SYSTEM_DESCRIPTOR_TYPE_INTERRUPT_GATE   0b1110
-#define SYSTEM_DESCRIPTOR_TYPE_TRAP_GATE        0b1111
+#define SYSTEM_DESCRIPTOR_TYPE_LDT 0b0010
+#define SYSTEM_DESCRIPTOR_TYPE_TSS_AVAILABLE 0b1001
+#define SYSTEM_DESCRIPTOR_TYPE_TSS_BUSY 0b1011
+#define SYSTEM_DESCRIPTOR_TYPE_CALL_GATE 0b1100
+#define SYSTEM_DESCRIPTOR_TYPE_INTERRUPT_GATE 0b1110
+#define SYSTEM_DESCRIPTOR_TYPE_TRAP_GATE 0b1111
 
 /// Interrupt Descriptor Table Type Attributes
 #define IDT_TA_RING0 0b10000000
 #define IDT_TA_RING3 0b11100000
-#define IDT_TA_InterruptGate       IDT_TA_RING0 | SYSTEM_DESCRIPTOR_TYPE_INTERRUPT_GATE
-#define IDT_TA_TrapGate            IDT_TA_RING0 | SYSTEM_DESCRIPTOR_TYPE_TRAP_GATE
-#define IDT_TA_UserInterruptGate   IDT_TA_RING3 | SYSTEM_DESCRIPTOR_TYPE_INTERRUPT_GATE
-#define IDT_TA_UserTrapGate        IDT_TA_RING3 | SYSTEM_DESCRIPTOR_TYPE_TRAP_GATE
+#define IDT_TA_InterruptGate IDT_TA_RING0 | SYSTEM_DESCRIPTOR_TYPE_INTERRUPT_GATE
+#define IDT_TA_TrapGate IDT_TA_RING0 | SYSTEM_DESCRIPTOR_TYPE_TRAP_GATE
+#define IDT_TA_UserInterruptGate IDT_TA_RING3 | SYSTEM_DESCRIPTOR_TYPE_INTERRUPT_GATE
+#define IDT_TA_UserTrapGate IDT_TA_RING3 | SYSTEM_DESCRIPTOR_TYPE_TRAP_GATE
 
 /* Interrupt Descriptor Table Descriptor Entry
  *   Offset          --  The address of the interrupt handler function in memory.
@@ -59,13 +59,13 @@ struct IDTEntry {
     /// 0b00000011
     ///         ==   IST
     ///   ======     Zero
-    u8  IST;
+    u8 IST;
     /// 0b00000000
     ///       ====   System Descriptor Type
     ///      =       Zero
     ///    ==        Descriptor Privilege Level (DPL)
     ///   =          Segment Present Flag
-    u8  TypeAttribute;
+    u8 TypeAttribute;
     u16 Offset1;
     u32 Offset2;
     u32 Ignore;
@@ -81,20 +81,16 @@ static_assert(sizeof(IDTEntry) == 16);
  *   Offset  --  The address of the table in memory.
  */
 struct IDTR {
-    u16 Limit  { 0 };
-    u64 Offset { 0 };
+    u16 Limit{0};
+    u64 Offset{0};
 
     IDTR() {}
     IDTR(u16 limit, u64 offset);
 
-    void install_handler(u64 handler_address
-                         , u8 entryOffset
-                         , u8 typeAttribute = IDT_TA_InterruptGate
-                         , u8 selector = 0x08
-                         );
+    void install_handler(u64 handler_address, u8 entryOffset, u8 typeAttribute = IDT_TA_InterruptGate, u8 selector = 0x08);
 
     void flush() {
-        asm volatile ("lidt %0" :: "m"(*this));
+        asm volatile("lidt %0" ::"m"(*this));
     }
 } __attribute__((packed));
 
