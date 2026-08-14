@@ -17,13 +17,19 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #ifndef _SYS_WAIT_H
 #define _SYS_WAIT_H
 
+#include <bits/decls.h>
+#include <sys/types.h>
+
 #define WEXITSTATUS(wstatus) (wstatus & 0xff)
 
-pid_t waitpid(pid_t pid, int *wstatus, int options);
+__BEGIN_DECLS__
+
+pid_t waitpid(pid_t pid, int* wstatus, int options);
+
+__END_DECLS__
 
 // TODO:
 // pid_t wait(int *_Nullable wstatus);
