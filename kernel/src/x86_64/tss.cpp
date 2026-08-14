@@ -18,6 +18,7 @@
  */
 
 #include <gdt.h>
+#include <kernel.h>
 #include <link_definitions.h>
 #include <memory.h>
 #include <memory/common.h>
@@ -51,26 +52,25 @@ void initialize() {
         "  Limit: {:#08x}\n",
         gGDT.TSS.base(),
         gGDT.TSS.limit());
-    // 0x28 -> offset of TSS in GDT (I think).
+    // 0x28 -> offset of TSS in GDT.
     asm volatile(
         "mov $0x28, %%ax\n\t"
         "ltr %%ax\n\t" ::: "rax");
 
     // Allocate an interrupt kernel stack
-    constexpr size_t stack_flags = (size_t)Memory::PageTableFlag::Present
-                                   | (size_t)Memory::PageTableFlag::ReadWrite;
-    constexpr size_t KernelInterruptStackPages = 2;
-    constexpr size_t KernelInterruptStackSize = KernelInterruptStackPages * PAGE_SIZE;
-    // FIXME: why this address
-    constexpr uintptr_t KernelInterruptStackBase = 0xfffff77f00f00000;
-    constexpr uintptr_t KernelInterruptStackTop = KernelInterruptStackBase + KernelInterruptStackSize;
-    for (size_t i = 0; i < KernelInterruptStackPages; ++i) {
-        auto physical_page = Memory::request_page();
-        auto virtual_page = (void*)(KernelInterruptStackBase + (i * PAGE_SIZE));
-        Memory::map(virtual_page, physical_page, stack_flags);
+    constexpr size_t KernelInterruptStackSizePages = 2;
+    constexpr size_t KernelInterruptStackSize = KernelInterruptStackSizePages * PAGE_SIZE;
+    constexpr auto KernelInterruptStackFlags = (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite;
+    auto physical_stack_base = Memory::request_pages(KernelInterruptStackSizePages);
+    if (physical_stack_base == 0) {
+        std::print("[ELF]: Couldn't allocate stack for new userspace process (kernel stack)\n");
+        return;
     }
-    std::print("  Stack: 0x{:016x}\n", KernelInterruptStackTop);
-    Scheduler::StartupProcess.kernel_stack = KernelInterruptStackTop;
-    tssEntry.set_stack(KernelInterruptStackTop);
+    memset(physical_stack_base, 0, KernelInterruptStackSize);
+    auto physical_stack_top = ((uintptr_t)physical_stack_base) + KernelInterruptStackSize;
+    Scheduler::StartupProcess.add_memory_region(physical_stack_base, physical_stack_base, KernelInterruptStackSize, KernelInterruptStackFlags);
+    std::print("  Stack: 0x{:016x}\n", physical_stack_top);
+
+    tssEntry.set_stack(physical_stack_top);
 }
 }  // namespace TSS
