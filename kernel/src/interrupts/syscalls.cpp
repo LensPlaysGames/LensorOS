@@ -327,7 +327,7 @@ void sys$8_time(Time::tm* time) {
 
 /// Wait for process with PID to terminate. If process with PID is
 /// invalid, return immediately.
-int sys$9_waitpid(pid_t pid) {
+int sys$9_waitpid(pid_t pid, int* status) {
     CPUState* cpu = nullptr;
     asm volatile("mov %%r11, %0\n"
                  : "=r"(cpu));
@@ -336,15 +336,22 @@ int sys$9_waitpid(pid_t pid) {
     auto* thisProcess = Scheduler::CurrentProcess->value();
     pid_t thisPID = thisProcess->ProcessID;
 
+    // Don't do anything if you pass us bogus pointers
+    if (status and not thisProcess->valid_address(status)) {
+        std::print("[SYS$]:ERROR:waitpid: You passed us an invalid pointer 0x{:016x}\n", (uintptr_t)status);
+        return -1;
+    }
+
     // Reap zombie.
     auto zombie = std::find_if(thisProcess->Zombies, [&pid](const auto& zombie) {
         return zombie.PID == pid;
     });
     if (zombie != thisProcess->Zombies.end()) {
-        DBGMSG("[SYS$]:waitpid: Reaping zombie ({}, {}) from process {}\n", zombie->PID, zombie->ReturnStatus, thisPID);
+        std::print("[SYS$]:waitpid: Reaping zombie ({}, {}) from process {}\n", zombie->PID, zombie->ReturnStatus, thisPID);
         int returnStatus = zombie->ReturnStatus;
+        if (status) *status = returnStatus;
         thisProcess->Zombies.erase(zombie);
-        return returnStatus;
+        return pid;
     }
 
     Process* process = Scheduler::process(pid);
@@ -368,6 +375,18 @@ int sys$9_waitpid(pid_t pid) {
     Scheduler::yield();
 
     std::print("[SYS$]:waitpid: yield returned\n");
+    {
+        auto zombie = std::find_if(thisProcess->Zombies, [&pid](const auto& zombie) {
+            return zombie.PID == pid;
+        });
+        if (zombie != thisProcess->Zombies.end()) {
+            DBGMSG("[SYS$]:waitpid: Reaping zombie ({}, {}) from process {} after unblocking\n", zombie->PID, zombie->ReturnStatus, thisPID);
+            int returnStatus = zombie->ReturnStatus;
+            if (status) *status = returnStatus;
+            thisProcess->Zombies.erase(zombie);
+            return pid;
+        }
+    }
 
     return pid;
 }
@@ -383,7 +402,9 @@ pid_t sys$10_fork() {
     Process* process = Scheduler::CurrentProcess->value();
     // Copy current process.
     pid_t cpid = CopyUserspaceProcess(process);
+    // std::print("[FORK]: PPID: {}, CPID: {}\n", process->ProcessID, cpid);
     DBGMSG("[FORK]: PPID: {}, CPID: {}\n", process->ProcessID, cpid);
+    // std::print("cpid: {}\n", cpid);
     return cpid;
 }
 
