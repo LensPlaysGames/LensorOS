@@ -72,7 +72,9 @@ struct IDTEntry {
 
     void SetOffset(u64 offset);
     u64 GetOffset();
-} __attribute__((packed));;
+} __attribute__((packed));
+
+static_assert(sizeof(IDTEntry) == 16);
 
 /* Interrupt Descriptor Table Register
  *   Limit   --  The size of the descriptor table in bytes minus one.
@@ -95,6 +97,8 @@ struct IDTR {
         asm volatile ("lidt %0" :: "m"(*this));
     }
 } __attribute__((packed));
+
+static_assert(sizeof(IDTR) == 10);
 
 extern IDTR gIDT;
 

@@ -37,9 +37,6 @@
 #endif
 
 /// External symbol definitions for `scheduler.asm`
-void (*scheduler_switch_process)(CPUState*)
-    __attribute__((no_caller_saved_registers));
-
 void (*timer_tick)();
 
 void Process::destroy(int status) {
@@ -115,9 +112,17 @@ void print_debug() {
         "  Process Queue:\n");
     ProcessQueue->for_each([](auto* it) {
         Process& process = *it->value();
+        auto cpu = (CPUState*)process.kernel_stack;
         std::print(
             "    Process {} (Parent {}) at {}\n"
-            "      CR3:      {}\n"
+            "      kernel_stack: {:#016x}\n"
+            "      CR3:      {}\n",
+            process.ProcessID,
+            process.ParentProcess,
+            (void*)&process,
+            process.kernel_stack,
+            (void*)process.CR3);
+        std::print(
             "      RAX:      {:#016x}\n"
             "      RBX:      {:#016x}\n"
             "      RCX:      {:#016x}\n"
@@ -140,31 +145,27 @@ void print_debug() {
             "        RFLAGS: {:#016x}\n"
             "        RSP:    {:#016x}\n"
             "        SS:     {:#016x}\n",
-            process.ProcessID,
-            process.ParentProcess,
-            (void*)&process,
-            (void*)process.CR3,
-            u64(process.CPU.RAX),
-            u64(process.CPU.RBX),
-            u64(process.CPU.RCX),
-            u64(process.CPU.RDX),
-            u64(process.CPU.RSI),
-            u64(process.CPU.RDI),
-            u64(process.CPU.RBP),
-            u64(process.CPU.RSP),
-            u64(process.CPU.R8),
-            u64(process.CPU.R9),
-            u64(process.CPU.R10),
-            u64(process.CPU.R11),
-            u64(process.CPU.R12),
-            u64(process.CPU.R13),
-            u64(process.CPU.R14),
-            u64(process.CPU.R15),
-            u64(process.CPU.Frame.ip),
-            u64(process.CPU.Frame.cs),
-            u64(process.CPU.Frame.flags),
-            u64(process.CPU.Frame.sp),
-            u64(process.CPU.Frame.ss));
+            u64(cpu->RAX),
+            u64(cpu->RBX),
+            u64(cpu->RCX),
+            u64(cpu->RDX),
+            u64(cpu->RSI),
+            u64(cpu->RDI),
+            u64(cpu->RBP),
+            u64(cpu->RSP),
+            u64(cpu->R8),
+            u64(cpu->R9),
+            u64(cpu->R10),
+            u64(cpu->R11),
+            u64(cpu->R12),
+            u64(cpu->R13),
+            u64(cpu->R14),
+            u64(cpu->R15),
+            u64(cpu->Frame.ip),
+            u64(cpu->Frame.cs),
+            u64(cpu->Frame.flags),
+            u64(cpu->Frame.sp),
+            u64(cpu->Frame.ss));
         std::print("      File Descriptors:\n");
         for (const auto& [procfd, fd] : process.FileDescriptors.pairs()) {
             std::print("        {} -> {}\n", s64(procfd), s64(fd));
@@ -227,6 +228,48 @@ bool remove_process(pid_t pid, int status) {
     return false;
 }
 
+Process* request_process(pid_t parent_pid) {
+    // Allocate process before cloning page table in case it causes
+    // heap to expand.
+    auto* process = new Process{};
+    process->ParentProcess = parent_pid;
+    process->State = Process::ProcessState::SLEEPING;
+    pid_t pid = Scheduler::add_process(process);
+
+    // Copy current page table (fork)
+    // TODO: Use clone_pag_map_copy_on_write, and remove "copy each
+    // memory region" section below. Or put it behind #ifdef
+    // LENSOR_OS_NO_COPY_ON_WRITE or smth
+    auto* newPageTable = Memory::clone_active_page_map();
+    if (newPageTable == nullptr) {
+        std::print("Failed to clone current page map for new process page map.\n");
+        Scheduler::remove_process(pid, -1);
+        return nullptr;
+    }
+    process->CR3 = newPageTable;
+
+    Memory::map(
+        newPageTable,
+        newPageTable,
+        newPageTable,
+        (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
+
+    constexpr size_t KernelStackSizePages = 2;
+    constexpr size_t KernelStackSize = KernelStackSizePages * PAGE_SIZE;
+    constexpr auto KernelStackFlags = (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite;
+    auto physical_stack_base = Memory::request_pages(KernelStackSizePages);
+    if (physical_stack_base == 0) {
+        std::print("[ELF]: Couldn't allocate stack for new userspace process (kernel stack)\n");
+        return nullptr;
+    }
+    memset(physical_stack_base, 0, KernelStackSize);
+    auto physical_stack_top = ((uintptr_t)physical_stack_base) + KernelStackSize;
+    process->add_memory_region(physical_stack_base, physical_stack_base, KernelStackSize, KernelStackFlags);
+    process->kernel_stack = physical_stack_top;
+
+    return process;
+}
+
 bool initialize() {
 #ifdef x86_64
     // The Task State Segment in x86_64 is used
@@ -237,8 +280,6 @@ bool initialize() {
     // IRQ handler in assembly increments PIT ticks counter using this
     // function.
     timer_tick = pit_tick;
-    // IRQ handler in assembly switches processes using this function.
-    scheduler_switch_process = scheduler_switch;
 
     // Setup currently executing code as the start process with PID 0.
     StartupProcess.CR3 = Memory::active_page_map();
@@ -301,21 +342,24 @@ SinglyLinkedListNode<Process*>* next_viable_process(SinglyLinkedListNode<Process
     return NextProcess;
 }
 
-void switch_process_impl(CPUState* cpu) {
+/// Called from `irq0_handler` in `scheduler.asm`
+/// A stupid simple round-robin process switcher.
+extern "C" Process* switch_process(CPUState* cpu) {
+    std::print("switch_process()...\n");
+
+    // Save address of stack frame
+    CurrentProcess->value()->kernel_stack = (uintptr_t)cpu;
+
+    // TODO: Check all processes that called `wait(ms)`, and run/
+    // unstop them if the timestamp is greater than the calculated
+    // one.
+    // for (auto* p : time_waitlist)
+    //     if (p->wait_until > now)
+    //         p->unblock();
+
     // std::print("[SCHED]: {} processes to choose from...\n", ProcessQueue->length());
     // print_debug();
     // std::print("\n");
-
-    // If there is only one viable process, this is a short-cut to do nothing.
-    if (CurrentProcess
-        and CurrentProcess->next() == nullptr
-        and CurrentProcess == ProcessQueue->head())
-        return;
-
-    // If current process isn't tracked, reset to beginning of process list.
-    // Handles end of queue, as well as a process deleting itself.
-    if (CurrentProcess == nullptr or CurrentProcess->next() == nullptr)
-        CurrentProcess = ProcessQueue->head();
 
     CurrentProcess = next_viable_process(CurrentProcess);
 
@@ -328,110 +372,8 @@ void switch_process_impl(CPUState* cpu) {
     std::print("Setting TSS RSP to 0x{:016x} (was 0x{:016x})\n", CurrentProcess->value()->kernel_stack, TSS::tssEntry.get_stack());
     TSS::tssEntry.set_stack(CurrentProcess->value()->kernel_stack);
 
-    // Update state of CPU that will be restored.
-    memcpy(cpu, &CurrentProcess->value()->CPU, sizeof(CPUState));
-
-    if (SYSTEM->cpu().fxsr_enabled() && CurrentProcess->value()->CPUExtraSet) {
-        // Get 512-byte aligned address.
-        usz i = (512 - ((usz)&CurrentProcess->value()->CPUExtra[0] % 512)) % 512;
-        // std::print("Restoring FPU state using fxrstor64 at {}...\n", addr);
-        asm volatile("fxrstor64 %0" ::"m"(CurrentProcess->value()->CPUExtra[i]));
-        // std::print("Restored FPU state using fxrstor64 at {}...\n", addr);
-    }
-
-    // Update ES and DS to SS.
-    asm("xor %%rax, %%rax\n\t"
-        "movq %0, %%rax\n\t"
-        "movw %%ax, %%es\n\t"
-        "movw %%ax, %%ds\n\t" ::"r"(cpu->Frame.ss)
-        : "rax");
-    // Eventually, FS and GS will be used for TLS, or Thread Local Storage.
-    // Update FS and GS to SS.
-    cpu->FS = cpu->Frame.ss;
-    cpu->GS = cpu->Frame.ss;
-
-    // Use new process' page map.
-    std::print("Using new page map: 0x{:016x} (was 0x{:016x})\n", (uintptr_t)CurrentProcess->value()->CR3, (uintptr_t)Memory::active_page_map());
-    Memory::flush_page_map(CurrentProcess->value()->CR3);
-}
-
-/// Called from `irq0_handler` in `scheduler.asm`
-/// A stupid simple round-robin process switcher.766
-
-void switch_process(CPUState* cpu) {
-    // Save CPU state into process
-    memcpy(&CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
-
-    // Save extra context depending on system features
-    // (i.e. xmm registers with fxsave/fxrestore)
-    if (SYSTEM->cpu().fxsr_enabled()) {
-        // std::print("Saving FPU state using fxsave64 at {}...\n", addr);
-        asm volatile("fxsave64 %0\n\t" ::"m"(CurrentProcess->value()->CPUExtra[0]));
-        CurrentProcess->value()->CPUExtraSet = true;
-        // std::print("Saved fpu state using fxsave at {}...\n", addr);
-    }
-
-    // TODO: Check all processes that called `wait(ms)`, and run/
-    // unstop them if the timestamp is greater than the calculated
-    // one.
-    // for (auto* p : time_waitlist)
-    //     if (p->wait_until > now)
-    //         p->unblock();
-
-    switch_process_impl(cpu);
-}
-
-void yield(CPUState* cpu) {
-    // Save kernel stack into process
-    CurrentProcess->value()->kernel_stack = cpu->RSP;
-
-    switch_process(cpu);
-
-    auto& next_cpu = CurrentProcess->value()->CPU;
-    // iretq to the new process, bb.
-    yield_asm(&next_cpu);
-}
-
-Process* request_process(pid_t parent_pid) {
-    // Allocate process before cloning page table in case it causes
-    // heap to expand.
-    auto* process = new Process{};
-    process->ParentProcess = parent_pid;
-    process->State = Process::ProcessState::SLEEPING;
-    pid_t pid = Scheduler::add_process(process);
-
-    // Copy current page table (fork)
-    // TODO: Use clone_pag_map_copy_on_write, and remove "copy each
-    // memory region" section below. Or put it behind #ifdef
-    // LENSOR_OS_NO_COPY_ON_WRITE or smth
-    auto* newPageTable = Memory::clone_active_page_map();
-    if (newPageTable == nullptr) {
-        std::print("Failed to clone current page map for new process page map.\n");
-        Scheduler::remove_process(pid, -1);
-        return nullptr;
-    }
-    process->CR3 = newPageTable;
-
-    Memory::map(
-        newPageTable,
-        newPageTable,
-        newPageTable,
-        (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
-
-    constexpr size_t KernelStackSizePages = 2;
-    constexpr size_t KernelStackSize = KernelStackSizePages * PAGE_SIZE;
-    constexpr auto KernelStackFlags = (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite;
-    auto physical_stack_base = Memory::request_pages(KernelStackSizePages);
-    if (physical_stack_base == 0) {
-        std::print("[ELF]: Couldn't allocate stack for new userspace process (kernel stack)\n");
-        return nullptr;
-    }
-    memset(physical_stack_base, 0, KernelStackSize);
-    auto physical_stack_top = ((uintptr_t)physical_stack_base) + KernelStackSize;
-    process->add_memory_region(physical_stack_base, physical_stack_base, KernelStackSize, KernelStackFlags);
-    process->kernel_stack = physical_stack_top;
-
-    return process;
+    // std::print("switch_process() done...\n");
+    return CurrentProcess->value();
 }
 
 }  // namespace Scheduler
@@ -509,10 +451,13 @@ pid_t CopyUserspaceProcess(Process* original) {
     newProcess->ExecutablePath = original->ExecutablePath;
     newProcess->WorkingDirectory = original->WorkingDirectory;
 
-    newProcess->CPU = original->CPU;
-    newProcess->next_region_vaddr = original->next_region_vaddr;
+    // Copy initial CPU state
+    newProcess->kernel_stack -= sizeof(CPUState);
+    *((CPUState*)newProcess->kernel_stack) = *((CPUState*)original->kernel_stack);
     // Set child return value for `fork()`.
     newProcess->set_return_value(0);
+
+    newProcess->next_region_vaddr = original->next_region_vaddr;
 
     newProcess->State = Process::ProcessState::RUNNING;
 

@@ -154,13 +154,13 @@ private:
 ///   however, a ring may not access anything in any ring smaller than itself.
 /// This allows for the kernel (ring zero) to access all programs, drivers, etc.
 ///   but dis-allow userland programs from tampering with the kernel, drivers, etc.
-struct GDT {
-    GDTEntry Null;      // 0x00
-    GDTEntry Ring0Code; // 0x08
-    GDTEntry Ring0Data; // 0x10
-    GDTEntry Ring3Code; // 0x18
-    GDTEntry Ring3Data; // 0x20
-    TSS_GDTEntry TSS;   // 0x28, 0x30
+struct __attribute__((packed)) GDT {
+    GDTEntry Null;       // 0x00
+    GDTEntry Ring0Code;  // 0x08
+    GDTEntry Ring0Data;  // 0x10
+    GDTEntry Ring3Code;  // 0x18
+    GDTEntry Ring3Data;  // 0x20
+    TSS_GDTEntry TSS;    // 0x28, 0x30
 } __attribute__((aligned(0x1000)));
 
 void setup_gdt();

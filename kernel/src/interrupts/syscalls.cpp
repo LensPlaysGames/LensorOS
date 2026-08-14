@@ -117,22 +117,15 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
     // metadata shared pointer would become dangling and never get cleaned up.
     ssz rc = vfs.read(fd, buffer, byteCount, 0);
     if (rc == -2) {
+        std::print("[SYS$]:read: Process {} yielding...\n", process->ProcessID);
+
         // Set state to SLEEPING so that after we yield, the scheduler
         // won't switch back to us until the file has been written to,
         // or something of that nature.
         process->State = Process::SLEEPING;
 
-        uintptr_t cpu_sp = process->CPU.RSP;
-        std::print("Process({})::CPU.RSP=0x{:016x}\n", process->ProcessID, cpu_sp);
-        uintptr_t frame_sp = cpu->Frame.sp;
-        std::print("Process({})::CPU.Frame.sp=0x{:016x}\n", process->ProcessID, frame_sp);
-        u64 current_sp{0};
-        asm volatile("movq %%rsp, %0\n\t"
-                     : "=m"(current_sp));
-        std::print("Current RSP: 0x{:016x}\n", current_sp);
-
         // Bye!
-        Scheduler::yield(cpu);
+        Scheduler::yield();
 
         std::print("[SYS$]:read: yield returned\n");
     }
@@ -167,17 +160,17 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
 
     VFS& vfs = SYSTEM->virtual_filesystem();
 
-    // Save CPU state in case write blocks, aka calls yield.
-    memcpy(&Scheduler::CurrentProcess->value()->CPU, cpu, sizeof(CPUState));
     ssz rc = vfs.write(fd, buffer, byteCount, 0);
     if (rc == -2) {
+        std::print("[SYS$]:write: Process {} yielding...\n", Scheduler::CurrentProcess->value()->ProcessID);
+
         // Set state to SLEEPING so that after we yield, the scheduler
         // won't switch back to us until the file has been written to,
         // or something of that nature.
         Scheduler::CurrentProcess->value()->State = Process::SLEEPING;
 
         // Bye!
-        Scheduler::yield(cpu);
+        Scheduler::yield();
 
         std::print("[SYS$]:write: yield returned\n");
     }
@@ -220,7 +213,7 @@ void sys$5_exit(int status) {
 
     std::print("[SYS$]:exit: yielding...\n");
 
-    Scheduler::yield(cpu);
+    Scheduler::yield();
 
     std::print("[SYS$]:exit: yield returned...\n");
     hang();
@@ -370,8 +363,9 @@ int sys$9_waitpid(pid_t pid) {
     process->WaitingList.push_back(thisPID);
 
     // Wait until we are woken up.
+    std::print("[SYS$]:waitpid: Process {} yielding...\n", process->ProcessID);
     thisProcess->State = Process::ProcessState::SLEEPING;
-    Scheduler::yield(cpu);
+    Scheduler::yield();
 
     std::print("[SYS$]:waitpid: yield returned\n");
 
@@ -387,9 +381,6 @@ pid_t sys$10_fork() {
                  : "=r"(cpu));
     DBGMSG(sys$_dbgfmt, 10, "fork");
     Process* process = Scheduler::CurrentProcess->value();
-    // Save cpu state into process cache so that it will be set
-    // properly for the forked process.
-    memcpy(&process->CPU, cpu, sizeof(CPUState));
     // Copy current process.
     pid_t cpid = CopyUserspaceProcess(process);
     DBGMSG("[FORK]: PPID: {}, CPID: {}\n", process->ProcessID, cpid);
@@ -416,62 +407,61 @@ void sys$11_exec(const char* path, const char** args) {
     }
     Process* process = Scheduler::CurrentProcess->value();
 
-    {  // Nested scope so that dtors get called before yield
 #if defined(DEBUG_SYSCALLS)
-        std::print(
-            "  path: {}\n"
-            "  args:\n",
-            path);
-        usz i = 0;
-        for (const char** args_it = args; args_it and *args_it; ++args_it)
-            std::print("    {}: \"{}\"\n", i++, *args_it);
-        std::print("  endargs\n");
+    std::print(
+        "  path: {}\n"
+        "  args:\n",
+        path);
+    usz i = 0;
+    for (const char** args_it = args; args_it and *args_it; ++args_it)
+        std::print("    {}: \"{}\"\n", i++, *args_it);
+    std::print("  endargs\n");
 #endif
-        // Load executable at path with virtual filesystem.
-        FileDescriptors fds = SYSTEM->virtual_filesystem().open(path);
-        if (fds.invalid()) {
-            std::print("[EXEC]: Could not load file when path == {}\n", path);
-            return;
-        }
-
-        // TODO: What if path is a directory?? What if it isn't an executable? Currently, things kind of explode.
-
-        process->ExecutablePath = path;
-
-        std::vector<std::string> args_vector_impl;
-        std::vector<std::string_view> args_vector;
-        args_vector.push_back(process->ExecutablePath.data());
-        {  // We create copies of the userspace buffer(s), because during
-            // replacing the userspace process, any data within it is
-            // invalidated.
-            for (const char** args_it = args; args_it and *args_it; ++args_it)
-                args_vector_impl.push_back(*args_it);
-
-            for (const auto& s : args_vector_impl)
-                args_vector.push_back(s);
-        }
-
-        // Replace current process with new process.
-        bool success = ELF::ReplaceUserspaceElf64Process(process, fds.Process, args_vector);
-        if (not success) {
-            // ... Unrecoverable, terminate the program, somehow.
-            std::print("[SYS$]:exec: Failed to replace process and parent is now unrecoverable, terminating.\n");
-            // TODO: Mark for destruction (halt and catch fire).
-            // FIXME: We should figure out how to exit the scope, so that everything is freed properly.
-            // FIXME: Also the fact that we opened a file at path, but never close it.
-            process->State = Process::ProcessState::SLEEPING;
-            Scheduler::yield(cpu);
-            std::print("[SYS$]:exec: yield returned (0)\n");
-        }
-
-        // Scheduler::print_debug();
-        SYSTEM->virtual_filesystem().close(fds.Process);
+    // Load executable at path with virtual filesystem.
+    FileDescriptors fds = SYSTEM->virtual_filesystem().open(path);
+    if (fds.invalid()) {
+        std::print("[EXEC]: Could not load file when path == {}\n", path);
+        return;
     }
 
-    *cpu = process->CPU;
-    // TODO: Do we need to yield, or can we just use the syscall return now that cpu state is fixed up?
-    // Scheduler::yield(cpu);
-    // std::print("[SYS$]:exec: yield returned (1)");
+    // TODO: What if path is a directory?? What if it isn't an executable?
+    // Currently, things kind of explode.
+
+    process->ExecutablePath = path;
+
+    std::vector<std::string> args_vector_impl;
+    std::vector<std::string_view> args_vector;
+    args_vector.push_back(process->ExecutablePath.data());
+    {  // We create copies of the userspace buffer(s), because during
+        // replacing the userspace process, any data within it is
+        // invalidated.
+        for (const char** args_it = args; args_it and *args_it; ++args_it)
+            args_vector_impl.push_back(*args_it);
+
+        for (const auto& s : args_vector_impl)
+            args_vector.push_back(s);
+    }
+
+    // Replace current process with new process.
+    bool success = ELF::ReplaceUserspaceElf64Process(process, fds.Process, args_vector);
+    if (not success) {
+        // ... Unrecoverable, terminate the program, somehow.
+        std::print("[SYS$]:exec: Failed to replace process and parent is now unrecoverable, terminating.\n");
+        // TODO: Mark for destruction (halt and catch fire).
+        // FIXME: We should figure out how to exit the scope, so that everything is freed properly.
+        // FIXME: Also the fact that we opened a file at path, but never close it.
+        process->State = Process::ProcessState::SLEEPING;
+        Scheduler::yield();
+        std::print("[SYS$]:exec: yield returned (0)\n");
+    }
+
+    // Scheduler::print_debug();
+    SYSTEM->virtual_filesystem().close(fds.Process);
+
+    // Restore CPU state from cached state modified by above process stuff.
+    *cpu = *(CPUState*)process->kernel_stack;
+
+    std::print("{}\n", *cpu);
 }
 
 /// The second file descriptor given will be associated with the file
@@ -878,7 +868,7 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
     // for some reason other than an incoming connection.
     process->set_return_value(usz(ProcFD::Invalid));
     process->State = Process::SLEEPING;
-    Scheduler::yield(cpu);
+    Scheduler::yield();
 
     std::print("[SYS$]:accept: yield returned\n");
     return ProcFD(-2);

@@ -97,7 +97,6 @@ struct Process {
 
     /// Used to save/restore CPU state when a context switch occurs.
 #ifdef x86_64
-    CPUState CPU{};
     Memory::PageTable* CR3{nullptr};
 
     /* Data for extra CPU info (fxsave, etc). */
@@ -152,7 +151,7 @@ struct Process {
 
     /// Set the return value within CPU state.
     void set_return_value(usz value) {
-        CPU.RAX = value;
+        ((CPUState*)kernel_stack)->RAX = value;
     }
 
     /// Set the process state to running.
@@ -184,12 +183,13 @@ struct Process {
 };
 
 /// External symbols for 'scheduler.asm', defined in `scheduler.cpp`
-extern void (*scheduler_switch_process)(CPUState*)
-    __attribute__((no_caller_saved_registers));
 extern void (*timer_tick)();
 
-// Defined in `scheduler.asm`
-extern "C" void yield_asm(CPUState*);
+// For switch_context_asm in scheduler.asm
+static_assert(offsetof(Process, kernel_stack) == 56);
+static_assert(offsetof(Process, CR3) == 232);
+static_assert(offsetof(Process, CPUExtra) == 240);
+static_assert(offsetof(Process, CPUExtraSet) == 752);
 
 namespace Scheduler {
 /// External symbol defined in `scheduler.cpp`
@@ -199,6 +199,8 @@ extern SinglyLinkedListNode<Process*>* CurrentProcess;
 extern std::vector<Memory::PageTable*> PageMapsToFree;
 
 extern Process StartupProcess;
+
+extern "C" void yield();
 
 bool initialize();
 
@@ -210,13 +212,8 @@ pid_t request_pid();
 [[nodiscard]]
 Process* process(pid_t);
 
-/* Switch to the next available task.
- * | Called by IRQ0 Handler (System Timer Interrupt).
- * |-- Copy registers saved from IRQ0 to current process.
- * |-- Update current process to next available process.
- * `-- Manipulate stack to trick `iretq` into doing what we want.
- */
-void switch_process(CPUState*);
+extern "C" [[nodiscard]]
+Process* switch_process(CPUState*);
 
 /// Add an existing process to the list of processes.
 /// Creates and assigns a unique PID.
@@ -240,9 +237,6 @@ bool remove_process(pid_t, int status);
 
 void print_debug();
 
-/// Stop the current process, and start the next.
-void yield(CPUState*);
-
 [[nodiscard]]
 Process* request_process(pid_t parent_pid);
 
@@ -251,8 +245,6 @@ Process* request_process(pid_t parent_pid);
 void map_pages_in_all_processes(void* virtualAddress, void* physicalAddress, u64 mappingFlags, size_t pages, Memory::ShowDebug d = Memory::ShowDebug::No);
 
 }  // namespace Scheduler
-
-__attribute__((no_caller_saved_registers)) void scheduler_switch(CPUState*);
 
 pid_t CopyUserspaceProcess(Process* original);
 

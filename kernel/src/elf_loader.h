@@ -48,7 +48,7 @@
 #ifdef DEBUG_ELF
 #define DBGMSG(...) std::print(__VA_ARGS__)
 #else
-#define DBGMSG(...) void()
+#define DBGMSG(...)
 #endif
 
 namespace ELF {
@@ -139,11 +139,13 @@ LoadUserspaceElf64Process(
         phdr++) {
         DBGMSG(
             "Program header: type={}, offset={}\n"
-            "  filesz={:#016x}, memsz={:#016x}\n",
+            "  filesz={:#016x}, memsz={:#016x}\n"
+            "  vaddr={:#016x}\n",
             phdr->p_type,
             phdr->p_offset,
             phdr->p_filesz,
-            phdr->p_memsz);
+            phdr->p_memsz,
+            phdr->p_vaddr);
 
         /// Warn if the size is zero.
         if (phdr->p_memsz == 0)
@@ -183,11 +185,13 @@ LoadUserspaceElf64Process(
             if (!(phdr->p_flags & PF_X)) {
                 flags |= (size_t)Memory::PageTableFlag::NX;
             }
-            u64 virtAddress = phdr->p_vaddr;
+            u64 virtAddress = phdr->p_vaddr - offset;  // page align
             for (u64 t = 0; t < pages * PAGE_SIZE; t += PAGE_SIZE) {
-                Memory::map(pageTable, (void*)(virtAddress + t), loadedProgram + t, flags, Memory::ShowDebug::No);
+                Memory::map(pageTable, (void*)(virtAddress + t), loadedProgram + t,
+                            flags,
+                            Memory::ShowDebug::No);
             }
-            process->add_memory_region((void*)phdr->p_vaddr, (void*)loadedProgram, pages * PAGE_SIZE, flags);
+            process->add_memory_region((void*)virtAddress, (void*)loadedProgram, pages * PAGE_SIZE, flags);
         } else if (phdr->p_type == PT_GNU_STACK) {
             DBGMSG("[ELF]: Stack permissions set by GNU_STACK program header.\n");
             if (!(phdr->p_flags & PF_X)) {
@@ -205,18 +209,21 @@ LoadUserspaceElf64Process(
     constexpr size_t UserProcessStackSize = UserProcessStackSizePages * PAGE_SIZE;
     constexpr uintptr_t virtual_stack_bottom = 0x0000733700000000;
     constexpr uintptr_t virtual_stack_top = virtual_stack_bottom + UserProcessStackSize;
-    for (auto virtual_page = virtual_stack_bottom; virtual_page < virtual_stack_top; virtual_page += PAGE_SIZE) {
-        auto physical_page = Memory::request_page();
-        if (physical_page == 0) {
-            std::print("[ELF]: Couldn't allocate stack for new userspace process\n");
-            return false;
-        }
-        Memory::map(pageTable, (void*)virtual_page, physical_page, stack_flags);
-        // Keep track of stack, as it is a memory region that remains
-        // for the duration of the process, and should only be freed
-        // when it exits.
-        process->add_memory_region((void*)virtual_page, physical_page, PAGE_SIZE, stack_flags);
-    }
+    auto user_stack = Memory::request_pages(UserProcessStackSizePages);
+    Memory::map_pages(pageTable, (void*)virtual_stack_bottom, user_stack, stack_flags, UserProcessStackSizePages, Memory::ShowDebug::No);
+    process->add_memory_region((void*)virtual_stack_bottom, user_stack, UserProcessStackSize, stack_flags);
+    // for (auto virtual_page = virtual_stack_bottom; virtual_page < virtual_stack_top; virtual_page += PAGE_SIZE) {
+    //     auto physical_page = Memory::request_page();
+    //     if (physical_page == 0) {
+    //         std::print("[ELF]: Couldn't allocate stack for new userspace process\n");
+    //         return false;
+    //     }
+    //     Memory::map(pageTable, (void*)virtual_page, physical_page, stack_flags);
+    //     // Keep track of stack, as it is a memory region that remains
+    //     // for the duration of the process, and should only be freed
+    //     // when it exits.
+    //     process->add_memory_region((void*)virtual_page, physical_page, PAGE_SIZE, stack_flags);
+    // }
 
     // TODO: Max argument length? Maximum environment length?
 
@@ -312,17 +319,22 @@ LoadUserspaceElf64Process(
         }
     }
 
-    // New stack.
-    process->CPU.RBP = (u64)(stack_top_address);
-    process->CPU.RSP = (u64)(stack_top_address);
-    process->CPU.Frame.sp = (u64)(stack_top_address);
+    auto forged_frame = (CPUState*)(process->kernel_stack - sizeof(CPUState));
+    process->kernel_stack = (uintptr_t)forged_frame;
+
+    // User stack.
+    forged_frame->Frame.sp = (u64)(stack_top_address);
     // Entry point.
-    process->CPU.Frame.ip = elfHeader.e_entry;
+    forged_frame->Frame.ip = elfHeader.e_entry;
     // Ring 3 GDT segment selectors.
-    process->CPU.Frame.cs = 0x18 | 3;
-    process->CPU.Frame.ss = 0x20 | 3;
+    forged_frame->Frame.cs = 0x18 | 3;
+    forged_frame->Frame.ss = 0x20 | 3;
     // Enable interrupts after jump.
-    process->CPU.Frame.flags = 0b1010000010;
+    forged_frame->Frame.flags = 0b1010000010;
+
+    // New stack.
+    forged_frame->RBP = process->kernel_stack;
+    forged_frame->RSP = process->kernel_stack;
 
 #ifdef DEBUG_ELF
     Scheduler::print_debug();

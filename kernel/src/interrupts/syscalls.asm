@@ -83,10 +83,12 @@ skip_swap_syscall0:
     pop r13
     pop r14
     pop r15
-    pop fs
-    pop gs
 ;;; Return value of syscall is stored in RAX; we don't want to overwrite it.
-    add rsp, 8                  ; Eat `rax` off the stack.
+;;; ring 3 fs/gs while still in ring 0 is a big bad
+    ;; pop fs
+    ;; pop gs
+    ;; pop rax
+    add rsp, 24                  ; Eat `rax` off the stack.
 ;;; do swapgs only if necessary
     cmp QWORD [rsp + 0x08], 0x08
     je skip_swap_syscall1

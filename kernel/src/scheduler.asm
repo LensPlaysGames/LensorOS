@@ -17,25 +17,71 @@
 ;; along with LensorOS. If not, see <https://www.gnu.org/licens
 
 [BITS 64]
-;; External symbols provided in `scheduler.h` and `scheduler.cpp`
-;; A pointer to task switching handler function.
-extern scheduler_switch_process
+
 ;; A pointer to a function that increments timer ticks by one.
 extern timer_tick
+;; The unified C++ scheduling logic
+extern switch_process
 
-GLOBAL irq0_handler
+; ==============================================================================
+; VOLUNTARY YIELD WRAPPER
+; ==============================================================================
+global yield
+yield:
+    ; 1. Allocate the entire CPUState block (184 bytes minus the 8 bytes 'call' used)
+    sub rsp, 176
+
+    ; 2. Immediately save pristine RAX and RBX into their exact final struct slots
+    ; before modifying them for layout setup.
+    mov [rsp + 136], rax  ; Save pristine RAX at its exact struct offset
+    mov [rsp + 8], rbx    ; Save pristine RBX at its exact struct offset
+
+    ; 3. Now RAX and RBX are completely safe. We can use them as scratch registers.
+    mov rax, [rsp + 176]        ; Fetch the return RIP (pushed by 'call yield')
+    mov [rsp + 144], rax        ; Frame.ip = Return RIP
+
+    lea rbx, [rsp + 184]        ; Calculate pristine RSP from before 'call yield'
+    mov [rsp + 168], rbx        ; Frame.sp = Pristine original RSP
+
+    mov [rsp + 176], qword 0x10 ; Frame.ss = 0x10
+    mov [rsp + 152], qword 0x08 ; Frame.cs = 0x08
+
+    pushfq
+    pop rbx                     ; Use safe RBX to grab flags
+    mov [rsp + 160], rbx        ; Frame.rflags
+
+    ; Fill out the remaining general-purpose registers, excluding rax and rbx.
+    mov [rsp + 128], gs
+    mov [rsp + 120], fs
+    mov [rsp + 112], r15
+    mov [rsp + 104], r14
+    mov [rsp + 96], r13
+    mov [rsp + 88], r12
+    mov [rsp + 80], r11
+    mov [rsp + 72], r10
+    mov [rsp + 64], r9
+    mov [rsp + 56], r8
+    mov [rsp + 48], rbp
+    mov [rsp + 40], rdi
+    mov [rsp + 32], rsi
+    mov [rsp + 24], rdx
+    mov [rsp + 16], rcx
+    mov [rsp + 0], qword 0 ; Uniform placeholder for the struct's RSP slot
+
+    ; --- HAND CONTROL TO THE SCHEDULER ---
+    ; Pass the pointer to this completed CPUState struct (RSP) into C++
+    mov rdi, rsp                ; Argument 1 (RDI) = CPUState* cpu
+    call switch_process
+
+    jmp switch_context_asm
+
+; ==============================================================================
+; THE HARDWARE REGULAR TIMER INTERRUPT WRAPPER
+; ==============================================================================
+global irq0_handler
 irq0_handler:
-;; `iretq` arguments already on the stack:
-;; |-- Data Segment Selector
-;; |-- Old Stack Pointer (RSP)
-;; |-- Flags Register (RFLAGS)
-;; |-- Code Segment Selector
-;; `-- Instruction Pointer (RIP)
-;;; SAVE CPU STATE ON STACK
-    cmp QWORD [rsp + 0x8], 0x8
-    je skip_swap
-    swapgs
-skip_swap:
+    ; Hardware already pushed SS, RSP, RFLAGS, CS, and RIP.
+    ; Push general purpose registers
     push rax
     push gs
     push fs
@@ -54,17 +100,68 @@ skip_swap:
     push rcx
     push rbx
     push rsp
-;;; INCREMENT SYSTEM TIMER TICKS
+
     call [rel timer_tick]
-;;; CALL C++ FUNCTION; ARGUMENT IN `rdi`
-    mov rdi, rsp
-    call [rel scheduler_switch_process]
-;;; END INTERRUPT
-    mov ax, 0x20                ; 0x20 = PIC_EOI
-    out 0x20, al                ; 0x20 = PIC1_COMMAND port
-yield_asm_impl:
-;;; RESTORE CPU STATE FROM STACK
-    add rsp, 8                  ; Eat `rsp` off of stack.
+
+    pop rsp
+    push rsp
+
+    ; --- NOTIFY THE HARDWARE CONTROLLER ---
+    ; Send End of Interrupt (EOI) command to the PIC/APIC controller
+    ; This enables future hardware interrupts to fire safely.
+    mov al, 0x20            ; 0x20 = EOI command code
+    out 0x20, al            ; Send to Master PIC command port
+
+    ; --- HAND CONTROL TO THE SCHEDULER ---
+    ; Pass the pointer to this completed CPUState struct (RSP) into C++
+    mov rdi, rsp            ; Argument 1 (RDI) = CPUState* cpu
+    call switch_process
+
+    ; NOTE: switch_process calls switch_context_asm at the very end.
+    ; Execution will never return to this point.
+    jmp switch_context_asm
+
+; ==============================================================================
+; THE UNIFIED CONTEXT SWITCH TRAMPOLINE
+; ==============================================================================
+global switch_context_asm
+switch_context_asm:
+    ; RAX = Process*
+
+    ; RDI = process->kernel_stack
+    mov rdi, qword [rax + 56]
+    ; RSI = process->CR3
+    mov rsi, qword [rax + 232]
+    ; RDX = &process->CPUExtra
+    lea rdx, qword [rax + 240]
+    ; RCX = process->CPUExtraSet
+    mov rcx, qword [rax + 752]
+
+    ; Load target stack pointer
+    mov rsp, rdi
+
+    ; Change page map register
+    mov rax, cr3
+    cmp rax, rsi
+    je .skip_cr3_flush
+    mov cr3, rsi
+.skip_cr3_flush:
+
+    ; Reset segment registers to kernel data segment
+    mov ax, 0x10
+    mov es, ax
+    mov ds, ax
+    mov fs, ax
+    mov gs, ax
+
+    ; Restore FPU state if active
+    test cl, cl
+    jz .skip_fpu_restore
+    fxrstor64 [rdx]
+.skip_fpu_restore:
+
+    ; Pop registers from target CPUState struct
+    add rsp, 8 ; skip rsp (wouldn't be able to pop now would we)
     pop rbx
     pop rcx
     pop rdx
@@ -79,16 +176,9 @@ yield_asm_impl:
     pop r13
     pop r14
     pop r15
-    pop fs
-    pop gs
+    ;; skip fs, gs (avoid popping user selectors for kernel mode)
+    add rsp, 16
     pop rax
-    cmp QWORD [rsp + 0x8], 0x8
-    je skip_swap1
-    swapgs
-skip_swap1:
-    iretq
 
-GLOBAL yield_asm
-yield_asm:
-    mov rsp, rdi
-    jmp yield_asm_impl
+    ; Return to target process frame
+    iretq

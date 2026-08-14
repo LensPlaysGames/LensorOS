@@ -66,6 +66,35 @@ void print_now(Vector2<u64>& position) {
     gRend.crlf(position, startOffset);
 }
 
+extern "C" void kregulate() {
+    // Tasks that need done by a kernel thread and done frequently should go
+    // in this loop.
+    for (;;) {
+        // Free pages which previously housed page maps (or portions thereof).
+        if (Scheduler::PageMapsToFree.size() > 15) {
+            // TODO: Abstract x86_64
+            // Disable interrupts; we do this to prevent a timer interrupt causing a
+            // yield away from this thread, which could invalidate the iterator in the
+            // following loop.
+            asm("cli");
+            std::print("[KERNEL]: Disabled interrupts; freeing {} page tables\n", Scheduler::PageMapsToFree.size());
+
+            for (Memory::PageTable* table : Scheduler::PageMapsToFree) {
+                // std::print("[KERNEL]: Freeing page table at {}\n", (void*)table);
+                Memory::free_page_map(table);
+            }
+
+            // Once we free a page map, we no longer need to free it.
+            Scheduler::PageMapsToFree.clear();
+
+            // TODO: Abstract x86_64
+            // Enable interrupts (allow yielding away as it now won't cause iterator invalidation or anything)
+            std::print("[KERNEL]: Enabling interrupts after freeing page tables\n");
+            asm("sti");
+        }
+    }
+}
+
 extern "C" void kmain(BootInfo* bInfo) {
     // The heavy lifting is done within the kstage1 function.
     kstage1(bInfo);
@@ -81,32 +110,7 @@ extern "C" void kmain(BootInfo* bInfo) {
     gPIT.wait();                                            // Rest
     gPIT.play_sound(392, MACCYS_STEP_LENGTH_MILLISECONDS);  // G4
 
-    // Tasks that need done by a kernel thread and done frequently should go
-    // in this loop.
-    for (;;) {
-        // Free pages which previously housed page maps (or portions thereof).
-        if (Scheduler::PageMapsToFree.size() > 15) {
-            // TODO: Abstract x86_64
-            // Disable interrupts; we do this to prevent a timer interrupt causing a
-            // yield away from this thread, which could invalidate the iterator in the
-            // following loop.
-            //std::print("[KERNEL]: Disabled interrupts; freeing {} page tables\n", Scheduler::PageMapsToFree.size());
-            asm("cli");
-
-            for (Memory::PageTable* table : Scheduler::PageMapsToFree) {
-                // std::print("[KERNEL]: Freeing page table at {}\n", (void*)table);
-                Memory::free_page_map(table);
-            }
-
-            // Once we free a page map, we no longer need to free it.
-            Scheduler::PageMapsToFree.clear();
-
-            // TODO: Abstract x86_64
-            // Enable interrupts (allow yielding away as it now won't cause iterator invalidation or anything)
-            //std::print("[KERNEL]: Enabling interrupts after freeing page tables\n");
-            asm("sti");
-        }
-    }
+    kregulate();
 
     // KERNEL INACTIVE
     hang();

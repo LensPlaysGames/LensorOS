@@ -22,6 +22,10 @@
 
 #include <boot.h>
 
+// Prekernel enters kernel here.
 extern "C" void kmain(BootInfo*);
+
+// Main kernel process runs this function when multi-tasking gets enabled.
+extern "C" void kregulate();
 
 #endif /* LENSOR_OS_KERNEL_H */
