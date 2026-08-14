@@ -381,9 +381,6 @@ void switch_process(CPUState* cpu) {
     switch_process_impl(cpu);
 }
 
-// Defined in `scheduler.asm`
-extern "C" [[noreturn]] void yield_asm(CPUState*);
-
 void yield(CPUState* cpu) {
     // Save kernel stack into process
     CurrentProcess->value()->kernel_stack = cpu->RSP;

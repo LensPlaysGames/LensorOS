@@ -45,4 +45,31 @@ struct CPUState {
     InterruptFrame Frame;
 } __attribute__((packed));
 
-#endif // LENSOR_OS_X86_64_CPU_H
+template <>
+struct std::formatter<CPUState> : std::formatter<std::string_view> {
+    template <typename FormatContext>
+    auto format(const CPUState& cpu, FormatContext& ctx) const {
+        // Construct a clean, multi-line string representation
+        std::string s = std::format(
+            "CPUState:\n"
+            "  RAX: {:#018x}  RBX: {:#018x}  RCX: {:#018x}  RDX: {:#018x}\n"
+            "  RSI: {:#018x}  RDI: {:#018x}  RBP: {:#018x}  RSP: {:#018x}\n"
+            "  R8:  {:#018x}  R9:  {:#018x}  R10: {:#018x}  R11: {:#018x}\n"
+            "  R12: {:#018x}  R13: {:#018x}  R14: {:#018x}  R15: {:#018x}\n"
+            "  FS:  {:#018x}  GS:  {:#018x}\n"
+            "  Frame::RIP: {:#018x}  Frame::CS: {:#0x}\n"
+            "  Frame::RFLAGS: {:#018x}  Frame::RSP: {:#018x}  Frame::SS: {:#0x}",
+            cpu.RAX, cpu.RBX, cpu.RCX, cpu.RDX,
+            cpu.RSI, cpu.RDI, cpu.RBP, cpu.RSP,
+            cpu.R8, cpu.R9, cpu.R10, cpu.R11,
+            cpu.R12, cpu.R13, cpu.R14, cpu.R15,
+            cpu.FS, cpu.GS,
+            cpu.Frame.ip, cpu.Frame.cs,
+            cpu.Frame.flags, cpu.Frame.sp, cpu.Frame.ss);
+
+        // Pass the formatted string back to the base string_view formatter
+        return std::formatter<std::string_view>::format(s, ctx);
+    }
+};
+
+#endif  // LENSOR_OS_X86_64_CPU_H

@@ -188,6 +188,9 @@ extern void (*scheduler_switch_process)(CPUState*)
     __attribute__((no_caller_saved_registers));
 extern void (*timer_tick)();
 
+// Defined in `scheduler.asm`
+extern "C" void yield_asm(CPUState*);
+
 namespace Scheduler {
 /// External symbol defined in `scheduler.cpp`
 // The list node of the currently executing process.
