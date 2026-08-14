@@ -11,16 +11,6 @@ set(
 add_custom_target( userspace-libraries )
 add_custom_target( userspace )
 
-add_custom_command(
-    TARGET userspace-libraries
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND}
-    "-DPROJECT_ROOT=${CMAKE_CURRENT_LIST_DIR}/.."
-    -P "${CMAKE_CURRENT_LIST_DIR}/../scripts/sysroot.cmake"
-    COMMENT "Installing sysroot"
-)
-
-
 # LIBRARIES
 
 # NOTE: Each library passed to this function *must* have a subdirectory
@@ -34,16 +24,12 @@ function(add_userspace_library NAME)
     PROPERTY RUNTIME_OUTPUT_DIRECTORY ${USERSPACE_OUTPUT_DIRECTORY}
   )
   add_dependencies( userspace ${NAME} )
+  add_dependencies( userspace-libraries "install-lib${NAME}" )
 endfunction()
 
 add_userspace_library( c )
-add_dependencies( userspace-libraries install-libc )
 add_userspace_library( m )
-add_dependencies( userspace-libraries install-libm )
 add_userspace_library( stdc++ )
-add_dependencies( userspace-libraries install-libstdc++ )
-
-add_dependencies( userspace userspace-libraries )
 
 # PROGRAMS
 
@@ -52,7 +38,7 @@ add_dependencies( userspace userspace-libraries )
 # generate one target that is named the same as the subdirectory.
 function(add_userspace_program NAME )
   add_subdirectory( ${NAME} EXCLUDE_FROM_ALL )
-  add_dependencies( ${NAME} install-libc ) # depend on libc by default
+  add_dependencies( ${NAME} userspace-libraries )
   set_property(
     TARGET ${NAME}
     PROPERTY RUNTIME_OUTPUT_DIRECTORY ${USERSPACE_OUTPUT_DIRECTORY}
