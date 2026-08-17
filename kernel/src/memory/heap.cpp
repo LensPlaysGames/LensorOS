@@ -85,7 +85,10 @@ HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
         return nullptr;
 
     /// Position of header that is newly created within the middle of `this` header.
-    HeapSegmentHeader* splitHeader = (HeapSegmentHeader*)((u64)this + sizeof(HeapSegmentHeader) + splitLength);
+    HeapSegmentHeader* splitHeader
+        = (HeapSegmentHeader*)((u64)this
+                               + sizeof(HeapSegmentHeader)
+                               + splitLength);
     if (next) {
         // Set next segment's last segment to the new segment.
         next->last = splitHeader;
@@ -157,13 +160,15 @@ void expand_heap(u64 numBytes) {
         Scheduler::map_pages_in_all_processes(
             (void*)((u64)sHeapEnd + i),
             addr,
-            (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite,
+            (u64)Memory::PageTableFlag::Present
+                | (u64)Memory::PageTableFlag::ReadWrite,
             1);
         Memory::map(
             Memory::active_page_map(),
             (void*)((u64)sHeapEnd + i),
             addr,
-            (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite,
+            (u64)Memory::PageTableFlag::Present
+                | (u64)Memory::PageTableFlag::ReadWrite,
             Memory::ShowDebug::No);
 
         DBGMSG("[Heap]: Mapped {} to {}\n", (void*)((u64)sHeapEnd + i), addr);
@@ -230,7 +235,9 @@ void* malloc(size_t numBytes) {
 #undef free
 void free(void* address) {
     if (((usz)address & HEAP_VIRTUAL_BASE) != HEAP_VIRTUAL_BASE) {
-        DBGMSG("[Heap]: free() -- Denying free of address {} as it does not look like a heap pointer\n", address);
+        DBGMSG(
+            "[Heap]: free() -- Denying free of address {} as it does not look like a heap pointer\n",
+            address);
         return;
     }
     auto* segment = (HeapSegmentHeader*)((usz)address - sizeof(HeapSegmentHeader));
@@ -403,20 +410,25 @@ void operator delete[](void* ptr, size_t) noexcept { free(ptr); }
 }
 void aligned_delete(void* addr, size_t align) {
     if (align <= HEAP_BYTE_ALIGN) {
-        std::print("[Heap]: aligned_delete() -- Align ({}) smaller than minimum alignment: regular free\n", align);
+        std::print(
+            "[Heap]: aligned_delete() -- Align ({}) smaller than minimum alignment: regular free\n",
+            align);
         free(addr);
         return;
     }
     if (((usz)addr & HEAP_VIRTUAL_BASE) != HEAP_VIRTUAL_BASE) {
-        std::print("[Heap]: aligned_delete() -- Denying deletion of address {} as it does not look like a heap pointer\n", addr);
+        std::print(
+            "[Heap]: aligned_delete() -- Denying deletion of address {} as it does not look like a heap pointer\n",
+            addr);
         return;
     }
     uintptr_t* ptr_to_free_addr = (uintptr_t*)((uintptr_t)addr - sizeof(uintptr_t*));
-    std::print("[Heap]: aligned_delete() -- align={}  addr={}  ptr_to_free_addr={}  ptr_to_free={:x}\n",
-               align,
-               addr,
-               (void*)ptr_to_free_addr,
-               *ptr_to_free_addr);
+    std::print(
+        "[Heap]: aligned_delete() -- align={}  addr={}  ptr_to_free_addr={}  ptr_to_free={:x}\n",
+        align,
+        addr,
+        (void*)ptr_to_free_addr,
+        *ptr_to_free_addr);
     free((void*)*ptr_to_free_addr);
 }
 
