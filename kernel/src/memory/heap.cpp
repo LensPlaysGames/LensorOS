@@ -17,32 +17,32 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <memory/heap.h>
-
 #include <cstr.h>
 #include <debug.h>
-#include <format>
 #include <integers.h>
 #include <memory.h>
 #include <memory/common.h>
+#include <memory/heap.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 #include <scheduler.h>
+
+#include <format>
 #include <string>
 
 // Uncomment the following directive for extra debug information output.
-//#define DEBUG_HEAP
+// #define DEBUG_HEAP
 
 #ifdef DEBUG_HEAP
-#   define DBGMSG(...) std::print(__VA_ARGS__)
+#define DBGMSG(...) std::print(__VA_ARGS__)
 #else
-#   define DBGMSG(...)
+#define DBGMSG(...)
 #endif
 
-void* sHeapStart { nullptr };
-void* sHeapEnd { nullptr };
-HeapSegmentHeader* sLastHeader { nullptr };
+void* sHeapStart{nullptr};
+void* sHeapEnd{nullptr};
+HeapSegmentHeader* sLastHeader{nullptr};
 
 void HeapSegmentHeader::combine_forward() {
     // Can't combine nothing :^).
@@ -113,11 +113,13 @@ void init_heap() {
     for (u64 i = 0; i < HEAP_INITIAL_PAGES * PAGE_SIZE; i += PAGE_SIZE) {
         // Map virtual heap position to physical memory address returned by page frame allocator.
         // FIXME: Should this be global?
-        Memory::map((void*)((u64)HEAP_VIRTUAL_BASE + i), Memory::request_page()
-                    , (u64)Memory::PageTableFlag::Present
-                    | (u64)Memory::PageTableFlag::ReadWrite
-                    //| (u64)Memory::PageTableFlag::Global
-                    );
+        Memory::map(
+            (void*)((u64)HEAP_VIRTUAL_BASE + i),
+            Memory::request_page(),
+            (u64)Memory::PageTableFlag::Present
+                | (u64)Memory::PageTableFlag::ReadWrite
+            //| (u64)Memory::PageTableFlag::Global
+        );
     }
     sHeapStart = (void*)HEAP_VIRTUAL_BASE;
     sHeapEnd = (void*)((u64)sHeapStart + numBytes);
@@ -128,12 +130,14 @@ void init_heap() {
     firstSegment->last = nullptr;
     firstSegment->free = true;
     sLastHeader = firstSegment;
-    std::print("[Heap]: \033[32mInitialized\033[0m\n"
-               "  Virtual Address: {} thru {}\n"
-               "  Size: {}\n"
-               "\n"
-               , sHeapStart, sHeapEnd
-               , numBytes);
+    std::print(
+        "[Heap]: \033[32mInitialized\033[0m\n"
+        "  Virtual Address: {} thru {}\n"
+        "  Size: {}\n"
+        "\n",
+        sHeapStart,
+        sHeapEnd,
+        numBytes);
     heap_print_debug();
 }
 
@@ -143,25 +147,24 @@ void expand_heap(u64 numBytes) {
     // Round byte count to page-aligned boundary.
     numBytes = numPages * PAGE_SIZE;
 
-    DBGMSG("[Heap]: Expanding by {} bytes\n" , numBytes);
+    DBGMSG("[Heap]: Expanding by {} bytes\n", numBytes);
 
     // NOTE: We don't use map_pages here because we request a new page for each one mapped.
     for (u64 i = 0; i < numPages * PAGE_SIZE; i += PAGE_SIZE) {
         // Map virtual heap position to physical memory address returned by page frame allocator.
         void* addr = Memory::request_page();
         memset(addr, 0, PAGE_SIZE);
-        Scheduler::map_pages_in_all_processes
-            ((void*)((u64)sHeapEnd + i), addr
-             , (u64)Memory::PageTableFlag::Present
-             | (u64)Memory::PageTableFlag::ReadWrite
-             , 1
-             );
-        Memory::map(Memory::active_page_map()
-                    , (void*)((u64)sHeapEnd + i), addr
-                    , (u64)Memory::PageTableFlag::Present
-                    | (u64)Memory::PageTableFlag::ReadWrite
-                    , Memory::ShowDebug::No
-                    );
+        Scheduler::map_pages_in_all_processes(
+            (void*)((u64)sHeapEnd + i),
+            addr,
+            (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite,
+            1);
+        Memory::map(
+            Memory::active_page_map(),
+            (void*)((u64)sHeapEnd + i),
+            addr,
+            (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite,
+            Memory::ShowDebug::No);
 
         DBGMSG("[Heap]: Mapped {} to {}\n", (void*)((u64)sHeapEnd + i), addr);
     }
@@ -184,7 +187,6 @@ void expand_heap(u64 numBytes) {
     extension->combine_backward();
     DBGMSG("  \033[32mHeap expansion successful\033[0m\n");
 }
-
 
 void* malloc(size_t numBytes) {
     // Can not allocate nothing.
@@ -232,7 +234,7 @@ void free(void* address) {
         return;
     }
     auto* segment = (HeapSegmentHeader*)((usz)address - sizeof(HeapSegmentHeader));
-    [[maybe_unused]]u64 length = segment->length;
+    [[maybe_unused]] u64 length = segment->length;
     DBGMSG("[Heap]: free() -- address={}, numBytes={}\n", address, length);
     segment->free = true;
     segment->combine_forward();
@@ -287,27 +289,31 @@ void heap_print_debug() {
     // TODO: Interesting information, like average allocation
     //       size, number of malloc vs free calls, etc.
     u64 heapSize = (u64)(sHeapEnd) - (u64)(sHeapStart);
-    std::print("[Heap]: Debug information:\n"
-               "  Size:   {}\n"
-               "  Start:  {}\n"
-               "  End:    {}\n"
-               "  Regions:\n"
-               , heapSize, sHeapStart, sHeapEnd);
+    std::print(
+        "[Heap]: Debug information:\n"
+        "  Size:   {}\n"
+        "  Start:  {}\n"
+        "  End:    {}\n"
+        "  Regions:\n",
+        heapSize,
+        sHeapStart,
+        sHeapEnd);
     u64 i = 0;
     // u64 usedCount = 0;
     auto* it = (HeapSegmentHeader*)sHeapStart;
     while (it) {
-        std::print("    Region {}:\n"
-                   "      Free:   {}\n"
-                   "      Length: {} ({})\n"
-                   "      Header Address:  {}\n"
-                   "      Payload Address: {}\n"
-                   , i
-                   , it->free
-                   , u64(it->length)
-                   , it->length + sizeof(HeapSegmentHeader)
-                   , (void*) it
-                   , (void*)(u64(it) + sizeof(HeapSegmentHeader)));
+        std::print(
+            "    Region {}:\n"
+            "      Free:   {}\n"
+            "      Length: {} ({})\n"
+            "      Header Address:  {}\n"
+            "      Payload Address: {}\n",
+            i,
+            it->free,
+            u64(it->length),
+            it->length + sizeof(HeapSegmentHeader),
+            (void*)it,
+            (void*)(u64(it) + sizeof(HeapSegmentHeader)));
         // if (!it->free) usedCount++;
         ++i;
         it = it->next;
@@ -320,12 +326,15 @@ void heap_print_debug_summed() {
     // TODO: Interesting information, like average allocation
     //       size, number of malloc vs free calls, etc.
     u64 heapSize = (u64)(sHeapEnd) - (u64)(sHeapStart);
-    std::print("[Heap]: Debug information:\n"
-               "  Size:   {}\n"
-               "  Start:  {}\n"
-               "  End:    {}\n"
-               "  Regions:\n"
-               , heapSize, sHeapStart, sHeapEnd);
+    std::print(
+        "[Heap]: Debug information:\n"
+        "  Size:   {}\n"
+        "  Start:  {}\n"
+        "  End:    {}\n"
+        "  Regions:\n",
+        heapSize,
+        sHeapStart,
+        sHeapEnd);
     u64 i = 0;
     // u64 usedCount = 0;
     auto* it = (HeapSegmentHeader*)sHeapStart;
@@ -345,13 +354,16 @@ void heap_print_debug_summed() {
         }
         if (i - start_i == 1 || i - start_i == 0)
             std::print("    Region {}:\n", start_i);
-        else std::print("    Region {} through {}:\n", start_i, i - 1);
-        std::print("      Free:          {}\n"
-                   "      Length:        {} ({})\n"
-                   "      Start Address: {}\n",
-                   free,
-                   payload_total, total_length,
-                   (void*) start_it);
+        else
+            std::print("    Region {} through {}:\n", start_i, i - 1);
+        std::print(
+            "      Free:          {}\n"
+            "      Length:        {} ({})\n"
+            "      Start Address: {}\n",
+            free,
+            payload_total,
+            total_length,
+            (void*)start_it);
     };
 
     heap_print_debug_starchart();
@@ -401,7 +413,10 @@ void aligned_delete(void* addr, size_t align) {
     }
     uintptr_t* ptr_to_free_addr = (uintptr_t*)((uintptr_t)addr - sizeof(uintptr_t*));
     std::print("[Heap]: aligned_delete() -- align={}  addr={}  ptr_to_free_addr={}  ptr_to_free={:x}\n",
-               align, addr, (void*)ptr_to_free_addr, *ptr_to_free_addr);
+               align,
+               addr,
+               (void*)ptr_to_free_addr,
+               *ptr_to_free_addr);
     free((void*)*ptr_to_free_addr);
 }
 
@@ -410,7 +425,6 @@ void aligned_delete(void* addr, size_t align) {
 [[nodiscard]] void* operator new[](size_t size, std::align_val_t align) { return aligned_new(size, (size_t)align); }
 void operator delete(void* addr, std::align_val_t align) { return aligned_delete(addr, (size_t)align); }
 void operator delete[](void* addr, std::align_val_t align) { return aligned_delete(addr, (size_t)align); }
-
 
 [[nodiscard]] void* operator new(size_t, void* ptr) noexcept { return ptr; }
 [[nodiscard]] void* operator new[](size_t, void* ptr) noexcept { return ptr; }
