@@ -106,19 +106,20 @@ irq0_handler:
     pop rsp
     push rsp
 
-    ; --- NOTIFY THE HARDWARE CONTROLLER ---
-    ; Send End of Interrupt (EOI) command to the PIC/APIC controller
-    ; This enables future hardware interrupts to fire safely.
-    mov al, 0x20            ; 0x20 = EOI command code
-    out 0x20, al            ; Send to Master PIC command port
-
     ; --- HAND CONTROL TO THE SCHEDULER ---
     ; Pass the pointer to this completed CPUState struct (RSP) into C++
     mov rdi, rsp            ; Argument 1 (RDI) = CPUState* cpu
     call switch_process
 
-    ; NOTE: switch_process calls switch_context_asm at the very end.
-    ; Execution will never return to this point.
+    ; --- NOTIFY THE HARDWARE CONTROLLER ---
+    ; Send End of Interrupt (EOI) command to the PIC/APIC controller
+    ; This enables future hardware interrupts to fire safely.
+    push rax
+    mov al, 0x20            ; 0x20 = EOI command code
+    out 0x20, al            ; Send to Master PIC command port
+    pop rax
+
+    ; --- LOAD NEW CONTEXT AND JUMP AWAY ---
     jmp switch_context_asm
 
 ; ==============================================================================
