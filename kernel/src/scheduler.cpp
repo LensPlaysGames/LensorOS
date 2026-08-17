@@ -90,7 +90,8 @@ void Process::destroy(int status) {
         SYSTEM->virtual_filesystem().close(this, procfd);
     }
 
-    Scheduler::PageMapsToFree.push_back(CR3);
+    if (CR3)
+        Scheduler::PageMapsToFree.push_back(CR3);
 }
 
 namespace Scheduler {
@@ -232,6 +233,11 @@ Process* request_process(pid_t parent_pid) {
     // Allocate process before cloning page table in case it causes
     // heap to expand.
     auto* process = new Process{};
+    if ((uintptr_t)&process->CPUExtra % 16 != 0) {
+        std::print("[ELF]: Process allocated with invalid alignment (CPUExtra not 16-byte aligned).\n");
+        delete process;
+        return nullptr;
+    }
     process->ParentProcess = parent_pid;
     process->State = Process::ProcessState::SLEEPING;
     pid_t pid = Scheduler::add_process(process);
@@ -242,7 +248,7 @@ Process* request_process(pid_t parent_pid) {
     // LENSOR_OS_NO_COPY_ON_WRITE or smth
     auto* newPageTable = Memory::clone_active_page_map();
     if (newPageTable == nullptr) {
-        std::print("Failed to clone current page map for new process page map.\n");
+        std::print("[ELF]: Failed to clone current page map for new process page map.\n");
         Scheduler::remove_process(pid, -1);
         return nullptr;
     }
@@ -260,6 +266,7 @@ Process* request_process(pid_t parent_pid) {
     auto physical_stack_base = Memory::request_pages(KernelStackSizePages);
     if (physical_stack_base == 0) {
         std::print("[ELF]: Couldn't allocate stack for new userspace process (kernel stack)\n");
+        Scheduler::remove_process(pid, -1);
         return nullptr;
     }
     memset(physical_stack_base, 0, KernelStackSize);
@@ -348,7 +355,8 @@ extern "C" Process* switch_process(CPUState* cpu) {
     // std::print("switch_process()...\n");
 
     // Save address of stack frame
-    CurrentProcess->value()->kernel_stack = (uintptr_t)cpu;
+    if (CurrentProcess and CurrentProcess->value())
+        CurrentProcess->value()->kernel_stack = (uintptr_t)cpu;
 
     // TODO: Check all processes that called `wait(ms)`, and run/
     // unstop them if the timestamp is greater than the calculated
@@ -362,6 +370,11 @@ extern "C" Process* switch_process(CPUState* cpu) {
     // std::print("\n");
 
     CurrentProcess = next_viable_process(CurrentProcess);
+    if (not CurrentProcess) {
+        // TODO: There is no viable process to run. What do now?
+        std::print("[SCHED]: no viable processes, hanging...");
+        hang();
+    }
 
     // From this point on, we are trying to restore program state from
     // CurrentProcess.

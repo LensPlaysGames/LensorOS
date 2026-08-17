@@ -225,6 +225,7 @@ void* malloc(size_t numBytes) {
     return malloc(numBytes);
 }
 
+#undef free
 void free(void* address) {
     if (((usz)address & HEAP_VIRTUAL_BASE) != HEAP_VIRTUAL_BASE) {
         DBGMSG("[Heap]: free() -- Denying free of address {} as it does not look like a heap pointer\n", address);
