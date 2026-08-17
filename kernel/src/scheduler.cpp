@@ -210,23 +210,25 @@ bool remove_process(pid_t pid, int status) {
         }
         processToRemoveIndex += 1;
     }
+
+    if (not processToRemove)
+        return false;
+
     std::print("Removing process {}\n", pid);
     std::print("  index: {}\n", processToRemoveIndex);
     std::print("  CR3: 0x{:016x}\n", (uintptr_t)processToRemove->CR3);
-    if (processToRemove) {
-        ProcessQueue->remove(processToRemoveIndex);
 
-        // Ensure CurrentProcess doesn't dangle
-        if (processToRemove == CurrentProcess->value())
-            CurrentProcess = nullptr;
+    ProcessQueue->remove(processToRemoveIndex);
 
-        // Ensure scheduler doesn't **somehow** run this process after it's destroyed.
-        processToRemove->State = Process::SLEEPING;
-        processToRemove->destroy(status);
-        delete processToRemove;
-        return true;
-    }
-    return false;
+    // Ensure CurrentProcess doesn't dangle
+    if (processToRemove == CurrentProcess->value())
+        CurrentProcess = nullptr;
+
+    // Ensure scheduler doesn't **somehow** run this process after it's destroyed.
+    processToRemove->State = Process::SLEEPING;
+    processToRemove->destroy(status);
+    delete processToRemove;
+    return true;
 }
 
 Process* request_process(pid_t parent_pid) {
