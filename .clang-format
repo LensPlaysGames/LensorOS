@@ -1,0 +1,32 @@
+---
+BasedOnStyle: Google
+IndentWidth: 4
+
+# Use spaces instead of tabs
+UseTab: Never
+
+# Never automatically wrap a line
+ColumnLimit: 0
+
+# Force pointers and references to align to the type
+# int* p instead of int *p
+PointerAlignment: Left
+
+# Sort #include directives alphabetically
+SortIncludes: true
+
+# Newline before binary operators, not after.
+BreakBeforeBinaryOperators: All
+
+# If arguments are split across lines, each argument is on its own line
+BinPackArguments: false
+AllowAllArgumentsOnNextLine: false
+BinPackParameters: false
+AllowAllParametersOfDeclarationOnNextLine: false
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+    BeforeElse: true
+
+BreakConstructorInitializers: BeforeComma
+---
