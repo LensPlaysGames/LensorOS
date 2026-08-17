@@ -29,7 +29,7 @@ extern switch_process
 global yield
 yield:
     ; 1. Allocate the entire CPUState block (184 bytes minus the 8 bytes 'call' used)
-    sub rsp, 176
+    sub rsp, 184
 
     ; 2. Immediately save pristine RAX and RBX into their exact final struct slots
     ; before modifying them for layout setup.
