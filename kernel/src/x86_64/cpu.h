@@ -45,6 +45,9 @@ struct CPUState {
     InterruptFrame Frame;
 } __attribute__((packed));
 
+static_assert(offsetof(CPUState, RCX) == 16);
+static_assert(offsetof(CPUState, Frame) == 144);
+
 template <>
 struct std::formatter<CPUState> : std::formatter<std::string_view> {
     template <typename FormatContext>
@@ -59,13 +62,29 @@ struct std::formatter<CPUState> : std::formatter<std::string_view> {
             "  FS:  {:#018x}  GS:  {:#018x}\n"
             "  Frame::RIP: {:#018x}  Frame::CS: {:#0x}\n"
             "  Frame::RFLAGS: {:#018x}  Frame::RSP: {:#018x}  Frame::SS: {:#0x}",
-            cpu.RAX, cpu.RBX, cpu.RCX, cpu.RDX,
-            cpu.RSI, cpu.RDI, cpu.RBP, cpu.RSP,
-            cpu.R8, cpu.R9, cpu.R10, cpu.R11,
-            cpu.R12, cpu.R13, cpu.R14, cpu.R15,
-            cpu.FS, cpu.GS,
-            cpu.Frame.ip, cpu.Frame.cs,
-            cpu.Frame.flags, cpu.Frame.sp, cpu.Frame.ss);
+            cpu.RAX,
+            cpu.RBX,
+            cpu.RCX,
+            cpu.RDX,
+            cpu.RSI,
+            cpu.RDI,
+            cpu.RBP,
+            cpu.RSP,
+            cpu.R8,
+            cpu.R9,
+            cpu.R10,
+            cpu.R11,
+            cpu.R12,
+            cpu.R13,
+            cpu.R14,
+            cpu.R15,
+            cpu.FS,
+            cpu.GS,
+            cpu.Frame.ip,
+            cpu.Frame.cs,
+            cpu.Frame.flags,
+            cpu.Frame.sp,
+            cpu.Frame.ss);
 
         // Pass the formatted string back to the base string_view formatter
         return std::formatter<std::string_view>::format(s, ctx);
