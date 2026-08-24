@@ -366,6 +366,9 @@ ReplaceUserspaceElf64Process(Process* process, ProcessFileDescriptor fd, const s
     // Clear memories list.
     while (process->Memories.remove(0));
 
+    // Update executable path
+    process->ExecutablePath = args[0];
+
     return LoadUserspaceElf64Process(process, process->CR3, fd, elfHeader, args);
 }
 
