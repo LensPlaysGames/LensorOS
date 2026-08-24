@@ -76,7 +76,7 @@ extern "C" void kregulate() {
             // Disable interrupts; we do this to prevent a timer interrupt causing a
             // yield away from this thread, which could invalidate the iterator in the
             // following loop.
-            asm("cli");
+            asm volatile("cli");
             std::print("[KERNEL]: Disabled interrupts; freeing {} page tables\n", Scheduler::PageMapsToFree.size());
 
             for (Memory::PageTable* table : Scheduler::PageMapsToFree) {
@@ -90,14 +90,17 @@ extern "C" void kregulate() {
             // TODO: Abstract x86_64
             // Enable interrupts (allow yielding away as it now won't cause iterator invalidation or anything)
             std::print("[KERNEL]: Enabling interrupts after freeing page tables\n");
-            asm("sti");
+            asm volatile("sti");
         }
+        // TODO: Don't eat CPU time (yield or halt or something)
+        // Currently this causes the kernel to dereference -1, somehow.
     }
 }
 
 extern "C" void kmain(BootInfo* bInfo) {
     // The heavy lifting is done within the kstage1 function.
     kstage1(bInfo);
+
     // I'm lovin' it :^) (Plays Maccy's theme).
     constexpr usz MACCYS_BPM = 125;
     constexpr usz MACCYS_STEP_LENGTH_MILLISECONDS = (60 * 1000 / MACCYS_BPM) / 4;
