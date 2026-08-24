@@ -28,27 +28,30 @@ extern switch_process
 ; ==============================================================================
 global yield
 yield:
-    ; 1. Allocate the entire CPUState block (184 bytes minus the 8 bytes 'call' used)
-    sub rsp, 184
+    pushfq
 
-    ; 2. Immediately save pristine RAX and RBX into their exact final struct slots
-    ; before modifying them for layout setup.
+    ; Allocate the entire CPUState block (184 bytes minus the 8 bytes for
+    ; flags we just pushed)
+    sub rsp, 176
+
+    ; Immediately save pristine RAX and RBX into their exact final struct
+    ; slots before modifying them for layout setup.
     mov [rsp + 136], rax  ; Save pristine RAX at its exact struct offset
     mov [rsp + 8], rbx    ; Save pristine RBX at its exact struct offset
 
-    ; 3. Now RAX and RBX are completely safe. We can use them as scratch registers.
-    mov rax, [rsp + 176]        ; Fetch the return RIP (pushed by 'call yield')
+    ; Now RAX and RBX are completely safe. We can use them as scratch
+    ; registers.
+    mov rax, [rsp + 176]
+    mov [rsp + 160], rax        ; Frame.rflags
+
+    mov rax, [rsp + 184]        ; Fetch the return RIP (pushed by 'call yield')
     mov [rsp + 144], rax        ; Frame.ip = Return RIP
 
-    lea rbx, [rsp + 184]        ; Calculate pristine RSP from before 'call yield'
+    lea rbx, [rsp + 184]        ; Calculate pristine RSP (from before 'call yield')
     mov [rsp + 168], rbx        ; Frame.sp = Pristine original RSP
 
     mov [rsp + 176], qword 0x10 ; Frame.ss = 0x10
     mov [rsp + 152], qword 0x08 ; Frame.cs = 0x08
-
-    pushfq
-    pop rbx                     ; Use safe RBX to grab flags
-    mov [rsp + 160], rbx        ; Frame.rflags
 
     ; Fill out the remaining general-purpose registers, excluding rax and rbx.
     mov [rsp + 128], gs
@@ -101,6 +104,7 @@ irq0_handler:
     push rbx
     push rsp
 
+    ; FIXME: 16-byte stack alignment?
     call [rel timer_tick]
 
     pop rsp
