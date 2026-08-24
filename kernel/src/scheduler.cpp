@@ -291,6 +291,7 @@ bool initialize() {
     timer_tick = pit_tick;
 
     // Setup currently executing code as the start process with PID 0.
+    StartupProcess.ExecutablePath = "/boot/LensorOS/kernel.elf";
     StartupProcess.CR3 = Memory::active_page_map();
     StartupProcess.State = Process::RUNNING;
     StartupProcess.ProcessID = 0;
