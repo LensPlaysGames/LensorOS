@@ -118,14 +118,22 @@ set(ROOT "${CMAKE_CURRENT_LIST_DIR}/../../root")
 set(STD "${CMAKE_CURRENT_LIST_DIR}/../../std")
 
 if (NOT LENSOR_OS_LIBC_BUILD_HOST)
+  # Copies headers every build
+  add_custom_target(
+    libc-headers ALL
+    COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=${CMAKE_CURRENT_LIST_DIR}" -P "${CMAKE_CURRENT_LIST_DIR}/install-headers.cmake"
+    COMMENT "Installing LibC Headers"
+  )
+  # Force libc to wait until headers are copied
+  add_dependencies(c libc-headers)
+
   add_custom_target(
     install-libc ALL
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:c> "${ROOT}/lib"
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/c.dir/crt0.s.obj" "${ROOT}/lib/crt0.o"
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/c.dir/crti.s.obj" "${ROOT}/lib/crti.o"
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/c.dir/crtn.s.obj" "${ROOT}/lib/crtn.o"
-    COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=${CMAKE_CURRENT_LIST_DIR}" -P "${CMAKE_CURRENT_LIST_DIR}/install-headers.cmake"
-    COMMENT "Installing LibC headers"
+    COMMENT "Installing LibC Objects"
 
     DEPENDS c
   )
