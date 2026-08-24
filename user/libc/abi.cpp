@@ -185,25 +185,36 @@ void __cxa_finalize(__dso_handle_t dso) {
 
 /// Call global constructors.
 void __libc_init() noexcept {
+    DBGMSG("[LibC] Initializing malloc\n");
+
     __libc_init_malloc();
 
     DBGMSG("[LibC] Calling global constructors\n");
 
-    DBGMSG("[LibC] Searching preinit array at {}\n", (void*) __preinit_array_start);
+    DBGMSG("[LibC] Searching preinit array at {}\n", (void*)__preinit_array_start);
     for (init_cb* cb = __preinit_array_start; cb != __preinit_array_end; ++cb)
-        DBGMSG("    Found preinit callback at {}\n", (void*) *cb);
+        DBGMSG("    Found preinit callback at {}\n", (void*)*cb);
 
-    DBGMSG("[LibC] Searching init array at {}\n", (void*) __init_array_start);
+    DBGMSG("[LibC] Searching init array at {}\n", (void*)__init_array_start);
     for (init_cb* cb = __init_array_start; cb != __init_array_end; ++cb)
-        DBGMSG("    Found init callback at {}\n", (void*) *cb);
+        DBGMSG("    Found init callback at {}\n", (void*)*cb);
 
-    for (init_cb* cb = __preinit_array_start; cb != __preinit_array_end; ++cb) { (*cb)(); }
-    for (init_cb* cb = __init_array_start; cb != __init_array_end; ++cb) { (*cb)(); }
+    for (init_cb* cb = __preinit_array_start; cb != __preinit_array_end; ++cb) {
+        (*cb)();
+        DBGMSG("    Ran preinit callback at {}\n", (void*)*cb);
+    }
+    for (init_cb* cb = __init_array_start; cb != __init_array_end; ++cb) {
+        (*cb)();
+        DBGMSG("    Ran init callback at {}\n", (void*)*cb);
+    }
+    DBGMSG("[LibC] Initialized\n");
 }
 
 /// Call global destructors.
 void __libc_fini() noexcept {
-    for (init_cb* cb = __fini_array_start; cb != __fini_array_end; ++cb) { (*cb)(); }
+    for (init_cb* cb = __fini_array_start; cb != __fini_array_end; ++cb) {
+        (*cb)();
+    }
     __cxa_finalize(nullptr);
     __libc_fini_malloc();
 }
