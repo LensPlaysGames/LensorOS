@@ -31,6 +31,8 @@ struct GDTDescriptor {
         : Size(size), Offset(offset) {}
 } __attribute__((packed));
 
+static_assert(sizeof(GDTDescriptor) == 10);
+
 /// Info taken from "Section 3.4.5: Segment Descriptors" and
 ///   "Figure 3-8: Segment Descriptor" of the Intel Software Developer Manual, Volume 3-A.
 /// NOTE: Each type of entry has a different layout, below only shows the generic.
@@ -119,6 +121,8 @@ struct GDTEntry {
     u8 Base2{0};
 } __attribute__((packed));
 
+static_assert(sizeof(GDTEntry) == 8);
+
 class TSS_GDTEntry : public GDTEntry {
    public:
     TSS_GDTEntry() {}
@@ -142,6 +146,8 @@ class TSS_GDTEntry : public GDTEntry {
     u32 Base3{0};
     u32 Reserved{0};
 } __attribute__((packed));
+
+static_assert(sizeof(TSS_GDTEntry) == 16);
 
 /// Global Descriptor Table
 /// The `Code` entry is loaded into CS,
