@@ -314,13 +314,18 @@ LoadUserspaceElf64Process(
     if (stack_top_address % 16 != 0) {
         if (stack_top_address % 8 != 0) {
             panic("STACK UNALIGNED\n");
-        } else {
+        }
+        else {
             panic("STACK 8-BYTE ALIGNED\n");
         }
     }
 
-    auto forged_frame = (CPUState*)(process->kernel_stack - sizeof(CPUState));
-    process->kernel_stack = (uintptr_t)forged_frame;
+    // Allocate enough room for a forged interrupt frame that we can "return"
+    // into.
+    process->kernel_stack -= sizeof(CPUState);
+    auto forged_frame = (CPUState*)(process->kernel_stack);
+    // Zero out forged frame.
+    memset(forged_frame, 0, sizeof(CPUState));
 
     // User stack.
     forged_frame->Frame.sp = (u64)(stack_top_address);
@@ -344,7 +349,11 @@ LoadUserspaceElf64Process(
 }
 
 inline bool
-ReplaceUserspaceElf64Process(Process* process, ProcessFileDescriptor fd, const std::vector<std::string_view>& args = {}) {
+ReplaceUserspaceElf64Process(Process* process, ProcessFileDescriptor fd, const std::vector<std::string_view>& args) {
+    if (!args.size()) {
+        std::print("Can not invoke process with zero arguments: at least invocation (argv[0]) is required\n");
+        return false;
+    }
     VFS& vfs = SYSTEM->virtual_filesystem();
     DBGMSG("Attempting to add userspace process from file descriptor {}\n", fd);
     Elf64_Ehdr elfHeader;
@@ -368,6 +377,14 @@ ReplaceUserspaceElf64Process(Process* process, ProcessFileDescriptor fd, const s
 
     // Update executable path
     process->ExecutablePath = args[0];
+
+    // LoadUserspace...Process() ends up subtracting enough room for a forged
+    // interrupt frame on the kernel stack; because exec wants to actually *
+    // override* the current kernel stack, we update it such that when room is
+    // made for the "forged" frame, it actually overwrites the "current"
+    // frame.
+    // TODO: Verify bounds
+    process->kernel_stack += sizeof(CPUState);
 
     return LoadUserspaceElf64Process(process, process->CR3, fd, elfHeader, args);
 }
@@ -425,6 +442,7 @@ CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::str
     process->State = Process::ProcessState::RUNNING;
     return true;
 }
+
 }  // namespace ELF
 
 #undef DBGMSG
