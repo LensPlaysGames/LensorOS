@@ -23,6 +23,8 @@
 #include <integers.h>
 #include <interrupts/interrupts.h>
 
+#include <format>
+
 struct CPUState {
     u64 RSP;
     u64 RBX;
@@ -47,6 +49,9 @@ struct CPUState {
 
 static_assert(offsetof(CPUState, RCX) == 16);
 static_assert(offsetof(CPUState, Frame) == 144);
+
+[[nodiscard]]
+bool verify(const CPUState&);
 
 template <>
 struct std::formatter<CPUState> : std::formatter<std::string_view> {
