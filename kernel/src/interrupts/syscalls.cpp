@@ -80,9 +80,6 @@ void sys$1_close(ProcessFileDescriptor fd) {
 }
 
 int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
-    CPUState* cpu = nullptr;
-    asm volatile("mov %%r11, %0\n"
-                 : "=r"(cpu));
     DBGMSG(sys$_dbgfmt, 2, "read");
     DBGMSG(
         "  file descriptor: {}\n"
@@ -139,9 +136,6 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
 }
 
 int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
-    CPUState* cpu = nullptr;
-    asm volatile("mov %%r11, %0\n"
-                 : "=r"(cpu));
     DBGMSG(sys$_dbgfmt, 3, "write");
     DBGMSG(
         "  file descriptor: {}\n"
@@ -191,9 +185,6 @@ void sys$4_poke() {
 }
 
 void sys$5_exit(int status) {
-    CPUState* cpu = nullptr;
-    asm volatile("mov %%r11, %0\n"
-                 : "=r"(cpu));
     DBGMSG(sys$_dbgfmt, 5, "exit");
     DBGMSG(
         "  status: {}\n"
@@ -206,7 +197,8 @@ void sys$5_exit(int status) {
         bool success = Scheduler::remove_process(pid, status);
         if (not success) {
             std::print("[SYS$]:exit: Failure to remove process {}\n", pid);
-        } else {
+        }
+        else {
             std::print("[SYS$]:exit({}) -- Removed process {}\n", status, pid);
         }
     }
@@ -235,7 +227,8 @@ void* sys$6_map(void* address, usz size, u64 flags) {
     usz pages = 0;
     if ((size % PAGE_SIZE) == 0) {
         pages = size / PAGE_SIZE;
-    } else {
+    }
+    else {
         pages = 1 + (size / PAGE_SIZE);
     }
 
@@ -328,9 +321,6 @@ void sys$8_time(Time::tm* time) {
 /// Wait for process with PID to terminate. If process with PID is
 /// invalid, return immediately.
 int sys$9_waitpid(pid_t pid, int* status) {
-    CPUState* cpu = nullptr;
-    asm volatile("mov %%r11, %0\n"
-                 : "=r"(cpu));
     DBGMSG(sys$_dbgfmt, 9, "waitpid");
 
     auto* thisProcess = Scheduler::CurrentProcess->value();
@@ -398,8 +388,15 @@ pid_t sys$10_fork() {
     CPUState* cpu = nullptr;
     asm volatile("mov %%r11, %0\n"
                  : "=r"(cpu));
+
     DBGMSG(sys$_dbgfmt, 10, "fork");
+
     Process* process = Scheduler::CurrentProcess->value();
+
+    // FIXME: fix for invalid kernel stack in the child... not sure if needed
+    // in the parent.
+    process->kernel_stack = (uintptr_t)cpu;
+
     // Copy current process.
     pid_t cpid = CopyUserspaceProcess(process);
     // std::print("[FORK]: PPID: {}, CPID: {}\n", process->ProcessID, cpid);
@@ -421,15 +418,24 @@ void sys$11_exec(const char* path, const char** args) {
     CPUState* cpu = nullptr;
     asm volatile("mov %%r11, %0\n"
                  : "=r"(cpu));
+
+    std::print("[EXEC]\n");
+
     DBGMSG(sys$_dbgfmt, 11, "exec");
+
+    std::print("[EXEC]: path=\"{}\", args={}\n", path, (void*)args);
+
     if (not path) {
         std::print("[EXEC]: Can not execute NULL path\n");
         return;
     }
     Process* process = Scheduler::CurrentProcess->value();
+    std::print("[EXEC]: process: {:#016x}, kernel_stack: {:#016x}, cpu: {:#016x}\n", (uintptr_t)process, process->kernel_stack, (uintptr_t)cpu);
+    process->kernel_stack = (uintptr_t)cpu;
 
 #if defined(DEBUG_SYSCALLS)
     std::print(
+        "[EXEC]:\n"
         "  path: {}\n"
         "  args:\n",
         path);
@@ -441,14 +447,20 @@ void sys$11_exec(const char* path, const char** args) {
     // Load executable at path with virtual filesystem.
     FileDescriptors fds = SYSTEM->virtual_filesystem().open(path);
     if (fds.invalid()) {
-        std::print("[EXEC]: Could not load file when path == {}\n", path);
+        std::print("[SYS$]:exec: Could not load file when path == {}\n", path);
         return;
     }
 
-    // TODO: What if path is a directory?? What if it isn't an executable?
-    // Currently, things kind of explode.
+    {
+        auto meta = SYSTEM->virtual_filesystem().file(fds.Global);
+        if (not meta->is_regular()) {
+            std::print("[SYS$]:exec: File is not a regular file: {}\n", path);
+            return;
+        }
+    }
 
     process->ExecutablePath = path;
+    std::print("[EXEC]: process->ExecutablePath set to \"{}\"\n", process->ExecutablePath);
 
     std::vector<std::string> args_vector_impl;
     std::vector<std::string_view> args_vector;
@@ -474,15 +486,27 @@ void sys$11_exec(const char* path, const char** args) {
         process->State = Process::ProcessState::SLEEPING;
         Scheduler::yield();
         std::print("[SYS$]:exec: yield returned (0)\n");
+        hang();
     }
 
     // Scheduler::print_debug();
     SYSTEM->virtual_filesystem().close(fds.Process);
 
-    // Restore CPU state from cached state modified by above process stuff.
-    *cpu = *(CPUState*)process->kernel_stack;
+    // process->kernel_stack == cpu
+    if (not verify(*cpu)) {
+        // ... Unrecoverable, terminate the program, somehow.
+        std::print("[SYS$]:exec: Failed to replace process and parent is now unrecoverable, terminating.\n");
+        // TODO: Mark for destruction (halt and catch fire).
+        // FIXME: We should figure out how to exit the scope, so that everything is freed properly...
+        process->State = Process::ProcessState::SLEEPING;
+        Scheduler::yield();
+        std::print("[SYS$]:exec: yield returned (1)\n");
+        hang();
+    }
 
-    std::print("{}\n", *cpu);
+    std::print("[EXEC]: process->CR3: {:#016x}, active cr3: {:#016x}\n", (uintptr_t)process->CR3, (uintptr_t)Memory::active_page_map());
+
+    std::print("[EXEC]: returning from exec() syscall with {}\n", *cpu);
 }
 
 /// The second file descriptor given will be associated with the file
@@ -822,9 +846,6 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* givenAddress, usz addre
 }
 
 ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* addressLength) {
-    CPUState* cpu = nullptr;
-    asm volatile("mov %%r11, %0\n"
-                 : "=r"(cpu));
     DBGMSG(sys$_dbgfmt, 22, "accept");
 
     Process* process = Scheduler::CurrentProcess->value();
