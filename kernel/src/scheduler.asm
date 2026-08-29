@@ -22,6 +22,9 @@
 extern timer_tick
 ;; The unified C++ scheduling logic
 extern switch_process
+;; The function that updates cr3, doing bookkeeping of the currently
+;; active page map.
+extern flush_page_map
 
 ; ==============================================================================
 ; VOLUNTARY YIELD WRAPPER
@@ -142,17 +145,29 @@ switch_context_asm:
     ; RCX = process->CPUExtraSet
     mov rcx, qword [rax + 752]
 
-    ; Load target stack pointer
-    mov rsp, rdi
-
-    ; Change page map register
+    ; Change page map register, if needed
     mov rax, cr3
     cmp rax, rsi
     je .skip_cr3_flush
-    mov cr3, rsi
+
+    push rdi
+    push rsi
+    push rdx
+    push rcx
+    mov rdi, rsi ; Argument 1 -> RDI (page map pointer)
+    call flush_page_map
+    pop rcx
+    pop rdx
+    pop rsi
+    pop rdi
+
 .skip_cr3_flush:
 
+    ; Load target stack pointer
+    mov rsp, rdi
+
     ; Reset segment registers to kernel data segment
+    ; FIXME: GS---thread local stuff, etc.
     mov ax, 0x10
     mov es, ax
     mov ds, ax

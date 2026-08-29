@@ -26,7 +26,7 @@
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 
-#include <format>
+#include <print>
 
 namespace Memory {
 PageTable* ActivePageMap;
@@ -63,7 +63,18 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
             "    Larger Pages:    {}\n"
             "    Global:          {}\n"
             "\n",
-            virtualAddress, physicalAddress, (void*)pageMapLevelFour, present, write, user, writeThrough, cacheDisabled, accessed, dirty, largerPages, global);
+            virtualAddress,
+            physicalAddress,
+            (void*)pageMapLevelFour,
+            present,
+            write,
+            user,
+            writeThrough,
+            cacheDisabled,
+            accessed,
+            dirty,
+            largerPages,
+            global);
     }
 
     PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
@@ -187,14 +198,6 @@ void unmap_pages(PageTable* pageTable, void* virtualAddress, usz pageCount, Show
     for (u64 t = u64(virtualAddress); t < end; t += PAGE_SIZE) {
         Memory::unmap(pageTable, (void*)t, d);
     }
-}
-
-void flush_page_map(PageTable* pageMapLevelFour) {
-    asm volatile("mov %0, %%cr3"
-                 :  // No outputs
-                 : "r"(pageMapLevelFour)
-                 : "memory");
-    ActivePageMap = pageMapLevelFour;
 }
 
 Memory::PageTable* clone_page_map_copy_on_write(Memory::PageTable* oldPageTable) {
@@ -493,7 +496,8 @@ void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filte
                     if (flags != -1ull && PDE.flags() != flags) {
                         if (flags & (u64)Memory::PageTableFlag::Present && (flags & (u64)filter) == (u64)filter) {
                             std::print("Present: {:#016x} to {:#016x} |",
-                                       startAddress, endAddress);
+                                       startAddress,
+                                       endAddress);
                             if (flags & (u64)Memory::PageTableFlag::ReadWrite)
                                 std::print(" RW");
                             if (flags & (u64)Memory::PageTableFlag::UserSuper)
@@ -551,4 +555,13 @@ void print_pde_flags(Memory::PageDirectoryEntry PDE) {
     if (PDE.flag(Memory::PageTableFlag::NX))
         std::print(" NX");
 }
+
 }  // namespace Memory
+
+extern "C" void flush_page_map(Memory::PageTable* pageMapLevelFour) {
+    asm volatile("mov %0, %%cr3"
+                 :  // No outputs
+                 : "r"(pageMapLevelFour)
+                 : "memory");
+    Memory::ActivePageMap = pageMapLevelFour;
+}

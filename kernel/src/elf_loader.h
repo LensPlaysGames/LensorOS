@@ -187,12 +187,20 @@ LoadUserspaceElf64Process(
             }
             u64 virtAddress = phdr->p_vaddr - offset;  // page align
             for (u64 t = 0; t < pages * PAGE_SIZE; t += PAGE_SIZE) {
-                Memory::map(pageTable, (void*)(virtAddress + t), loadedProgram + t,
-                            flags,
-                            Memory::ShowDebug::No);
+                Memory::map(
+                    pageTable,
+                    (void*)(virtAddress + t),
+                    loadedProgram + t,
+                    flags,
+                    Memory::ShowDebug::No);
             }
-            process->add_memory_region((void*)virtAddress, (void*)loadedProgram, pages * PAGE_SIZE, flags);
-        } else if (phdr->p_type == PT_GNU_STACK) {
+            process->add_memory_region(
+                (void*)virtAddress,
+                (void*)loadedProgram,
+                pages * PAGE_SIZE,
+                flags);
+        }
+        else if (phdr->p_type == PT_GNU_STACK) {
             DBGMSG("[ELF]: Stack permissions set by GNU_STACK program header.\n");
             if (!(phdr->p_flags & PF_X)) {
                 stack_flags |= (size_t)Memory::PageTableFlag::NX;
@@ -210,8 +218,18 @@ LoadUserspaceElf64Process(
     constexpr uintptr_t virtual_stack_bottom = 0x0000733700000000;
     constexpr uintptr_t virtual_stack_top = virtual_stack_bottom + UserProcessStackSize;
     auto user_stack = Memory::request_pages(UserProcessStackSizePages);
-    Memory::map_pages(pageTable, (void*)virtual_stack_bottom, user_stack, stack_flags, UserProcessStackSizePages, Memory::ShowDebug::No);
-    process->add_memory_region((void*)virtual_stack_bottom, user_stack, UserProcessStackSize, stack_flags);
+    Memory::map_pages(
+        pageTable,
+        (void*)virtual_stack_bottom,
+        user_stack,
+        stack_flags,
+        UserProcessStackSizePages,
+        Memory::ShowDebug::No);
+    process->add_memory_region(
+        (void*)virtual_stack_bottom,
+        user_stack,
+        UserProcessStackSize,
+        stack_flags);
     // for (auto virtual_page = virtual_stack_bottom; virtual_page < virtual_stack_top; virtual_page += PAGE_SIZE) {
     //     auto physical_page = Memory::request_page();
     //     if (physical_page == 0) {
@@ -421,7 +439,12 @@ CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::str
     // Open stdin.
     vfs.add_file(vfs.StdinDriver->open("stdin"), process);
     // Open stdout and stderr
-    auto outmeta = FileMetadata::Make(FileMetadata::FileType::Regular, "stdout", fsd(vfs.StdoutDriver), 0, nullptr);
+    auto outmeta = FileMetadata::Make(
+        FileMetadata::FileType::Regular,
+        "stdout",
+        fsd(vfs.StdoutDriver),
+        0,
+        nullptr);
     vfs.add_file(outmeta, process);
     vfs.add_file(std::move(outmeta), process);
     vfs.print_debug();
@@ -436,7 +459,9 @@ CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::str
 #endif
 
     process->ExecutablePath = args[0];
-    process->WorkingDirectory = process->ExecutablePath.substr(0, process->ExecutablePath.find_last_of("/"));
+    process->WorkingDirectory = process->ExecutablePath.substr(
+        0,
+        process->ExecutablePath.find_last_of("/"));
 
     // Make scheduler aware that this process may be run.
     process->State = Process::ProcessState::RUNNING;

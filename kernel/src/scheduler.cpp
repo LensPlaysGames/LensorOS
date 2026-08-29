@@ -358,8 +358,15 @@ extern "C" Process* switch_process(CPUState* cpu) {
     // std::print("switch_process()...\n");
 
     // Save address of stack frame
-    if (CurrentProcess and CurrentProcess->value())
+    if (CurrentProcess and CurrentProcess->value()) {
         CurrentProcess->value()->kernel_stack = (uintptr_t)cpu;
+
+        // std::print(
+        //     "\n\nSwitching from process({}) loaded from \"{}\": {}\n",
+        //     CurrentProcess->value()->ProcessID,
+        //     CurrentProcess->value()->ExecutablePath,
+        //     *(CPUState*)CurrentProcess->value()->kernel_stack);
+    }
 
     // TODO: Check all processes that called `wait(ms)`, and run/
     // unstop them if the timestamp is greater than the calculated
@@ -387,6 +394,13 @@ extern "C" Process* switch_process(CPUState* cpu) {
     // kernel stack.
     // std::print("Setting TSS RSP to 0x{:016x} (was 0x{:016x})\n", CurrentProcess->value()->kernel_stack, TSS::tssEntry.get_stack());
     TSS::tssEntry.set_stack(CurrentProcess->value()->kernel_stack);
+
+    // std::print("Kernel Stack: 0x{:016x}\n", CurrentProcess->value()->kernel_stack);
+    // std::print(
+    //     "Switching to process({}) loaded from \"{}\": {}\n",
+    //     CurrentProcess->value()->ProcessID,
+    //     CurrentProcess->value()->ExecutablePath,
+    //     *(CPUState*)CurrentProcess->value()->kernel_stack);
 
     // std::print("switch_process() done...\n");
     return CurrentProcess->value();
@@ -428,7 +442,9 @@ pid_t CopyUserspaceProcess(Process* original) {
             newProcess->CR3,
             newMemory.vaddr,
             newMemory.paddr,
-            (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite | (u64)Memory::PageTableFlag::UserSuper,
+            (u64)Memory::PageTableFlag::Present
+                | (u64)Memory::PageTableFlag::ReadWrite
+                | (u64)Memory::PageTableFlag::UserSuper,
             newMemory.pages,
             Memory::ShowDebug::No);
 
@@ -438,8 +454,10 @@ pid_t CopyUserspaceProcess(Process* original) {
 
     // Copy file descriptors.
     // FIXME: We need a better way of doing this.
+    // ***************
     // ProcFDs need to remain equal, while the values that they index
     // in the sparse_vector need to be replaced with a new shared ptr.
+    // ***************
     std::vector<ProcFD> garbage_fds_to_erase;
     for (const auto& [procfd, sysfd] : original->FileDescriptors.pairs()) {
         // In order to account for holes in the file descriptors vector
@@ -449,7 +467,7 @@ pid_t CopyUserspaceProcess(Process* original) {
             auto [fd, success] = newProcess->FileDescriptors.push_back(sysfd);
             if (!success)
                 break;
-            std::print("Pushing garbage: {}...\n", fd);
+            std::print("[SCHED]: Pushing garbage file descriptor: {}...\n", fd);
             garbage_fds_to_erase.push_back(fd);
         }
 
@@ -459,7 +477,7 @@ pid_t CopyUserspaceProcess(Process* original) {
     }
 
     for (auto fd : garbage_fds_to_erase) {
-        std::print("Clearing garbage at {}...\n", fd);
+        std::print("[SCHED]: Clearing garbage file descriptor: {}\n", fd);
         newProcess->FileDescriptors.erase(fd);
     }
 
