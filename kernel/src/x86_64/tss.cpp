@@ -64,9 +64,9 @@ void initialize() {
     }
     memset(physical_stack_base, 0, KernelInterruptStackSize);
     auto physical_stack_top = ((uintptr_t)physical_stack_base) + KernelInterruptStackSize;
-    // Scheduler::StartupProcess.add_memory_region(physical_stack_base, physical_stack_base, KernelInterruptStackSize, KernelInterruptStackFlags);
     std::print("  Stack: 0x{:016x}\n", physical_stack_top);
 
     tssEntry.set_stack(physical_stack_top);
+    Scheduler::StartupProcess.kernel_stack_top = physical_stack_top;
 }
 }  // namespace TSS

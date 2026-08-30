@@ -137,13 +137,13 @@ switch_context_asm:
     ; RAX = Process*
 
     ; RDI = process->kernel_stack
-    mov rdi, qword [rax + 56]
+    mov rdi, qword [rax + 64]
     ; RSI = process->CR3
-    mov rsi, qword [rax + 232]
+    mov rsi, qword [rax + 240]
     ; RDX = &process->CPUExtra
-    lea rdx, qword [rax + 240]
+    lea rdx, qword [rax + 256]
     ; RCX = process->CPUExtraSet
-    mov rcx, qword [rax + 752]
+    mov rcx, qword [rax + 768]
 
     ; Change page map register, if needed
     mov rax, cr3
@@ -196,7 +196,7 @@ switch_context_asm:
     pop r13
     pop r14
     pop r15
-    ;; skip fs, gs (avoid popping user selectors for kernel mode)
+    ; skip fs, gs (avoid popping user selectors for kernel mode)
     add rsp, 16
     pop rax
 

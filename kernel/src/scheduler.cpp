@@ -273,7 +273,7 @@ Process* request_process(pid_t parent_pid) {
     }
     memset(physical_stack_base, 0, KernelStackSize);
     auto physical_stack_top = ((uintptr_t)physical_stack_base) + KernelStackSize;
-    // process->add_memory_region(physical_stack_base, physical_stack_base, KernelStackSize, KernelStackFlags);
+    process->kernel_stack_top = physical_stack_top;
     process->kernel_stack = physical_stack_top;
 
     return process;
@@ -359,6 +359,11 @@ extern "C" Process* switch_process(CPUState* cpu) {
 
     // Save address of stack frame
     if (CurrentProcess and CurrentProcess->value()) {
+        // std::print(
+        //     "[SCHED]: Updating kernel stack of process({}) to 0x{:016x} (was 0x{:016x})\n",
+        //     CurrentProcess->value()->ProcessID,
+        //     (uintptr_t)cpu,
+        //     CurrentProcess->value()->kernel_stack);
         CurrentProcess->value()->kernel_stack = (uintptr_t)cpu;
 
         // std::print(
@@ -392,8 +397,8 @@ extern "C" Process* switch_process(CPUState* cpu) {
 
     // Update kernel stack that will be returned to with this process' saved
     // kernel stack.
-    // std::print("Setting TSS RSP to 0x{:016x} (was 0x{:016x})\n", CurrentProcess->value()->kernel_stack, TSS::tssEntry.get_stack());
-    TSS::tssEntry.set_stack(CurrentProcess->value()->kernel_stack);
+    // std::print("  Setting TSS RSP to 0x{:016x} (was 0x{:016x})\n", CurrentProcess->value()->kernel_stack_top, TSS::tssEntry.get_stack());
+    TSS::tssEntry.set_stack(CurrentProcess->value()->kernel_stack_top);
 
     // std::print("Kernel Stack: 0x{:016x}\n", CurrentProcess->value()->kernel_stack);
     // std::print(

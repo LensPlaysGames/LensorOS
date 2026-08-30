@@ -64,6 +64,7 @@ struct Process {
 
     pid_t ParentProcess{(pid_t)-1};
 
+    uintptr_t kernel_stack_top{};
     uintptr_t kernel_stack{};
 
     /// A list of programs waiting to be set to `RUNNING` when this
@@ -186,10 +187,10 @@ struct Process {
 extern void (*timer_tick)();
 
 // For switch_context_asm in scheduler.asm
-static_assert(offsetof(Process, kernel_stack) == 56);
-static_assert(offsetof(Process, CR3) == 232);
-static_assert(offsetof(Process, CPUExtra) == 240);
-static_assert(offsetof(Process, CPUExtraSet) == 752);
+static_assert(offsetof(Process, kernel_stack) == 64);
+static_assert(offsetof(Process, CR3) == 240);
+static_assert(offsetof(Process, CPUExtra) == 256);
+static_assert(offsetof(Process, CPUExtraSet) == 768);
 
 namespace Scheduler {
 /// External symbol defined in `scheduler.cpp`
