@@ -50,7 +50,7 @@ yield:
     mov rax, [rsp + 184]        ; Fetch the return RIP (pushed by 'call yield')
     mov [rsp + 144], rax        ; Frame.ip = Return RIP
 
-    lea rbx, [rsp + 184]        ; Calculate pristine RSP (from before 'call yield')
+    lea rbx, [rsp + 192]        ; Calculate pristine RSP (from before 'call yield')
     mov [rsp + 168], rbx        ; Frame.sp = Pristine original RSP
 
     mov [rsp + 176], qword 0x10 ; Frame.ss = 0x10
