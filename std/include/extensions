@@ -24,13 +24,13 @@
 #ifndef _LENSOROS_EXTENSIONS
 #define _LENSOROS_EXTENSIONS
 
-#include <algorithm>
 #include <bits/colours.h>
-#include <vector>
 
+#include <algorithm>
 #include <extensions_double_ended_queue>
 #include <extensions_ring_buffer>
 #include <extensions_sparse_vector>
+#include <vector>
 
 namespace std {
 template <typename _Container, typename _Predicate>
@@ -43,6 +43,6 @@ constexpr auto find(_Container&& container, _El&& el) {
     return find(container.begin(), container.end(), std::forward<_El>(el));
 }
 
-} // namespace std
+}  // namespace std
 
-#endif // _LENSOROS_EXTENSIONS
+#endif  // _LENSOROS_EXTENSIONS

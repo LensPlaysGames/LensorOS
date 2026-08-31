@@ -17,7 +17,6 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #ifndef _STDDEF_H
 #define _STDDEF_H
 
@@ -37,15 +36,15 @@ typedef struct {
 } max_align_t;
 
 #ifdef __cplusplus
-#   define NULL nullptr
+#define NULL nullptr
 namespace std {
 typedef decltype(nullptr) nullptr_t;
 using size_t = size_t;
 using ptrdiff_t = ptrdiff_t;
-} // namespace std
+}  // namespace std
 #else
-#   define NULL ((void*)0)
-    typedef __WCHAR_TYPE__ wchar_t;
+#define NULL ((void*)0)
+typedef __WCHAR_TYPE__ wchar_t;
 #endif
 
 __END_DECLS__

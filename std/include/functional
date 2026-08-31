@@ -46,16 +46,16 @@ inline size_t __hash_ptr(void* __ptr) {
     return __hash_64bit(uint64_t(__ptr));
 }
 
-} // namespace __detail
+}  // namespace __detail
 
 template <class _Key>
 struct hash;
 
-template<>
+template <>
 struct hash<std::nullptr_t> {
     using argument_type = std::nullptr_t;
     using result_type = size_t;
-    result_type operator() (argument_type __key) const noexcept {
+    result_type operator()(argument_type __key) const noexcept {
         return std::__detail::__hash_ptr((void*)__key);
     }
 };
@@ -64,19 +64,21 @@ template <class _T>
 struct hash<_T*> {
     using argument_type = _T*;
     using result_type = size_t;
-    result_type operator() (argument_type __key) const noexcept {
+    result_type operator()(argument_type __key) const noexcept {
         return std::__detail::__hash_ptr(__key);
     }
 };
 
-#define _IntegerHashImpl(__t) template<> struct hash<__t> {             \
-    using argument_type = __t;                                          \
-    using result_type = size_t;                                         \
-    result_type operator() (argument_type __key) const noexcept {       \
-        if constexpr (sizeof(argument_type) <= 4) return std::__detail::__hash_32bit(__key); \
-        if constexpr (sizeof(argument_type) <= 8) return std::__detail::__hash_64bit(__key); \
-        static_assert(sizeof(argument_type) <= 8, "Unsupported "#__t" size, sorry"); \
-    }                                                                   \
+#define _IntegerHashImpl(__t)                                                                    \
+    template <>                                                                                  \
+    struct hash<__t> {                                                                           \
+        using argument_type = __t;                                                               \
+        using result_type = size_t;                                                              \
+        result_type operator()(argument_type __key) const noexcept {                             \
+            if constexpr (sizeof(argument_type) <= 4) return std::__detail::__hash_32bit(__key); \
+            if constexpr (sizeof(argument_type) <= 8) return std::__detail::__hash_64bit(__key); \
+            static_assert(sizeof(argument_type) <= 8, "Unsupported " #__t " size, sorry");       \
+        }                                                                                        \
     }
 
 _IntegerHashImpl(int);
@@ -96,47 +98,51 @@ _IntegerHashImpl(char16_t);
 _IntegerHashImpl(char32_t);
 _IntegerHashImpl(wchar_t);
 
-template<> struct hash<float> {
+template <>
+struct hash<float> {
     using argument_type = float;
     using result_type = size_t;
-    result_type operator() (argument_type __key) const noexcept {
+    result_type operator()(argument_type __key) const noexcept {
         static_assert(sizeof(argument_type) == 4, "Sorry, float must be 4 bytes for current implementation of std::hash");
         return std::__detail::__hash_32bit(std::bit_cast<uint32_t>(__key));
     }
 };
-template<> struct hash<double> {
+template <>
+struct hash<double> {
     using argument_type = double;
     using result_type = size_t;
-    result_type operator() (argument_type __key) const noexcept {
+    result_type operator()(argument_type __key) const noexcept {
         static_assert(sizeof(argument_type) == 8, "Sorry, double must be 8 bytes for current implementation of std::hash");
         return std::__detail::__hash_64bit(std::bit_cast<uint64_t>(__key));
     }
 };
 // TODO
-template<> struct hash<long double>;
+template <>
+struct hash<long double>;
 
-
-#define _DefineBinaryOperatorFunctionObject(name, op) template <class _T = void> \
-    struct name {                                                       \
-        constexpr _T operator() (const _T& __lhs, const _T& __rhs) const { \
-            return __lhs op __rhs;                                      \
-        };                                                              \
+#define _DefineBinaryOperatorFunctionObject(name, op)                     \
+    template <class _T = void>                                            \
+    struct name {                                                         \
+        constexpr _T operator()(const _T& __lhs, const _T& __rhs) const { \
+            return __lhs op __rhs;                                        \
+        };                                                                \
     }
 
-#define _DefineBinaryComparisonFunctionObject(name, op) template <class _T = void> \
-    struct name {                                                       \
-        constexpr bool operator() (const _T& __lhs, const _T& __rhs) const { \
-            return __lhs op __rhs;                                      \
-        };                                                              \
+#define _DefineBinaryComparisonFunctionObject(name, op)                     \
+    template <class _T = void>                                              \
+    struct name {                                                           \
+        constexpr bool operator()(const _T& __lhs, const _T& __rhs) const { \
+            return __lhs op __rhs;                                          \
+        };                                                                  \
     }
 
-#define _DefineUnaryOperatorFunctionObject(name, op) template <class _T = void> \
-    struct name {                                                       \
-        constexpr _T operator() (const _T& __value) const {             \
-            return op __value;                                          \
-        };                                                              \
+#define _DefineUnaryOperatorFunctionObject(name, op)       \
+    template <class _T = void>                             \
+    struct name {                                          \
+        constexpr _T operator()(const _T& __value) const { \
+            return op __value;                             \
+        };                                                 \
     }
-
 
 _DefineBinaryOperatorFunctionObject(plus, +);
 _DefineBinaryOperatorFunctionObject(minus, -);
@@ -161,7 +167,6 @@ _DefineBinaryOperatorFunctionObject(bit_or, |);
 _DefineBinaryOperatorFunctionObject(bit_xor, ^);
 _DefineUnaryOperatorFunctionObject(bit_not, ~);
 
+}  // namespace std
 
-} // namespace std
-
-#endif // _LENSOROS_FUNCTIONAL_H
+#endif  // _LENSOROS_FUNCTIONAL_H

@@ -21,14 +21,14 @@
 #define LENSOROS_VECTOR_
 
 #ifdef __kernel__
-#   include "memory/heap.h"
+#include "memory/heap.h"
 #endif
 
 #include <algorithm>
+#include <initializer_list>
 #include <iterator>
 #include <memory>
 #include <type_traits>
-#include <initializer_list>
 #include <utility>
 
 namespace std {
@@ -36,8 +36,7 @@ namespace std {
 template <
     typename _T,
     typename __index_type = size_t,
-    typename = _Requires<_NotRef<_T>>
->
+    typename = _Requires<_NotRef<_T>>>
 struct __vector {
     using value_type = _T;
     using pointer = _T*;
@@ -51,12 +50,12 @@ struct __vector {
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-private:
-    value_type* __ptr{};
+   private:
+    value_type* __ptr{nullptr};
     size_type __sz{};
     size_type __cap{};
 
-public:
+   public:
     /// =======================================================================
     ///  Constructors.
     /// =======================================================================
@@ -69,20 +68,23 @@ public:
     /// Construct a __vector with __n copies of __val.
     __vector(size_type __n, const value_type& __val) : __sz(__n), __cap(__n) {
         __ptr = new value_type[__cap];
-        for (size_type i = 0; i < __n; ++i) { __ptr[i] = __val; }
+        for (size_type i = 0; i < __n; ++i) {
+            __ptr[i] = __val;
+        }
     }
 
     /// Construct a __vector with the contents of the range [__first, __last).
-    template<typename _It>
+    template <typename _It>
     __vector(_It __first, _It __last) : __sz(__last - __first), __cap(__last - __first) {
         __ptr = new value_type[__cap];
-        for (size_type i = 0; i < __sz; ++i) { __ptr[i] = *__first++; }
+        for (size_type i = 0; i < __sz; ++i) {
+            __ptr[i] = *__first++;
+        }
     }
 
     // The Initializer List Constructor
     __vector(std::initializer_list<value_type> __il)
-    : __sz(__il.size()), __cap(__il.size())
-    {
+        : __sz(__il.size()), __cap(__il.size()) {
         // Allocate space for the incoming elements
         __ptr = new value_type[__cap];
 
@@ -95,7 +97,9 @@ public:
     /// =======================================================================
     __vector(const __vector& __other) : __sz(__other.__sz), __cap(__other.__cap) {
         __ptr = new value_type[__cap];
-        for (size_type i = 0; i < __sz; ++i) { __ptr[i] = __other.__ptr[i]; }
+        for (size_type i = 0; i < __sz; ++i) {
+            __ptr[i] = __other.__ptr[i];
+        }
     }
 
     __vector(__vector&& __other) noexcept : __ptr(__other.__ptr), __sz(__other.__sz), __cap(__other.__cap) {
@@ -105,16 +109,22 @@ public:
     }
 
     __vector& operator=(const __vector& __other) {
-        if (this == addressof(__other)) { return *this; }
+        if (this == addressof(__other)) {
+            return *this;
+        }
         __sz = __other.__sz;
         __cap = __other.__cap;
         __ptr = new value_type[__sz];
-        for (size_type i = 0; i < __sz; ++i) { __ptr[i] = __other.__ptr[i]; }
+        for (size_type i = 0; i < __sz; ++i) {
+            __ptr[i] = __other.__ptr[i];
+        }
         return *this;
     }
 
     __vector& operator=(__vector&& __other) noexcept {
-        if (this == addressof(__other)) { return *this; }
+        if (this == addressof(__other)) {
+            return *this;
+        }
         __ptr = __other.__ptr;
         __sz = __other.__sz;
         __cap = __other.__cap;
@@ -156,23 +166,32 @@ public:
     size_type capacity() const noexcept { return __cap; }
 
     void resize(size_type __n) {
-        if (__n > __cap) { reserve(__n); }
+        if (__n > __cap) {
+            reserve(__n);
+        }
         __sz = __n;
     }
 
     void resize(size_type __n, const value_type& __val) {
-        if (__n > __cap) { reserve(__n); }
+        if (__n > __cap) {
+            reserve(__n);
+        }
         if (__n > __sz) {
-            for (size_type i = __sz; i < __n; ++i) { __ptr[i] = __val; }
+            for (size_type i = __sz; i < __n; ++i) {
+                __ptr[i] = __val;
+            }
         }
         __sz = __n;
     }
 
     void reserve(size_type __n) {
-        if (__n > max_size()) { /* TODO: Crash horribly */ }
+        if (__n > max_size()) { /* TODO: Crash horribly */
+        }
         if (__n > __cap) {
             auto __new_ptr = new value_type[__n];
-            for (size_type i = 0; i < __sz; ++i) { __new_ptr[i] = std::move(__ptr[i]); }
+            for (size_type i = 0; i < __sz; ++i) {
+                __new_ptr[i] = std::move(__ptr[i]);
+            }
             delete[] __ptr;
             __ptr = __new_ptr;
             __cap = __n;
@@ -182,7 +201,9 @@ public:
     void shrink_to_fit() {
         if (__sz < __cap) {
             auto __new_ptr = new value_type[__sz];
-            for (size_type i = 0; i < __sz; ++i) { __new_ptr[i] = std::move(__ptr[i]); }
+            for (size_type i = 0; i < __sz; ++i) {
+                __new_ptr[i] = std::move(__ptr[i]);
+            }
             delete[] __ptr;
             __ptr = __new_ptr;
             __cap = __sz;
@@ -210,20 +231,26 @@ public:
     /// =======================================================================
     ///  Pushing, popping, and emplacing.
     /// =======================================================================
-    template <typename ..._Args>
+    template <typename... _Args>
     reference emplace_back(_Args&&... __args) {
-        if (__sz == __cap) { reserve(__cap == 0 ? 1 : __cap * 2); }
+        if (__sz == __cap) {
+            reserve(__cap == 0 ? 1 : __cap * 2);
+        }
         __ptr[__sz++] = value_type(forward<_Args>(__args)...);
         return __ptr[__sz - 1];
     }
 
     void push_back(const value_type& __val) {
-        if (__sz == __cap) { reserve(__cap == 0 ? 1 : __cap * 2); }
+        if (__sz == __cap) {
+            reserve(__cap == 0 ? 1 : __cap * 2);
+        }
         __ptr[__sz++] = __val;
     }
 
     void push_back(value_type&& __val) {
-        if (__sz == __cap) { reserve(__cap == 0 ? 1 : __cap * 2); }
+        if (__sz == __cap) {
+            reserve(__cap == 0 ? 1 : __cap * 2);
+        }
         __ptr[__sz++] = move(__val);
     }
 
@@ -234,10 +261,15 @@ public:
     ///  Inserting and erasing.
     /// =======================================================================
     iterator insert(const_iterator __pos, value_type&& __val) {
-        if (__pos > end() || __pos < begin()) { /* TODO: Crash horribly */ }
+        if (__pos > end() || __pos < begin()) { /* TODO: Crash horribly */
+        }
         const auto __idx = __pos - __ptr;
-        if (__sz == __cap) { reserve(__cap == 0 ? 1 : __cap * 2); }
-        for (difference_type i = __sz; i > __idx; --i) { __ptr[i] = __ptr[i - 1]; }
+        if (__sz == __cap) {
+            reserve(__cap == 0 ? 1 : __cap * 2);
+        }
+        for (difference_type i = __sz; i > __idx; --i) {
+            __ptr[i] = __ptr[i - 1];
+        }
         __ptr[__idx] = move(__val);
         ++__sz;
         return __ptr + __idx;
@@ -247,25 +279,35 @@ public:
         return insert(__pos, value_type(__val));
     }
 
-    template<typename _It>
+    template <typename _It>
     iterator insert(const_iterator __pos, _It __first, _It __last) {
-        if (__pos > end() || __pos < begin()) { /* TODO: Crash horribly */ }
+        if (__pos > end() || __pos < begin()) { /* TODO: Crash horribly */
+        }
         const auto __idx = __pos - __ptr;
         const auto __n = __last - __first;
-        if (__sz + __n > __cap) { reserve(max(__sz + __n, __cap == 0 ? 1 : __cap * 2)); }
+        if (__sz + __n > __cap) {
+            reserve(max(__sz + __n, __cap == 0 ? 1 : __cap * 2));
+        }
 
-        for (size_type i = __sz + __n - 1; i >= __idx + __n; --i) { __ptr[i] = __ptr[i - __n]; }
-        for (size_type i = 0; i < __n; ++i) { __ptr[__idx + i] = __first[i]; }
+        for (size_type i = __sz + __n - 1; i >= __idx + __n; --i) {
+            __ptr[i] = __ptr[i - __n];
+        }
+        for (size_type i = 0; i < __n; ++i) {
+            __ptr[__idx + i] = __first[i];
+        }
 
         __sz += __n;
         return __ptr + __idx;
     }
 
     iterator erase(const_iterator __first, const_iterator __last) {
-        if (__first > end() || __first < begin() || __last > end() || __last < begin()) { /* TODO: Crash horribly */ }
+        if (__first > end() || __first < begin() || __last > end() || __last < begin()) { /* TODO: Crash horribly */
+        }
         const auto __idx = __first - __ptr;
         const auto __n = __last - __first;
-        for (size_type i = __idx; i < __sz - __n; ++i) { __ptr[i] = __ptr[i + __n]; }
+        for (size_type i = __idx; i < __sz - __n; ++i) {
+            __ptr[i] = __ptr[i + __n];
+        }
         __sz -= __n;
         return __ptr + __idx;
     }
@@ -273,12 +315,9 @@ public:
     iterator erase(const_iterator __pos) { return erase(__pos, __pos + 1); }
 };
 
-
-template
-<typename _ElementType,
- typename __index_type = size_t,
- class _ComparedType
- >
+template <typename _ElementType,
+          typename __index_type = size_t,
+          class _ComparedType>
 constexpr typename __vector<_ElementType, __index_type>::size_type
 erase(__vector<_ElementType, __index_type>& __container, const _ComparedType& __value) {
     size_t __size = __container.size();
@@ -286,11 +325,9 @@ erase(__vector<_ElementType, __index_type>& __container, const _ComparedType& __
     return __size - __container.size();
 }
 
-template
-<typename _ElementType,
- typename __index_type = size_t,
- class _Predicate
- >
+template <typename _ElementType,
+          typename __index_type = size_t,
+          class _Predicate>
 constexpr typename __vector<_ElementType, __index_type>::size_type
 erase_if(__vector<_ElementType, __index_type>& __container, _Predicate __predicate) {
     size_t __size = __container.size();
@@ -298,10 +335,9 @@ erase_if(__vector<_ElementType, __index_type>& __container, _Predicate __predica
     return __size - __container.size();
 }
 
-
 template <typename _T>
 using vector = __vector<_T, size_t>;
 
-} // namespace std
+}  // namespace std
 
-#endif // LENSOROS_VECTOR_
+#endif  // LENSOROS_VECTOR_

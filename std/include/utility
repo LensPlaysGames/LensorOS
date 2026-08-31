@@ -1,20 +1,20 @@
 /* Copyright 2022, Contributors To LensorOS.
-* All rights reserved.
-*
-* This file is part of LensorOS.
-*
-* LensorOS is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* LensorOS is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <type_traits>
@@ -25,8 +25,8 @@
 namespace std {
 /// *Very* simple std::pair.
 template <
-    typename _First,  /// First member of the pair.
-    typename _Second, /// Second member of the pair.
+    typename _First,   /// First member of the pair.
+    typename _Second,  /// Second member of the pair.
 
     /// SFINAE: Make sure the types are not references.
     typename = _Requires<_NotRef<_First>, _NotRef<_Second>>>
@@ -38,9 +38,8 @@ struct pair {
     second_type second;
 };
 
-
-
-template <typename _T> constexpr bool __false = false;
+template <typename _T>
+constexpr bool __false = false;
 template <typename _T>
 add_rvalue_reference_t<_T> declval() noexcept {
     static_assert(__false<_T>, "std::declval() may not be used outside of sizeof, decltype, and other unevaluated contexts");
@@ -64,13 +63,13 @@ constexpr _T&& forward(std::remove_reference_t<_T>&& __t) noexcept {
     return static_cast<_T&&>(__t);
 }
 
-template<class _T>
+template <class _T>
 constexpr void swap(_T& a, _T& b) noexcept {
     auto c = move(a);
     a = move(b);
     b = move(c);
 }
 
-} // namespace std
+}  // namespace std
 
-#endif // _LENSOR_OS_UTILITY
+#endif  // _LENSOR_OS_UTILITY

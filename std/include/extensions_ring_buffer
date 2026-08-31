@@ -27,7 +27,6 @@ namespace std {
 
 template <typename _T, size_t _Size>
 struct ring_buffer {
-
     using size_type = std::size_t;
 
     struct iterator {
@@ -51,14 +50,18 @@ struct ring_buffer {
             return __out;
         }
         iterator& operator--() {
-            if (!__current) __current = _Size - 1;
-            else --__current;
+            if (!__current)
+                __current = _Size - 1;
+            else
+                --__current;
             return *this;
         }
         iterator operator--(int) {
             iterator __out{__ring, __current};
-            if (!__current) --__out.__current = _Size - 1;
-            else --__out.__current;
+            if (!__current)
+                --__out.__current = _Size - 1;
+            else
+                --__out.__current;
             return __out;
         }
         bool operator==(const iterator& __rhs) const {
@@ -109,6 +112,6 @@ struct ring_buffer {
     }
 };
 
-}
+}  // namespace std
 
 #endif /* _LENSOROS_EXTENSIONS_RING_BUFFER_H */

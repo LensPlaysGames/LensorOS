@@ -20,12 +20,17 @@
 #ifndef _LENSOROS_DEQUE_H
 #define _LENSOROS_DEQUE_H
 
+#include <bits/decls.h>
+#include <stddef.h>
 #include <stdint.h>
 
-#include <bits/decls.h>
+#include <vector>
 
 __BEGIN_DECLS__
-void* memmove(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n);
+void* memmove(
+    void* __restrict__ __dest,
+    const void* __restrict__ __src,
+    size_t __n);
 __END_DECLS__
 
 namespace std {
@@ -67,10 +72,10 @@ struct __deque_impl {
         return __head + __index < __data.size();
     }
 
-    reference operator[] (size_type __index) {
+    reference operator[](size_type __index) {
         return &__data[__head + __index];
     }
-    const_reference operator[] (size_type __index) const {
+    const_reference operator[](size_type __index) const {
         return &__data[__head + __index];
     }
 
@@ -177,8 +182,8 @@ struct __deque_impl {
 template <typename _T>
 using double_ended_queue = __deque_impl<_T>;
 
-template<class _T>
-bool operator== (const std::double_ended_queue<_T>& __lhs, const std::double_ended_queue<_T>& __rhs) {
+template <class _T>
+bool operator==(const std::double_ended_queue<_T>& __lhs, const std::double_ended_queue<_T>& __rhs) {
     if (__lhs.size() != __rhs.size()) return false;
     // Compare each element
     for (size_t i = 0; i < __lhs.size(); ++i) {
@@ -186,11 +191,11 @@ bool operator== (const std::double_ended_queue<_T>& __lhs, const std::double_end
     }
     return true;
 }
-template<class _T>
-bool operator!= (const std::double_ended_queue<_T>& __lhs, const std::double_ended_queue<_T>& __rhs) {
+template <class _T>
+bool operator!=(const std::double_ended_queue<_T>& __lhs, const std::double_ended_queue<_T>& __rhs) {
     return !(operator==(__lhs, __rhs));
 }
 
-}
+}  // namespace std
 
 #endif /* _LENSOROS_DEQUE_H */

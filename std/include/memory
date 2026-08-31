@@ -30,8 +30,7 @@ namespace std {
 template <typename _T>
 constexpr _T* addressof(_T& __val) noexcept {
     return reinterpret_cast<_T*>(
-        &const_cast<char&>(reinterpret_cast<const volatile char&>(__val))
-    );
+        &const_cast<char&>(reinterpret_cast<const volatile char&>(__val)));
 }
 
 template <typename _T>
@@ -48,7 +47,7 @@ class unique_ptr {
         }
     }
 
-public:
+   public:
     unique_ptr() = default;
     explicit unique_ptr(_T* __ptr) : __ptr(__ptr) {}
     unique_ptr(nullptr_t) noexcept : unique_ptr() {}
@@ -93,7 +92,8 @@ unique_ptr<_T> make_unique(_Args&&... __args) {
     return unique_ptr<_T>(new _T{std::forward<_Args>(__args)...});
 }
 
-template <typename _T> class shared_ptr;
+template <typename _T>
+class shared_ptr;
 
 class __shared_ptr_ctrl_block {
     template <typename _T>
@@ -105,7 +105,7 @@ class __shared_ptr_ctrl_block {
     template <typename _T, typename... _Args>
     friend shared_ptr<_T> make_shared(_Args&&... __args);
 
-    void *__obj = nullptr;
+    void* __obj = nullptr;
     void (*__deleter)(void*, bool) = [](auto, auto) {};
     std::atomic<size_t> __ref_count{1};
     std::atomic<size_t> __weak_count{1};
@@ -142,7 +142,9 @@ class __shared_ptr_ctrl_block {
             if (__jointly_allocated) {
                 this->~__shared_ptr_ctrl_block();
                 delete[] reinterpret_cast<char*>(this);
-            } else delete this;
+            }
+            else
+                delete this;
         }
     }
 
@@ -180,15 +182,17 @@ class shared_ptr {
     static auto __deleter_for() noexcept {
         return [](void* __raw_obj, bool __jointly_allocated) {
             auto __obj = reinterpret_cast<_U*>(__raw_obj);
-            if (__jointly_allocated) __obj->~_U();
-            else delete __obj;
+            if (__jointly_allocated)
+                __obj->~_U();
+            else
+                delete __obj;
         };
     }
 
     /// Should only ever be used internally.
     shared_ptr(_T* __ptr, __shared_ptr_ctrl_block* __ctrl) noexcept : __ptr(__ptr), __ctrl(__ctrl) {}
 
-public:
+   public:
     using element_type = _T;
 
     shared_ptr() noexcept = default;
@@ -202,7 +206,9 @@ public:
 
     /// Copy constructor.
     shared_ptr(const shared_ptr& __other) noexcept : __ptr(__other.__ptr), __ctrl(__other.__ctrl) {
-        if (__ctrl) { __ctrl->__add_shared(); }
+        if (__ctrl) {
+            __ctrl->__add_shared();
+        }
     }
 
     /// Move constructor.
@@ -214,7 +220,9 @@ public:
     /// Aliasing constructor.
     template <typename _U>
     shared_ptr(const shared_ptr<_U>& __other, _T* __ptr) noexcept : __ptr(__ptr), __ctrl(__other.__ctrl) {
-        if (__ctrl) { __ctrl->__add_shared(); }
+        if (__ctrl) {
+            __ctrl->__add_shared();
+        }
     }
 
     /// Aliasing move constructor.
@@ -226,17 +234,23 @@ public:
 
     /// Copy assignment.
     shared_ptr& operator=(const shared_ptr& __other) {
-        if (this == &__other) { return *this; }
+        if (this == &__other) {
+            return *this;
+        }
         __delete();
         __ptr = __other.__ptr;
         __ctrl = __other.__ctrl;
-        if (__ctrl) { __ctrl->__add_shared(); }
+        if (__ctrl) {
+            __ctrl->__add_shared();
+        }
         return *this;
     }
 
     /// Move assignment.
     shared_ptr& operator=(shared_ptr&& __other) {
-        if (this == &__other) { return *this; }
+        if (this == &__other) {
+            return *this;
+        }
         __delete();
         __ptr = __other.__ptr;
         __ctrl = __other.__ctrl;
@@ -258,8 +272,10 @@ public:
 
     /// Get the reference count.
     size_t use_count() const noexcept {
-        if (__ctrl) return __ctrl->__use_count();
-        else return 0;
+        if (__ctrl)
+            return __ctrl->__use_count();
+        else
+            return 0;
     }
 
     _T* get() const noexcept { return __ptr; }
@@ -282,14 +298,13 @@ shared_ptr<_T> make_shared(_Args&&... __args) {
     static_assert(alignof(__shared_ptr_ctrl_block) <= alignof(max_align_t));
 
     /// Calculate the offset of the object from the start of the allocation.
-    static constexpr size_t __obj_offset =
-        sizeof(__shared_ptr_ctrl_block)
-        + alignof(max_align_t)
-        - sizeof(__shared_ptr_ctrl_block) % alignof(max_align_t);
+    static constexpr size_t __obj_offset = sizeof(__shared_ptr_ctrl_block)
+                                           + alignof(max_align_t)
+                                           - sizeof(__shared_ptr_ctrl_block) % alignof(max_align_t);
     static_assert(__obj_offset % alignof(max_align_t) == 0);
 
     /// Construct the refcount and the object.
-    auto __ptr = new char [__obj_offset + sizeof(_T)];
+    auto __ptr = new char[__obj_offset + sizeof(_T)];
     auto __ctrl = new (__ptr) __shared_ptr_ctrl_block{};
     auto __obj = new (__ptr + __obj_offset) _T(forward<_Args>(__args)...);
     __ctrl->__jointly_allocated = true;
@@ -307,7 +322,7 @@ struct weak_ptr {
     template <typename _U>
     friend struct weak_ptr;
 
-private:
+   private:
     _T* __ptr{};
     __shared_ptr_ctrl_block* __ctrl{};
 
@@ -315,24 +330,30 @@ private:
         if (__ctrl) __ctrl->__release_weak();
     }
 
-public:
+   public:
     constexpr weak_ptr() noexcept {}
 
     /// Copy a weak_ptr.
     weak_ptr(const weak_ptr& __other) noexcept : __ptr(__other.__ptr), __ctrl(__other.__ctrl) {
-        if (__ctrl) { __ctrl->__add_weak(); }
+        if (__ctrl) {
+            __ctrl->__add_weak();
+        }
     }
 
     /// Copy a weak_ptr of a different type.
     template <typename _U>
     weak_ptr(const weak_ptr<_U>& __other) noexcept : __ptr(__other.__ptr), __ctrl(__other.__ctrl) {
-        if (__ctrl) { __ctrl->__add_weak(); }
+        if (__ctrl) {
+            __ctrl->__add_weak();
+        }
     }
 
     /// Create a weak_ptr from a shared_ptr.
     template <typename _U>
     weak_ptr(const shared_ptr<_U>& __other) noexcept : __ptr(__other.__ptr), __ctrl(__other.__ctrl) {
-        if (__ctrl) { __ctrl->__add_weak(); }
+        if (__ctrl) {
+            __ctrl->__add_weak();
+        }
     }
 
     /// Move a weak_ptr.
@@ -353,17 +374,23 @@ public:
 
     /// Copy assignment.
     weak_ptr& operator=(const weak_ptr& __other) noexcept {
-        if (this == &__other) { return *this; }
+        if (this == &__other) {
+            return *this;
+        }
         __delete();
         __ptr = __other.__ptr;
         __ctrl = __other.__ctrl;
-        if (__ctrl) { __ctrl->__add_weak(); }
+        if (__ctrl) {
+            __ctrl->__add_weak();
+        }
         return *this;
     }
 
     /// Move assignment.
     weak_ptr& operator=(weak_ptr&& __other) noexcept {
-        if (this == &__other) { return *this; }
+        if (this == &__other) {
+            return *this;
+        }
         __delete();
         __ptr = __other.__ptr;
         __ctrl = __other.__ctrl;
@@ -378,7 +405,9 @@ public:
         __delete();
         __ptr = __other.__ptr;
         __ctrl = __other.__ctrl;
-        if (__ctrl) { __ctrl->__add_weak(); }
+        if (__ctrl) {
+            __ctrl->__add_weak();
+        }
         return *this;
     }
 
@@ -411,20 +440,26 @@ public:
 
     /// Get the number of shared_ptrs that point to the same object.
     long use_count() const noexcept {
-        if (__ctrl) { return __ctrl->__use_count(); }
+        if (__ctrl) {
+            return __ctrl->__use_count();
+        }
         return 0;
     }
 
     /// Check if the weak_ptr is expired.
     bool expired() const noexcept {
-        if (__ctrl) { return __ctrl->__use_count() == 0; }
+        if (__ctrl) {
+            return __ctrl->__use_count() == 0;
+        }
         return true;
     }
 
     /// Convert to a shared_ptr.
     shared_ptr<_T> lock() const noexcept {
         /// If there is no control block, then we don’t even need to try.
-        if (!__ctrl) { return {}; }
+        if (!__ctrl) {
+            return {};
+        }
 
         /// Get the current refcount. If, at any point, it is zero, then
         /// the object has been deleted and we should return an empty
@@ -432,7 +467,9 @@ public:
         size_t __ref_count;
         do {
             __ref_count = __ctrl->__use_count();
-            if (__ref_count == 0) { return {}; }
+            if (__ref_count == 0) {
+                return {};
+            }
         }
 
         /// Try to increment it. If we fail, then we try again. If we succeed,
@@ -485,6 +522,6 @@ shared_ptr<_T> reinterpret_pointer_cast(shared_ptr<_U>&& __other) noexcept {
     return shared_ptr<_T>(std::move(__other), ptr);
 }
 
-} // namespace std
+}  // namespace std
 
-#endif // LENSOROS_MEMORY_HH
+#endif  // LENSOROS_MEMORY_HH

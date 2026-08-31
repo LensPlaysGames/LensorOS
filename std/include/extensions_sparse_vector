@@ -28,7 +28,7 @@ namespace std {
 /// Like std::vector, but erasing is O(1) and doesn't invalidate indices.
 template <typename _T, auto __invalid, typename index_type = size_t>
 class __sparse_vector_base {
-protected:
+   protected:
     /// For now, we only allow __invalid to be something we can easily store.
     static_assert(sizeof(__invalid) <= sizeof(void*));
     static_assert(alignof(decltype(__invalid)) <= alignof(void*));
@@ -38,9 +38,7 @@ protected:
 
     __sparse_vector_base() = default;
     __sparse_vector_base(const __sparse_vector_base& other)
-        : __els(other.__els),
-          __idxs(other.__idxs)
-    {}
+        : __els(other.__els), __idxs(other.__idxs) {}
 
     struct __sentinel {};
 
@@ -51,7 +49,9 @@ protected:
 
         __iterator() = default;
         __iterator(_P __ptr_, _P __end_) : __ptr(__ptr_), __end(__end_) {
-            while (__ptr < __end && *__ptr == static_cast<_T>(__invalid)) { ++__ptr; }
+            while (__ptr < __end && *__ptr == static_cast<_T>(__invalid)) {
+                ++__ptr;
+            }
         }
 
         __iterator& operator++() {
@@ -75,7 +75,8 @@ protected:
         }
 
         ptrdiff_t operator-(const __iterator& __other) const {
-            if (__end != __other.__end) { /** TODO: Crash horribly **/ }
+            if (__end != __other.__end) { /** TODO: Crash horribly **/
+            }
             return __ptr - __other.__ptr;
         }
 
@@ -120,7 +121,7 @@ protected:
         __sentinel end() { return {}; }
     };
 
-public:
+   public:
     /// =======================================================================
     ///  Iterators.
     /// =======================================================================
@@ -141,7 +142,9 @@ public:
     ///         and a bool that is true iff an element was inserted.
     template <typename _U>
     std::pair<index_type, bool> push_back(_U&& __el) {
-        if (__el == static_cast<_T>(__invalid)) { return {static_cast<index_type>(0), false}; }
+        if (__el == static_cast<_T>(__invalid)) {
+            return {static_cast<index_type>(0), false};
+        }
         auto [__idx, _] = allocate();
         __els[size_t(__idx)] = std::forward<_U>(__el);
         return {static_cast<index_type>(__idx), true};
@@ -159,7 +162,8 @@ public:
             auto __idx = __idxs.back();
             __idxs.pop_back();
             return {index_type(__idx), false};
-        } else {
+        }
+        else {
             __els.push_back(static_cast<_T>(__invalid));
             return {index_type(__els.size() - 1), true};
         }
@@ -176,8 +180,12 @@ public:
 
     bool erase(index_type __idx) {
         const auto __i = static_cast<size_t>(__idx);
-        if (__i > __els.size()) { return false; }
-        if (__els[__i] == static_cast<_T>(__invalid)) { return false; }
+        if (__i > __els.size()) {
+            return false;
+        }
+        if (__els[__i] == static_cast<_T>(__invalid)) {
+            return false;
+        }
 
         __els[__i] = static_cast<_T>(__invalid);
         __idxs.push_back(__i);
@@ -185,7 +193,9 @@ public:
     }
 
     bool erase(__iterator<decltype(__els.begin())> __it) {
-        if (__it == end()) { return false; }
+        if (__it == end()) {
+            return false;
+        }
         return erase(static_cast<index_type>(__it - begin()));
     }
 
@@ -210,14 +220,20 @@ public:
     void compact() {
         /// Find the first hole.
         size_t __hole = 0;
-        while (__hole < __els.size() && __els[__hole] != __invalid) { __hole++; }
+        while (__hole < __els.size() && __els[__hole] != __invalid) {
+            __hole++;
+        }
 
         /// If there are no holes, we're done.
-        if (__hole == __els.size()) { return; }
+        if (__hole == __els.size()) {
+            return;
+        }
 
         /// Find the first non-hole after the hole.
         size_t __el = __hole + 1;
-        while (__el < __els.size() && __els[__el] == __invalid) { __el++; }
+        while (__el < __els.size() && __els[__el] == __invalid) {
+            __el++;
+        }
 
         /// If the hole is at the end, we're done.
         if (__el == __els.size()) {
@@ -247,19 +263,22 @@ struct sparse_vector : __sparse_vector_base<_T, __invalid, index_type> {
     using __base = __sparse_vector_base<_T, __invalid, index_type>;
     using __base::__els;
 
-
     /// =======================================================================
     ///  Accessing elements.
     /// =======================================================================
     _T* operator[](index_type __idx) noexcept {
         const auto __i = static_cast<size_t>(__idx);
-        if (__i >= __els.size()) { return nullptr; }
+        if (__i >= __els.size()) {
+            return nullptr;
+        }
         return __els.data() + __i;
     }
 
     const _T* operator[](index_type __idx) const noexcept {
         const auto __i = static_cast<size_t>(__idx);
-        if (__i >= __els.size()) { return nullptr; }
+        if (__i >= __els.size()) {
+            return nullptr;
+        }
         return __els.data() + __i;
     }
 };
@@ -277,13 +296,17 @@ struct sparse_vector<std::unique_ptr<_T>, nullptr, index_type>
     /// =======================================================================
     std::unique_ptr<_T>& operator[](index_type __idx) noexcept {
         const auto __i = static_cast<size_t>(__idx);
-        if (__i >= __els.size()) { return __invalid_value; }
+        if (__i >= __els.size()) {
+            return __invalid_value;
+        }
         return __els[__i];
     }
 
     const std::unique_ptr<_T>& operator[](index_type __idx) const noexcept {
         const auto __i = static_cast<size_t>(__idx);
-        if (__i >= __els.size()) { return __invalid_value; }
+        if (__i >= __els.size()) {
+            return __invalid_value;
+        }
         return __els[__i];
     }
 };
@@ -299,11 +322,13 @@ struct sparse_vector<std::shared_ptr<_T>, nullptr, index_type>
     /// =======================================================================
     std::shared_ptr<_T> operator[](index_type __idx) const noexcept {
         const auto __i = static_cast<size_t>(__idx);
-        if (__i >= __els.size()) { return std::shared_ptr<_T>{nullptr}; }
+        if (__i >= __els.size()) {
+            return std::shared_ptr<_T>{nullptr};
+        }
         return __els[__i];
     }
 };
 
-} // namespace std
+}  // namespace std
 
-#endif // _LENSOROS_EXTENSIONS_SPARSE_VECTOR
+#endif  // _LENSOROS_EXTENSIONS_SPARSE_VECTOR

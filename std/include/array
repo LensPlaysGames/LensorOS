@@ -48,6 +48,6 @@ struct array {
     constexpr _T* end() noexcept { return __elems + _Sz; }
     constexpr const _T* end() const noexcept { return __elems + _Sz; }
 };
-}
+}  // namespace std
 
-#endif // _LENSOROS_LIBC_ARRAY_
+#endif  // _LENSOROS_LIBC_ARRAY_

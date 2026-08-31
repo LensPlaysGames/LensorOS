@@ -24,12 +24,12 @@
 #include <stdint.h>
 
 #include <functional>
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace std {
 
-template<
+template <
     class _Key,
     class _T,
     class _Hash = std::hash<_Key>,
@@ -55,10 +55,10 @@ struct __unordered_map_impl {
 
     // FIXME: Technically an unordered map doesn't need a doubly linked list, just singly.
     struct __bucket {
-        bool __occupied { false };
+        bool __occupied{false};
         value_type __keyval;
-        __bucket* __prev { nullptr };
-        __bucket* __next { nullptr };
+        __bucket* __prev{nullptr};
+        __bucket* __next{nullptr};
 
         /// [A]<->[B]<->[C]
         /// B.insert_after(F);
@@ -180,23 +180,23 @@ struct __unordered_map_impl {
         }
 
         size_type length() {
-            size_type __out { 0 };
+            size_type __out{0};
             for (__bucket* __it = this; __it; __it = __it->__next)
                 ++__out;
             return __out;
         }
     };
 
-    std::vector<__bucket> __data { 512 };
+    std::vector<__bucket> __data{512};
 
     // Amount of elements stored in the map.
-    size_type __count { 0 };
+    size_type __count{0};
 
     struct iterator {
-        __bucket* __buckets { nullptr };
-        size_type __count { 0 };
-        size_type __index { 0 };
-        __bucket* __current { nullptr };
+        __bucket* __buckets{nullptr};
+        size_type __count{0};
+        size_type __index{0};
+        __bucket* __current{nullptr};
 
         void clear() {
             __buckets = nullptr;
@@ -233,32 +233,34 @@ struct __unordered_map_impl {
             : __buckets(__bucket_array), __count(__bucket_count), __index(__i), __current(__b) {}
 
         // Prefix increment operator
-        iterator& operator++ () {
-            if (__current->__next) __current = __current->__next;
-            else __update_to_next_occupied();
+        iterator& operator++() {
+            if (__current->__next)
+                __current = __current->__next;
+            else
+                __update_to_next_occupied();
             return *this;
         }
 
-        bool operator== (const iterator& __other) const {
+        bool operator==(const iterator& __other) const {
             return __buckets == __other.__buckets
-                && __count == __other.__count
-                && __index == __other.__index
-                && __current == __other.__current;
+                   && __count == __other.__count
+                   && __index == __other.__index
+                   && __current == __other.__current;
         }
-        bool operator!= (const iterator& __other) const {
+        bool operator!=(const iterator& __other) const {
             return !(operator==(__other));
         }
 
-        value_type& operator* () {
+        value_type& operator*() {
             return __current->__keyval;
         }
     };
 
     iterator begin() {
-        return { __data.data(), __data.capacity() };
+        return {__data.data(), __data.capacity()};
     }
 
-    iterator end() { return { nullptr, 0, 0, nullptr }; }
+    iterator end() { return {nullptr, 0, 0, nullptr}; }
 
     [[nodiscard]]
     bool empty() const noexcept {
@@ -304,7 +306,7 @@ struct __unordered_map_impl {
         auto __key = __value.first;
         size_type __index = __get_index(__key);
         auto __make_it = [&](__bucket* __b, bool __inserted = true) -> std::pair<iterator, bool> {
-            return { { __data.data(), __data.capacity(), __index, __b }, __inserted };
+            return {{__data.data(), __data.capacity(), __index, __b}, __inserted};
         };
         __bucket* __b = __data.data() + __index;
         if (__b->__occupied) {
@@ -317,7 +319,7 @@ struct __unordered_map_impl {
             }
             // If we got through all of the pairs in the bucket without finding a
             // matching key, it's time to add this key/value pair to this bucket.
-            auto* __b = new __bucket{ true, __key, __value.second };
+            auto* __b = new __bucket{true, __key, __value.second};
             __last_it->insert_after(__b);
             return __make_it(__last_it->__next);
         }
@@ -328,11 +330,11 @@ struct __unordered_map_impl {
         return __make_it(__b);
     }
 
-    mapped_type& operator[] (const key_type& __key) {
-        auto __it = insert({ __key, {} });
+    mapped_type& operator[](const key_type& __key) {
+        auto __it = insert({__key, {}});
         return __it.first.__current->__keyval.second;
     }
-    mapped_type& operator[] (key_type&& __key) {
+    mapped_type& operator[](key_type&& __key) {
         return operator[](__key);
     }
 
@@ -341,18 +343,20 @@ struct __unordered_map_impl {
         size_type __index = __get_index(__key);
         __bucket* __b = __data.data() + __index;
         if (!__b->__occupied) return 0;
-        while (__b) if (__keys_equal(__key, __b->__key)) return 1;
+        while (__b)
+            if (__keys_equal(__key, __b->__key)) return 1;
         return 0;
     }
 
     iterator find(const key_type& __key) {
         size_type __index = __get_index(__key);
         auto __make_it = [&](__bucket* __b) -> iterator {
-            return { __data.data(), __data.capacity(), __index, __b };
+            return {__data.data(), __data.capacity(), __index, __b};
         };
         __bucket* __b = __data.data() + __index;
         if (!__b->__occupied) return {};
-        while (__b) if (__keys_equal(__key, __b->__key)) return __make_it(__b);
+        while (__b)
+            if (__keys_equal(__key, __b->__key)) return __make_it(__b);
         return {};
     }
 
@@ -381,13 +385,13 @@ struct __unordered_map_impl {
     key_equal key_eq() { return __keys_equal; }
 };
 
-template<
+template <
     class _Key,
     class _T,
     class _Hash = std::hash<_Key>,
     class _KeyEqual = std::equal_to<_Key>>
 using unordered_map = __unordered_map_impl<_Key, _T, _Hash, _KeyEqual>;
 
-} // namespace std
+}  // namespace std
 
 #endif /* _LENSOROS_UNORDERED_MAP */

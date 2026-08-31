@@ -17,14 +17,14 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-
 #ifndef _LENSOR_OS_BIT_H
 #define _LENSOR_OS_BIT_H
 
-#include <array>
-#include <algorithm>
 #include <bits/decls.h>
 #include <stdint.h>
+
+#include <algorithm>
+#include <array>
 #include <type_traits>
 
 __BEGIN_DECLS__
@@ -34,19 +34,19 @@ __END_DECLS__
 namespace std {
 
 template <typename _To, typename _From>
-requires (sizeof(_To) == sizeof(_From))
+    requires(sizeof(_To) == sizeof(_From))
 constexpr _To bit_cast(const _From& __from) {
     return __builtin_bit_cast(_To, __from);
 }
 
-template<class _T>
+template <class _T>
 constexpr _T byteswap(_T n) noexcept {
-    //static_assert(std::has_unique_object_representations_v<_T>, "T may not have padding bits");
+    // static_assert(std::has_unique_object_representations_v<_T>, "T may not have padding bits");
     auto repr = std::bit_cast<std::array<uint8_t, sizeof(_T)>>(n);
     std::reverse(repr.begin(), repr.end());
     return std::bit_cast<_T>(repr);
 }
 
-} // namespace std
+}  // namespace std
 
 #endif /* _LENSOR_OS_BIT_H */

@@ -4,7 +4,7 @@
 namespace std {
 
 // FIXME: STUB
-class locale{};
+class locale {};
 
 } /* namespace std */
 
