@@ -58,8 +58,8 @@ find_program(
 
 # TODO: Should we add -mno-red-zone here?
 
-# LensorOS toolchain is GCC 11.2 or greater, so we're good here.
-set( CMAKE_CXX_STANDARD 20 )
+# LensorOS toolchain is GCC 16 or greater, so we're good here.
+set( CMAKE_CXX_STANDARD 23 )
 
 # Skip compiler tests (hard to run an executable made for another OS).
 set( CMAKE_C_COMPILER_WORKS 1 )

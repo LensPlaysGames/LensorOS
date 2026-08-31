@@ -19,7 +19,15 @@
 
 cmake_minimum_required(VERSION 3.14)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
+
+if (NOT LENSOR_OS_LIBC_BUILD_HOST)
+    message(STATUS "Cross compiling LensorOS libstdc++ to run on LensorOS")
+    # Use cross compiler.
+    set( CMAKE_TOOLCHAIN_FILE ../../toolchain/lensor_gnu_toolchain.cmake )
+else()
+    message(STATUS "Building LensorOS libstdc++ to run on host")
+endif()
 
 project(LensorOS_libstdc++ VERSION 0.0.1 LANGUAGES CXX)
 
@@ -78,9 +86,22 @@ target_link_options(
 )
 
 set(ROOT "${CMAKE_CURRENT_LIST_DIR}/../../root")
-add_custom_target(
-  install-libstdc++ ALL
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:stdc++> "${ROOT}/lib"
-  COMMENT "Installing LibStdC++ into ${ROOT}/lib"
-  DEPENDS stdc++
-)
+set(STD "${CMAKE_CURRENT_LIST_DIR}/../../std")
+
+if (NOT LENSOR_OS_LIBC_BUILD_HOST)
+  # Copies headers every build
+  add_custom_target(
+    libstdc++-headers ALL
+    COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=${CMAKE_CURRENT_LIST_DIR}" -P "${CMAKE_CURRENT_LIST_DIR}/install-headers.cmake"
+    COMMENT "Installing LibStdC++ Headers"
+  )
+  # Force libc to wait until headers are copied
+  add_dependencies(stdc++ libstdc++-headers)
+
+  add_custom_target(
+    install-libstdc++ ALL
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:stdc++> "${ROOT}/lib"
+    COMMENT "Installing LibStdC++ into ${ROOT}/lib"
+    DEPENDS stdc++
+  )
+endif()
