@@ -17,7 +17,6 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #ifndef _STDBOOL_H
 #define _STDBOOL_H
 

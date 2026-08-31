@@ -17,23 +17,22 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <format>
-#include <string_view>
-
 #include <assert.h>
 #include <bits/abi.h>
 #include <bits/decls.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-//#define DEBUG_LIBC
+#include <format>
+#include <string_view>
+
+#define DEBUG_LIBC
 
 #ifdef DEBUG_LIBC
 #define DBGMSG(...) debug_print(__VA_ARGS__)
 #else
 #define DBGMSG(...)
 #endif
-
 
 /// ===========================================================================
 ///  Extern symbols.
@@ -115,7 +114,7 @@ void debug_print(std::format_string<_Args...> __fmt, _Args&&... __args) {
     std::__detail::__format(std::move(__ctx), __fmt.get());
 }
 
-} // namespace
+}  // namespace
 
 /// ===========================================================================
 ///  Interface.
@@ -174,7 +173,9 @@ void __cxa_finalize(__dso_handle_t dso) {
 
     /// Find the dso atexit list.
     auto* list = find_dso_atexit_list(dso);
-    if (!list || list->processed) { return; }
+    if (!list || list->processed) {
+        return;
+    }
 
     /// Call all the callbacks.
     list->processed = true;

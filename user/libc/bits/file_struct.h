@@ -1,37 +1,37 @@
 /* Copyright 2022, Contributors To LensorOS.
-* All rights reserved.
-*
-* This file is part of LensorOS.
-*
-* LensorOS is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* LensorOS is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
-*/
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 #ifndef _LENSOROS_LIBC_FILE_STRUCT_H
 #define _LENSOROS_LIBC_FILE_STRUCT_H
 
 #ifndef __cplusplus
-#    error "This header is C++ only."
+#error "This header is C++ only."
 #endif
-
 
 #include <bits/decls.h>
 #include <bits/io_defs.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <utility>
+
 #include <extensions>
+#include <utility>
 
 /// ===========================================================================
 ///  File struct.
@@ -55,23 +55,23 @@ struct _IO_File {
     _IO_lock_t __mutex{};
     _IO_fd_t __fd = -1;
 
-    _IO_flags_t __f_buffering : 2;    /// Buffering mode.
-    _IO_flags_t __f_error : 1;        /// Error indicator.
-    _IO_flags_t __f_eof : 1;          /// End-of-file indicator.
-    _IO_flags_t __f_has_ungotten : 1; /// Whether ungetc() has been called.
-    _IO_flags_t : 11;                 /// Unused.
+    _IO_flags_t __f_buffering : 2;     /// Buffering mode.
+    _IO_flags_t __f_error : 1;         /// Error indicator.
+    _IO_flags_t __f_eof : 1;           /// End-of-file indicator.
+    _IO_flags_t __f_has_ungotten : 1;  /// Whether ungetc() has been called.
+    _IO_flags_t : 11;                  /// Unused.
 
-    char __ungotten{}; /// The character that ungetc() should insert.
+    char __ungotten{};  /// The character that ungetc() should insert.
 
     /// ===========================================================================
     ///  CDtors.
     /// ===========================================================================
-private:
+   private:
     /// Create a new FILE and allocate buffers for a file descriptor.
     /// This is private so we can make sure that no-one creates a dangling FILE.
     explicit _IO_File(_IO_fd_t fd = -1, Buffering buffering_mode = FullyBuffered);
 
-public:
+   public:
     /// List of open files.
     /// TODO: The big_file_lock and the vector should be wrapped into a single struct.
     static std::sparse_vector<_IO_File*, nullptr> open_files;
@@ -166,13 +166,12 @@ public:
     /// \return The number of bytes read or EOF on error.
     ssize_t read(char* __restrict__ buf, const size_t size);
 
-
     /// Read up to `size` bytes from `stream` into `buf`. Stop if `until` is encountered.
     /// \return True if `until` was found or EOF was reached, false if there was an error
     ///         or if the stream is at EOF.
     bool read_until(char* __restrict__ buf, const size_t size, char until);
 
-private:
+   private:
     /// Copy data into a buffer from a stream’s read buffer.
     size_t copy_from_read_buffer(char* __restrict__ buf, size_t size);
 
@@ -180,10 +179,9 @@ private:
     std::pair<size_t, bool> copy_until_from_read_buffer(
         char* __restrict__ buf,
         size_t rest,
-        char until
-    );
+        char until);
 
-public:
+   public:
     /// ===========================================================================
     ///  Writing.
     /// ===========================================================================
@@ -197,10 +195,10 @@ public:
     /// Write a character to the stream.
     bool write(char c);
 
-private:
+   private:
     /// Write to the stream. This function only flushes the buffer if it is full.
     /// \return The number of bytes written, or EOF on error.
     ssize_t write_internal(const char* __restrict__ buffer, size_t count);
 };
 
-#endif // _LENSOROS_LIBC_FILE_STRUCT_H
+#endif  // _LENSOROS_LIBC_FILE_STRUCT_H

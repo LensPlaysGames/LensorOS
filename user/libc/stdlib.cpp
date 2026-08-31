@@ -248,10 +248,11 @@ void __libc_init_malloc() {
 }
 
 void __libc_fini_malloc() {
+    // TODO: One could check for memory leaks here...
+
     // Free the memory region mapped during initialisation/expansion of
     // the heap.
     syscall(SYS_unmap, heap_base);
-    /// One could check for memory leaks here.
 }
 
 int* __errno_location(void) { return &__errno; }
@@ -275,7 +276,8 @@ __attribute__((__noreturn__)) void __assert_abort(
         fputs(expr, stderr);
         fputs(_N "\n", stderr);
         fflush(stderr);
-    } else {
+    }
+    else {
         write(2, "Assertion failed: ", 18);
         __write(expr);
         write(2, "\n", 1);
@@ -287,8 +289,11 @@ __attribute__((__noreturn__)) void __assert_abort(
 /// Report a failed assertion with a message.
 __attribute__((__noreturn__)) void
 __assert_abort_msg(
-    const char* expr, const char* msg, const char* file,
-    unsigned int line, const char* func) {
+    const char* expr,
+    const char* msg,
+    const char* file,
+    unsigned int line,
+    const char* func) {
     if (!__stdio_destructed) {
         // fprintf(stderr, "%s: in function %s:%u: Assertion failed: %s: %s\n",
         // file, func, line, expr, msg);
@@ -301,7 +306,8 @@ __assert_abort_msg(
         fputs(msg, stderr);
         fputs(_N "\n", stderr);
         fflush(stderr);
-    } else {
+    }
+    else {
         write(2, "LensorOS LibC Internal Assertion Failed: ", 41);
         __write(expr);
         write(2, "\n| ", 3);
@@ -337,7 +343,8 @@ int atexit(void function()) {
             auto arg = reinterpret_cast<void (*)()>(_arg);
             arg();
         },
-        reinterpret_cast<void*>(function), nullptr);
+        reinterpret_cast<void*>(function),
+        nullptr);
     return 0;
 }
 
@@ -433,7 +440,7 @@ __attribute__((alloc_size(2))) void* realloc(void* ptr, size_t size) {
     return realloc_impl<true>(ptr, size);
 }
 
-void free(void* ptr) {
+void __free_impl(void* ptr, const char* file, int line) {
     /// If the pointer is null, do nothing.
     if (!ptr) {
         return;
@@ -471,7 +478,9 @@ void free(void* ptr) {
             }
             head = head->next;
         }
-        __libc_assert(false, "free(): invalid pointer");
+        fprintf(stderr, "%s:%d: free(): invalid pointer %p\n", file, line, ptr);
+        fflush(stderr);
+        __libc_assert(block, "free(): invalid pointer");
     }
 
     /// Otherwise, remove the block from the allocated list.

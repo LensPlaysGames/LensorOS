@@ -20,7 +20,7 @@
 #ifndef _LIMITS_H
 #define _LIMITS_H
 
-#if defined (__cplusplus)
+#if defined(__cplusplus)
 extern "C" {
 #endif
 
@@ -56,7 +56,7 @@ extern "C" {
 #define CHAR_MIN SCHAR_MIN
 #define CHAR_MAX SCHAR_MAX
 
-#if defined (__cplusplus)
+#if defined(__cplusplus)
 } /* extern "C" */
 #endif
 

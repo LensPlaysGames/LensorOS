@@ -22,9 +22,9 @@
 
 #include "../assert.h"
 
-#define _LIBC_STUB()                              \
+#define _LIBC_STUB()                             \
     do {                                         \
         __libc_assert(false, "Not implemented"); \
     } while (0)
 
-#endif // _LENSOR_OS_STUB_H
+#endif  // _LENSOR_OS_STUB_H

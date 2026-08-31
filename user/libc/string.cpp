@@ -17,14 +17,13 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #include "string.h"
-
-#include "errno.h"
-#include "bits/stub.h"
 
 #include <string>
 #include <string_view>
+
+#include "bits/stub.h"
+#include "errno.h"
 
 // TODO: Set this at runtime initialization based on cpuid bits or some
 // other way of accessing the kernel CPU data.
@@ -32,8 +31,8 @@ bool __libc_have_erms = false;
 
 _PushIgnoreWarning("-Wunused-parameter")
 
-/// Copying
-void* memmove(void* dst, const void* src, size_t n) {
+    /// Copying
+    void* memmove(void* dst, const void* src, size_t n) {
     __extension__ unsigned char tmp[n];
     memcpy(tmp, src, n);
     memcpy(dst, tmp, n);
@@ -50,7 +49,7 @@ char* strcpy(char* dst, const char* src) {
 char* strncpy(char* dst, const char* src, size_t n) {
     while (n--) {
         *dst++ = *src++;
-        if (*src == '\0'){
+        if (*src == '\0') {
             while (n--)
                 *dst++ = '\0';
             break;
@@ -58,7 +57,6 @@ char* strncpy(char* dst, const char* src, size_t n) {
     }
     return dst;
 }
-
 
 /// Concatenation
 char* strcat(char* dst, const char* src) {
@@ -74,7 +72,6 @@ char* strncat(char* dst, const char* src, size_t n) {
     while ((*dst++ = *src++) && n--);
     return dst;
 }
-
 
 /// Comparison
 int memcmp(const void* a, const void* b, size_t n) {
@@ -116,7 +113,6 @@ size_t strxfrm(char* dst, const char* src, size_t n) {
     _LIBC_STUB();
     return 1;
 }
-
 
 /// Searching
 void* memchr(const void* ptr, int value, size_t n) {
@@ -191,40 +187,37 @@ char* strstr(const char* haystack, const char* needle) {
 
 /// This is not thread safe, at all!
 char* strtok(char* str, const char* delim) {
-    static char *lastToken = NULL;
-    if (str == NULL ) {
+    static char* lastToken = NULL;
+    if (str == NULL) {
         str = lastToken;
         if (str == NULL)
             return NULL;
     }
-    else str += strspn(str, delim);
+    else
+        str += strspn(str, delim);
     char* tmp = strpbrk(str, delim);
     if (tmp) {
         *tmp = '\0';
         lastToken = tmp + 1;
     }
-    else lastToken = NULL;
+    else
+        lastToken = NULL;
     return str;
 }
-
 
 /// Other
 // This isn't really part of any standard, but it is
 // expected to be there by quite a few programs anyway.
-const void* memmem
-(
- const void* haystack
- , size_t haystacklen
- , const void* needle
- , size_t needlelen
- )
-{
+const void* memmem(
+    const void* haystack,
+    size_t haystacklen,
+    const void* needle,
+    size_t needlelen) {
     if (needlelen > haystacklen) return NULL;
     // Stop searching at the last possible position for a match,
     // which is haystack[ haystacklen - needlelen + 1 ].
     haystacklen -= needlelen - 1;
-    while (haystacklen)
-    {
+    while (haystacklen) {
         // Find the first byte in a potential match
         unsigned char* z = (unsigned char*)memchr((unsigned char*)haystack, *(unsigned char*)needle, haystacklen);
         if (!z) return NULL;
@@ -236,7 +229,7 @@ const void* memmem
         haystacklen -= delta;
         haystack = z;
         // Did we find a match?
-        if (!memcmp( haystack, needle, needlelen )) return haystack;
+        if (!memcmp(haystack, needle, needlelen)) return haystack;
         // Ready for next loop
         haystack = (unsigned char*)haystack + 1;
         haystacklen -= 1;
@@ -296,14 +289,14 @@ char* strerror(int errnum) {
 }
 
 size_t strlen(const char* str) {
-    size_t len { 0 };
+    size_t len{0};
     while (*(str++))
         ++len;
     return len;
 }
 
 size_t strnlen(const char* str, size_t maxlen) {
-    size_t len { 0 };
+    size_t len{0};
     for (; len < maxlen && *str; str++)
         len++;
     return len;

@@ -20,11 +20,11 @@
 #ifndef _FLOAT_H
 #define _FLOAT_H
 
-#if defined (__cplusplus)
+#if defined(__cplusplus)
 extern "C" {
 #endif
 
-  int __flt_rounds(void);
+int __flt_rounds(void);
 #define FLT_ROUNDS (__flt_rounds())
 
 #define FLT_RADIX 2
@@ -63,7 +63,7 @@ extern "C" {
 #define DBL_MAX_10_EXP 308
 #define LDBL_MAX_10_EXP 4932
 
-#if defined (__cplusplus)
+#if defined(__cplusplus)
 } /* extern "C" */
 #endif
 

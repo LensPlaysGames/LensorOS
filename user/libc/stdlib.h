@@ -17,7 +17,6 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #ifndef _STDLIB_H
 #define _STDLIB_H
 
@@ -51,7 +50,9 @@ void srand(unsigned seed);
 
 /// Dynamic memory management
 __attribute__((malloc, alloc_size(1, 2))) void* calloc(size_t nitems, size_t);
-void free(void*);
+// void free(void*);
+void __free_impl(void* ptr, const char* file, int line);
+#define free(__ptr) __free_impl((__ptr), __FILE__, __LINE__)
 __attribute__((malloc, alloc_size(1))) void* malloc(size_t);
 __attribute__((alloc_size(2))) void* realloc(void* ptr, size_t);
 
@@ -73,7 +74,7 @@ __attribute__((__noreturn__)) void _Exit(int status);
 void* bsearch(const void* key, const void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*));
 void qsort(void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*));
 
-  /// Integer arithmetics
+/// Integer arithmetics
 typedef struct {
     int quot;
     int rem;
@@ -96,7 +97,7 @@ lldiv_t lldiv(long long, long long);
 
 /// Multibyte characters
 #ifndef __cplusplus
-  typedef __WCHAR_TYPE__ wchar_t;
+typedef __WCHAR_TYPE__ wchar_t;
 #endif
 
 #define MB_CUR_MAX 4

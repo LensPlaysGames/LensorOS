@@ -20,22 +20,21 @@
 #ifndef _LENSOR_OS_LIBC_STRING_H
 #define _LENSOR_OS_LIBC_STRING_H
 
+#include "bits/string_intrinsics.h"
 #include "stddef.h"
 #include "sys/types.h"
-#include "bits/string_intrinsics.h"
 
 __BEGIN_DECLS__
 
 /// Copying
 static __forceinline void* memcpy(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n) {
-#   ifdef __have_memcpy_sse_unaligned_intrin
+#ifdef __have_memcpy_sse_unaligned_intrin
     __memcpy_sse_unaligned_intrin(__dest, __src, __n);
-#   else
+#else
     __memcpy_naive(__dest, __src, __n);
-#   endif
+#endif
     return __dest;
 }
-
 
 void* memmove(void*, const void*, size_t);
 char* strcpy(char* __dest, const char* __src);

@@ -17,11 +17,11 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #ifndef _UNISTD_H
 #define _UNISTD_H
 
 #include <bits/decls.h>
+
 #include "sys/types.h"
 #include "sys/wait.h"
 
@@ -44,7 +44,7 @@ int pipe(int fds[2]);
 int dup2(int oldfd, int newfd);
 
 pid_t fork(void);
-pid_t execv(const char* file, char *const argv[]);
+pid_t execv(const char* file, char* const argv[]);
 
 /// On success, `buf` will be filled with the absolute path of the
 /// current process' working directory.
@@ -60,7 +60,7 @@ pid_t execv(const char* file, char *const argv[]);
 ///   absolute pathname of the working directory, including the
 ///   terminating null byte.  You need to allocate a bigger
 ///   array and try again.
-char *getcwd(char *buf, size_t size);
+char* getcwd(char* buf, size_t size);
 
 /// On success, return a pointer to a buffer containing the current
 /// process' working directory. The caller should free() the returned
@@ -78,7 +78,7 @@ char *getcwd(char *buf, size_t size);
 ///
 /// ENOMEM
 ///   Memory allocation has failed (malloc()/realloc() returned NULL).
-char *get_current_dir_name(void);
+char* get_current_dir_name(void);
 
 __END_DECLS__
 

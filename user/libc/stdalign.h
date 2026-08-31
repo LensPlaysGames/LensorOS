@@ -17,11 +17,10 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #ifndef _STDALIGN_H
 #define _STDALIGN_H
 
-#if defined (__cplusplus)
+#if defined(__cplusplus)
 extern "C" {
 #endif
 
@@ -40,7 +39,7 @@ extern "C" {
 #define __alignas_is_defined 1
 #define __alignof_is_defined 1
 
-#if defined (__cplusplus)
+#if defined(__cplusplus)
 } /* extern "C" */
 #endif
 

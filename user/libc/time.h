@@ -17,17 +17,14 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #ifndef _TIME_H
 #define _TIME_H
 
-#if defined (__cplusplus)
+#if defined(__cplusplus)
 extern "C" {
 #endif
 
-
-
-#if defined (__cplusplus)
+#if defined(__cplusplus)
 } /* extern "C" */
 #endif
 

@@ -17,7 +17,6 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #ifndef _STDARG_H
 #define _STDARG_H
 
@@ -27,10 +26,10 @@ __BEGIN_DECLS__
 
 typedef __builtin_va_list va_list;
 
-#define va_start(__ap,__last)   __builtin_va_start(__ap, __last)
-#define va_end(__ap)            __builtin_va_end(__ap)
-#define va_arg(__ap,__type)     __builtin_va_arg(__ap,__type)
-#define va_copy(__dest, __src)  __builtin_va_copy(__dest,__src)
+#define va_start(__ap, __last) __builtin_va_start(__ap, __last)
+#define va_end(__ap) __builtin_va_end(__ap)
+#define va_arg(__ap, __type) __builtin_va_arg(__ap, __type)
+#define va_copy(__dest, __src) __builtin_va_copy(__dest, __src)
 
 __END_DECLS__
 

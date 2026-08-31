@@ -19,18 +19,6 @@
 
 #include "stdio.h"
 
-#include "bits/cdtors.h"
-#include "bits/file_struct.h"
-#include "bits/io_defs.h"
-#include "bits/stub.h"
-#include "errno.h"
-#include "extensions"
-#include "stdarg.h"
-#include "stdlib.h"
-#include "string.h"
-#include "unistd.h"
-#include "sys/syscalls.h"
-
 #include <algorithm>
 #include <atomic>
 #include <extensions>
@@ -40,7 +28,19 @@
 #include <string>
 #include <utility>
 
-#define LOCK(stream) std::unique_lock _CAT(__lock_, __COUNTER__)(stream->__mutex)
+#include "bits/cdtors.h"
+#include "bits/file_struct.h"
+#include "bits/io_defs.h"
+#include "bits/stub.h"
+#include "errno.h"
+#include "extensions"
+#include "stdarg.h"
+#include "stdlib.h"
+#include "string.h"
+#include "sys/syscalls.h"
+#include "unistd.h"
+
+#define LOCK(stream) std::unique_lock _CAT(__lock_, __COUNTER__)(stream -> __mutex)
 
 /// ===========================================================================
 ///  Internal definitions and state
@@ -80,9 +80,9 @@ _IO_File::_IO_File(_IO_fd_t fd, Buffering buffering_mode) {
     __fd = fd;
 
     /// Flags
-    _PushIgnoreWarning("-Wconversion")
+    _PushIgnoreWarning("-Wconversion");
     __f_buffering = buffering_mode;
-    _PopWarnings()
+    _PopWarnings();
 }
 
 _IO_File::~_IO_File() {
@@ -136,14 +136,18 @@ void _IO_File::erase() {
     /// If we can't, we'll have to search the list for the file.
     size_t index = __fd;
     auto element = open_files[index];
-    if (element && *element == this) { open_files.erase(index); }
+    if (element && *element == this) {
+        open_files.erase(index);
+    }
     else
 #endif
-    open_files.erase(std::find(open_files, this));
+        open_files.erase(std::find(open_files, this));
 }
 
 bool _IO_File::flush() {
-    if (__wbuf.__offs == 0) { return true; }
+    if (__wbuf.__offs == 0) {
+        return true;
+    }
 
     /// Write the data.
     ssize_t written = ::write(__fd, __wbuf.__buf, __wbuf.__offs);
@@ -171,7 +175,7 @@ void _IO_File::reassociate(_IO_fd_t fd) {
 void _IO_File::close_all() {
     std::unique_lock lock(big_file_lock);
     for (auto file : open_files) {
-         file->erase();
+        file->erase();
     }
 }
 
@@ -191,7 +195,9 @@ _IO_File* _IO_File::create(_IO_fd_t fd, Buffering buffering_mode) {
 /// ===========================================================================
 int _IO_File::unget(char c) {
     /// TODO: unget() isn't possible if the stream isn't open for reading.
-    if (not may_unget()) { return EOF; }
+    if (not may_unget()) {
+        return EOF;
+    }
 
     __f_has_ungotten = true;
     __ungotten = c;
@@ -223,7 +229,7 @@ int _IO_File::setpos(const fpos_t& pos) {
     return -1;
 }
 
-auto _IO_File::tell(_IO_off_t& offset) const -> _IO_off_t{
+auto _IO_File::tell(_IO_off_t& offset) const -> _IO_off_t {
     /// TODO: Implement.
     (void)offset;
     return -1;
@@ -298,18 +304,23 @@ ssize_t _IO_File::read(char* __restrict__ buf, const size_t size) {
         auto copied = copy_from_read_buffer(buf, rest);
 
         /// We've copied all the data.
-        if (copied == rest) { return ssize_t(size); }
+        if (copied == rest) {
+            return ssize_t(size);
+        }
 
         /// We've reached end of file.
         return ssize_t(size - rest + copied);
-    } else {
+    }
+    else {
         auto n_read = ::read(__fd, buf, rest);
         if (n_read == -1) {
             __f_error = true;
             return EOF;
         }
         /// If we've reached end of file, set the flag.
-        if (n_read == 0) { __f_eof = true; }
+        if (n_read == 0) {
+            __f_eof = true;
+        }
 
         return ssize_t(size - rest + n_read);
     }
@@ -324,7 +335,9 @@ bool _IO_File::read_until(char* __restrict__ buf, const size_t size, char until)
         __f_has_ungotten = false;
         buf++;
         rest--;
-        if (__ungotten == until) { return true; }
+        if (__ungotten == until) {
+            return true;
+        }
     }
 
     /// Copy data from the read buffer.
@@ -344,7 +357,9 @@ bool _IO_File::read_until(char* __restrict__ buf, const size_t size, char until)
         }
 
         /// If we've reached end of file, set the flag.
-        if (n_read == 0) { __f_eof = true; }
+        if (n_read == 0) {
+            __f_eof = true;
+        }
         __rdbuf.__start = 0;
         __rdbuf.__offs = n_read;
 
@@ -379,7 +394,8 @@ size_t _IO_File::copy_from_read_buffer(char* __restrict__ buf, size_t size) {
         __rdbuf.__offs = 0;
     }
     /// Otherwise, move the start pointer.
-    else __rdbuf.__start += to_copy;
+    else
+        __rdbuf.__start += to_copy;
 
     /// Return the number of bytes copied.
     return to_copy;
@@ -388,14 +404,12 @@ size_t _IO_File::copy_from_read_buffer(char* __restrict__ buf, size_t size) {
 std::pair<size_t, bool> _IO_File::copy_until_from_read_buffer(
     char* __restrict__ buf,
     const size_t rest,
-    char until
-) {
+    char until) {
     /// Find the first occurrence of `until` in the read buffer.
-    auto* first = (char*) memchr(
+    auto* first = (char*)memchr(
         __rdbuf.__buf + __rdbuf.__start,
         until,
-        __rdbuf.__offs - __rdbuf.__start
-    );
+        __rdbuf.__offs - __rdbuf.__start);
 
     /// Copy everything up to and including `until`, or the size of the buffer
     /// if `until` was not found.
@@ -406,7 +420,9 @@ std::pair<size_t, bool> _IO_File::copy_until_from_read_buffer(
     auto copied = copy_from_read_buffer(buf, to_copy);
 
     /// If we've filled the buffer or found `until`, we're done.
-    if (first || copied == rest) { return {copied, true}; }
+    if (first || copied == rest) {
+        return {copied, true};
+    }
     return {copied, false};
 }
 
@@ -428,12 +444,12 @@ bool _IO_File::setbuf(Buffering buffering, size_t size) {
         case LineBuffered:
         case FullyBuffered:
             _PushIgnoreWarning("-Wconversion")
-            __f_buffering = buffering;
+                __f_buffering = buffering;
             _PopWarnings()
 
-            /// According to the standard, `size` is only supposed to be a hint
-            /// if `buffer` is nullptr, so we should ignore it if it's too small.
-            if (size < BUFSIZ) size = BUFSIZ;
+                /// According to the standard, `size` is only supposed to be a hint
+                /// if `buffer` is nullptr, so we should ignore it if it's too small.
+                if (size < BUFSIZ) size = BUFSIZ;
 
             /// We never use the buffer that the user provided, because that would
             /// be too much of a hassle.
@@ -447,7 +463,7 @@ bool _IO_File::setbuf(Buffering buffering, size_t size) {
             /// reason to copy its contents.
             if (__wbuf.__cap != size) {
                 __wbuf.__cap = size;
-                __wbuf.__buf = (char*) __mextend(__wbuf.__buf, size);
+                __wbuf.__buf = (char*)__mextend(__wbuf.__buf, size);
             }
 
             /// Realloc the read buffer. Make sure we don't lose any data.
@@ -455,20 +471,21 @@ bool _IO_File::setbuf(Buffering buffering, size_t size) {
                 /// Buffer is empty; just extend it.
                 if (not __rdbuf.__offs) {
                     __rdbuf.__cap = size;
-                    __rdbuf.__buf = (char*) __mextend(__rdbuf.__buf, size);
+                    __rdbuf.__buf = (char*)__mextend(__rdbuf.__buf, size);
                 }
 
                 /// Buffer has data; make sure we don't lose any of it.
                 else {
                     __rdbuf.__cap = std::max(__rdbuf.__offs, size);
-                    __rdbuf.__buf = (char*) realloc(__rdbuf.__buf, __rdbuf.__cap);
+                    __rdbuf.__buf = (char*)realloc(__rdbuf.__buf, __rdbuf.__cap);
                 }
             }
 
             return true;
 
         /// Invalid buffering mode.
-        default: return false;
+        default:
+            return false;
     }
 }
 
@@ -509,10 +526,12 @@ ssize_t _IO_File::write(const char* __restrict__ str, size_t sz) {
             return written;
         }
 
-        case FullyBuffered: return write_internal(str, sz);
+        case FullyBuffered:
+            return write_internal(str, sz);
 
         /// Invalid buffering mode. Should be unreachable.
-        default: return EOF;
+        default:
+            return EOF;
     }
 }
 
@@ -553,11 +572,11 @@ constexpr static char __digit_from_value(auto value) {
 /// ===========================================================================
 __BEGIN_DECLS__
 
-FILE* stdin;
-FILE* stdout;
-FILE* stderr;
+FILE* stdin = nullptr;
+FILE* stdout = nullptr;
+FILE* stderr = nullptr;
 
-_PushIgnoreWarning("-Wprio-ctor-dtor")
+_PushIgnoreWarning("-Wprio-ctor-dtor");
 
 /// Initialise the standard streams.
 [[gnu::constructor(_CDTOR_STDIO)]] void __stdio_init() {
@@ -573,7 +592,7 @@ _PushIgnoreWarning("-Wprio-ctor-dtor")
     __stdio_destructed = true;
 }
 
-_PopWarnings()
+_PopWarnings();
 
 /// ===========================================================================
 ///  7.21.4 Operations on files.
@@ -632,7 +651,9 @@ FILE* freopen(const char* __restrict__ filename, const char* __restrict__ mode, 
     /// If the filename is nullptr, the mode of the stream is changed to the mode specified by `mode`.
     /// What mode changes are possible is implementation-defined, so currently, we always fail.
     (void)mode;
-    if (not filename) { return nullptr; }
+    if (not filename) {
+        return nullptr;
+    }
 
     /// Open the new file.
     auto fd = open(filename, 0, 0);
@@ -654,7 +675,9 @@ int setvbuf(FILE* __restrict__ stream, char* __restrict__, int mode, size_t size
     if (stream->__rdbuf.__offs != 0
         || stream->__wbuf.__offs != 0
         || stream->__f_error
-        || stream->__f_eof) { return -1; }
+        || stream->__f_eof) {
+        return -1;
+    }
 
     /// Set the buffer.
     switch (mode) {
@@ -667,7 +690,8 @@ int setvbuf(FILE* __restrict__ stream, char* __restrict__, int mode, size_t size
         case _IOFBF:
             if (not stream->setbuf(FullyBuffered, size)) return -1;
             break;
-        default: return -1;
+        default:
+            return -1;
     }
 
     return 0;
@@ -719,9 +743,8 @@ int snprintf(char* __restrict__ str, size_t size, const char* __restrict__ forma
 int sprintf(char* __restrict__ str, const char* __restrict__ format, ...) {
     va_list args;
     va_start(args, format);
-    _PushIgnoreWarning("-Wdeprecated-declarations")
-    auto ret = vsprintf(str, format, args);
-    _PopWarnings()
+    _PushIgnoreWarning("-Wdeprecated-declarations") auto ret = vsprintf(str, format, args);
+    _PopWarnings();
     va_end(args);
     return ret;
 }
@@ -735,82 +758,85 @@ int sscanf(const char* __restrict__ str, const char* __restrict__ format, ...) {
 }
 
 int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list args) {
-    for (const char *fmt = format; *fmt; ++fmt) {
+    for (const char* fmt = format; *fmt; ++fmt) {
         if (*fmt == '%') {
             ++fmt;
             switch (*fmt) {
+                    // TODO: Support more format specifiers
 
-            // TODO: Support more format specifiers
+                case 'p': {
+                    void* addr = va_arg(args, void*);
+                    std::print("{}", addr);
+                }
+                    continue;
 
-            case 'p': {
-                void *addr = va_arg(args, void *);
-                std::print("{}", addr);
-            } continue;
+                case 's': {
+                    const char* str = va_arg(args, const char*);
+                    fputs(str, stream);
+                }
+                    continue;
 
-            case 's': {
-                const char *str = va_arg(args, const char *);
-                fputs(str, stream);
-            } continue;
+                case 'c': {
+                    int c = va_arg(args, int);
+                    fputc(c, stream);
+                }
+                    continue;
 
-            case 'c': {
-                int c = va_arg(args, int);
-                fputc(c, stream);
-            } continue;
+                case 'u': {
+                    unsigned int val = va_arg(args, unsigned int);
 
-            case 'u': {
-                unsigned int val = va_arg(args, unsigned int);
+                    // TODO: Abstract + parameterise number printing
+                    constexpr const size_t radix = 10;
+                    static_assert(radix != 0, "Can not print zero-base numbers");
 
-                // TODO: Abstract + parameterise number printing
-                constexpr const size_t radix = 10;
-                static_assert(radix != 0, "Can not print zero-base numbers");
+                    constexpr const size_t max_digits = 32;
+                    static_assert(max_digits != 0, "Can not print into zero-length buffer");
+                    char digits[max_digits];
 
-                constexpr const size_t max_digits = 32;
-                static_assert(max_digits != 0, "Can not print into zero-length buffer");
-                char digits[max_digits];
+                    size_t i = max_digits;
+                    for (size_t tmp_val = val; tmp_val && i; tmp_val /= radix, --i)
+                        digits[i - 1] = __digit_from_value(tmp_val % radix);
 
-                size_t i = max_digits;
-                for (size_t tmp_val = val; tmp_val && i; tmp_val /= radix, --i)
-                    digits[i - 1] = __digit_from_value(tmp_val % radix);
+                    if (i == max_digits) digits[--i] = '0';
 
-                if (i == max_digits) digits[--i] = '0';
+                    for (const char* it = &digits[i]; it < &digits[0] + max_digits; ++it)
+                        fputc(*it, stream);
+                }
+                    continue;
 
-                for (const char *it = &digits[i]; it < &digits[0] + max_digits; ++it)
-                    fputc(*it, stream);
+                case 'i':
+                    [[fallthrough]];
+                case 'd': {
+                    int val = va_arg(args, int);
+                    bool negative = val < 0;
 
-            } continue;
+                    // TODO: Abstract + parameterise number printing
+                    constexpr const size_t radix = 10;
+                    static_assert(radix != 0, "Can not print zero-base numbers");
 
-            case 'i': [[fallthrough]];
-            case 'd': {
-                int val = va_arg(args, int);
-                bool negative = val < 0;
+                    constexpr const size_t max_digits = 32;
+                    static_assert(max_digits != 0, "Can not print into zero-length buffer");
+                    char digits[max_digits];
 
-                // TODO: Abstract + parameterise number printing
-                constexpr const size_t radix = 10;
-                static_assert(radix != 0, "Can not print zero-base numbers");
+                    size_t i = max_digits;
+                    for (size_t tmp_val = negative ? -val : val; tmp_val && i; tmp_val /= radix, --i)
+                        digits[i - 1] = __digit_from_value(tmp_val % radix);
 
-                constexpr const size_t max_digits = 32;
-                static_assert(max_digits != 0, "Can not print into zero-length buffer");
-                char digits[max_digits];
+                    if (i == max_digits) digits[--i] = '0';
 
-                size_t i = max_digits;
-                for (size_t tmp_val = negative ? -val : val; tmp_val && i; tmp_val /= radix, --i)
-                    digits[i - 1] = __digit_from_value(tmp_val % radix);
+                    if (negative) fputc('-', stream);
+                    for (const char* it = &digits[i]; it < &digits[0] + max_digits; ++it)
+                        fputc(*it, stream);
+                }
+                    continue;
 
-                if (i == max_digits) digits[--i] = '0';
+                case '\0':
+                    fputc('%', stream);
+                    return 0;
 
-                if (negative) fputc('-', stream);
-                for (const char *it = &digits[i]; it < &digits[0] + max_digits; ++it)
-                    fputc(*it, stream);
-
-            } continue;
-
-            case '\0':
-                fputc('%', stream);
-                return 0;
-
-            default:
-                fputc('%', stream);
-                break;
+                default:
+                    fputc('%', stream);
+                    break;
             }
         }
         fputc(*fmt, stream);
@@ -846,81 +872,82 @@ int vsnprintf(char* __restrict__ str, size_t size, const char* __restrict__ form
 }
 
 int vsprintf(char* __restrict__ str, const char* __restrict__ format, va_list args) {
-    for (const char *fmt = format; *fmt; ++fmt) {
+    for (const char* fmt = format; *fmt; ++fmt) {
         if (*fmt == '%') {
             ++fmt;
             switch (*fmt) {
+                    // TODO: Support more format specifiers
 
-            // TODO: Support more format specifiers
-
-            case 's': {
-                const char *str_val = va_arg(args, const char *);
-                while (*str_val) {
-                    *str++ = *str_val++;
+                case 's': {
+                    const char* str_val = va_arg(args, const char*);
+                    while (*str_val) {
+                        *str++ = *str_val++;
+                    }
+                    *str = '\0';
                 }
-                *str = '\0';
-            } continue;
+                    continue;
 
-            case 'c': {
-                int c = va_arg(args, int);
-                *str++ = (char)c;
-            } continue;
+                case 'c': {
+                    int c = va_arg(args, int);
+                    *str++ = (char)c;
+                }
+                    continue;
 
-            case 'u': {
-                unsigned int val = va_arg(args, unsigned int);
+                case 'u': {
+                    unsigned int val = va_arg(args, unsigned int);
 
-                // TODO: Abstract + parameterise number printing
-                constexpr const size_t radix = 10;
-                static_assert(radix != 0, "Can not print zero-base numbers");
+                    // TODO: Abstract + parameterise number printing
+                    constexpr const size_t radix = 10;
+                    static_assert(radix != 0, "Can not print zero-base numbers");
 
-                constexpr const size_t max_digits = 32;
-                static_assert(max_digits != 0, "Can not print into zero-length buffer");
-                char digits[max_digits] = {0};
+                    constexpr const size_t max_digits = 32;
+                    static_assert(max_digits != 0, "Can not print into zero-length buffer");
+                    char digits[max_digits] = {0};
 
-                size_t i = max_digits;
-                for (size_t tmp_val = val; tmp_val && i; tmp_val /= radix, --i)
-                    digits[i - 1] = __digit_from_value(tmp_val % radix);
+                    size_t i = max_digits;
+                    for (size_t tmp_val = val; tmp_val && i; tmp_val /= radix, --i)
+                        digits[i - 1] = __digit_from_value(tmp_val % radix);
 
-                if (i == max_digits) digits[--i] = '0';
+                    if (i == max_digits) digits[--i] = '0';
 
-                for (const char *it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
-                    *str++ = *it;
+                    for (const char* it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
+                        *str++ = *it;
+                }
+                    continue;
 
-            } continue;
+                case 'i':
+                case 'd': {
+                    int val = va_arg(args, int);
+                    bool negative = val < 0;
 
-            case 'i':
-            case 'd': {
-                int val = va_arg(args, int);
-                bool negative = val < 0;
+                    // TODO: Abstract + parameterise number printing
+                    constexpr const size_t radix = 10;
+                    static_assert(radix != 0, "Can not print zero-base numbers");
 
-                // TODO: Abstract + parameterise number printing
-                constexpr const size_t radix = 10;
-                static_assert(radix != 0, "Can not print zero-base numbers");
+                    constexpr const size_t max_digits = 32;
+                    static_assert(max_digits != 0, "Can not print into zero-length buffer");
+                    char digits[max_digits] = {0};
 
-                constexpr const size_t max_digits = 32;
-                static_assert(max_digits != 0, "Can not print into zero-length buffer");
-                char digits[max_digits] = {0};
+                    size_t i = max_digits;
+                    for (size_t tmp_val = negative ? -val : val; tmp_val && i; tmp_val /= radix, --i)
+                        digits[i - 1] = __digit_from_value(tmp_val % radix);
 
-                size_t i = max_digits;
-                for (size_t tmp_val = negative ? -val : val; tmp_val && i; tmp_val /= radix, --i)
-                    digits[i - 1] = __digit_from_value(tmp_val % radix);
+                    if (i == max_digits) digits[--i] = '0';
 
-                if (i == max_digits) digits[--i] = '0';
+                    if (negative) *str++ = '-';
+                    for (const char* it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
+                        *str++ = *it;
+                }
+                    continue;
 
-                if (negative) *str++ = '-';
-                for (const char *it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
-                    *str++ = *it;
+                case '\0':
+                    *str++ = '%';
+                    *str = '\0';
+                    return 0;
 
-            } continue;
-
-            case '\0':
-                *str++ = '%';
-                *str = '\0';
-                return 0;
-
-            default:
-                *str++ = '%';
-                break;
+                default:
+                    *str++ = '%';
+                    break;
             }
         }
         *str++ = *fmt;
@@ -1114,15 +1141,14 @@ void perror(const char* str) {
 /// ===========================================================================
 ///  POSIX extensions.
 /// ===========================================================================
-_PushIgnoreWarning("-Wunused-parameter")
-char *ctermid(char *s) {
+_PushIgnoreWarning("-Wunused-parameter") char* ctermid(char* s) {
     static char empty_string = 0;
     if (not s) return &empty_string;
     *s = 0;
     return s;
 }
 
-int dprintf(int fd, const char * __restrict__ fmt, ...) {
+int dprintf(int fd, const char* __restrict__ fmt, ...) {
     /// TODO: Like fprintf, but it accepts a file descriptor rather than a FILE.
     _LIBC_STUB();
 }
@@ -1153,7 +1179,7 @@ off_t ftello(FILE* stream) {
     return ftell(stream);
 }
 
-int getc_unlocked(FILE *stream) {
+int getc_unlocked(FILE* stream) {
     char c;
     if (stream->read(&c, 1) != 1) return EOF;
     return c;
@@ -1163,7 +1189,7 @@ int getchar_unlocked() {
     return getc_unlocked(stdin);
 }
 
-int putc_unlocked(int c, FILE *stream) {
+int putc_unlocked(int c, FILE* stream) {
     auto ch = static_cast<char>(c);
     if (not stream->write(ch)) return EOF;
     return ch;
@@ -1172,7 +1198,8 @@ int putc_unlocked(int c, FILE *stream) {
 int putchar_unlocked(int c) {
     return putc_unlocked(c, stdout);
 }
-_PopWarnings()
+_PopWarnings();
+
 /// ===========================================================================
 ///  Internal
 /// ===========================================================================

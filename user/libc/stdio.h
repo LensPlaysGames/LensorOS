@@ -53,7 +53,7 @@ void __write_ptr(void* ptr);
 int remove(const char* __pathname);
 int rename(const char* __oldpath, const char* __newpath);
 
-#define TMP_MAX 25 // Minimum is twenty five
+#define TMP_MAX 25  // Minimum is twenty five
 FILE* tmpfile(void);
 
 #define L_tmpnam 4
@@ -62,7 +62,6 @@ char* tmpnam(char*);
 /// File access
 int fclose(FILE*);
 int fflush(FILE*);
-
 
 #define FOPEN_MAX 7  // Minimum is seven
 FILE* fopen(const char* __pathname, const char* __mode);
@@ -81,8 +80,7 @@ int scanf(const char* __fmt, ...) _Format(__scanf__, 1, 2);
 int snprintf(char* __buffer, size_t, const char* __fmt, ...) _Format(__printf__, 3, 4);
 
 _Format(__printf__, 2, 3)
-_Deprecated("sprintf() is deprecated as it can cause buffer overflows. Use snprintf() instead.")
-int sprintf(char* __buffer, const char* __fmt, ...);
+    _Deprecated("sprintf() is deprecated as it can cause buffer overflows. Use snprintf() instead.") int sprintf(char* __buffer, const char* __fmt, ...);
 
 int sscanf(const char* __str, const char* __fmt, ...) _Format(__printf__, 2, 3);
 int vfprintf(FILE*, const char* __fmt, __builtin_va_list) _Format(__printf__, 2, 0);
@@ -92,8 +90,7 @@ int vscanf(const char*, __builtin_va_list) _Format(__scanf__, 1, 0);
 int vsnprintf(char* __buffer, size_t, const char* __fmt, __builtin_va_list) _Format(__printf__, 3, 0);
 
 _Format(__printf__, 2, 0)
-_Deprecated("vsprintf() is deprecated as it can cause buffer overflows. Use vsnprintf() instead.")
-int vsprintf(char* __buffer, const char* __fmt, __builtin_va_list);
+    _Deprecated("vsprintf() is deprecated as it can cause buffer overflows. Use vsnprintf() instead.") int vsprintf(char* __buffer, const char* __fmt, __builtin_va_list);
 
 int vsscanf(const char*, const char*, __builtin_va_list) _Format(__scanf__, 2, 0);
 int fgetc(FILE*);
@@ -131,18 +128,18 @@ void perror(const char*);
 
 /// POSIX extensions.
 #define L_ctermid 1
-char *ctermid(char *__s);
-int dprintf(int __fd, const char * __restrict__ __fmt, ...) _Format(__printf__, 2, 3);
+char* ctermid(char* __s);
+int dprintf(int __fd, const char* __restrict__ __fmt, ...) _Format(__printf__, 2, 3);
 FILE* fdopen(int __fd, const char* __mode);
 void flockfile(FILE* __stream);
 int ftrylockfile(FILE* __stream);
 void funlockfile(FILE* __stream);
 FILE* fmemopen(void* __restrict__ __buf, size_t __size, const char* __restrict__ __mode);
-int fseeko(FILE *__stream, off_t __offset, int __whence);
-off_t ftello(FILE *);
-int getc_unlocked(FILE *__stream);
+int fseeko(FILE* __stream, off_t __offset, int __whence);
+off_t ftello(FILE*);
+int getc_unlocked(FILE* __stream);
 int getchar_unlocked(void);
-int putc_unlocked(int __c, FILE *__stream);
+int putc_unlocked(int __c, FILE* __stream);
 int putchar_unlocked(int __c);
 
 __END_DECLS__

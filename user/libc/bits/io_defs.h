@@ -5,9 +5,9 @@
 #ifndef LENSOROS_IO_DEFS_H
 #define LENSOROS_IO_DEFS_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <bits/decls.h>
+#include <stddef.h>
+#include <stdint.h>
 
 __BEGIN_DECLS__
 
@@ -46,5 +46,4 @@ enum Buffering : _IO_flags_t {
 
 #endif
 
-
-#endif // LENSOROS_IO_DEFS_H
+#endif  // LENSOROS_IO_DEFS_H

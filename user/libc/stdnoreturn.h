@@ -17,7 +17,6 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #ifndef _STDNORETURN_H
 #define _STDNORETURN_H
 

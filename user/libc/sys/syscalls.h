@@ -27,42 +27,41 @@
 #include <sys/types.h>
 
 #ifdef __lensor__
-#define SYS_open    0
-#define SYS_close   1
-#define SYS_read    2
-#define SYS_write   3
-#define SYS_poke    4
-#define SYS_exit    5
-#define SYS_map     6
-#define SYS_unmap   7
-#define SYS_time    8
+#define SYS_open 0
+#define SYS_close 1
+#define SYS_read 2
+#define SYS_write 3
+#define SYS_poke 4
+#define SYS_exit 5
+#define SYS_map 6
+#define SYS_unmap 7
+#define SYS_time 8
 #define SYS_waitpid 9
-#define SYS_fork    10
-#define SYS_exec    11
-#define SYS_repfd   12
-#define SYS_pipe    13
-#define SYS_seek    14
-#define SYS_pwd     15
-#define SYS_dup     16
-#define SYS_uart    17
-#define SYS_socket  18
-#define SYS_bind    19
-#define SYS_listen  20
+#define SYS_fork 10
+#define SYS_exec 11
+#define SYS_repfd 12
+#define SYS_pipe 13
+#define SYS_seek 14
+#define SYS_pwd 15
+#define SYS_dup 16
+#define SYS_uart 17
+#define SYS_socket 18
+#define SYS_bind 19
+#define SYS_listen 20
 #define SYS_connect 21
-#define SYS_accept  22
-#define SYS_kqueue  23
-#define SYS_kevent  24
+#define SYS_accept 22
+#define SYS_kqueue 23
+#define SYS_kevent 24
 #define SYS_directory_data 25
 #define SYS_MAXSYSCALL 25
 #else
-#define SYS_read  0
+#define SYS_read 0
 #define SYS_write 1
-#define SYS_open  2
+#define SYS_open 2
 #define SYS_close 3
-#define SYS_exit  60
+#define SYS_exit 60
 #define SYS_MAXSYSCALL 325
 #endif
-
 
 /// ===========================================================================
 ///  Syscall functions.
@@ -97,12 +96,10 @@ __BEGIN_DECLS__
 #define _DEFINE_SYSCALL(_N, _Args, ...)                                                 \
     __attribute__((__always_inline__, __artificial__)) inline __a __syscall##_N _Args { \
         __a __result;                                                                   \
-        __asm__ __volatile__                                                            \
-            (_SYSCALL "\n"                                                              \
-             : "=a"(__result)                                                           \
-             : "a"(__n) __VA_OPT__(, ) __VA_ARGS__                                      \
-             : "memory" _SYSCALL_CLOBBERS                                               \
-        );                                                                              \
+        __asm__ __volatile__(_SYSCALL "\n"                                              \
+                             : "=a"(__result)                                           \
+                             : "a"(__n)__VA_OPT__(, ) __VA_ARGS__                       \
+                             : "memory" _SYSCALL_CLOBBERS);                             \
         return __result;                                                                \
     }
 
@@ -113,42 +110,36 @@ _DEFINE_SYSCALL(1, _DEFINE_SYSCALL_ARGS(__a __1), _R1(__1))
 _DEFINE_SYSCALL(2, _DEFINE_SYSCALL_ARGS(__a __1, __a __2), _R1(__1), _R2(__2))
 _DEFINE_SYSCALL(3, _DEFINE_SYSCALL_ARGS(__a __1, __a __2, __a __3), _R1(__1), _R2(__2), _R3(__3))
 
-__attribute__((__always_inline__, __artificial__))
-inline __a __syscall4(__a __n, __a __1, __a __2, __a __3, __a __4) {
+__attribute__((__always_inline__, __artificial__)) inline __a __syscall4(__a __n, __a __1, __a __2, __a __3, __a __4) {
     __a __result;
     register __a __r4 asm(_R4) = __4;
-    __asm__ __volatile__
-        (_SYSCALL "\n"
-         : "=a"(__result)
-         : "a"(__n), _R1(__1), _R2(__2), _R3(__3), "r"(__r4)
-         : "memory" _SYSCALL_CLOBBERS);
+    __asm__ __volatile__(_SYSCALL "\n"
+                         : "=a"(__result)
+                         : "a"(__n), _R1(__1), _R2(__2), _R3(__3), "r"(__r4)
+                         : "memory" _SYSCALL_CLOBBERS);
     return __result;
 }
 
-__attribute__((__always_inline__, __artificial__))
-inline __a __syscall5(__a __n, __a __1, __a __2, __a __3, __a __4, __a __5) {
+__attribute__((__always_inline__, __artificial__)) inline __a __syscall5(__a __n, __a __1, __a __2, __a __3, __a __4, __a __5) {
     __a __result;
     register __a __r4 asm(_R4) = __4;
     register __a __r5 asm(_R5) = __5;
-    __asm__ __volatile__
-        (_SYSCALL "\n"
-         : "=a"(__result)
-         : "a"(__n), _R1(__1), _R2(__2), _R3(__3), "r"(__r4), "r"(__r5)
-         : "memory" _SYSCALL_CLOBBERS);
+    __asm__ __volatile__(_SYSCALL "\n"
+                         : "=a"(__result)
+                         : "a"(__n), _R1(__1), _R2(__2), _R3(__3), "r"(__r4), "r"(__r5)
+                         : "memory" _SYSCALL_CLOBBERS);
     return __result;
 }
 
-__attribute__((__always_inline__, __artificial__))
-inline __a __syscall6(__a __n, __a __1, __a __2, __a __3, __a __4, __a __5, __a __6) {
+__attribute__((__always_inline__, __artificial__)) inline __a __syscall6(__a __n, __a __1, __a __2, __a __3, __a __4, __a __5, __a __6) {
     __a __result;
     register __a __r4 asm(_R4) = __4;
     register __a __r5 asm(_R5) = __5;
     register __a __r6 asm(_R6) = __6;
-    __asm__ __volatile__
-        (_SYSCALL "\n"
-         : "=a"(__result)
-         : "a"(__n), _R1(__1), _R2(__2), _R3(__3), "r"(__r4), "r"(__r5), "r"(__r6)
-         : "memory" _SYSCALL_CLOBBERS);
+    __asm__ __volatile__(_SYSCALL "\n"
+                         : "=a"(__result)
+                         : "a"(__n), _R1(__1), _R2(__2), _R3(__3), "r"(__r4), "r"(__r5), "r"(__r6)
+                         : "memory" _SYSCALL_CLOBBERS);
     return __result;
 }
 
@@ -172,15 +163,15 @@ typedef struct sockaddr {
 } sockaddr;
 
 typedef struct tm {
-    int seconds;                  // seconds,  0--59
-    int minutes;                  // minutes,  0--59
-    int hours;                    // hours, 0 to 23
-    int day_of_month;             // day of the month, 1--31
-    int month;                    // month, 0--11
-    int years_since_1900;         // The number of years since 1900
-    int day_of_week;              // day of the week, 0--6
-    int day_of_year;              // day in the year, 0--365
-    int is_daylight_savings_time; // daylight saving time
+    int seconds;                   // seconds,  0--59
+    int minutes;                   // minutes,  0--59
+    int hours;                     // hours, 0 to 23
+    int day_of_month;              // day of the month, 1--31
+    int month;                     // month, 0--11
+    int years_since_1900;          // The number of years since 1900
+    int day_of_week;               // day of the week, 0--6
+    int day_of_year;               // day in the year, 0--365
+    int is_daylight_savings_time;  // daylight saving time
 } tm;
 
 struct DirectoryEntry {
@@ -189,7 +180,6 @@ struct DirectoryEntry {
 };
 
 __END_DECLS__
-
 
 /// ===========================================================================
 ///  C Interface.
@@ -208,7 +198,7 @@ typedef struct DirectoryEntry DirectoryEntry;
 #define _MAP_6(M, x, ...) M(x)
 
 // The Counter macro: Maps the number of arguments to a suffix number
-#define _COUNT(...) _COUNT_I(__VA_ARGS__ __VA_OPT__(,) 6, 5, 4, 3, 2, 1, 0)
+#define _COUNT(...) _COUNT_I(__VA_ARGS__ __VA_OPT__(, ) 6, 5, 4, 3, 2, 1, 0)
 #define _COUNT_I(_1, _2, _3, _4, _5, _6, N, ...) N
 
 // Glue macros to safely build token names (like __syscall3)
@@ -220,7 +210,7 @@ typedef struct DirectoryEntry DirectoryEntry;
 
 // The clean entry point
 #define syscall(sys, ...) \
-    _EVAL(__syscall, _COUNT(__VA_ARGS__))(sys __VA_OPT__(,) _MAP(_TO_UINT, __VA_ARGS__))
+    _EVAL(__syscall, _COUNT(__VA_ARGS__))(sys __VA_OPT__(, ) _MAP(_TO_UINT, __VA_ARGS__))
 
 typedef uint64_t ProcessFileDescriptor;
 typedef ProcessFileDescriptor ProcFD;
@@ -258,13 +248,13 @@ int sys_waitpid(pid_t pid) {
 pid_t sys_fork() {
     return (pid_t)syscall(SYS_fork);
 }
-void sys_exec(const char *path, const char **args) {
+void sys_exec(const char* path, const char** args) {
     syscall(SYS_exec, (uintptr_t)path, (uintptr_t)args);
 }
 void sys_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
     syscall(SYS_repfd, (uintptr_t)fd, (uintptr_t)replaced);
 }
-void sys_pipe(ProcessFileDescriptor *fds) {
+void sys_pipe(ProcessFileDescriptor* fds) {
     syscall(SYS_pipe, (uintptr_t)fds);
 }
 /// SEEK_CUR == 0 == OFFSET is based off of current offset (relative).
@@ -273,7 +263,7 @@ void sys_pipe(ProcessFileDescriptor *fds) {
 int sys_seek(ProcessFileDescriptor fd, ssize_t offset, int whence) {
     return (int)syscall(SYS_seek, (uintptr_t)fd, (uintptr_t)offset, (uintptr_t)whence);
 }
-bool sys_pwd(char *buffer, size_t numBytes) {
+bool sys_pwd(char* buffer, size_t numBytes) {
     return (bool)syscall(SYS_pwd, (uintptr_t)buffer, (uintptr_t)numBytes);
 }
 ProcFD sys_dup(ProcessFileDescriptor fd) {
@@ -308,7 +298,7 @@ typedef enum EventType {
     EVENTTYPE_COUNT
 } EventType;
 typedef union EventFilter {
-  ProcFD ProcessFD;
+    ProcFD ProcessFD;
 } EventFilter;
 #define EVENT_MAX_SIZE 128
 typedef struct Event {
@@ -321,15 +311,14 @@ typedef struct EventData_ReadyToReadWrite {
     size_t BytesAvailable;
 } EventData_ReadyToReadWrite;
 int sys_kqueue() {
-  return (int)syscall(SYS_kqueue);
+    return (int)syscall(SYS_kqueue);
 }
 int sys_kevent(int handle, const Event* changelist, int numChanges, Event* eventlist, int maxEvents) {
-  return (int)syscall(SYS_kevent, handle, changelist, numChanges, eventlist, maxEvents);
+    return (int)syscall(SYS_kevent, handle, changelist, numChanges, eventlist, maxEvents);
 }
 int sys_directory_data(const char* path, DirectoryEntry* entries, int maxEntries) {
     return (int)syscall(SYS_directory_data, path, entries, maxEntries);
 }
-
 
 /// ===========================================================================
 ///  C++ Interface.
@@ -350,22 +339,20 @@ template <
     typename = _Requires<
         bool_constant<sizeof...(_Args) <= 6>,
         _Or<_Number<_Args>,
-            _Pointer<_Args>>...>
->
+            _Pointer<_Args> >...> >
 [[__gnu__::__always_inline__, __gnu__::__artificial__]]
-inline _Ret syscall(uintptr_t __sys, _Args&& ...__args) {
-    __if   (sizeof...(_Args) == 0) return _Ret(__syscall0(__sys));
-    __elif (sizeof...(_Args) == 1) return _Ret(__syscall1(__sys, (uintptr_t)__args...));
-    __elif (sizeof...(_Args) == 2) return _Ret(__syscall2(__sys, (uintptr_t)__args...));
-    __elif (sizeof...(_Args) == 3) return _Ret(__syscall3(__sys, (uintptr_t)__args...));
-    __elif (sizeof...(_Args) == 4) return _Ret(__syscall4(__sys, (uintptr_t)__args...));
-    __elif (sizeof...(_Args) == 5) return _Ret(__syscall5(__sys, (uintptr_t)__args...));
-    __elif (sizeof...(_Args) == 6) return _Ret(__syscall6(__sys, (uintptr_t)__args...));
+inline _Ret syscall(uintptr_t __sys, _Args&&... __args) {
+    __if(sizeof...(_Args) == 0) return _Ret(__syscall0(__sys));
+    __elif(sizeof...(_Args) == 1) return _Ret(__syscall1(__sys, (uintptr_t)__args...));
+    __elif(sizeof...(_Args) == 2) return _Ret(__syscall2(__sys, (uintptr_t)__args...));
+    __elif(sizeof...(_Args) == 3) return _Ret(__syscall3(__sys, (uintptr_t)__args...));
+    __elif(sizeof...(_Args) == 4) return _Ret(__syscall4(__sys, (uintptr_t)__args...));
+    __elif(sizeof...(_Args) == 5) return _Ret(__syscall5(__sys, (uintptr_t)__args...));
+    __elif(sizeof...(_Args) == 6) return _Ret(__syscall6(__sys, (uintptr_t)__args...));
     __else __builtin_unreachable();
-
 }
 
-} // namespace __detail
+}  // namespace __detail
 
 using ProcessFileDescriptor = uint64_t;
 using ProcFD = ProcessFileDescriptor;
@@ -403,7 +390,7 @@ inline int sys_waitpid(pid_t pid) {
 inline pid_t sys_fork() {
     return std::__detail::syscall<pid_t>(SYS_fork);
 }
-inline void sys_exec(const char *path, const char **args) {
+inline void sys_exec(const char* path, const char** args) {
     std::__detail::syscall(SYS_exec, (uintptr_t)path, (uintptr_t)args);
 }
 inline void sys_exec(std::string_view path, std::vector<const char*> args) {
@@ -414,7 +401,7 @@ inline void sys_exec(std::string_view path, std::vector<const char*> args) {
 inline void sys_repfd(ProcessFileDescriptor fd, ProcessFileDescriptor replaced) {
     std::__detail::syscall(SYS_repfd, (uintptr_t)fd, (uintptr_t)replaced);
 }
-inline void sys_pipe(ProcessFileDescriptor *fds) {
+inline void sys_pipe(ProcessFileDescriptor* fds) {
     std::__detail::syscall(SYS_pipe, (uintptr_t)fds);
 }
 /// SEEK_CUR == 0 == OFFSET is based off of current offset  (relative).
@@ -423,7 +410,7 @@ inline void sys_pipe(ProcessFileDescriptor *fds) {
 inline int sys_seek(ProcessFileDescriptor fd, ssize_t offset, int whence) {
     return std::__detail::syscall<int>(SYS_seek, (uintptr_t)fd, (uintptr_t)offset, (uintptr_t)whence);
 }
-inline bool sys_pwd(char *buffer, size_t numBytes) {
+inline bool sys_pwd(char* buffer, size_t numBytes) {
     return std::__detail::syscall<bool>(SYS_pwd, (uintptr_t)buffer, (uintptr_t)numBytes);
 }
 inline ProcFD sys_dup(ProcessFileDescriptor fd) {
@@ -452,7 +439,7 @@ inline int sys_directory_data(const char* path, DirectoryEntry* entries, int max
     return std::__detail::syscall<int>(SYS_directory_data, (uintptr_t)path, (uintptr_t)entries, (uintptr_t)maxEntries);
 }
 
-} // namespace std
+}  // namespace std
 
 using std::__detail::syscall;
 
