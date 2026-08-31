@@ -266,17 +266,21 @@ void charbuf_putc(CharacterBuffer* charbuf, const uint32_t c) {
             charbuf_putc(charbuf, ' ');
             // Decrement cursor position (undo increment from writing space)
             charbuf->cursor.x -= 1;
-        } else if (!charbuf->cursor.y) {
+        }
+        else if (!charbuf->cursor.y) {
             // Backspace at very beginning of character buffer (replace first character with space).
             charbuf_putc(charbuf, ' ');
             charbuf->cursor.x = 0;
-        } else {
+        }
+        else {
             // TODO: At beginning of line, move cursor to end of last line.
             puts("\n[stdout]: TODO: backspace newline\n");
         }
-    } else if (c == '\r') {
+    }
+    else if (c == '\r') {
         charbuf->cursor.x = 0;
-    } else if (c == '\n') {
+    }
+    else if (c == '\n') {
         charbuf->cursor.y += 1;
         charbuf->cursor.x = 0;
         if (charbuf->cursor.y >= charbuf->height) {
@@ -287,7 +291,8 @@ void charbuf_putc(CharacterBuffer* charbuf, const uint32_t c) {
         }
         // FIXME: We probably have to draw spaces to the rest of the line in the
         // character buffer.
-    } else {
+    }
+    else {
         // Write character into character buffer.
         charbuf_write(charbuf, charbuf->cursor.x, charbuf->cursor.y, c);
 
@@ -346,8 +351,8 @@ void run_program_waitpid(const char* const filepath, const char** args, Characte
 
         // puts("Parent waited");
         // fflush(NULL);
-
-    } else {
+    }
+    else {
         // puts("Child");;
         close(fds[0]);
 
@@ -406,7 +411,7 @@ int main(int argc, const char** argv) {
     const uint32_t black = mkpixel(fb.format, 22, 23, 24, 0xff);
     fill_color(fb, black);
 
-    puts("\n\n<===!= WELCOME TO LensorOS SHELL [WIP] =!=!==>\n");
+    puts("\n\n<===!= WELCOME TO LensorOS [WIP] =!=!==>\n");
     puts("  LensorOS  Copyright (C) 2022, Contributors To LensorOS.");
 
     const char* const fontpath = "/fs0/res/fonts/psf1/dfltfont.psf";
