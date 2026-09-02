@@ -21,6 +21,7 @@
 #define LENSOR_OS_FILESYSTEM_DRIVER_H
 
 #include <storage/storage_device_driver.h>
+
 #include <string>
 
 // Forward declaration; full definition in `./file_metadata.h`
@@ -42,7 +43,8 @@ template <typename Derived>
 auto fsd(Derived&& derived) -> std::shared_ptr<FilesystemDriver> {
     if constexpr (std::is_same_v<std::remove_cvref_t<Derived>, std::shared_ptr<FilesystemDriver>>)
         return derived;
-    else return std::static_pointer_cast<FilesystemDriver>(std::forward<Derived>(derived));
+    else
+        return std::static_pointer_cast<FilesystemDriver>(std::forward<Derived>(derived));
 }
 
 #endif /* LENSOR_OS_FILESYSTEM_DRIVER_H */

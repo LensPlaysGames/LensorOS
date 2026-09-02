@@ -51,6 +51,8 @@ int main(int argc, char **argv) {
   sockaddr connected_addr;
   size_t connected_addrlen = sizeof(sockaddr);
   int clientFD = -1;
+  // Attempt to accept incoming connection. If given the retry return code,
+  // retry.
   do {
     printf("[SERVE]: Accepting...\n");
     fflush(stdout);
@@ -61,6 +63,7 @@ int main(int argc, char **argv) {
   }
   while (clientFD == -2)
     ;
+
   if (clientFD < 0) {
     close(sockFD);
     printf("[SERVE]: `accept` failed: %d\n", clientFD);

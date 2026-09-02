@@ -17,10 +17,9 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <pit.h>
-
 #include <integers.h>
 #include <io.h>
+#include <pit.h>
 
 PIT gPIT;
 void pit_tick() { gPIT.tick(); }
@@ -38,13 +37,13 @@ usz PIT::milliseconds_since_boot() {
 }
 
 void PIT::prepare_wait_milliseconds(usz ms) {
-  TicksToWait = ms * PIT_FREQUENCY / 1000;
+    TicksToWait = ms * PIT_FREQUENCY / 1000;
 }
 
 void PIT::wait() {
     u64 tickToWaitTo = Ticks + TicksToWait;
     while (Ticks < tickToWaitTo)
-        asm volatile ("hlt");
+        asm volatile("hlt");
 }
 
 void PIT::start_speaker() {
@@ -76,21 +75,28 @@ void PIT::play_sound(u64 frequency, usz ms) {
 void PIT::configure_channel(Channel channel, Access access, Mode mode, u64 frequency) {
     if (access == Access::LatchCount)
         out8(PIT_CMD, channel);
+
     // Interrupt on Terminal Count mode only works on channel zero.
-    if (channel != Channel::Zero && mode == Mode::InterruptOnTerminalCount)
+    if (channel != Channel::Zero and mode == Mode::InterruptOnTerminalCount)
         return;
+
     // Input gate can't be changed in channels zero or one, and hardware strobe relies on this.
-    if (mode == Mode::HardwareStrobe && channel == Channel::Zero)
+    if (mode == Mode::HardwareStrobe and channel == Channel::Zero)
         return;
+
     // Divisor must not be `1` in these modes.
-    if ((mode == Mode::RateGenerator || mode == Mode::SquareWaveGenerator) && frequency == PIT_MAX_FREQ)
+    if (
+        (mode == Mode::RateGenerator or mode == Mode::SquareWaveGenerator)
+        and frequency == PIT_MAX_FREQ)
         return;
+
     if (frequency == 0)
         return;
 
-    _PushIgnoreWarning("-Wdeprecated-enum-enum-conversion")
+    _PushIgnoreWarning("-Wdeprecated-enum-enum-conversion");
     u8 command = (channel | access | mode) & ~1;
-    _PopWarnings()
+    _PopWarnings();
+
     u16 dataPort = PIT_CH0_DAT;
     u16 divisor = PIT_MAX_FREQ / frequency;
 

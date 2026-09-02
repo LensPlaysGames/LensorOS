@@ -25,6 +25,7 @@
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
 #include <utf.h>
+
 #include <string>
 #include <vector>
 
@@ -62,7 +63,7 @@ class FileAllocationTableDriver final : public FilesystemDriver {
     FATType Type{};
 
     friend std::shared_ptr<FileAllocationTableDriver>
-        std::make_shared(std::shared_ptr<StorageDeviceDriver>&& device, BootRecord&& br);
+    std::make_shared(std::shared_ptr<StorageDeviceDriver>&& device, BootRecord&& br);
 
     static auto fat_type(BootRecord& br) -> FATType;
 
@@ -100,7 +101,7 @@ class FileAllocationTableDriver final : public FilesystemDriver {
             auto operator->() -> EntryType* { return &Entry; }
             bool operator!=(std::default_sentinel_t) const { return MoreClusters; }
 
-        private:
+           private:
             /// Read the next cluster unconditionally.
             void ReadNextCluster();
 
@@ -110,7 +111,7 @@ class FileAllocationTableDriver final : public FilesystemDriver {
 
         DirIteratorHelper(FileAllocationTableDriver& driver) : Driver(driver) {}
         DirIteratorHelper(FileAllocationTableDriver& driver, u32 directoryCluster)
-        : Driver(driver), ClusterIndex(directoryCluster) {}
+            : Driver(driver), ClusterIndex(directoryCluster) {}
 
         /// Get an iterator that points to the first entry.
         auto begin() -> Iterator { return Iterator{Driver, ClusterIndex}; }
@@ -125,7 +126,7 @@ class FileAllocationTableDriver final : public FilesystemDriver {
     /// Given "/foo/bar/baz.txt" return "foo" and overwrite parameter to "bar/baz.txt"
     /// Given "/bar/" return "bar" and overwrite parameter to "bar"
     /// Given "/" return "/"
-    auto pop_filename_from_front_of_path(std::string &raw_path) -> std::string;
+    auto pop_filename_from_front_of_path(std::string& raw_path) -> std::string;
 
     // Takes a path that points to a directory and returns the directory
     // cluster for that directory, otherwise it returns -1.
@@ -143,7 +144,7 @@ class FileAllocationTableDriver final : public FilesystemDriver {
 
             // If path and raw_filename are equal, we can not resolve any more
             // filenames from full path; we have found the file the path points to.
-            //std::print("path:\"{}\" | raw_filename:\"{}\" | filename:\"{}\" \n", path, raw_filename, filename);
+            // std::print("path:\"{}\" | raw_filename:\"{}\" | filename:\"{}\" \n", path, raw_filename, filename);
             if (path == raw_filename) {
                 // If path was valid but doesn't point to directory, we can't get
                 // directory data from a non-directory.
@@ -170,7 +171,7 @@ class FileAllocationTableDriver final : public FilesystemDriver {
     /// with the directory cluster of the root directory.
     std::shared_ptr<FileMetadata> traverse_path(std::string_view raw_path, u32 directoryCluster = -1);
 
-public:
+   public:
     static void print_fat(BootRecord&);
 
     auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
@@ -220,15 +221,17 @@ public:
             // Skip volume label(s).
             if (Entry.CE->volume_id()) continue;
 
-            //std::print("Gathered directory entry \"{}\" \"{}\"\n", Entry.FileName, Entry.LongFileName);
+            // std::print("Gathered directory entry short=\"{}\" long=\"{}\"\n", Entry.FileName, utf16_to_utf8(Entry.LongFileName));
 
             // Copy file name into entry name.
             // Use long file name if it exists, otherwise use regular file name.
             if (Entry.LongFileName.size()) {
-                // TODO: LongFileName is utf-16, need to do conversion
+                // LongFileName is utf-16, need to do conversion
                 auto lfn = utf16_to_utf8(Entry.LongFileName);
+                // std::print("  long name: \"{}\"\n", lfn);
                 memcpy(&out[count].name[0], lfn.data(), std::min(lfn.size(), sizeof(out[count].name)));
-            } else {
+            }
+            else {
                 auto filename = Entry.FileName;
                 if (filename.size() == 11) {
                     // tolower
@@ -245,13 +248,17 @@ public:
                     // If extension isn't just spaces, add a period inbetween name and extension
                     if (extension.size())
                         filename = name + "." + extension;
-                    else filename = name;
+                    else
+                        filename = name;
                 }
+                // std::print("  short name: \"{}\"\n", filename);
                 memcpy(&out[count].name[0], filename.data(), std::min(filename.size(), sizeof(out[count].name)));
             }
 
             // Set directory vs regular file type.
-            out[count].type = Entry.CE->directory() ? FileMetadata::FileType::Directory : FileMetadata::FileType::Regular;
+            out[count].type = Entry.CE->directory()
+                                  ? FileMetadata::FileType::Directory
+                                  : FileMetadata::FileType::Regular;
 
             // Ensure we don't write too many entries.
             if (usz(++count) >= max_entry_count) break;
