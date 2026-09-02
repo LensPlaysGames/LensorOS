@@ -32,6 +32,7 @@ extern flush_page_map
 global yield
 yield:
     pushfq
+    cli ; prevent interrupts from bothering us
 
     ; Allocate the entire CPUState block (184 bytes minus the 8 bytes for
     ; flags we just pushed)
