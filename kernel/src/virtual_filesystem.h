@@ -20,24 +20,23 @@
 #ifndef LENSOR_OS_VIRTUAL_FILESYSTEM_H
 #define LENSOR_OS_VIRTUAL_FILESYSTEM_H
 
-
 #include <file.h>
 #include <linked_list.h>
+#include <scheduler.h>
 #include <storage/file_metadata.h>
 #include <storage/filesystem_driver.h>
-#include <storage/storage_device_driver.h>
 #include <storage/filesystem_drivers/dbgout.h>
 #include <storage/filesystem_drivers/input.h>
 #include <storage/filesystem_drivers/pipe.h>
 #include <storage/filesystem_drivers/socket.h>
-#include <scheduler.h>
+#include <storage/storage_device_driver.h>
 #include <vfs_forward.h>
 
-#include <memory>
 #include <extensions>
-#include <vector>
 #include <format>
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace std {
 template <>
@@ -61,7 +60,7 @@ struct formatter<SysFD> : formatter<FileDescriptor> {
         return formatter<FileDescriptor>::format(static_cast<FileDescriptor>(fd), ctx);
     }
 };
-} // namespace std
+}  // namespace std
 
 struct MountPoint {
     MountPoint() = default;
@@ -73,8 +72,8 @@ struct MountPoint {
 };
 
 struct FileDescriptors {
-    ProcFD Process { ProcFD::Invalid };
-    SysFD Global { SysFD::Invalid };
+    ProcFD Process{ProcFD::Invalid};
+    SysFD Global{SysFD::Invalid};
 
     bool valid() const {
         return Process != ProcFD::Invalid && Global != SysFD::Invalid;
@@ -93,10 +92,10 @@ struct VFS {
     std::shared_ptr<SocketDriver> SocketsDriver;
 
     VFS() {
-        StdinDriver    = std::make_shared<InputDriver>();
-        StdoutDriver   = std::make_shared<DbgOutDriver>();
-        PipesDriver    = std::make_shared<PipeDriver>();
-        SocketsDriver  = std::make_shared<SocketDriver>();
+        StdinDriver = std::make_shared<InputDriver>();
+        StdoutDriver = std::make_shared<DbgOutDriver>();
+        PipesDriver = std::make_shared<PipeDriver>();
+        SocketsDriver = std::make_shared<SocketDriver>();
     }
 
     void mount(std::string path, std::shared_ptr<FilesystemDriver>&& fs) {
@@ -145,8 +144,8 @@ struct VFS {
 
         // Get meta currently associated with `replaced` ProcFD.
         SysFD replaced_sysfd = procfd_to_fd(proc, replaced);
-        //auto replaced_file = file(replaced_sysfd);
-        //std::print("[VFS]:dup2: Replacing \"{}\" (ProcFD {}) with \"{}\" (ProcFD {})\n", replaced_file->name(), replaced, f->name(), fd);
+        // auto replaced_file = file(replaced_sysfd);
+        // std::print("[VFS]:dup2: Replacing \"{}\" (ProcFD {}) with \"{}\" (ProcFD {})\n", replaced_file->name(), replaced, f->name(), fd);
 
         // FIXME: This assumes that each and every process file
         // descriptor refers to a unique FileMetadata in the VFS Files
@@ -223,7 +222,7 @@ struct VFS {
         return -1;
     }
 
-private:
+   private:
     // It is a shared_ptr so that we can easily keep references to individual
     // elements past this vector's index and iterator invalidation.
     /// NOTE: Just a vector, nothing to see here.
@@ -232,7 +231,7 @@ private:
 
     void free_fd(SysFD fd, ProcFD procfd);
     void free_fd(Process*, SysFD fd, ProcFD procfd);
-    bool valid(Process *proc, ProcFD procfd) const;
+    bool valid(Process* proc, ProcFD procfd) const;
     bool valid(ProcFD procfd) const;
     bool valid(SysFD fd) const;
 };

@@ -17,20 +17,20 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <cstr.h>
+#include <scheduler.h>
+#include <storage/file_metadata.h>
 #include <virtual_filesystem.h>
 
-#include <cstr.h>
 #include <format>
-#include <storage/file_metadata.h>
-#include <scheduler.h>
 
 // Uncomment the following directive for extra debug information output.
 // #define DEBUG_VFS
 
 #ifdef DEBUG_VFS
-#   define DBGMSG(...) std::print(__VA_ARGS__)
+#define DBGMSG(...) std::print(__VA_ARGS__)
 #else
-#   define DBGMSG(...)
+#define DBGMSG(...)
 #endif
 
 SysFD VFS::procfd_to_fd(ProcFD procfd) const {
@@ -81,7 +81,7 @@ auto VFS::file(SysFD fd) -> std::shared_ptr<FileMetadata> {
     return f;
 }
 
-bool VFS::valid(Process *proc, ProcFD procfd) const {
+bool VFS::valid(Process* proc, ProcFD procfd) const {
     return procfd_to_fd(proc, procfd) != SysFD::Invalid;
 }
 
@@ -139,25 +139,24 @@ FileDescriptors VFS::open(std::string_view path) {
         /// Try to open the file.
         DBGMSG("[VFS]: Attempting to open file at path {} on mount {}\n", fs_path, mount.Path);
         if (auto meta = mount.FS->open(fs_path)) {
-            DBGMSG("  Metadata:\n"
-                   "    Name: {}\n"
-                   "    File Size: {}\n"
-                   "    Driver Data: {}\n"
-                   "    Filesystem Driver: {}\n"
-                   "    Invalid: {}\n"
-                   , meta->name()
-                   , meta->file_size()
-                   , meta->driver_data()
-                   , (void*) meta->filesystem_driver().get()
-                   , meta->invalid()
-            );
+            DBGMSG(
+                "  Metadata:\n"
+                "    Name: {}\n"
+                "    File Size: {}\n"
+                "    Driver Data: {}\n"
+                "    Filesystem Driver: {}\n"
+                "    Invalid: {}\n",
+                meta->name(),
+                meta->file_size(),
+                meta->driver_data(),
+                (void*)meta->filesystem_driver().get(),
+                meta->invalid());
             return add_file(std::move(meta));
         }
     }
 
     return {};
 }
-
 
 bool VFS::close(Process* process, ProcFD procfd) {
     if (!process) return false;
@@ -183,16 +182,16 @@ bool VFS::close(ProcFD procfd) {
 }
 
 ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
-    DBGMSG("[VFS]: read\n"
-           "  file descriptor: {}\n"
-           "  buffer address:  {}\n"
-           "  byte count:      {}\n"
-           "  byte offset:     {}\n"
-           , fd
-           , (void*) buffer
-           , byteCount
-           , byteOffset
-           );
+    DBGMSG(
+        "[VFS]: read\n"
+        "  file descriptor: {}\n"
+        "  buffer address:  {}\n"
+        "  byte count:      {}\n"
+        "  byte offset:     {}\n",
+        fd,
+        (void*)buffer,
+        byteCount,
+        byteOffset);
 
     // Scheduler::yield() is noreturn, but that doesn't mean the stackframe(s)
     // will be cleaned up. So we either have to
@@ -262,29 +261,30 @@ ssz VFS::write(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
 }
 
 void VFS::print_debug() {
-    std::print("[VFS]: Debug Info\n"
-           "  Mounts:\n");
+    std::print(
+        "[VFS]: Debug Info\n"
+        "  Mounts:\n");
     u64 i = 0;
     for (const auto& mp : Mounts) {
-        std::print("    Mount {}:\n"
-                   "      Path: {}\n"
-                   "      Filesystem: {}\n"
-                   "      Driver Address: {}\n"
-                   , i
-                   , mp.Path
-                   , mp.FS->name()
-                   , (void*) mp.FS.get()
-                   );
+        std::print(
+            "    Mount {}:\n"
+            "      Path: {}\n"
+            "      Filesystem: {}\n"
+            "      Driver Address: {}\n",
+            i,
+            mp.Path,
+            mp.FS->name(),
+            (void*)mp.FS.get());
         i += 1;
     }
     std::print("\n  Opened files:\n");
     i = 0;
     for (const auto& f : Files) {
-        std::print("    Open File {}:\n"
-                   "      Driver Address: {}\n"
-                   , i
-                   , (void*) f->filesystem_driver().get()
-        );
+        std::print(
+            "    Open File {}:\n"
+            "      Driver Address: {}\n",
+            i,
+            (void*)f->filesystem_driver().get());
         i++;
     }
     std::print("\n");
@@ -305,5 +305,5 @@ FileDescriptors VFS::add_file(std::shared_ptr<FileMetadata> file, Process* proc)
 
     /// Return the fds.
     DBGMSG("[VFS]: Mapped {} (pid {}) to {}\n", procfd, proc->ProcessID, fd);
-    return { static_cast<ProcFD>(procfd), static_cast<SysFD>(fd) };
+    return {static_cast<ProcFD>(procfd), static_cast<SysFD>(fd)};
 }
