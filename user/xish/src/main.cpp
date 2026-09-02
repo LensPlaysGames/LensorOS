@@ -41,28 +41,28 @@ void run_program_quiet_nowait(const char* const filepath, char* const* args) {
 ///   Passed to `exec` syscall
 int run_program_waitpid(const char* const filepath, const char** args) {
     if (not filepath or not args) {
-        std::print("[XiSh]: internal error: null arguments\n");
+        std::print("[XiSh]:Error: internal error: null arguments\n");
         exit(1);
     }
 
-    std::print("[XiSh]: running command at \"{}\", command line:", filepath);
-    for (auto arg = args; *arg; ++arg)
-        std::print(" {}", *arg);
-    std::print("\n");
+    // std::print("[XiSh]: running command at \"{}\", command line:", filepath);
+    // for (auto arg = args; *arg; ++arg)
+    //     std::print(" {}", *arg);
+    // std::print("\n");
 
     errno = 0;
 
     int fds[2] = {-1, -1};
     auto pipe_rc = pipe(fds);
     if (pipe_rc != 0) {
-        std::print("[XiSh]: Failed to create pipe: rc={} errno={}\n", pipe_rc, errno);
+        std::print("[XiSh]:Error: Failed to create pipe: rc={} errno={}\n", pipe_rc, errno);
         return -1;
     }
     // std::print("[XiSh]: Created pipe: ({}, {})\n", fds[0], fds[1]);
 
     pid_t cpid = fork();
     if (cpid == -1) {
-        std::print("[XiSh]: Failed to fork process: rc={} errno={}\n", cpid, errno);
+        std::print("[XiSh]:Error: Failed to fork process: rc={} errno={}\n", cpid, errno);
         return -1;
     }
     // printf("pid: %d\n", cpid);
@@ -71,7 +71,7 @@ int run_program_waitpid(const char* const filepath, const char** args) {
         {
             auto close_rc = close(fds[1]);
             if (close_rc != 0) {
-                std::print("[XiSh]: Failed to close write end of pipe in parent: rc={} errno={}\n", close_rc, errno);
+                std::print("[XiSh]:Error: Failed to close write end of pipe in parent: rc={} errno={}\n", close_rc, errno);
                 return -1;
             }
         }
@@ -82,25 +82,21 @@ int run_program_waitpid(const char* const filepath, const char** args) {
             std::print("{}", c);
 
         if (bytes_read < 0)
-            std::print("[XiSh]: Failed to read output from command (read returned {}) (errno={})\n", bytes_read, errno);
+            std::print("[XiSh]:Error: Failed to read output from command (read returned {}) (errno={})\n", bytes_read, errno);
 
         {
             auto close_rc = close(fds[0]);
             if (close_rc != 0) {
-                std::print("[XiSh]: Failed to close read end of pipe in parent: rc={} errno={}\n", close_rc, errno);
+                std::print("[XiSh]:Error: Failed to close read end of pipe in parent: rc={} errno={}\n", close_rc, errno);
                 return -1;
             }
         }
 
-        // TODO: waitpid needs to reserve some uncommon error code for
-        // itself so that it is clear what is a failure from waitpid or just a
-        // failing status. Maybe have some other way to check? Or wrap this in
-        // libc that sets errno (that always goes well).
         fflush(NULL);
         int command_status{};
         auto wait_rc = waitpid(cpid, &command_status, 0);
         if (wait_rc == -1) {
-            std::print("[XiSh]: `waitpid` failure! on pid {}\n", cpid);
+            std::print("[XiSh]:Error: `waitpid` failure! on pid {}\n", cpid);
             return -1;
         }
 
@@ -125,6 +121,24 @@ int run_program_waitpid(const char* const filepath, const char** args) {
     // FIXME: Unreachable
 
     return -1;
+}
+
+std::filesystem::path resolve_command(
+    const std::vector<std::filesystem::path>& PATH,
+    std::filesystem::path command) {
+    if (std::filesystem::exists(command))
+        return command;
+
+    for (auto& p : PATH) {
+        auto e = p / command;
+        // std::print("[XiSh]: Looking for command at \"{}\"\n", e);
+        if (std::filesystem::exists(e)) {
+            // std::print("[XiSh]: Found command at \"{}\"\n", resolved_command.data());
+            return e;
+        }
+    }
+
+    return "";
 }
 
 int main(int argc, char** argv) {
@@ -238,14 +252,14 @@ int main(int argc, char** argv) {
             arguments.push_back({arg.data(), arg.size()});
         }
 
-        {
-            std::print("[XiSH]: got command: \"{}\"\n", command);
-            size_t index = 0;
-            for (const auto& arg : arguments) {
-                std::print("  arg{}: \"{}\"\n", index, arg);
-                ++index;
-            }
-        }
+        // {
+        //     std::print("[XiSH]: got command: \"{}\"\n", command);
+        //     size_t index = 0;
+        //     for (const auto& arg : arguments) {
+        //         std::print("  arg{}: \"{}\"\n", index, arg);
+        //         ++index;
+        //     }
+        // }
 
         // BUILTINS
         if (command == "quit")
@@ -262,7 +276,8 @@ int main(int argc, char** argv) {
             command = arguments.at(0);
             arguments.erase(arguments.begin());
 
-            if (std::filesystem::exists(std::filesystem::path{command.data()})) {
+            auto resolved_command = resolve_command(PATH, command);
+            if (not resolved_command.empty()) {
                 // Prepare arguments for exec syscall
                 std::vector<char*> argv;
                 for (const auto& arg : arguments) {
@@ -270,8 +285,8 @@ int main(int argc, char** argv) {
                 }
                 argv.push_back(nullptr);
 
-                run_program_quiet_nowait(command.data(), argv.data());
-                std::print("[XiSH]: Ran \"{}\" in background\n", command);
+                run_program_quiet_nowait(resolved_command.c_str(), argv.data());
+                // std::print("[XiSH]: Ran \"{}\" in background\n", command);
             }
             else
                 std::print("[XiSH]:Error:builtin_background: \"{}\" does not exist\n", command);
@@ -280,30 +295,20 @@ int main(int argc, char** argv) {
         }
 
         // NOT A BUILTIN, DELEGATE TO SYSTEM COMMAND
-        std::string resolved_command{};
-        for (auto& p : PATH) {
-            auto e = p / command.data();
-            std::print("[XiSh]: Looking for command at \"{}\"\n", e);
-            if (std::filesystem::exists(e)) {
-                resolved_command = e.string();
-                std::print("[XiSh]: Found command at \"{}\"\n", resolved_command.data());
-                break;
-            }
-        }
-
+        auto resolved_command = resolve_command(PATH, command);
         if (resolved_command.empty()) {
             std::print("[XiSH]:Error: \"{}\" does not exist\n", command);
             continue;
         }
 
         std::vector<const char*> argv{};
-        argv.push_back(resolved_command.data());
+        argv.push_back(resolved_command.c_str());
         for (const auto& arg : arguments) {
             argv.push_back(arg.data());
         }
         argv.push_back(nullptr);
 
-        rc = run_program_waitpid(resolved_command.data(), argv.data());
+        rc = run_program_waitpid(resolved_command.c_str(), argv.data());
     }
     return 0;
 }
