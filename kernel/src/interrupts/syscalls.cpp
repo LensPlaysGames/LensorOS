@@ -126,14 +126,14 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
         // Bye!
         Scheduler::yield();
 
+        // Retry! (once)
+        rc = vfs.read(fd, buffer, byteCount, 0);
     }
 
     // If data was read, move the "cursor" of the file metadata forward, so
     // that next time we read we will get new data.
-    if (meta->is_regular() and rc > 0) {
-        std::print("[SYS$]:read: increasing meta offset to {} (was {})\n", meta->offset + rc, meta->offset);
+    if (meta->is_regular() and rc > 0)
         meta->offset += rc;
-    }
 
     return rc;
 }
@@ -167,13 +167,16 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
         // Bye!
         Scheduler::yield();
 
+        // Retry! (once)
+        rc = vfs.write(fd, buffer, byteCount, 0);
     }
 
-    // If data was read, move the "cursor" of the file metadata forward, so
-    // that next time we read we will get new data.
-    if (rc > 0) {
+    // If data was written, move the "cursor" of the file metadata forward, so
+    // that next time we write we won't overwrite the same data.
+    {
         auto meta = vfs.file(fd);
-        meta->offset += rc;
+        if (meta->is_regular() and rc > 0)
+            meta->offset += rc;
     }
 
     return rc;
@@ -984,7 +987,7 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
     return success;
 }
 
-// DirectoryEntry defined in `/kernel/src/storage/file_metadata.cpp`
+// DirectoryEntry defined in `/kernel/src/storage/file_metadata.h`
 int sys$25_directory_data(const char* path, DirectoryEntry* dirp, usz count) {
     DBGMSG(sys$_dbgfmt, 25, "directory_data");
 
@@ -1002,6 +1005,8 @@ int sys$25_directory_data(const char* path, DirectoryEntry* dirp, usz count) {
         std::print("[SYS$]:directory_data:ERROR: directory entry address invalid: {}\n", (void*)dirp);
         return -1;
     }
+
+    memset(dirp, 0, sizeof(DirectoryEntry) * count);
 
     auto& vfs = SYSTEM->virtual_filesystem();
     return vfs.directory_data(path, count, dirp);
