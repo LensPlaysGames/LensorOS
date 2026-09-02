@@ -255,6 +255,14 @@ uint32_t* charbuf_at(const CharacterBuffer* charbuf, const size_t x, const size_
     return &charbuf->data[charbuf->width * y + x];
 }
 void charbuf_write(const CharacterBuffer* charbuf, const size_t x, const size_t y, const uint32_t c) {
+    if (x >= charbuf->width) {
+        puts("[term]: x out of bounds! refusing character buffer write");
+        return;
+    }
+    if (y >= charbuf->height) {
+        puts("[term]: y out of bounds! refusing character buffer write");
+        return;
+    }
     *charbuf_at(charbuf, x, y) = c;
 }
 void charbuf_putc(CharacterBuffer* charbuf, const uint32_t c) {
