@@ -196,7 +196,10 @@ struct VFS {
             usz count = 0;
             for (auto mount : Mounts) {
                 // Copy mount prefix into directory entry name field.
-                memcpy(&dirents[count].name[0], mount.Path.data(), mount.Path.size());
+                memcpy(
+                    &dirents[count].name[0],
+                    mount.Path.data(),
+                    std::min(mount.Path.size(), sizeof(dirents[count].name)));
                 // Root of mount is always a directory
                 dirents[count].type = FileMetadata::FileType::Directory;
                 ++count;
