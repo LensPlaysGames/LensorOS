@@ -52,8 +52,7 @@ void PipeDriver::close(FileMetadata* meta) {
                 continue;
             }
             // std::print("[PIPE]: close()  Unblocking process {}  pipeEnd={} pipeBuffer={}\n", pid, (void*)pipe, (void*)pipeBuffer);
-            // FIXME: This is now how we return EOF, I don't think.
-            process->unblock(true, -1);
+            process->unblock(true, 0);
         }
         pipeBuffer->PIDsWaitingOnReadToWrite.clear();
     }
@@ -72,8 +71,7 @@ void PipeDriver::close(FileMetadata* meta) {
                 continue;
             }
             // std::print("[PIPE]: close()  Unblocking process {}  pipeEnd={} pipeBuffer={}\n", pid, (void*)pipe, (void*)pipeBuffer);
-            // FIXME: This is now how we return EOF, I don't think.
-            process->unblock(true, -1);
+            process->unblock(true, 0);
         }
         pipeBuffer->PIDsWaitingOnWriteToRead.clear();
     }
@@ -149,8 +147,7 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
         // is completely closed.
         if (pipe->Buffer->WriteClosed) {
             // std::print("[PIPE]: read()  Returning EOF because write end is closed and pipe is empty\n");
-            // FIXME: This is now how we return EOF, I don't think.
-            return -1;
+            return 0;
         }
 
         auto* process = Scheduler::CurrentProcess->value();
@@ -256,8 +253,18 @@ auto PipeDriver::lay_pipe() -> PipeMetas {
     static usz counter = 0;
     std::string path = std::format("panon{}", ++counter);
 
-    auto readMeta = FileMetadata::Make(FileMetadata::FileType::Regular, path, fsd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, readEnd);
-    auto writeMeta = FileMetadata::Make(FileMetadata::FileType::Regular, path, fsd(SYSTEM->virtual_filesystem().PipesDriver), PIPE_BUFSZ, writeEnd);
+    auto readMeta = FileMetadata::Make(
+        FileMetadata::FileType::Pipe,
+        path,
+        fsd(SYSTEM->virtual_filesystem().PipesDriver),
+        PIPE_BUFSZ,
+        readEnd);
+    auto writeMeta = FileMetadata::Make(
+        FileMetadata::FileType::Pipe,
+        path,
+        fsd(SYSTEM->virtual_filesystem().PipesDriver),
+        PIPE_BUFSZ,
+        writeEnd);
 
     // std::print("[PIPE]: lay_pipe()  \"{}\"  buffer={}  read={}  write={}\n", path, (void*)pipe, (void*)readEnd, (void*)writeEnd);
 

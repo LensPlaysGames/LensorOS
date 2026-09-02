@@ -99,15 +99,20 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
     VFS& vfs = SYSTEM->virtual_filesystem();
     auto meta = vfs.file(fd);
 
-    // If we have read the entire file, offset will be equal to (or greater
-    // than) the file's size. This means there is nothing to possibly read.
-    if (meta->offset >= meta->file_size())
-        return 0;
+    if (meta->is_regular()) {
+        // If we have read the entire file, offset will be equal to (or greater
+        // than) the file's size. This means there is nothing to possibly read.
+        if (meta->offset >= meta->file_size()) {
+            std::print("[SYS$]:read: offset >= file size, entire file read\n");
+            return 0;
+        }
 
-    // Truncate a read that would attempt to read past the end of the file.
-    if (meta->offset + byteCount > meta->file_size())
-        byteCount = meta->file_size() - meta->offset;
-
+        // Truncate a read that would attempt to read past the end of the file.
+        if (meta->offset + byteCount > meta->file_size()) {
+            std::print("[SYS$]:read: read over-runs file size, truncating read\n");
+            byteCount = meta->file_size() - meta->offset;
+        }
+    }
     auto* process = Scheduler::CurrentProcess->value();
 
     // NOTE: nothing in this flow may call yield itself, as the above file
@@ -129,8 +134,10 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
 
     // If data was read, move the "cursor" of the file metadata forward, so
     // that next time we read we will get new data.
-    if (rc > 0)
+    if (meta->is_regular() and rc > 0) {
+        std::print("[SYS$]:read: increasing meta offset to {} (was {})\n", meta->offset + rc, meta->offset);
         meta->offset += rc;
+    }
 
     return rc;
 }
