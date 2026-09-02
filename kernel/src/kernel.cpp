@@ -92,8 +92,8 @@ extern "C" void kregulate() {
             std::print("[KERNEL]: Enabling interrupts after freeing page tables\n");
             asm volatile("sti");
         }
-        // TODO: Don't eat CPU time (yield or halt or something)
-        // Currently this causes the kernel to dereference -1, somehow.
+
+        Scheduler::yield();
     }
 }
 
