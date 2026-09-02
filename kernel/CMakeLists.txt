@@ -49,7 +49,13 @@ target_compile_options(
 
   -c
 )
-target_include_directories( Interrupts PRIVATE src/ ${CMAKE_CURRENT_LIST_DIR}/../std/include )
+target_include_directories(
+  Interrupts
+  PRIVATE
+  src/
+  ${CMAKE_CURRENT_LIST_DIR}/../std/include
+  ${CMAKE_CURRENT_LIST_DIR}/../def/
+)
 
 add_library(
   Assembly
@@ -160,7 +166,13 @@ target_link_options(
   -nostdlib
   -z max-page-size=0x1000
 )
-target_include_directories( Kernel PRIVATE src/ ${CMAKE_CURRENT_LIST_DIR}/../std/include )
+target_include_directories(
+  Kernel
+  PRIVATE
+  src/
+  ${CMAKE_CURRENT_LIST_DIR}/../std/include
+  ${CMAKE_CURRENT_LIST_DIR}/../def/
+)
 target_link_libraries( Kernel PRIVATE Interrupts )
 target_link_libraries( Kernel PRIVATE Assembly )
 

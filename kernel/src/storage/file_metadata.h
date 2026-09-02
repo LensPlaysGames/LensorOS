@@ -20,6 +20,7 @@
 #ifndef LENSOR_OS_FILE_METADATA_H
 #define LENSOR_OS_FILE_METADATA_H
 
+#include <files.h>
 #include <integers.h>
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
@@ -29,13 +30,7 @@
 #include <utility>
 
 struct FileMetadata {
-    enum class FileType : u32 {
-        Regular,
-        Directory,
-        Pipe,
-        Socket,
-        // TODO: More file types (device, etc)
-    };
+    using FileType = ::FileType;
 
     FileMetadata()
         : FileSize(-1ull), Name(""), FileDriver(nullptr), DriverData(nullptr), Invalid(true) {}
@@ -76,12 +71,5 @@ struct FileMetadata {
 
     bool Invalid = true;
 };
-
-struct DirectoryEntry {
-    FileMetadata::FileType type;
-    char name[252];
-};
-static_assert(sizeof(DirectoryEntry) == 256);
-static_assert(offsetof(DirectoryEntry, name) == 4);
 
 #endif /* LENSOR_OS_FILE_METADATA_H */

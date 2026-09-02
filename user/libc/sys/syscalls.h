@@ -174,20 +174,7 @@ typedef struct tm {
     int is_daylight_savings_time;  // daylight saving time
 } tm;
 
-// NOTE: *MUST* match kernel/src/storage/file_metadata.h
-typedef enum FileType {
-    Regular,
-    Directory,
-    Pipe,
-    Socket,
-} FileType;
-// NOTE: *MUST* match kernel/src/storage/file_metadata.h
-typedef struct DirectoryEntry {
-    uint32_t type;   // enum FileType
-    char name[252];  // utf8
-} DirectoryEntry;
-static_assert(sizeof(DirectoryEntry) == 256);
-static_assert(offsetof(DirectoryEntry, name) == 4);
+#include <files.h>
 
 __END_DECLS__
 
