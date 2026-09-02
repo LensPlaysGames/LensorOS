@@ -26,7 +26,8 @@
 #include <format>
 #include <string_view>
 
-#define DEBUG_LIBC
+// Uncomment the following directive for extra debug output.
+// #define DEBUG_LIBC
 
 #ifdef DEBUG_LIBC
 #define DBGMSG(...) debug_print(__VA_ARGS__)
