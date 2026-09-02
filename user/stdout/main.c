@@ -282,7 +282,7 @@ void charbuf_putc(CharacterBuffer* charbuf, const uint32_t c) {
         }
         else {
             // TODO: At beginning of line, move cursor to end of last line.
-            puts("\n[stdout]: TODO: backspace newline\n");
+            puts("\n[INIT]: TODO: backspace newline\n");
         }
     }
     else if (c == '\r') {
@@ -326,7 +326,6 @@ void run_program_waitpid(const char* const filepath, const char** args, Characte
     syscall(SYS_pipe, fds);
 
     pid_t cpid = fork();
-    printf("pid: %d\n", cpid);
     if (cpid) {
         // puts("Parent");
         // printf("PARENT: Closing write end...\n");
@@ -353,7 +352,7 @@ void run_program_waitpid(const char* const filepath, const char** args, Characte
         int command_status;
         waitpid(cpid, &command_status, 0);
         if (command_status == -1) {
-            printf("`waitpid` failure! pid=%d\n", (int)cpid);
+            printf("[INIT]: `waitpid` failure! pid=%d\n", (int)cpid);
             return;
         }
 
@@ -382,9 +381,6 @@ void run_background_program(const char* const filepath, const char** args) {
 }
 
 int main(int argc, const char** argv) {
-    printf(" &argc: %p\n", &argc);
-    printf("*&argc: %d\n", *&argc);
-
     // FIXME: Only do this when terminal is not graphical.
     // Set stdout unbuffered so the user can see updates as they type.
     // NOTE: Probably not very efficient for the terminal's output to be unbuffered.
@@ -419,26 +415,26 @@ int main(int argc, const char** argv) {
     const uint32_t black = mkpixel(fb.format, 22, 23, 24, 0xff);
     fill_color(fb, black);
 
-    puts("\n\n<===!= WELCOME TO LensorOS [WIP] =!=!==>\n");
+    puts("\n\n[INIT]:\n<==!=!=<  WELCOME TO LensorOS  >=!=!==>\n");
     puts("  LensorOS  Copyright (C) 2022, Contributors To LensorOS.");
 
     const char* const fontpath = "/fs0/res/fonts/psf1/dfltfont.psf";
     FILE* fontfile = fopen(fontpath, "rb");
     if (!fontfile) {
-        printf("Could not open font at %s\n", fontpath);
+        printf("[INIT]:Error: Could not open font at %s\n", fontpath);
         return 1;
     }
-    printf("Successfully opened font at %s\n", fontpath);
+    printf("[INIT]: Successfully opened font at %s\n", fontpath);
 
     PSF1_FONT font;
     size_t bytes_read = 0;
     bytes_read = fread(&font.header, 1, sizeof(PSF1_HEADER), fontfile);
     if (bytes_read != sizeof(PSF1_HEADER)) {
-        printf("Could not read PSF1 header from font file.\n");
+        printf("[INIT]:Error:Could not read PSF1 header from font file.\n");
         return 1;
     }
     if (font.header.magic[0] != PSF1_MAGIC0 || font.header.magic[1] != PSF1_MAGIC1) {
-        printf("Invalid font format (magic bytes not correct)\n");
+        printf("[INIT]:Error: Invalid font format (magic bytes not correct)\n");
         return 1;
     }
 
@@ -452,21 +448,21 @@ int main(int argc, const char** argv) {
     // Read glyph buffer from font file after header
     font.glyph_buffer = malloc(glyph_buffer_size + sizeof(PSF1_HEADER));
     if (!font.glyph_buffer) {
-        printf("Failed to allocate memory for PSF1 font glyph buffer.\n");
+        printf("[INIT]:Error: Failed to allocate memory for PSF1 font glyph buffer.\n");
         return 1;
     }
 
     fseek(fontfile, sizeof(PSF1_HEADER), SEEK_SET);
     bytes_read = fread(font.glyph_buffer, 1, glyph_buffer_size, fontfile);
     if (bytes_read != glyph_buffer_size) {
-        printf("Could not read PSF1 glyph buffer from font file.\n");
+        printf("[INIT]:Error: Could not read PSF1 glyph buffer from font file.\n");
         return 1;
     }
 
     fclose(fontfile);
 
     g_font = font;
-    printf("Successfully loaded PSF1 font from \"%s\"\n", fontpath);
+    printf("[INIT]: Successfully loaded PSF1 font from \"%s\"\n", fontpath);
 
     CharacterBuffer charbuf = charbuf_create(psf1_width(g_font), psf1_height(g_font));
 
