@@ -464,7 +464,9 @@ int main(int argc, const char** argv) {
     g_font = font;
     printf("[INIT]: Successfully loaded PSF1 font from \"%s\"\n", fontpath);
 
-    CharacterBuffer charbuf = charbuf_create(psf1_width(g_font), psf1_height(g_font));
+    CharacterBuffer charbuf = charbuf_create(
+        g_framebuffer.pixel_width / psf1_width(g_font),
+        g_framebuffer.pixel_height / psf1_height(g_font));
 
     const char* sh_args[1] = {NULL};
     run_program_waitpid("/fs0/bin/xish", sh_args, &charbuf);
