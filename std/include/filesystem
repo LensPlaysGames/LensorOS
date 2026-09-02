@@ -6,6 +6,7 @@
 #include <locale>
 #include <memory>
 #include <string>
+#include <utility>
 
 #if defined(_WIN32)
 #define DIR_SEP '\\'
@@ -18,7 +19,9 @@
 namespace std {
 namespace filesystem {
 
-template <typename value_type = char, typename string_type = basic_string<char>>
+template <
+    typename value_type = char,
+    typename string_type = basic_string<char>>
 class __path {
     string_type __str;
 
@@ -42,6 +45,12 @@ class __path {
     __path() noexcept = default;
 
     __path(string_type&& __source, format __fmt = auto_format) {
+        // FIXME: __fmt should do something.
+        __str = std::move(__source);
+    }
+    // NOTE: Pretty sure this is a non-standard constructor, I just don't like
+    // converting strings all over the place...
+    __path(string_type& __source, format __fmt = auto_format) {
         // FIXME: __fmt should do something.
         __str = __source;
     }
@@ -224,6 +233,13 @@ inline path operator/(std::string_view __lhs, const path& __rhs) {
 inline path operator/(path&& __lhs, std::string_view __rhs) {
     __lhs /= __rhs;
     return std::move(__lhs);
+}
+
+// Creates a new path from a const path on the lhs
+inline path operator/(const path __lhs, const path& __rhs) {
+    path __p{__lhs};
+    __p /= __rhs;
+    return __p;
 }
 
 bool exists(path p);
