@@ -43,7 +43,7 @@
 #endif
 
 // Uncomment the following directive for extra debug output.
-#define DEBUG_ELF
+// #define DEBUG_ELF
 
 #ifdef DEBUG_ELF
 #define DBGMSG(...) std::print(__VA_ARGS__)
