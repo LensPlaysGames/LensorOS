@@ -279,7 +279,7 @@ int main(int argc, char** argv) {
             auto resolved_command = resolve_command(PATH, command);
             if (not resolved_command.empty()) {
                 // Prepare arguments for exec syscall
-                std::vector<char*> argv;
+                std::vector<char*> argv{};
                 for (const auto& arg : arguments) {
                     argv.push_back((char*)arg.data());
                 }
