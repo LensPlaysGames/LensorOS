@@ -7,10 +7,6 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    struct DirectoryEntry {
-        uint32_t type;
-        char name[248];
-    };
     DirectoryEntry entries[8] = {0};
 
     int entry_count = syscall(SYS_directory_data, argv[1], &entries[0], 8);

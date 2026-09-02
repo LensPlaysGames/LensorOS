@@ -81,7 +81,7 @@ struct DirectoryEntry {
     FileMetadata::FileType type;
     char name[252];
 };
-
 static_assert(sizeof(DirectoryEntry) == 256);
+static_assert(offsetof(DirectoryEntry, name) == 4);
 
 #endif /* LENSOR_OS_FILE_METADATA_H */
