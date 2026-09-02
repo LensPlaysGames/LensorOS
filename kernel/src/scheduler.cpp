@@ -214,9 +214,9 @@ bool remove_process(pid_t pid, int status) {
     if (not processToRemove)
         return false;
 
-    std::print("Removing process {}\n", pid);
-    std::print("  index: {}\n", processToRemoveIndex);
-    std::print("  CR3: 0x{:016x}\n", (uintptr_t)processToRemove->CR3);
+    // std::print("Removing process {}\n", pid);
+    // std::print("  index: {}\n", processToRemoveIndex);
+    // std::print("  CR3: 0x{:016x}\n", (uintptr_t)processToRemove->CR3);
 
     ProcessQueue->remove(processToRemoveIndex);
 

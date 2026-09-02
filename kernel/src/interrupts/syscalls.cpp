@@ -115,21 +115,17 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
     }
     auto* process = Scheduler::CurrentProcess->value();
 
-    // NOTE: nothing in this flow may call yield itself, as the above file
-    // metadata shared pointer would become dangling and never get cleaned up.
     ssz rc = vfs.read(fd, buffer, byteCount, 0);
     if (rc == -2) {
-        std::print("[SYS$]:read: Process {} yielding...\n", process->ProcessID);
-
         // Set state to SLEEPING so that after we yield, the scheduler
         // won't switch back to us until the file has been written to,
         // or something of that nature.
+        // NOTE: relies on driver to do that sort of thing.
         process->State = Process::SLEEPING;
 
         // Bye!
         Scheduler::yield();
 
-        std::print("[SYS$]:read: yield returned\n");
     }
 
     // If data was read, move the "cursor" of the file metadata forward, so
@@ -163,8 +159,6 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
 
     ssz rc = vfs.write(fd, buffer, byteCount, 0);
     if (rc == -2) {
-        std::print("[SYS$]:write: Process {} yielding...\n", Scheduler::CurrentProcess->value()->ProcessID);
-
         // Set state to SLEEPING so that after we yield, the scheduler
         // won't switch back to us until the file has been written to,
         // or something of that nature.
@@ -173,7 +167,6 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
         // Bye!
         Scheduler::yield();
 
-        std::print("[SYS$]:write: yield returned\n");
     }
 
     // If data was read, move the "cursor" of the file metadata forward, so
@@ -210,11 +203,8 @@ void sys$5_exit(int status) {
         }
     }
 
-    std::print("[SYS$]:exit: yielding...\n");
-
     Scheduler::yield();
-
-    std::print("[SYS$]:exit: yield returned...\n");
+    // Our process should never be switched back to; this should be unreachable.
     hang();
 }
 
@@ -426,18 +416,16 @@ void sys$11_exec(const char* path, const char** args) {
     asm volatile("mov %%r11, %0\n"
                  : "=r"(cpu));
 
-    std::print("[EXEC]\n");
-
     DBGMSG(sys$_dbgfmt, 11, "exec");
 
-    std::print("[EXEC]: path=\"{}\", args={}\n", path, (void*)args);
+    // std::print("[EXEC]: path=\"{}\", args={}\n", path, (void*)args);
 
     if (not path) {
-        std::print("[EXEC]: Can not execute NULL path\n");
+        std::print("[SYS$]:exec: Can not execute NULL path\n");
         return;
     }
     Process* process = Scheduler::CurrentProcess->value();
-    std::print("[EXEC]: process: {:#016x}, kernel_stack: {:#016x}, cpu: {:#016x}\n", (uintptr_t)process, process->kernel_stack, (uintptr_t)cpu);
+    // std::print("[EXEC]: process: {:#016x}, kernel_stack: {:#016x}, cpu: {:#016x}\n", (uintptr_t)process, process->kernel_stack, (uintptr_t)cpu);
     process->kernel_stack = (uintptr_t)cpu;
 
 #if defined(DEBUG_SYSCALLS)
@@ -467,7 +455,6 @@ void sys$11_exec(const char* path, const char** args) {
     }
 
     process->ExecutablePath = path;
-    std::print("[EXEC]: process->ExecutablePath set to \"{}\"\n", process->ExecutablePath);
 
     std::vector<std::string> args_vector_impl;
     std::vector<std::string_view> args_vector;
@@ -492,7 +479,7 @@ void sys$11_exec(const char* path, const char** args) {
         // FIXME: Also the fact that we opened a file at path, but never close it.
         process->State = Process::ProcessState::SLEEPING;
         Scheduler::yield();
-        std::print("[SYS$]:exec: yield returned (0)\n");
+        std::print("[SYS$]:exec: !! yield returned !! (0)\n");
         hang();
     }
 
@@ -507,13 +494,12 @@ void sys$11_exec(const char* path, const char** args) {
         // FIXME: We should figure out how to exit the scope, so that everything is freed properly...
         process->State = Process::ProcessState::SLEEPING;
         Scheduler::yield();
-        std::print("[SYS$]:exec: yield returned (1)\n");
+        std::print("[SYS$]:exec: !! yield returned !! (1)\n");
         hang();
     }
 
-    std::print("[EXEC]: process->CR3: {:#016x}, active cr3: {:#016x}\n", (uintptr_t)process->CR3, (uintptr_t)Memory::active_page_map());
-
-    std::print("[EXEC]: returning from exec() syscall with {}\n", *cpu);
+    // std::print("[EXEC]: process->CR3: {:#016x}, active cr3: {:#016x}\n", (uintptr_t)process->CR3, (uintptr_t)Memory::active_page_map());
+    // std::print("[EXEC]: returning from exec() syscall with {}\n", *cpu);
 }
 
 /// The second file descriptor given will be associated with the file
