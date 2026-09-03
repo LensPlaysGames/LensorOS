@@ -39,8 +39,8 @@ typedef struct {
 #define NULL nullptr
 namespace std {
 typedef decltype(nullptr) nullptr_t;
-using size_t = size_t;
-using ptrdiff_t = ptrdiff_t;
+using ::ptrdiff_t;
+using ::size_t;
 }  // namespace std
 #else
 #define NULL ((void*)0)

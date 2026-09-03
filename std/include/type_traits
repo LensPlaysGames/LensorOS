@@ -279,11 +279,11 @@ struct _NotRef : _Not<_IsRef<_T>> {};
 
 /// Check whether a type is trivially copyable.
 template <typename _T>
-struct is_trivially_copyable : bool_constant<__has_trivial_copy(_T)> {};
+struct is_trivially_copyable : bool_constant<__is_trivially_copyable(_T)> {};
 
 /// Check whether a type is trivially destructible.
 template <typename _T>
-struct is_trivially_destructible : bool_constant<__has_trivial_destructor(_T)> {};
+struct is_trivially_destructible : bool_constant<__is_trivially_destructible(_T)> {};
 
 /// Check whether a type is an object, i.e. not a function, reference, or void.
 template <typename _T>

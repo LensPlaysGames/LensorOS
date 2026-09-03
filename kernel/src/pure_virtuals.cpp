@@ -17,11 +17,21 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <format>
-
+#include <panic.h>
 #include <pure_virtuals.h>
 
-extern "C" void __cxa_pure_virtual() {
+extern "C" {
+
+int atexit(void (*func)(void)) {
+    return 0;
+}
+int __cxa_atexit(void (*func)(void*), void* arg, void* dso_handle) {
+    return 0;
+}
+
+void __cxa_pure_virtual() {
     panic("Pure virtual function called!");
     hang();
 }
+
+}  // extern "C"

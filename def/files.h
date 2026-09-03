@@ -12,7 +12,7 @@ typedef struct DirectoryEntry {
     FileType type;
     char name[252];
 } DirectoryEntry;
-static_assert(sizeof(DirectoryEntry) == 256);
-static_assert(offsetof(DirectoryEntry, name) == 4);
+static_assert(sizeof(DirectoryEntry) == 256, "DirectoryEntry has invalid size");
+static_assert(offsetof(DirectoryEntry, name) == 4, "DirectoryEntry::name was padded");
 
 #endif /* LENSOROS_DEFINES_FILES_H */

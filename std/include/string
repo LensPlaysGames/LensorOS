@@ -21,6 +21,7 @@
 
 #include <bits/decls.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include <algorithm>
@@ -814,9 +815,11 @@ inline string to_string(long long __i) { return __to_string<char>(__i); }
 inline string to_string(unsigned __i) { return __to_string<char>(__i); }
 inline string to_string(unsigned long __i) { return __to_string<char>(__i); }
 inline string to_string(unsigned long long __i) { return __to_string<char>(__i); }
+#ifdef __SSE__
 inline string to_string(float __f) { return __to_string<char>(__f); }
 inline string to_string(double __f) { return __to_string<char>(__f); }
 inline string to_string(long double __f) { return __to_string<char>(__f); }
+#endif
 
 }  // namespace std
 #endif  // _LENSOROS_STRING_

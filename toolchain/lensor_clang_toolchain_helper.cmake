@@ -8,7 +8,6 @@ set(
 set(
   LENSOR_C_FLAGS_LIST
   "-target ${TARGET_TRIPLE}"
-  "-ffreestanding"
   "-nodefaultlibs"
   "-nostdlib"
 )
@@ -30,6 +29,7 @@ endif()
 
 # Userspace Only Configuration (Standard Libraries and stuff)
 if (LENSOROS_KERNEL_BUILD)
+  list( APPEND LENSOR_C_FLAGS_LIST "-ffreestanding")
   set( CMAKE_C_STANDARD_LIBRARIES "")
   set( CMAKE_CXX_STANDARD_LIBRARIES "" )
   set( CMAKE_LINK_DIRECTORIES "" )

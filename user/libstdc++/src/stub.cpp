@@ -1,5 +1,4 @@
 #include <stdint.h>
-#include <sys/syscalls.h>
 
 // See: https://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html#base-personality
 
@@ -50,9 +49,8 @@ typedef enum {
 /// full representation of an exception object is language- and
 /// implementation-specific, but it will be prefixed by a header
 /// understood by the unwind interface, defined as follows:
-typedef void (*_Unwind_Exception_Cleanup_Fn)
-(_Unwind_Reason_Code reason,
- struct _Unwind_Exception *exc);
+typedef void (*_Unwind_Exception_Cleanup_Fn)(_Unwind_Reason_Code reason,
+                                             struct _Unwind_Exception* exc);
 
 struct _Unwind_Exception {
     uint64_t exception_class;

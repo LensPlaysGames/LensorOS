@@ -17,6 +17,7 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <bits/decls.h>
 #include <integers.h>
 #include <io.h>
 #include <pit.h>

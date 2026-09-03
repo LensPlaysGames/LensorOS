@@ -132,7 +132,6 @@ __BEGIN_DECLS__
 void __libc_init_malloc();
 void __libc_fini_malloc();
 
-/// We need to pass envp to main too.
 int main(int argc, char** argv, char** envp);
 
 /// Registers a function to be called when `dso` is unloaded.

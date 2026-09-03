@@ -56,7 +56,22 @@ find_program(
   REQUIRED
 )
 
-# TODO: Should we add -mno-red-zone here?
+set(
+  CMAKE_C_STANDARD_INCLUDE_DIRECTORIES
+  "${CMAKE_CURRENT_LIST_DIR}/../root/inc"
+  "${CMAKE_CURRENT_LIST_DIR}/../def/"
+)
+set(
+  CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES
+  ${CMAKE_C_STANDARD_INCLUDE_DIRECTORIES}
+)
+
+# TODO Should we add -mno-red-zone here?
+set( LENSOR_FLAGS "-fno-stack-protector -fno-exceptions -fno-rtti" )
+set( CMAKE_C_FLAGS_INIT "${LENSOR_FLAGS}" )
+set( CMAKE_CXX_FLAGS_INIT "${LENSOR_FLAGS}" )
+set( CMAKE_EXE_LINKER_FLAGS_INIT "${LENSOR_FLAGS}" )
+set( CMAKE_SHARED_LINKER_FLAGS_INIT "${LENSOR_FLAGS}" )
 
 # LensorOS toolchain is GCC 16 or greater, so we're good here.
 set( CMAKE_CXX_STANDARD 23 )

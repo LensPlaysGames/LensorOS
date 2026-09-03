@@ -22,6 +22,11 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS on )
 # Output executable files to `/bin` directory.
 set( EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin )
 
+# NOTE: *NOT* cached! Only while processing this directory
+set(LENSOROS_KERNEL_BUILD ON)
+
+cmake_minimum_required( VERSION 3.20 )
+project( LensorOSKernel VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGES} )
 
 add_definitions(-D__kernel__)
 
@@ -53,8 +58,6 @@ target_include_directories(
   Interrupts
   PRIVATE
   src/
-  ${CMAKE_CURRENT_LIST_DIR}/../std/include
-  ${CMAKE_CURRENT_LIST_DIR}/../def/
 )
 
 add_library(
@@ -130,6 +133,7 @@ if( HIDE_UART_COLOR_CODES )
 endif()
 target_compile_options(
   Kernel PRIVATE
+  -nostdinc
   -ffreestanding
   -fshort-wchar
 
@@ -151,13 +155,17 @@ target_compile_options(
   -Werror
 
   -Wno-unused-parameter
-
-  ## C++20 deprecates volatile |= and &=. That's nonsense, so we disable this warning.
-  ##
-  ## If you don't believe me that it's nonsense, C++23 de-deprecates them because they
-  ## realised that this is nonsense.
-  -Wno-volatile
 )
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  target_compile_options(
+    Kernel PRIVATE
+    -Wno-unused-private-field
+    -Wno-unused-const-variable
+    -Wno-c99-designator
+    -Wno-unknown-warning-option
+    -fno-use-cxa-atexit
+  )
+endif()
 target_link_options(
   Kernel PRIVATE
   -T ${CMAKE_CURRENT_LIST_DIR}/kernel.ld
@@ -170,8 +178,6 @@ target_include_directories(
   Kernel
   PRIVATE
   src/
-  ${CMAKE_CURRENT_LIST_DIR}/../std/include
-  ${CMAKE_CURRENT_LIST_DIR}/../def/
 )
 target_link_libraries( Kernel PRIVATE Interrupts )
 target_link_libraries( Kernel PRIVATE Assembly )
@@ -181,9 +187,9 @@ add_custom_command(
   TARGET Kernel
   PRE_BUILD
   COMMAND
-  ${CMAKE_COMMAND} -E make_directory ${PROJECT_SOURCE_DIR}/boot/LensorOS
+  ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_LIST_DIR}/../boot/LensorOS
   COMMAND
   ${CMAKE_COMMAND} -E copy_directory
-  ${CMAKE_CURRENT_LIST_DIR}/res ${PROJECT_SOURCE_DIR}/boot/LensorOS
+  ${CMAKE_CURRENT_LIST_DIR}/res ${CMAKE_CURRENT_LIST_DIR}/../boot/LensorOS
   VERBATIM
 )

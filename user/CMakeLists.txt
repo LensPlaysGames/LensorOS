@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION 3.20 )
-project( LensorOS VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGES} )
+project( LensorOSUser VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGES} )
 
 set(
   USERSPACE_OUTPUT_DIRECTORY

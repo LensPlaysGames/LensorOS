@@ -28,17 +28,3 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS on )
 project( ls VERSION ${ls_VERSION} LANGUAGES ${ls_LANGUAGES} )
 
 add_executable( ls main.cpp )
-target_compile_options(
-  ls
-  PUBLIC
-  -fno-stack-protector
-  -fno-exceptions
-  -fno-rtti
-)
-target_link_options(
-  ls
-  PUBLIC
-  -fno-stack-protector
-  -fno-exceptions
-  -fno-rtti
-)

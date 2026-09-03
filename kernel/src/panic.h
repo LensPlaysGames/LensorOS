@@ -24,8 +24,8 @@
 #define PanicStartX 400
 #define PanicStartY 500
 
-class InterruptFrame;
-class InterruptFrameError;
+struct InterruptFrame;
+struct InterruptFrameError;
 
 __attribute__((no_caller_saved_registers))
 void panic(const char* panicMessage);

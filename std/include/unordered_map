@@ -147,7 +147,7 @@ struct __unordered_map_impl {
             _T* __next_it = __next;
             __next = nullptr;
             while ((__it = __next_it) && __n--) {
-                __next_it = __it.__next;
+                __next_it = __it->__next;
                 delete __it;
             }
         }
@@ -319,7 +319,7 @@ struct __unordered_map_impl {
             }
             // If we got through all of the pairs in the bucket without finding a
             // matching key, it's time to add this key/value pair to this bucket.
-            auto* __b = new __bucket{true, __key, __value.second};
+            auto* __b = new __bucket{true, {__key, __value.second}};
             __last_it->insert_after(__b);
             return __make_it(__last_it->__next);
         }

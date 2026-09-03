@@ -20,6 +20,10 @@
 #ifndef LENSOR_OS_PURE_VIRTUALS_H
 #define LENSOR_OS_PURE_VIRTUALS_H
 
-extern "C" void __cxa_pure_virtual();
+extern "C" {
+int atexit(void (*func)(void));
+int __cxa_atexit(void (*func)(void*), void* arg, void* dso_handle);
+void __cxa_pure_virtual();
+}
 
 #endif
