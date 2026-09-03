@@ -23,7 +23,7 @@ include( "${CMAKE_CURRENT_LIST_DIR}/config.cmake" )
 set( CMAKE_SYSTEM_NAME Generic )
 set( CMAKE_SYSTEM_VERSION ${LensorOS_VERSION} )
 
-set(TARGET_TRIPLE x86_64-unknown-none-elf)
+set(TARGET_TRIPLE x86_64-unknown-none-elf CACHE STRING "")
 
 # Set sysroot.
 set( CMAKE_SYSROOT "${CMAKE_CURRENT_LIST_DIR}/../root" )
@@ -33,6 +33,11 @@ if( NOT EXISTS "${CMAKE_SYSROOT}" )
     "The sysroot at ${CMAKE_SYSROOT} does not exist"
   )
 endif()
+
+set(
+  CMAKE_PROJECT_INCLUDE
+  "${CMAKE_CURRENT_LIST_DIR}/lensor_clang_toolchain_helper.cmake"
+)
 
 # Look for LensorOS Toolchain executables.
 find_program(
@@ -46,14 +51,20 @@ find_program(
   REQUIRED
 )
 
+# Standard Headers (sysroot)
+# This is required, even though we set the sysroot, because clang only
+# looks at specific Linux-style subdirectories within the sysroot.
 set(
-  USERSPACE_COMPILE_FLAGS
-  "-target ${TARGET_TRIPLE} --sysroot=${MY_SYSROOT} -I${CMAKE_CURRENT_LIST_DIR}/../def/"
+  CMAKE_C_STANDARD_INCLUDE_DIRECTORIES
+  "${CMAKE_CURRENT_LIST_DIR}/../root/inc"
+  "${CMAKE_CURRENT_LIST_DIR}/../def/"
+)
+set(
+  CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES
+  ${CMAKE_C_STANDARD_INCLUDE_DIRECTORIES}
 )
 
-set(CMAKE_C_FLAGS "${USERSPACE_COMPILE_FLAGS}" CACHE STRING "" FORCE)
-set(CMAKE_CXX_FLAGS "${USERSPACE_COMPILE_FLAGS}" CACHE STRING "" FORCE)
-
+set( CMAKE_C_STANDARD 23 )
 set( CMAKE_CXX_STANDARD 23 )
 
 # Skip compiler tests (hard to run an executable made for another OS).
@@ -64,7 +75,6 @@ set( CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY )
 
 # Look for host programs in the host environment, not the target.
 set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
-
 # Do look for libraries and includes in the target sysroot.
 set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
 set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
