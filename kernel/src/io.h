@@ -22,12 +22,33 @@
 
 #include <integers.h>
 
-void out8  (u16 port, u8 value);
-u8   in8   (u16 port);
-void out16 (u16 port, u16 value);
-u16  in16  (u16 port);
-void out32 (u16 port, u32 value);
-u32  in32  (u16 port);
+inline __attribute__((always_inline)) void out8(u16 port, u8 value) noexcept {
+    asm volatile("outb %0, %1" : : "a"(value), "Nd"(port) : "memory");
+}
+[[nodiscard]]
+inline __attribute__((always_inline)) u8 in8(u16 port) noexcept {
+    u8 retValue;
+    asm volatile("inb %1, %0" : "=a"(retValue) : "Nd"(port) : "memory");
+    return retValue;
+}
+inline __attribute__((always_inline)) void out16(u16 port, u16 value) {
+    asm volatile("outw %0, %1" : : "a"(value), "Nd"(port));
+}
+[[nodiscard]]
+inline __attribute__((always_inline)) u16 in16(u16 port) {
+    u16 retValue;
+    asm volatile("inw %1, %0" : "=a"(retValue) : "Nd"(port));
+    return retValue;
+}
+inline __attribute__((always_inline)) void out32(u16 port, u32 value) {
+    asm volatile("outl %0, %1" : : "a"(value), "Nd"(port));
+}
+[[nodiscard]]
+inline __attribute__((always_inline)) u32 in32(u16 port) {
+    u32 retValue;
+    asm volatile("inl %1, %0" : "=a"(retValue) : "Nd"(port));
+    return retValue;
+}
 
 /* By writing to a port that is known to be unused,
  *   it is possible to 'delay' the CPU by a microsecond or two.
@@ -36,6 +57,9 @@ u32  in32  (u16 port);
  * Port 0x80 is used by BIOS for POST codes, and reading from/writing to
  *   it is effectively guaranteed to not adversely affect the hardware.
  */
-void io_wait();
+inline __attribute__((always_inline)) void io_wait() {
+    // Port 0x80 -- Unused port that is safe to read/write
+    asm volatile("outb %%al, $0x80" : : "a"(0));
+}
 
 #endif

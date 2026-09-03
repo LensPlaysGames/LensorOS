@@ -88,7 +88,6 @@ add_executable(
   src/hpet.cpp
   src/interrupts/idt.cpp
   src/interrupts/syscalls.cpp
-  src/io.cpp
   src/kernel.cpp
   src/keyboard.cpp
   src/keyboard_scancode_translation.cpp

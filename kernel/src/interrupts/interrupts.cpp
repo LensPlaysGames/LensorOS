@@ -47,11 +47,6 @@
 #include <format>
 
 /// Use this when called from an interrupt handler.
-__attribute__((no_caller_saved_registers)) u8 in8_wrap(u8 port) {
-    return in8(port);
-}
-
-/// Use this when called from an interrupt handler.
 #define print printerrupt
 namespace std {
 template <typename... _Args>
@@ -192,7 +187,8 @@ __attribute__((no_caller_saved_registers)) static void handle_scancode_input(u8 
 /// IRQ1: PS/2 KEYBOARD
 __attribute__((interrupt)) void keyboard_handler(InterruptFrame* frame) {
     // Read scancode from bus.
-    handle_scancode_input(in8_wrap(0x60));
+    auto data = in8(0x60);
+    handle_scancode_input(data);
     end_of_interrupt(1);
 }
 
@@ -224,7 +220,7 @@ __attribute__((interrupt)) void rtc_handler(InterruptFrame* frame) {
 
 /// IRQ12: PS/2 MOUSE
 __attribute__((interrupt)) void mouse_handler(InterruptFrame* frame) {
-    u8 data = in8_wrap(0x60);
+    u8 data = in8(0x60);
     // TODO: Send input event or something? Write input event to queue?
     // handle_ps2_mouse_interrupt(data);
     // End interrupt
@@ -375,19 +371,22 @@ __attribute__((interrupt)) void page_fault_handler(InterruptFrameError* frame) {
                 panic(frame, std::format("#PF: User process {} attempted to write to a page that is not present", u64(pid)).data());
             else
                 panic(frame, std::format("#PF: User process {} attempted to write to a page and caused a protection fault", u64(pid)).data());
-        } else {
+        }
+        else {
             if (notPresent)
                 panic(frame, std::format("#PF: User process {} attempted to read from a page that is not present", u64(pid)).data());
             else
                 panic(frame, std::format("#PF: User process {} attempted to read from a page and caused a protection fault", u64(pid)).data());
         }
-    } else {
+    }
+    else {
         if ((frame->error & (u64)PageFaultErrorCode::ReadWrite) > 0) {
             if (notPresent)
                 panic(frame, "#PF: Supervisor process attempted to write to a page that is not present");
             else
                 panic(frame, "#PF: Supervisor process attempted to write to a page and caused a protection fault");
-        } else {
+        }
+        else {
             if (notPresent)
                 panic(frame, "#PF: Supervisor process attempted to read from a page that is not present");
             else

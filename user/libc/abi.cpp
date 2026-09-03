@@ -223,6 +223,7 @@ void __libc_fini() noexcept {
 /// Run the program.
 int __libc_run_main(int argc, char** argv, char** envp) {
     __libc_init();
+    DBGMSG("Running main() (at {})\n", (void*)main);
     int ret = __extension__ main(argc, argv, envp);
     __libc_fini();
     return ret;
