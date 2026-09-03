@@ -45,7 +45,6 @@ target_include_directories(
   stdc++
   PUBLIC
   "${CMAKE_CURRENT_LIST_DIR}"
-  "${CMAKE_CURRENT_LIST_DIR}/../../std/include"
 )
 
 if(USE_DIAGNOSTICS_COLOUR)
@@ -67,22 +66,6 @@ target_compile_options(
   -Werror=return-type
   -Wno-unused-parameter
   -Wno-unused-variable
-)
-
-target_compile_options(
-    stdc++
-    PUBLIC
-    -fno-stack-protector
-    -fno-exceptions
-    -fno-rtti
-)
-
-target_link_options(
-    stdc++
-    PUBLIC
-    -fno-stack-protector
-    -fno-exceptions
-    -fno-rtti
 )
 
 set(ROOT "${CMAKE_CURRENT_LIST_DIR}/../../root")

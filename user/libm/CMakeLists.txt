@@ -36,7 +36,6 @@ target_include_directories(
   m
   PUBLIC
   "${CMAKE_CURRENT_LIST_DIR}"
-  "${CMAKE_CURRENT_LIST_DIR}/../../std/include"
 )
 
 if(USE_DIAGNOSTICS_COLOUR)

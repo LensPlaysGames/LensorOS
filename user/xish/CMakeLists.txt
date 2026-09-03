@@ -29,17 +29,3 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project( xish VERSION ${xish_VERSION} LANGUAGES ${xish_LANGUAGES} )
 
 add_executable( xish src/main.cpp )
-target_compile_options(
-  xish
-  PUBLIC
-  -fno-stack-protector
-  -fno-exceptions
-  -fno-rtti
-)
-target_link_options(
-  xish
-  PUBLIC
-  -fno-stack-protector
-  -fno-exceptions
-  -fno-rtti
-)

@@ -28,17 +28,3 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS on )
 project( cat VERSION ${cat_VERSION} LANGUAGES ${cat_LANGUAGES} )
 
 add_executable( cat main.cpp )
-target_compile_options(
-  cat
-  PUBLIC
-  -fno-stack-protector
-  -fno-exceptions
-  -fno-rtti
-)
-target_link_options(
-  cat
-  PUBLIC
-  -fno-stack-protector
-  -fno-exceptions
-  -fno-rtti
-)
