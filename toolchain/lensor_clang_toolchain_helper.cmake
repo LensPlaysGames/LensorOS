@@ -3,6 +3,7 @@ set(
   "-target ${TARGET_TRIPLE}"
   "-fuse-ld=lld"
   "-nostdlib"
+  "-no-pie"
 )
 
 set(
@@ -10,6 +11,7 @@ set(
   "-target ${TARGET_TRIPLE}"
   "-nodefaultlibs"
   "-nostdlib"
+  "-fno-pie"
 )
 
 set(
@@ -58,7 +60,6 @@ else()
   list(
     APPEND LENSOR_LINK_FLAGS_LIST
     "-B${CMAKE_SYSROOT}/lib/"
-    "-T${CMAKE_CURRENT_LIST_DIR}/clang_entry_fix.ld"
   )
 
   set(
