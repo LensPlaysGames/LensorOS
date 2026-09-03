@@ -7,7 +7,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    DirectoryEntry entries[8] = {0};
+    DirectoryEntry entries[8] = {};
 
     int entry_count = syscall(SYS_directory_data, argv[1], &entries[0], 8);
     if (entry_count == -1) return 1;
