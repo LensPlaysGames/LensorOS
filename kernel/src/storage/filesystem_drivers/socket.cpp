@@ -17,15 +17,13 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <storage/filesystem_drivers/socket.h>
-
 #include <scheduler.h>
 #include <storage/file_metadata.h>
+#include <storage/filesystem_drivers/socket.h>
 #include <storage/storage_device_driver.h>
 #include <system.h>
 
 #include <memory>
-
 
 std::shared_ptr<FileMetadata> SocketDriver::open(std::string_view path) {
     SocketData* data = new SocketData;
@@ -48,29 +46,31 @@ void SocketDriver::close(FileMetadata* meta) {
     SocketData* data = (SocketData*)meta->driver_data();
     if (not data) return;
 
+    // std::print("[SOCK]:close\n");
+
     switch (data->Type) {
-    case SocketType::LENSOR: {
-        std::print("[SOCK]:close: LENSOR type socket; decrementing buffers refcount\n");
-        SocketBuffers* buffers = (SocketBuffers*)data->Data;
-        if (not buffers) break;
-        data->Data = nullptr;
-        // FIXME: If we `dup` a socket fd, we're going to have a bad time.
-        // Or if we `fork` while one is open; that may also get sketchy.
-        buffers->RefCount -= 1;
-        if (buffers->RefCount == 0) {
-            std::print("[SOCK]:close: Unbinding  and deleting SocketBuffers at {}\n", (void*)buffers);
-            // If bound, remove binding for this socket from list of bindings.
-            if (data->Address.Type != SocketAddress::UNBOUND) {
-                const SocketAddress& addr = data->Address;
-                auto did_unbind = unbind(addr);
-                if (not did_unbind) {
-                    std::string_view addr_view{(const char*)addr.Data, sizeof(addr.Data)};
-                    std::print("[SOCK]:close: Failed to unbind address {}\n", addr_view);
+        case SocketType::LENSOR: {
+            std::print("[SOCK]:close: LENSOR type socket; decrementing buffers refcount\n");
+            SocketBuffers* buffers = (SocketBuffers*)data->Data;
+            if (not buffers) break;
+            data->Data = nullptr;
+            // FIXME: If we `dup` a socket fd, we're going to have a bad time.
+            // Or if we `fork` while one is open; that may also get sketchy.
+            buffers->RefCount -= 1;
+            if (buffers->RefCount == 0) {
+                std::print("[SOCK]:close: Unbinding  and deleting SocketBuffers at {}\n", (void*)buffers);
+                // If bound, remove binding for this socket from list of bindings.
+                if (data->Address.Type != SocketAddress::UNBOUND) {
+                    const SocketAddress& addr = data->Address;
+                    auto did_unbind = unbind(addr);
+                    if (not did_unbind) {
+                        std::string_view addr_view{(const char*)addr.Data, sizeof(addr.Data)};
+                        std::print("[SOCK]:close: Failed to unbind address {}\n", addr_view);
+                    }
                 }
+                delete buffers;
             }
-            delete buffers;
-        }
-    } break;
+        } break;
     }
     delete data;
 }
@@ -80,17 +80,17 @@ ssz SocketDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
     SocketData* data = (SocketData*)meta->driver_data();
     if (!data) return -1;
     switch (data->Type) {
-    case SocketType::LENSOR: {
-        SocketBuffers* buffers = (SocketBuffers*)data->Data;
-        if (!buffers) return -1;
-        switch (data->ClientServer) {
-        case SocketData::CLIENT:
-            return buffers->TXBuffer.read(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
-        case SocketData::SERVER:
-            return buffers->RXBuffer.read(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
+        case SocketType::LENSOR: {
+            SocketBuffers* buffers = (SocketBuffers*)data->Data;
+            if (!buffers) return -1;
+            switch (data->ClientServer) {
+                case SocketData::CLIENT:
+                    return buffers->TXBuffer.read(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
+                case SocketData::SERVER:
+                    return buffers->RXBuffer.read(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
+            }
+            UNREACHABLE();
         }
-        UNREACHABLE();
-    }
     }
     UNREACHABLE();
 }
@@ -100,30 +100,30 @@ ssz SocketDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
     SocketData* data = (SocketData*)meta->driver_data();
     if (!data) return -1;
     switch (data->Type) {
-    case SocketType::LENSOR: {
-        SocketBuffers* buffers = (SocketBuffers*)data->Data;
-        if (!buffers) return -1;
-        switch (data->ClientServer) {
-        case SocketData::CLIENT:
-            return buffers->RXBuffer.write(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
-        case SocketData::SERVER:
-            return buffers->TXBuffer.write(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
+        case SocketType::LENSOR: {
+            SocketBuffers* buffers = (SocketBuffers*)data->Data;
+            if (!buffers) return -1;
+            switch (data->ClientServer) {
+                case SocketData::CLIENT:
+                    return buffers->RXBuffer.write(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
+                case SocketData::SERVER:
+                    return buffers->TXBuffer.write(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
+            }
+            UNREACHABLE();
         }
-        UNREACHABLE();
-    }
     }
     return -1;
 }
 
 auto SocketDriver::socket(SocketType domain, int type, int protocol) -> std::shared_ptr<FileMetadata> {
     switch (domain) {
-    case SocketType::LENSOR: {
-        auto f = open("");
-        if (!f) return {};
-        SocketData* data = (SocketData*)f->driver_data();
-        data->Data = new SocketBuffers;
-        return f;
-    }
+        case SocketType::LENSOR: {
+            auto f = open("");
+            if (!f) return {};
+            SocketData* data = (SocketData*)f->driver_data();
+            data->Data = new SocketBuffers;
+            return f;
+        }
     }
     return {};
 }

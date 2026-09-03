@@ -85,8 +85,7 @@ void prepare_interrupts() {
     gIDT.install_handler((u64)general_protection_fault_handler, 0x0d);
     gIDT.install_handler((u64)page_fault_handler, 0x0e);
     gIDT.install_handler((u64)simd_exception_handler, 0x13);
-    gIDT.install_handler((u64)system_call_handler_asm, 0x80,
-                         IDT_TA_UserInterruptGate);
+    gIDT.install_handler((u64)system_call_handler_asm, 0x80, IDT_TA_UserInterruptGate);
     gIDT.flush();
 #endif
 }
@@ -153,20 +152,26 @@ void probe_system_devices() {
             // pointer or a large struct is really hard to do correctly.
 
             void* containing_page = (void*)((usz)ABAR - ((usz)ABAR % PAGE_SIZE));
-            Memory::map(containing_page, containing_page,
-                        (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
+            Memory::map(
+                containing_page,
+                containing_page,
+                (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
 
             // Handle case where ABAR spans two pages, in which case we have to map both.
             void* next_page = (void*)((usz)containing_page + PAGE_SIZE);
-            if (((usz)ABAR + sizeof(AHCI::HBAMemory)) >= (u64)next_page)
-                Memory::map(next_page, next_page,
-                            (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
+            if (((usz)ABAR + sizeof(AHCI::HBAMemory)) >= (u64)next_page) {
+                Memory::map(
+                    next_page,
+                    next_page,
+                    (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
+            }
 
             // Handle case where ABAR spans three pages, in which case we have to map a third.
             next_page = (void*)((usz)next_page + PAGE_SIZE);
             if (((usz)ABAR + sizeof(AHCI::HBAMemory)) >= (u64)next_page)
                 Memory::map(
-                    next_page, next_page,
+                    next_page,
+                    next_page,
                     (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
 
             u32 ports = ABAR->PortsImplemented;
@@ -177,9 +182,12 @@ void probe_system_devices() {
                     if (type != AHCI::PortType::None) {
                         SYSTEM->create_device<Devices::AHCIPort>(
                             std::static_pointer_cast<Devices::AHCIController>(dev),
-                            type, i, port);
+                            type,
+                            i,
+                            port);
                     }
-                } else
+                }
+                else
                     break;
             }
             // Don't search AHCI controller any further, already found all ports.
@@ -238,7 +246,8 @@ void discover_partitions() {
                         "        Sector Offset: {}\n"
                         "        Sector Count: {}\n"
                         "        Attributes: {}\n",
-                        i, name_in_utf8,
+                        i,
+                        name_in_utf8,
                         GUID(part->TypeGUID),
                         GUID(part->UniqueGUID),
                         u64(part->StartLBA),
@@ -260,7 +269,8 @@ void discover_partitions() {
                     }
                     if (!known)
                         SYSTEM->create_device<Devices::GPTPartition>(
-                            std::static_pointer_cast<Devices::AHCIPort>(dev), *part);
+                            std::static_pointer_cast<Devices::AHCIPort>(dev),
+                            *part);
                 }
 
                 /* Don't search port any further, we figured
@@ -301,7 +311,8 @@ void discover_filesystems() {
                             && partition->Partition.TypeGUID == GPT::PartitionType$EFISystem) {
                             mountPath = "/efi";
                             foundEFI = true;
-                        } else
+                        }
+                        else
                             mountPath = std::format("/fs{}", vfs.mounts().size());
 
                         vfs.mount(mountPath, std::move(FAT));
@@ -310,7 +321,8 @@ void discover_filesystems() {
                         dev->set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
                     }
                 }
-            } else if (dev->minor() == SYSDEV_MINOR_AHCI_PORT) {
+            }
+            else if (dev->minor() == SYSDEV_MINOR_AHCI_PORT) {
                 auto* controller = static_cast<Devices::AHCIPort*>(dev.get());
                 if (controller->Driver) {
                     std::print(
@@ -398,7 +410,8 @@ void probe_cpu() {
                     "mov %%rdx, %%cr0\n"
                     "fninit\n" ::: "rax", "rdx");
                 SystemCPU->set_fpu_enabled();
-            } else {
+            }
+            else {
                 // FPU not supported, ensure it is disabled.
                 asm volatile(
                     "mov %%cr0, %%rdx\n"
@@ -507,7 +520,13 @@ void kstage2(BootInfo* bInfo) {
         std::print(
             "[kstage1]: {Real Time Clock (RTC) initialized}\n"
             "\033[1;33mNow is {}:{}:{:02} on {}-{}-{}\033[0m\n\n",
-            __GREEN, gRTC.Time.hour, gRTC.Time.minute, gRTC.Time.second, gRTC.Time.year, gRTC.Time.month, gRTC.Time.date);
+            __GREEN,
+            gRTC.Time.hour,
+            gRTC.Time.minute,
+            gRTC.Time.second,
+            gRTC.Time.year,
+            gRTC.Time.month,
+            gRTC.Time.date);
 
         // TODO: Register RTC as a real time clock timer device within system.
     }
@@ -571,7 +590,10 @@ void kstage2(BootInfo* bInfo) {
         "  Rate Generator, BCD Disabled\n"
         "  Periodic interrupts at {}{}hz{}.\n"
         "\n",
-        __GREEN, __YELLOW, static_cast<double>(PIT_FREQUENCY), __FG_DEFAULT);
+        __GREEN,
+        __YELLOW,
+        static_cast<double>(PIT_FREQUENCY),
+        __FG_DEFAULT);
 
     // Setup network device(s)
     for (auto& dev : SYSTEM->Devices) {
@@ -594,13 +616,16 @@ void kstage2(BootInfo* bInfo) {
         usz fb_phys_addr = (usz)bInfo->framebuffer->BaseAddress;
         usz fb_virt_addr = 0x7f000000;
 
-        std::vector<std::string_view> argv;
-        argv.push_back(std::format("{}", programTwoFilePath));
-        argv.push_back(std::format("{:x}", fb_virt_addr));
-        argv.push_back(std::format("{:x}", (usz)bInfo->framebuffer->BufferSize));
-        argv.push_back(std::format("{:x}", (usz)bInfo->framebuffer->PixelWidth));
-        argv.push_back(std::format("{:x}", (usz)bInfo->framebuffer->PixelHeight));
-        argv.push_back(std::format("{:x}", (usz)bInfo->framebuffer->PixelsPerScanLine));
+        std::vector<std::string> argv_data{};
+        std::vector<std::string_view> argv{};
+        argv_data.push_back(std::format("{}", programTwoFilePath));
+        argv_data.push_back(std::format("{:x}", fb_virt_addr));
+        argv_data.push_back(std::format("{:x}", (usz)bInfo->framebuffer->BufferSize));
+        argv_data.push_back(std::format("{:x}", (usz)bInfo->framebuffer->PixelWidth));
+        argv_data.push_back(std::format("{:x}", (usz)bInfo->framebuffer->PixelHeight));
+        argv_data.push_back(std::format("{:x}", (usz)bInfo->framebuffer->PixelsPerScanLine));
+        for (const auto& arg : argv_data)
+            argv.emplace_back(arg);
 
         std::print("Opening {} with VFS\n", programTwoFilePath);
         auto fds = vfs.open(programTwoFilePath);
@@ -625,7 +650,8 @@ void kstage2(BootInfo* bInfo) {
                 process->CR3,
                 (void*)(fb_virt_addr + t),
                 (void*)(fb_phys_addr + t),
-                flags, Memory::ShowDebug::No);
+                flags,
+                Memory::ShowDebug::No);
         }
         process->add_memory_region(
             (void*)fb_virt_addr,
@@ -657,6 +683,8 @@ void kstage2(BootInfo* bInfo) {
     // TODO: only if we want to, or whatever.
     run_tests();
 
+    Scheduler::print_debug();
+
     // Memory::print_efi_memory_map(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     Memory::print_efi_memory_map_summed(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     // heap_print_debug();
@@ -679,7 +707,16 @@ void kstage2(BootInfo* bInfo) {
         "  This is {cyan!}\n"
         "  This is {white}\n"
         "  This is {}back to default\n",
-        __BLACK, __RED, __RED, __GREEN, __YELLOW, __BLUE, __MAGENTA, __CYAN, __WHITE, __DEFAULT);
+        __BLACK,
+        __RED,
+        __RED,
+        __GREEN,
+        __YELLOW,
+        __BLUE,
+        __MAGENTA,
+        __CYAN,
+        __WHITE,
+        __DEFAULT);
 
     struct EthernetFrameHeader {
         u8 MACDestination[6];

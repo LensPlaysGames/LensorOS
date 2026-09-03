@@ -26,8 +26,16 @@ PIT gPIT;
 void pit_tick() { gPIT.tick(); }
 
 PIT::PIT() {
-    configure_channel(Channel::Zero, Access::HighAndLow, Mode::RateGenerator, PIT_FREQUENCY);
-    configure_channel(Channel::Two, Access::HighAndLow, Mode::SquareWaveGenerator, 440);
+    configure_channel(
+        Channel::Zero,
+        Access::HighAndLow,
+        Mode::RateGenerator,
+        PIT_FREQUENCY);
+    configure_channel(
+        Channel::Two,
+        Access::HighAndLow,
+        Mode::SquareWaveGenerator,
+        440);
 }
 
 usz PIT::seconds_since_boot() {
