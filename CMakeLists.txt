@@ -11,7 +11,8 @@ set( LensorOS_VERSION   0.0.2 )
 set( LensorOS_LANGUAGES ASM ASM_NASM C CXX )
 
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
-set( CMAKE_CXX_STANDARD_REQUIRED 23 )
+set( CMAKE_CXX_STANDARD 23 )
+set( CMAKE_CXX_STANDARD_REQUIRED ON )
 
 # Use `ccache` if it is installed in system's PATH.
 find_program( CCACHE_PROGRAM ccache )
@@ -20,12 +21,17 @@ if ( CCACHE_PROGRAM )
 endif ()
 
 # Use LensorOS GNU-based toolchain by default.
-set( CMAKE_TOOLCHAIN_FILE toolchain/lensor_gnu_toolchain.cmake)
+if ( NOT CMAKE_TOOLCHAIN_FILE )
+  set( CMAKE_TOOLCHAIN_FILE toolchain/lensor_gnu_toolchain.cmake)
+endif()
+
 include( toolchain/config.cmake )
 if ( ARCH STREQUAL "" )
   message(FATAL_ERROR "[31;5mERROR: `toolchain/config.cmake` MUST SET `ARCH` variable to non-empty string![m")
 endif()
 add_compile_definitions(${ARCH})
+
+include_directories("${CMAKE_CURRENT_LIST_DIR}/def/")
 
 cmake_minimum_required( VERSION 3.20 )
 project( LensorOS VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGES} )
