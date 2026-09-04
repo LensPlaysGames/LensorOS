@@ -22,7 +22,7 @@
 
 #include <integers.h>
 
-constexpr usz LENSOR_OS_NUM_SYSCALLS = 28;
+constexpr usz LENSOR_OS_NUM_SYSCALLS = 29;
 extern void* syscalls[LENSOR_OS_NUM_SYSCALLS];
 
 // Defined in `syscalls.cpp`

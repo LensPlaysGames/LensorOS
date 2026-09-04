@@ -1136,6 +1136,11 @@ void* sys$27_shared_memory_acquire(int id) {
     return address;
 }
 
+void sys$28_cooperative_yield() {
+    DBGMSG(sys$_dbgfmt, 28, "yield");
+    Scheduler::yield();
+}
+
 // TODO: Reorder this
 // FIXME: Make it easier to reorder this (maybe separate the number
 // from the name? I don't know, something to make this easier...)
@@ -1187,4 +1192,6 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
 
     (void*)sys$26_shared_memory_allocate,
     (void*)sys$27_shared_memory_acquire,
+
+    (void*)sys$28_cooperative_yield,
 };
