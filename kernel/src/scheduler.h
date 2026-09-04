@@ -50,6 +50,21 @@ struct ZombieState {
     int ReturnStatus;
 };
 
+extern std::unordered_map<int, std::weak_ptr<struct shared_memory_region>> shared_memory;
+struct shared_memory_region {
+    void* physical_address{};
+    size_t size{};
+    size_t id{-1ull};
+
+    ~shared_memory_region() {
+        if (not physical_address or not size) return;
+        auto pages = size / PAGE_SIZE;
+        if (size % PAGE_SIZE) ++pages;
+        Memory::free_pages(physical_address, pages);
+        shared_memory.erase(id);
+    }
+};
+
 struct Process {
     pid_t ProcessID = 0;
 
@@ -105,6 +120,8 @@ struct Process {
     alignas(16) u8 CPUExtra[512] = {0};
     bool CPUExtraSet = false;
 #endif
+
+    SinglyLinkedList<std::shared_ptr<shared_memory_region>> SharedMemories{};
 
     Process() = default;
 

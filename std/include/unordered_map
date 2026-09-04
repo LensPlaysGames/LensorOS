@@ -187,7 +187,7 @@ struct __unordered_map_impl {
         }
     };
 
-    std::vector<__bucket> __data{512};
+    mutable std::vector<__bucket> __data{512};
 
     // Amount of elements stored in the map.
     size_type __count{0};
@@ -280,7 +280,7 @@ struct __unordered_map_impl {
     }
 
     [[nodiscard]]
-    size_type __get_index(const key_type& __key) {
+    size_type __get_index(const key_type& __key) const {
         if (!__data.capacity()) __data.reserve(512);
         size_type __hash = __hash_function(__key);
         return __hash % __data.capacity();
@@ -289,7 +289,7 @@ struct __unordered_map_impl {
     [[nodiscard]]
     __bucket* __get_matching_bucket(size_type __index, const key_type& __key) const {
         __bucket* __b = __data.data() + __index;
-        while (__b && !__keys_equal(__key, __b->__key.first))
+        while (__b && !__keys_equal(__key, __b->__keyval.first))
             __b = __b->__next;
         return __b;
     }
@@ -297,7 +297,7 @@ struct __unordered_map_impl {
     __bucket* __get_matching_bucket(const key_type& __key) const {
         size_type __index = __get_index(__key);
         __bucket* __b = __data.data() + __index;
-        while (__b && !__keys_equal(__key, __b->__key))
+        while (__b && !__keys_equal(__key, __b->__keyval.first))
             __b = __b->__next;
         return __b;
     }
@@ -344,7 +344,7 @@ struct __unordered_map_impl {
         __bucket* __b = __data.data() + __index;
         if (!__b->__occupied) return 0;
         while (__b)
-            if (__keys_equal(__key, __b->__key)) return 1;
+            if (__keys_equal(__key, __b->__keyval.first)) return 1;
         return 0;
     }
 
@@ -379,6 +379,48 @@ struct __unordered_map_impl {
 
     size_type bucket(const key_type& __key) {
         return __get_index(__key);
+    }
+
+    void erase(const key_type& __key) {
+        auto __index = __get_index(__key);
+
+        // Find the exact bucket
+        __bucket* __b = __get_matching_bucket(__index, __key);
+        if (!__b || !__b->__occupied) return;
+
+        // Find the beginning of the bucket chain
+        auto* __head = &__data[__index];
+
+        // If the element is the primary slot in the vector...
+        if (__b == __head) {
+            // And there is a collision chain, then move the next node's data into the
+            // head slot.
+            auto* __next_node = __b->__next;
+            if (__next_node) {
+                __b->__keyval = __next_node->__keyval;
+                __b->__occupied = __next_node->__occupied;
+
+                // Unlink and free the duplicate node
+                __next_node->erase();
+                delete __next_node;
+            }
+            else {
+                // No collision chain. Just wipe the head slot clean.
+                __b->__next = nullptr;
+                __b->__prev = nullptr;
+                __b->__occupied = false;
+                // Clear the keyval out (optional)
+                __b->__keyval = value_type();
+            }
+        }
+        else {
+            // Otherwise, the element is a deep node in the collision chain
+            __b->erase();
+            delete __b;
+        }
+
+        // Decrement total element tracker
+        --__count;
     }
 
     hasher hash_function() { return __hash_function; }

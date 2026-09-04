@@ -224,13 +224,9 @@ void* sys$6_map(void* address, usz size, u64 flags) {
 
     Process* process = Scheduler::CurrentProcess->value();
 
-    usz pages = 0;
-    if ((size % PAGE_SIZE) == 0) {
-        pages = size / PAGE_SIZE;
-    }
-    else {
-        pages = 1 + (size / PAGE_SIZE);
-    }
+    usz pages = size / PAGE_SIZE;
+    if (size % PAGE_SIZE)
+        ++pages;
 
     // Allocate physical RAM
     // TODO: There isn't really any reason these need to be contiguous.
@@ -1012,6 +1008,123 @@ int sys$25_directory_data(const char* path, DirectoryEntry* dirp, usz count) {
     return vfs.directory_data(path, count, dirp);
 }
 
+size_t next_shared_memory_id = 0;
+std::unordered_map<int, std::weak_ptr<shared_memory_region>> shared_memory{};
+
+// @param[out] ptr
+//     The virtual address mapped to newly allocated physical memory.
+// @return non-negative value that may be passed to
+//     shared_memory_acquire() to map the same physical memory to a
+//     (different) virtual address. Useful to share this value via
+//     IPC of some sort (local socket, in a file, etc).
+int sys$26_shared_memory_allocate(void** ptr, size_t size) {
+    DBGMSG(sys$_dbgfmt, 26, "shared_memory_allocate");
+
+    auto* process = Scheduler::CurrentProcess->value();
+
+    // If the pointer passed to us as an argument isn't valid, don't trust
+    // anything the process wants. TODO: decrease process honor.
+    if (not process->valid_address(ptr))
+        return -1;
+
+    // If the pointer value passed to us an argument overlaps with an existing
+    // memory segment, we can't use that address. NOTE: nullptr should never
+    // be a valid address, and thus should always pass this check.
+    if (process->valid_address(*ptr))
+        return -1;
+
+    // Requested Address Validation
+    if (*ptr) {
+        uintptr_t ptr_value = (uintptr_t)*ptr;
+        if (
+            // Less than 1MiB in memory
+            ptr_value < MiB(1)
+            // Any higher half bits set
+            or ptr_value & 0xffffffff00000000)
+            return -1;
+    }
+
+    usz pages = size / PAGE_SIZE;
+    if (size % PAGE_SIZE)
+        ++pages;
+
+    // Allocate physical RAM
+    // TODO: There isn't really any reason these need to be contiguous.
+    void* physical_address = Memory::request_pages(pages);
+
+    // If address is NULL, pick an address to place memory at.
+    if (not *ptr) {
+        *ptr = (void*)process->next_region_vaddr;
+        process->next_region_vaddr += pages * PAGE_SIZE;
+    }
+
+    // Add memory region to current process
+    // TODO: Convert given flags to Memory::PageTableFlag
+    // TODO: Figure out what flags we are given (libc, ig).
+    usz memory_flags = (usz)Memory::PageTableFlag::Present
+                       | (usz)Memory::PageTableFlag::UserSuper
+                       | (usz)Memory::PageTableFlag::ReadWrite;
+
+    auto new_region_id = ++next_shared_memory_id;
+    auto new_region = std::make_shared<shared_memory_region>(
+        physical_address,
+        pages * PAGE_SIZE,
+        next_shared_memory_id);
+
+    shared_memory[new_region_id] = new_region;
+
+    process->SharedMemories.add(new_region);
+
+    // Map virtual address to physical with proper flags
+    Memory::map_pages(
+        process->CR3,
+        *ptr,
+        physical_address,
+        memory_flags,
+        pages,
+        Memory::ShowDebug::No);
+
+    return new_region->id;
+}
+
+void* sys$27_shared_memory_acquire(int id) {
+    DBGMSG(sys$_dbgfmt, 27, "shared_memory_acquire");
+
+    auto* process = Scheduler::CurrentProcess->value();
+
+    auto memory_flags = (usz)Memory::PageTableFlag::Present
+                        | (usz)Memory::PageTableFlag::UserSuper
+                        | (usz)Memory::PageTableFlag::ReadWrite;
+
+    if (not shared_memory.contains(id))
+        return nullptr;
+
+    auto shared_memory_region_ptr = shared_memory[id];
+
+    auto memory_region = shared_memory_region_ptr.lock();
+    if (not memory_region)
+        return nullptr;
+
+    process->SharedMemories.add(memory_region);
+
+    usz pages = memory_region->size / PAGE_SIZE;
+    if (memory_region->size % PAGE_SIZE)
+        ++pages;
+
+    auto address = (void*)process->next_region_vaddr;
+    process->next_region_vaddr += pages * PAGE_SIZE;
+
+    Memory::map_pages(
+        process->CR3,
+        address,
+        memory_region->physical_address,
+        memory_flags,
+        pages,
+        Memory::ShowDebug::No);
+
+    return address;
+}
+
 // TODO: Reorder this
 // FIXME: Make it easier to reorder this (maybe separate the number
 // from the name? I don't know, something to make this easier...)
@@ -1060,4 +1173,7 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     (void*)sys$24_kevent,
 
     (void*)sys$25_directory_data,
+
+    (void*)sys$26_shared_memory_allocate,
+    (void*)sys$27_shared_memory_acquire,
 };
