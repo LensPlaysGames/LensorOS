@@ -1145,6 +1145,29 @@ void sys$28_cooperative_yield() {
     Scheduler::yield();
 }
 
+void sys$29_shared_memory_release(usz shared_memory_id) {
+    DBGMSG(sys$_dbgfmt, 29, "shared_memory_release");
+
+    auto* process = Scheduler::CurrentProcess->value();
+
+    // TODO: We should probably unmap the pages, seeing as they no longer
+    // point to valid memory. Need to bookkeep virtual address per process.
+
+    usz index = usz(-1);
+    auto it = process->SharedMemories.begin();
+    for (usz i = 0; i < process->SharedMemories.length(); ++i) {
+        if ((*it)->id == shared_memory_id) {
+            index = i;
+            break;
+        }
+        ++it;
+    }
+
+    if (index == usz(-1)) return;
+
+    process->SharedMemories.remove(index);
+}
+
 // TODO: Reorder this
 // FIXME: Make it easier to reorder this (maybe separate the number
 // from the name? I don't know, something to make this easier...)
