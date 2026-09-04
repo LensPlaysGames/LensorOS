@@ -29,7 +29,6 @@
 #include <algorithm>
 #include <extensions>
 #include <functional>
-#include <print>
 #include <unordered_map>
 #include <vector>
 
@@ -185,7 +184,6 @@ struct EventQueue {
 
     void register_listening(EventType e, EventFilter efilt) {
         if (e >= EventType::COUNT) return;
-        std::print("PID {} now listening to event type {}\n", PID, (usz)e);
         Filter[(size_t)e].push_back(efilt);
         // Add PID to kernel event queue for this event type
         gEvents.register_listener(e, PID);
@@ -203,17 +201,8 @@ struct EventQueue {
     bool listens(EventType e, EventFilter efilt) const {
         if (e >= EventType::COUNT) return false;
         const auto& filter_stack = Filter[(size_t)e];
-        std::print("  given filt: {}\n", usz(efilt.ProcessFD));
-        std::print("[event queue]: filter stack size={}\n", filter_stack.size());
-        for (auto f : filter_stack) {
-            std::print("  filter: {}\n", (usz)f.ProcessFD);
-        }
         return filter_stack.size() != 0
-               && std::find(
-                      filter_stack.begin(),
-                      filter_stack.end(),
-                      efilt)
-                      != filter_stack.end();
+               and std::find(filter_stack, efilt) != filter_stack.end();
     }
 
     void push(const Event& e) {

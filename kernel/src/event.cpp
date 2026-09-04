@@ -20,10 +20,8 @@
 #include <event.h>
 #include <integers.h>
 #include <scheduler.h>
-#include <stddef.h>
-#include <stdint.h>
 
-#include <bit>
+#include <print>
 #include <vector>
 
 EventManager gEvents;
@@ -37,7 +35,6 @@ void EventManager::notify(const Event& event) {
             "  This is likely an error in the LensorOS kernel; please submit a bug report with as much information as possible.\n");
         return;
     }
-    std::print("[global event]: {} listeners on {} type\n", Listeners[event.Type].size(), (usz)event.Type);
     for (auto pid : Listeners[event.Type])
         notify(event, pid);
 }
@@ -52,7 +49,6 @@ void EventManager::notify(const Event& event, Process* process) {
         // If it doesn't, we move on.
         if (!queue.listens(event.Type, event.Filter)) continue;
         // If it does, we push this event to the event queue.
-        std::print("Pushing event to event queue\n");
         queue.push(event);
         found = true;
     }
