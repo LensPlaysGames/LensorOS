@@ -238,12 +238,14 @@ int main(int argc, const char** argv) {
         unsigned int width;
         unsigned int height;
         int shared_region_id;
+        int client_fd;
     } window_t;
 
     window_t windows[8] = {0};
 
     while (true) {
         // Handle Incoming Requests on GUI Socket, Creating A New Window
+        // FIXME: We may not handle all events, doing it like this.
         if (sys_kevent(listen_queue, NULL, 0, eventlist, eventlist_size) == 0) {
             printf("Got incoming connection...\n");
 
@@ -287,7 +289,13 @@ int main(int argc, const char** argv) {
             window->shared_region_id = id;
             window->width = g_framebuffer.pixel_width;
             window->height = g_framebuffer.pixel_height;
+            window->client_fd = clientFD;
+            // TODO: Register change in (a new) kqueue to be notified when clientFD is
+            // closed/EOF status. This is an "easy" way to tell when the process no
+            // longer wants it's window, whether from no longer running or from
+            // specifically requesting the window to be closed.
 
+            // Communicate basic framebuffer data to client through shared memory.
             *shared_data++ = g_framebuffer.buffer_size;
             *shared_data++ = g_framebuffer.pixel_width;
             *shared_data++ = g_framebuffer.pixel_height;
@@ -349,6 +357,7 @@ int main(int argc, const char** argv) {
             }
         }
 
+        // Swap Back Buffer <-> Front Buffer
         memcpy(g_framebuffer.base_address, back_buffer, g_framebuffer.buffer_size);
 
         // Yield

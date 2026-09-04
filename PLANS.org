@@ -4,7 +4,7 @@ Medium Priority
 Basically, I want =stdout= to:
 
 - Open a socket, =!GUI=, for listening.
-- When a connection comes in on this socket, accept it, allocate shared memory large enough for a copy of the entire framebuffer, write  the shared memory region id to the accepted connection file descriptor so the client can read it. Bookkeep this shared memory id has a window (shared memory region id and address), where it is (with depth!), and possibly anything else the client chose to share with us (eventually).
+- When a connection comes in on this socket, accept it, allocate shared memory large enough for a copy of the entire framebuffer, write the shared memory region id to the accepted connection file descriptor so the client can read it. Bookkeep this shared memory id has a window (shared memory region id and address), where it is (with depth!), and possibly anything else the client chose to share with us (eventually).
 
 The client reads the shared memory ID from the socket, acquires the shared memory, and writes it's graphical pixel data into this memory. It hopes and prays the compositor program (us, we) will actually display it.
 
