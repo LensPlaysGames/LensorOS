@@ -950,7 +950,7 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
     static constexpr const int error{-1};
 
     if (handle == EventQueueHandle::Invalid) {
-        std::print("[SYS$]:kevent: Invalid event queue handle\n");
+        std::print("[SYS$]:kevent:ERROR: Invalid event queue handle\n");
         return error;
     }
 
