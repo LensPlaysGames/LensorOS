@@ -931,6 +931,17 @@ EventQueueHandle sys$23_kqueue() {
     return handle;
 }
 
+// kevent -- kernel event
+// This syscall is multi-faceted.
+//
+//   When numChanges is non-zero, changelist must be non-null. When
+//   changelist is non-null, process the changes to the event queue in the
+//   list. This may register new events to push to this event queue,
+//   unregister, etc.
+//
+//   When maxEvents is non-zero, eventlist must be non-null. When eventlist
+//   is non-null, write up to maxEvents Events to the list, specified by
+//   previously registered events.
 int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChanges, Event* eventlist, int maxEvents) {
     DBGMSG(sys$_dbgfmt, 24, "kevent");
 
