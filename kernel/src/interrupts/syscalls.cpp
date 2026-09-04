@@ -925,6 +925,7 @@ EventQueueHandle sys$23_kqueue() {
     if (handle != EventQueueHandle::Invalid) {
         EventQueue<Process::EventQueueSize> queue;
         queue.ID = handle;
+        queue.PID = process->ProcessID;
         process->EventQueues.push_back(std::move(queue));
     }
 
