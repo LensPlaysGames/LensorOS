@@ -1069,7 +1069,7 @@ int sys$26_shared_memory_allocate(void** ptr, size_t size) {
     auto new_region = std::make_shared<shared_memory_region>(
         physical_address,
         pages * PAGE_SIZE,
-        next_shared_memory_id);
+        new_region_id);
 
     shared_memory[new_region_id] = new_region;
 
