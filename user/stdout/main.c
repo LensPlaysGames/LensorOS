@@ -331,12 +331,14 @@ int main(int argc, const char** argv) {
             }
             else if (eventlist[0].Type == EVENTTYPE_KEYBOARD) {
                 EventData_KeyboardInput* e_data = (EventData_KeyboardInput*)&eventlist[0].Data;
-                printf("[SERVE]: Got keyboard input %d %d", e_data->press, e_data->value);
+                printf("[SERVE]: Got keyboard input %d %d\n", e_data->press, e_data->value);
                 if (focus.window && focus.window->shared_region) {
                     ipc_keyboard_t keyboard_message;
                     keyboard_message.magic = IPC_KEYBOARD_MAGIC;
                     keyboard_message.value = e_data->value;
                     keyboard_message.is_pressed = e_data->press;
+                    // TODO: non-blocking, in case our GUI program isn't reading from the
+                    // socket.
                     write(focus.window->client_fd, &keyboard_message, sizeof(keyboard_message));
                 }
             }
