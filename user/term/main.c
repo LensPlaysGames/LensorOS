@@ -385,7 +385,7 @@ int main(int argc, const char** argv) {
     // NOTE: Probably not very efficient for the terminal's output to be unbuffered.
     setvbuf(stdout, NULL, _IONBF, BUFSIZ);
 
-    // TODO: Get this from opening a connection to the !GUI socket
+    // Get graphical window from opening a connection to the !GUI socket
     int sockFD = sys_socket(0, 0, 0);
     sockaddr addr;
     addr.type = LENSOR16;
@@ -405,7 +405,6 @@ int main(int argc, const char** argv) {
     uint64_t* data_it = (uint64_t*)data;
     uint64_t shared_memory_id = data_it[2];
     uintptr_t* shared_data = (uintptr_t*)syscall(SYS_shared_memory_acquire, shared_memory_id);
-    close(sockFD);
 
     Framebuffer fb;
     fb.base_address = shared_data;
@@ -477,12 +476,11 @@ int main(int argc, const char** argv) {
     const char* sh_args[1] = {NULL};
     run_program_waitpid("/fs0/bin/xish", sh_args, &charbuf);
 
-    // TODO: Uhhh, init shell exited. Should we try to reboot into another shell?
-    // Hang for now
-    for (;;);
+    printf("[TERM]: teardown\n");
 
     charbuf_delete(charbuf);
     psf1_delete(font);
+    close(sockFD);
 
     return 0;
 }
