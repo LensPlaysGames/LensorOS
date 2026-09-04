@@ -59,9 +59,9 @@
 
 template <usz N = KiB(1)>
 struct FIFOBuffer {
-    u8 Data[N] {0};
+    u8 Data[N]{0};
     /// This index is the index that incoming data will be written to.
-    usz Offset {0};
+    usz Offset{0};
     /// List of PIDs of processes who are waiting to write into the
     /// txbuffer as it is full.
     std::vector<pid_t> PIDsWaitingUntilRead;
@@ -169,7 +169,7 @@ struct SocketBuffers {
     /// Client writes to this buffer.
     FIFOBuffer<SOCKET_RX_BUFFER_SIZE> RXBuffer;
 
-    usz RefCount {1};
+    usz RefCount{1};
 
     void clear() {
         TXBuffer.clear();
@@ -190,18 +190,20 @@ struct SocketAddress {
         // 16 bytes; simply a unique identifier which is memcmp'd
         // Used by LENSOR type sockets.
         LENSOR16,
-    } Type { UNBOUND };
+    } Type{UNBOUND};
     u8 Data[SOCKET_ADDRESS_MAX_SIZE];
 
-    bool operator== (const SocketAddress& other) const {
+    bool operator==(const SocketAddress& other) const {
         if (Type != other.Type) return false;
         switch (Type) {
-        case UNBOUND: return true;
-        case LENSOR16: return memcmp(Data, other.Data, 16) == 0;
+            case UNBOUND:
+                return true;
+            case LENSOR16:
+                return memcmp(Data, other.Data, 16) == 0;
         }
         return false;
     }
-    bool operator!= (const SocketAddress& other) const {
+    bool operator!=(const SocketAddress& other) const {
         return !(operator==(other));
     }
 };
@@ -213,13 +215,13 @@ struct SocketConnection {
     SocketData* Socket;
     /// ID of process that should be unblocked when connection is
     /// accepted.
-    pid_t PID { pid_t(-1) };
+    pid_t PID{pid_t(-1)};
 };
 
 /// Each FileMetadata associated with an open socket has this struct at
 /// it's `driver_data()`.
 struct SocketData {
-    SocketType Type { SocketType::LENSOR };
+    SocketType Type{SocketType::LENSOR};
 
     // FIXME: PID/FD fields are not correct; socket may be `dup`d,
     // closed by `dup2`, copied by `fork`, closed by `exec`, etc.
@@ -227,14 +229,14 @@ struct SocketData {
     /// The ID of the process that opened this socket; mainly used for
     /// server sockets, so that they can be unblocked upon an incoming
     /// request.
-    pid_t PID { pid_t(-1) };
+    pid_t PID{pid_t(-1)};
     /// The ProcFD of the opened socket when it was created, in `PID`.
-    ProcFD FD { ProcFD::Invalid };
+    ProcFD FD{ProcFD::Invalid};
 
     SocketAddress Address{};
 
     /// `true` iff PID is waiting to accept an incoming connection.
-    bool WaitingOnConnection { false };
+    bool WaitingOnConnection{false};
 
     // TODO: Use ring buffer instead?
     std::double_ended_queue<SocketConnection> ConnectionQueue;
@@ -242,20 +244,20 @@ struct SocketData {
     enum {
         CLIENT,
         SERVER
-    } ClientServer {CLIENT};
+    } ClientServer{CLIENT};
     // FIXME: This should be a shared ptr.
-    void* Data { nullptr };
+    void* Data{nullptr};
 };
 
 struct SocketBinding {
     SocketAddress Address;
     SocketData* Data;
 
-    bool operator== (const SocketAddress& addr) const {
+    bool operator==(const SocketAddress& addr) const {
         return Address == addr;
     }
-    bool operator!= (const SocketAddress& addr) const {
-        return not (operator==(addr));
+    bool operator!=(const SocketAddress& addr) const {
+        return not(operator==(addr));
     }
 };
 
@@ -278,7 +280,7 @@ struct SocketDriver final : FilesystemDriver {
 
     /// Return true iff binding was found and removed.
     bool unbind(const SocketAddress& addr) {
-        return std::erase_if(Bindings, [&addr](const SocketBinding &binding) {
+        return std::erase_if(Bindings, [&addr](const SocketBinding& binding) {
             return binding == addr;
         });
     }
@@ -309,7 +311,7 @@ struct SocketDriver final : FilesystemDriver {
         return "Socket";
     };
 
-private:
+   private:
     std::vector<SocketBinding> Bindings;
 };
 
