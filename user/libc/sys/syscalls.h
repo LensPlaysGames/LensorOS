@@ -53,7 +53,9 @@
 #define SYS_kqueue 23
 #define SYS_kevent 24
 #define SYS_directory_data 25
-#define SYS_MAXSYSCALL 25
+#define SYS_shared_memory_allocate 26
+#define SYS_shared_memory_acquire 27
+#define SYS_MAXSYSCALL 27
 #else
 #define SYS_read 0
 #define SYS_write 1
