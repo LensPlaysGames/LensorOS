@@ -213,7 +213,8 @@ int main(int argc, const char** argv) {
     memset(changelist, 0, sizeof(changelist));
     changelist[0].Type = EVENTTYPE_READY_TO_READ;
     changelist[0].Filter.ProcessFD = sockFD;
-    // This applies the above change to the event queue, meaning we will
+    changelist[0].Flags |= EVENTFLAGS_CHANGE_ADD_REMOVE;
+    // This applies the above changes to the event queue, meaning we will
     // recieve events when the given file descriptor is ready to read from.
     // In the case of a local socket, that means a process has connected.
     sys_kevent(listen_queue, changelist, 1, NULL, 0);

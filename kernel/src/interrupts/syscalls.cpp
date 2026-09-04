@@ -973,9 +973,12 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
         return error;
 
     // Apply changes from changelist, if any.
-    // TODO: Allow for unregistering, we need a special event type for that.
     for (int i = 0; i < numChanges; ++i) {
-        queue->register_listening(changelist[i].Type, changelist[i].Filter);
+        static_assert(((usz)EventFlags_Change::CANARY) == 2, "Exhaustive handling of kevent changelist flags");
+        if (changelist[i].Flags & (usz)EventFlags_Change::ADD_REMOVE)
+            queue->register_listening(changelist[i].Type, changelist[i].Filter);
+        else
+            queue->unregister_listening(changelist[i].Type, changelist[i].Filter);
     }
 
     if (not queue->has_events()) {

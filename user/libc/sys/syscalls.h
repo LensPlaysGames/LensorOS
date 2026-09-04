@@ -300,11 +300,18 @@ typedef enum EventType {
 typedef union EventFilter {
     ProcFD ProcessFD;
 } EventFilter;
-#define EVENT_MAX_SIZE 128
+typedef uint32_t EventFlags;
+typedef enum EventFlags_Change {
+    EVENTFLAGS_CHANGE_ADD_REMOVE = 1 << 0,
+    EVENTFLAGS_CHANGE_CANARY
+} EventFlags_Change;
+
+#define EVENT_DATA_SIZE 128
 typedef struct Event {
     EventType Type;
     EventFilter Filter;
-    uint8_t Data[EVENT_MAX_SIZE];
+    EventFlags Flags;
+    uint8_t Data[EVENT_DATA_SIZE];
 } Event;
 /// Both READY_TO_READ and READY_TO_WRITE events have this data sent with them.
 typedef struct EventData_ReadyToReadWrite {
