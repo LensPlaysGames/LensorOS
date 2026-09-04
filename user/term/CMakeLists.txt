@@ -18,13 +18,13 @@
 
 
 cmake_minimum_required( VERSION 3.14 )
-set( stdout_VERSION 0.1.0 )
-set( stdout_LANGUAGES C )
+set( term_VERSION 0.1.0 )
+set( term_LANGUAGES C )
 
 # Export compilation database in JSON format.
 set( CMAKE_EXPORT_COMPILE_COMMANDS on )
 
-project( stdout VERSION ${stdout_VERSION} LANGUAGES ${stdout_LANGUAGES} )
+project( term VERSION ${term_VERSION} LANGUAGES ${term_LANGUAGES} )
 
-add_executable( stdout framebuffer.c main.c )
-target_include_directories( stdout PRIVATE . )
+add_executable( term framebuffer.c main.c psf.c )
+target_include_directories( term PRIVATE . )
