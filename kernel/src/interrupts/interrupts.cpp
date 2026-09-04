@@ -174,21 +174,23 @@ __attribute__((no_caller_saved_registers)) static void handle_scancode_input(u8 
             break;
     }
 
+    bool press = not(scancode & 0x80);
+
     // TODO: Support other keyboard scancode translation layouts.
     char translated = Keyboard::QWERTY::Translate(
         scancode,
         State.LeftShift or State.RightShift or State.CapsLock);
-    if (translated)
+
+    if (press and translated)
         handle_direct_input(translated);
     // else std::print("Skipping scancode: {:x}\n", scancode);
 
-    std::print("[k]: Notifying keyboard event\n");
+    // Send Input Event
     Event e{};
     e.Type = EventType::KEYBOARD;
     auto* e_data = (EventData_KeyboardInput*)&e.Data;
     e_data->value = translated ? translated : scancode;
-    // PS/2 usually sets the 0x80 bit for "break" scancodes (key release).
-    e_data->press = not(scancode & 0x80);
+    e_data->press = press;
     gEvents.notify(e);
 }
 
