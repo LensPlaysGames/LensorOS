@@ -29,6 +29,7 @@
 
 #include <basic_renderer.h>
 #include <cstr.h>
+#include <event.h>
 #include <interrupts/interrupts.h>
 #include <io.h>
 #include <keyboard.h>
@@ -133,23 +134,21 @@ __attribute__((no_caller_saved_registers)) static void handle_direct_input(char 
 
     // Send user input to userspace!
     // Write to stdin of init process.
-    if (SYSTEM) {
+    if (SYSTEM and SYSTEM->init_process()) {
         Process* init = SYSTEM->init_process();
-        if (init) {
-            auto fd = static_cast<ProcFD>(0);
-            auto sysfd = init->FileDescriptors[fd];
-            auto f = SYSTEM->virtual_filesystem().file(*sysfd);
-            if (f)
-                f->filesystem_driver()->write(f.get(), 0, sizeof(char), &input);
-            return;
-        }
+        auto fd = static_cast<ProcFD>(0);
+        auto sysfd = init->FileDescriptors[fd];
+        auto f = SYSTEM->virtual_filesystem().file(*sysfd);
+        if (f)
+            f->filesystem_driver()->write(f.get(), 0, sizeof(char), &input);
+
+        return;
     }
     std::print("[INPUT]: No init process: cannot handle user input properly.\n");
 }
 
 __attribute__((no_caller_saved_registers)) static void handle_scancode_input(u8 scancode) {
     // Handle modifiers
-    static Keyboard::KeyboardState State = {0};
     switch (scancode) {
         case LSHIFT:
             // std::print("[INPUT]: mod_press: left shift\n");
@@ -182,6 +181,15 @@ __attribute__((no_caller_saved_registers)) static void handle_scancode_input(u8 
     if (translated)
         handle_direct_input(translated);
     // else std::print("Skipping scancode: {:x}\n", scancode);
+
+    std::print("[k]: Notifying keyboard event\n");
+    Event e{};
+    e.Type = EventType::KEYBOARD;
+    auto* e_data = (EventData_KeyboardInput*)&e.Data;
+    e_data->value = translated ? translated : scancode;
+    // PS/2 usually sets the 0x80 bit for "break" scancodes (key release).
+    e_data->press = not(scancode & 0x80);
+    gEvents.notify(e);
 }
 
 /// IRQ1: PS/2 KEYBOARD

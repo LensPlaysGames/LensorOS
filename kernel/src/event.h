@@ -20,21 +20,21 @@
 #ifndef LENSOR_OS_EVENT_H
 #define LENSOR_OS_EVENT_H
 
-#include <algorithm>
-#include <functional>
 #include <integers.h>
 #include <memory.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <vector>
 #include <vfs_forward.h>
-#include <extensions>
-#include <unordered_map>
 
+#include <algorithm>
+#include <extensions>
+#include <functional>
+#include <print>
+#include <unordered_map>
+#include <vector>
 
 // WARNING: Changes to data structures in this file likely also need
 // reflected in `user/libc/sys/syscalls.h`.
-
 
 typedef u64 pid_t;
 
@@ -42,24 +42,32 @@ typedef u64 pid_t;
 /// defined that the "data" field of the event can be cast to.
 enum struct EventType : u32 {
     INVALID,
+    // TODO: Reduce this to just "FILE_READY" and have ready for read/write be
+    // a flag.
     // For server-type listening sockets: connections waiting to be accepted.
     // For sockets/pipes: data is available to read.
     READY_TO_READ,
     // For sockets/pipes: space is available in the FIFO to write to.
     READY_TO_WRITE,
+
+    // Human Input
+    KEYBOARD,
+    MOUSE,  // NOTE: touch, joystick, etc
+
     COUNT
 };
 
 // Allow event type enum to be used as the key for a map.
 namespace std {
-template<> struct hash<EventType> {
+template <>
+struct hash<EventType> {
     using argument_type = EventType;
     using result_type = size_t;
-    result_type operator() (argument_type __key) const noexcept {
+    result_type operator()(argument_type __key) const noexcept {
         return result_type(__key);
     }
 };
-}
+}  // namespace std
 
 struct Event;
 struct Process;
@@ -76,7 +84,11 @@ struct EventManager {
 
     void register_listener(EventType event_type, pid_t new_listener) {
         if (event_type >= EventType::COUNT) return;
-        if (std::find(Listeners[event_type].begin(), Listeners[event_type].end(), new_listener) != Listeners[event_type].end())
+        if (std::find(
+                Listeners[event_type].begin(),
+                Listeners[event_type].end(),
+                new_listener)
+            == Listeners[event_type].end())
             Listeners[event_type].push_back(new_listener);
     }
 
@@ -97,7 +109,7 @@ union EventFilter {
     // NOTE: THE FIRST NAMED MEMBER MUST BE THE LARGEST!!
 
     // Used by READY_TO_READ and READY_TO_WRITE event types.
-    ProcFD ProcessFD { ProcFD::Invalid };
+    ProcFD ProcessFD{ProcFD::Invalid};
     /*
     struct PIDFD_T {
         pid_t PID;
@@ -105,22 +117,50 @@ union EventFilter {
     } PIDFD;
     */
 
-    bool operator== (const EventFilter& other) const {
+    bool operator==(const EventFilter& other) const {
         return memcmp(this, &other, sizeof(EventFilter)) == 0;
     }
 };
 
-#define EVENT_MAX_SIZE 128
+typedef u32 EventFlags;
+
+// For use in the changelist
+enum class EventFlags_Change {
+    // When non-zero, register event type with filter.
+    // When zero, unregister any existing event types.
+    ADD_REMOVE = 1 << 0,
+    CANARY
+};
+
+#define EVENT_DATA_SIZE 128
 struct Event {
+    // An event type signifies what has happened, categorically.
     EventType Type = EventType::INVALID;
+    // The filter narrows down the subject that the event is happening to.
+    // For READY_TO_READ, this would be a file descriptor.
     EventFilter Filter = {};
-    u8 Data[EVENT_MAX_SIZE] = { 0 };
+    EventFlags Flags = {};
+    u8 Data[EVENT_DATA_SIZE] = {0};
 };
 
 /// Both READY_TO_READ and READY_TO_WRITE events have this data sent with them.
 struct EventData_ReadyToReadWrite {
     size_t BytesAvailable;
 };
+static_assert(sizeof(EventData_ReadyToReadWrite) <= EVENT_DATA_SIZE);
+
+struct EventData_KeyboardInput {
+    size_t value{};
+    bool press{};
+};
+static_assert(sizeof(EventData_KeyboardInput) <= EVENT_DATA_SIZE);
+
+struct EventData_MouseInput {
+    int32_t delta_x{};
+    int32_t delta_y{};
+    int32_t wheel_delta{};
+};
+static_assert(sizeof(EventData_MouseInput) <= EVENT_DATA_SIZE);
 
 enum struct EventQueueHandle : int { Invalid = static_cast<int>(-1) };
 
@@ -130,8 +170,8 @@ struct EventQueue {
     // within a process. In the future, we shouldn't need this, and
     // the handle should just be an index into some data structure,
     // or something.
-    EventQueueHandle ID { EventQueueHandle::Invalid };
-    pid_t PID { pid_t(-1) };
+    EventQueueHandle ID{EventQueueHandle::Invalid};
+    pid_t PID{pid_t(-1)};
     std::ring_buffer<Event, N> Events;
     // Yes, this is an array of vectors. The array index is the event
     // type as a size_t. This provides constant O(1) lookup on event
@@ -145,6 +185,7 @@ struct EventQueue {
 
     void register_listening(EventType e, EventFilter efilt) {
         if (e >= EventType::COUNT) return;
+        std::print("PID {} now listening to event type {}\n", PID, (usz)e);
         Filter[(size_t)e].push_back(efilt);
         // Add PID to kernel event queue for this event type
         gEvents.register_listener(e, PID);
@@ -161,7 +202,18 @@ struct EventQueue {
 
     bool listens(EventType e, EventFilter efilt) const {
         if (e >= EventType::COUNT) return false;
-        return Filter[(size_t)e].size() != 0 && std::find(Filter[(size_t)e].begin(), Filter[(size_t)e].end(), efilt) != Filter[(size_t)e].end();
+        const auto& filter_stack = Filter[(size_t)e];
+        std::print("  given filt: {}\n", usz(efilt.ProcessFD));
+        std::print("[event queue]: filter stack size={}\n", filter_stack.size());
+        for (auto f : filter_stack) {
+            std::print("  filter: {}\n", (usz)f.ProcessFD);
+        }
+        return filter_stack.size() != 0
+               && std::find(
+                      filter_stack.begin(),
+                      filter_stack.end(),
+                      efilt)
+                      != filter_stack.end();
     }
 
     void push(const Event& e) {
@@ -170,7 +222,7 @@ struct EventQueue {
 
     Event pop() {
         if (Events.size()) return Events.pop_front();
-        return { EventType::INVALID, {}, { 0 } };
+        return {EventType::INVALID};
     }
 
     bool has_events() {

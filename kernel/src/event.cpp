@@ -18,28 +18,28 @@
  */
 
 #include <event.h>
-
-#include <bit>
 #include <integers.h>
+#include <scheduler.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <scheduler.h>
+
+#include <bit>
 #include <vector>
 
 EventManager gEvents;
 
 void EventManager::notify(const Event& event) {
     if (event.Type >= EventType::COUNT) return;
-    static_assert((usz)EventType::COUNT == 3, "Exhaustive handling of process-specific event types in all-process notify().");
+    static_assert((usz)EventType::COUNT == 5, "Exhaustive handling of process-specific event types in all-process notify().");
     if (event.Type == EventType::READY_TO_READ || event.Type == EventType::READY_TO_WRITE) {
-        std::print("[Events]: Event manager refuses to notify all processes for process-specific events.\n"
-                   "  This is likely an error in the LensorOS kernel; please submit a bug report with as much information as possible.\n");
+        std::print(
+            "[Events]: Event manager refuses to notify all processes for process-specific events.\n"
+            "  This is likely an error in the LensorOS kernel; please submit a bug report with as much information as possible.\n");
         return;
     }
-    for (auto pid : Listeners[event.Type]) {
-        Process* process = Scheduler::process(pid);
-        notify(event, process);
-    }
+    std::print("[global event]: {} listeners on {} type\n", Listeners[event.Type].size(), (usz)event.Type);
+    for (auto pid : Listeners[event.Type])
+        notify(event, pid);
 }
 
 void EventManager::notify(const Event& event, Process* process) {
@@ -66,4 +66,3 @@ void EventManager::notify(const Event& event, pid_t pid) {
     auto* process = Scheduler::process(pid);
     return notify(event, process);
 }
-

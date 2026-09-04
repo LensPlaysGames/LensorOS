@@ -144,6 +144,13 @@ void run_background_program(const char* const filepath, const char** args) {
     if (fork() == 0) syscall(SYS_exec, filepath, args);
 }
 
+#define IPC_KEYBOARD_MAGIC 0xf8
+typedef struct ipc_keyboard_t {
+    uint8_t magic;
+    uint8_t is_pressed;
+    uint16_t value;
+} ipc_keyboard_t;
+
 int main(int argc, const char** argv) {
     // FIXME: Only do this when terminal is not graphical.
     // Set stdout unbuffered so the user can see updates as they type.
@@ -211,13 +218,19 @@ int main(int argc, const char** argv) {
     const size_t changelist_size = 4;
     Event changelist[changelist_size];
     memset(changelist, 0, sizeof(changelist));
+
     changelist[0].Type = EVENTTYPE_READY_TO_READ;
     changelist[0].Filter.ProcessFD = sockFD;
     changelist[0].Flags |= EVENTFLAGS_CHANGE_ADD_REMOVE;
+
+    changelist[1].Type = EVENTTYPE_KEYBOARD;
+    changelist[1].Filter.ProcessFD = -1;
+    changelist[1].Flags |= EVENTFLAGS_CHANGE_ADD_REMOVE;
+
     // This applies the above changes to the event queue, meaning we will
     // recieve events when the given file descriptor is ready to read from.
     // In the case of a local socket, that means a process has connected.
-    sys_kevent(listen_queue, changelist, 1, NULL, 0);
+    sys_kevent(listen_queue, changelist, 2, NULL, 0);
 
     const size_t eventlist_size = 4;
     Event eventlist[eventlist_size];
@@ -235,7 +248,6 @@ int main(int argc, const char** argv) {
         void* shared_region;
         unsigned int x;
         unsigned int y;
-        unsigned int z;
         unsigned int width;
         unsigned int height;
         int shared_region_id;
@@ -244,69 +256,93 @@ int main(int argc, const char** argv) {
 
     window_t windows[8] = {0};
 
+    typedef struct focus_t {
+        window_t* window;
+    } focus_t;
+
+    focus_t focus;
+    focus.window = &windows[0];
+
     while (true) {
         // Handle Incoming Requests on GUI Socket, Creating A New Window
         // FIXME: We may not handle all events, doing it like this.
         if (sys_kevent(listen_queue, NULL, 0, eventlist, eventlist_size) == 0) {
-            printf("Got incoming connection...\n");
+            // TODO: Handle all events in event list.
+            if (eventlist[0].Type == EVENTTYPE_READY_TO_READ && eventlist[0].Filter.ProcessFD == sockFD) {
+                printf("Got incoming connection...\n");
 
-            sockaddr connected_addr;
-            size_t connected_addrlen = sizeof(sockaddr);
-            int clientFD = -1;
-            // Attempt to accept incoming connection. If given the retry return code,
-            // retry.
-            do {
-                printf("[SERVE]: Accepting...\n");
+                sockaddr connected_addr;
+                size_t connected_addrlen = sizeof(sockaddr);
+                int clientFD = -1;
+                // Attempt to accept incoming connection. If given the retry return code,
+                // retry.
+                do {
+                    printf("[SERVE]: Accepting...\n");
+                    fflush(stdout);
+                    // We will block here until a connection is made.
+                    clientFD = sys_accept(sockFD, &connected_addr, &connected_addrlen);
+                    printf("[SERVE]: accept returned %d\n", clientFD);
+                    fflush(stdout);
+                } while (clientFD == -2);
+
+                if (clientFD < 0) {
+                    close(sockFD);
+                    printf("[SERVE]: `accept` failed: %d\n", clientFD);
+                    return 1;
+                }
+
+                window_t* window;
+                for (int i = 0; i < sizeof(windows) / sizeof(window_t); ++i) {
+                    window = &windows[i];
+                    if (!window->shared_region) break;
+                    window = nullptr;
+                }
+                if (!window) {
+                    printf("[SERVE]: too many windows, ignoring request...\n");
+                    continue;
+                }
+
+                uintptr_t* shared_data = NULL;
+                int id = syscall(SYS_shared_memory_allocate, &shared_data, g_framebuffer.buffer_size);
+                printf("id:%d data:%p\n", id, shared_data);
+
+                // Book-keep shared_data pointer and id (create new window)
+                window->shared_region = shared_data;
+                window->shared_region_id = id;
+                window->width = g_framebuffer.pixel_width;
+                window->height = g_framebuffer.pixel_height;
+                window->client_fd = clientFD;
+                // TODO: Register change in kqueue to be notified when clientFD is
+                // closed/EOF status. This is an "easy" way to tell when the process no
+                // longer wants it's window, whether from no longer running or from
+                // specifically requesting the window to be closed.
+
+                // Communicate basic framebuffer data to client through shared memory.
+                *shared_data++ = g_framebuffer.buffer_size;
+                *shared_data++ = g_framebuffer.pixel_width;
+                *shared_data++ = g_framebuffer.pixel_height;
+
+                uintptr_t payload[3] = {69, 420, id};
+
+                printf("[SERVE]: writing...\n");
                 fflush(stdout);
-                // We will block here until a connection is made.
-                clientFD = sys_accept(sockFD, &connected_addr, &connected_addrlen);
-                printf("[SERVE]: accept returned %d\n", clientFD);
-                fflush(stdout);
-            } while (clientFD == -2);
 
-            if (clientFD < 0) {
-                close(sockFD);
-                printf("[SERVE]: `accept` failed: %d\n", clientFD);
-                return 1;
+                write(clientFD, payload, sizeof(payload));
             }
-
-            window_t* window;
-            for (int i = 0; i < sizeof(windows) / sizeof(window_t); ++i) {
-                window = &windows[i];
-                if (!window->shared_region) break;
-                window = nullptr;
+            else if (eventlist[0].Type == EVENTTYPE_KEYBOARD) {
+                EventData_KeyboardInput* e_data = (EventData_KeyboardInput*)&eventlist[0].Data;
+                printf("[SERVE]: Got keyboard input %d %d", e_data->press, e_data->value);
+                if (focus.window && focus.window->shared_region) {
+                    ipc_keyboard_t keyboard_message;
+                    keyboard_message.magic = IPC_KEYBOARD_MAGIC;
+                    keyboard_message.value = e_data->value;
+                    keyboard_message.is_pressed = e_data->press;
+                    write(focus.window->client_fd, &keyboard_message, sizeof(keyboard_message));
+                }
             }
-            if (!window) {
-                printf("[SERVE]: too many windows, ignoring request...\n");
-                continue;
+            else {
+                printf("[SERVE]: Unhandled kqueue event\n");
             }
-
-            uintptr_t* shared_data = NULL;
-            int id = syscall(SYS_shared_memory_allocate, &shared_data, g_framebuffer.buffer_size);
-            printf("id:%d data:%p\n", id, shared_data);
-
-            // Book-keep shared_data pointer and id (create new window)
-            window->shared_region = shared_data;
-            window->shared_region_id = id;
-            window->width = g_framebuffer.pixel_width;
-            window->height = g_framebuffer.pixel_height;
-            window->client_fd = clientFD;
-            // TODO: Register change in (a new) kqueue to be notified when clientFD is
-            // closed/EOF status. This is an "easy" way to tell when the process no
-            // longer wants it's window, whether from no longer running or from
-            // specifically requesting the window to be closed.
-
-            // Communicate basic framebuffer data to client through shared memory.
-            *shared_data++ = g_framebuffer.buffer_size;
-            *shared_data++ = g_framebuffer.pixel_width;
-            *shared_data++ = g_framebuffer.pixel_height;
-
-            uintptr_t payload[3] = {69, 420, id};
-
-            printf("[SERVE]: writing...\n");
-            fflush(stdout);
-
-            write(clientFD, payload, sizeof(payload));
         }
 
         // Draw Each Window's Framebuffer to the Actual Framebuffer

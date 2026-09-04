@@ -295,6 +295,8 @@ typedef enum EventType {
     EVENTTYPE_READY_TO_READ,
     // For sockets/pipes: space is available in the FIFO to write to.
     EVENTTYPE_READY_TO_WRITE,
+    EVENTTYPE_KEYBOARD,
+    EVENTTYPE_MOUSE,
     EVENTTYPE_COUNT
 } EventType;
 typedef union EventFilter {
@@ -317,6 +319,15 @@ typedef struct Event {
 typedef struct EventData_ReadyToReadWrite {
     size_t BytesAvailable;
 } EventData_ReadyToReadWrite;
+typedef struct EventData_KeyboardInput {
+    size_t value;
+    bool press;
+} EventData_KeyboardInput;
+typedef struct EventData_MouseInput {
+    int32_t delta_x;
+    int32_t delta_y;
+    int32_t wheel_delta;
+} EventData_MouseInput;
 int sys_kqueue() {
     return (int)syscall(SYS_kqueue);
 }
