@@ -84,9 +84,9 @@ struct FIFOBuffer {
     /// \retval -1   Failure
     /// \retval -2   Should block (will unblock when written to)
     ssz read(pid_t pid, usz byteCount, u8* buffer) {
-        std::print("[SOCK]: read({}, {}, {})\n", pid, byteCount, (void*)buffer);
+        // std::print("[SOCK]: read({}, {}, {})\n", pid, byteCount, (void*)buffer);
         if (Offset == 0) {
-            std::print("[SOCK]: read() from socket by process {} waiting until write\n", pid);
+            // std::print("[SOCK]: read() from socket by process {} waiting until write\n", pid);
             PIDsWaitingUntilWrite.push_back(pid);
             return -2;
         }
@@ -94,7 +94,7 @@ struct FIFOBuffer {
         if (byteCount > Offset)
             byteCount = Offset;
 
-        std::print("[SOCK]: Reading {} bytes from FIFO into buffer at {}\n", byteCount, (void*)buffer);
+        // std::print("[SOCK]: Reading {} bytes from FIFO into buffer at {}\n", byteCount, (void*)buffer);
 
         // Transfer the data from the FIFO buffer to the given buffer.
         memcpy(buffer, Data, byteCount);
@@ -108,7 +108,7 @@ struct FIFOBuffer {
         for (pid_t pid : PIDsWaitingUntilRead) {
             auto* process = Scheduler::process(pid);
             if (!process) continue;
-            std::print("[SOCK]: read()  Unblocking process {}\n", pid);
+            // std::print("[SOCK]: read()  Unblocking process {}\n", pid);
             // Set return value of process to retry syscall.
             process->unblock(true, -2);
         }
@@ -124,16 +124,16 @@ struct FIFOBuffer {
     /// \retval -1   Failure
     /// \retval -2   Should block (will unblock when read from)
     ssz write(pid_t pid, usz byteCount, u8* buffer) {
-        std::print("[SOCK]: write({}, {}, {})\n", pid, byteCount, (void*)buffer);
+        // std::print("[SOCK]: write({}, {}, {})\n", pid, byteCount, (void*)buffer);
 
         // Block until a write can be performed.
         if (Offset + byteCount > N) {
-            std::print("[SOCK]: write() to socket by process {} waiting until read\n", pid);
+            // std::print("[SOCK]: write() to socket by process {} waiting until read\n", pid);
             PIDsWaitingUntilRead.push_back(pid);
             return -2;
         }
 
-        std::print("[SOCK]: Writing {} bytes to FIFO from buffer at {}\n", byteCount, (void*)buffer);
+        // std::print("[SOCK]: Writing {} bytes to FIFO from buffer at {}\n", byteCount, (void*)buffer);
 
         // Transfer the data from the given buffer to the FIFO buffer.
         memcpy(Data + Offset, buffer, byteCount);
@@ -146,7 +146,7 @@ struct FIFOBuffer {
         for (pid_t pid : PIDsWaitingUntilWrite) {
             auto* process = Scheduler::process(pid);
             if (!process) continue;
-            std::print("[SOCK]: write()  Unblocking process {}\n", pid);
+            // std::print("[SOCK]: write()  Unblocking process {}\n", pid);
             // Set return value of process to retry syscall.
             process->unblock(true, -2);
         }
