@@ -179,6 +179,14 @@ int main(int argc, const char** argv) {
     const uint32_t black = mkpixel(fb.format, 22, 23, 24, 0xff);
     fill_color(fb, black);
 
+    // Allocate back buffer
+    // TODO: flags
+    void* back_buffer = (void*)syscall(SYS_map, NULL, fb.buffer_size, 0);
+    if (!back_buffer) {
+        printf("[INIT]: could not allocate graphical back buffer\n");
+        return 1;
+    }
+
     // Open GUI socket for listening
     int sockFD = sys_socket(0, 0, 0);
     sockaddr addr;
@@ -224,10 +232,12 @@ int main(int argc, const char** argv) {
 
     typedef struct window_t {
         void* shared_region;
+        unsigned int x;
+        unsigned int y;
+        unsigned int z;
+        unsigned int width;
+        unsigned int height;
         int shared_region_id;
-        int x;
-        int y;
-        int z;
     } window_t;
 
     window_t windows[8] = {0};
@@ -275,6 +285,8 @@ int main(int argc, const char** argv) {
             // Book-keep shared_data pointer and id (create new window)
             window->shared_region = shared_data;
             window->shared_region_id = id;
+            window->width = g_framebuffer.pixel_width;
+            window->height = g_framebuffer.pixel_height;
 
             *shared_data++ = g_framebuffer.buffer_size;
             *shared_data++ = g_framebuffer.pixel_width;
@@ -290,12 +302,54 @@ int main(int argc, const char** argv) {
 
         // Draw Each Window's Framebuffer to the Actual Framebuffer
         for (int i = 0; i < sizeof(windows) / sizeof(window_t); ++i) {
-            window_t* window = &windows[i];
+            const window_t* window = &windows[i];
             if (!window->shared_region) continue;
-            // TODO: draw at x and y offset
-            // TODO: take z ordering into account
-            memcpy(g_framebuffer.base_address, window->shared_region, g_framebuffer.buffer_size);
+
+            // Define pixel size (TODO: get from kernel)
+            const int bytes_per_pixel = 4;
+
+            // Get screen dimensions and pitches
+            const int screen_pitch = g_framebuffer.pixel_width * bytes_per_pixel;
+            const int window_pitch = window->width * bytes_per_pixel;
+
+            // Cast to uint8_t* for byte-level pointer arithmetic
+            // TODO: use a back buffer
+            const uint8_t* screen_fb = (uint8_t*)back_buffer;
+            const uint8_t* window_fb = (uint8_t*)window->shared_region;
+
+            // Clip the window boundaries to prevent drawing off-screen (kernel panics/segfaults)
+            const int start_y = window->y;
+            const int end_y
+                = (window->y + window->height > g_framebuffer.pixel_height)
+                      ? g_framebuffer.pixel_height
+                      : (window->y + window->height);
+
+            const int start_x = window->x;
+            const int end_x
+                = (window->x + window->width > g_framebuffer.pixel_width)
+                      ? g_framebuffer.pixel_width
+                      : (window->x + window->width);
+
+            // Calculate dimensions to actually copy after clipping
+            const int copy_width_pixels = end_x - start_x;
+            if (copy_width_pixels <= 0) continue;
+
+            // Loop through each visible row of the window
+            for (int y = start_y; y < end_y; ++y) {
+                // Find where this window row starts relative to the window's own buffer
+                const int win_local_y = y - window->y;
+                const int win_local_x = start_x - window->x;
+                const uint8_t* src_row = window_fb + (win_local_y * window_pitch) + (win_local_x * bytes_per_pixel);
+
+                // Find the matching row on the physical screen
+                const uint8_t* dest_row = screen_fb + (y * screen_pitch) + (start_x * bytes_per_pixel);
+
+                // Copy exactly one row segment
+                memcpy(dest_row, src_row, copy_width_pixels * bytes_per_pixel);
+            }
         }
+
+        memcpy(g_framebuffer.base_address, back_buffer, g_framebuffer.buffer_size);
 
         // Yield
         syscall(SYS_cooperative_yield);
