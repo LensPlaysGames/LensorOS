@@ -42,14 +42,14 @@ int close(int fd) {
 ssize_t read(int fd, const void* buffer, size_t count) {
     /// TODO: check return value and set errno.
     int rc = 0;
-    while ((rc = syscall<int>(SYS_read, fd, buffer, count)) == -2);
+    while ((rc = syscall<int>(SYS_read, fd, buffer, count, LENSOROS_SYSCALL_READ_FLAG_NONE)) == -2);
     return rc;
 }
 
 ssize_t write(int fd, const void* buffer, size_t count) {
     /// TODO: check return value and set errno.
     ssize_t rc = 0;
-    while ((rc = syscall<ssize_t>(SYS_write, fd, buffer, count)) == -2);
+    while ((rc = syscall<ssize_t>(SYS_write, fd, buffer, count, LENSOROS_SYSCALL_WRITE_FLAG_NONE)) == -2);
     return rc;
 }
 

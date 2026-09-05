@@ -20,8 +20,8 @@
 #ifndef LENSOR_OS_FILE_METADATA_H
 #define LENSOR_OS_FILE_METADATA_H
 
-#include <files.h>
 #include <integers.h>
+#include <lensor/files.h>
 #include <storage/filesystem_driver.h>
 #include <storage/storage_device_driver.h>
 

@@ -18,7 +18,7 @@
  */
 
 #include <keyboard_scancode_translation.h>
-#include <keys.h>
+#include <lensor/keys.h>
 
 namespace Keyboard {
 namespace QWERTY {

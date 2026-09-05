@@ -19,7 +19,7 @@
 
 #include <framebuffer.h>
 #include <ints.h>
-#include <keys.h>
+#include <lensor/keys.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -314,6 +314,7 @@ int main(int argc, const char** argv) {
         unsigned int height;
         int shared_region_id;
         int client_fd;
+        bool hidden;
     } window_t;
 
     window_t windows[8] = {0};
@@ -387,6 +388,7 @@ int main(int argc, const char** argv) {
                 window->width = g_framebuffer.pixel_width;
                 window->height = g_framebuffer.pixel_height;
                 window->client_fd = clientFD;
+                window->hidden = false;
                 // TODO: Register change in kqueue to be notified when clientFD is
                 // closed/EOF status. This is an "easy" way to tell when the process no
                 // longer wants it's window, whether from no longer running or from
@@ -402,7 +404,11 @@ int main(int argc, const char** argv) {
                 printf("[SERVE]: writing...\n");
                 fflush(stdout);
 
-                write(clientFD, payload, sizeof(payload));
+                sys_write(
+                    clientFD,
+                    (uint8_t*)payload,
+                    sizeof(payload),
+                    LENSOROS_SYSCALL_WRITE_FLAG_NOBLOCK);
             }
             else if (eventlist[0].Type == EVENTTYPE_KEYBOARD) {
                 EventData_KeyboardInput* e_data = (EventData_KeyboardInput*)&eventlist[0].Data;
@@ -460,9 +466,11 @@ int main(int argc, const char** argv) {
                     mouse_message.delta_x = e_data->delta_x;
                     mouse_message.delta_y = e_data->delta_y;
                     mouse_message.delta_scroll = e_data->wheel_delta;
-                    // TODO: non-blocking, in case our GUI program isn't reading from the
-                    // socket.
-                    // write(focus.window->client_fd, &mouse_message, sizeof(mouse_message));
+                    sys_write(
+                        focus.window->client_fd,
+                        (uint8_t*)&mouse_message,
+                        sizeof(mouse_message),
+                        LENSOROS_SYSCALL_WRITE_FLAG_NOBLOCK);
                 }
             }
             else {
@@ -519,6 +527,51 @@ int main(int argc, const char** argv) {
         }
 
         // TODO: Draw Taskbar/Window Stack
+        const uint32_t window_stack_height = 28;
+        uint32_t window_stack_begin_y = g_framebuffer.pixel_height - window_stack_height;
+
+        // [WINSTACK]: Draw background
+        fill_rect(
+            g_backbuffer,
+            black,
+            0,
+            window_stack_begin_y,
+            g_framebuffer.pixel_width,
+            window_stack_height);
+        // [WINSTACK]: Delineating Stripe
+        const uint32_t orange = mkpixel(g_framebuffer.format, 0xff, 0x62, 0x00, 0xff);
+        fill_rect(
+            g_backbuffer,
+            orange,
+            0,
+            window_stack_begin_y,
+            g_framebuffer.pixel_width,
+            window_stack_height / 8);
+
+        for (int i = 0; i < sizeof(windows) / sizeof(window_t); ++i) {
+            const window_t* window = &windows[i];
+            if (!window->shared_region) continue;
+
+            const uint32_t present_window_color = mkpixel(g_framebuffer.format, 0xff, 0xff, 0xff, 0xff);
+            const uint32_t hidden_window_color = mkpixel(g_framebuffer.format, 0x67, 0x67, 0x67, 0xff);
+            const uint32_t focused_window_color = orange;
+            uint32_t color = present_window_color;
+            if (window == focus.window) {
+                color = focused_window_color;
+            }
+            else if (window->hidden) {
+                color = hidden_window_color;
+            }
+
+            const uint32_t window_selector_width = 16;
+            fill_rect(
+                g_backbuffer,
+                color,
+                i * window_selector_width,
+                window_stack_begin_y,
+                window_selector_width,
+                window_stack_height);
+        }
 
         // Draw Mouse Cursor
         draw_cursor(&g_backbuffer, focus.cursor_x, focus.cursor_y);

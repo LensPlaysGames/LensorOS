@@ -21,6 +21,7 @@
 #define _SYSCALLS_H
 
 #include <bits/decls.h>
+#include <lensor/syscalls.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -177,7 +178,7 @@ typedef struct tm {
     int is_daylight_savings_time;  // daylight saving time
 } tm;
 
-#include <files.h>
+#include <lensor/files.h>
 
 __END_DECLS__
 
@@ -212,20 +213,17 @@ typedef struct DirectoryEntry DirectoryEntry;
 #define syscall(sys, ...) \
     _EVAL(__syscall, _COUNT(__VA_ARGS__))(sys __VA_OPT__(, ) _MAP(_TO_UINT, __VA_ARGS__))
 
-typedef uint64_t ProcessFileDescriptor;
-typedef ProcessFileDescriptor ProcFD;
-
 ProcFD sys_open(const char* path) {
     return (ProcFD)syscall(SYS_open, (uintptr_t)path);
 }
 void sys_close(ProcFD fd) {
     syscall(SYS_close, (uintptr_t)fd);
 }
-int sys_read(ProcFD fd, uint8_t* buffer, uint64_t byteCount) {
-    return (int)syscall(SYS_read, (uintptr_t)fd, (uintptr_t)buffer, (uintptr_t)byteCount);
+int sys_read(ProcFD fd, uint8_t* buffer, uint64_t byteCount, uint64_t flags) {
+    return (int)syscall(SYS_read, (uintptr_t)fd, (uintptr_t)buffer, (uintptr_t)byteCount, (uintptr_t)flags);
 }
-int sys_write(ProcFD fd, uint8_t* buffer, uint64_t byteCount) {
-    return (int)syscall(SYS_write, (uintptr_t)fd, (uintptr_t)buffer, (uintptr_t)byteCount);
+int sys_write(ProcFD fd, uint8_t* buffer, uint64_t byteCount, uint64_t flags) {
+    return (int)syscall(SYS_write, (uintptr_t)fd, (uintptr_t)buffer, (uintptr_t)byteCount, (uintptr_t)flags);
 }
 void sys_poke() {
     syscall(SYS_poke);
@@ -288,46 +286,8 @@ ProcFD sys_accept(ProcFD socketFD, const sockaddr* address, size_t* addressLengt
     return (ProcFD)syscall(SYS_accept, (uintptr_t)socketFD, (uintptr_t)address, (uintptr_t)addressLength);
 }
 
-typedef enum EventType {
-    EVENTTYPE_INVALID,
-    // For server-type listening sockets: connections waiting to be accepted.
-    // For sockets/pipes: data is available to read.
-    EVENTTYPE_READY_TO_READ,
-    // For sockets/pipes: space is available in the FIFO to write to.
-    EVENTTYPE_READY_TO_WRITE,
-    EVENTTYPE_KEYBOARD,
-    EVENTTYPE_MOUSE,
-    EVENTTYPE_COUNT
-} EventType;
-typedef union EventFilter {
-    ProcFD ProcessFD;
-} EventFilter;
-typedef uint32_t EventFlags;
-typedef enum EventFlags_Change {
-    EVENTFLAGS_CHANGE_ADD_REMOVE = 1 << 0,
-    EVENTFLAGS_CHANGE_CANARY
-} EventFlags_Change;
+#include <lensor/kqueue_events.h>
 
-#define EVENT_DATA_SIZE 128
-typedef struct Event {
-    EventType Type;
-    EventFilter Filter;
-    EventFlags Flags;
-    uint8_t Data[EVENT_DATA_SIZE];
-} Event;
-/// Both READY_TO_READ and READY_TO_WRITE events have this data sent with them.
-typedef struct EventData_ReadyToReadWrite {
-    size_t BytesAvailable;
-} EventData_ReadyToReadWrite;
-typedef struct EventData_KeyboardInput {
-    size_t value;
-    bool press;
-} EventData_KeyboardInput;
-typedef struct EventData_MouseInput {
-    int32_t delta_x;
-    int32_t delta_y;
-    int32_t wheel_delta;
-} EventData_MouseInput;
 int sys_kqueue() {
     return (int)syscall(SYS_kqueue);
 }
@@ -381,11 +341,11 @@ inline ProcFD sys_open(const char* path) {
 inline void sys_close(ProcFD fd) {
     std::__detail::syscall(SYS_close, (uintptr_t)fd);
 }
-inline int sys_read(ProcFD fd, uint8_t* buffer, uint64_t byteCount) {
-    return std::__detail::syscall<int>(SYS_read, (uintptr_t)fd, (uintptr_t)buffer, (uintptr_t)byteCount);
+inline int sys_read(ProcFD fd, uint8_t* buffer, uint64_t byteCount, uint64_t flags) {
+    return std::__detail::syscall<int>(SYS_read, (uintptr_t)fd, (uintptr_t)buffer, (uintptr_t)byteCount, (uintptr_t)flags);
 }
-inline int sys_write(ProcFD fd, uint8_t* buffer, uint64_t byteCount) {
-    return std::__detail::syscall<int>(SYS_write, (uintptr_t)fd, (uintptr_t)buffer, (uintptr_t)byteCount);
+inline int sys_write(ProcFD fd, uint8_t* buffer, uint64_t byteCount, uint64_t flags) {
+    return std::__detail::syscall<int>(SYS_write, (uintptr_t)fd, (uintptr_t)buffer, (uintptr_t)byteCount, (uintptr_t)flags);
 }
 inline void sys_poke() {
     std::__detail::syscall(SYS_poke);

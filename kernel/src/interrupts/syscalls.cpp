@@ -32,6 +32,7 @@
 #include <event.h>
 #include <file.h>
 #include <interrupts/syscalls.h>
+#include <lensor/syscalls.h>
 #include <linked_list.h>
 #include <memory/common.h>
 #include <memory/paging.h>
@@ -79,7 +80,7 @@ void sys$1_close(ProcessFileDescriptor fd) {
     SYSTEM->virtual_filesystem().close(fd);
 }
 
-int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
+int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount, u64 flags) {
     DBGMSG(sys$_dbgfmt, 2, "read");
     DBGMSG(
         "  file descriptor: {}\n"
@@ -138,7 +139,7 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
     return rc;
 }
 
-int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount) {
+int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount, u64 flags) {
     DBGMSG(sys$_dbgfmt, 3, "write");
     DBGMSG(
         "  file descriptor: {}\n"
@@ -1099,6 +1100,13 @@ int sys$26_shared_memory_allocate(void** ptr, size_t size) {
         pages,
         Memory::ShowDebug::No);
 
+    std::print(
+        "Allocated shared memory region, id={} base={} mapped to {} in process({})\n",
+        new_region_id,
+        physical_address,
+        *ptr,
+        process->ProcessID);
+
     return new_region->id;
 }
 
@@ -1136,6 +1144,13 @@ void* sys$27_shared_memory_acquire(int id) {
         memory_flags,
         pages,
         Memory::ShowDebug::No);
+
+    std::print(
+        "Acquired shared memory region, id={} base={} mapped to {} in process({})\n",
+        id,
+        memory_region->physical_address,
+        address,
+        process->ProcessID);
 
     return address;
 }

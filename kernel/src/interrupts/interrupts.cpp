@@ -34,7 +34,7 @@
 #include <io.h>
 #include <keyboard.h>
 #include <keyboard_scancode_translation.h>
-#include <keys.h>
+#include <lensor/keys.h>
 #include <memory/paging.h>
 #include <memory/virtual_memory_manager.h>
 #include <mouse.h>

@@ -21,6 +21,7 @@
 #define LENSOR_OS_EVENT_H
 
 #include <integers.h>
+#include <lensor/kqueue_events.h>
 #include <memory.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -32,29 +33,7 @@
 #include <unordered_map>
 #include <vector>
 
-// WARNING: Changes to data structures in this file likely also need
-// reflected in `user/libc/sys/syscalls.h`.
-
 typedef u64 pid_t;
-
-/// NOTE: Each one of these (except invalid) should have a struct
-/// defined that the "data" field of the event can be cast to.
-enum struct EventType : u32 {
-    INVALID,
-    // TODO: Reduce this to just "FILE_READY" and have ready for read/write be
-    // a flag.
-    // For server-type listening sockets: connections waiting to be accepted.
-    // For sockets/pipes: data is available to read.
-    READY_TO_READ,
-    // For sockets/pipes: space is available in the FIFO to write to.
-    READY_TO_WRITE,
-
-    // Human Input
-    KEYBOARD,
-    MOUSE,  // NOTE: touch, joystick, etc
-
-    COUNT
-};
 
 // Allow event type enum to be used as the key for a map.
 namespace std {
@@ -104,26 +83,8 @@ struct EventManager {
 
 extern EventManager gEvents;
 
-union EventFilter {
-    // NOTE: THE FIRST NAMED MEMBER MUST BE THE LARGEST!!
-
-    // Used by READY_TO_READ and READY_TO_WRITE event types.
-    ProcFD ProcessFD{ProcFD::Invalid};
-    /*
-    struct PIDFD_T {
-        pid_t PID;
-        ProcFD FD;
-    } PIDFD;
-    */
-
-    bool operator==(const EventFilter& other) const {
-        return memcmp(this, &other, sizeof(EventFilter)) == 0;
-    }
-};
-
 typedef u32 EventFlags;
 
-// For use in the changelist
 enum class EventFlags_Change {
     // When non-zero, register event type with filter.
     // When zero, unregister any existing event types.
@@ -132,15 +93,6 @@ enum class EventFlags_Change {
 };
 
 #define EVENT_DATA_SIZE 128
-struct Event {
-    // An event type signifies what has happened, categorically.
-    EventType Type = EventType::INVALID;
-    // The filter narrows down the subject that the event is happening to.
-    // For READY_TO_READ, this would be a file descriptor.
-    EventFilter Filter = {};
-    EventFlags Flags = {};
-    u8 Data[EVENT_DATA_SIZE] = {0};
-};
 
 /// Both READY_TO_READ and READY_TO_WRITE events have this data sent with them.
 struct EventData_ReadyToReadWrite {
