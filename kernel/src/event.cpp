@@ -51,6 +51,8 @@ void EventManager::notify(const Event& event, Process* process) {
         // If it does, we push this event to the event queue.
         queue.push(event);
         found = true;
+        // Unblock
+        process->State = Process::RUNNING;
     }
     // If none of the event queue's had this filter, then that means the
     // book-keeping went wrong and we should remove this process from this
