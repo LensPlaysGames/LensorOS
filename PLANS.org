@@ -1,25 +1,15 @@
 * Implement A Graphical Compositor Program
 Medium Priority
 
-Basically, I want =stdout= to:
+- Fix: read/write() need to be configurable for non-blocking, or something of that nature.
 
-- Open a socket, =!GUI=, for listening.
-- When a connection comes in on this socket, accept it, allocate shared memory large enough for a copy of the entire framebuffer, write the shared memory region id to the accepted connection file descriptor so the client can read it. Bookkeep this shared memory id has a window (shared memory region id and address), where it is (with depth!), and possibly anything else the client chose to share with us (eventually).
+** Window Stack
 
-The client reads the shared memory ID from the socket, acquires the shared memory, and writes it's graphical pixel data into this memory. It hopes and prays the compositor program (us, we) will actually display it.
+What other OSes might call a "task bar".
 
-- "Occasionally" repaint, drawing the visible portions of each book-kept window's shared memory region onto the actual portion of the real framebuffer it needs to be drawn onto.
+I want the compositor to draw it's own portion of the screen, where the compositor state is displayed, like currently open windows.
 
-
-Some things I notice: blocking. We need =stdout= to /react/ to incoming connections, but not wait and do nothing until connections come in. This is solveable already with =kqueue=.
-
-** Okay, so, here's the plan
-
-- All stdout gets drawn with PSF screen font to terminal window. (It's currently drawn directly to visible framebuffer).
-
-I think we'll move the terminal and psf parts of =stdout= to a terminal process that does the regular "request window through the socket" sort of thing. That way we will fork()+exec() =stdout= into =stdout= and that terminal process, where =stdout= goes on to repaint the screen, handle incoming client connections, etc. in a loop. The terminal process will draw to *it's* framebuffer using the PSF screen font. The =stdout= process will draw all window's framebuffer's to the screen. Initially, it should be no different than what is happening now. We should just be able to have more than one window, technically.
-
-- Each window displays something on the screen, so we can *see* how many there are and stuff, even if they are minimised or invisible or whatever.
+The mouse should be able to select the active window (z order) as well as the focused window (focus state) with mouse clicks
 
 * Flesh out the Network Stack
 Low Priority
@@ -39,3 +29,8 @@ Technologies built on UDP:
   This lets you turn human-readable URLs into computer-readable IPs!
 - NTP :: Network Time Protocol
   This lets you sync your time with everyone else's time!
+
+* PSF Screen Font Sharing
+Low Priority
+
+It's so common that I think we should just map the PSF screen font in every process, since the kernel will always have it loaded anyway. Compositor can take advantage of this, terminal programs, etc. Who doesn't need a font?
