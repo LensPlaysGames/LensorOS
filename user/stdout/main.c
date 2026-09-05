@@ -19,6 +19,7 @@
 
 #include <framebuffer.h>
 #include <ints.h>
+#include <keys.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -28,8 +29,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-// This is a hack and should be removed
+// The screen itself
 static Framebuffer g_framebuffer;
+// The canvas that is blitted to the screen
+static Framebuffer g_backbuffer;
 
 #define ESCAPE 0x01
 #define BACKSPACE 0x0e
@@ -151,6 +154,59 @@ typedef struct ipc_keyboard_t {
     uint16_t value;
 } ipc_keyboard_t;
 
+#define IPC_MOUSE_MAGIC 0xf9
+typedef struct ipc_mouse_t {
+    uint8_t magic;
+    int32_t delta_x;
+    int32_t delta_y;
+    int32_t delta_scroll;
+} ipc_mouse_t;
+
+const uint32_t mouse_cursor_color = 0xffffffffu;
+// In bits
+#define MouseCursorWidth 16
+// In bits
+#define MouseCursorHeight 16
+// This is a bitmap of the cursor, lmao.
+// clang-format off
+u8 mouse_cursor_bitmap[] = {
+    0b10000000, 0b00000000,
+    0b11000000, 0b00000000,
+    0b11100000, 0b00000000,
+    0b11110000, 0b00000000,
+    0b11111000, 0b00000000,
+    0b11111100, 0b00000000,
+    0b11111110, 0b00000000,
+    0b11111111, 0b00000000,
+    0b11111111, 0b10000000,
+    0b11111111, 0b11000000,
+    0b11111111, 0b00000000,
+    0b11111100, 0b00000000,
+    0b11110000, 0b00000000,
+    0b11000000, 0b00000000,
+    0b00000000, 0b00000000,
+    0b00000000, 0b00000000
+};
+// clang-format on
+void draw_cursor(Framebuffer* fb, size_t cursor_x, size_t cursor_y) {
+    clamp_draw_position(*fb, &cursor_x, &cursor_y);
+    u32 size_x = MouseCursorWidth;
+    u32 size_y = MouseCursorHeight;
+    u32 initX = size_x;
+    u32 diffX = fb->pixel_width - cursor_x;
+    u32 diffY = fb->pixel_height - cursor_y;
+    if (diffX < size_x) size_x = diffX;
+    if (diffY < size_y) size_y = diffY;
+    u32* pixel_ptr = (u32*)fb->base_address;
+    for (u64 y = cursor_y; y < cursor_y + size_y; y++) {
+        for (u64 x = cursor_x; x < cursor_x + size_x; x++) {
+            s32 byte = ((x - cursor_x) + ((y - cursor_y) * initX)) / 8;
+            if ((mouse_cursor_bitmap[byte] & (0b10000000 >> ((x - cursor_x) % 8))) > 0)
+                *(u32*)(pixel_ptr + x + (y * fb->pixels_per_scanline)) = mouse_cursor_color;
+        }
+    }
+}
+
 int main(int argc, const char** argv) {
     // FIXME: Only do this when terminal is not graphical.
     // Set stdout unbuffered so the user can see updates as they type.
@@ -193,6 +249,8 @@ int main(int argc, const char** argv) {
         printf("[INIT]: could not allocate graphical back buffer\n");
         return 1;
     }
+    g_backbuffer = g_framebuffer;
+    g_backbuffer.base_address = back_buffer;
 
     // Open GUI socket for listening
     int sockFD = sys_socket(0, 0, 0);
@@ -227,10 +285,14 @@ int main(int argc, const char** argv) {
     changelist[1].Filter.ProcessFD = -1;
     changelist[1].Flags |= EVENTFLAGS_CHANGE_ADD_REMOVE;
 
+    changelist[2].Type = EVENTTYPE_MOUSE;
+    changelist[2].Filter.ProcessFD = -1;
+    changelist[2].Flags |= EVENTFLAGS_CHANGE_ADD_REMOVE;
+
     // This applies the above changes to the event queue, meaning we will
     // recieve events when the given file descriptor is ready to read from.
     // In the case of a local socket, that means a process has connected.
-    sys_kevent(listen_queue, changelist, 2, NULL, 0);
+    sys_kevent(listen_queue, changelist, 3, NULL, 0);
 
     const size_t eventlist_size = 4;
     Event eventlist[eventlist_size];
@@ -258,10 +320,23 @@ int main(int argc, const char** argv) {
 
     typedef struct focus_t {
         window_t* window;
+
+        ssize_t cursor_x;
+        ssize_t cursor_y;
+
+        bool left_control;
+        bool left_shift;
+        bool right_shift;
+        bool left_alt;
+        bool right_alt;
+        bool left_super;
+        bool right_super;
     } focus_t;
 
     focus_t focus;
     focus.window = &windows[0];
+    focus.cursor_x = 0;
+    focus.cursor_y = 0;
 
     while (true) {
         // Handle Incoming Requests on GUI Socket, Creating A New Window
@@ -331,15 +406,63 @@ int main(int argc, const char** argv) {
             }
             else if (eventlist[0].Type == EVENTTYPE_KEYBOARD) {
                 EventData_KeyboardInput* e_data = (EventData_KeyboardInput*)&eventlist[0].Data;
-                printf("[SERVE]: Got keyboard input %d %d\n", e_data->press, e_data->value);
-                if (focus.window && focus.window->shared_region) {
+                // printf("[SERVE]: Got keyboard input %d %d\n", e_data->press, e_data->value);
+
+                if (e_data->value == LENSOR_KEY_LEFTCTRL) {
+                    focus.left_control = e_data->press;
+                }
+                // TODO: right control
+                else if (e_data->value == LENSOR_KEY_LEFTSHIFT) {
+                    focus.left_shift = e_data->press;
+                }
+                else if (e_data->value == LENSOR_KEY_RIGHTSHIFT) {
+                    focus.right_shift = e_data->press;
+                }
+                else if (e_data->value == LENSOR_KEY_LEFTALT) {
+                    focus.left_alt = e_data->press;
+                }
+                else if (e_data->value == LENSOR_KEY_MOUSE_LEFT) {
+                    // TODO: If mouse click is over window stack, calculate if it's over an
+                    // open window selector; if it is, focus that window. Also move it in Z
+                    // ordering.
+                }
+                // TODO: right alt
+                // TODO: left/right super
+                else if (focus.window && focus.window->shared_region) {
                     ipc_keyboard_t keyboard_message;
                     keyboard_message.magic = IPC_KEYBOARD_MAGIC;
                     keyboard_message.value = e_data->value;
                     keyboard_message.is_pressed = e_data->press;
                     // TODO: non-blocking, in case our GUI program isn't reading from the
                     // socket.
-                    write(focus.window->client_fd, &keyboard_message, sizeof(keyboard_message));
+                    // We should write this event to a ring buffer, then, we should only write
+                    // to the client FD once it is actually writable.
+                    // write(focus.window->client_fd, &keyboard_message, sizeof(keyboard_message));
+                }
+            }
+            else if (eventlist[0].Type == EVENTTYPE_MOUSE) {
+                EventData_MouseInput* e_data = (EventData_MouseInput*)&eventlist[0].Data;
+                // printf("[SERVE]: Got mouse input (%d, %d)\n", e_data->delta_x, e_data->delta_y);
+                focus.cursor_x += e_data->delta_x;
+                focus.cursor_y += e_data->delta_y;
+
+                if (focus.cursor_x < 0) focus.cursor_x = 0;
+                if (focus.cursor_x >= g_framebuffer.pixel_width)
+                    focus.cursor_x = g_framebuffer.pixel_width - 1;
+
+                if (focus.cursor_y < 0) focus.cursor_y = 0;
+                if (focus.cursor_y >= g_framebuffer.pixel_height)
+                    focus.cursor_y = g_framebuffer.pixel_height - 1;
+
+                if (focus.window && focus.window->shared_region) {
+                    ipc_mouse_t mouse_message;
+                    mouse_message.magic = IPC_MOUSE_MAGIC;
+                    mouse_message.delta_x = e_data->delta_x;
+                    mouse_message.delta_y = e_data->delta_y;
+                    mouse_message.delta_scroll = e_data->wheel_delta;
+                    // TODO: non-blocking, in case our GUI program isn't reading from the
+                    // socket.
+                    // write(focus.window->client_fd, &mouse_message, sizeof(mouse_message));
                 }
             }
             else {
@@ -360,8 +483,7 @@ int main(int argc, const char** argv) {
             const int window_pitch = window->width * bytes_per_pixel;
 
             // Cast to uint8_t* for byte-level pointer arithmetic
-            // TODO: use a back buffer
-            const uint8_t* screen_fb = (uint8_t*)back_buffer;
+            const uint8_t* screen_fb = (uint8_t*)g_backbuffer.base_address;
             const uint8_t* window_fb = (uint8_t*)window->shared_region;
 
             // Clip the window boundaries to prevent drawing off-screen (kernel panics/segfaults)
@@ -396,8 +518,16 @@ int main(int argc, const char** argv) {
             }
         }
 
+        // TODO: Draw Taskbar/Window Stack
+
+        // Draw Mouse Cursor
+        draw_cursor(&g_backbuffer, focus.cursor_x, focus.cursor_y);
+
         // Swap Back Buffer <-> Front Buffer
-        memcpy(g_framebuffer.base_address, back_buffer, g_framebuffer.buffer_size);
+        memcpy(
+            g_framebuffer.base_address,
+            g_backbuffer.base_address,
+            g_framebuffer.buffer_size);
 
         // Yield
         syscall(SYS_cooperative_yield);

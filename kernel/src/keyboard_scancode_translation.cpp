@@ -18,6 +18,7 @@
  */
 
 #include <keyboard_scancode_translation.h>
+#include <keys.h>
 
 namespace Keyboard {
 namespace QWERTY {
@@ -140,6 +141,77 @@ uint8_t cap_map[][2] = {
     {55, '*'},
     {56, 0},
     {57, ' '}};
+
+uint16_t lensor_map[][2] = {
+    {0, LENSOR_KEY_NULL},
+    {1, LENSOR_KEY_ESC},
+    {2, LENSOR_KEY_DIGIT1},
+    {3, LENSOR_KEY_DIGIT2},
+    {4, LENSOR_KEY_DIGIT3},
+    {5, LENSOR_KEY_DIGIT4},
+    {6, LENSOR_KEY_DIGIT5},
+    {7, LENSOR_KEY_DIGIT6},
+    {8, LENSOR_KEY_DIGIT7},
+    {9, LENSOR_KEY_DIGIT8},
+    {10, LENSOR_KEY_DIGIT9},
+    {11, LENSOR_KEY_DIGIT0},
+    {12, LENSOR_KEY_MINUS},
+    {13, LENSOR_KEY_EQUAL},
+    {14, LENSOR_KEY_BACKSPACE},
+    {15, LENSOR_KEY_TAB},
+    {16, LENSOR_KEY_Q},
+    {17, LENSOR_KEY_W},
+    {18, LENSOR_KEY_E},
+    {19, LENSOR_KEY_R},
+    {20, LENSOR_KEY_T},
+    {21, LENSOR_KEY_Y},
+    {22, LENSOR_KEY_U},
+    {23, LENSOR_KEY_I},
+    {24, LENSOR_KEY_O},
+    {25, LENSOR_KEY_P},
+    {26, LENSOR_KEY_LEFTBRACE},
+    {27, LENSOR_KEY_RIGHTBRACE},
+    {28, LENSOR_KEY_ENTER},
+    {29, LENSOR_KEY_LEFTCTRL},
+    {30, LENSOR_KEY_A},
+    {31, LENSOR_KEY_S},
+    {32, LENSOR_KEY_D},
+    {33, LENSOR_KEY_F},
+    {34, LENSOR_KEY_G},
+    {35, LENSOR_KEY_H},
+    {36, LENSOR_KEY_J},
+    {37, LENSOR_KEY_K},
+    {38, LENSOR_KEY_L},
+    {39, LENSOR_KEY_SEMICOLON},
+    {40, '\''},
+    {41, LENSOR_KEY_GRAVE},
+    {42, LENSOR_KEY_LEFTSHIFT},
+    {43, LENSOR_KEY_BACKSLASH},
+    {44, LENSOR_KEY_Z},
+    {45, LENSOR_KEY_X},
+    {46, LENSOR_KEY_C},
+    {47, LENSOR_KEY_V},
+    {48, LENSOR_KEY_B},
+    {49, LENSOR_KEY_N},
+    {50, LENSOR_KEY_M},
+    {51, LENSOR_KEY_COMMA},
+    {52, LENSOR_KEY_DOT},
+    {53, LENSOR_KEY_SLASH},
+    {54, LENSOR_KEY_RIGHTSHIFT},
+    {55, LENSOR_KEY_KPASTERISK},
+    {56, LENSOR_KEY_LEFTALT},
+    {57, LENSOR_KEY_SPACE}};
+
+uint16_t TranslateScancode(uint8_t scancode) {
+    // clear "break" bit
+    scancode &= ~0x80;
+
+    // Not within recognized range
+    if (scancode >= 58)
+        return 0;
+
+    return (char)lensor_map[scancode][1];
+}
 
 char Translate(uint8_t scancode, bool capital) {
     // clear "break" bit

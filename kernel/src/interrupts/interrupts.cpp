@@ -34,6 +34,7 @@
 #include <io.h>
 #include <keyboard.h>
 #include <keyboard_scancode_translation.h>
+#include <keys.h>
 #include <memory/paging.h>
 #include <memory/virtual_memory_manager.h>
 #include <mouse.h>
@@ -153,23 +154,23 @@ __attribute__((no_caller_saved_registers)) static void handle_scancode_input(u8 
         case LSHIFT:
             // std::print("[INPUT]: mod_press: left shift\n");
             State.LeftShift = true;
-            return;
+            break;
         case LSHIFT + 0x80:
             // std::print("[INPUT]: mod_release: left shift\n");
             State.LeftShift = false;
-            return;
+            break;
         case RSHIFT:
             // std::print("[INPUT]: mod_press: right shift\n");
             State.RightShift = true;
-            return;
+            break;
         case RSHIFT + 0x80:
             // std::print("[INPUT]: mod_press: right shift\n");
             State.RightShift = false;
-            return;
+            break;
         case CAPSLOCK:
             // std::print("[INPUT]: mod_capslock\n");
             State.CapsLock = !State.CapsLock;
-            return;
+            break;
         default:
             break;
     }
@@ -189,7 +190,7 @@ __attribute__((no_caller_saved_registers)) static void handle_scancode_input(u8 
     Event e{};
     e.Type = EventType::KEYBOARD;
     auto* e_data = (EventData_KeyboardInput*)&e.Data;
-    e_data->value = translated ? translated : scancode;
+    e_data->value = Keyboard::QWERTY::TranslateScancode(scancode);
     e_data->press = press;
     gEvents.notify(e);
 }
@@ -229,10 +230,66 @@ __attribute__((interrupt)) void rtc_handler(InterruptFrame* frame) {
 }
 
 /// IRQ12: PS/2 MOUSE
+u8 mouse_cycle{0};
+u8 mouse_packet[4];
 __attribute__((interrupt)) void mouse_handler(InterruptFrame* frame) {
     u8 data = in8(0x60);
-    // TODO: Send input event or something? Write input event to queue?
-    // handle_ps2_mouse_interrupt(data);
+
+    // If we are expecting a "first packet", but we don't get one, ignore it.
+    if (mouse_cycle == 0 and (data & 0b00001000) == 0) {
+        end_of_interrupt(12);
+        return;
+    }
+
+    mouse_packet[mouse_cycle] = data;
+    ++mouse_cycle;
+
+    if (mouse_cycle >= 3) {
+        mouse_cycle = 0;
+        // TODO: Send key event(s) for button(s)
+        // Left Mouse Button (LMB)
+        if (mouse_packet[0] & PS2_LEFT_BUTTON) {
+            Event e{};
+            e.Type = EventType::KEYBOARD;
+            auto* e_data = (EventData_KeyboardInput*)&e.Data;
+            e_data->value = LENSOR_KEY_MOUSE_LEFT;
+            e_data->press = true;
+            gEvents.notify(e);
+        }
+        // Right Mouse Button (RMB)
+        else if (mouse_packet[0] & PS2_RIGHT_BUTTON) {
+            Event e{};
+            e.Type = EventType::KEYBOARD;
+            auto* e_data = (EventData_KeyboardInput*)&e.Data;
+            e_data->value = LENSOR_KEY_MOUSE_RIGHT;
+            e_data->press = true;
+            gEvents.notify(e);
+        }
+        // Middle Mouse Button (MMB)
+        else if (mouse_packet[0] & PS2_MIDDLE_BUTTON) {
+            Event e{};
+            e.Type = EventType::KEYBOARD;
+            auto* e_data = (EventData_KeyboardInput*)&e.Data;
+            e_data->value = LENSOR_KEY_MOUSE_MIDDLE;
+            e_data->press = true;
+            gEvents.notify(e);
+        }
+
+        // Send mouse event for movement
+        Event e{};
+        e.Type = EventType::MOUSE;
+        auto* mouse_data = (EventData_MouseInput*)&e.Data[0];
+        int8_t x_data = (int8_t)mouse_packet[1];
+        int8_t y_data = (int8_t)mouse_packet[2];
+
+        mouse_data->delta_x = x_data;
+        mouse_data->delta_y = -y_data;
+
+        // std::print("Got mouse delta: ({}, {})\n", mouse_data->delta_x, mouse_data->delta_y);
+
+        gEvents.notify(e);
+    }
+
     // End interrupt
     end_of_interrupt(12);
 }
