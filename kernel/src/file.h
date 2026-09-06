@@ -29,23 +29,23 @@
 typedef u64 FileDescriptor;
 
 class File {
-public:
+   public:
     File() {}
 
-    FileDescriptor (*open)  () { nullptr };
-    void           (*close) () { nullptr };
-    void           (*read)  () { nullptr };
-    void           (*write) () { nullptr };
+    FileDescriptor (*open)(){nullptr};
+    void (*close)(){nullptr};
+    void (*read)(){nullptr};
+    void (*write)(){nullptr};
 
-    u64 flags()          { return Flags; }
-    bool flag(u64 flag)  { return 1ull << flag; }
+    u64 flags() { return Flags; }
+    bool flag(u64 flag) { return 1ull << flag; }
 
-private:
-    u64 Flags { 0 };
+   private:
+    u64 Flags{0};
 };
 
 class Device : public File {
-public:
+   public:
     Device(u64 maj, u64 min)
         : Major(maj), Minor(min) {};
     Device(const File& f, u64 maj, u64 min)
@@ -54,9 +54,9 @@ public:
     u64 major() { return Major; }
     u64 minor() { return Minor; }
 
-private:
-    u64 Major { 0 };
-    u64 Minor { 0 };
+   private:
+    u64 Major{0};
+    u64 Minor{0};
 };
 
 #endif /* LENSOR_OS_FILE_H */
