@@ -215,7 +215,7 @@ LoadUserspaceElf64Process(
     }
     constexpr size_t UserProcessStackSizePages = 4;
     constexpr size_t UserProcessStackSize = UserProcessStackSizePages * PAGE_SIZE;
-    constexpr uintptr_t virtual_stack_bottom = 0x0000733700000000;
+    constexpr uintptr_t virtual_stack_bottom = Memory::USER_STACK_BASE;
     constexpr uintptr_t virtual_stack_top = virtual_stack_bottom + UserProcessStackSize;
     auto user_stack = Memory::request_pages(UserProcessStackSizePages);
     Memory::map_pages(

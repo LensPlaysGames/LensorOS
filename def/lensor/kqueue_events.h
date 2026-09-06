@@ -32,6 +32,12 @@ typedef struct Event {
     uint8_t Data[EVENT_DATA_SIZE];
 } Event;
 #else
+
+#ifdef __kernel__
+#include <memory.h>
+#else
+#include <string.h>
+#endif
 // ================================================================
 // C++ Interface
 // ================================================================

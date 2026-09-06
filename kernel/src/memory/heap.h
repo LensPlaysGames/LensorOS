@@ -21,22 +21,22 @@
 #define LENSOR_OS_HEAP_H
 
 #include <integers.h>
+#include <memory/common.h>
+
 #include <new>
 
-#define HEAP_VIRTUAL_BASE 0xffffffffff000000
 #define HEAP_INITIAL_PAGES 1
-
 #define HEAP_BYTE_ALIGN 16
 
 // TODO: Store physical address (or make it easy to
 //   convert between physical/virtual addresses).
 struct HeapSegmentHeader {
     // Doubly linked list
-    HeapSegmentHeader* last { nullptr };
-    HeapSegmentHeader* next { nullptr };
+    HeapSegmentHeader* last{nullptr};
+    HeapSegmentHeader* next{nullptr};
     // Data fields
-    u64 length { 0 };
-    bool free { false };
+    u64 length{0};
+    bool free{false};
     // Fragmentation Prevention
     void combine_forward();
     void combine_backward();

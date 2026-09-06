@@ -85,32 +85,8 @@ extern EventManager gEvents;
 
 typedef u32 EventFlags;
 
-enum class EventFlags_Change {
-    // When non-zero, register event type with filter.
-    // When zero, unregister any existing event types.
-    ADD_REMOVE = 1 << 0,
-    CANARY
-};
-
-#define EVENT_DATA_SIZE 128
-
-/// Both READY_TO_READ and READY_TO_WRITE events have this data sent with them.
-struct EventData_ReadyToReadWrite {
-    size_t BytesAvailable;
-};
 static_assert(sizeof(EventData_ReadyToReadWrite) <= EVENT_DATA_SIZE);
-
-struct EventData_KeyboardInput {
-    size_t value{};
-    bool press{};
-};
 static_assert(sizeof(EventData_KeyboardInput) <= EVENT_DATA_SIZE);
-
-struct EventData_MouseInput {
-    int32_t delta_x{};
-    int32_t delta_y{};
-    int32_t wheel_delta{};
-};
 static_assert(sizeof(EventData_MouseInput) <= EVENT_DATA_SIZE);
 
 enum struct EventQueueHandle : int { Invalid = static_cast<int>(-1) };

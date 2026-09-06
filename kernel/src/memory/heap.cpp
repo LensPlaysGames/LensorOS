@@ -117,16 +117,16 @@ void init_heap() {
         // Map virtual heap position to physical memory address returned by page frame allocator.
         // FIXME: Should this be global?
         Memory::map(
-            (void*)((u64)HEAP_VIRTUAL_BASE + i),
+            (void*)(Memory::KERNEL_HEAP_VIRTUAL_BASE + i),
             Memory::request_page(),
             (u64)Memory::PageTableFlag::Present
                 | (u64)Memory::PageTableFlag::ReadWrite
             //| (u64)Memory::PageTableFlag::Global
         );
     }
-    sHeapStart = (void*)HEAP_VIRTUAL_BASE;
+    sHeapStart = (void*)Memory::KERNEL_HEAP_VIRTUAL_BASE;
     sHeapEnd = (void*)((u64)sHeapStart + numBytes);
-    HeapSegmentHeader* firstSegment = (HeapSegmentHeader*)HEAP_VIRTUAL_BASE;
+    HeapSegmentHeader* firstSegment = (HeapSegmentHeader*)Memory::KERNEL_HEAP_VIRTUAL_BASE;
     // Actual length of free memory has to take into account header.
     firstSegment->length = numBytes - sizeof(HeapSegmentHeader);
     firstSegment->next = nullptr;
@@ -234,7 +234,7 @@ void* malloc(size_t numBytes) {
 
 #undef free
 void free(void* address) {
-    if (((usz)address & HEAP_VIRTUAL_BASE) != HEAP_VIRTUAL_BASE) {
+    if (((usz)address & Memory::KERNEL_HEAP_VIRTUAL_BASE) != Memory::KERNEL_HEAP_VIRTUAL_BASE) {
         DBGMSG(
             "[Heap]: free() -- Denying free of address {} as it does not look like a heap pointer\n",
             address);
@@ -416,7 +416,7 @@ void aligned_delete(void* addr, size_t align) {
         free(addr);
         return;
     }
-    if (((usz)addr & HEAP_VIRTUAL_BASE) != HEAP_VIRTUAL_BASE) {
+    if (((usz)addr & Memory::KERNEL_HEAP_VIRTUAL_BASE) != Memory::KERNEL_HEAP_VIRTUAL_BASE) {
         std::print(
             "[Heap]: aligned_delete() -- Denying deletion of address {} as it does not look like a heap pointer\n",
             addr);

@@ -24,6 +24,7 @@
 #include <integers.h>
 #include <interrupts/interrupts.h>
 #include <linked_list.h>
+#include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/region.h>
@@ -75,7 +76,7 @@ struct Process {
 
     /// Keep track of memory that should be freed when the process exits.
     SinglyLinkedList<Memory::Region> Memories;
-    usz next_region_vaddr = 0xf8000000;
+    usz next_region_vaddr = Memory::USER_MEMORY_REGION_BASE;
 
     pid_t ParentProcess{(pid_t)-1};
 
