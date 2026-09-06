@@ -166,6 +166,9 @@ void map_pages(PageTable* pageTable, void* virtualAddress, void* physicalAddress
         Memory::map(pageTable, (void*)virt, (void*)physical, mappingFlags, d);
     }
 }
+void map_pages(void* virtualAddress, void* physicalAddress, u64 mappingFlags, usz pageCount, ShowDebug d) {
+    Memory::map_pages(active_page_map(), virtualAddress, physicalAddress, mappingFlags, pageCount, d);
+}
 
 void unmap(PageTable* pageMapLevelFour, void* virtualAddress, ShowDebug debug) {
     if (debug == ShowDebug::Yes)

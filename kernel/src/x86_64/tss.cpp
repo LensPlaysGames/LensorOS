@@ -54,27 +54,45 @@ void initialize() {
         "ltr %%ax\n\t" ::: "rax");
 
     // Allocate an interrupt kernel stack
-    constexpr size_t KernelInterruptStackSizePages = 2;
-    constexpr size_t KernelInterruptStackSize = KernelInterruptStackSizePages * PAGE_SIZE;
-    // FIXME: Utilize higher half mapping??? P2V()?
-    auto physical_stack_base = Memory::request_pages(KernelInterruptStackSizePages);
+    constexpr uintptr_t InterruptStackSizePages = 2;
+    constexpr uintptr_t InterruptStackSize = InterruptStackSizePages * PAGE_SIZE;
+    constexpr usz interrupt_stack_flags = (usz)Memory::PageTableFlag::Present
+                                          | (usz)Memory::PageTableFlag::ReadWrite;
+    uintptr_t InterruptStackAddress = Memory::KERNEL_INTERRUPT_STACK_BASE;
+    auto physical_stack_base = Memory::request_pages(InterruptStackSizePages);
     if (physical_stack_base == 0) {
         std::print("[ELF]: Couldn't allocate stack for new userspace process (kernel stack)\n");
         return;
     }
-    memset(physical_stack_base, 0, KernelInterruptStackSize);
-    auto physical_stack_top = ((uintptr_t)physical_stack_base) + KernelInterruptStackSize;
-    std::print("  Stack: 0x{:016x}\n", physical_stack_top);
+    const uintptr_t virtual_stack_base = InterruptStackAddress;
+    const uintptr_t virtual_stack_top = virtual_stack_base + InterruptStackSize;
+    InterruptStackAddress += InterruptStackSize + PAGE_SIZE;
 
-    tssEntry.set_stack(physical_stack_top);
-    Scheduler::StartupProcess.kernel_stack_top = physical_stack_top;
+    Memory::map_pages(
+        (void*)virtual_stack_base,
+        physical_stack_base,
+        interrupt_stack_flags,
+        InterruptStackSizePages);
 
-    constexpr usz interrupt_stack_flags = (usz)Memory::PageTableFlag::Present
-                                          | (usz)Memory::PageTableFlag::ReadWrite;
+    Memory::unmap((void*)(virtual_stack_base - PAGE_SIZE));
+    Memory::unmap((void*)virtual_stack_top);
+
+    memset((void*)virtual_stack_base, 0, InterruptStackSize);
+    // Ring N -> Ring 0 transition loads this stack
+    tssEntry.set_stack(virtual_stack_top);
+
+    std::print(
+        "  Ring 0 Stack: 0x{:016x} (PHYS 0x{:016x})\n",
+        virtual_stack_top,
+        (uintptr_t)physical_stack_base + InterruptStackSize);
+
+    // Ring 1 and 2 unused by LensorOS
+    tssEntry.set_stack(0, TSSEntry::RSP::One);
+    tssEntry.set_stack(0, TSSEntry::RSP::Two);
+
+    Scheduler::StartupProcess.kernel_stack_top = virtual_stack_top;
+
     for (int i = (int)TSSEntry::IST::One; i <= (int)TSSEntry::IST::Seven; ++i) {
-        constexpr uintptr_t InterruptStackSizePages = 2;
-        constexpr uintptr_t InterruptStackSize = InterruptStackSizePages * PAGE_SIZE;
-
         auto physical_base = Memory::request_pages(InterruptStackSizePages);
         if (physical_base == 0) {
             std::print("[TSS]: Couldn't allocate interrupt stack (system may break)\n");
@@ -100,7 +118,7 @@ void initialize() {
 
         memset((void*)virtual_base, 0, InterruptStackSize);
 
-        std::print("Setting IST{} to 0x{:016x}\n", i, virtual_top);
+        std::print("  IST{}: 0x{:016x} (PHYS 0x{:016x})\n", i, virtual_top, (uintptr_t)physical_base + InterruptStackSize);
         tssEntry.set_ist(virtual_top, (TSSEntry::IST)i);
     }
 }

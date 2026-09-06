@@ -308,7 +308,7 @@ bool initialize() {
 #ifdef x86_64
     // Install IRQ0 handler found in `scheduler.asm` (over-write default
     // system timer handler).
-    gIDT.install_handler((u64)irq0_handler, PIC_IRQ0, 5);
+    gIDT.install_handler((u64)irq0_handler, PIC_IRQ0, 0);
     gIDT.flush();
     std::print("Flushed IDT after installing new IRQ0 handler\n");
 #endif
