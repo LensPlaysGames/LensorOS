@@ -1,8 +1,7 @@
 #include <e1000.h>
-
-#include <io.h>
 #include <interrupts/idt.h>
 #include <interrupts/interrupts.h>
+#include <io.h>
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
@@ -253,15 +252,15 @@
 
 static constexpr bool is_82541xx(u16 deviceID) {
     return deviceID == 0x1013
-        || deviceID == 0x1018
-        || deviceID == 0x1076
-        || deviceID == 0x1077
-        || deviceID == 0x1078;
+           || deviceID == 0x1018
+           || deviceID == 0x1076
+           || deviceID == 0x1077
+           || deviceID == 0x1078;
 };
 
 static constexpr bool is_82547_GI_EI(u16 deviceID) {
     return deviceID == 0x101a
-        || deviceID == 0x1019;
+           || deviceID == 0x1019;
 }
 
 /// REGISTERS ACCESSIBLE FROM BAR0 or BAR1:BAR0 DEPENDING ON BAR32 BIT
@@ -589,7 +588,6 @@ static constexpr bool is_82547_GI_EI(u16 deviceID) {
 #define STATUS_PCIX_SPEED_50_66_MHZ (0b00 << 14)
 #define STATUS_PCIX_SPEED_66_100_MHZ (0b01 << 14)
 #define STATUS_PCIX_SPEED_100_133_MHZ (0b10 << 14)
-
 
 /// Category:    General
 /// Permissions: R/W
@@ -1539,7 +1537,7 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// Permissions: R/W
 /// PBM  Packet Buffer Memory
 #define REG_PACKET_BUFFER_MEMORY_BEGIN 0x10000
-#define REG_PACKET_BUFFER_MEMORY_END   0x1fffc
+#define REG_PACKET_BUFFER_MEMORY_END 0x1fffc
 
 /// SLU == Set Link Up
 #define ECTRL_SLU 0x40
@@ -1547,11 +1545,11 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// End Of Packet
 /// When set, indicates the last descriptor making up the packet. One
 /// or many descriptors can be used to form a packet.
-#define CMD_EOP   (1 << 0)
+#define CMD_EOP (1 << 0)
 /// Insert FCS
 /// Controls the insertion of the FCS/CRC field in normal Ethernet
 /// packets. IFCS is valid only when EOP is set.
-#define CMD_IFCS  (1 << 1)
+#define CMD_IFCS (1 << 1)
 /// Insert Checksum
 /// When set, the Ethernet controller needs to insert a checksum at the
 /// offset indicated by the CSO field. The checksum calculations are
@@ -1559,7 +1557,7 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// the CCS field. IC is ignored if CSO and CCS are out of the packet
 /// range. This occurs when (CSS >= length) OR (CSO >= length - 1). IC
 /// is valid only when EOP is set.
-#define CMD_IC    (1 << 2)
+#define CMD_IC (1 << 2)
 /// Report Status
 /// When set, the Ethernet controller needs to report the status
 /// information. This ability may be used by software that does
@@ -1567,7 +1565,7 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// ones are done and packets have been buffered in the transmit FIFO.
 /// Software does it by looking at the descriptor status byte and
 /// checking the Descriptor Done (DD) bit.
-#define CMD_RS    (1 << 3)
+#define CMD_RS (1 << 3)
 /// Report Packet Sent
 /// When set, the 82544GC/EI defers writing the DD bit in the status
 /// byte (DESC.STATUS) until the packet has been sent, or transmission
@@ -1580,7 +1578,7 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// RPS set. RPS is valid only when EOP is set.
 /// This bit is reserved and should be programmed to 0b for all
 /// Ethernet controllers except the 82544GC/EI.
-#define CMD_RPS   (1 << 4)
+#define CMD_RPS (1 << 4)
 /// VLAN Packet Enable
 /// When set, indicates that the packet is a VLAN packet and the
 /// Ethernet controller should add the VLAN Ethertype and an 802.1q
@@ -1593,7 +1591,7 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// In order to have this capability CTRL.VME bit should also be set,
 /// otherwise VLE capability is ignored. VLE is valid only when EOP is
 /// set.
-#define CMD_VLE   (1 << 6)
+#define CMD_VLE (1 << 6)
 /// Interrupt Delay Enable
 /// When set, activates the transmit interrupt delay timer. The
 /// Ethernet controller loads a countdown register when it writes back
@@ -1606,7 +1604,7 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// a previous descriptor. If hardware encounters a descriptor that has
 /// RS set, but not IDE, it generates an interrupt immediately after
 /// writing back the descriptor. The interrupt delay timer is cleared.
-#define CMD_IDE   (1 << 7)
+#define CMD_IDE (1 << 7)
 
 /// TXCMD/TDESC.CMD  Transmit command
 /// Extension (0b for legacy mode).
@@ -1614,9 +1612,9 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 #define CMD_DEXT (1 << 5)
 
 /// Transmit Enable
-#define TCTL_EN          (1 << 1)
+#define TCTL_EN (1 << 1)
 /// Pad Short Packets
-#define TCTL_PSP         (1 << 3)
+#define TCTL_PSP (1 << 3)
 /// Collision Threshold
 #define TCTL_COLLISION_THRESHOLD_SHIFT 4
 #define TCTL_COLLISION_THRESHOLD_MASK (0b11111111 << TCTL_COLLISION_THRESHOLD_SHIFT)
@@ -1628,9 +1626,9 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 #define TCTL_COLLISION_DISTANCE(x) (((u32)(x) << TCTL_COLLISION_DISTANCE_SHIFT) & TCTL_COLLISION_DISTANCE_MASK)
 #define TCTL_COLLISION_DISTANCE_DEFAULT TCTL_COLLISION_DISTANCE(0x40)
 /// Software XOFF transmission
-#define TCTL_SWXOFF      (1 << 22)
+#define TCTL_SWXOFF (1 << 22)
 /// Re-transmit on Late Collision
-#define TCTL_RTLC        (1 << 24)
+#define TCTL_RTLC (1 << 24)
 
 /// TSTA == Transmission Status, field of transmission descriptor
 ///         (struct E1000TXDesc).
@@ -1663,7 +1661,6 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// This bit is reserved and should be programmed to 0b for all
 /// Ethernet controllers except the 82544GC/EI.
 #define TSTA_TU (1 << 3)
-
 
 /// EEPROM Address Map (16-bit word offsets)
 
@@ -1825,7 +1822,6 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 /// Image Value 0x8086
 #define EEPROM_VENDOR_ID 0xe
 
-
 /// Used by HW
 /// For 82545GM, 82545EM, 82540EP, and 82540EM, Image Value 0x3040
 /// For 82541xx, 82547GI, and 82547EI, Image Value 0xb080
@@ -1953,13 +1949,13 @@ constexpr auto EERD_DATA(u32 eerd) { return u16(eerd >> 16); };
 #define EEPROM_LEDCTL_DEFAULT 0x2f
 
 #define EEPROM_FIRMWARE_BEGIN 0x30
-#define EEPROM_FIRMWARE_END   0x3e
+#define EEPROM_FIRMWARE_END 0x3e
 
 /// Checksum of words 0x00 through 0x3f
 #define EEPROM_SOFTWARE_CHECKSUM 0x3f
 
 #define EEPROM_SOFTWARE_AVAIABLE_BEGIN 0xf8
-#define EEPROM_SOFTWARE_AVAIABLE_END   0xff
+#define EEPROM_SOFTWARE_AVAIABLE_END 0xff
 
 E1000 gE1000 = {};
 
@@ -2015,7 +2011,8 @@ u16 E1000::read_eeprom(u8 address) {
     if (is_82541xx(PCIHeader->Header.DeviceID) || is_82547_GI_EI(PCIHeader->Header.DeviceID)) {
         calculatedAddress = EERD_ADDRESS_EXTRA(address);
         successMask = EERD_DONE_EXTRA;
-    } else {
+    }
+    else {
         calculatedAddress = EERD_ADDRESS(address);
         successMask = EERD_DONE;
     }
@@ -2025,7 +2022,7 @@ u16 E1000::read_eeprom(u8 address) {
     /// and EECD.EE_GNT bits are clear before attempting to use EERD to
     /// access the EEPROM.
     // FIXME: This hangs forever (am I doing something wrong?)
-    //while (read_command(REG_EECD) & (EECD_EEPROM_REQUEST | EECD_EEPROM_GRANT));
+    // while (read_command(REG_EECD) & (EECD_EEPROM_REQUEST | EECD_EEPROM_GRANT));
 
     /// Write address to EEPROM register along with the Start Read bit
     /// to indicate to the NIC that it needs to do an EEPROM read with
@@ -2056,7 +2053,8 @@ void E1000::get_mac_address() {
         value = read_eeprom(EEPROM_ETHERNET_ADDRESS_BYTES2);
         MACAddress[4] = value & 0xff;
         MACAddress[5] = value >> 8;
-    } else {
+    }
+    else {
         // TODO: What if BARType is IO? We can probably do this same thing through BARIOAddress and 3 in32()s.
         u8* base = (u8*)(BARMemoryAddress + REG_RAL_BEGIN);
         for (uint i = 0; i < 6; ++i, ++base) MACAddress[i] = *base;
@@ -2075,12 +2073,12 @@ void E1000::decode_base_address() {
         BARMemoryAddress = PCIHeader->BAR0 & ~usz(3);
         /// Map address in virtual page table.
         Memory::map_pages(Memory::active_page_map(),
-                          (void*)BARMemoryAddress, (void*)BARMemoryAddress
-                          , (u64)Memory::PageTableFlag::Present
-                          | (u64)Memory::PageTableFlag::ReadWrite
-                          , KiB(128) / PAGE_SIZE
-                          , Memory::ShowDebug::No
-                          );
+                          (void*)BARMemoryAddress,
+                          (void*)BARMemoryAddress,
+                          (u64)Memory::PageTableFlag::Present
+                              | (u64)Memory::PageTableFlag::ReadWrite,
+                          KiB(128) / PAGE_SIZE,
+                          Memory::ShowDebug::No);
         std::print("[E1000]: BAR0 is memory! addr={}\n", (void*)BARMemoryAddress);
     }
     else {
@@ -2136,7 +2134,7 @@ void E1000::initialise_rx() {
     for (uint i = 0; i < 6; ++i, ++base) *base = MACAddress[i];
 
     /// Initialize the MTA (Multicast Table Array) to 0b.
-    for(uint i = 0; i <= ((REG_MTA_END - REG_MTA_BEGIN) / 4); ++i)
+    for (uint i = 0; i <= ((REG_MTA_END - REG_MTA_BEGIN) / 4); ++i)
         write_command(REG_MTA_BEGIN + (i * 4), 0);
 
     /// Allocate a region of memory for the receive descriptor list.
@@ -2174,17 +2172,17 @@ void E1000::initialise_rx() {
         desc->Status = 0;
     }
 
-    write_command(REG_RX_CONTROL
-                  , RCTL_LOOPBACK_MODE_OFF
-                  | RCTL_BROADCAST_ACCEPT_MODE
-                  | RCTL_LONG_PACKET_RECEPTION_ENABLE
-                  | RCTL_UNICAST_PROMISCUOUS_ENABLED
-                  | RCTL_MULTICAST_PROMISCUOUS_ENABLED
-                  | RCTL_DESC_MIN_THRESHOLD_SIZE_HALF
-                  | RCTL_STRIP_ETHERNET_CRC
-                  | RCTL_STORE_BAD_PACKETS
-                  | RCTL_BUFFER_SIZE_8192
-                  );
+    write_command(
+        REG_RX_CONTROL,
+        RCTL_LOOPBACK_MODE_OFF
+            | RCTL_BROADCAST_ACCEPT_MODE
+            | RCTL_LONG_PACKET_RECEPTION_ENABLE
+            | RCTL_UNICAST_PROMISCUOUS_ENABLED
+            | RCTL_MULTICAST_PROMISCUOUS_ENABLED
+            | RCTL_DESC_MIN_THRESHOLD_SIZE_HALF
+            | RCTL_STRIP_ETHERNET_CRC
+            | RCTL_STORE_BAD_PACKETS
+            | RCTL_BUFFER_SIZE_8192);
 }
 
 void E1000::initialise_tx() {
@@ -2231,9 +2229,8 @@ void E1000::initialise_tx() {
     /// easier to always program to the values shown.
     write_command(REG_TCTL,
                   TCTL_PSP
-                  | TCTL_COLLISION_THRESHOLD_DEFAULT
-                  | TCTL_COLLISION_DISTANCE_DEFAULT
-                  );
+                      | TCTL_COLLISION_THRESHOLD_DEFAULT
+                      | TCTL_COLLISION_DISTANCE_DEFAULT);
     write_command(REG_TIPG, TIPG_IPGT(10) | TIPG_IPGR1(4) | TIPG_IPGR2(6));
 }
 
@@ -2246,10 +2243,11 @@ void E1000::write_raw(void* data, usz length) {
     usz pages = 0;
     if (length % PAGE_SIZE)
         pages = 1 + (length / PAGE_SIZE);
-    else pages = length / PAGE_SIZE;
+    else
+        pages = length / PAGE_SIZE;
 
     desc->Address = u64(Memory::request_pages(pages));
-    //std::print("Copying {} pages from virtual {} to physical {}\n", pages, data, (void*)desc->Address);
+    // std::print("Copying {} pages from virtual {} to physical {}\n", pages, data, (void*)desc->Address);
     memcpy((void*)desc->Address, data, length);
     /// Maximum allowed packet size (16288 bytes).
     if (length > 16288) {
@@ -2327,7 +2325,8 @@ void E1000::handle_interrupt() {
             usz pages = 0;
             if (txDesc->Length % PAGE_SIZE)
                 pages = 1 + (txDesc->Length / PAGE_SIZE);
-            else pages = txDesc->Length / PAGE_SIZE;
+            else
+                pages = txDesc->Length / PAGE_SIZE;
             Memory::free_pages((void*)txDesc->Address, pages);
             txDesc->Address = 0;
             txDesc->Command = 0;
@@ -2364,9 +2363,9 @@ void E1000::handle_interrupt() {
             volatile RXDesc* rxDesc = RXDescPhysical + RXHead;
             if (rxDesc->Status & RXDesc::DONE
                 && rxDesc->Status & RXDesc::END_OF_PACKET) {
-                std::array<u8,6> macDst;
+                std::array<u8, 6> macDst;
                 std::copy((u8*)rxDesc->Address, ((u8*)rxDesc->Address) + 6, macDst.begin());
-                std::array<u8,6> macSrc;
+                std::array<u8, 6> macSrc;
                 std::copy((u8*)rxDesc->Address + 6, ((u8*)rxDesc->Address) + 12, macSrc.begin());
                 u16 ethertype = *((u16*)(rxDesc->Address + 12));
                 // TODO: ntohl  network to host byte order!
@@ -2374,21 +2373,27 @@ void E1000::handle_interrupt() {
 
                 usz length = rxDesc->Length;
 
-                std::print("[E1000]: Packet received! (desc {})\n"
-                           "  Length: {}\n"
-                           "  Destination: {:2x}:{:2x}:{:2x}:{:2x}:{:2x}:{:2x}\n"
-                           "  Source:      {:2x}:{:2x}:{:2x}:{:2x}:{:2x}:{:2x}\n"
-                           "  Ethertype:   0x{:4x}\n"
-                           , RXHead
-                           , length
-                           , macDst.data()[0],macDst.data()[1]
-                           , macDst.data()[2],macDst.data()[3]
-                           , macDst.data()[4],macDst.data()[5]
-                           , macSrc.data()[0],macSrc.data()[1]
-                           , macSrc.data()[2],macSrc.data()[3]
-                           , macSrc.data()[4],macSrc.data()[5]
-                           , ethertype
-                           );
+                std::print(
+                    "[E1000]: Packet received! (desc {})\n"
+                    "  Length: {}\n"
+                    "  Destination: {:2x}:{:2x}:{:2x}:{:2x}:{:2x}:{:2x}\n"
+                    "  Source:      {:2x}:{:2x}:{:2x}:{:2x}:{:2x}:{:2x}\n"
+                    "  Ethertype:   0x{:4x}\n",
+                    RXHead,
+                    length,
+                    macDst.data()[0],
+                    macDst.data()[1],
+                    macDst.data()[2],
+                    macDst.data()[3],
+                    macDst.data()[4],
+                    macDst.data()[5],
+                    macSrc.data()[0],
+                    macSrc.data()[1],
+                    macSrc.data()[2],
+                    macSrc.data()[3],
+                    macSrc.data()[4],
+                    macSrc.data()[5],
+                    ethertype);
             }
 
             if (!(rxDesc->Status & RXDesc::DONE) || rxDesc->Errors) {
@@ -2398,7 +2403,6 @@ void E1000::handle_interrupt() {
             rxDesc->Status = 0;
             rxDesc->Errors = 0;
         }
-
     }
 
     /// The last descriptor block for a transmit queue has been used.
@@ -2408,7 +2412,7 @@ void E1000::handle_interrupt() {
     /// interrupt), and we use 1-descriptor per "packet".
     if (status & ICR_TX_QUEUE_EMPTY) {
         status &= ~ICR_TX_QUEUE_EMPTY;
-        //std::print("[E1000]: TX Queue Empty\n");
+        // std::print("[E1000]: TX Queue Empty\n");
     }
 
     /// Link Status Change
@@ -2440,7 +2444,6 @@ void E1000::handle_interrupt() {
         status &= ~ICR_RX_DESC_MIN_THRESHOLD_HIT;
         std::print("[E1000]: RX Descriptors minimum threshold reached (free RX descriptors as there aren't many left)!\n");
         // TODO: actually try to free recieve descriptors; maybe "realloc"?
-
     }
 
     /// Indicates that the minimum number of transmit descriptors are available and software should load more transmit descriptors.
@@ -2464,8 +2467,7 @@ void E1000::handle_interrupt() {
     read_command(REG_ICR);
 }
 
-__attribute__((interrupt))
-void e1000_interrupt_handler(InterruptFrame* frame);
+__attribute__((interrupt)) void e1000_interrupt_handler(InterruptFrame* frame);
 
 E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
     if (!PCIHeader) return;
@@ -2501,14 +2503,13 @@ E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
     write_command(REG_IMASK_CLEAR, 0xffffffff);
     write_command(REG_IMASK,
                   IMASK_RX_TIMER_INTERRUPT
-                  | IMASK_RX_OVERRUN
-                  | IMASK_RX_DESC_MIN_THRESHOLD_HIT
-                  | IMASK_RX_SEQUENCE_ERROR
-                  | IMASK_LINK_STATUS_CHANGE
-                  | IMASK_TX_QUEUE_EMPTY
-                  | IMASK_TX_DESC_WRITTEN_BACK
-                  | IMASK_TX_DESC_MIN_THRESHOLD_HIT
-                  );
+                      | IMASK_RX_OVERRUN
+                      | IMASK_RX_DESC_MIN_THRESHOLD_HIT
+                      | IMASK_RX_SEQUENCE_ERROR
+                      | IMASK_LINK_STATUS_CHANGE
+                      | IMASK_TX_QUEUE_EMPTY
+                      | IMASK_TX_DESC_WRITTEN_BACK
+                      | IMASK_TX_DESC_MIN_THRESHOLD_HIT);
     /// Clear pending interrupts
     read_command(REG_ICR);
 
