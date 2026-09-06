@@ -1,7 +1,17 @@
+* Make Sure Systems With Different Amounts of RAM Don't Crash
+High Priority
+
+Changing QEMU's memory to 512M causes lots and lots of page faults all the time.
+
 * Implement A Graphical Compositor Program
 Medium Priority
 
-- Fix: read/write() need to be configurable for non-blocking, or something of that nature.
+** Fix: read/write() need to be configurable for non-blocking, or something of that nature.
+
+** HIGH PRIORITY: triple fault
+Just launch the system and type =term RET=. Gonzo.
+
+First step would be to implement a clean double-fault stack in the IST field of the TSS and register the double fault to use it in the IDT.
 
 ** Window Stack
 
@@ -9,7 +19,7 @@ What other OSes might call a "task bar".
 
 I want the compositor to draw it's own portion of the screen, where the compositor state is displayed, like currently open windows.
 
-The mouse should be able to select the active window (z order) as well as the focused window (focus state) with mouse clicks
+The mouse should be able to select the active window (z order) as well as the focused window (focus state) with mouse clicks.
 
 * Flesh out the Network Stack
 Low Priority
