@@ -68,5 +68,40 @@ void initialize() {
 
     tssEntry.set_stack(physical_stack_top);
     Scheduler::StartupProcess.kernel_stack_top = physical_stack_top;
+
+    constexpr usz interrupt_stack_flags = (usz)Memory::PageTableFlag::Present
+                                          | (usz)Memory::PageTableFlag::ReadWrite;
+    for (int i = (int)TSSEntry::IST::One; i <= (int)TSSEntry::IST::Seven; ++i) {
+        constexpr uintptr_t InterruptStackSizePages = 2;
+        constexpr uintptr_t InterruptStackSize = InterruptStackSizePages * PAGE_SIZE;
+
+        auto physical_base = Memory::request_pages(InterruptStackSizePages);
+        if (physical_base == 0) {
+            std::print("[TSS]: Couldn't allocate interrupt stack (system may break)\n");
+            return;
+        }
+
+        // Map in the higher half so all processes share this mapping.
+        // Each i gets a guard page following it.
+        const int index = i - 1;
+        const uintptr_t virtual_offset = index * InterruptStackSize
+                                         + index * PAGE_SIZE;
+        const uintptr_t virtual_base = Memory::KERNEL_INTERRUPT_STACK_BASE + virtual_offset;
+        Memory::map_pages(
+            (void*)virtual_base,
+            physical_base,
+            interrupt_stack_flags,
+            InterruptStackSizePages);
+        uintptr_t virtual_top = virtual_base + InterruptStackSize;
+        // Guard page (stack overflow)
+        Memory::unmap((void*)(virtual_base - PAGE_SIZE));
+        // Guard page (stack underflow)
+        Memory::unmap((void*)virtual_top);
+
+        memset((void*)virtual_base, 0, InterruptStackSize);
+
+        std::print("Setting IST{} to 0x{:016x}\n", i, virtual_top);
+        tssEntry.set_ist(virtual_top, (TSSEntry::IST)i);
+    }
 }
 }  // namespace TSS

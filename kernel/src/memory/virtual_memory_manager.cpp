@@ -155,7 +155,7 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
 }
 
 void map(void* virtualAddress, void* physicalAddress, u64 mappingFlags, ShowDebug debug) {
-    map(ActivePageMap, virtualAddress, physicalAddress, mappingFlags, debug);
+    map(active_page_map(), virtualAddress, physicalAddress, mappingFlags, debug);
 }
 
 void map_pages(PageTable* pageTable, void* virtualAddress, void* physicalAddress, u64 mappingFlags, usz pageCount, ShowDebug d) {
@@ -435,14 +435,28 @@ void init_virtual(PageTable* pageMap) {
      * the kernel.
      */
     for (u64 t = 0; t < total_ram(); t += PAGE_SIZE) {
-        map(pageMap, (void*)t, (void*)t, (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite);
+        map(
+            pageMap,
+            (void*)t,
+            (void*)t,
+            (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite);
     }
+    // TODO: large pages
+    // for (u64 t = 0; t < total_ram(); t += PAGE_SIZE) {
+    //     map(
+    //         pageMap,
+    //         (void*)(t + Memory::PHYSICAL_BASE),
+    //         (void*)t,
+    //         (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite);
+    // }
     u64 kPhysicalStart = (u64)&KERNEL_PHYSICAL;
     u64 kernelBytesNeeded = 1 + ((u64)&KERNEL_END - (u64)&KERNEL_START);
     for (u64 t = kPhysicalStart; t < kPhysicalStart + kernelBytesNeeded + PAGE_SIZE; t += PAGE_SIZE) {
-        map(pageMap, (void*)(t + (u64)&KERNEL_VIRTUAL), (void*)t, (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite
-            //| (u64)PageTableFlag::Global
-        );
+        map(
+            pageMap,
+            (void*)(t + (u64)&KERNEL_VIRTUAL),
+            (void*)t,
+            (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite);
     }
     // Make null-dereference generate exception.
     unmap(nullptr);

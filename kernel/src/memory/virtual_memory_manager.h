@@ -26,6 +26,7 @@
 extern "C" void flush_page_map(Memory::PageTable*);
 
 namespace Memory {
+
 /* Map the entire physical address space, virtual kernel space, and
  *   finally flush the map to use it as the active mapping.
  */
@@ -40,12 +41,21 @@ enum class ShowDebug {
 /* Map a virtual address to a physical
  *   address in the given page map level four.
  */
-void map(PageTable*, void* virtualAddress, void* physicalAddress, u64 mappingFlags, ShowDebug d = ShowDebug::No);
+void map(
+    PageTable*,
+    void* virtualAddress,
+    void* physicalAddress,
+    u64 mappingFlags,
+    ShowDebug d = ShowDebug::No);
 
 /* Map a virtual address to a physical address in
  *   the currently active page map level four.
  */
-void map(void* virtualAddress, void* physicalAddress, u64 mappingFlags, ShowDebug d = ShowDebug::No);
+void map(
+    void* virtualAddress,
+    void* physicalAddress,
+    u64 mappingFlags,
+    ShowDebug d = ShowDebug::No);
 
 /* If a mapping is within the range beginning at the given virtual
  * address and spanning the given length in pages is marked as
@@ -53,7 +63,20 @@ void map(void* virtualAddress, void* physicalAddress, u64 mappingFlags, ShowDebu
  * with the flags found in `mappingFlags`, and mapped to the
  * corresponding contiguous physical address.
  */
-void map_pages(PageTable* pageTable, void* virtualAddress, void* physicalAddress, u64 mappingFlags, usz pageCount, ShowDebug d);
+void map_pages(
+    PageTable* pageTable,
+    void* virtualAddress,
+    void* physicalAddress,
+    u64 mappingFlags,
+    usz pageCount,
+    ShowDebug d = ShowDebug::No);
+// map_pages() but into the currently active page map.
+void map_pages(
+    void* virtualAddress,
+    void* physicalAddress,
+    u64 mappingFlags,
+    usz pageCount,
+    ShowDebug d = ShowDebug::No);
 
 /* If a mapping is marked as present within the given
  *   page map level four, it will be marked as not present.

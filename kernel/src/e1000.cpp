@@ -2491,7 +2491,7 @@ E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
 
     /// Register interrupt handler in IDT!!
     std::print("[E1000]: Interrupt line: 0x{:x} (0x{:x})\n", interrupt_line(), irq_number());
-    gIDT.install_handler((u64)e1000_interrupt_handler, interrupt_line());
+    gIDT.install_handler((u64)e1000_interrupt_handler, interrupt_line(), 4);
     gIDT.flush();
     enable_interrupt(irq_number());
 

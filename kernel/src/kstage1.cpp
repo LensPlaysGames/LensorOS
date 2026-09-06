@@ -75,16 +75,16 @@ void prepare_interrupts() {
     // POPULATE TABLE.
     // NOTE: IRQ0 uses this handler by default, but scheduler over-rides this!
     // gIDT.install_handler((u64)system_timer_handler, PIC_IRQ0);
-    gIDT.install_handler((u64)keyboard_handler, PIC_IRQ1);
-    gIDT.install_handler((u64)uart_com1_handler, PIC_IRQ4);
-    gIDT.install_handler((u64)rtc_handler, PIC_IRQ8);
-    gIDT.install_handler((u64)mouse_handler, PIC_IRQ12);
-    gIDT.install_handler((u64)divide_by_zero_handler, 0x00);
-    gIDT.install_handler((u64)double_fault_handler, 0x08);
-    gIDT.install_handler((u64)stack_segment_fault_handler, 0x0c);
-    gIDT.install_handler((u64)general_protection_fault_handler, 0x0d);
-    gIDT.install_handler((u64)page_fault_handler, 0x0e);
-    gIDT.install_handler((u64)simd_exception_handler, 0x13);
+    gIDT.install_handler((u64)keyboard_handler, PIC_IRQ1, 5);
+    gIDT.install_handler((u64)uart_com1_handler, PIC_IRQ4, 5);
+    gIDT.install_handler((u64)rtc_handler, PIC_IRQ8, 5);
+    gIDT.install_handler((u64)mouse_handler, PIC_IRQ12, 5);
+    gIDT.install_handler((u64)divide_by_zero_handler, 0x00, 7);
+    gIDT.install_handler((u64)double_fault_handler, 0x08, 1);
+    gIDT.install_handler((u64)stack_segment_fault_handler, 0x0c, 6);
+    gIDT.install_handler((u64)general_protection_fault_handler, 0x0d, 3);
+    gIDT.install_handler((u64)page_fault_handler, 0x0e, 2);
+    gIDT.install_handler((u64)simd_exception_handler, 0x13, 7);
     gIDT.install_handler((u64)system_call_handler_asm, 0x80, 0, IDT_TA_UserInterruptGate);
     gIDT.flush();
 #endif

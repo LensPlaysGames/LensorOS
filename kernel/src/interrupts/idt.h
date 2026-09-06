@@ -90,7 +90,8 @@ struct IDTR {
     void install_handler(
         u64 handler_address,
         u8 entryOffset,
-        u8 ist = 0,
+        // max value == 7
+        u8 ist,
         u8 typeAttribute = IDT_TA_InterruptGate,
         u8 selector = 0x08);
 
