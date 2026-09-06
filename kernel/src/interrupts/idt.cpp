@@ -17,17 +17,16 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <interrupts/idt.h>
-
 #include <integers.h>
+#include <interrupts/idt.h>
 #include <memory.h>
+
+#include <print>
 
 IDTR gIDT;
 
 IDTR::IDTR(u16 limit, u64 offset)
-    : Limit(limit),
-      Offset(offset)
-{
+    : Limit(limit), Offset(offset) {
     // Ensure table is zeroed out before use.
     memset((void*)Offset, 0, Limit);
 }
@@ -39,18 +38,21 @@ IDTR::IDTR(u16 limit, u64 offset)
  *     typeAttribute    --  Instructs CPU on how to prepare for the interrupt handler to execute.
  *     selector         --  Global Descriptor Table Entry Offset of code segment that handler lies within.
  */
-void IDTR::install_handler
-(
+void IDTR::install_handler(
     u64 handler_address,
     u8 entryOffset,
+    u8 ist,
     u8 typeAttribute,
-    u8 selector
- )
-{
+    u8 selector) {
     IDTEntry* interrupt = (IDTEntry*)(Offset + entryOffset * sizeof(IDTEntry));
     interrupt->SetOffset((u64)handler_address);
     interrupt->TypeAttribute = typeAttribute;
     interrupt->Selector = selector;
+    if (ist & ~(0b111)) {
+        std::print("[IDT]: Invalid interrupt stack (only bottom 3 bits may be set)!\n");
+        ist = 0;
+    }
+    interrupt->IST = ist;
 }
 
 void IDTEntry::SetOffset(u64 offset) {
@@ -66,4 +68,3 @@ u64 IDTEntry::GetOffset() {
     offset |= ((u64)Offset2) << 32;
     return offset;
 }
-

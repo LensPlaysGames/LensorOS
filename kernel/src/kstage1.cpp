@@ -85,7 +85,7 @@ void prepare_interrupts() {
     gIDT.install_handler((u64)general_protection_fault_handler, 0x0d);
     gIDT.install_handler((u64)page_fault_handler, 0x0e);
     gIDT.install_handler((u64)simd_exception_handler, 0x13);
-    gIDT.install_handler((u64)system_call_handler_asm, 0x80, IDT_TA_UserInterruptGate);
+    gIDT.install_handler((u64)system_call_handler_asm, 0x80, 0, IDT_TA_UserInterruptGate);
     gIDT.flush();
 #endif
 }
