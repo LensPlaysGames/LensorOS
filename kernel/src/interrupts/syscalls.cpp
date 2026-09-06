@@ -118,6 +118,9 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount, u64 flags) {
 
     ssz rc = vfs.read(fd, buffer, byteCount, 0);
     if (rc == -2) {
+        if (flags & LENSOROS_SYSCALL_READ_FLAG_NOBLOCK)
+            return rc;
+
         // Set state to SLEEPING so that after we yield, the scheduler
         // won't switch back to us until the file has been written to,
         // or something of that nature.
@@ -160,6 +163,8 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount, u64 flags) 
 
     ssz rc = vfs.write(fd, buffer, byteCount, 0);
     if (rc == -2) {
+        if (flags & LENSOROS_SYSCALL_WRITE_FLAG_NOBLOCK)
+            return rc;
         // Set state to SLEEPING so that after we yield, the scheduler
         // won't switch back to us until the file has been written to,
         // or something of that nature.
@@ -976,8 +981,10 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
 
     // Apply changes from changelist, if any.
     for (int i = 0; i < numChanges; ++i) {
-        static_assert(((usz)EventFlags_Change::CANARY) == 2, "Exhaustive handling of kevent changelist flags");
-        if (changelist[i].Flags & (usz)EventFlags_Change::ADD_REMOVE)
+        static_assert(
+            ((usz)EVENTFLAGS_CHANGE_CANARY) == 2,
+            "Exhaustive handling of kevent changelist flags");
+        if (changelist[i].Flags & (usz)EVENTFLAGS_CHANGE_ADD_REMOVE)
             queue->register_listening(changelist[i].Type, changelist[i].Filter);
         else
             queue->unregister_listening(changelist[i].Type, changelist[i].Filter);
