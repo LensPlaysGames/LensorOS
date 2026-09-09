@@ -524,6 +524,7 @@ int main(int argc, const char** argv) {
                     break;
 
                 handle_event(eventlist[i], &context);
+                memset(&eventlist[i], 0, sizeof(eventlist[i]));
             }
         }
 
