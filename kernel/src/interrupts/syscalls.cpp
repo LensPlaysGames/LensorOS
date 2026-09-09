@@ -893,7 +893,12 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
 
         /// Return a file descriptor that references the client's socket data, but
         /// is a new file metadata.
-        auto f = FileMetadata::Make(FileMetadata::FileType::Regular, "client_socket", fsd(SYSTEM->virtual_filesystem().SocketsDriver), SOCKET_RX_BUFFER_SIZE, data);
+        auto f = FileMetadata::Make(
+            FileMetadata::FileType::Regular,
+            "client_socket",
+            fsd(SYSTEM->virtual_filesystem().SocketsDriver),
+            SOCKET_RX_BUFFER_SIZE,
+            data);
         auto fds = SYSTEM->virtual_filesystem().add_file(f);
         if (fds.invalid()) {
             std::print("[SYS$]:accept:ERROR: Could not add file to accept connection, sorry.\n");
