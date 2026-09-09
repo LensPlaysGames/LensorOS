@@ -183,7 +183,7 @@ uint16_t lensor_map[][2] = {
     {37, LENSOR_KEY_K},
     {38, LENSOR_KEY_L},
     {39, LENSOR_KEY_SEMICOLON},
-    {40, '\''},
+    {40, LENSOR_KEY_BACKSLASH},
     {41, LENSOR_KEY_GRAVE},
     {42, LENSOR_KEY_LEFTSHIFT},
     {43, LENSOR_KEY_BACKSLASH},
