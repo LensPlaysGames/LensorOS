@@ -135,8 +135,8 @@ typedef enum LensorOS_Key {
     // convert Hangul syllables into traditional Chinese characters.
     LENSOR_KEY_HANJA,
     LENSOR_KEY_YEN,
-    LENSOR_KEY_LEFTMETA,
-    LENSOR_KEY_RIGHTMETA,
+    LENSOR_KEY_LEFTSUPER,
+    LENSOR_KEY_RIGHTSUPER,
     LENSOR_KEY_COMPOSE,
 
     LENSOR_KEY_STOP,
