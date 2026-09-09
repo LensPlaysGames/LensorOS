@@ -207,6 +207,202 @@ void draw_cursor(Framebuffer* fb, size_t cursor_x, size_t cursor_y) {
     }
 }
 
+typedef struct window_t {
+    void* shared_region;
+    unsigned int x;
+    unsigned int y;
+    unsigned int width;
+    unsigned int height;
+    int shared_region_id;
+    int client_fd;
+    bool hidden;
+} window_t;
+
+typedef struct focus_t {
+    window_t* window;
+
+    ssize_t cursor_x;
+    ssize_t cursor_y;
+
+    bool left_control;
+    bool left_shift;
+    bool right_shift;
+    bool left_alt;
+    bool right_alt;
+    bool left_super;
+    bool right_super;
+} focus_t;
+
+#define MAX_WINDOW_COUNT 8
+typedef struct CompositorContext {
+    window_t windows[MAX_WINDOW_COUNT];
+    focus_t focus;
+
+    ProcFD incoming_client_socket;
+} CompositorContext;
+
+void handle_event_incoming_client(Event incoming_client_event, CompositorContext* context) {
+    if (context == NULL) return;
+
+    // EventData_ReadyToReadWrite* readwrite_data = (EventData_ReadyToReadWrite*)&incoming_client_event.Data[0];
+
+    printf("[INIT]: Got incoming connection...\n");
+
+    ProcFD incoming_client_fd = context->incoming_client_socket;
+
+    sockaddr connected_addr;
+    size_t connected_addrlen = sizeof(sockaddr);
+    int clientFD = -1;
+    // Attempt to accept incoming connection. If given the retry return code,
+    // retry.
+    do {
+        printf("[INIT]: Accepting incoming client connection...\n");
+        fflush(stdout);
+        // We will block here until a connection is made.
+        clientFD = sys_accept(context->incoming_client_socket, &connected_addr, &connected_addrlen);
+        printf("[INIT]: accept returned %d\n", clientFD);
+        fflush(stdout);
+    } while (clientFD == -2);
+
+    if (clientFD < 0) {
+        close(incoming_client_fd);
+        printf("[INIT]: `accept` failed: %d\n", clientFD);
+        return;
+    }
+
+    window_t* window;
+    for (int i = 0; i < sizeof(context->windows) / sizeof(context->windows[0]); ++i) {
+        window = &context->windows[i];
+        if (!window->shared_region) break;
+        window = NULL;
+    }
+    if (!window) {
+        printf("[INIT]: too many windows, ignoring request...\n");
+        return;
+    }
+
+    uintptr_t* shared_data = NULL;
+    int id = syscall(SYS_shared_memory_allocate, &shared_data, g_framebuffer.buffer_size);
+    printf("[INIT]: shmem -- id:%d data:%p\n", id, shared_data);
+
+    // Book-keep shared_data pointer and id (create new window)
+    window->shared_region = shared_data;
+    window->shared_region_id = id;
+    window->width = g_framebuffer.pixel_width;
+    window->height = g_framebuffer.pixel_height;
+    window->client_fd = clientFD;
+    window->hidden = false;
+
+    // If no windows are open, automatically focus the first opened window.
+    if (context->focus.window == NULL)
+        context->focus.window = window;
+
+    // TODO: Register change in kqueue to be notified when clientFD is
+    // closed/EOF status. This is an "easy" way to tell when the process no
+    // longer wants it's window, whether from no longer running or from
+    // specifically requesting the window to be closed.
+
+    // Communicate basic framebuffer data to client through shared memory.
+    *shared_data++ = g_framebuffer.buffer_size;
+    *shared_data++ = g_framebuffer.pixel_width;
+    *shared_data++ = g_framebuffer.pixel_height;
+
+    uintptr_t payload[3] = {69, 420, id};
+
+    printf("[INIT]: writing payload...\n");
+    fflush(stdout);
+
+    sys_write(
+        clientFD,
+        (uint8_t*)payload,
+        sizeof(payload),
+        LENSOROS_SYSCALL_WRITE_FLAG_NOBLOCK);
+}
+
+void handle_event_keyboard(Event event, CompositorContext* context) {
+    EventData_KeyboardInput* keyboard_data = (EventData_KeyboardInput*)&event.Data[0];
+    // printf("[SERVE]: Got keyboard input %d %d\n", keyboard_data->press, keyboard_data->value);
+
+    if (keyboard_data->value == LENSOR_KEY_LEFTCTRL) {
+        context->focus.left_control = keyboard_data->press;
+    }
+    // TODO: right control
+    else if (keyboard_data->value == LENSOR_KEY_LEFTSHIFT) {
+        context->focus.left_shift = keyboard_data->press;
+    }
+    else if (keyboard_data->value == LENSOR_KEY_RIGHTSHIFT) {
+        context->focus.right_shift = keyboard_data->press;
+    }
+    else if (keyboard_data->value == LENSOR_KEY_LEFTALT) {
+        context->focus.left_alt = keyboard_data->press;
+    }
+    else if (keyboard_data->value == LENSOR_KEY_MOUSE_LEFT) {
+        // TODO: If mouse click is over window stack, calculate if it's over an
+        // open window selector; if it is, focus that window. Also move it in Z
+        // ordering.
+    }
+    // TODO: right alt
+    // TODO: left/right super
+    else if (context->focus.window && context->focus.window->shared_region) {
+        ipc_keyboard_t keyboard_message;
+        keyboard_message.magic = IPC_KEYBOARD_MAGIC;
+        keyboard_message.value = keyboard_data->value;
+        keyboard_message.is_pressed = keyboard_data->press;
+        // TODO: We should write this event to a ring buffer, then, we should only write
+        // to the client FD once it is actually writable.
+        sys_write(
+            context->focus.window->client_fd,
+            (uint8_t*)&keyboard_message,
+            sizeof(keyboard_message),
+            LENSOROS_SYSCALL_WRITE_FLAG_NOBLOCK);
+    }
+}
+
+void handle_event_mouse(Event event, CompositorContext* context) {
+    EventData_MouseInput* mouse_data = (EventData_MouseInput*)&event.Data[0];
+
+    // printf("[SERVE]: Got mouse input (%d, %d)\n", mouse_data->delta_x, mouse_data->delta_y);
+    context->focus.cursor_x += mouse_data->delta_x;
+    context->focus.cursor_y += mouse_data->delta_y;
+
+    if (context->focus.cursor_x < 0) context->focus.cursor_x = 0;
+    if (context->focus.cursor_x >= g_framebuffer.pixel_width)
+        context->focus.cursor_x = g_framebuffer.pixel_width - 1;
+
+    if (context->focus.cursor_y < 0) context->focus.cursor_y = 0;
+    if (context->focus.cursor_y >= g_framebuffer.pixel_height)
+        context->focus.cursor_y = g_framebuffer.pixel_height - 1;
+
+    if (context->focus.window && context->focus.window->shared_region) {
+        ipc_mouse_t mouse_message;
+        mouse_message.magic = IPC_MOUSE_MAGIC;
+        mouse_message.delta_x = mouse_data->delta_x;
+        mouse_message.delta_y = mouse_data->delta_y;
+        mouse_message.delta_scroll = mouse_data->wheel_delta;
+        sys_write(
+            context->focus.window->client_fd,
+            (uint8_t*)&mouse_message,
+            sizeof(mouse_message),
+            LENSOROS_SYSCALL_WRITE_FLAG_NOBLOCK);
+    }
+}
+
+void handle_event(Event event, CompositorContext* context) {
+    if (event.Type == EVENTTYPE_READY_TO_READ
+        && event.Filter.ProcessFD == context->incoming_client_socket)
+        handle_event_incoming_client(event, context);
+
+    else if (event.Type == EVENTTYPE_KEYBOARD)
+        handle_event_keyboard(event, context);
+
+    else if (event.Type == EVENTTYPE_MOUSE)
+        handle_event_mouse(event, context);
+
+    else {
+        printf("[SERVE]: Unhandled kqueue event\n");
+    }
+}
+
 int main(int argc, const char** argv) {
     // FIXME: Only do this when terminal is not graphical.
     // Set stdout unbuffered so the user can see updates as they type.
@@ -294,6 +490,14 @@ int main(int argc, const char** argv) {
     // In the case of a local socket, that means a process has connected.
     sys_kevent(listen_queue, changelist, 3, NULL, 0);
 
+    CompositorContext context = {0};
+    context.incoming_client_socket = sockFD;
+
+    if (context.incoming_client_socket == 0) {
+        printf("[INIT]:ERROR: Init process internal error: did not set incoming client socket, no windows will be able to open\n");
+        return 1;
+    }
+
     const size_t eventlist_size = 4;
     Event eventlist[eventlist_size];
     memset(eventlist, 0, sizeof(eventlist));
@@ -306,181 +510,23 @@ int main(int argc, const char** argv) {
     const char* sh_args[1] = {NULL};
     run_background_program("/fs0/bin/term", sh_args);
 
-    typedef struct window_t {
-        void* shared_region;
-        unsigned int x;
-        unsigned int y;
-        unsigned int width;
-        unsigned int height;
-        int shared_region_id;
-        int client_fd;
-        bool hidden;
-    } window_t;
-
-    window_t windows[8] = {0};
-
-    typedef struct focus_t {
-        window_t* window;
-
-        ssize_t cursor_x;
-        ssize_t cursor_y;
-
-        bool left_control;
-        bool left_shift;
-        bool right_shift;
-        bool left_alt;
-        bool right_alt;
-        bool left_super;
-        bool right_super;
-    } focus_t;
-
-    focus_t focus;
-    focus.window = &windows[0];
-    focus.cursor_x = 0;
-    focus.cursor_y = 0;
-
     while (true) {
-        // Handle Incoming Requests on GUI Socket, Creating A New Window
-        // FIXME: We may not handle all events, doing it like this.
+        // If any event that we've registered to listen for has occurred, the
+        // kernel will have stored them in our event queue. Either pop the events
+        // out of the event queue, or block until one is ready to handle.
         if (sys_kevent(listen_queue, NULL, 0, eventlist, eventlist_size) == 0) {
-            // TODO: Handle all events in event list.
-            if (eventlist[0].Type == EVENTTYPE_READY_TO_READ && eventlist[0].Filter.ProcessFD == sockFD) {
-                printf("Got incoming connection...\n");
+            // Handle all valid events in event list.
+            for (int i = 0; i < eventlist_size; ++i) {
+                if (eventlist[i].Type == EVENTTYPE_INVALID)
+                    break;
 
-                sockaddr connected_addr;
-                size_t connected_addrlen = sizeof(sockaddr);
-                int clientFD = -1;
-                // Attempt to accept incoming connection. If given the retry return code,
-                // retry.
-                do {
-                    printf("[SERVE]: Accepting...\n");
-                    fflush(stdout);
-                    // We will block here until a connection is made.
-                    clientFD = sys_accept(sockFD, &connected_addr, &connected_addrlen);
-                    printf("[SERVE]: accept returned %d\n", clientFD);
-                    fflush(stdout);
-                } while (clientFD == -2);
-
-                if (clientFD < 0) {
-                    close(sockFD);
-                    printf("[SERVE]: `accept` failed: %d\n", clientFD);
-                    return 1;
-                }
-
-                window_t* window;
-                for (int i = 0; i < sizeof(windows) / sizeof(window_t); ++i) {
-                    window = &windows[i];
-                    if (!window->shared_region) break;
-                    window = nullptr;
-                }
-                if (!window) {
-                    printf("[SERVE]: too many windows, ignoring request...\n");
-                    continue;
-                }
-
-                uintptr_t* shared_data = NULL;
-                int id = syscall(SYS_shared_memory_allocate, &shared_data, g_framebuffer.buffer_size);
-                printf("id:%d data:%p\n", id, shared_data);
-
-                // Book-keep shared_data pointer and id (create new window)
-                window->shared_region = shared_data;
-                window->shared_region_id = id;
-                window->width = g_framebuffer.pixel_width;
-                window->height = g_framebuffer.pixel_height;
-                window->client_fd = clientFD;
-                window->hidden = false;
-                // TODO: Register change in kqueue to be notified when clientFD is
-                // closed/EOF status. This is an "easy" way to tell when the process no
-                // longer wants it's window, whether from no longer running or from
-                // specifically requesting the window to be closed.
-
-                // Communicate basic framebuffer data to client through shared memory.
-                *shared_data++ = g_framebuffer.buffer_size;
-                *shared_data++ = g_framebuffer.pixel_width;
-                *shared_data++ = g_framebuffer.pixel_height;
-
-                uintptr_t payload[3] = {69, 420, id};
-
-                printf("[SERVE]: writing...\n");
-                fflush(stdout);
-
-                sys_write(
-                    clientFD,
-                    (uint8_t*)payload,
-                    sizeof(payload),
-                    LENSOROS_SYSCALL_WRITE_FLAG_NOBLOCK);
-            }
-            else if (eventlist[0].Type == EVENTTYPE_KEYBOARD) {
-                EventData_KeyboardInput* e_data = (EventData_KeyboardInput*)&eventlist[0].Data;
-                // printf("[SERVE]: Got keyboard input %d %d\n", e_data->press, e_data->value);
-
-                if (e_data->value == LENSOR_KEY_LEFTCTRL) {
-                    focus.left_control = e_data->press;
-                }
-                // TODO: right control
-                else if (e_data->value == LENSOR_KEY_LEFTSHIFT) {
-                    focus.left_shift = e_data->press;
-                }
-                else if (e_data->value == LENSOR_KEY_RIGHTSHIFT) {
-                    focus.right_shift = e_data->press;
-                }
-                else if (e_data->value == LENSOR_KEY_LEFTALT) {
-                    focus.left_alt = e_data->press;
-                }
-                else if (e_data->value == LENSOR_KEY_MOUSE_LEFT) {
-                    // TODO: If mouse click is over window stack, calculate if it's over an
-                    // open window selector; if it is, focus that window. Also move it in Z
-                    // ordering.
-                }
-                // TODO: right alt
-                // TODO: left/right super
-                else if (focus.window && focus.window->shared_region) {
-                    ipc_keyboard_t keyboard_message;
-                    keyboard_message.magic = IPC_KEYBOARD_MAGIC;
-                    keyboard_message.value = e_data->value;
-                    keyboard_message.is_pressed = e_data->press;
-                    // TODO: non-blocking, in case our GUI program isn't reading from the
-                    // socket.
-                    // We should write this event to a ring buffer, then, we should only write
-                    // to the client FD once it is actually writable.
-                    // write(focus.window->client_fd, &keyboard_message, sizeof(keyboard_message));
-                }
-            }
-            else if (eventlist[0].Type == EVENTTYPE_MOUSE) {
-                EventData_MouseInput* e_data = (EventData_MouseInput*)&eventlist[0].Data;
-                // printf("[SERVE]: Got mouse input (%d, %d)\n", e_data->delta_x, e_data->delta_y);
-                focus.cursor_x += e_data->delta_x;
-                focus.cursor_y += e_data->delta_y;
-
-                if (focus.cursor_x < 0) focus.cursor_x = 0;
-                if (focus.cursor_x >= g_framebuffer.pixel_width)
-                    focus.cursor_x = g_framebuffer.pixel_width - 1;
-
-                if (focus.cursor_y < 0) focus.cursor_y = 0;
-                if (focus.cursor_y >= g_framebuffer.pixel_height)
-                    focus.cursor_y = g_framebuffer.pixel_height - 1;
-
-                if (focus.window && focus.window->shared_region) {
-                    ipc_mouse_t mouse_message;
-                    mouse_message.magic = IPC_MOUSE_MAGIC;
-                    mouse_message.delta_x = e_data->delta_x;
-                    mouse_message.delta_y = e_data->delta_y;
-                    mouse_message.delta_scroll = e_data->wheel_delta;
-                    sys_write(
-                        focus.window->client_fd,
-                        (uint8_t*)&mouse_message,
-                        sizeof(mouse_message),
-                        LENSOROS_SYSCALL_WRITE_FLAG_NOBLOCK);
-                }
-            }
-            else {
-                printf("[SERVE]: Unhandled kqueue event\n");
+                handle_event(eventlist[i], &context);
             }
         }
 
         // Draw Each Window's Framebuffer to the Actual Framebuffer
-        for (int i = 0; i < sizeof(windows) / sizeof(window_t); ++i) {
-            const window_t* window = &windows[i];
+        for (int i = 0; i < sizeof(context.windows) / sizeof(context.windows[0]); ++i) {
+            const window_t* window = &context.windows[i];
             if (!window->shared_region) continue;
 
             // Define pixel size (TODO: get from kernel)
@@ -491,7 +537,7 @@ int main(int argc, const char** argv) {
             const int window_pitch = window->width * bytes_per_pixel;
 
             // Cast to uint8_t* for byte-level pointer arithmetic
-            const uint8_t* screen_fb = (uint8_t*)g_backbuffer.base_address;
+            uint8_t* screen_fb = (uint8_t*)g_backbuffer.base_address;
             const uint8_t* window_fb = (uint8_t*)window->shared_region;
 
             // Clip the window boundaries to prevent drawing off-screen (kernel panics/segfaults)
@@ -519,14 +565,14 @@ int main(int argc, const char** argv) {
                 const uint8_t* src_row = window_fb + (win_local_y * window_pitch) + (win_local_x * bytes_per_pixel);
 
                 // Find the matching row on the physical screen
-                const uint8_t* dest_row = screen_fb + (y * screen_pitch) + (start_x * bytes_per_pixel);
+                uint8_t* dest_row = screen_fb + (y * screen_pitch) + (start_x * bytes_per_pixel);
 
                 // Copy exactly one row segment
                 memcpy(dest_row, src_row, copy_width_pixels * bytes_per_pixel);
             }
         }
 
-        // TODO: Draw Taskbar/Window Stack
+        // Draw Taskbar/Window Stack
         const uint32_t window_stack_height = 28;
         uint32_t window_stack_begin_y = g_framebuffer.pixel_height - window_stack_height;
 
@@ -548,33 +594,34 @@ int main(int argc, const char** argv) {
             g_framebuffer.pixel_width,
             window_stack_height / 8);
 
-        for (int i = 0; i < sizeof(windows) / sizeof(window_t); ++i) {
-            const window_t* window = &windows[i];
+        for (int i = 0; i < sizeof(context.windows) / sizeof(context.windows[0]); ++i) {
+            const window_t* window = &context.windows[i];
             if (!window->shared_region) continue;
 
             const uint32_t present_window_color = mkpixel(g_framebuffer.format, 0xff, 0xff, 0xff, 0xff);
             const uint32_t hidden_window_color = mkpixel(g_framebuffer.format, 0x67, 0x67, 0x67, 0xff);
             const uint32_t focused_window_color = orange;
             uint32_t color = present_window_color;
-            if (window == focus.window) {
+            if (window == context.focus.window) {
                 color = focused_window_color;
             }
             else if (window->hidden) {
                 color = hidden_window_color;
             }
 
-            const uint32_t window_selector_width = 16;
+            const uint32_t window_selector_width = 28;
+            const uint32_t window_selector_separator_width = 2;
             fill_rect(
                 g_backbuffer,
                 color,
-                i * window_selector_width,
+                i * window_selector_width + i * window_selector_separator_width,
                 window_stack_begin_y,
                 window_selector_width,
                 window_stack_height);
         }
 
         // Draw Mouse Cursor
-        draw_cursor(&g_backbuffer, focus.cursor_x, focus.cursor_y);
+        draw_cursor(&g_backbuffer, context.focus.cursor_x, context.focus.cursor_y);
 
         // Swap Back Buffer <-> Front Buffer
         memcpy(
