@@ -20,15 +20,15 @@
 #ifndef LENSOR_OS_INPUT_DRIVER_H
 #define LENSOR_OS_INPUT_DRIVER_H
 
+#include <memory/common.h>
+#include <scheduler.h>
+#include <storage/file_metadata.h>
+#include <storage/filesystem_driver.h>
+
 #include <format>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include <memory/common.h>
-#include <storage/filesystem_driver.h>
-#include <storage/file_metadata.h>
-#include <scheduler.h>
 
 // NOTE: This is an attempt to keep `sizeof(InputBuffer)` == PAGE_SIZE
 #define INPUT_BUFSZ PAGE_SIZE - sizeof(usz) - sizeof(std::vector<pid_t>)
@@ -76,7 +76,7 @@ struct InputDriver final : FilesystemDriver {
         return "Input";
     };
 
-private:
+   private:
     std::vector<NamedInputBuffer> InputBuffers;
     std::vector<InputBuffer*> FreeInputBuffers;
 };

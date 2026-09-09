@@ -944,7 +944,7 @@ EventQueueHandle sys$23_kqueue() {
 }
 
 // kevent -- kernel event
-// This syscall is multi-faceted.
+// This syscall has two major purposes, both involving kqueue().
 //
 //   When numChanges is non-zero, changelist must be non-null. When
 //   changelist is non-null, process the changes to the event queue in the
@@ -978,9 +978,12 @@ int sys$24_kevent(EventQueueHandle handle, const Event* changelist, int numChang
     }
 
     // Find queue that is referenced by this handle for this process.
-    EventQueue<Process::EventQueueSize>* queue = std::find_if(process->EventQueues.begin(), process->EventQueues.end(), [&](const auto& q) {
-        return q.ID == handle;
-    });
+    EventQueue<Process::EventQueueSize>* queue = std::find_if(
+        process->EventQueues.begin(),
+        process->EventQueues.end(),
+        [&](const auto& q) {
+            return q.ID == handle;
+        });
     if (not queue)
         return error;
 

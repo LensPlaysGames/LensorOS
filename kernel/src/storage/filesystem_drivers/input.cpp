@@ -17,23 +17,22 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <storage/filesystem_drivers/input.h>
-
-#include <storage/file_metadata.h>
-#include <system.h>
 #include <scheduler.h>
+#include <storage/file_metadata.h>
+#include <storage/filesystem_drivers/input.h>
+#include <system.h>
 #include <virtual_filesystem.h>
 
-#include <string_view>
 #include <memory>
+#include <string_view>
 
 // Uncomment the following directive for extra debug information output.
-//#define DEBUG_INPUT_DRIVER
+// #define DEBUG_INPUT_DRIVER
 
 #ifdef DEBUG_INPUT_DRIVER
-# define DBGMSG(...) std::print(__VA_ARGS__)
+#define DBGMSG(...) std::print(__VA_ARGS__)
 #else
-# define DBGMSG(...)
+#define DBGMSG(...)
 #endif
 
 void InputDriver::close(FileMetadata* file) {
@@ -52,7 +51,8 @@ std::shared_ptr<FileMetadata> InputDriver::open(std::string_view path) {
     InputBuffer* input = nullptr;
     if (FreeInputBuffers.empty()) {
         input = new InputBuffer();
-    } else {
+    }
+    else {
         input = FreeInputBuffers.back();
         FreeInputBuffers.pop_back();
     }
@@ -81,9 +81,8 @@ ssz InputDriver::read(FileMetadata* file, usz, usz bytes, void* buffer, usz flag
 
     // TODO: Read in a loop to fill buffers larger than what is currently written.
     // For now, truncate read if it is too large.
-    if (bytes > input->Offset) {
+    if (bytes > input->Offset)
         bytes = input->Offset;
-    }
 
     memcpy(buffer, input->Data, bytes);
 

@@ -21,16 +21,16 @@
 #define LENSOR_OS_PIPE_DRIVER_H
 
 #include <integers.h>
-#include <storage/storage_device_driver.h>
-#include <storage/file_metadata.h>
 #include <scheduler.h>
+#include <storage/file_metadata.h>
+#include <storage/storage_device_driver.h>
 
 #include <algorithm>
+#include <format>
 #include <memory>
-#include <vector>
 #include <string>
 #include <string_view>
-#include <format>
+#include <vector>
 
 #define PIPE_BUFSZ 512
 
@@ -73,30 +73,29 @@ struct PipeBuffer {
     }
 };
 
-
 struct PipeMetas {
     std::shared_ptr<FileMetadata> Read;
     std::shared_ptr<FileMetadata> Write;
 
     PipeMetas(std::shared_ptr<FileMetadata> readMeta, std::shared_ptr<FileMetadata> writeMeta)
-    : Read(readMeta), Write(writeMeta) {}
+        : Read(readMeta), Write(writeMeta) {}
 };
 
 struct PipeEnd {
     PipeBuffer* Buffer;
-    enum EndType{
+    enum EndType {
         READ,
         WRITE,
     } End;
 
     PipeEnd(PipeBuffer* buffer, PipeEnd::EndType endType)
-    : Buffer(buffer), End(endType) {}
+        : Buffer(buffer), End(endType) {}
 };
 
 struct NamedPipeBuffer {
     std::weak_ptr<FileMetadata> meta;
     std::string name;
-    PipeBuffer *pipe;
+    PipeBuffer* pipe;
 };
 
 struct PipeDriver final : FilesystemDriver {
@@ -121,7 +120,7 @@ struct PipeDriver final : FilesystemDriver {
 
     PipeMetas lay_pipe();
 
-private:
+   private:
     /// Stores pipe buffers along with names for mock-filesystem functionality.
     std::vector<NamedPipeBuffer> PipeBuffers;
     std::vector<PipeBuffer*> FreePipeBuffers;

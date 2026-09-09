@@ -20,22 +20,28 @@
 #ifndef LENSOR_OS_GPT_PARTITION_DRIVER_H
 #define LENSOR_OS_GPT_PARTITION_DRIVER_H
 
-#include <integers.h>
 #include <guid.h>
+#include <integers.h>
 #include <storage/storage_device_driver.h>
 
 /// TODO: This should probably be replaced with a FileMetadata that stores
 ///       the offset and is passed directly to the underlying driver.
 struct GPTPartitionDriver final : StorageDeviceDriver {
-    GPTPartitionDriver(std::shared_ptr<StorageDeviceDriver> driver
-                       , GUID type, GUID unique
-                       , u64 startSector, u64 sectorSize)
+    GPTPartitionDriver(
+        std::shared_ptr<StorageDeviceDriver> driver,
+        GUID type,
+        GUID unique,
+        u64 startSector,
+        u64 sectorSize)
         : Driver(std::move(driver))
-        , Type(type), Unique(unique)
+        , Type(type)
+        , Unique(unique)
         , Offset(startSector * sectorSize) {}
 
     void close(FileMetadata* file) final { Driver->close(file); }
-    auto open(std::string_view name) -> std::shared_ptr<FileMetadata> final { return Driver->open(name); }
+    auto open(std::string_view name) -> std::shared_ptr<FileMetadata> final {
+        return Driver->open(name);
+    }
 
     ssz read(FileMetadata* file, usz offs, usz byteCount, void* buffer, usz flags) final {
         return Driver->read(file, offs + Offset, byteCount, buffer, flags);
@@ -51,12 +57,12 @@ struct GPTPartitionDriver final : StorageDeviceDriver {
     GUID type_guid() { return Type; }
     GUID unique_guid() { return Unique; }
 
-private:
-    std::shared_ptr<StorageDeviceDriver> Driver { nullptr };
+   private:
+    std::shared_ptr<StorageDeviceDriver> Driver{nullptr};
     GUID Type;
     GUID Unique;
     /// Number of bytes to offset within storage device for start of partition.
-    usz Offset { 0 };
+    usz Offset{0};
 };
 
 #endif /* LENSOR_OS_GPT_PARTITION_DRIVER_H */

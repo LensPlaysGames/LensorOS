@@ -1,21 +1,21 @@
 /* Copyright 2022, Contributors To LensorOS.
-* All rights reserved.
-*
-* This file is part of LensorOS.
-*
-* LensorOS is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* LensorOS is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with LensorOS. If not, see <https://www.gnu.org/licenses
-*/
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
 #ifndef LENSOROS_PORT_CONTROLLER_H
 #define LENSOROS_PORT_CONTROLLER_H
 
@@ -43,11 +43,11 @@ struct PortController final : StorageDeviceDriver {
     // probably use something smaller than a u64 here.
     u64 port_number() { return PortNumber; }
 
-private:
-    PortType Type { PortType::None };
-    u64 PortNumber { 99 };
-    volatile HBAPort* Port { nullptr };
-    u8* Buffer { nullptr };
+   private:
+    PortType Type{PortType::None};
+    u64 PortNumber{99};
+    volatile HBAPort* Port{nullptr};
+    u8* Buffer{nullptr};
     const u64 BYTES_PER_SECTOR = 512;
     const u64 PORT_BUFFER_PAGES = 0x100;
     const u64 PORT_BUFFER_BYTES = PORT_BUFFER_PAGES * 0x1000;
@@ -62,6 +62,6 @@ private:
     void stop_commands();
 };
 
-}
+}  // namespace AHCI
 
-#endif // LENSOROS_PORT_CONTROLLER_H
+#endif  // LENSOROS_PORT_CONTROLLER_H

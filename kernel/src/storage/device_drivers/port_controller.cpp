@@ -1,38 +1,37 @@
 /* Copyright 2022, Contributors To LensorOS.
-* All rights reserved.
-*
-* This file is part of LensorOS.
-*
-* LensorOS is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* LensorOS is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with LensorOS. If not, see <https://www.gnu.org/licenses
-*/
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses
+ */
 
 #include <storage/device_drivers/port_controller.h>
 
 // Uncomment the following directive for extra debug information output.
-//#define DEBUG_AHCI
+// #define DEBUG_AHCI
 
 #ifdef DEBUG_AHCI
-#   define DBGMSG(...) std::print(__VA_ARGS__)
+#define DBGMSG(...) std::print(__VA_ARGS__)
 #else
-#   define DBGMSG(...) void()
+#define DBGMSG(...) void()
 #endif
 
 namespace AHCI {
 
 PortController::PortController(PortType type, u64 portNumber, HBAPort* portAddress)
-    : Type(type), PortNumber(portNumber), Port(portAddress)
-{
+    : Type(type), PortNumber(portNumber), Port(portAddress) {
     // Get contiguous physical memory for
     // this AHCI port to read to/write from.
     Buffer = (u8*)Memory::request_pages(PORT_BUFFER_PAGES);
@@ -75,7 +74,7 @@ bool PortController::read_low_level(u64 sector, u64 sectors) {
     // Disable interrupts during command construction.
     Port->InterruptStatus = (u32)-1;
     auto* commandHeader = reinterpret_cast<HBACommandHeader*>(Port->command_list_base());
-    commandHeader->CommandFISLength = sizeof(FIS_REG_H2D)/sizeof(u32);
+    commandHeader->CommandFISLength = sizeof(FIS_REG_H2D) / sizeof(u32);
     commandHeader->Write = 0;
     commandHeader->PRDTLength = 1;
 
@@ -116,16 +115,17 @@ ssz PortController::read(FileMetadata*, usz byteOffset, usz byteCount, void* buf
 /// Convert bytes to sectors, then read into and copy from intermediate
 /// `Buffer` to given `buffer` until all data is read and copied.
 ssz PortController::read_raw(usz byteOffset, usz byteCount, void* buffer) {
-    DBGMSG("[AHCI]: Port {} -- read()  byteOffset={}, byteCount={}, buffer={}\n"
-           , PortNumber
-           , byteOffset
-           , byteCount
-           , (void*) buffer
-           );
+    DBGMSG(
+        "[AHCI]: Port {} -- read()  byteOffset={}, byteCount={}, buffer={}\n",
+        PortNumber,
+        byteOffset,
+        byteCount,
+        (void*)buffer);
 
     if (Type != PortType::SATA) {
-        std::print("  \033[31mERRROR\033[0m: `read()`  port type not implemented: {}\n"
-                   , port_type_string(Type));
+        std::print(
+            "  \033[31mERRROR\033[0m: `read()`  port type not implemented: {}\n",
+            port_type_string(Type));
         return -1;
     }
     // TODO: Actual error handling!
@@ -133,7 +133,8 @@ ssz PortController::read_raw(usz byteOffset, usz byteCount, void* buffer) {
         std::print("  \033[31mERROR\033[0m: `read()`  buffer can not be nullptr\n");
         return -1;
     }
-    // TODO: Don't reject reads over port buffer max size, just do multiple reads and copy as you go.
+    // TODO: Don't reject reads over port buffer max size, just do multiple
+    // reads and copy as you go.
     if (byteCount > MAX_READ_BYTES) {
         std::print("  \033[31mERROR\033[0m: `read()`  byteCount can not be larger than maximum readable bytes.\n");
         return -1;
@@ -141,16 +142,17 @@ ssz PortController::read_raw(usz byteOffset, usz byteCount, void* buffer) {
 
     u64 sector = byteOffset / BYTES_PER_SECTOR;
     u64 byteOffsetWithinSector = byteOffset % BYTES_PER_SECTOR;
-    u64 sectors = (byteOffsetWithinSector + byteCount + BYTES_PER_SECTOR - 1) / BYTES_PER_SECTOR;
+    u64 sectors = (byteOffsetWithinSector + byteCount + BYTES_PER_SECTOR - 1)
+                  / BYTES_PER_SECTOR;
 
     if (byteOffsetWithinSector + byteCount <= BYTES_PER_SECTOR)
         sectors = 1;
 
-    DBGMSG("  Calculated sector data: sector={}, sectors={}, byteOffsetWithinSector={}\n"
-           , sector
-           , sectors
-           , byteOffsetWithinSector
-           );
+    DBGMSG(
+        "  Calculated sector data: sector={}, sectors={}, byteOffsetWithinSector={}\n",
+        sector,
+        sectors,
+        byteOffsetWithinSector);
 
     if (sectors * BYTES_PER_SECTOR > PORT_BUFFER_BYTES) {
         std::print("  \033[31mERROR\033[0m: `read()`  can not read more bytes than internal buffer size.\n");
@@ -161,7 +163,9 @@ ssz PortController::read_raw(usz byteOffset, usz byteCount, void* buffer) {
         DBGMSG("  \033[32mSUCCESS\033[0m: `read_low_level()` SUCCEEDED\n");
         void* bufferAddress = (void*)((u64)&Buffer[0] + byteOffsetWithinSector);
         memcpy(buffer, bufferAddress, byteCount);
-    } else DBGMSG("  \033[31mERROR\033[0m: `read_low_level()` FAILED\n");
+    }
+    else
+        DBGMSG("  \033[31mERROR\033[0m: `read_low_level()` FAILED\n");
 
     return byteCount;
 }
@@ -181,17 +185,24 @@ bool PortController::write_low_level(u64 sector, u64 sectors) {
 
     // Disable interrupts during command construction.
     Port->InterruptStatus = (u32)-1;
-    auto* commandHeader = reinterpret_cast<HBACommandHeader*>(Port->command_list_base());
-    commandHeader->CommandFISLength = sizeof(FIS_REG_H2D)/sizeof(u32);
+    auto* commandHeader
+        = reinterpret_cast<HBACommandHeader*>(Port->command_list_base());
+    commandHeader->CommandFISLength = sizeof(FIS_REG_H2D) / sizeof(u32);
     commandHeader->Write = 1;
     commandHeader->PRDTLength = 1;
 
-    auto* commandTable = reinterpret_cast<HBACommandTable*>(commandHeader->command_table_base());
-    memset(commandTable, 0, sizeof(HBACommandTable) + ((commandHeader->PRDTLength - 1) * sizeof(HBA_PRDTEntry)));
+    auto* commandTable
+        = reinterpret_cast<HBACommandTable*>(commandHeader->command_table_base());
+    memset(
+        commandTable,
+        0,
+        sizeof(HBACommandTable)
+            + ((commandHeader->PRDTLength - 1) * sizeof(HBA_PRDTEntry)));
     commandTable->PRDTEntry[0].set_data_base((u64)Buffer);
     commandTable->PRDTEntry[0].set_byte_count((sectors << 9) - 1);
     commandTable->PRDTEntry[0].set_interrupt_on_completion(true);
-    auto* commandFIS = reinterpret_cast<FIS_REG_H2D*>(&commandTable->CommandFIS);
+    auto* commandFIS
+        = reinterpret_cast<FIS_REG_H2D*>(&commandTable->CommandFIS);
     commandFIS->Type = FIS_TYPE::REG_H2D;
     // Take control of command structure.
     commandFIS->CommandControl = 1;
@@ -225,16 +236,17 @@ bool PortController::write_low_level(u64 sector, u64 sectors) {
 }
 
 ssz PortController::write_raw(usz byteOffset, usz byteCount, void* buffer) {
-    DBGMSG("[AHCI]: Port {} -- write()  byteOffset={}, byteCount={}, buffer={}\n"
-               , PortNumber
-               , byteOffset
-               , byteCount
-               , (void*) buffer
-               );
+    DBGMSG(
+        "[AHCI]: Port {} -- write()  byteOffset={}, byteCount={}, buffer={}\n",
+        PortNumber,
+        byteOffset,
+        byteCount,
+        (void*)buffer);
 
     if (Type != PortType::SATA) {
-        std::print("  \033[31mERRROR\033[0m: `write()`  port type not implemented: {}\n"
-                   , port_type_string(Type));
+        std::print(
+            "  \033[31mERRROR\033[0m: `write()`  port type not implemented: {}\n",
+            port_type_string(Type));
         return -1;
     }
     if (buffer == nullptr) {
@@ -254,11 +266,11 @@ ssz PortController::write_raw(usz byteOffset, usz byteCount, void* buffer) {
     if (byteOffsetWithinSector + byteCount <= BYTES_PER_SECTOR)
         sectors = 1;
 
-    DBGMSG("  Calculated sector data: sector={}, sectors={}, byteOffsetWithinSector={}\n"
-               , sector
-               , sectors
-               , byteOffsetWithinSector
-               );
+    DBGMSG(
+        "  Calculated sector data: sector={}, sectors={}, byteOffsetWithinSector={}\n",
+        sector,
+        sectors,
+        byteOffsetWithinSector);
 
     if (sectors * BYTES_PER_SECTOR > PORT_BUFFER_BYTES) {
         std::print("  \033[31mERROR\033[0m: `write()`  can not write more bytes than internal buffer size.\n");
@@ -286,8 +298,8 @@ ssz PortController::write_raw(usz byteOffset, usz byteCount, void* buffer) {
             return -1;
         }
         DBGMSG("write_low_level(): \033[32mSUCCEEDED!\033[m\n");
-
-    } else {
+    }
+    else {
         if (!write_low_level(sector, sectors)) {
             std::print("write_low_level(): \033[31mFAILED!\033[m\n");
             return -1;
@@ -304,8 +316,8 @@ ssz PortController::write(FileMetadata*, usz byteOffset, usz byteCount, void* bu
     return write_raw(byteOffset, byteCount, buffer);
 }
 
-_PushIgnoreWarning("-Wvolatile")
-    void PortController::start_commands() {
+_PushIgnoreWarning("-Wvolatile");
+void PortController::start_commands() {
     while (Port->CommandAndStatus & HBA_PxCMD_CR);
     Port->CommandAndStatus |= HBA_PxCMD_FRE;
     Port->CommandAndStatus |= HBA_PxCMD_ST;
@@ -317,6 +329,6 @@ void PortController::stop_commands() {
     while (Port->CommandAndStatus & HBA_PxCMD_FR
            && Port->CommandAndStatus & HBA_PxCMD_CR);
 }
-_PopWarnings()
+_PopWarnings();
 
-}
+}  // namespace AHCI
