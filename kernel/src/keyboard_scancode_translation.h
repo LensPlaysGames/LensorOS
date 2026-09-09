@@ -24,30 +24,23 @@
 
 namespace Keyboard {
 namespace QWERTY {
-/// For release counter-part, add 0x80.
-#define ESCAPE 0x01
-#define BACKSPACE 0x0e
-#define TAB 0x0f
-#define ENTER 0x1c
-#define LCONTROL 0x1d
-#define LSHIFT 0x2a
-#define RSHIFT 0x36
-#define LALT 0x38
-#define SPACE 0x39
-#define CAPSLOCK 0x3a
-#define NUMLOCK 0x45
-#define SCROLLLOCK 0x46
 
-/// Preceded by 'e0' byte.
-#define ARROW_UP 0x48
-#define ARROW_DOWN 0x50
-#define ARROW_LEFT 0x4b
-#define ARROW_RIGHT 0x4d
+void HandleScancodeInput(u8 scancode);
 
-extern const char ASCII[];
+/// @return LENSOR_KEY_* value corresponding to the given scancode.
 uint16_t TranslateScancode(uint8_t scancode);
+
+/// @return LENSOR_KEY_* value corresponding to the given scancode *as if
+/// it were prefixed with the extended set zero prefix (0xe0, usually)*.
+uint32_t TranslateExtendedScancode(u8 scancode);
+
+/// @return ASCII Text Character corresponding to the given scancode within the QWERTY namespace.
 char Translate(u8 scancode, bool capital);
+
+// Writes to stdin driver, basically. For simplified text-based operation.
+void HandleDirectInput(char input);
 
 }  // namespace QWERTY
 }  // namespace Keyboard
+
 #endif

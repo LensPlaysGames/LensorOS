@@ -125,166 +125,11 @@ __attribute__((interrupt)) void system_timer_handler(InterruptFrame* frame) {
     end_of_interrupt(0);
 }
 
-Keyboard::KeyboardState State{};
-
-static void handle_direct_input(char input) {
-    if (!input) {
-        std::print("[INPUT]: Refusing null input\n");
-        return;
-    }
-
-    // Send user input to userspace!
-    // Write to stdin of init process.
-    if (SYSTEM and SYSTEM->init_process()) {
-        Process* init = SYSTEM->init_process();
-        auto fd = static_cast<ProcFD>(0);
-        auto sysfd = init->FileDescriptors[fd];
-        auto f = SYSTEM->virtual_filesystem().file(*sysfd);
-        if (f)
-            f->filesystem_driver()->write(f.get(), 0, sizeof(char), &input);
-
-        return;
-    }
-    std::print("[INPUT]: No init process: cannot handle user input properly.\n");
-}
-
-static uint32_t translate_extended_scancode(u8 scancode) {
-    std::print("[KEYB]: Translating scancode {} from extended set 0...\n", scancode);
-    switch (scancode) {
-        case 0x11:
-            return LENSOR_KEY_RIGHTALT;
-        case 0x14:
-            return LENSOR_KEY_RIGHTCTRL;
-        case 0x15:
-            return LENSOR_KEY_PREVIOUSSONG;
-        case 0x1f:
-            return LENSOR_KEY_LEFTSUPER;
-        case 0x21:
-            return LENSOR_KEY_VOLUMEDOWN;
-        case 0x23:
-            return LENSOR_KEY_MUTE;
-        case 0x27:
-            return LENSOR_KEY_RIGHTSUPER;
-        case 0x2b:
-            return LENSOR_KEY_CALC;
-        case 0x2f:
-            return LENSOR_KEY_MENU;
-        case 0x32:
-            return LENSOR_KEY_VOLUMEUP;
-        case 0x34:
-            return LENSOR_KEY_PLAY;
-        case 0x37:
-            return LENSOR_KEY_POWER;
-        case 0x3b:
-            return LENSOR_KEY_STOP;
-        case 0x3f:
-            return LENSOR_KEY_SLEEP;
-        case 0x40:
-            return LENSOR_KEY_COMPUTER;
-        case 0x48:
-            return LENSOR_KEY_EMAIL;
-        case 0x4a:
-            return LENSOR_KEY_KPSLASH;
-        case 0x4d:
-            return LENSOR_KEY_NEXTSONG;
-        case 0x50:
-            return LENSOR_KEY_PLAYCD;
-        case 0x5a:
-            return LENSOR_KEY_KPENTER;
-        case 0x5e:
-            return LENSOR_KEY_WAKEUP;
-        case 0x69:
-            return LENSOR_KEY_END;
-        case 0x6b:
-            return LENSOR_KEY_LEFT;
-        case 0x6c:
-            return LENSOR_KEY_HOME;
-        case 0x70:
-            return LENSOR_KEY_INSERT;
-        case 0x71:
-            return LENSOR_KEY_DELETE;
-        case 0x72:
-            return LENSOR_KEY_DOWN;
-        case 0x74:
-            return LENSOR_KEY_RIGHT;
-        case 0x75:
-            return LENSOR_KEY_UP;
-        case 0x7a:
-            return LENSOR_KEY_PAGEDOWN;
-        case 0x7d:
-            return LENSOR_KEY_PAGEUP;
-        default: /* no-op */
-            break;
-    }
-    return LENSOR_KEY_NULL;
-}
-
-bool got_extended_prefix = false;
-bool got_release = false;
-static void handle_scancode_input(u8 scancode) {
-    // Some keyboards send 0xf0 before the extended key scancode and
-    // after 0xe0 prefix to signify release rather than setting bit 0x80.
-    if (scancode == 0xf0) {
-        std::print("[KEYB]: Got release scancode...\n");
-        got_release = true;
-        return;
-    }
-    if (scancode == 0xe0 and not got_extended_prefix) {
-        std::print("[KEYB]: Got extended set 0 scancode...\n");
-        got_extended_prefix = true;
-        return;
-    }
-
-    uint32_t translated{};
-    char translated_character{};
-
-    // A release key may either have 0x80 bit set, or be prefixed with 0xf0.
-    bool press = (not(scancode & 0x80)) and (not(got_release));
-    std::print("[KEYB] release bit={}, release prefix={}\n", scancode & 0x80, got_release);
-    got_release = false;
-
-    // TODO: Support other keyboard scancode translation layouts.
-    if (got_extended_prefix)
-        translated = translate_extended_scancode(scancode);
-    else
-        translated = Keyboard::QWERTY::TranslateScancode(scancode);
-
-    got_extended_prefix = false;
-
-    {
-        // TODO: Support other keyboard scancode translation layouts.
-        translated_character = Keyboard::QWERTY::Translate(
-            scancode,
-            State.LeftShift or State.RightShift or State.CapsLock);
-
-        std::print("[KEYB]: Got translated character {}\n", (int)translated_character);
-
-        if (press and translated_character)
-            handle_direct_input(translated_character);
-    }
-
-    // Send Input Event
-    Event e{};
-    e.Type = EventType::KEYBOARD;
-    auto* e_data = (EventData_KeyboardInput*)&e.Data;
-    e_data->value = translated;
-    e_data->press = press;
-    gEvents.notify(e);
-
-    // FIXME: Kernel Level Modifier Tracking Has Been Deprecated
-    if (translated == LENSOR_KEY_LEFTSHIFT)
-        State.LeftShift = press;
-    if (translated == LENSOR_KEY_RIGHTSHIFT)
-        State.RightShift = press;
-    if (translated == LENSOR_KEY_CAPSLOCK)
-        State.CapsLock ^= press;
-}
-
 /// IRQ1: PS/2 KEYBOARD
 __attribute__((interrupt)) void keyboard_handler(InterruptFrame* frame) {
     // Read scancode from bus.
     auto data = in8(0x60);
-    handle_scancode_input(data);
+    Keyboard::QWERTY::HandleScancodeInput(data);
     end_of_interrupt(1);
 }
 
@@ -293,7 +138,7 @@ __attribute__((interrupt)) void uart_com1_handler(InterruptFrame* frame) {
     u8 data = UART::read();
     // TODO: Handle input data more betterer.
     if (data == '\n' || data == '\b' || data == '\a' || (data >= ' ' && data <= '~'))
-        handle_direct_input(data);
+        Keyboard::QWERTY::HandleDirectInput(data);
     // Keyboard::gText.handle_character(data);
     end_of_interrupt(4);
 }
