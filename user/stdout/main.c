@@ -256,11 +256,14 @@ void handle_event_incoming_client(Event incoming_client_event, CompositorContext
     // Attempt to accept incoming connection. If given the retry return code,
     // retry.
     do {
-        printf("[INIT]: Accepting incoming client connection...\n");
+        // printf("[INIT]: Accepting incoming client connection...\n");
         fflush(stdout);
         // We will block here until a connection is made.
-        clientFD = sys_accept(context->incoming_client_socket, &connected_addr, &connected_addrlen);
-        printf("[INIT]: accept returned %d\n", clientFD);
+        clientFD = sys_accept(
+            context->incoming_client_socket,
+            &connected_addr,
+            &connected_addrlen);
+        // printf("[INIT]: accept returned %d\n", clientFD);
         fflush(stdout);
     } while (clientFD == -2);
 
@@ -594,8 +597,8 @@ int main(int argc, const char** argv) {
             g_framebuffer.pixel_width,
             window_stack_height / 8);
 
-        for (int i = 0; i < sizeof(context.windows) / sizeof(context.windows[0]); ++i) {
-            const window_t* window = &context.windows[i];
+        for (int i = sizeof(context.windows) / sizeof(context.windows[0]); i; --i) {
+            const window_t* window = &context.windows[i - 1];
             if (!window->shared_region) continue;
 
             const uint32_t present_window_color = mkpixel(g_framebuffer.format, 0xff, 0xff, 0xff, 0xff);
