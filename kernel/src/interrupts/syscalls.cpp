@@ -869,6 +869,18 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
     if (not data)
         return ProcFD::Invalid;
 
+    if (data->ConnectionQueue.empty()) {
+        std::print("[SYS$]:accept: No waiting connections, blocking\n");
+        // Block this process until a connection is made to this socket.
+        data->WaitingOnConnection = true;
+        // Set return value to invalid fd just in case we are unblocked
+        // for some reason other than an incoming connection.
+        process->set_return_value(usz(ProcFD::Invalid));
+        process->State = Process::SLEEPING;
+        Scheduler::yield();
+        std::print("[SYS$]:accept: yield returned\n");
+    }
+
     if (data->ConnectionQueue.size()) {
         std::print("[SYS$]:accept: Connection already exists, returning immediately\n");
         /// Pop the first connection off the queue
@@ -906,16 +918,7 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
         }
         return fds.Process;
     }
-    std::print("[SYS$]:accept: No waiting connections, blocking\n");
-    // Block this process until a connection is made to this socket.
-    data->WaitingOnConnection = true;
-    // Set return value to invalid fd just in case we are unblocked
-    // for some reason other than an incoming connection.
-    process->set_return_value(usz(ProcFD::Invalid));
-    process->State = Process::SLEEPING;
-    Scheduler::yield();
 
-    std::print("[SYS$]:accept: yield returned\n");
     return ProcFD(-2);
 }
 
