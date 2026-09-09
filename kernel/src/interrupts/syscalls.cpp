@@ -116,7 +116,7 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount, u64 flags) {
     }
     auto* process = Scheduler::CurrentProcess->value();
 
-    ssz rc = vfs.read(fd, buffer, byteCount, 0);
+    ssz rc = vfs.read(fd, buffer, byteCount, 0, flags);
     if (rc == -2) {
         if (flags & LENSOROS_SYSCALL_READ_FLAG_NOBLOCK)
             return rc;
@@ -131,7 +131,7 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount, u64 flags) {
         Scheduler::yield();
 
         // Retry! (once)
-        rc = vfs.read(fd, buffer, byteCount, 0);
+        rc = vfs.read(fd, buffer, byteCount, 0, flags);
     }
 
     // If data was read, move the "cursor" of the file metadata forward, so
@@ -161,7 +161,7 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount, u64 flags) 
 
     VFS& vfs = SYSTEM->virtual_filesystem();
 
-    ssz rc = vfs.write(fd, buffer, byteCount, 0);
+    ssz rc = vfs.write(fd, buffer, byteCount, 0, flags);
     if (rc == -2) {
         if (flags & LENSOROS_SYSCALL_WRITE_FLAG_NOBLOCK)
             return rc;
@@ -174,7 +174,7 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount, u64 flags) 
         Scheduler::yield();
 
         // Retry! (once)
-        rc = vfs.write(fd, buffer, byteCount, 0);
+        rc = vfs.write(fd, buffer, byteCount, 0, flags);
     }
 
     // If data was written, move the "cursor" of the file metadata forward, so

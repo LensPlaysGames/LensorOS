@@ -175,8 +175,8 @@ struct VFS {
     bool close(ProcFD procfd);
     bool close(Process*, ProcFD procfd);
 
-    ssz read(ProcFD procfd, u8* buffer, usz byteCount, usz byteOffset = 0);
-    ssz write(ProcFD procfd, u8* buffer, usz byteCount, usz byteOffset);
+    ssz read(ProcFD procfd, u8* buffer, usz byteCount, usz byteOffset = 0, usz flags = 0);
+    ssz write(ProcFD procfd, u8* buffer, usz byteCount, usz byteOffset, usz flags = 0);
 
     void print_debug();
 

@@ -181,7 +181,7 @@ bool VFS::close(ProcFD procfd) {
     return close(Scheduler::CurrentProcess->value(), procfd);
 }
 
-ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
+ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset, usz flags) {
     DBGMSG(
         "[VFS]: read\n"
         "  file descriptor: {}\n"
@@ -202,7 +202,7 @@ ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
     return meta->filesystem_driver()->read(meta, byteOffset + meta->offset, byteCount, buffer);
 }
 
-ssz VFS::write(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset) {
+ssz VFS::write(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset, usz flags) {
     /*
     DBGMSG("[VFS]: write11111111111111111\n"
            "  file descriptor: {}\n"
