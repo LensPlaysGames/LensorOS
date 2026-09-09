@@ -529,8 +529,8 @@ int main(int argc, const char** argv) {
         }
 
         // Draw Each Window's Framebuffer to the Actual Framebuffer
-        for (int i = 0; i < sizeof(context.windows) / sizeof(context.windows[0]); ++i) {
-            const window_t* window = &context.windows[i];
+        for (int i = sizeof(context.windows) / sizeof(context.windows[0]); i; --i) {
+            const window_t* window = &context.windows[i - 1];
             if (!window->shared_region) continue;
 
             // Define pixel size (TODO: get from kernel)
@@ -598,6 +598,7 @@ int main(int argc, const char** argv) {
             g_framebuffer.pixel_width,
             window_stack_height / 8);
 
+        int selector_count = 0;
         for (int i = sizeof(context.windows) / sizeof(context.windows[0]); i; --i) {
             const window_t* window = &context.windows[i - 1];
             if (!window->shared_region) continue;
@@ -613,15 +614,17 @@ int main(int argc, const char** argv) {
                 color = hidden_window_color;
             }
 
-            const uint32_t window_selector_width = 28;
-            const uint32_t window_selector_separator_width = 2;
+            const uint32_t window_selector_width = 27;
+            const uint32_t window_selector_separator_width = 1;
             fill_rect(
                 g_backbuffer,
                 color,
-                i * window_selector_width + i * window_selector_separator_width,
+                selector_count * window_selector_width + selector_count * window_selector_separator_width,
                 window_stack_begin_y,
                 window_selector_width,
                 window_stack_height);
+
+            ++selector_count;
         }
 
         // Draw Mouse Cursor
