@@ -21,6 +21,7 @@
 #define LENSOR_OS_SOCKET_DRIVER_H
 
 #include <integers.h>
+#include <lensor/syscalls.h>
 #include <scheduler.h>
 
 #include <extensions_double_ended_queue>
@@ -83,12 +84,17 @@ struct FIFOBuffer {
     /// \retval >=0  Success, amount of bytes read.
     /// \retval -1   Failure
     /// \retval -2   Should block (will unblock when written to)
-    ssz read(pid_t pid, usz byteCount, u8* buffer) {
+    ssz read(pid_t pid, usz byteCount, u8* buffer, usz flags) {
         // std::print("[SOCK]: read({}, {}, {})\n", pid, byteCount, (void*)buffer);
         if (Offset == 0) {
             // std::print("[SOCK]: read() from socket by process {} waiting until write\n", pid);
+            if (flags & LENSOROS_SYSCALL_READ_FLAG_NOBLOCK)
+                return -2;
+
             PIDsWaitingUntilWrite.push_back(pid);
-            return -2;
+            auto* process = Scheduler::process(pid);
+            process->State = Process::SLEEPING;
+            Scheduler::yield();
         }
         // Truncate reads that are larger than possible.
         if (byteCount > Offset)
@@ -123,14 +129,20 @@ struct FIFOBuffer {
     /// \retval >=0  Success, amount of bytes written.
     /// \retval -1   Failure
     /// \retval -2   Should block (will unblock when read from)
-    ssz write(pid_t pid, usz byteCount, u8* buffer) {
+    ssz write(pid_t pid, usz byteCount, u8* buffer, usz flags) {
         // std::print("[SOCK]: write({}, {}, {})\n", pid, byteCount, (void*)buffer);
 
-        // Block until a write can be performed.
+        // Write not possible
         if (Offset + byteCount > N) {
+            if (flags & LENSOROS_SYSCALL_WRITE_FLAG_NOBLOCK)
+                return -2;
+
+            // Block until a write can be performed.
             // std::print("[SOCK]: write() to socket by process {} waiting until read\n", pid);
             PIDsWaitingUntilRead.push_back(pid);
-            return -2;
+            auto* process = Scheduler::process(pid);
+            process->State = Process::SLEEPING;
+            Scheduler::yield();
         }
 
         // std::print("[SOCK]: Writing {} bytes to FIFO from buffer at {}\n", byteCount, (void*)buffer);
@@ -295,9 +307,9 @@ struct SocketDriver final : FilesystemDriver {
         return nullptr;
     }
 
-    ssz read(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
+    ssz read(FileMetadata* meta, usz, usz byteCount, void* buffer, usz flags) final;
     ssz read_raw(usz, usz, void*) final { return -1; };
-    ssz write(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
+    ssz write(FileMetadata* meta, usz, usz byteCount, void* buffer, usz flags) final;
     ssz flush(FileMetadata* file) final { return -1; };
 
     ssz directory_data(std::string_view path, usz max_entry_count, DirectoryEntry* out) final {

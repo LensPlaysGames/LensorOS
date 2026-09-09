@@ -126,7 +126,7 @@ auto PipeDriver::open(std::string_view path) -> std::shared_ptr<FileMetadata> {
     // return meta;
 }
 
-ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
+ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer, usz flags) {
     if (!meta) {
         std::print("[PIPE]:ERROR: Cannot read file given null file metadata\n");
         return -1;
@@ -150,10 +150,14 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
             return 0;
         }
 
+        if (flags & LENSOROS_SYSCALL_READ_FLAG_NOBLOCK)
+            return -2;
+
         auto* process = Scheduler::CurrentProcess->value();
         // std::print("[PIPE]: read()  Blocking process {}  pipeEnd={} pipeBuffer={}\n", process->ProcessID, (void*)pipe, (void*)pipe->Buffer);
         pipe->Buffer->PIDsWaitingOnWriteToRead.push_back(process->ProcessID);
-        return -2;
+        process->State = Process::SLEEPING;
+        Scheduler::yield();
     }
 
     // TODO: Read in a loop to fill buffers larger than what is currently written.
@@ -189,7 +193,7 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
     return ssz(byteCount);
 };
 
-ssz PipeDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
+ssz PipeDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer, usz flags) {
     if (!meta) return -1;
     auto* pipe = get_driver_data(meta);
     if (!pipe) return -1;
@@ -206,11 +210,15 @@ ssz PipeDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
     }
 
     if (pipe->Buffer->Offset + byteCount > PIPE_BUFSZ) {
+        if (flags & LENSOROS_SYSCALL_WRITE_FLAG_NOBLOCK)
+            return -2;
+
         // Support "wait if full".
         auto* process = Scheduler::CurrentProcess->value();
         // std::print("[PIPE]: write()  Pipe full, blocking process {}  pipeEnd={} pipeBuffer={}\n", process->ProcessID, (void*)pipe, (void*)pipe->Buffer);
         pipe->Buffer->PIDsWaitingOnReadToWrite.push_back(process->ProcessID);
-        return -2;
+        process->State = Process::SLEEPING;
+        Scheduler::yield();
     }
 
     memcpy(pipe->Buffer->Data + pipe->Buffer->Offset, buffer, byteCount);

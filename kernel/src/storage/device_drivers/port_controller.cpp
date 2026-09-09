@@ -109,7 +109,7 @@ bool PortController::read_low_level(u64 sector, u64 sectors) {
     return true;
 }
 
-ssz PortController::read(FileMetadata*, usz byteOffset, usz byteCount, void* buffer) {
+ssz PortController::read(FileMetadata*, usz byteOffset, usz byteCount, void* buffer, usz flags) {
     return read_raw(byteOffset, byteCount, buffer);
 }
 
@@ -299,7 +299,7 @@ ssz PortController::write_raw(usz byteOffset, usz byteCount, void* buffer) {
     return byteCount;
 }
 
-ssz PortController::write(FileMetadata*, usz byteOffset, usz byteCount, void* buffer) {
+ssz PortController::write(FileMetadata*, usz byteOffset, usz byteCount, void* buffer, usz flags) {
     DBGMSG("[AHCI]: write()  offset={}  size={}  buffer={}\n", byteOffset, byteCount, buffer);
     return write_raw(byteOffset, byteCount, buffer);
 }

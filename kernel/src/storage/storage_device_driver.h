@@ -20,11 +20,11 @@
 #ifndef LENSOR_OS_STORAGE_DEVICE_DRIVER_H
 #define LENSOR_OS_STORAGE_DEVICE_DRIVER_H
 
-#include <string_view>
-#include <memory>
-
 #include <integers.h>
 #include <pure_virtuals.h>
+
+#include <memory>
+#include <string_view>
 
 struct FileMetadata;
 
@@ -33,9 +33,9 @@ struct StorageDeviceDriver {
     virtual void close(FileMetadata* file) = 0;
     virtual auto open(std::string_view path) -> std::shared_ptr<FileMetadata> = 0;
     [[gnu::nonnull(2)]]
-    virtual ssz read(FileMetadata* file, usz offs, usz bytes, void* buffer) = 0;
+    virtual ssz read(FileMetadata* file, usz offs, usz bytes, void* buffer, usz flags) = 0;
     virtual ssz read_raw(usz offs, usz bytes, void* buffer) = 0;
-    virtual ssz write(FileMetadata* file, usz offs, usz bytes, void* buffer) = 0;
+    virtual ssz write(FileMetadata* file, usz offs, usz bytes, void* buffer, usz flags) = 0;
 };
 
 /// Helper function to convert a Driver to a StorageDeviceDriver.

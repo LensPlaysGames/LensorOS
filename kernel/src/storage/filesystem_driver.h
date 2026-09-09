@@ -28,8 +28,8 @@
 struct DirectoryEntry;
 
 struct FilesystemDriver : StorageDeviceDriver {
-    virtual ssz read(FileMetadata* file, usz offs, usz size, void* buffer) = 0;
-    virtual ssz write(FileMetadata* file, usz offset, usz size, void* buffer) = 0;
+    virtual ssz read(FileMetadata* file, usz offs, usz size, void* buffer, usz flags) = 0;
+    virtual ssz write(FileMetadata* file, usz offset, usz size, void* buffer, usz flags) = 0;
     virtual ssz flush(FileMetadata* file) = 0;
 
     virtual ssz directory_data(std::string_view path, usz max_entry_count, DirectoryEntry* out) = 0;

@@ -75,7 +75,7 @@ void SocketDriver::close(FileMetadata* meta) {
     delete data;
 }
 
-ssz SocketDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
+ssz SocketDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer, usz flags) {
     if (!meta) return -1;
     SocketData* data = (SocketData*)meta->driver_data();
     if (!data) return -1;
@@ -85,9 +85,17 @@ ssz SocketDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
             if (!buffers) return -1;
             switch (data->ClientServer) {
                 case SocketData::CLIENT:
-                    return buffers->TXBuffer.read(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
+                    return buffers->TXBuffer.read(
+                        Scheduler::CurrentProcess->value()->ProcessID,
+                        byteCount,
+                        (u8*)buffer,
+                        flags);
                 case SocketData::SERVER:
-                    return buffers->RXBuffer.read(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
+                    return buffers->RXBuffer.read(
+                        Scheduler::CurrentProcess->value()->ProcessID,
+                        byteCount,
+                        (u8*)buffer,
+                        flags);
             }
             UNREACHABLE();
         }
@@ -95,7 +103,7 @@ ssz SocketDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer) {
     UNREACHABLE();
 }
 
-ssz SocketDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
+ssz SocketDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer, usz flags) {
     if (!meta) return -1;
     SocketData* data = (SocketData*)meta->driver_data();
     if (!data) return -1;
@@ -105,9 +113,17 @@ ssz SocketDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer) {
             if (!buffers) return -1;
             switch (data->ClientServer) {
                 case SocketData::CLIENT:
-                    return buffers->RXBuffer.write(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
+                    return buffers->RXBuffer.write(
+                        Scheduler::CurrentProcess->value()->ProcessID,
+                        byteCount,
+                        (u8*)buffer,
+                        flags);
                 case SocketData::SERVER:
-                    return buffers->TXBuffer.write(Scheduler::CurrentProcess->value()->ProcessID, byteCount, (u8*)buffer);
+                    return buffers->TXBuffer.write(
+                        Scheduler::CurrentProcess->value()->ProcessID,
+                        byteCount,
+                        (u8*)buffer,
+                        flags);
             }
             UNREACHABLE();
         }

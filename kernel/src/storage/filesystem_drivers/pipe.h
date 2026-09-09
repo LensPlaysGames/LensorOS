@@ -103,9 +103,9 @@ struct PipeDriver final : FilesystemDriver {
     void close(FileMetadata* meta) final;
     auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
 
-    ssz read(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
+    ssz read(FileMetadata* meta, usz, usz byteCount, void* buffer, usz flags) final;
     ssz read_raw(usz, usz, void*) final { return -1; };
-    ssz write(FileMetadata* meta, usz, usz byteCount, void* buffer) final;
+    ssz write(FileMetadata* meta, usz, usz byteCount, void* buffer, usz flags) final;
     ssz flush(FileMetadata* file) final { return -1; };
 
     ssz directory_data(std::string_view path, usz max_entry_count, DirectoryEntry* out) final {

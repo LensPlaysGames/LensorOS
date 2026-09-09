@@ -37,15 +37,15 @@ struct GPTPartitionDriver final : StorageDeviceDriver {
     void close(FileMetadata* file) final { Driver->close(file); }
     auto open(std::string_view name) -> std::shared_ptr<FileMetadata> final { return Driver->open(name); }
 
-    ssz read(FileMetadata* file, usz offs, usz byteCount, void* buffer) final {
-        return Driver->read(file, offs + Offset, byteCount, buffer);
+    ssz read(FileMetadata* file, usz offs, usz byteCount, void* buffer, usz flags) final {
+        return Driver->read(file, offs + Offset, byteCount, buffer, flags);
     }
     ssz read_raw(usz offs, usz byteCount, void* buffer) final {
         return Driver->read_raw(offs + Offset, byteCount, buffer);
     }
 
-    ssz write(FileMetadata* file, usz offs, usz byteCount, void* buffer) final {
-        return Driver->write(file, offs + Offset, byteCount, buffer);
+    ssz write(FileMetadata* file, usz offs, usz byteCount, void* buffer, usz flags) final {
+        return Driver->write(file, offs + Offset, byteCount, buffer, flags);
     }
 
     GUID type_guid() { return Type; }

@@ -177,7 +177,7 @@ class FileAllocationTableDriver final : public FilesystemDriver {
     auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
     void close(FileMetadata* file) final { Device->close(file); }
 
-    ssz read(FileMetadata* file, usz offs, usz size, void* buffer) final {
+    ssz read(FileMetadata* file, usz offs, usz size, void* buffer, usz flags) final {
         return Device->read_raw(usz(file->driver_data()) + offs, size, buffer);
     }
 
@@ -185,12 +185,12 @@ class FileAllocationTableDriver final : public FilesystemDriver {
         return Device->read_raw(offs, bytes, buffer);
     }
 
-    ssz write(FileMetadata* file, usz offset, usz size, void* buffer) final {
+    ssz write(FileMetadata* file, usz offset, usz size, void* buffer, usz flags) final {
         // TODO: Fail? if this would increase file size. I feel like we
         // don't want to write past the end of the file, just in case
         // there is stuff there, right? So we will have to figure out
         // how to make a file bigger in FAT.
-        return Device->write(file, usz(file->driver_data()) + offset, size, buffer);
+        return Device->write(file, usz(file->driver_data()) + offset, size, buffer, flags);
     }
 
     ssz flush(FileMetadata* file) final { return -1; };

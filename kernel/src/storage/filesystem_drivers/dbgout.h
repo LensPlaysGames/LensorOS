@@ -29,7 +29,7 @@ struct DbgOutDriver final : FilesystemDriver {
     ssz read_raw(usz offs, usz bytes, void* buffer) final {
         return -1;
     };
-    ssz read(FileMetadata* file, usz offset, usz size, void* buffer) final {
+    ssz read(FileMetadata* file, usz offset, usz size, void* buffer, usz flags) final {
         return -1;
     }
     ssz flush(FileMetadata* file) final {
@@ -42,7 +42,7 @@ struct DbgOutDriver final : FilesystemDriver {
         return;
     };
 
-    ssz write(FileMetadata* file, usz offset, usz size, void* buffer) final {
+    ssz write(FileMetadata* file, usz offset, usz size, void* buffer, usz flags) final {
         // NOTE: offset is ignored (no offset into dbgout)
         dbgmsg_buf(reinterpret_cast<u8*>(buffer), size);
         return ssz(size);

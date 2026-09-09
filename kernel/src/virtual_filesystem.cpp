@@ -199,7 +199,12 @@ ssz VFS::read(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset, usz flags) {
     DBGMSG("  file offset:     {}\n", meta->offset);
     DBGMSG("  file size:       {}\n", meta->file_size());
 
-    return meta->filesystem_driver()->read(meta, byteOffset + meta->offset, byteCount, buffer);
+    return meta->filesystem_driver()->read(
+        meta.get(),
+        byteOffset + meta->offset,
+        byteCount,
+        buffer,
+        flags);
 }
 
 ssz VFS::write(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset, usz flags) {
@@ -237,7 +242,12 @@ ssz VFS::write(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset, usz flags) 
            );
     */
 
-    return meta->filesystem_driver()->write(meta, byteOffset + meta->offset, byteCount, buffer);
+    return meta->filesystem_driver()->write(
+        meta.get(),
+        byteOffset + meta->offset,
+        byteCount,
+        buffer,
+        flags);
 }
 
 void VFS::print_debug() {

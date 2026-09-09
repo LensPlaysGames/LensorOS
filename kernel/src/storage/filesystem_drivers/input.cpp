@@ -61,7 +61,7 @@ std::shared_ptr<FileMetadata> InputDriver::open(std::string_view path) {
     return f;
 }
 
-ssz InputDriver::read(FileMetadata* file, usz, usz bytes, void* buffer) {
+ssz InputDriver::read(FileMetadata* file, usz, usz bytes, void* buffer, usz flags) {
     if (!file) return -1;
 
     auto* input = static_cast<InputBuffer*>(file->driver_data());
@@ -69,10 +69,14 @@ ssz InputDriver::read(FileMetadata* file, usz, usz bytes, void* buffer) {
 
     // Block until there is something to read.
     if (input->Offset == 0) {
+        if (flags & LENSOROS_SYSCALL_READ_FLAG_NOBLOCK)
+            return -2;
+
         auto* process = Scheduler::CurrentProcess->value();
         DBGMSG("[INPUT]:  read()  Blocking process {}  buffer at {} has no data\n", process->ProcessID, (void*)input);
         input->PIDsWaiting.push_back(process->ProcessID);
-        return -2;
+        process->State = Process::SLEEPING;
+        Scheduler::yield();
     }
 
     // TODO: Read in a loop to fill buffers larger than what is currently written.
@@ -96,7 +100,7 @@ ssz InputDriver::read(FileMetadata* file, usz, usz bytes, void* buffer) {
     return ssz(bytes);
 }
 
-ssz InputDriver::write(FileMetadata* file, usz, usz bytes, void* buffer) {
+ssz InputDriver::write(FileMetadata* file, usz, usz bytes, void* buffer, usz flags) {
     if (!file) return -1;
     auto* input = static_cast<InputBuffer*>(file->driver_data());
     if (!input) return -1;

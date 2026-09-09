@@ -248,7 +248,7 @@ void HandleDirectInput(char input) {
         auto sysfd = init->FileDescriptors[fd];
         auto f = SYSTEM->virtual_filesystem().file(*sysfd);
         if (f)
-            f->filesystem_driver()->write(f.get(), 0, sizeof(char), &input);
+            f->filesystem_driver()->write(f.get(), 0, sizeof(char), &input, 0);
 
         return;
     }
