@@ -34,7 +34,9 @@ __END_DECLS__
 
 namespace std {
 enum class align_val_t : size_t {};
-}
+struct nothrow_t {};
+extern const nothrow_t nothrow;
+}  // namespace std
 
 [[nodiscard]] void* operator new(size_t size);
 [[nodiscard]] void* operator new[](size_t size);
@@ -52,5 +54,11 @@ void operator delete[](void* ptr, std::align_val_t align);
 /// Placement new.
 [[nodiscard]] void* operator new(size_t, void* ptr) noexcept;
 [[nodiscard]] void* operator new[](size_t, void* ptr) noexcept;
+
+/// Nothrow new.
+[[nodiscard]] void* operator new(size_t size, std::nothrow_t tag);
+[[nodiscard]] void* operator new[](size_t size, std::nothrow_t tag);
+[[nodiscard]] void* operator new(size_t size, std::align_val_t align, std::nothrow_t tag);
+[[nodiscard]] void* operator new[](size_t size, std::align_val_t align, std::nothrow_t tag);
 
 #endif  // _LENSOR_OS_NEW

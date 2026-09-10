@@ -505,8 +505,26 @@ void __free_impl(void* ptr, const char* file, int line) {
 
 __END_DECLS__
 
+namespace std {
+const std::nothrow_t nothrow;
+}
+
+// new
 [[nodiscard]] void* operator new(size_t size) { return malloc(size); }
 [[nodiscard]] void* operator new[](size_t size) { return malloc(size); }
+
+// nothrow new
+[[nodiscard]] void* operator new(size_t size, std::nothrow_t tag) { return malloc(size); }
+[[nodiscard]] void* operator new[](size_t size, std::nothrow_t tag) { return malloc(size); }
+
+// aligned new
+// TODO: Actually aligned
+[[nodiscard]] void* operator new(size_t size, std::align_val_t align) { return malloc(size); }
+[[nodiscard]] void* operator new[](size_t size, std::align_val_t align) { return malloc(size); }
+[[nodiscard]] void* operator new(size_t size, std::align_val_t align, std::nothrow_t tag) { return malloc(size); }
+[[nodiscard]] void* operator new[](size_t size, std::align_val_t align, std::nothrow_t tag) { return malloc(size); }
+
+// delete
 void operator delete(void* ptr) noexcept { free(ptr); }
 void operator delete[](void* ptr) noexcept { free(ptr); }
 void operator delete(void* ptr, size_t) noexcept { free(ptr); }
