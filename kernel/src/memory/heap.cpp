@@ -118,7 +118,7 @@ void init_heap() {
         // allocator.
         Memory::map(
             (void*)(Memory::KERNEL_HEAP_VIRTUAL_BASE + i),
-            Memory::request_page(),
+            (void*)Memory::TO_FRAME_POINTER(Memory::request_page()),
             (u64)Memory::PageTableFlag::Present
                 | (u64)Memory::PageTableFlag::ReadWrite);
     }
@@ -157,14 +157,14 @@ void expand_heap(u64 numBytes) {
         memset(addr, 0, PAGE_SIZE);
         Scheduler::map_pages_in_all_processes(
             (void*)((u64)sHeapEnd + i),
-            addr,
+            (void*)Memory::TO_FRAME_POINTER(addr),
             (u64)Memory::PageTableFlag::Present
                 | (u64)Memory::PageTableFlag::ReadWrite,
             1);
         Memory::map(
             Memory::active_page_map(),
             (void*)((u64)sHeapEnd + i),
-            addr,
+            (void*)Memory::TO_FRAME_POINTER(addr),
             (u64)Memory::PageTableFlag::Present
                 | (u64)Memory::PageTableFlag::ReadWrite,
             Memory::ShowDebug::No);
