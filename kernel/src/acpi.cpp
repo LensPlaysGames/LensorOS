@@ -109,7 +109,7 @@ void* find_table(SDTHeader* header, const char* signature) {
         print_sdt(sdt);
 #endif /* DEBUG_ACPI */
         // Find matching signature.
-        if (strcmp((char*)Memory::FROM_FRAME_POINTER(sdt->Signature), signature, 4)) {
+        if (strcmp((char*)sdt->Signature, signature, 4)) {
             if (int rc = checksum(sdt, sdt->Length)) {
                 std::print(
                     "[ACPI]: \033[31mERROR::\033[0m Invalid checksum on '{}' table: {}\n\n",
