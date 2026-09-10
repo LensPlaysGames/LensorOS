@@ -17,42 +17,41 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <gpt.h>
-
 #include <ahci.h>
 #include <debug.h>
+#include <gpt.h>
 
 // Uncomment the following directive for extra debug information output.
-//#define DEBUG_GPT
+// #define DEBUG_GPT
 
 #ifdef DEBUG_GPT
-#   define DBGMSG(...) std::print(__VA_ARGS__)
+#define DBGMSG(...) std::print(__VA_ARGS__)
 #else
-#   define DBGMSG(...)
+#define DBGMSG(...)
 #endif
 
 namespace GPT {
-    constexpr const char* HEADER_SIGNATURE = "EFI PART";
-    bool is_gpt_present(StorageDeviceDriver* driver) {
-        if (driver == nullptr) {
-            std::print("[GPT]: GPT can not be present on driver that is nullptr!\n");
-            return false;
-        }
-        DBGMSG("[GPT]: Checking for valid GPT\n");
-        Header hdr;
-        driver->read_raw(512, sizeof hdr, (u8*)&hdr);
-        // Validate GPT Header
-        if (hdr.Revision == 0) {
-            DBGMSG("  ERROR: Revision is not zero\n");
-            return false;
-        }
-        for (u8 i = 0; i < 8; ++i) {
-            if (hdr.Signature[i] != HEADER_SIGNATURE[i]) {
-                DBGMSG("  ERROR: Signature doesn't match\n");
-                return false;
-            }
-        }
-        DBGMSG("  Valid GPT\n");
-        return true;
+constexpr const char* HEADER_SIGNATURE = "EFI PART";
+bool is_gpt_present(StorageDeviceDriver* driver) {
+    if (driver == nullptr) {
+        std::print("[GPT]: GPT can not be present on driver that is nullptr!\n");
+        return false;
     }
+    DBGMSG("[GPT]: Checking for valid GPT\n");
+    Header hdr;
+    driver->read_raw(512, sizeof hdr, (u8*)&hdr);
+    // Validate GPT Header
+    if (hdr.Revision == 0) {
+        DBGMSG("  ERROR: Revision is not zero\n");
+        return false;
+    }
+    for (u8 i = 0; i < 8; ++i) {
+        if (hdr.Signature[i] != HEADER_SIGNATURE[i]) {
+            DBGMSG("  ERROR: Signature doesn't match\n");
+            return false;
+        }
+    }
+    DBGMSG("  Valid GPT\n");
+    return true;
 }
+}  // namespace GPT

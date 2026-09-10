@@ -73,25 +73,25 @@ Status Register `D`:
 #define CENTURY_REGISTER 0x00
 
 struct RTCData {
-    u8  second  { 0 };
-    u8  minute  { 0 };
-    u8  hour    { 0 };
-    u8  weekday { 0 };
-    u8  date    { 0 };
-    u8  month   { 0 };
-    u32 year    { 0 };
-    u8  century { 0 };
+    u8 second{0};
+    u8 minute{0};
+    u8 hour{0};
+    u8 weekday{0};
+    u8 date{0};
+    u8 month{0};
+    u32 year{0};
+    u8 century{0};
 
     RTCData() {}
 
-    void operator = (const RTCData& other) {
-        second  = other.second;
-        minute  = other.minute;
-        hour    = other.hour;
+    void operator=(const RTCData& other) {
+        second = other.second;
+        minute = other.minute;
+        hour = other.hour;
         weekday = other.weekday;
-        date    = other.date;
-        month   = other.month;
-        year    = other.year;
+        date = other.date;
+        month = other.month;
+        year = other.year;
         century = other.century;
     }
 };
@@ -104,9 +104,9 @@ struct RTCData {
 #define RTC_PERIODIC_HERTZ (32768 >> (RTC_PERIODIC_RATE - 1))
 
 class RTC {
-public:
+   public:
     RTCData Time;
-    usz Ticks { 0 };
+    usz Ticks{0};
 
     RTC() {
         update_data();
@@ -132,7 +132,8 @@ public:
 
     void update_data();
     void set_periodic_int_enabled(bool);
-private:
+
+   private:
     void get_rtc_data(RTCData&);
 };
 

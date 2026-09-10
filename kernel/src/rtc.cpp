@@ -27,13 +27,13 @@ void RTC::set_periodic_int_enabled(bool enabled) {
 }
 
 void RTC::get_rtc_data(RTCData& data) {
-    data.second  = read_register(0x00);
-    data.minute  = read_register(0x02);
-    data.hour    = read_register(0x04);
+    data.second = read_register(0x00);
+    data.minute = read_register(0x02);
+    data.hour = read_register(0x04);
     data.weekday = read_register(0x06);
-    data.date    = read_register(0x07);
-    data.month   = read_register(0x08);
-    data.year    = read_register(0x09);
+    data.date = read_register(0x07);
+    data.month = read_register(0x08);
+    data.year = read_register(0x09);
     if (CENTURY_REGISTER != 0)
         data.century = read_register(0x32);
 }
@@ -55,30 +55,29 @@ void RTC::update_data() {
         // Wait for update to read again.
         while (is_rtc_updating() != 0);
         get_rtc_data(Time);
-    }
-    while (newTime.second     != Time.second
-           || newTime.minute  != Time.minute
-           || newTime.hour    != Time.hour
-           || newTime.weekday != Time.weekday
-           || newTime.date    != Time.date
-           || newTime.month   != Time.month
-           || newTime.year    != Time.year
-           || newTime.century != Time.century);
+    } while (newTime.second != Time.second
+             || newTime.minute != Time.minute
+             || newTime.hour != Time.hour
+             || newTime.weekday != Time.weekday
+             || newTime.date != Time.date
+             || newTime.month != Time.month
+             || newTime.year != Time.year
+             || newTime.century != Time.century);
 
     u8 statusB = read_register(0x0b);
 
     // BCD -> BINARY
     if (!(statusB & 0b00000100)) {
         Time.second = (Time.second & 0x0f)
-            + ((Time.second / 16)
-               * 10);
+                      + ((Time.second / 16)
+                         * 10);
         Time.minute = (Time.minute & 0x0f)
-            + ((Time.minute / 16)
-               * 10);
+                      + ((Time.minute / 16)
+                         * 10);
         Time.hour = ((Time.hour & 0x0f)
-                      + (((Time.hour & 0x70) / 16)
-                      * 10))
-                      | (Time.hour & 0x80);
+                     + (((Time.hour & 0x70) / 16)
+                        * 10))
+                    | (Time.hour & 0x80);
         Time.weekday = (Time.weekday & 0x0f) + ((Time.weekday / 16) * 10);
         Time.date = (Time.date & 0x0f) + ((Time.date / 16) * 10);
         Time.month = (Time.month & 0x0f) + ((Time.month / 16) * 10);

@@ -20,8 +20,9 @@
 #ifndef LENSOR_OS_UART_H
 #define LENSOR_OS_UART_H
 
-#include <io.h>
 #include <integers.h>
+#include <io.h>
+
 #include <string>
 
 #define BAUD_FREQ 115200
@@ -107,7 +108,7 @@
  *      2: Stop Bits
  *        0 = 1,  1 = 1.5/2 (depends on data bits)
  *      3-5: Parity
- *        0 0 0 = NONE, 0 0 1 = ODD, 0 1 1 = EVEN, 1 0 1 = MARK, 1 1 1 = SPACE  
+ *        0 0 0 = NONE, 0 0 1 = ODD, 0 1 1 = EVEN, 1 0 1 = MARK, 1 1 1 = SPACE
  * 4: Modem Control
  *      Bit 0: Data Terminal Ready
  *          1: Request to Send
@@ -143,29 +144,29 @@
 
 // TODO: Add capability for selecting communication channel (COM1, COM2, etc).
 namespace UART {
-    void initialize();
-    bool initialized();
-    
-    enum class Chip;
-    const char* get_uart_chip_name(Chip);
+void initialize();
+bool initialized();
 
-    // Called from the UART interrupt handler when data is received.
-    u8 read();
+enum class Chip;
+const char* get_uart_chip_name(Chip);
 
-    // Write a singular byte verbatim to serial output.
-    void out(u8);
-    inline void outc(char c) {
-        out((u8)c);
-    }
+// Called from the UART interrupt handler when data is received.
+u8 read();
 
-    // Write a c-style null-terminated string to serial output.
-    void out(std::string_view str);
-    // Write a number of bytes from a given buffer to serial output.
-    void out(const u8* buffer, u64 numberOfBytes);
-    // Write the given number as a string to serial output.
-    void out(u64);
-    void out(u32);
-    void out(u16);
+// Write a singular byte verbatim to serial output.
+void out(u8);
+inline void outc(char c) {
+    out((u8)c);
 }
+
+// Write a c-style null-terminated string to serial output.
+void out(std::string_view str);
+// Write a number of bytes from a given buffer to serial output.
+void out(const u8* buffer, u64 numberOfBytes);
+// Write the given number as a string to serial output.
+void out(u64);
+void out(u32);
+void out(u16);
+}  // namespace UART
 
 #endif

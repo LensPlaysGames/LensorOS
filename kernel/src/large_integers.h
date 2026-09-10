@@ -45,7 +45,6 @@ struct uint512_t {
 } __attribute__((packed));
 using u512 = uint512_t;
 
-
 /// 128 BYTES
 struct uint1024_t {
     u512 a;
@@ -88,7 +87,6 @@ struct uint262144_t {
     u65536 d;
 } __attribute__((packed));
 using u262144 = uint262144_t;
-
 
 /// 131072 BYTES
 struct uint1048576_t {

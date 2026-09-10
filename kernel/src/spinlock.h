@@ -26,22 +26,22 @@
 class Spinlock {
     friend class SpinlockLocker;
 
-public:
+   public:
     Spinlock() : locked(false) {}
     bool get() { return locked; }
 
-private:
-    volatile bool locked { false };
+   private:
+    volatile bool locked{false};
 };
 
 class SpinlockLocker {
-public:
+   public:
     explicit SpinlockLocker(Spinlock&);
     ~SpinlockLocker();
 
     void unlock();
 
-private:
+   private:
     Spinlock& Lock;
 
     inline void lock();

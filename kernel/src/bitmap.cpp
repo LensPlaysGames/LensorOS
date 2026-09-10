@@ -22,8 +22,8 @@
 #include <memory.h>
 
 Bitmap::Bitmap(u64 size, u8* bufferAddress)
-    : Size(size), Buffer(bufferAddress)
-{
+    : Size(size)
+    , Buffer(bufferAddress) {
     memset(Buffer, 0, Size);
 }
 

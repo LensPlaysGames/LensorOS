@@ -18,41 +18,40 @@
  */
 
 #include <ahci.h>
-#include <format>
 #include <integers.h>
 
+#include <format>
+
 // Uncomment the following directive for extra debug information output.
-//#define DEBUG_AHCI
+// #define DEBUG_AHCI
 
 #ifdef DEBUG_AHCI
-#   define DBGMSG(...) std::print(__VA_ARGS__)
+#define DBGMSG(...) std::print(__VA_ARGS__)
 #else
-#   define DBGMSG(...) void()
+#define DBGMSG(...) void()
 #endif
 
 namespace AHCI {
-    const char* port_type_strings[5] = {
-        "None",
-        "SATA",
-        "SEMB",
-        "PM",
-        "SATAPI"
-    };
-    const char* port_type_string(PortType p) {
-        return port_type_strings[p];
-    }
+const char* port_type_strings[5] = {
+    "None",
+    "SATA",
+    "SEMB",
+    "PM",
+    "SATAPI"};
+const char* port_type_string(PortType p) {
+    return port_type_strings[p];
+}
 
-    PortType get_port_type(HBAPort* port) {
-        u32 sataStatus = port->SataStatus;
-        u8 interfacePowerManagement = (sataStatus >> 8) & 0b111;
-        u8 deviceDetection = sataStatus & 0b111;
-        if (deviceDetection != HBA_PORT_DEVICE_PRESENT
-            || interfacePowerManagement != HBA_PORT_IPM_ACTIVE)
-        {
-            // Device is not present or active.
-            return PortType::None;
-        }
-        switch (port->signature) {
+PortType get_port_type(HBAPort* port) {
+    u32 sataStatus = port->SataStatus;
+    u8 interfacePowerManagement = (sataStatus >> 8) & 0b111;
+    u8 deviceDetection = sataStatus & 0b111;
+    if (deviceDetection != HBA_PORT_DEVICE_PRESENT
+        || interfacePowerManagement != HBA_PORT_IPM_ACTIVE) {
+        // Device is not present or active.
+        return PortType::None;
+    }
+    switch (port->signature) {
         case SATA_SIG_ATAPI:
             return PortType::SATAPI;
         case SATA_SIG_ATA:
@@ -63,7 +62,7 @@ namespace AHCI {
             return PortType::PM;
         default:
             return PortType::None;
-        }
     }
-
 }
+
+}  // namespace AHCI

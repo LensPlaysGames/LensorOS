@@ -18,12 +18,13 @@
  */
 
 #include <basic_renderer.h>
-#include <format>
 #include <integers.h>
 #include <math.h>
 #include <memory/common.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
+
+#include <format>
 
 // Define global renderer for use anywhere within the kernel.
 BasicRenderer gRend;
@@ -41,15 +42,16 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
     Memory::lock_pages(render->BaseAddress, fbPages);
     // Map active framebuffer physical address to virtual addresses 1:1.
     for (u64 t = fbBase; t < fbBase + fbSize; t += PAGE_SIZE) {
-        Memory::map((void*)t, (void*)t
-                    , (u64)Memory::PageTableFlag::Present
-                    | (u64)Memory::PageTableFlag::ReadWrite
-                    );
+        Memory::map(
+            (void*)t,
+            (void*)t,
+            (u64)Memory::PageTableFlag::Present
+                | (u64)Memory::PageTableFlag::ReadWrite);
     }
-    std::print("  Active GOP framebuffer mapped to {:#016x} thru {:#016x}\n"
-               , fbBase
-               , fbBase + fbSize
-               );
+    std::print(
+        "  Active GOP framebuffer mapped to {:#016x} thru {:#016x}\n",
+        fbBase,
+        fbBase + fbSize);
     // Create a new framebuffer. This memory is what will be drawn to.
     // When the screen should be updated, this new framebuffer is copied
     // into the active one. This helps performance as the active framebuffer
@@ -65,28 +67,28 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
         Target = Render;
     }
     else {
-        std::print("  Deferred GOP framebuffer allocated at {} thru {:#016x}\n"
-                   , target.BaseAddress
-                   , (u64)target.BaseAddress + fbSize
-                   );
+        std::print(
+            "  Deferred GOP framebuffer allocated at {} thru {:#016x}\n",
+            target.BaseAddress,
+            (u64)target.BaseAddress + fbSize);
         // If memory allocation succeeds, map memory somewhere
         // out of the way in the virtual address range.
         // FIXME: Don't hard code this address.
         constexpr u64 virtualTargetBaseAddress = 0xffffff8000000000;
         u64 physicalTargetBaseAddress = (u64)target.BaseAddress;
         for (u64 t = 0; t < fbSize; t += PAGE_SIZE) {
-            Memory::map((void*)(virtualTargetBaseAddress + t)
-                        , (void*)(physicalTargetBaseAddress + t)
-                        , (u64)Memory::PageTableFlag::Present
-                        | (u64)Memory::PageTableFlag::ReadWrite
-                        );
+            Memory::map(
+                (void*)(virtualTargetBaseAddress + t),
+                (void*)(physicalTargetBaseAddress + t),
+                (u64)Memory::PageTableFlag::Present
+                    | (u64)Memory::PageTableFlag::ReadWrite);
         }
         target.BaseAddress = (void*)virtualTargetBaseAddress;
         Target = &target;
-        std::print("  Deferred GOP framebuffer mapped to {:#016x} thru {:#016x}\n"
-               , virtualTargetBaseAddress
-               , virtualTargetBaseAddress + fbSize
-               );
+        std::print(
+            "  Deferred GOP framebuffer mapped to {:#016x} thru {:#016x}\n",
+            virtualTargetBaseAddress,
+            virtualTargetBaseAddress + fbSize);
     }
     clear();
     swap();
@@ -131,30 +133,26 @@ void BasicRenderer::swap(Vector2<u64> position, Vector2<u64> size) {
 void BasicRenderer::cret(Vector2<u64>& position) {
     position = {
         0,
-        position.y
-    };
+        position.y};
 }
 /// Newline ('\n') or LineFeed (LF)
 void BasicRenderer::newl(Vector2<u64>& position) {
     position = {
         position.x,
-        position.y + Font->PSF1_Header->CharacterSize
-    };
+        position.y + Font->PSF1_Header->CharacterSize};
 }
 /// Carriage return line feed; CRLF ('\r' + '\n')
 void BasicRenderer::crlf(Vector2<u64>& position) {
     position = {
         0,
-        position.y + Font->PSF1_Header->CharacterSize
-    };
+        position.y + Font->PSF1_Header->CharacterSize};
 }
 
 /// Carriage return, offset by given argument value pixels, then newline.
 void BasicRenderer::crlf(Vector2<u64>& position, u32 offset) {
     position = {
         offset,
-        position.y + Font->PSF1_Header->CharacterSize
-    };
+        position.y + Font->PSF1_Header->CharacterSize};
 }
 
 void BasicRenderer::drawrect(Vector2<u64>& position, Vector2<u64> size, u32 color) {
@@ -234,7 +232,8 @@ void BasicRenderer::drawbmp(Vector2<u64>& position, Vector2<u64> size, const u8*
             s32 byte = ((x - position.x) + ((y - position.y) * initX)) / 8;
             if ((bitmap[byte] & (0b10000000 >> ((x - position.x) % 8))) > 0)
                 *(u32*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = color;
-            else *(u32*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = BackgroundColor;
+            else
+                *(u32*)(pixel_ptr + x + (y * Target->PixelsPerScanLine)) = BackgroundColor;
         }
     }
 }
@@ -247,8 +246,12 @@ void BasicRenderer::drawbmpover(Vector2<u64>& position, Vector2<u64> size, const
     u32 initX = size.x;
     u32 diffX = Target->PixelWidth - position.x;
     u32 diffY = Target->PixelHeight - position.y;
-    if (diffX < size.x) { size.x = diffX; }
-    if (diffY < size.y) { size.y = diffY; }
+    if (diffX < size.x) {
+        size.x = diffX;
+    }
+    if (diffY < size.y) {
+        size.y = diffY;
+    }
     u32* pixel_ptr = (u32*)Target->BaseAddress;
     for (u64 y = position.y; y < position.y + size.y; y++) {
         for (u64 x = position.x; x < position.x + size.x; x++) {
@@ -262,20 +265,22 @@ void BasicRenderer::drawbmpover(Vector2<u64>& position, Vector2<u64> size, const
 /// Draw a character at `position` using the renderer's bitmap font.
 void BasicRenderer::drawchar(Vector2<u64>& position, char c, u32 color) {
     // Draw character.
-    drawbmp(position,
-            {8, Font->PSF1_Header->CharacterSize},
-            (u8*)Font->GlyphBuffer + (c * Font->PSF1_Header->CharacterSize),
-            color);
+    drawbmp(
+        position,
+        {8, Font->PSF1_Header->CharacterSize},
+        (u8*)Font->GlyphBuffer + (c * Font->PSF1_Header->CharacterSize),
+        color);
 }
 
 /// Draw a character at `position` using the renderer's bitmap font,
 /// without clearing what's behind the character.
 void BasicRenderer::drawcharover(Vector2<u64>& position, char c, u32 color) {
     // Draw character.
-    drawbmpover(position,
-                {8, Font->PSF1_Header->CharacterSize},
-                (u8*)Font->GlyphBuffer + (c * Font->PSF1_Header->CharacterSize),
-                color);
+    drawbmpover(
+        position,
+        {8, Font->PSF1_Header->CharacterSize},
+        (u8*)Font->GlyphBuffer + (c * Font->PSF1_Header->CharacterSize),
+        color);
 }
 
 /// Draw a character using the renderer's bitmap font, then increment `DrawPos`
@@ -297,7 +302,9 @@ void BasicRenderer::putchar(Vector2<u64>& position, char c, u32 color) {
 void BasicRenderer::clear(Vector2<u64> position, Vector2<u64> size) {
     // Only clear what is within the bounds of the framebuffer.
     if (position.x > Target->PixelWidth
-        || position.y > Target->PixelHeight) { return; }
+        || position.y > Target->PixelHeight) {
+        return;
+    }
     // Ensure size doesn't over-run edge of framebuffer.
     u64 diffX = Target->PixelWidth - position.x;
     u64 diffY = Target->PixelHeight - position.y;
@@ -306,9 +313,10 @@ void BasicRenderer::clear(Vector2<u64> position, Vector2<u64> size) {
     if (diffY < size.y)
         size.y = diffY;
     // Calculate addresses.
-    u32* renderBaseAddress = (u32*)((u64)Render->BaseAddress
-                                    + (BytesPerPixel * position.x)
-                                    + (BytesPerPixel * position.y * Render->PixelsPerScanLine));
+    u32* renderBaseAddress
+        = (u32*)((u64)Render->BaseAddress
+                 + (BytesPerPixel * position.x)
+                 + (BytesPerPixel * position.y * Render->PixelsPerScanLine));
     // Copy rectangle line-by-line.
     for (u64 y = 0; y < size.y; ++y) {
         for (u64 x = 0; x < size.x; ++x) {
@@ -330,14 +338,19 @@ void BasicRenderer::clearchar(Vector2<u64>& position) {
         position.x = Target->PixelWidth;
         if (position.y >= Font->PSF1_Header->CharacterSize)
             position.y -= Font->PSF1_Header->CharacterSize;
-        else position = {8, 0};
+        else
+            position = {8, 0};
     }
     position.x -= 8;
-    drawrect(position, {8, Font->PSF1_Header->CharacterSize}, BackgroundColor);
+    drawrect(
+        position,
+        {8, Font->PSF1_Header->CharacterSize},
+        BackgroundColor);
 }
 
 /// Put a string of characters `str` (null terminated) to the screen
 /// with color `color` at `position`.
 void BasicRenderer::puts(Vector2<u64>& position, std::string_view str, u32 color) {
-    for (char c : str) { putchar(position, c, color); }
+    for (char c : str)
+        putchar(position, c, color);
 }

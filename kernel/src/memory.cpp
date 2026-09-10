@@ -17,10 +17,9 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <memory.h>
-
 #include <integers.h>
 #include <large_integers.h>
+#include <memory.h>
 
 extern "C" int memcmp(const void* aPtr, const void* bPtr, size_t numBytes) {
     if (aPtr == bPtr)
@@ -40,17 +39,17 @@ extern "C" int memcmp(const void* aPtr, const void* bPtr, size_t numBytes) {
 extern "C" void* memcpy(void* __restrict__ dest, const void* __restrict__ src, size_t numBytes) {
     void* result = dest;
 
-    asm volatile (
-        "shrq $3, %%rcx\n\t"          // Divide byte count by 8 to get QWORD count
-        "rep movsq\n\t"               // Copy 8-byte blocks. Modifies RDI and RSI.
+    asm volatile(
+        "shrq $3, %%rcx\n\t"  // Divide byte count by 8 to get QWORD count
+        "rep movsq\n\t"       // Copy 8-byte blocks. Modifies RDI and RSI.
 
-        "movq %[numBytes], %%rcx\n\t" // Reload original byte count
-        "andq $7, %%rcx\n\t"          // Extract trailing bytes (numBytes % 8)
-        "rep movsb\n\t"               // Copy remaining bytes. Modifies RDI and RSI.
+        "movq %[numBytes], %%rcx\n\t"  // Reload original byte count
+        "andq $7, %%rcx\n\t"           // Extract trailing bytes (numBytes % 8)
+        "rep movsb\n\t"                // Copy remaining bytes. Modifies RDI and RSI.
 
-        : "+D"(dest), "+S"(src)       // Tells compiler RDI and RSI are modified in-place
-        : "c"(numBytes), [numBytes]"r"(numBytes) // Pass size into RCX ("c") and another GPR
-        : "memory"                    // Memory barrier to protect cache sequencing
+        : "+D"(dest), "+S"(src)                    // Tells compiler RDI and RSI are modified in-place
+        : "c"(numBytes), [numBytes] "r"(numBytes)  // Pass size into RCX ("c") and another GPR
+        : "memory"                                 // Memory barrier to protect cache sequencing
     );
 
     return result;
@@ -81,7 +80,6 @@ extern "C" void* memmove(void* dst, const void* src, size_t num) {
         return memcpy(dst, src, num);
     else
         for (usz i = num; i; --i)
-            ((u8*)dst)[i-1] = ((u8*)src)[i-1];
+            ((u8*)dst)[i - 1] = ((u8*)src)[i - 1];
     return dst;
 }
-

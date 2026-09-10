@@ -41,35 +41,39 @@ class FileSystem;
  */
 
 class Inode {
-public:
+   public:
     Inode(FileSystem& fs, u64 i)
         : Filesystem(fs)
         , Index(i) {}
 
     FileSystem& get_filesystem() { return Filesystem; }
-    u64 get_index()              { return Index;      }
+    u64 get_index() { return Index; }
 
     /// Get a child inode from this directory inode by a given null-terminated relative path.
     /// To be implemented by each file system's custom Inode class.
     /// This will allow even non inode-based filesystems to work with the VFS.
-    virtual Inode* lookup(char* path) { (void)path; return nullptr; };
-private:
+    virtual Inode* lookup(char* path) {
+        (void)path;
+        return nullptr;
+    };
+
+   private:
     /// Identifiers
     FileSystem& Filesystem;
-    u8* Path { nullptr };
-    u64 Index        { 0 };
+    u8* Path{nullptr};
+    u64 Index{0};
     /// Metadata
-    u64 SizeInBytes  { 0 };
-    u64 Mode         { 0 }; // File attributes.
-    u64 UserID       { 0 }; // ID of User that owns this inode.
-    u64 GroupID      { 0 }; // ID of Group that owns this inode.
-    u64 LinkCount    { 0 }; // Number of hard-links to this inode.
-    s64 AccessedTime { 0 };
-    s64 ChangedTime  { 0 };
-    s64 ModifiedTime { 0 };
-    s64 DeletionTime { 0 };
-    u64 BlockSize    { 0 }; // Block size for Filesystem I/O.
-    u64 BlockCount   { 0 }; // Number of 512-byte blocks.
+    u64 SizeInBytes{0};
+    u64 Mode{0};       // File attributes.
+    u64 UserID{0};     // ID of User that owns this inode.
+    u64 GroupID{0};    // ID of Group that owns this inode.
+    u64 LinkCount{0};  // Number of hard-links to this inode.
+    s64 AccessedTime{0};
+    s64 ChangedTime{0};
+    s64 ModifiedTime{0};
+    s64 DeletionTime{0};
+    u64 BlockSize{0};   // Block size for Filesystem I/O.
+    u64 BlockCount{0};  // Number of 512-byte blocks.
 };
 
 #endif

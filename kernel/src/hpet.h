@@ -38,13 +38,13 @@
 #define HPET_MAX_COMPARATORS 32
 
 #define HPET_REG_GENERAL_CAPABILITIES_AND_ID 0x000
-#define HPET_MAIN_COUNTER_PERIOD             0x004
-#define HPET_REG_GENERAL_CONFIGURATION       0x010
-#define HPET_REG_GENERAL_INTERRUPT_STATUS    0x020
-#define HPET_REG_MAIN_COUNTER_VALUE          0x0f0
+#define HPET_MAIN_COUNTER_PERIOD 0x004
+#define HPET_REG_GENERAL_CONFIGURATION 0x010
+#define HPET_REG_GENERAL_INTERRUPT_STATUS 0x020
+#define HPET_REG_MAIN_COUNTER_VALUE 0x0f0
 #define HPET_REG_TIMER_N_CONFIG_AND_CAPABILITIES(n) (0x100 + 0x20 * n)
-#define HPET_REG_TIMER_N_COMPARATOR_VALUE(n)        (0x108 + 0x20 * n)
-#define HPET_REG_TIMER_N_FSB_INTERRUPT_ROUTE(n)     (0x110 + 0x20 * n)
+#define HPET_REG_TIMER_N_COMPARATOR_VALUE(n) (0x108 + 0x20 * n)
+#define HPET_REG_TIMER_N_FSB_INTERRUPT_ROUTE(n) (0x110 + 0x20 * n)
 
 /* HPET Registers
  * General Capabilities and ID (read-only):
@@ -65,7 +65,7 @@
  *            If set, software can clear it by writing a 1 to this bit. Writes of 0 have no effect.
  *          If edge-triggered, ignored (must be zero).
  *       32-63: Reserved
- * 
+ *
  * Main Counter Value (read-write):
  *   Do not write to this register unless main counter is disabled.
  *   Bits 0-63: Value of main counter.
@@ -98,14 +98,14 @@ struct Comparator {
         , PeriodicCapable(periodicCapable) {}
 
     /* 64-bit Comparator Width */
-    bool LargeCounterSupport { false };
+    bool LargeCounterSupport{false};
     /* Capable of providing a regular, repeating interrupt. */
-    bool PeriodicCapable { false };
+    bool PeriodicCapable{false};
 };
 
 // High Precision Event Timer
 class HPET {
-public:
+   public:
     HPET() {};
 
     bool initialize();
@@ -118,7 +118,7 @@ public:
     /* Get the amount of seconds passed based on main counter.
      * NOTE: This is inaccurate as counter is paused/started often.
      */
-    //double seconds();
+    // double seconds();
 
     /// Disable counting, set the main counter to the given value, then enable counting.
     void set_main_counter(u64 value);
@@ -127,17 +127,17 @@ public:
     /// Print the current state of this HPET (address, freq, etc) to serial out.
     void print_state();
 
-private:
+   private:
     Spinlock Lock;
-    ACPI::HPETHeader* Header { nullptr };
-    bool Initialized { false };
-    bool LargeCounterSupport { false };
-    bool LegacyInterruptSupport { false };
-    u32 Period    { 0 };
-    u64 Frequency { 0 };
+    ACPI::HPETHeader* Header{nullptr};
+    bool Initialized{false};
+    bool LargeCounterSupport{false};
+    bool LegacyInterruptSupport{false};
+    u32 Period{0};
+    u64 Frequency{0};
     /* Number of comparators implemented; can vary from 3-32. */
-    u8 NumberOfComparators { 0 };
-    Comparator Comparators[HPET_MAX_COMPARATORS] {};
+    u8 NumberOfComparators{0};
+    Comparator Comparators[HPET_MAX_COMPARATORS]{};
     /* NOTE: Registers may only be read from/written to at 32-byte boundaries.
      *   To extract a single byte, the caller must do it manually (mask & shift).
      */

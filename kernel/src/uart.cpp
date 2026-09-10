@@ -17,15 +17,15 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <format>
-
 #include <cstr.h>
 #include <io.h>
 #include <panic.h>
 #include <uart.h>
 
+#include <format>
+
 namespace UART {
-bool Initialized { false };
+bool Initialized{false};
 bool initialized() {
     return Initialized;
 };
@@ -37,7 +37,7 @@ enum class Chip {
     _16550,
     _16550A,
     _16750,
-} chip { Chip::NONE };
+} chip{Chip::NONE};
 
 namespace {
 void out_raw(u8 byte) {
@@ -55,24 +55,24 @@ void out_raw(u8 byte) {
 
     out8(COM1, byte);
 }
-}
+}  // namespace
 
 const char* get_uart_chip_name(Chip ch) {
     switch (ch) {
-    case Chip::NONE:
-        return "Invalid UART chip";
-    case Chip::_8250:
-        return "8250";
-    case Chip::_16450:
-        return "16450";
-    case Chip::_16550:
-        return "16550";
-    case Chip::_16550A:
-        return "16550A";
-    case Chip::_16750:
-        return "16750";
-    default:
-        return "Unrecognized UART chip";
+        case Chip::NONE:
+            return "Invalid UART chip";
+        case Chip::_8250:
+            return "8250";
+        case Chip::_16450:
+            return "16450";
+        case Chip::_16550:
+            return "16550";
+        case Chip::_16550A:
+            return "16550A";
+        case Chip::_16750:
+            return "16750";
+        default:
+            return "Unrecognized UART chip";
     }
 }
 
@@ -93,9 +93,11 @@ void initialize() {
         if (fifo_test & (1 << 7)) {
             if (fifo_test & (1 << 5))
                 chip = Chip::_16750;
-            else chip = Chip::_16550A;
+            else
+                chip = Chip::_16550A;
         }
-        else chip = Chip::_16550;
+        else
+            chip = Chip::_16550;
     }
     else {
         u8 test_byte = 0x2a;
@@ -103,7 +105,8 @@ void initialize() {
         u8 scratch_returned = in8(SCRATCH_PORT(COM1));
         if (scratch_returned == test_byte)
             chip = Chip::_16450;
-        else chip = Chip::_8250;
+        else
+            chip = Chip::_8250;
     }
 
 #ifndef VBOX
@@ -112,8 +115,8 @@ void initialize() {
     u8 test_byte = 0xae;
     out8(COM1, test_byte);
     if (in8(COM1) != test_byte) {
-       Initialized = false;
-       return;
+        Initialized = false;
+        return;
     }
 #endif
 
@@ -164,9 +167,9 @@ void out(u8 byte) {
     if (byte == '\0') {
         out_raw('\\');
         out_raw('0');
-        //out_raw('N');
-        //out_raw('U');
-        //out_raw('L');
+        // out_raw('N');
+        // out_raw('U');
+        // out_raw('L');
     }
     if (byte == '\n') out_raw('\r');
     out_raw(byte);
@@ -183,7 +186,9 @@ void out(std::string_view str) {
 #ifdef LENSOR_OS_UART_HIDE_COLOR_CODES
         if (*c == '\033') {
             // Loop until null terminator or 'm'.
-            do { c++; } while (*c != 'm' && *c != '\0');
+            do {
+                c++;
+            } while (*c != 'm' && *c != '\0');
             // Don't read memory past null terminator!
             if (*c == '\0')
                 return;
@@ -241,4 +246,4 @@ void out(u32 number) {
 void out(u16 number) {
     out(std::to_string(number));
 }
-}
+}  // namespace UART

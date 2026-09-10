@@ -22,7 +22,7 @@
 
 #include <string>
 
-void append_codepoint_as_utf8(std::string &appendee, u32 codepoint);
+void append_codepoint_as_utf8(std::string& appendee, u32 codepoint);
 
 // utf16 -> utf8
 // Fairly lax, will ignore most invalid utf16 in a best effort approach.

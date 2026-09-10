@@ -1,8 +1,7 @@
-#include <format>
-
+#include <cstr.h>
 #include <random_lfsr.h>
 
-#include <cstr.h>
+#include <format>
 
 LFSR gRandomLFSR;
 
@@ -22,10 +21,12 @@ void LFSR::print_shift_register() {
 void LFSR::next() {
     // left-most bit = new bit to shift into register.
     u8 newbit = ((get_bit_value(0) ^ (get_bit_value(1))
-                  ^ (get_bit_value(2)) ^ (get_bit_value(7))) & 1) << 7;
-    
+                  ^ (get_bit_value(2)) ^ (get_bit_value(7)))
+                 & 1)
+                << 7;
+
     // Shift each byte within shift register
-    u8 lastCarry { 0 };
+    u8 lastCarry{0};
     for (u8 j = 128 / 8 - 1; j < 128 / 8; --j) {
         // left-most bit = bit that will be shifted out.
         u8 carry = (ShiftRegister[j] & 1) << 7;
@@ -49,8 +50,8 @@ u8 LFSR::get_bit_value(u8 index) {
 }
 
 u64 LFSR::get() {
-    u64 result { 0 };
-    for(u8 i = 0; i < 64; ++i) {
+    u64 result{0};
+    for (u8 i = 0; i < 64; ++i) {
         if (get_bit(0))
             result |= 1;
 

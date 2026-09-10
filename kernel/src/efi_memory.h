@@ -33,10 +33,10 @@ struct EFI_MEMORY_DESCRIPTOR {
 };
 
 namespace Memory {
-    extern const char* EFI_MEMORY_TYPE_STRINGS[];
+extern const char* EFI_MEMORY_TYPE_STRINGS[];
 
-    void print_efi_memory_map(EFI_MEMORY_DESCRIPTOR* map, u64 mapSize, u64 entrySize);
-    void print_efi_memory_map_summed(EFI_MEMORY_DESCRIPTOR* map, u64 mapSize, u64 entrySize);
-}
+void print_efi_memory_map(EFI_MEMORY_DESCRIPTOR* map, u64 mapSize, u64 entrySize);
+void print_efi_memory_map_summed(EFI_MEMORY_DESCRIPTOR* map, u64 mapSize, u64 entrySize);
+}  // namespace Memory
 
 #endif

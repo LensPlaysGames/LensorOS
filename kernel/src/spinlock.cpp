@@ -34,11 +34,12 @@ bool SpinlockLocker::compare_and_swap_lock() {
      *    `- "a"  -- The 'A' register; lock flag will be set only if it matches this value  -- "%2"
      */
     bool ret;
-    asm volatile("lock cmpxchg %2, %1\n"
-                 "sete %0\n"
-                 : "=q" (ret), "=m" (Lock.locked)
-                 : "r" (true), "m" (Lock.locked), "a" (false)
-                 : "memory");
+    asm volatile(
+        "lock cmpxchg %2, %1\n"
+        "sete %0\n"
+        : "=q"(ret), "=m"(Lock.locked)
+        : "r"(true), "m"(Lock.locked), "a"(false)
+        : "memory");
     return ret;
 }
 
@@ -63,13 +64,12 @@ bool SpinlockLocker::test_and_set_lock() {
      *    `- "r"  -- Any register; new lock flag value
      */
     bool old_value;
-    asm volatile ("lock xchg %0, %1" : "=a" (old_value) : "m" (Lock.locked), "r" (true));
+    asm volatile("lock xchg %0, %1" : "=a"(old_value) : "m"(Lock.locked), "r"(true));
     return old_value;
 }
 
 SpinlockLocker::SpinlockLocker(Spinlock& l)
-    : Lock(l)
-{
+    : Lock(l) {
     lock();
 }
 

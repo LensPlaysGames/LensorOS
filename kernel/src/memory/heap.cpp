@@ -114,15 +114,13 @@ void init_heap() {
     u64 numBytes = HEAP_INITIAL_PAGES * PAGE_SIZE;
     // NOTE: We don't use map_pages here because we request a new page for each one mapped.
     for (u64 i = 0; i < HEAP_INITIAL_PAGES * PAGE_SIZE; i += PAGE_SIZE) {
-        // Map virtual heap position to physical memory address returned by page frame allocator.
-        // FIXME: Should this be global?
+        // Map virtual heap position to physical memory address returned by frame
+        // allocator.
         Memory::map(
             (void*)(Memory::KERNEL_HEAP_VIRTUAL_BASE + i),
             Memory::request_page(),
             (u64)Memory::PageTableFlag::Present
-                | (u64)Memory::PageTableFlag::ReadWrite
-            //| (u64)Memory::PageTableFlag::Global
-        );
+                | (u64)Memory::PageTableFlag::ReadWrite);
     }
     sHeapStart = (void*)Memory::KERNEL_HEAP_VIRTUAL_BASE;
     sHeapEnd = (void*)((u64)sHeapStart + numBytes);

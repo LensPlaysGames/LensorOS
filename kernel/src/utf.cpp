@@ -19,7 +19,7 @@
 
 #include <utf.h>
 
-void append_codepoint_as_utf8(std::string &appendee, u32 codepoint) {
+void append_codepoint_as_utf8(std::string& appendee, u32 codepoint) {
     if (codepoint <= 0x7f) {
         appendee += (char)(codepoint);
         return;
@@ -60,7 +60,8 @@ auto utf16_to_utf8(std::string_view utf16) -> std::string {
         // numerically equivalent to a codepoint.
         if (code_unit <= 0xd7ff or code_unit > 0xe000) {
             append_codepoint_as_utf8(out, code_unit);
-        } else {
+        }
+        else {
             // From U+D800 to U+DFFF is a part of a surrogate pair encoding U+100000 to U+10FFFF
             u16 high_surrogate = code_unit;
             u16 high_surrogate_translated = (high_surrogate - 0xd800) << 10;

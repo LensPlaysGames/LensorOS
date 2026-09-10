@@ -23,6 +23,7 @@
 #include <integers.h>
 #include <math.h>
 #include <memory.h>
+
 #include <string>
 
 struct PSF1_HEADER {
@@ -56,12 +57,12 @@ struct Framebuffer {
 constexpr u32 BytesPerPixel = 4;
 
 class BasicRenderer {
-public:
+   public:
     // Target = framebuffer to draw to in memory
-    Framebuffer* Render          {nullptr};
-    Framebuffer* Target          {nullptr};
-    PSF1_FONT*   Font            {nullptr};
-    u32 BackgroundColor {0x00000000};
+    Framebuffer* Render{nullptr};
+    Framebuffer* Target{nullptr};
+    PSF1_FONT* Font{nullptr};
+    u32 BackgroundColor{0x00000000};
 
     BasicRenderer() {}
     BasicRenderer(Framebuffer* render, PSF1_FONT* f);

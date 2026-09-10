@@ -17,17 +17,16 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-
 #include <basic_renderer.h>
 #include <cstr.h>
-#include <format>
 #include <interrupts/interrupts.h>
 #include <panic.h>
 
-Vector2<u64> PanicLocation = { PanicStartX, PanicStartY };
+#include <format>
 
-__attribute__((no_caller_saved_registers))
-void panic(const char* message) {
+Vector2<u64> PanicLocation = {PanicStartX, PanicStartY};
+
+__attribute__((no_caller_saved_registers)) void panic(const char* message) {
     std::print("\n\033[1;37;41mLensorOS PANIC\033[0m\n  {}\n", message);
     gRend.BackgroundColor = 0xffff0000;
     gRend.puts(PanicLocation, "LensorOS PANIC MODE");
@@ -39,13 +38,13 @@ void panic(const char* message) {
     gRend.swap({PanicStartX, PanicStartY}, {80000, 80000});
 }
 
-__attribute__((no_caller_saved_registers))
-void panic(InterruptFrame* frame, const char* panicMessage) {
+__attribute__((no_caller_saved_registers)) void panic(InterruptFrame* frame, const char* panicMessage) {
     panic(panicMessage);
-    std::print("  Instruction Address: {:#016x}\n"
-               "  Stack Pointer: {:#016x}\n"
-               , u64(frame->ip)
-               , u64(frame->sp));
+    std::print(
+        "  Instruction Address: {:#016x}\n"
+        "  Stack Pointer: {:#016x}\n",
+        u64(frame->ip),
+        u64(frame->sp));
     gRend.puts(PanicLocation, std::format("Instruction Address: {:#016x}", u64(frame->ip)), 0x00000000);
     gRend.crlf(PanicLocation, PanicStartX);
     gRend.puts(PanicLocation, std::format("Stack Pointer: {:#016x}", u64(frame->sp)), 0x00000000);
@@ -54,15 +53,15 @@ void panic(InterruptFrame* frame, const char* panicMessage) {
     gRend.swap({PanicStartX, PanicStartY}, {80000, 80000});
 }
 
-__attribute__((no_caller_saved_registers))
-void panic(InterruptFrameError* frame, const char* panicMessage) {
+__attribute__((no_caller_saved_registers)) void panic(InterruptFrameError* frame, const char* panicMessage) {
     panic(panicMessage);
-    std::print("  Error Code: {:#016x}\n"
-               "  Instruction Address: {:#016x}\n"
-               "  Stack Pointer: {:#016x}\n"
-               , u64(frame->error)
-               , u64(frame->ip)
-               , u64(frame->sp));
+    std::print(
+        "  Error Code: {:#016x}\n"
+        "  Instruction Address: {:#016x}\n"
+        "  Stack Pointer: {:#016x}\n",
+        u64(frame->error),
+        u64(frame->ip),
+        u64(frame->sp));
     gRend.puts(PanicLocation, std::format("Error Code: {:#016x}", u64(frame->error)), 0x00000000);
     gRend.crlf(PanicLocation, PanicStartX);
     gRend.puts(PanicLocation, std::format("Instruction Address: {:#016x}", u64(frame->ip)), 0x00000000);
@@ -75,5 +74,5 @@ void panic(InterruptFrameError* frame, const char* panicMessage) {
 
 void hang() {
     while (true)
-        asm volatile ("hlt");
+        asm volatile("hlt");
 }

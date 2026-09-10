@@ -26,4 +26,4 @@ typedef __builtin_va_list va_list;
 #define va_arg(ap,type)     __builtin_va_arg(ap,type)
 #define va_copy(dest, src)  __builtin_va_copy(dest,src)
 
-#endif/* LENSOR_OS_VA_LIST_H */
+#endif /* LENSOR_OS_VA_LIST_H */

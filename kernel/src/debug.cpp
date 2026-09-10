@@ -18,9 +18,10 @@
  */
 
 #include <debug.h>
-#include <format>
 #include <integers.h>
 #include <uart.h>
+
+#include <format>
 
 void dbgmsg_buf(const u8* buffer, u64 byteCount) {
     UART::out(buffer, byteCount);

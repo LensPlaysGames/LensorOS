@@ -109,12 +109,12 @@ class E1000 {
         volatile u16 Special;
     } __attribute__((packed));
 
-    PCI::PCIHeader0* PCIHeader { nullptr };
+    PCI::PCIHeader0* PCIHeader{nullptr};
 
-    uint RXDescCount { 0 };
-    volatile RXDesc* RXDescPhysical { nullptr };
-    uint TXDescCount { 0 };
-    volatile TXDesc* TXDescPhysical { nullptr };
+    uint RXDescCount{0};
+    volatile RXDesc* RXDescPhysical{nullptr};
+    uint TXDescCount{0};
+    volatile TXDesc* TXDescPhysical{nullptr};
 
     /// Tagged union
     PCI::BarType BARType;
@@ -159,17 +159,17 @@ class E1000 {
     /// every index that is incremented past until the hardware head
     /// index is reached, that transmit descriptor will be deleted.
     /// This will occur every time we get a TX queue empty interrupt.
-    uint RXHead {0};
+    uint RXHead{0};
 
     /// The known "head" index of the transmit descriptor ring buffer.
     /// This number will trail behind the hardware head index; for
     /// every index that is incremented past until the hardware head
     /// index is reached, that transmit descriptor will be deleted.
     /// This will occur every time we get a TX queue empty interrupt.
-    uint TXHead {0};
+    uint TXHead{0};
 
-public:
-    u8 MACAddress[6] {0};
+   public:
+    u8 MACAddress[6]{0};
 
     E1000() {}
     E1000(PCI::PCIHeader0* header);

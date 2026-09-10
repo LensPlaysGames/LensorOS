@@ -21,8 +21,9 @@
 #define LENSOR_OS_DEBUG_H
 
 #include <integers.h>
-#include <string>
 #include <va_list.h>
+
+#include <string>
 
 enum class ShouldNewline {
     Yes = 0,

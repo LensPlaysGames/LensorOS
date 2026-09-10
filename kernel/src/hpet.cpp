@@ -18,10 +18,11 @@
  */
 
 #include <hpet.h>
-#include <format>
 #include <integers.h>
 #include <memory.h>
 #include <memory/virtual_memory_manager.h>
+
+#include <format>
 
 HPET gHPET;
 
@@ -62,9 +63,12 @@ bool HPET::initialize() {
     }
 
     if (Header->Address.AddressSpaceID == 0) {
-        Memory::map((void*)Header->Address.Address, (void*)Header->Address.Address,
-                    (u64) Memory::PageTableFlag::Present | (u64) Memory::PageTableFlag::ReadWrite);
-    } else {
+        Memory::map(
+            (void*)Header->Address.Address,
+            (void*)Header->Address.Address,
+            (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
+    }
+    else {
         hpet_init_failed("Invalid Address Space ID");
         return false;
     }
@@ -104,8 +108,7 @@ bool HPET::initialize() {
      */
     NumberOfComparators = (Header->ID & 0b11111) + 1;
     if (NumberOfComparators < HPET_MIN_COMPARATORS
-        || NumberOfComparators > HPET_MAX_COMPARATORS)
-    {
+        || NumberOfComparators > HPET_MAX_COMPARATORS) {
         std::print("  Number of Comparators: {}\n", NumberOfComparators);
         hpet_init_failed("Number of comparators is invalid.");
         return false;
@@ -138,7 +141,6 @@ void HPET::start_main_counter() {
     writel(HPET_REG_GENERAL_CONFIGURATION, config);
 }
 
-
 void HPET::stop_main_counter() {
     if (Initialized == false)
         return;
@@ -155,11 +157,11 @@ u64 HPET::get() {
 
     stop_main_counter();
     SpinlockLocker locker(Lock);
-    u64 result { 0 };
+    u64 result{0};
     if (LargeCounterSupport) {
-        u32 low  { 0 };
+        u32 low{0};
         u32 high = readl(HPET_REG_MAIN_COUNTER_VALUE + 4);
-        for(;;) {
+        for (;;) {
             low = readl(HPET_REG_MAIN_COUNTER_VALUE);
             u32 newHigh = readl(HPET_REG_MAIN_COUNTER_VALUE + 4);
             if (newHigh == high)
@@ -168,18 +170,19 @@ u64 HPET::get() {
         }
         result = ((u64)high << 32) | low;
     }
-    else result = readl(HPET_REG_MAIN_COUNTER_VALUE);
+    else
+        result = readl(HPET_REG_MAIN_COUNTER_VALUE);
     locker.unlock();
     start_main_counter();
     return result;
 }
 
-//double HPET::seconds() {
-//    if (Initialized == false)
-//        return 0;
+// double HPET::seconds() {
+//     if (Initialized == false)
+//         return 0;
 //
-//    return static_cast<double>(get()) / Frequency;
-//}
+//     return static_cast<double>(get()) / Frequency;
+// }
 
 void HPET::set_main_counter(u64 value) {
     if (Initialized == false)
@@ -206,33 +209,34 @@ void HPET::print_state() {
     if (Initialized == false)
         return;
 
-    std::print("[HPET]: \033[32mInitialized\033[0m\n"
-              "  Revision ID: {:08b}\n"
-              "  ID: {:#x}\n"
-              "  PCI Vendor ID: {:#x}\n"
-              "  Main Counter Enabled: {}\n"
-              "  Supports 64-bit Main Counter: {}\n"
-              "  Supports Legacy Interrupt Mapping: {}\n"
-              "  Base Address: {:#016x}\n"
-              "  Address Space ID: {:#x}\n"
-              "  Sequence Number: {}\n"
-              "  Minimum Tick: {}\n"
-              "  Period: {}\n"
-              "  Frequency: {}\n"
-              "  Number of Comparators: {}\n"
-              "  Page Protection: {:08b}\n"
-              , Header->RevisionID
-              , Header->ID
-              , u16(Header->PCIvendorID)
-              , bool(readl(HPET_REG_GENERAL_CONFIGURATION) & 1)
-              , LargeCounterSupport
-              , LegacyInterruptSupport
-              , u64(Header->Address.Address)
-              , Header->Address.AddressSpaceID
-              , Header->Number
-              , u16(Header->MinimumTick)
-              , Period
-              , Frequency
-              , NumberOfComparators
-              , Header->PageProtection);
+    std::print(
+        "[HPET]: \033[32mInitialized\033[0m\n"
+        "  Revision ID: {:08b}\n"
+        "  ID: {:#x}\n"
+        "  PCI Vendor ID: {:#x}\n"
+        "  Main Counter Enabled: {}\n"
+        "  Supports 64-bit Main Counter: {}\n"
+        "  Supports Legacy Interrupt Mapping: {}\n"
+        "  Base Address: {:#016x}\n"
+        "  Address Space ID: {:#x}\n"
+        "  Sequence Number: {}\n"
+        "  Minimum Tick: {}\n"
+        "  Period: {}\n"
+        "  Frequency: {}\n"
+        "  Number of Comparators: {}\n"
+        "  Page Protection: {:08b}\n",
+        Header->RevisionID,
+        Header->ID,
+        u16(Header->PCIvendorID),
+        bool(readl(HPET_REG_GENERAL_CONFIGURATION) & 1),
+        LargeCounterSupport,
+        LegacyInterruptSupport,
+        u64(Header->Address.Address),
+        Header->Address.AddressSpaceID,
+        Header->Number,
+        u16(Header->MinimumTick),
+        Period,
+        Frequency,
+        NumberOfComparators,
+        Header->PageProtection);
 }

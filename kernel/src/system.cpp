@@ -19,4 +19,4 @@
 
 #include <system.h>
 
-System* SYSTEM { nullptr };
+System* SYSTEM{nullptr};

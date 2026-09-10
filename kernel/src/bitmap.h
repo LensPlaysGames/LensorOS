@@ -21,9 +21,10 @@
 #define LENSOR_OS_BITMAP_H
 
 #include <integers.h>
+#include <memory/common.h>
 
 class Bitmap {
-public:
+   public:
     Bitmap() {}
 
     Bitmap(u64 size, u8* bufferAddress);
@@ -35,9 +36,9 @@ public:
     bool get(u64 index);
     bool set(u64 index, bool value);
 
-    bool operator [] (u64 index);
+    bool operator[](u64 index);
 
-private:
+   private:
     /* Number of bits within the bitmap. */
     u64 Size;
     /* Buffer to store bitmap within. */

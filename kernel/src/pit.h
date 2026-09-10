@@ -35,8 +35,8 @@
 #define PIT_CH0_DAT 0x40
 #define PIT_CH1_DAT 0x41
 #define PIT_CH2_DAT 0x42
-#define PIT_CMD     0x43
-#define PIT_PCSPK   0x61
+#define PIT_CMD 0x43
+#define PIT_PCSPK 0x61
 /* CMD BYTE BREAKDOWN
  *   0b00000000
  *            =   BCD/Binary (1 = BCD)
@@ -60,7 +60,7 @@
  *     0 1 =      channel 1
  *     1 0 =      channel 2
  *     1 1 =      read-back command (8254 only)
-*/
+ */
 
 /* TODO:
  * |- Lock the PIT when it's being used so
@@ -73,26 +73,26 @@ class PIT {
     //   implemented, especially on modern hardware.
     enum Channel {
         Zero = 0b00000000,
-        Two  = 0b10000000,
+        Two = 0b10000000,
     };
 
     enum Access {
         LatchCount = 0b00000000,
-        LowOnly    = 0b00010000,
-        HighOnly   = 0b00100000,
+        LowOnly = 0b00010000,
+        HighOnly = 0b00100000,
         HighAndLow = 0b00110000,
     };
 
     enum Mode {
-        InterruptOnTerminalCount     = 0b00000000,
+        InterruptOnTerminalCount = 0b00000000,
         HardwareRetriggerableOneShot = 0b00000010,
-        RateGenerator                = 0b00000100,
-        SquareWaveGenerator          = 0b00000110,
-        SoftwareStrobe               = 0b00001000,
-        HardwareStrobe               = 0b00001010,
+        RateGenerator = 0b00000100,
+        SquareWaveGenerator = 0b00000110,
+        SoftwareStrobe = 0b00001000,
+        HardwareStrobe = 0b00001010,
     };
 
-public:
+   public:
     PIT();
 
     void tick() { Ticks = Ticks + 1; }
@@ -112,13 +112,13 @@ public:
     /// Wait for the prepared amount of time.
     void wait();
 
-private:
+   private:
     /// Incremented by IRQ0 interrupt handler.
-    volatile usz Ticks { 0 };
+    volatile usz Ticks{0};
     /* `wait()` stops spinning as soon `Ticks` reaches
      *   offset from `Ticks` at beginning of spinning.
      */
-    usz TicksToWait { 0 };
+    usz TicksToWait{0};
 
     /* Playing sound out of the PC Speaker by
      *   manipulating bits 0 & 1 of IO port 0x61.

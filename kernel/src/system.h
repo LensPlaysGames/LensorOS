@@ -58,14 +58,13 @@ inline constexpr u64 SYSDEV_MAJOR_STORAGE = 1;
 inline constexpr u64 SYSDEV_MAJOR_STORAGE_SEARCH = 0;
 /* STORAGE DEVICE MINOR NUMBERS */
 inline constexpr u64 SYSDEV_MINOR_AHCI_CONTROLLER = 0;
-inline constexpr u64 SYSDEV_MINOR_AHCI_PORT       = 1;
-inline constexpr u64 SYSDEV_MINOR_GPT_PARTITION   = 10;
+inline constexpr u64 SYSDEV_MINOR_AHCI_PORT = 1;
+inline constexpr u64 SYSDEV_MINOR_GPT_PARTITION = 10;
 /* NETWORK DEVICE MAJOR NUMBERS */
 inline constexpr u64 SYSDEV_MAJOR_NETWORK = 2;
 /* NETWORK DEVICE FLAGS */
 /* NETWORK DEVICE MINOR NUMBERS */
 inline constexpr u64 SYSDEV_MINOR_E1000 = 0;
-
 
 struct System;
 
@@ -75,8 +74,8 @@ class SystemDevice {
     /// Default constructor required by std::vector.
     SystemDevice() = default;
     friend std::vector<SystemDevice>;
-public:
 
+   public:
     SystemDevice(u64 major, u64 minor)
         : Major(major), Minor(minor) {}
 
@@ -98,11 +97,11 @@ public:
     u64 minor() { return Minor; }
     auto driver() -> std::shared_ptr<StorageDeviceDriver> { return Driver; }
 
-private:
-    u64 Flags { 0 };
-    u64 Major { 0 };
-    u64 Minor { 0 };
-    std::shared_ptr<StorageDeviceDriver> Driver { nullptr };
+   private:
+    u64 Flags{0};
+    u64 Major{0};
+    u64 Minor{0};
+    std::shared_ptr<StorageDeviceDriver> Driver{nullptr};
 };
 
 struct System {
@@ -126,8 +125,8 @@ struct System {
 
     void add_device(std::shared_ptr<SystemDevice>&& d) { Devices.push_back(std::move(d)); }
 
-    template <typename DeviceType, typename ...Args>
-    void create_device(Args&& ...args) {
+    template <typename DeviceType, typename... Args>
+    void create_device(Args&&... args) {
         Devices.push_back(std::static_pointer_cast<SystemDevice>(std::make_shared<DeviceType>(std::forward<Args>(args)...)));
     }
 
@@ -145,14 +144,15 @@ struct System {
         CPU.print_debug();
         if (!Devices.empty()) {
             std::print("System Devices:\n");
-             for (auto& dev : Devices) {
-                std::print("  {}.{}:\n"
-                           "    Flags: {}"
-                           , dev->major()
-                           , dev->minor()
-                           , dev->flags());
+            for (auto& dev : Devices) {
+                std::print(
+                    "  {}.{}:\n"
+                    "    Flags: {}",
+                    dev->major(),
+                    dev->minor(),
+                    dev->flags());
 
-                if (auto d1 = dev->driver()) std::print("\n    Driver: {}", (void*) d1.get());
+                if (auto d1 = dev->driver()) std::print("\n    Driver: {}", (void*)d1.get());
 
                 std::print("\n");
             }
@@ -161,12 +161,13 @@ struct System {
         if (!VirtualFilesystem.mounts().empty()) {
             std::print("Filesystems:\n");
             for (auto& fs : VirtualFilesystem.mounts()) {
-                std::print("  Filesystem: {}\n"
-                           "    Mount Point: {}\n"
-                           "    Driver: {}\n"
-                           , fs.FS->name()
-                           , fs.Path
-                           , (void*) fs.FS.get());
+                std::print(
+                    "  Filesystem: {}\n"
+                    "    Mount Point: {}\n"
+                    "    Driver: {}\n",
+                    fs.FS->name(),
+                    fs.Path,
+                    (void*)fs.FS.get());
 
                 u8 buffer[8]{};
                 fs.FS->device()->read_raw(0, sizeof buffer, buffer);
@@ -176,7 +177,7 @@ struct System {
         }
     }
 
-private:
+   private:
     CPUDescription CPU;
     VFS VirtualFilesystem;
     Process* InitProcess = nullptr;
