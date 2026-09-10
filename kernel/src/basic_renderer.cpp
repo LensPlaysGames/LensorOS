@@ -31,27 +31,29 @@ BasicRenderer gRend;
 
 Framebuffer target;
 BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
-    : Render(render), Font(f) {
-    // Framebuffer supplied by GOP is in physical memory; map the
-    // physical memory dedicated to the framebuffer into virtual memory.
+    : Render(render)
+    , Font(f) {
+    // Adjust base address from actual physical frame pointer to virtually
+    // mapped offset pointer.
+    render->BaseAddress = (void*)Memory::FROM_FRAME_POINTER(render->BaseAddress);
+
     // Calculate size of framebuffer in pages.
-    u64 fbBase = (u64)render->BaseAddress;
     u64 fbSize = render->BufferSize + PAGE_SIZE;
     u64 fbPages = fbSize / PAGE_SIZE + 1;
+
+    Memory::map_pages(
+        render->BaseAddress,
+        (void*)Memory::TO_FRAME_POINTER(render->BaseAddress),
+        (usz)Memory::PageTableFlag::Present | (usz)Memory::PageTableFlag::ReadWrite,
+        fbPages);
+
     // Allocate physical pages for Render framebuffer.
     Memory::lock_pages(render->BaseAddress, fbPages);
     // Map active framebuffer physical address to virtual addresses 1:1.
-    for (u64 t = fbBase; t < fbBase + fbSize; t += PAGE_SIZE) {
-        Memory::map(
-            (void*)t,
-            (void*)t,
-            (u64)Memory::PageTableFlag::Present
-                | (u64)Memory::PageTableFlag::ReadWrite);
-    }
     std::print(
-        "  Active GOP framebuffer mapped to {:#016x} thru {:#016x}\n",
-        fbBase,
-        fbBase + fbSize);
+        "  Active GOP framebuffer at {:#016x} thru {:#016x}\n",
+        uintptr_t(render->BaseAddress),
+        uintptr_t(render->BaseAddress) + fbSize);
     // Create a new framebuffer. This memory is what will be drawn to.
     // When the screen should be updated, this new framebuffer is copied
     // into the active one. This helps performance as the active framebuffer
@@ -71,24 +73,8 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
             "  Deferred GOP framebuffer allocated at {} thru {:#016x}\n",
             target.BaseAddress,
             (u64)target.BaseAddress + fbSize);
-        // If memory allocation succeeds, map memory somewhere
-        // out of the way in the virtual address range.
-        // FIXME: Don't hard code this address.
-        constexpr u64 virtualTargetBaseAddress = 0xffffff8000000000;
-        u64 physicalTargetBaseAddress = (u64)target.BaseAddress;
-        for (u64 t = 0; t < fbSize; t += PAGE_SIZE) {
-            Memory::map(
-                (void*)(virtualTargetBaseAddress + t),
-                (void*)(physicalTargetBaseAddress + t),
-                (u64)Memory::PageTableFlag::Present
-                    | (u64)Memory::PageTableFlag::ReadWrite);
-        }
-        target.BaseAddress = (void*)virtualTargetBaseAddress;
+
         Target = &target;
-        std::print(
-            "  Deferred GOP framebuffer mapped to {:#016x} thru {:#016x}\n",
-            virtualTargetBaseAddress,
-            virtualTargetBaseAddress + fbSize);
     }
     clear();
     swap();

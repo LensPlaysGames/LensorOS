@@ -533,7 +533,9 @@ void kstage2(BootInfo* bInfo) {
 
     // Create basic framebuffer renderer.
     std::print("[kstage1]: Setting up Graphics Output Protocol Renderer\n");
-    gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
+    gRend = BasicRenderer(
+        (Framebuffer*)Memory::FROM_FRAME_POINTER(bInfo->framebuffer),
+        (PSF1_FONT*)Memory::FROM_FRAME_POINTER(bInfo->font));
     std::print("  {Setup Successful}\n\n", __GREEN);
     draw_boot_gfx();
 
@@ -863,6 +865,7 @@ void kstage1(BootInfo* bInfo) {
     Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     // Setup virtual memory (map entire address space as well as kernel).
     Memory::init_virtual();
+
     // Setup dynamic memory allocation (`new`, `delete`).
     init_heap();
 

@@ -80,7 +80,7 @@ void print_physmem() {
 }
 
 void lock_page(void* address) {
-    u64 index = (u64)address / PAGE_SIZE;
+    u64 index = TO_FRAME_POINTER(address) / PAGE_SIZE;
     // Page already locked.
     if (FrameBitmap.get(index))
         return;
