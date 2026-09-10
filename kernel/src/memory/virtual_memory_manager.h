@@ -57,6 +57,10 @@ void map(
     u64 mappingFlags,
     ShowDebug d = ShowDebug::No);
 
+// When write_direct is false, offset physical addresses by PHYSICAL_BASE.
+// When write_direct is true, write directly to physical addresses
+// (requires identity mapping only present in initial boot stages).
+template <bool write_direct = false>
 void map_large(
     PageTable* pageMapLevelFour,
     void* virtualAddress,

@@ -151,7 +151,7 @@ void* request_page() {
         MaxContiguousFreeFrames);
     for (; FirstFreeFrame < TotalFrameCount; ++FirstFreeFrame) {
         if (FrameBitmap.get(FirstFreeFrame) == false) {
-            void* addr = (void*)(FirstFreeFrame * PAGE_SIZE);
+            void* addr = (void*)(FROM_FRAME_POINTER(FirstFreeFrame * PAGE_SIZE));
             lock_page(addr);
             FirstFreeFrame += 1;  // Eat current page.
             DBGMSG(
@@ -217,7 +217,7 @@ void* request_pages(u64 numberOfPages) {
                 return nullptr;
             }
             if (run >= numberOfPages) {
-                void* out = (void*)(i * PAGE_SIZE);
+                void* out = (void*)(FROM_FRAME_POINTER(i * PAGE_SIZE));
                 lock_pages(out, numberOfPages);
                 DBGMSG(
                     "  Successfully fulfilled memory request: {}\n"
@@ -302,7 +302,7 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
          t < TotalFrameCount * PAGE_SIZE
          && t < InitialPageBitmapMaxAddress;
          t += PAGE_SIZE) {
-        map_large(
+        map_large<true>(
             activePML4,
             (void*)(t + PHYSICAL_BASE),
             (void*)t,

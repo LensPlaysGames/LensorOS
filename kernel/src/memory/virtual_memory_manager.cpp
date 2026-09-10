@@ -195,9 +195,17 @@ void map_pages(void* virtualAddress, void* physicalAddress, u64 mappingFlags, us
     Memory::map_pages(active_page_map(), virtualAddress, physicalAddress, mappingFlags, pageCount, d);
 }
 
+template <bool write_direct>
 void map_large(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddress, u64 mappingFlags, ShowDebug debug) {
     if (pageMapLevelFour == nullptr)
         return;
+
+    if ((uintptr_t(pageMapLevelFour) & PHYSICAL_BASE) == PHYSICAL_BASE) {
+        std::print(
+            "\nVIRTUAL MEMORY MANAGER ERROR: page map pointer {:#016x} is virtual, but it needs to be a physical frame pointer\n",
+            uintptr_t(pageMapLevelFour));
+        hang();
+    }
 
     PageMapIndexer indexer((u64)virtualAddress);
     PageDirectoryEntry PDE;
@@ -231,33 +239,51 @@ void map_large(PageTable* pageMapLevelFour, void* virtualAddress, void* physical
             global);
     }
 
+    if constexpr (not write_direct)
+        pageMapLevelFour = (PageTable*)FROM_FRAME_POINTER(uintptr_t(pageMapLevelFour));
+
     // Page Map Level 4 -> Page Directory Pointer Table Level 3
     PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
     PageTable* PDP;
     if (!PDE.flag(PageTableFlag::Present)) {
         PDP = (PageTable*)request_page();
-        memset(PDP, 0, PAGE_SIZE);
-        PDE.set_address((u64)PDP);
+        PageTable* write_ptr = PDP;
+        if constexpr (write_direct)
+            write_ptr = (PageTable*)TO_FRAME_POINTER(uintptr_t(PDP));
+        // Need to write to TO_FRAME_POINTER here only if write_direct is true
+        memset(write_ptr, 0, PAGE_SIZE);
+        // Need to store TO_FRAME_POINTER version here no matter what
+        PDE.set_address(TO_FRAME_POINTER(uintptr_t(PDP)));
     }
     PDE.or_flag_if(PageTableFlag::Present, present);
     PDE.or_flag_if(PageTableFlag::ReadWrite, write);
     PDE.or_flag_if(PageTableFlag::UserSuper, user);
     pageMapLevelFour->entries[indexer.page_directory_pointer()] = PDE;
     PDP = (PageTable*)PDE.address();
+    if constexpr (not write_direct)
+        PDP = (PageTable*)FROM_FRAME_POINTER(uintptr_t(PDP));
 
     // Page Directory Pointer Table Level 3 -> Page Directory Level 2
     PDE = PDP->entries[indexer.page_directory()];
     PageTable* PD;
     if (!PDE.flag(PageTableFlag::Present)) {
         PD = (PageTable*)request_page();
-        memset(PD, 0, PAGE_SIZE);
-        PDE.set_address((u64)PD);
+
+        PageTable* write_ptr = PD;
+        if constexpr (write_direct)
+            write_ptr = (PageTable*)TO_FRAME_POINTER(uintptr_t(PD));
+
+        memset(write_ptr, 0, PAGE_SIZE);
+
+        PDE.set_address(TO_FRAME_POINTER(uintptr_t(PD)));
     }
     PDE.or_flag_if(PageTableFlag::Present, present);
     PDE.or_flag_if(PageTableFlag::ReadWrite, write);
     PDE.or_flag_if(PageTableFlag::UserSuper, user);
     PDP->entries[indexer.page_directory()] = PDE;
     PD = (PageTable*)PDE.address();
+    if constexpr (not write_direct)
+        PD = (PageTable*)FROM_FRAME_POINTER(uintptr_t(PD));
 
     // Page Directory Level 2 -> Page Directory Entry (large)
     PDE = PD->entries[indexer.page_table()];
@@ -577,7 +603,7 @@ void init_virtual(PageTable* pageMap) {
     // Higher Half Physical Mapping
     // Begins at 0xffff800000000000
     for (u64 t = 0; t < total_ram(); t += PAGE_SIZE_LARGE) {
-        map_large(
+        map_large<true>(
             pageMap,
             (void*)(t + Memory::PHYSICAL_BASE),
             (void*)t,
@@ -586,8 +612,8 @@ void init_virtual(PageTable* pageMap) {
     }
     u64 kPhysicalStart = (u64)&KERNEL_PHYSICAL;
     u64 kernelBytesNeeded = 1 + ((u64)&KERNEL_END - (u64)&KERNEL_START);
-    for (u64 t = kPhysicalStart; t < kPhysicalStart + kernelBytesNeeded + PAGE_SIZE; t += PAGE_SIZE) {
-        map(
+    for (u64 t = kPhysicalStart; t < kPhysicalStart + kernelBytesNeeded; t += PAGE_SIZE_LARGE) {
+        map_large<true>(
             pageMap,
             (void*)(t + (u64)&KERNEL_VIRTUAL),
             (void*)t,
@@ -598,7 +624,9 @@ void init_virtual(PageTable* pageMap) {
 }
 
 void init_virtual() {
-    Memory::PageTable* table = (PageTable*)Memory::request_page();
+    Memory::PageTable* table
+        = (Memory::PageTable*)(((uintptr_t)Memory::request_page())
+                               - PHYSICAL_BASE);
     memset(table, 0, PAGE_SIZE);
     init_virtual(table);
 }
@@ -731,13 +759,18 @@ void print_pde_flags(Memory::PageDirectoryEntry PDE) {
 }  // namespace Memory
 
 extern "C" void flush_page_map(Memory::PageTable* pageMapLevelFour) {
-    if ((((uintptr_t)pageMapLevelFour) & Memory::PHYSICAL_BASE) != Memory::PHYSICAL_BASE)
-        std::print("!WARNING!: The page map address you passed, {:#016x} is not a kernel physical address, i.e. offset from Memory::PHYSICAL_BASE...", (uintptr_t)pageMapLevelFour);
-    pageMapLevelFour = (Memory::PageTable*)(((uintptr_t)pageMapLevelFour)
-                                            - Memory::PHYSICAL_BASE);
+    if ((((uintptr_t)pageMapLevelFour) & Memory::PHYSICAL_BASE) == Memory::PHYSICAL_BASE) {
+        std::print(
+            "!WARNING!: The page map address you passed, {:#016x} is a kernel physical address, i.e. offset from Memory::PHYSICAL_BASE, but CR3 needs a frame pointer...",
+            (uintptr_t)pageMapLevelFour);
+    }
+
+    // Store physical frame pointer.
+    Memory::ActivePageMap = pageMapLevelFour;
+
+    // Actually load CR3 register with physical frame pointer.
     asm volatile("mov %0, %%cr3"
-                 :  // No outputs
+                 : /** No Outputs */
                  : "r"(pageMapLevelFour)
                  : "memory");
-    Memory::ActivePageMap = pageMapLevelFour;
 }

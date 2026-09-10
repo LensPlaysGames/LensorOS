@@ -68,6 +68,13 @@ ENSURE_USER_ADDRESS(USER_MEMORY_REGION_BASE);
 constexpr uintptr_t USER_STACK_BASE = 0x0000733700000000;
 ENSURE_USER_ADDRESS(USER_STACK_BASE);
 
+constexpr inline uintptr_t TO_FRAME_POINTER(uintptr_t p) {
+    return p - PHYSICAL_BASE;
+}
+constexpr inline uintptr_t FROM_FRAME_POINTER(uintptr_t p) {
+    return p + PHYSICAL_BASE;
+}
+
 }  // namespace Memory
 
 #endif /* LENSOR_OS_MEMORY_COMMON_H */
