@@ -47,7 +47,7 @@ PortType get_port_type(HBAPort* port) {
     u8 interfacePowerManagement = (sataStatus >> 8) & 0b111;
     u8 deviceDetection = sataStatus & 0b111;
     if (deviceDetection != HBA_PORT_DEVICE_PRESENT
-        || interfacePowerManagement != HBA_PORT_IPM_ACTIVE) {
+        or interfacePowerManagement != HBA_PORT_IPM_ACTIVE) {
         // Device is not present or active.
         return PortType::None;
     }
