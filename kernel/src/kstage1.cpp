@@ -138,46 +138,22 @@ void probe_system_devices() {
             && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0) {
             std::print("[kstage1]: Probing AHCI Controller\n");
             auto controller = static_cast<Devices::AHCIController*>(dev.get());
-            auto* ABAR = reinterpret_cast<AHCI::HBAMemory*>(u64(controller->Header->BAR5));
-
-            // TODO: Better MMIO!! It should be separate from regular virtual mappings, I think.
-
-            // Okay, this bug just showed me how stupid the current system is.
-            // VIRTUAL MEMORY MANAGER NEEDS ANOTHER LEVEL OF ABSTRACTION TO THE API
-            // I need to add something like `map_sized` that takes in a
-            // page table, virtual address, physical address, size of
-            // thing at those addresses, and then flags... THEN DO ALL THIS
-            // MULTI-PAGE CALCULATION IN THAT FUNCTION. Because having to deal
-            // with this everywhere there *might* be a misaligned
-            // pointer or a large struct is really hard to do correctly.
-
-            void* containing_page = (void*)((usz)ABAR - ((usz)ABAR % PAGE_SIZE));
-            Memory::map(
-                containing_page,
-                containing_page,
-                (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
-
-            // Handle case where ABAR spans two pages, in which case we have to map both.
-            void* next_page = (void*)((usz)containing_page + PAGE_SIZE);
-            if (((usz)ABAR + sizeof(AHCI::HBAMemory)) >= (u64)next_page) {
+            auto* ABAR = reinterpret_cast<AHCI::HBAMemory*>(Memory::FROM_FRAME_POINTER(controller->Header->BAR5));
+            auto offset_in_page = uintptr_t(ABAR) % PAGE_SIZE;
+            auto containing_page = (uintptr_t)ABAR - offset_in_page;
+            for (usz t = 0; t < offset_in_page + sizeof(AHCI::HBAMemory); t += PAGE_SIZE) {
                 Memory::map(
-                    next_page,
-                    next_page,
-                    (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
+                    (void*)(uintptr_t(containing_page) + t),
+                    (void*)(Memory::TO_FRAME_POINTER(containing_page) + t),
+                    (u64)Memory::PageTableFlag::Present
+                        | (u64)Memory::PageTableFlag::ReadWrite
+                        | (u64)Memory::PageTableFlag::CacheDisabled);
             }
-
-            // Handle case where ABAR spans three pages, in which case we have to map a third.
-            next_page = (void*)((usz)next_page + PAGE_SIZE);
-            if (((usz)ABAR + sizeof(AHCI::HBAMemory)) >= (u64)next_page)
-                Memory::map(
-                    next_page,
-                    next_page,
-                    (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
 
             u32 ports = ABAR->PortsImplemented;
             for (uint i = 0; i < 32; ++i) {
                 if (ports & (1u << i)) {
-                    AHCI::HBAPort* port = &ABAR->Ports[i];
+                    auto* port = &ABAR->Ports[i];
                     AHCI::PortType type = get_port_type(port);
                     if (type != AHCI::PortType::None) {
                         SYSTEM->create_device<Devices::AHCIPort>(
