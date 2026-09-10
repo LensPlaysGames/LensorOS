@@ -1,2 +1,3 @@
 target remote localhost:1234
 symbol-file ./boot/LensorOS/kernel.elf
+set remotecache off
