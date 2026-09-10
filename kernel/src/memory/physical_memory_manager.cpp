@@ -313,7 +313,7 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
     // Calculate total number of bytes needed for a physical page
     // bitmap that covers hardware's actual amount of memory present.
     u64 bitmapSize = (TotalFrameCount / 8) + 1;
-    FrameBitmap.init(bitmapSize, (u8*)((u64)largestFreeMemorySegment));
+    FrameBitmap.init(bitmapSize, (u8*)((u64)largestFreeMemorySegment + Memory::PHYSICAL_BASE));
     UsedFrameCount = 0;
     lock_pages(0, TotalFrameCount + 1);
     // With all pages in the bitmap locked, free only the EFI conventional memory segments.
