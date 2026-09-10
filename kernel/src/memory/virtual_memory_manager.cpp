@@ -574,11 +574,8 @@ PageTable* clone_active_page_map() {
 }
 
 void init_virtual(PageTable* pageMap) {
-    /* Map all physical RAM addresses to virtual addresses 1:1,
-     * store them in the PML4. This means that virtual memory
-     * addresses will be equal to physical memory addresses within
-     * the kernel.
-     */
+    // Higher Half Physical Mapping
+    // Begins at 0xffff800000000000
     for (u64 t = 0; t < total_ram(); t += PAGE_SIZE_LARGE) {
         map_large(
             pageMap,
@@ -596,8 +593,6 @@ void init_virtual(PageTable* pageMap) {
             (void*)t,
             (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite);
     }
-    // Make null-dereference generate exception.
-    // unmap(nullptr);
     // Update current page map.
     flush_page_map(pageMap);
 }
@@ -736,6 +731,10 @@ void print_pde_flags(Memory::PageDirectoryEntry PDE) {
 }  // namespace Memory
 
 extern "C" void flush_page_map(Memory::PageTable* pageMapLevelFour) {
+    if ((((uintptr_t)pageMapLevelFour) & Memory::PHYSICAL_BASE) != Memory::PHYSICAL_BASE)
+        std::print("!WARNING!: The page map address you passed, {:#016x} is not a kernel physical address, i.e. offset from Memory::PHYSICAL_BASE...", (uintptr_t)pageMapLevelFour);
+    pageMapLevelFour = (Memory::PageTable*)(((uintptr_t)pageMapLevelFour)
+                                            - Memory::PHYSICAL_BASE);
     asm volatile("mov %0, %%cr3"
                  :  // No outputs
                  : "r"(pageMapLevelFour)
