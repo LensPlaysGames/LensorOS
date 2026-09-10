@@ -39,7 +39,8 @@ size_t operator "" KiB(unsigned long long sz) {
 #define TO_MiB(x) ((u64)(x) >> 20)
 #define TO_GiB(x) ((u64)(x) >> 30)
 
-constexpr usz PAGE_SIZE = 4096;
+constexpr usz PAGE_SIZE = KiB(4);
+constexpr usz PAGE_SIZE_LARGE = MiB(2);
 
 namespace Memory {
 

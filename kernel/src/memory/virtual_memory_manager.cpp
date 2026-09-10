@@ -43,9 +43,6 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
     bool user = mappingFlags & static_cast<u64>(PageTableFlag::UserSuper);
     bool writeThrough = mappingFlags & static_cast<u64>(PageTableFlag::WriteThrough);
     bool cacheDisabled = mappingFlags & static_cast<u64>(PageTableFlag::CacheDisabled);
-    bool accessed = mappingFlags & static_cast<u64>(PageTableFlag::Accessed);
-    bool dirty = mappingFlags & static_cast<u64>(PageTableFlag::Dirty);
-    bool largerPages = mappingFlags & static_cast<u64>(PageTableFlag::LargerPages);
     bool global = mappingFlags & static_cast<u64>(PageTableFlag::Global);
     // bool noExecute     = mappingFlags & static_cast<u64>(PageTableFlag::NX);
 
@@ -58,9 +55,6 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
             "    User-accessible: {}\n"
             "    Write-through:   {}\n"
             "    Cache Disabled:  {}\n"
-            "    Accessed:        {}\n"
-            "    Dirty:           {}\n"
-            "    Larger Pages:    {}\n"
             "    Global:          {}\n"
             "\n",
             virtualAddress,
@@ -71,9 +65,6 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
             user,
             writeThrough,
             cacheDisabled,
-            accessed,
-            dirty,
-            largerPages,
             global);
     }
 
@@ -87,12 +78,6 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
     PDE.or_flag_if(PageTableFlag::Present, present);
     PDE.or_flag_if(PageTableFlag::ReadWrite, write);
     PDE.or_flag_if(PageTableFlag::UserSuper, user);
-    PDE.or_flag_if(PageTableFlag::WriteThrough, writeThrough);
-    PDE.or_flag_if(PageTableFlag::CacheDisabled, cacheDisabled);
-    PDE.or_flag_if(PageTableFlag::Accessed, accessed);
-    PDE.or_flag_if(PageTableFlag::Dirty, dirty);
-    PDE.or_flag_if(PageTableFlag::LargerPages, largerPages);
-    PDE.or_flag_if(PageTableFlag::Global, global);
     // PDE.or_flag_if(PageTableFlag::NX,            noExecute);
     pageMapLevelFour->entries[indexer.page_directory_pointer()] = PDE;
     PDP = (PageTable*)PDE.address();
@@ -107,18 +92,67 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
     PDE.or_flag_if(PageTableFlag::Present, present);
     PDE.or_flag_if(PageTableFlag::ReadWrite, write);
     PDE.or_flag_if(PageTableFlag::UserSuper, user);
-    PDE.or_flag_if(PageTableFlag::WriteThrough, writeThrough);
-    PDE.or_flag_if(PageTableFlag::CacheDisabled, cacheDisabled);
-    PDE.or_flag_if(PageTableFlag::Accessed, accessed);
-    PDE.or_flag_if(PageTableFlag::Dirty, dirty);
-    PDE.or_flag_if(PageTableFlag::LargerPages, largerPages);
-    PDE.or_flag_if(PageTableFlag::Global, global);
     // PDE.or_flag_if(PageTableFlag::NX,            noExecute);
     PDP->entries[indexer.page_directory()] = PDE;
     PD = (PageTable*)PDE.address();
 
     PDE = PD->entries[indexer.page_table()];
     PageTable* PT;
+    // Split large 2MiB page if necessary
+    if (PDE.flag(PageTableFlag::Present) and PDE.flag(PageTableFlag::LargerPages)) {
+        if (debug == ShowDebug::Yes or true)
+            std::print("[Page Splitting] Splitting 2MiB large page at {} into 4KiB pages\n", virtualAddress);
+
+        // Allocate a Page Table Level 1
+        PT = (PageTable*)request_page();
+        memset(PT, 0, PAGE_SIZE);
+
+        // Extract the physical base address of the 2MiB page
+        u64 physical_base = PDE.address_large();
+
+        // Backfill all entries of the new Page Table Level 1 to exactly match the
+        // 2MiB layout.
+        const u64 target_i = (((uintptr_t)virtualAddress) >> 12) & 0x1ff;
+        for (u64 i = 0; i < 512; ++i) {
+            PageDirectoryEntry SubPDE{};
+
+            // Map the sub-page physical address (base + i * 4KiB)
+            SubPDE.set_address(physical_base + (i * PAGE_SIZE));
+
+            // Copy all original permission attributes down to the sub-pages, except
+            // for our split page.
+            if (i == target_i) {
+                // new address
+                SubPDE.set_address((uintptr_t)physicalAddress);
+                // new flags
+                SubPDE.set_flag(PageTableFlag::Present, present);
+                SubPDE.set_flag(PageTableFlag::ReadWrite, write);
+                SubPDE.set_flag(PageTableFlag::UserSuper, user);
+                SubPDE.set_flag(PageTableFlag::WriteThrough, writeThrough);
+                SubPDE.set_flag(PageTableFlag::CacheDisabled, cacheDisabled);
+                SubPDE.set_flag(PageTableFlag::Global, global);
+            }
+            else {
+                SubPDE.or_flag_if(PageTableFlag::Present, PDE.flag(PageTableFlag::Present));
+                SubPDE.or_flag_if(PageTableFlag::ReadWrite, PDE.flag(PageTableFlag::ReadWrite));
+                SubPDE.or_flag_if(PageTableFlag::UserSuper, PDE.flag(PageTableFlag::UserSuper));
+                SubPDE.or_flag_if(PageTableFlag::WriteThrough, PDE.flag(PageTableFlag::WriteThrough));
+                SubPDE.or_flag_if(PageTableFlag::CacheDisabled, PDE.flag(PageTableFlag::CacheDisabled));
+                SubPDE.or_flag_if(PageTableFlag::Global, PDE.flag(PageTableFlag::Global));
+            }
+            PT->entries[i] = SubPDE;
+        }
+
+        // Disable Large Page
+        PDE.set_flag(PageTableFlag::LargerPages, false);
+        // Clear out 2MiB physical memory address, point it to new Page Table
+        // Level 1.
+        PDE.set_address((u64)PT);
+
+        // Commit it back to Level 2
+        PD->entries[indexer.page_table()] = PDE;
+        return;
+    }
     if (!PDE.flag(PageTableFlag::Present)) {
         PT = (PageTable*)request_page();
         memset(PT, 0, PAGE_SIZE);
@@ -127,12 +161,6 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
     PDE.or_flag_if(PageTableFlag::Present, present);
     PDE.or_flag_if(PageTableFlag::ReadWrite, write);
     PDE.or_flag_if(PageTableFlag::UserSuper, user);
-    PDE.or_flag_if(PageTableFlag::WriteThrough, writeThrough);
-    PDE.or_flag_if(PageTableFlag::CacheDisabled, cacheDisabled);
-    PDE.or_flag_if(PageTableFlag::Accessed, accessed);
-    PDE.or_flag_if(PageTableFlag::Dirty, dirty);
-    PDE.or_flag_if(PageTableFlag::LargerPages, largerPages);
-    PDE.or_flag_if(PageTableFlag::Global, global);
     // PDE.or_flag_if(PageTableFlag::NX,            noExecute);
     PD->entries[indexer.page_table()] = PDE;
     PT = (PageTable*)PDE.address();
@@ -144,9 +172,6 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
     PDE.set_flag(PageTableFlag::UserSuper, user);
     PDE.set_flag(PageTableFlag::WriteThrough, writeThrough);
     PDE.set_flag(PageTableFlag::CacheDisabled, cacheDisabled);
-    PDE.set_flag(PageTableFlag::Accessed, accessed);
-    PDE.set_flag(PageTableFlag::Dirty, dirty);
-    PDE.set_flag(PageTableFlag::LargerPages, largerPages);
     PDE.set_flag(PageTableFlag::Global, global);
     // PDE.set_flag(PageTableFlag::NX,            noExecute);
     PT->entries[indexer.page()] = PDE;
@@ -170,18 +195,128 @@ void map_pages(void* virtualAddress, void* physicalAddress, u64 mappingFlags, us
     Memory::map_pages(active_page_map(), virtualAddress, physicalAddress, mappingFlags, pageCount, d);
 }
 
+void map_large(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddress, u64 mappingFlags, ShowDebug debug) {
+    if (pageMapLevelFour == nullptr)
+        return;
+
+    PageMapIndexer indexer((u64)virtualAddress);
+    PageDirectoryEntry PDE;
+
+    bool present = mappingFlags & static_cast<u64>(PageTableFlag::Present);
+    bool write = mappingFlags & static_cast<u64>(PageTableFlag::ReadWrite);
+    bool user = mappingFlags & static_cast<u64>(PageTableFlag::UserSuper);
+    bool writeThrough = mappingFlags & static_cast<u64>(PageTableFlag::WriteThrough);
+    bool cacheDisabled = mappingFlags & static_cast<u64>(PageTableFlag::CacheDisabled);
+    bool global = mappingFlags & static_cast<u64>(PageTableFlag::Global);
+
+    if (debug == ShowDebug::Yes) {
+        std::print(
+            "Attempting to map large 2MiB virtual {} to physical {} in page directory at {}\n"
+            "  Flags:\n"
+            "    Present:         {}\n"
+            "    Write:           {}\n"
+            "    User-accessible: {}\n"
+            "    Write-through:   {}\n"
+            "    Cache Disabled:  {}\n"
+            "    Global:          {}\n"
+            "\n",
+            virtualAddress,
+            physicalAddress,
+            (void*)pageMapLevelFour,
+            present,
+            write,
+            user,
+            writeThrough,
+            cacheDisabled,
+            global);
+    }
+
+    // Page Map Level 4 -> Page Directory Pointer Table Level 3
+    PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
+    PageTable* PDP;
+    if (!PDE.flag(PageTableFlag::Present)) {
+        PDP = (PageTable*)request_page();
+        memset(PDP, 0, PAGE_SIZE);
+        PDE.set_address((u64)PDP);
+    }
+    PDE.or_flag_if(PageTableFlag::Present, present);
+    PDE.or_flag_if(PageTableFlag::ReadWrite, write);
+    PDE.or_flag_if(PageTableFlag::UserSuper, user);
+    pageMapLevelFour->entries[indexer.page_directory_pointer()] = PDE;
+    PDP = (PageTable*)PDE.address();
+
+    // Page Directory Pointer Table Level 3 -> Page Directory Level 2
+    PDE = PDP->entries[indexer.page_directory()];
+    PageTable* PD;
+    if (!PDE.flag(PageTableFlag::Present)) {
+        PD = (PageTable*)request_page();
+        memset(PD, 0, PAGE_SIZE);
+        PDE.set_address((u64)PD);
+    }
+    PDE.or_flag_if(PageTableFlag::Present, present);
+    PDE.or_flag_if(PageTableFlag::ReadWrite, write);
+    PDE.or_flag_if(PageTableFlag::UserSuper, user);
+    PDP->entries[indexer.page_directory()] = PDE;
+    PD = (PageTable*)PDE.address();
+
+    // Page Directory Level 2 -> Page Directory Entry (large)
+    PDE = PD->entries[indexer.page_table()];
+    PDE.set_address_large((u64)physicalAddress);
+    PDE.or_flag_if(PageTableFlag::Present, present);
+    PDE.or_flag_if(PageTableFlag::ReadWrite, write);
+    PDE.or_flag_if(PageTableFlag::UserSuper, user);
+    PDE.or_flag_if(PageTableFlag::WriteThrough, writeThrough);
+    PDE.or_flag_if(PageTableFlag::CacheDisabled, cacheDisabled);
+    PDE.set_flag(PageTableFlag::LargerPages, true); /** (!) **/
+    PDE.or_flag_if(PageTableFlag::Global, global);
+    PD->entries[indexer.page_table()] = PDE;
+
+    if (debug == ShowDebug::Yes)
+        std::print("  {Mapped} (2MiB large page)\n\n", __GREEN);
+}
+
 void unmap(PageTable* pageMapLevelFour, void* virtualAddress, ShowDebug debug) {
     if (debug == ShowDebug::Yes)
         std::print("Attempting to unmap virtual {} in page table at {}\n", virtualAddress, (void*)pageMapLevelFour);
 
     PageMapIndexer indexer((u64)virtualAddress);
     PageDirectoryEntry PDE;
+
+    // Page Map Level 4 -> Page Directory Pointer Table Level 3
     PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
+    if (not PDE.flag(PageTableFlag::Present))  // Already unmapped.
+        return;
     auto* PDP = (PageTable*)PDE.address();
+
+    // Page Directory Pointer Table Level 3 -> Page Directory Level 2
     PDE = PDP->entries[indexer.page_directory()];
+    if (not PDE.flag(PageTableFlag::Present))  // Already unmapped.
+        return;
+    // 1GiB Large Pages
+    if (PDE.flag(PageTableFlag::LargerPages)) {
+        PDE.set_flag(PageTableFlag::Present, false);
+        PDE.set_flag(PageTableFlag::LargerPages, false);
+        PDP->entries[indexer.page_directory()] = PDE;
+        if (debug == ShowDebug::Yes)
+            std::print("  \033[32mUnmapped\033[0m (1GiB large page)\n\n");
+        return;
+    }
     auto* PD = (PageTable*)PDE.address();
+
+    // Page Directory Level 2 -> Page Table Level 1
     PDE = PD->entries[indexer.page_table()];
+    // 2MiB Large Pages
+    if (PDE.flag(PageTableFlag::LargerPages)) {
+        PDE.set_flag(PageTableFlag::Present, false);
+        PDE.set_flag(PageTableFlag::LargerPages, false);
+        PD->entries[indexer.page_table()] = PDE;
+        if (debug == ShowDebug::Yes)
+            std::print("  \033[32mUnmapped\033[0m (2MiB large page)\n\n");
+        return;
+    }
     auto* PT = (PageTable*)PDE.address();
+
+    // Page Table Level 1 -> Page Table Entry
     PDE = PT->entries[indexer.page()];
     PDE.set_flag(PageTableFlag::Present, false);
     PT->entries[indexer.page()] = PDE;
@@ -332,6 +467,13 @@ Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable) {
                 if (PDE.flag(Memory::PageTableFlag::Present) == false)
                     continue;
 
+                if (PDE.flag(Memory::PageTableFlag::LargerPages)) {
+                    // This is a 2MiB mapping! No Level 1 table exists.
+                    // Simply copy the entire large page entry descriptor over to the new directory.
+                    newPD->entries[k] = PDE;
+                    continue;
+                }
+
                 auto* newPT = (Memory::PageTable*)Memory::request_page();
                 if (newPT == nullptr) {
                     std::print("Failed to allocate memory for new process page table.\n");
@@ -437,20 +579,21 @@ void init_virtual(PageTable* pageMap) {
      * addresses will be equal to physical memory addresses within
      * the kernel.
      */
-    for (u64 t = 0; t < total_ram(); t += PAGE_SIZE) {
-        map(
+    for (u64 t = 0; t < total_ram(); t += PAGE_SIZE_LARGE) {
+        map_large(
             pageMap,
             (void*)t,
             (void*)t,
-            (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite);
+            (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite,
+            ShowDebug::Yes);
     }
-    // TODO: large pages
-    // for (u64 t = 0; t < total_ram(); t += PAGE_SIZE) {
-    //     map(
+    // for (u64 t = 0; t < total_ram(); t += PAGE_SIZE_LARGE) {
+    //     map_large(
     //         pageMap,
     //         (void*)(t + Memory::PHYSICAL_BASE),
     //         (void*)t,
-    //         (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite);
+    //         (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite,
+    //         ShowDebug::Yes);
     // }
     u64 kPhysicalStart = (u64)&KERNEL_PHYSICAL;
     u64 kernelBytesNeeded = 1 + ((u64)&KERNEL_END - (u64)&KERNEL_START);
@@ -462,7 +605,7 @@ void init_virtual(PageTable* pageMap) {
             (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite);
     }
     // Make null-dereference generate exception.
-    unmap(nullptr);
+    // unmap(nullptr);
     // Update current page map.
     flush_page_map(pageMap);
 }
@@ -474,6 +617,25 @@ void init_virtual() {
 }
 
 void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filter) {
+    // Lambda to avoid duplicating the printing block
+    auto print_range = [&](u64 start, u64 end, u64 currentFlags) {
+        if (currentFlags != -1ull
+            and (currentFlags & (u64)Memory::PageTableFlag::Present)
+            and (currentFlags & (u64)filter) == (u64)filter) {
+            std::print("Present: {:#016x} to {:#016x} |", start, end);
+            if (currentFlags & (u64)Memory::PageTableFlag::ReadWrite) std::print(" RW");
+            if (currentFlags & (u64)Memory::PageTableFlag::UserSuper) std::print(" US");
+            if (currentFlags & (u64)Memory::PageTableFlag::WriteThrough) std::print(" WT");
+            if (currentFlags & (u64)Memory::PageTableFlag::CacheDisabled) std::print(" CD");
+            if (currentFlags & (u64)Memory::PageTableFlag::Accessed) std::print(" AC");
+            if (currentFlags & (u64)Memory::PageTableFlag::Dirty) std::print(" DT");
+            if (currentFlags & (u64)Memory::PageTableFlag::LargerPages) std::print(" LG");
+            if (currentFlags & (u64)Memory::PageTableFlag::Global) std::print(" GB");
+            if (currentFlags & (u64)Memory::PageTableFlag::NX) std::print(" NX");
+            std::print("\n");
+        }
+    };
+
     u64 startAddress = -1ull;
     u64 endAddress = -1ull;
     u64 flags = -1ull;
@@ -495,6 +657,31 @@ void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filte
                 if (PDE.flag(Memory::PageTableFlag::Present) == false)
                     continue;
 
+                if (PDE.flag(PageTableFlag::LargerPages)) {
+                    u64 virtualAddress = 0;
+                    virtualAddress |= i << 27;
+                    virtualAddress |= j << 18;
+                    virtualAddress |= k << 9;
+                    virtualAddress <<= 12;
+
+                    // Sign-extension for canonical addresses
+                    if (virtualAddress & (1ULL << 47))
+                        virtualAddress |= 0xffff000000000000ull;
+
+                    endAddress = virtualAddress;
+
+                    if (flags != -1ull && PDE.flags() != flags) {
+                        print_range(startAddress, endAddress, flags);
+                        startAddress = virtualAddress;
+                        flags = PDE.flags();
+                    }
+
+                    if (startAddress == -1ull) startAddress = virtualAddress;
+                    if (flags == -1ull) flags = PDE.flags();
+
+                    continue;
+                }
+
                 auto* oldPT = (Memory::PageTable*)(PDE.address());
                 for (u64 l = 0; l < 512; ++l) {
                     PDE = oldPT->entries[l];
@@ -507,35 +694,15 @@ void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filte
                     virtualAddress |= l << 0;
                     virtualAddress <<= 12;
 
+                    // Sign-extension for canonical addresses
+                    if (virtualAddress & (1ULL << 47))
+                        virtualAddress |= 0xffff000000000000ull;
+
                     endAddress = virtualAddress;
 
                     // If flags does not equal new flags, stop and print.
                     if (flags != -1ull && PDE.flags() != flags) {
-                        if (flags & (u64)Memory::PageTableFlag::Present && (flags & (u64)filter) == (u64)filter) {
-                            std::print("Present: {:#016x} to {:#016x} |",
-                                       startAddress,
-                                       endAddress);
-                            if (flags & (u64)Memory::PageTableFlag::ReadWrite)
-                                std::print(" RW");
-                            if (flags & (u64)Memory::PageTableFlag::UserSuper)
-                                std::print(" US");
-                            if (flags & (u64)Memory::PageTableFlag::WriteThrough)
-                                std::print(" WT");
-                            if (flags & (u64)Memory::PageTableFlag::CacheDisabled)
-                                std::print(" CD");
-                            if (flags & (u64)Memory::PageTableFlag::Accessed)
-                                std::print(" AC");
-                            if (flags & (u64)Memory::PageTableFlag::Dirty)
-                                std::print(" DT");
-                            if (flags & (u64)Memory::PageTableFlag::LargerPages)
-                                std::print(" LG");
-                            if (flags & (u64)Memory::PageTableFlag::Global)
-                                std::print(" GB");
-                            if (flags & (u64)Memory::PageTableFlag::NX)
-                                std::print(" NX");
-                            std::print("\n");
-                        }
-
+                        print_range(startAddress, endAddress, flags);
                         startAddress = endAddress;
                         flags = PDE.flags();
                         continue;
@@ -550,6 +717,7 @@ void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filte
             }
         }
     }
+    print_range(startAddress, endAddress, flags);
 }
 
 void print_pde_flags(Memory::PageDirectoryEntry PDE) {

@@ -159,9 +159,9 @@ LoadUserspaceElf64Process(
             u64 pages = (size_to_load + PAGE_SIZE - 1) / PAGE_SIZE;
 
             // Should I just use the kernel heap for this? It could grow very large...
-            // Zero out the allocated memory.
             u8* loadedProgram = reinterpret_cast<u8*>(Memory::request_pages(pages));
-            memset(loadedProgram, 0, size_to_load);
+            // Zero out the allocated memory.
+            memset(loadedProgram, 0, pages * PAGE_SIZE);
 
             // Read the program into memory. If the program header does not start
             // at a page boundary, then we need to offset the read by the offset
@@ -170,6 +170,7 @@ LoadUserspaceElf64Process(
             auto n_read = vfs.read(fd, loadedProgram + offset, phdr->p_filesz, phdr->p_offset);
             if (n_read < 0 or size_t(n_read) != phdr->p_filesz) {
                 std::print("[ELF] Could not read program data from file {}\n", fd);
+                // TODO: Unallocate memory allocated for this process, etc.
                 return false;
             }
 
@@ -179,12 +180,11 @@ LoadUserspaceElf64Process(
             size_t flags = 0;
             flags |= (size_t)Memory::PageTableFlag::Present;
             flags |= (size_t)Memory::PageTableFlag::UserSuper;
-            if (phdr->p_flags & PF_W) {
+            if (phdr->p_flags & PF_W)
                 flags |= (size_t)Memory::PageTableFlag::ReadWrite;
-            }
-            if (!(phdr->p_flags & PF_X)) {
+            if (!(phdr->p_flags & PF_X))
                 flags |= (size_t)Memory::PageTableFlag::NX;
-            }
+
             u64 virtAddress = phdr->p_vaddr - offset;  // page align
             for (u64 t = 0; t < pages * PAGE_SIZE; t += PAGE_SIZE) {
                 Memory::map(
