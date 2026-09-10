@@ -37,6 +37,9 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
     // mapped offset pointer.
     render->BaseAddress = (void*)Memory::FROM_FRAME_POINTER(render->BaseAddress);
 
+    f->GlyphBuffer = (void*)Memory::FROM_FRAME_POINTER(f->GlyphBuffer);
+    f->PSF1_Header = (PSF1_HEADER*)Memory::FROM_FRAME_POINTER(f->PSF1_Header);
+
     // Calculate size of framebuffer in pages.
     u64 fbSize = render->BufferSize + PAGE_SIZE;
     u64 fbPages = fbSize / PAGE_SIZE + 1;

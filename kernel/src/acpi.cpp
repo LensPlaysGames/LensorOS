@@ -20,13 +20,14 @@
 #include <acpi.h>
 #include <cstr.h>
 #include <integers.h>
+#include <memory/common.h>
 
 #include <format>
 
 /* Helpful resource: https://github.com/freebsd/freebsd-src/blob/main/usr.sbin/acpi/acpidump/acpi.c */
 
 // Uncomment the following directive for extra debug information output.
-// #define DEBUG_ACPI
+#define DEBUG_ACPI
 
 #ifdef DEBUG_ACPI
 #define DBGMSG(...) std::print(__VA_ARGS__)
@@ -46,7 +47,7 @@ void initialize(RSDP2* rootSystemDescriptorPointer) {
     }
     gRSDP = (ACPI::SDTHeader*)rootSystemDescriptorPointer;
     // eXtended System Descriptor Table
-    gXSDT = (ACPI::SDTHeader*)(rootSystemDescriptorPointer->XSDTAddress);
+    gXSDT = (ACPI::SDTHeader*)(Memory::FROM_FRAME_POINTER(rootSystemDescriptorPointer->XSDTAddress));
     DBGMSG(
         "  RSDP {}\n"
         "  XSDT: {}\n"
@@ -92,7 +93,6 @@ void print_sdt(SDTHeader* header) {
         __s((u8*)&header->CreatorID),
         u32(header->CreatorRevision));
 }
-
 void* find_table(SDTHeader* header, const char* signature) {
     if (header == nullptr || signature == nullptr)
         return nullptr;
@@ -102,12 +102,14 @@ void* find_table(SDTHeader* header, const char* signature) {
 
     DBGMSG("  {}: {} entries\n", __s(header->Signature), entries);
     for (u64 t = 0; t < entries; ++t) {
-        SDTHeader* sdt = (SDTHeader*)*((u64*)((u64)header + sizeof(SDTHeader)) + t);
+        SDTHeader* sdt
+            = (SDTHeader*)Memory::FROM_FRAME_POINTER(*(
+                (uintptr_t*)((uintptr_t)header + sizeof(SDTHeader)) + t));
 #ifdef DEBUG_ACPI
         print_sdt(sdt);
 #endif /* DEBUG_ACPI */
         // Find matching signature.
-        if (strcmp((char*)sdt->Signature, signature, 4)) {
+        if (strcmp((char*)Memory::FROM_FRAME_POINTER(sdt->Signature), signature, 4)) {
             if (int rc = checksum(sdt, sdt->Length)) {
                 std::print(
                     "[ACPI]: \033[31mERROR::\033[0m Invalid checksum on '{}' table: {}\n\n",
