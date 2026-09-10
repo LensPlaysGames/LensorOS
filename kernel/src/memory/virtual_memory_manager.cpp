@@ -585,7 +585,7 @@ void init_virtual(PageTable* pageMap) {
             (void*)t,
             (void*)t,
             (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite,
-            ShowDebug::Yes);
+            ShowDebug::No);
     }
     // for (u64 t = 0; t < total_ram(); t += PAGE_SIZE_LARGE) {
     //     map_large(
