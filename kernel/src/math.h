@@ -22,13 +22,13 @@
 
 #include <integers.h>
 
-template<typename T>
+template <typename T>
 struct Vector2 {
     T x;
     T y;
 };
 
-template<>
+template <>
 struct Vector2<u64> {
     u64 x;
     u64 y;
@@ -43,22 +43,22 @@ struct Vector2<u64> {
         y = _y;
     }
 
-    friend inline bool operator == (const Vector2& lhs, const Vector2& rhs) {
+    friend inline bool operator==(const Vector2& lhs, const Vector2& rhs) {
         return (lhs.x == rhs.x && lhs.y == rhs.y);
     }
-    friend inline bool operator != (const Vector2& lhs, const Vector2& rhs) {
+    friend inline bool operator!=(const Vector2& lhs, const Vector2& rhs) {
         return !(lhs == rhs);
     }
-    friend inline Vector2 operator + (const Vector2& lhs, const Vector2& rhs) {
+    friend inline Vector2 operator+(const Vector2& lhs, const Vector2& rhs) {
         return {lhs.x + rhs.x, lhs.y + rhs.y};
     }
-    friend inline Vector2 operator - (const Vector2& lhs, const Vector2& rhs) {
+    friend inline Vector2 operator-(const Vector2& lhs, const Vector2& rhs) {
         return {lhs.x - rhs.x, lhs.y - rhs.y};
     }
-    friend inline Vector2 operator * (const Vector2& lhs, const Vector2& rhs) {
+    friend inline Vector2 operator*(const Vector2& lhs, const Vector2& rhs) {
         return {lhs.x * rhs.x, lhs.y * rhs.y};
     }
-    friend inline Vector2 operator / (const Vector2& lhs, const Vector2& rhs) {
+    friend inline Vector2 operator/(const Vector2& lhs, const Vector2& rhs) {
         return {lhs.x / rhs.x, lhs.y / rhs.y};
     }
 };

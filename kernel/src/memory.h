@@ -17,13 +17,12 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-
 #ifndef LENSOR_OS_MEMORY_H
 #define LENSOR_OS_MEMORY_H
 
 #include <integers.h>
 
-extern "C" void memset(void* src, u8 value  , u64 numBytes);
+extern "C" void memset(void* src, u8 value, u64 numBytes);
 extern "C" int memcmp(const void* src, const void* dest, size_t numBytes);
 extern "C" void* memcpy(void* __restrict__ dest, const void* __restrict__ src, size_t numBytes);
 extern "C" void* memmove(void* destination, const void* source, size_t num);

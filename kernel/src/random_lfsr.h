@@ -14,7 +14,8 @@ class LFSR {
     bool get_bit(u8 index);
     inline u8 get_bit_value(u8 index);
     void next();
-public:
+
+   public:
     LFSR() {
         // Initialize state to default.
         seed(DefaultInitialLFSRState.a, DefaultInitialLFSRState.b);

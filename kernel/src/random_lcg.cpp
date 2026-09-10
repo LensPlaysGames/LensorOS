@@ -17,9 +17,8 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <random_lcg.h>
-
 #include <integers.h>
+#include <random_lcg.h>
 
 LCG gRandomLCG;
 

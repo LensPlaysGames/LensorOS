@@ -4,8 +4,9 @@
 #include <integers.h>
 
 class LCG {
-    u64 state {0};
-public:
+    u64 state{0};
+
+   public:
     inline void seed(u64 s) {
         state = s;
     }
