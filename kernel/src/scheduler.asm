@@ -169,7 +169,7 @@ switch_context_asm:
 
     ; Reset segment registers to kernel data segment
     ; FIXME: GS---thread local stuff, etc.
-    mov ax, 0x10
+    mov eax, 0x10
     mov es, ax
     mov ds, ax
     mov fs, ax
