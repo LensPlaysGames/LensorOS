@@ -76,7 +76,7 @@ void enumerate_function(u64 deviceAddress, u64 functionNumber) {
     u64 functionAddress = deviceAddress + offset;
     Memory::map(
         (void*)functionAddress,
-        (void*)functionAddress,
+        (void*)Memory::TO_FRAME_POINTER(functionAddress),
         (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
     auto* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(functionAddress);
     if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
@@ -84,7 +84,7 @@ void enumerate_function(u64 deviceAddress, u64 functionNumber) {
         return;
     }
 
-    // TODO: Cache human readable information with device in device tree.
+    // Cache human readable information with device in device tree.
     DBGMSG(
         "\n"
         "      Function at {}: {} / {} / {} / {} / {}\n"
@@ -125,7 +125,7 @@ void enumerate_device(u64 busAddress, u64 deviceNumber) {
     u64 deviceAddress = busAddress + offset;
     Memory::map(
         (void*)deviceAddress,
-        (void*)deviceAddress,
+        (void*)Memory::TO_FRAME_POINTER(deviceAddress),
         (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
     auto* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(deviceAddress);
     if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
@@ -176,7 +176,9 @@ void enumerate_pci(ACPI::MCFGHeader* mcfg) {
             devCon->EndBus);
 
         for (u64 bus = devCon->StartBus; bus < devCon->EndBus; ++bus) {
-            enumerate_bus(devCon->BaseAddress, bus);
+            enumerate_bus(
+                Memory::FROM_FRAME_POINTER(devCon->BaseAddress),
+                bus);
         }
     }
 

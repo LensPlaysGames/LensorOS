@@ -40,19 +40,23 @@ PortController::PortController(PortType type, u64 portNumber, HBAPort* portAddre
     // Allocate memory for command list.
     void* base = Memory::request_page();
     memset(base, 0, 1024);
-    Port->set_command_list_base(base);
+    Port->set_command_list_base(
+        (void*)Memory::TO_FRAME_POINTER(base));
     // Allocate memory for Frame Information Structure.
     void* fisBase = Memory::request_page();
     memset(fisBase, 0, 256);
-    Port->set_frame_information_structure_base(fisBase);
+    Port->set_frame_information_structure_base(
+        (void*)Memory::TO_FRAME_POINTER(fisBase));
     // Populate command list with command tables.
-    auto* commandHeader = reinterpret_cast<HBACommandHeader*>(Port->command_list_base());
+    auto* commandHeader = reinterpret_cast<HBACommandHeader*>(
+        Memory::FROM_FRAME_POINTER(Port->command_list_base()));
     for (u8 i = 0; i < 32; ++i) {
         // 8 PRDT entries per command table, aka 256 bytes.
         commandHeader[i].PRDTLength = 8;
         void* commandTableAddress = Memory::request_page();
         u64 address = reinterpret_cast<u64>(commandTableAddress) + (i << 8);
-        commandHeader[i].set_command_table_base(address);
+        commandHeader[i].set_command_table_base(
+            (void*)Memory::TO_FRAME_POINTER(address));
         memset(reinterpret_cast<void*>(address), 0, 256);
     }
     start_commands();
@@ -73,14 +77,19 @@ bool PortController::read_low_level(u64 sector, u64 sectors) {
 
     // Disable interrupts during command construction.
     Port->InterruptStatus = (u32)-1;
-    auto* commandHeader = reinterpret_cast<HBACommandHeader*>(Port->command_list_base());
+    auto* commandHeader = reinterpret_cast<HBACommandHeader*>(
+        Memory::FROM_FRAME_POINTER(Port->command_list_base()));
     commandHeader->CommandFISLength = sizeof(FIS_REG_H2D) / sizeof(u32);
     commandHeader->Write = 0;
     commandHeader->PRDTLength = 1;
 
-    auto* commandTable = reinterpret_cast<HBACommandTable*>(commandHeader->command_table_base());
-    memset(commandTable, 0, sizeof(HBACommandTable) + ((commandHeader->PRDTLength - 1) * sizeof(HBA_PRDTEntry)));
-    commandTable->PRDTEntry[0].set_data_base((u64)Buffer);
+    auto* commandTable = reinterpret_cast<HBACommandTable*>(
+        Memory::FROM_FRAME_POINTER(commandHeader->command_table_base()));
+    memset(
+        commandTable,
+        0,
+        sizeof(HBACommandTable) + ((commandHeader->PRDTLength - 1) * sizeof(HBA_PRDTEntry)));
+    commandTable->PRDTEntry[0].set_data_base(Memory::TO_FRAME_POINTER(Buffer));
     commandTable->PRDTEntry[0].set_byte_count((sectors << 9) - 1);
     commandTable->PRDTEntry[0].set_interrupt_on_completion(true);
     auto* commandFIS = reinterpret_cast<FIS_REG_H2D*>(&commandTable->CommandFIS);
@@ -185,24 +194,24 @@ bool PortController::write_low_level(u64 sector, u64 sectors) {
 
     // Disable interrupts during command construction.
     Port->InterruptStatus = (u32)-1;
-    auto* commandHeader
-        = reinterpret_cast<HBACommandHeader*>(Port->command_list_base());
+    auto* commandHeader = reinterpret_cast<HBACommandHeader*>(
+        Memory::FROM_FRAME_POINTER(Port->command_list_base()));
     commandHeader->CommandFISLength = sizeof(FIS_REG_H2D) / sizeof(u32);
     commandHeader->Write = 1;
     commandHeader->PRDTLength = 1;
 
-    auto* commandTable
-        = reinterpret_cast<HBACommandTable*>(commandHeader->command_table_base());
+    auto* commandTable = reinterpret_cast<HBACommandTable*>(
+        Memory::FROM_FRAME_POINTER(commandHeader->command_table_base()));
     memset(
         commandTable,
         0,
         sizeof(HBACommandTable)
             + ((commandHeader->PRDTLength - 1) * sizeof(HBA_PRDTEntry)));
-    commandTable->PRDTEntry[0].set_data_base((u64)Buffer);
+    commandTable->PRDTEntry[0].set_data_base(Memory::TO_FRAME_POINTER(Buffer));
     commandTable->PRDTEntry[0].set_byte_count((sectors << 9) - 1);
     commandTable->PRDTEntry[0].set_interrupt_on_completion(true);
-    auto* commandFIS
-        = reinterpret_cast<FIS_REG_H2D*>(&commandTable->CommandFIS);
+    auto* commandFIS = reinterpret_cast<FIS_REG_H2D*>(
+        &commandTable->CommandFIS);
     commandFIS->Type = FIS_TYPE::REG_H2D;
     // Take control of command structure.
     commandFIS->CommandControl = 1;
