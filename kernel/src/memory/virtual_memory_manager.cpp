@@ -635,6 +635,7 @@ void init_virtual() {
     auto* table = (Memory::PageTable*)
         Memory::TO_FRAME_POINTER(Memory::request_page());
     memset(table, 0, PAGE_SIZE);
+    std::print("[VIRT]: Initial page map allocated at {}\n", (void*)table);
     init_virtual(table);
 }
 
