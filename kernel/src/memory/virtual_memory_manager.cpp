@@ -316,6 +316,7 @@ void unmap(PageTable* pageMapLevelFour, void* virtualAddress, ShowDebug debug) {
     PageDirectoryEntry PDE;
 
     // Page Map Level 4 -> Page Directory Pointer Table Level 3
+    pageMapLevelFour = (PageTable*)FROM_FRAME_POINTER(pageMapLevelFour);
     PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
     if (not PDE.flag(PageTableFlag::Present))  // Already unmapped.
         return;
