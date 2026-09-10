@@ -504,7 +504,8 @@ pid_t CopyUserspaceProcess(Process* original) {
 }
 
 void Scheduler::map_pages_in_all_processes(void* virtualAddress, void* physicalAddress, u64 mappingFlags, usz pages, Memory::ShowDebug d) {
-    for (SinglyLinkedListNode<Process*>* it = ProcessQueue->head(); it; it = it->next()) {
+    if (not ProcessQueue) return;
+    for (SinglyLinkedListNode<Process*>* it = ProcessQueue->head(); it and it->value(); it = it->next()) {
         Memory::map_pages(
             it->value()->CR3,
             virtualAddress,
