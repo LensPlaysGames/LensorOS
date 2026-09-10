@@ -579,22 +579,22 @@ void init_virtual(PageTable* pageMap) {
      * addresses will be equal to physical memory addresses within
      * the kernel.
      */
+    // for (u64 t = 0; t < total_ram(); t += PAGE_SIZE_LARGE) {
+    //     map_large(
+    //         pageMap,
+    //         (void*)t,
+    //         (void*)t,
+    //         (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite,
+    //         ShowDebug::No);
+    // }
     for (u64 t = 0; t < total_ram(); t += PAGE_SIZE_LARGE) {
         map_large(
             pageMap,
-            (void*)t,
+            (void*)(t + Memory::PHYSICAL_BASE),
             (void*)t,
             (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite,
             ShowDebug::No);
     }
-    // for (u64 t = 0; t < total_ram(); t += PAGE_SIZE_LARGE) {
-    //     map_large(
-    //         pageMap,
-    //         (void*)(t + Memory::PHYSICAL_BASE),
-    //         (void*)t,
-    //         (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite,
-    //         ShowDebug::Yes);
-    // }
     u64 kPhysicalStart = (u64)&KERNEL_PHYSICAL;
     u64 kernelBytesNeeded = 1 + ((u64)&KERNEL_END - (u64)&KERNEL_START);
     for (u64 t = kPhysicalStart; t < kPhysicalStart + kernelBytesNeeded + PAGE_SIZE; t += PAGE_SIZE) {

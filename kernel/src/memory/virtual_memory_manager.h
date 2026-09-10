@@ -57,6 +57,13 @@ void map(
     u64 mappingFlags,
     ShowDebug d = ShowDebug::No);
 
+void map_large(
+    PageTable* pageMapLevelFour,
+    void* virtualAddress,
+    void* physicalAddress,
+    u64 mappingFlags,
+    ShowDebug debug = ShowDebug::No);
+
 /* If a mapping is within the range beginning at the given virtual
  * address and spanning the given length in pages is marked as
  * present within the given page map level four, it will be marked
