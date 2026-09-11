@@ -34,24 +34,9 @@ static Framebuffer g_framebuffer;
 // The canvas that is blitted to the screen
 static Framebuffer g_backbuffer;
 
-#define ESCAPE 0x01
-#define BACKSPACE 0x0e
-#define TAB 0x0f
-#define ENTER 0x1c
-#define LCONTROL 0x1d
-#define LSHIFT 0x2a
-#define RSHIFT 0x36
-#define LALT 0x38
-#define SPACE 0x39
-#define CAPSLOCK 0x3a
-#define NUMLOCK 0x45
-#define SCROLLLOCK 0x46
-
-/// Preceded by 'e0' byte.
-#define ARROW_UP 0x48
-#define ARROW_DOWN 0x50
-#define ARROW_LEFT 0x4b
-#define ARROW_RIGHT 0x4d
+const uint32_t window_stack_height = 28;
+const uint32_t window_selector_width = 27;
+const uint32_t window_selector_separator_width = 1;
 
 void fprint_hexnibble(unsigned char byte, FILE* f) {
     if (byte < 10)
@@ -225,6 +210,7 @@ typedef struct focus_t {
     ssize_t cursor_y;
 
     bool left_control;
+    bool right_control;
     bool left_shift;
     bool right_shift;
     bool left_alt;
@@ -329,7 +315,9 @@ void handle_event_keyboard(Event event, CompositorContext* context) {
     if (keyboard_data->value == LENSOR_KEY_LEFTCTRL) {
         context->focus.left_control = keyboard_data->press;
     }
-    // TODO: right control
+    else if (keyboard_data->value == LENSOR_KEY_RIGHTCTRL) {
+        context->focus.right_control = keyboard_data->press;
+    }
     else if (keyboard_data->value == LENSOR_KEY_LEFTSHIFT) {
         context->focus.left_shift = keyboard_data->press;
     }
@@ -339,14 +327,48 @@ void handle_event_keyboard(Event event, CompositorContext* context) {
     else if (keyboard_data->value == LENSOR_KEY_LEFTALT) {
         context->focus.left_alt = keyboard_data->press;
     }
+    else if (keyboard_data->value == LENSOR_KEY_RIGHTALT) {
+        context->focus.right_alt = keyboard_data->press;
+    }
+    else if (keyboard_data->value == LENSOR_KEY_LEFTSUPER) {
+        context->focus.left_super = keyboard_data->press;
+    }
+    else if (keyboard_data->value == LENSOR_KEY_RIGHTSUPER) {
+        context->focus.right_super = keyboard_data->press;
+    }
     else if (keyboard_data->value == LENSOR_KEY_MOUSE_LEFT) {
-        // TODO: If mouse click is over window stack, calculate if it's over an
+        // If mouse click is over window stack, calculate if it's over an
         // open window selector; if it is, focus that window. Also move it in Z
         // ordering.
+        uint32_t window_stack_begin_y = g_framebuffer.pixel_height - window_stack_height;
+        if (context->focus.cursor_y >= window_stack_begin_y) {
+            const uint32_t window_stack_index
+                = context->focus.cursor_x / (window_selector_width + window_selector_separator_width);
+
+            const uint32_t window_count = (sizeof(context->windows) / sizeof(context->windows[0]));
+            if (window_stack_index < window_count) {
+                window_t clicked_window = context->windows[window_stack_index];
+                if (clicked_window.shared_region) {
+                    clicked_window.hidden = false;
+                    // shift all windows before clicked window forward
+                    //   v
+                    // A B C D -> _ A C D
+                    memmove(
+                        &context->windows[1],
+                        &context->windows[0],
+                        window_stack_index * sizeof(context->windows[0]));
+                    // move clicked window to front
+                    // B A C D
+                    context->windows[0] = clicked_window;
+                    context->focus.window = &context->windows[0];
+                }
+            }
+        }
+        else
+            printf("TODO: process click outside taskbar\n");
     }
-    // TODO: right alt
-    // TODO: left/right super
-    else if (context->focus.window && context->focus.window->shared_region) {
+
+    if (context->focus.window && context->focus.window->shared_region) {
         ipc_keyboard_t keyboard_message;
         keyboard_message.magic = IPC_KEYBOARD_MAGIC;
         keyboard_message.value = keyboard_data->value;
@@ -577,7 +599,6 @@ int main(int argc, const char** argv) {
         }
 
         // Draw Taskbar/Window Stack
-        const uint32_t window_stack_height = 28;
         uint32_t window_stack_begin_y = g_framebuffer.pixel_height - window_stack_height;
 
         // [WINSTACK]: Draw background
@@ -603,7 +624,7 @@ int main(int argc, const char** argv) {
             const window_t* window = &context.windows[i - 1];
             if (!window->shared_region) continue;
 
-            const uint32_t present_window_color = mkpixel(g_framebuffer.format, 0xff, 0xff, 0xff, 0xff);
+            const uint32_t present_window_color = mkpixel(g_framebuffer.format, 0xff + window->shared_region_id * 0x10, 0xff, 0xff, 0xff);
             const uint32_t hidden_window_color = mkpixel(g_framebuffer.format, 0x67, 0x67, 0x67, 0xff);
             const uint32_t focused_window_color = orange;
             uint32_t color = present_window_color;
@@ -614,12 +635,11 @@ int main(int argc, const char** argv) {
                 color = hidden_window_color;
             }
 
-            const uint32_t window_selector_width = 27;
-            const uint32_t window_selector_separator_width = 1;
             fill_rect(
                 g_backbuffer,
                 color,
-                selector_count * window_selector_width + selector_count * window_selector_separator_width,
+                selector_count * window_selector_width
+                    + selector_count * window_selector_separator_width,
                 window_stack_begin_y,
                 window_selector_width,
                 window_stack_height);
