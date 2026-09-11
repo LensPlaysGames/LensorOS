@@ -75,7 +75,12 @@ void print_physmem() {
             ++i;
         }
         // std::print("  endrun page at {:16x} is locked? {}\n", i * PAGE_SIZE, locked);
-        std::print("  {}: {} pages beginning at {:16x} through {:16x}\n", last_locked ? "used" : "free", run, begin * PAGE_SIZE, (begin + run) * PAGE_SIZE);
+        std::print(
+            "  {}: {} pages beginning at {:16x} through {:16x}\n",
+            last_locked ? "used" : "free",
+            run,
+            begin * PAGE_SIZE,
+            (begin + run) * PAGE_SIZE);
     }
 }
 
@@ -177,13 +182,15 @@ void* request_pages(u64 numberOfPages) {
     if (numberOfPages > FreeFrameCount) {
         std::print(
             "request_pages(): \033[31mERROR\033[0m:: "
-            "Number of pages requested is larger than amount of pages available.");
+            "Number of pages requested, {}, is larger than amount of pages available.",
+            numberOfPages);
         return nullptr;
     }
     if (numberOfPages > MaxContiguousFreeFrames) {
         std::print(
             "request_pages(): \033[31mERROR\033[0m:: "
-            "Number of pages requested is larger than any contiguous run of pages available.");
+            "Number of pages requested, {}, is larger than any contiguous run of pages available.",
+            numberOfPages);
         return nullptr;
     }
 
@@ -295,14 +302,21 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
             free_pages(
                 (void*)FROM_FRAME_POINTER(desc->physicalAddress),
                 desc->numPages);
+            if (desc->numPages > MaxContiguousFreeFrames)
+                MaxContiguousFreeFrames = desc->numPages;
         }
     }
+
+    // The largest free memory segment is going to be used by the next frame bitmap
+    // lock_pages(
+    //     (void*)FROM_FRAME_POINTER(largestFreeMemorySegment),
+    //     largestFreeMemorySegmentPageCount);
+
     // Lock the kernel (in case it was just freed).
     usz kernelByteCount = (u64)&KERNEL_END - (u64)&KERNEL_START;
     usz kernelPageCount = kernelByteCount / PAGE_SIZE;
     lock_pages((void*)FROM_FRAME_POINTER(&KERNEL_PHYSICAL), kernelPageCount);
-    // Use the initial pre-allocated page bitmap as a guide
-    // for where to allocate new virtual memory map entries.
+
     // Map up to the entire amount of physical memory
     // present or the max amount addressable given the
     // size limitation of the pre-allocated bitmap.
@@ -318,18 +332,26 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
             (void*)t,
             (u64)PageTableFlag::Present
                 | (u64)PageTableFlag::ReadWrite,
-            ShowDebug::No);
+            t == 0 ? ShowDebug::Yes : ShowDebug::No);
     }
     // TLB flush (virtual -> physical mappings cache reset)
     flush_page_map(activePML4);
-    asm volatile("" ::: "memory");
+
+    // Debug Check-in
+    print_physmem();
+    Memory::print_page_map(activePML4);
 
     // Calculate total number of bytes needed for a physical page
     // bitmap that covers hardware's actual amount of memory present.
-    u64 bitmapSize = (TotalFrameCount / 8) + 1;
+    u64 bitmapSize = (TotalFrameCount + 8 - 1) / 8;
+    usz bitmapPages = (bitmapSize + PAGE_SIZE - 1) / PAGE_SIZE;
+
+    // Use the initial pre-allocated page bitmap as a guide
+    // for where to allocate new bitmap.
+    auto* new_bitmap = Memory::request_pages(bitmapPages);
     FrameBitmap.move(
         bitmapSize,
-        (u8*)FROM_FRAME_POINTER(largestFreeMemorySegment));
+        (u8*)new_bitmap);
 
     // Lock all pages past the domain of the original allocation bitmap.
     // This ensures we don't accidentally attempt to utilize memory that is
@@ -357,13 +379,18 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
      *   important to re-lock the frame bitmap so it doesn't get trampled on
      *   when allocating more memory.
      */
-    lock_pages(FrameBitmap.base(), (FrameBitmap.length() / PAGE_SIZE) + 1);
+    lock_pages(
+        FrameBitmap.base(),
+        (FrameBitmap.length() / PAGE_SIZE) + 1);
 
     // Lock the kernel in the new frame bitmap (in case it already isn't).
-    lock_pages((void*)FROM_FRAME_POINTER(&KERNEL_PHYSICAL), kernelPageCount);
+    lock_pages(
+        (void*)FROM_FRAME_POINTER(&KERNEL_PHYSICAL),
+        kernelPageCount);
 
     // Calculate space that is lost due to page alignment.
     u64 deadSpace{0};
+    // NOTE: very closely linked to kernel.ld linker script.
     deadSpace += (u64)&DATA_START - (u64)&TEXT_END;
     deadSpace += (u64)&READ_ONLY_DATA_START - (u64)&DATA_END;
     deadSpace += (u64)&BLOCK_STARTING_SYMBOLS_START - (u64)&READ_ONLY_DATA_END;

@@ -60,7 +60,9 @@ void HeapSegmentHeader::combine_forward() {
     else
         sLastHeader = this;
 
+    DBGMSG("  length={}  next->length={}", length, next->length);
     length = length + next->length + sizeof(HeapSegmentHeader);
+    DBGMSG("  final length={}", length);
     next = next->next;
 }
 
@@ -157,22 +159,28 @@ void expand_heap(u64 numBytes) {
     for (u64 i = 0; i < numPages * PAGE_SIZE; i += PAGE_SIZE) {
         // Map virtual heap position to physical memory address returned by page frame allocator.
         void* addr = Memory::request_page();
-        memset(addr, 0, PAGE_SIZE);
-        Scheduler::map_pages_in_all_processes(
-            (void*)((u64)sHeapEnd + i),
-            (void*)Memory::TO_FRAME_POINTER(addr),
-            (u64)Memory::PageTableFlag::Present
-                | (u64)Memory::PageTableFlag::ReadWrite,
-            1);
-        Memory::map(
-            Memory::active_page_map(),
-            (void*)((u64)sHeapEnd + i),
-            (void*)Memory::TO_FRAME_POINTER(addr),
-            (u64)Memory::PageTableFlag::Present
-                | (u64)Memory::PageTableFlag::ReadWrite,
-            Memory::ShowDebug::No);
+        DBGMSG("[Heap]: new frame allocated at {}\n", addr);
+        memset(addr, 0xaa, PAGE_SIZE);
+        *(volatile uint8_t*)addr = 0xaa;
+        DBGMSG("[Heap]: first byte at {} -- {}\n", addr, (uint8_t)*(volatile uint8_t*)addr);
 
-        DBGMSG("[Heap]: Mapped {} to {}\n", (void*)((u64)sHeapEnd + i), addr);
+        uintptr_t frame = Memory::TO_FRAME_POINTER(addr);
+        DBGMSG("[Heap]: frame at {}\n", (void*)frame);
+        uintptr_t virt = (uintptr_t)sHeapEnd + i;
+
+        constexpr auto flags = (u64)Memory::PageTableFlag::Present
+                               | (u64)Memory::PageTableFlag::ReadWrite;
+
+        // We don't know whether or not the scheduler is up and running or how
+        // many processes are on the system.
+        Scheduler::map_pages_in_all_processes((void*)virt, (void*)frame, flags, 1);
+        // Ensure whatever thread/process this code is running in gets it mapped
+        // no matter what.
+        Memory::map((void*)virt, (void*)frame, flags);
+
+        asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
+
+        DBGMSG("[Heap]: Mapped {} to {}\n", (void*)virt, (void*)frame);
     }
 
     // Get address of new header at the end of the heap.
@@ -182,6 +190,9 @@ void expand_heap(u64 numBytes) {
     sHeapEnd = (void*)(uintptr_t(extension) + numBytes);
     DBGMSG("  extension end addr={}\n", sHeapEnd);
 
+    Memory::print_page_map(
+        (Memory::PageTable*)Memory::FROM_FRAME_POINTER(Memory::active_page_map()));
+
     extension->free = true;
     extension->last = sLastHeader;
     sLastHeader->next = extension;
@@ -189,7 +200,8 @@ void expand_heap(u64 numBytes) {
     extension->next = nullptr;
     extension->length = numBytes - sizeof(HeapSegmentHeader);
 
-    if (not extension->free or extension->length != numBytes - sizeof(HeapSegmentHeader)) {
+    if (not extension->free
+        or extension->length != numBytes - sizeof(HeapSegmentHeader)) {
         panic("Heap expansion invalid");
         hang();
     }
@@ -209,6 +221,7 @@ void* malloc(size_t numBytes) {
         numBytes += HEAP_BYTE_ALIGN;
     }
     DBGMSG("[Heap]: malloc() -- numBytes={}\n", numBytes);
+    heap_print_debug_summed();
     // Start looking for a free segment at the start of the heap.
     auto* current = (HeapSegmentHeader*)sHeapStart;
     while (true) {
@@ -379,7 +392,7 @@ void heap_print_debug_summed() {
             (void*)start_it);
     };
 
-    heap_print_debug_starchart();
+    // heap_print_debug_starchart();
 }
 
 [[nodiscard]] void* operator new(size_t size) { return malloc(size); }
