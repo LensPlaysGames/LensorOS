@@ -190,8 +190,9 @@ void expand_heap(u64 numBytes) {
     sHeapEnd = (void*)(uintptr_t(extension) + numBytes);
     DBGMSG("  extension end addr={}\n", sHeapEnd);
 
-    Memory::print_page_map(
-        (Memory::PageTable*)Memory::FROM_FRAME_POINTER(Memory::active_page_map()));
+#ifdef DEBUG_HEAP
+    Memory::print_page_map(Memory::active_page_map());
+#endif
 
     extension->free = true;
     extension->last = sLastHeader;
@@ -220,8 +221,10 @@ void* malloc(size_t numBytes) {
         numBytes -= (numBytes % HEAP_BYTE_ALIGN);
         numBytes += HEAP_BYTE_ALIGN;
     }
+
     DBGMSG("[Heap]: malloc() -- numBytes={}\n", numBytes);
-    heap_print_debug_summed();
+    // heap_print_debug_summed();
+
     // Start looking for a free segment at the start of the heap.
     auto* current = (HeapSegmentHeader*)sHeapStart;
     while (true) {
