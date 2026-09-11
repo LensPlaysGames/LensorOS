@@ -509,9 +509,8 @@ void kstage2(BootInfo* bInfo) {
 
     // Create basic framebuffer renderer.
     std::print("[kstage1]: Setting up Graphics Output Protocol Renderer\n");
-    gRend = BasicRenderer(
-        (Framebuffer*)Memory::FROM_FRAME_POINTER(bInfo->framebuffer),
-        (PSF1_FONT*)Memory::FROM_FRAME_POINTER(bInfo->font));
+
+    gRend = BasicRenderer(bInfo->framebuffer, bInfo->font);
     std::print("  {Setup Successful}\n\n", __GREEN);
     draw_boot_gfx();
 
@@ -538,7 +537,7 @@ void kstage2(BootInfo* bInfo) {
     probe_cpu();
 
     // Initialize Advanced Configuration and Power Management Interface.
-    ACPI::initialize((ACPI::RSDP2*)Memory::FROM_FRAME_POINTER(bInfo->rsdp));
+    ACPI::initialize(bInfo->rsdp);
 
     // Find Memory-mapped ConFiguration Table in order to find PCI devices.
     // Storage devices like AHCIs will be detected here.
@@ -841,6 +840,16 @@ void kstage1(BootInfo* bInfo) {
     Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     // Setup virtual memory (map entire address space as well as kernel).
     Memory::init_virtual();
+
+    // Adjust base address from actual physical frame pointer to virtually
+    // mapped offset pointer.
+    bInfo->framebuffer = (Framebuffer*)Memory::FROM_FRAME_POINTER(bInfo->framebuffer);
+    bInfo->framebuffer->BaseAddress = (Framebuffer*)Memory::FROM_FRAME_POINTER(bInfo->framebuffer->BaseAddress);
+    bInfo->font = (PSF1_FONT*)Memory::FROM_FRAME_POINTER(bInfo->font);
+    bInfo->font->GlyphBuffer = (PSF1_FONT*)Memory::FROM_FRAME_POINTER(bInfo->font->GlyphBuffer);
+    bInfo->font->PSF1_Header = (PSF1_HEADER*)Memory::FROM_FRAME_POINTER(bInfo->font->PSF1_Header);
+    bInfo->map = (EFI_MEMORY_DESCRIPTOR*)Memory::FROM_FRAME_POINTER(bInfo->map);
+    bInfo->rsdp = (ACPI::RSDP2*)Memory::FROM_FRAME_POINTER(bInfo->rsdp);
 
     // Setup dynamic memory allocation (`new`, `delete`).
     init_heap();
