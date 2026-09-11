@@ -818,8 +818,8 @@ void kstage1(BootInfo* bInfo) {
      */
     setup_gdt();
     gGDTD.Size = sizeof(GDT) - 1;
-    gGDTD.Offset = V2P((u64)&gGDT);
-    LoadGDT((GDTDescriptor*)V2P(&gGDTD));
+    gGDTD.Offset = uintptr_t(&gGDT);
+    LoadGDT(&gGDTD);
 #endif
 
     // Prepare system interrupts.
