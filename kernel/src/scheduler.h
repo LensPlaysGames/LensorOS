@@ -132,6 +132,16 @@ struct Process {
 
     // size is in bytes.
     void add_memory_region(void* vaddr, void* paddr, usz size, u64 flags) {
+        if ((uintptr_t(paddr) & Memory::PHYSICAL_BASE) != Memory::PHYSICAL_BASE) {
+            std::print(
+                "Refusing to add memory region {} to process {}, physical address {} is not a higher half address",
+                vaddr,
+                ProcessID,
+                paddr);
+            // TODO: Maybe just schedule process for destruction, go to sleep, and yield?
+            panic("Refusing to add memory region to process, physical address is not a higher half address");
+            hang();
+        }
         Memories.add({vaddr, paddr, size, flags});
     }
 

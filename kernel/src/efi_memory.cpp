@@ -68,9 +68,9 @@ void print_efi_memory_map_summed(EFI_MEMORY_DESCRIPTOR* map, u64 mapSize, u64 ma
     u64 mapEntries = mapSize / mapDescSize;
     u64 typePageSums[14];
     // Zero out sums to ensure a known starting point.
-    memset(&typePageSums[0], 0, 14 * sizeof(u64));
+    memset(&typePageSums[0], 0, sizeof(typePageSums));
     for (u64 i = 0; i < mapEntries; ++i) {
-        auto* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)map + (i * mapDescSize));
+        auto* desc = (EFI_MEMORY_DESCRIPTOR*)(uintptr_t(map) + (i * mapDescSize));
         if (desc->type < 14)
             typePageSums[desc->type] += desc->numPages;
     }

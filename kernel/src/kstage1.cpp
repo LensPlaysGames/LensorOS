@@ -626,7 +626,7 @@ void kstage2(BootInfo* bInfo) {
             Memory::map(
                 process->CR3,
                 (void*)(fb_virt_addr + t),
-                (void*)(fb_phys_addr + t),
+                (void*)Memory::TO_FRAME_POINTER(fb_phys_addr + t),
                 flags,
                 Memory::ShowDebug::No);
         }
@@ -848,7 +848,6 @@ void kstage1(BootInfo* bInfo) {
     bInfo->font = (PSF1_FONT*)Memory::FROM_FRAME_POINTER(bInfo->font);
     bInfo->font->GlyphBuffer = (PSF1_FONT*)Memory::FROM_FRAME_POINTER(bInfo->font->GlyphBuffer);
     bInfo->font->PSF1_Header = (PSF1_HEADER*)Memory::FROM_FRAME_POINTER(bInfo->font->PSF1_Header);
-    bInfo->map = (EFI_MEMORY_DESCRIPTOR*)Memory::FROM_FRAME_POINTER(bInfo->map);
     bInfo->rsdp = (ACPI::RSDP2*)Memory::FROM_FRAME_POINTER(bInfo->rsdp);
 
     // Setup dynamic memory allocation (`new`, `delete`).

@@ -123,52 +123,59 @@ void print_debug() {
             (void*)&process,
             process.kernel_stack,
             (void*)process.CR3);
-        std::print(
-            "      RAX:      {:#016x}\n"
-            "      RBX:      {:#016x}\n"
-            "      RCX:      {:#016x}\n"
-            "      RDX:      {:#016x}\n"
-            "      RSI:      {:#016x}\n"
-            "      RDI:      {:#016x}\n"
-            "      RBP:      {:#016x}\n"
-            "      RSP:      {:#016x}\n"
-            "      R8:       {:#016x}\n"
-            "      R9:       {:#016x}\n"
-            "      R10:      {:#016x}\n"
-            "      R11:      {:#016x}\n"
-            "      R12:      {:#016x}\n"
-            "      R13:      {:#016x}\n"
-            "      R14:      {:#016x}\n"
-            "      R15:      {:#016x}\n"
-            "      Frame:\n"
-            "        RIP:    {:#016x}\n"
-            "        CS:     {:#016x}\n"
-            "        RFLAGS: {:#016x}\n"
-            "        RSP:    {:#016x}\n"
-            "        SS:     {:#016x}\n",
-            u64(cpu->RAX),
-            u64(cpu->RBX),
-            u64(cpu->RCX),
-            u64(cpu->RDX),
-            u64(cpu->RSI),
-            u64(cpu->RDI),
-            u64(cpu->RBP),
-            u64(cpu->RSP),
-            u64(cpu->R8),
-            u64(cpu->R9),
-            u64(cpu->R10),
-            u64(cpu->R11),
-            u64(cpu->R12),
-            u64(cpu->R13),
-            u64(cpu->R14),
-            u64(cpu->R15),
-            u64(cpu->Frame.ip),
-            u64(cpu->Frame.cs),
-            u64(cpu->Frame.flags),
-            u64(cpu->Frame.sp),
-            u64(cpu->Frame.ss));
+        if (cpu
+            and uintptr_t(cpu) <= process.kernel_stack_top - sizeof(CPUState)) {
+            std::print(
+                "      RAX:      {:#016x}\n"
+                "      RBX:      {:#016x}\n"
+                "      RCX:      {:#016x}\n"
+                "      RDX:      {:#016x}\n"
+                "      RSI:      {:#016x}\n"
+                "      RDI:      {:#016x}\n"
+                "      RBP:      {:#016x}\n"
+                "      RSP:      {:#016x}\n"
+                "      R8:       {:#016x}\n"
+                "      R9:       {:#016x}\n"
+                "      R10:      {:#016x}\n"
+                "      R11:      {:#016x}\n"
+                "      R12:      {:#016x}\n"
+                "      R13:      {:#016x}\n"
+                "      R14:      {:#016x}\n"
+                "      R15:      {:#016x}\n"
+                "      Frame:\n"
+                "        RIP:    {:#016x}\n"
+                "        CS:     {:#016x}\n"
+                "        RFLAGS: {:#016x}\n"
+                "        RSP:    {:#016x}\n"
+                "        SS:     {:#016x}\n",
+                u64(cpu->RAX),
+                u64(cpu->RBX),
+                u64(cpu->RCX),
+                u64(cpu->RDX),
+                u64(cpu->RSI),
+                u64(cpu->RDI),
+                u64(cpu->RBP),
+                u64(cpu->RSP),
+                u64(cpu->R8),
+                u64(cpu->R9),
+                u64(cpu->R10),
+                u64(cpu->R11),
+                u64(cpu->R12),
+                u64(cpu->R13),
+                u64(cpu->R14),
+                u64(cpu->R15),
+                u64(cpu->Frame.ip),
+                u64(cpu->Frame.cs),
+                u64(cpu->Frame.flags),
+                u64(cpu->Frame.sp),
+                u64(cpu->Frame.ss));
+        }
+        else
+            std::print("      No CPU State\n");
+
         std::print("      File Descriptors:\n");
-        for (const auto& [procfd, fd] : process.FileDescriptors.pairs()) {
+        for (const auto& [procfd, fd] :
+             process.FileDescriptors.pairs()) {
             std::print("        {} -> {}\n", s64(procfd), s64(fd));
         }
     });
@@ -433,14 +440,14 @@ pid_t CopyUserspaceProcess(Process* original) {
                    );
         */
 
-        // Copy memory contents (physical addresses because kernel has identity mapping).
+        // Copy memory contents (physical addresses because kernel has higher half mapping).
         memcpy(newMemory.paddr, memory.paddr, memory.length);
 
         // Map virtual addresses to new physical addresses.
         Memory::map_pages(
             newProcess->CR3,
             newMemory.vaddr,
-            newMemory.paddr,
+            (void*)Memory::TO_FRAME_POINTER(newMemory.paddr),
             (u64)Memory::PageTableFlag::Present
                 | (u64)Memory::PageTableFlag::ReadWrite
                 | (u64)Memory::PageTableFlag::UserSuper,

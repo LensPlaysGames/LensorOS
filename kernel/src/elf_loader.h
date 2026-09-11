@@ -196,7 +196,7 @@ LoadUserspaceElf64Process(
             }
             process->add_memory_region(
                 (void*)virtAddress,
-                (void*)Memory::TO_FRAME_POINTER(loadedProgram),
+                (void*)loadedProgram,
                 pages * PAGE_SIZE,
                 flags);
         }
@@ -227,7 +227,7 @@ LoadUserspaceElf64Process(
         Memory::ShowDebug::No);
     process->add_memory_region(
         (void*)virtual_stack_bottom,
-        (void*)Memory::TO_FRAME_POINTER(user_stack),
+        (void*)user_stack,
         UserProcessStackSize,
         stack_flags);
     // for (auto virtual_page = virtual_stack_bottom; virtual_page < virtual_stack_top; virtual_page += PAGE_SIZE) {

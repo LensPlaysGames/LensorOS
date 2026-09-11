@@ -259,7 +259,13 @@ void* sys$6_map(void* address, usz size, u64 flags) {
     process->add_memory_region(address, paddr, size, memory_flags);
 
     // Map virtual address to physical with proper flags
-    Memory::map_pages(process->CR3, address, paddr, memory_flags, pages, Memory::ShowDebug::No);
+    Memory::map_pages(
+        process->CR3,
+        address,
+        (void*)Memory::TO_FRAME_POINTER(paddr),
+        memory_flags,
+        pages,
+        Memory::ShowDebug::No);
 
     DBGMSG("[SYS$]:map: Mapped {} pages at {} (physical {})\n", pages, (void*)address, (void*)paddr);
 
@@ -1113,7 +1119,7 @@ int sys$26_shared_memory_allocate(void** ptr, size_t size) {
     Memory::map_pages(
         process->CR3,
         *ptr,
-        physical_address,
+        (void*)Memory::TO_FRAME_POINTER(physical_address),
         memory_flags,
         pages,
         Memory::ShowDebug::No);
@@ -1158,7 +1164,7 @@ void* sys$27_shared_memory_acquire(int id) {
     Memory::map_pages(
         process->CR3,
         address,
-        memory_region->physical_address,
+        (void*)Memory::TO_FRAME_POINTER(memory_region->physical_address),
         memory_flags,
         pages,
         Memory::ShowDebug::No);

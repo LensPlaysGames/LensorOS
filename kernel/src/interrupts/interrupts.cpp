@@ -427,7 +427,7 @@ __attribute__((interrupt)) void stack_segment_fault_handler(InterruptFrameError*
 }
 
 __attribute__((interrupt)) void general_protection_fault_handler(InterruptFrameError* frame) {
-    std::print("\n!!> General Protection Fault <!!\n");
+    std::print("\n!!> General Protection Fault from {} <!!\n", (void*)frame->ip);
 
     if (frame->error & 0b1)
         std::print("  External\n");
