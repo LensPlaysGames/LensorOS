@@ -21,6 +21,7 @@
 #define LENSOR_OS_PAGING_H
 
 #include <integers.h>
+#include <memory/common.h>
 
 #include <print>
 
@@ -135,10 +136,13 @@ class PageDirectoryEntry {
    private:
     u64 Value{0};
 } __attribute__((packed));
+static_assert(sizeof(PageDirectoryEntry) == 8, "");
 
 struct PageTable {
     PageDirectoryEntry entries[512];
 } __attribute__((aligned(0x1000)));
+static_assert(sizeof(PageTable) == PAGE_SIZE, "");
+
 }  // namespace Memory
 
 #endif /* LENSOR_OS_PAGING_H */

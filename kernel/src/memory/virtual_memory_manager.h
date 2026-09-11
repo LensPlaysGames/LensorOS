@@ -154,7 +154,13 @@ void print_page_map(Memory::PageTable*, Memory::PageTableFlag filter = Memory::P
 
 /// Print the flags of a page directory entry. If no flags are set,
 /// nothing will be printed.
+std::string stringify_pde_flags(Memory::PageDirectoryEntry PDE);
+
+/// Print the flags of a page directory entry. If no flags are set,
+/// nothing will be printed.
+/// @c stringify_pde_flags()
 void print_pde_flags(Memory::PageDirectoryEntry PDE);
+
 }  // namespace Memory
 
 #endif /* LENSOR_OS_VIRTUAL_MEMORY_MANAGER_H */

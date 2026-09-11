@@ -40,7 +40,7 @@
 #endif
 
 namespace Memory {
-Bitmap FrameBitmap;
+Bitmap FrameBitmap{0, nullptr};
 
 u64 TotalFrameCount{0};
 u64 FreeFrameCount{0};
@@ -251,15 +251,20 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
     u64 largestFreeMemorySegmentPageCount{0};
     for (u64 i = 0; i < entries; ++i) {
         EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
-        if (desc->type == 7) {
-            if (desc->numPages > largestFreeMemorySegmentPageCount
-                && (u64)desc->physicalAddress + desc->numPages * PAGE_SIZE < InitialPageBitmapMaxAddress) {
-                largestFreeMemorySegment = desc->physicalAddress;
-                largestFreeMemorySegmentPageCount = desc->numPages;
-            }
+        if (desc->type == 7
+            and uintptr_t(desc->physicalAddress) >= MiB(1)
+            and desc->numPages > largestFreeMemorySegmentPageCount
+            and uintptr_t(desc->physicalAddress) + desc->numPages * PAGE_SIZE < InitialPageBitmapMaxAddress) {
+            largestFreeMemorySegment = desc->physicalAddress;
+            largestFreeMemorySegmentPageCount = desc->numPages;
         }
         TotalFrameCount += desc->numPages;
     }
+    std::print(
+        "[PHYS]: {}MiB\n"
+        "        {}MiB contiguous\n",
+        TO_MiB(TotalFrameCount * PAGE_SIZE),
+        TO_MiB(largestFreeMemorySegmentPageCount * PAGE_SIZE));
     if (largestFreeMemorySegment == nullptr
         || largestFreeMemorySegmentPageCount == 0) {
         std::print(
@@ -268,22 +273,21 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
             "physical memory manager intialization.");
         hang();
     }
-    DBGMSG(
-        "Found initial free memory segment ({}KiB) at {}\n",
-        TO_KiB(largestFreeMemorySegmentPageCount * PAGE_SIZE),
-        largestFreeMemorySegment);
     // Use pre-allocated memory region for initial physical page bitmap.
-    FrameBitmap.init(
+    FrameBitmap.move(
         InitialPageBitmapSize,
         (u8*)&InitialPageBitmap[0]);
     // Lock all pages in initial bitmap.
     lock_pages(
         (void*)FROM_FRAME_POINTER(uintptr_t(0)),
         InitialPageBitmapPageCount);
+
     // Unlock free pages in bitmap.
     for (u64 i = 0; i < entries; ++i) {
         auto* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
-        if (desc->type == 7) {
+        if (desc->type == 7
+            and uintptr_t(desc->physicalAddress) >= MiB(1)
+            and uintptr_t(desc->physicalAddress) < InitialPageBitmapMaxAddress) {
             DBGMSG(
                 "Freeing {} pages starting at {:#016x} according to EFI\n",
                 desc->numPages,
@@ -305,33 +309,41 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
     // TODO: `.text` + `.rodata` should be read only.
     PageTable* activePML4 = active_page_map();
     for (u64 t = 0;
-         t < TotalFrameCount * PAGE_SIZE
-         && t < InitialPageBitmapMaxAddress;
-         t += PAGE_SIZE) {
+         t < TotalFrameCount * PAGE_SIZE;
+         t += PAGE_SIZE_LARGE) {
+        void* virt = (void*)FROM_FRAME_POINTER(t);
         map_large<true>(
             activePML4,
-            (void*)(t + PHYSICAL_BASE),
+            virt,
             (void*)t,
             (u64)PageTableFlag::Present
                 | (u64)PageTableFlag::ReadWrite,
             ShowDebug::No);
     }
+    // TLB flush (virtual -> physical mappings cache reset)
+    flush_page_map(activePML4);
+    asm volatile("" ::: "memory");
+
     // Calculate total number of bytes needed for a physical page
     // bitmap that covers hardware's actual amount of memory present.
     u64 bitmapSize = (TotalFrameCount / 8) + 1;
-    FrameBitmap.init(
+    FrameBitmap.move(
         bitmapSize,
         (u8*)FROM_FRAME_POINTER(largestFreeMemorySegment));
-    UsedFrameCount = 0;
+
+    // Lock all pages past the domain of the original allocation bitmap.
+    // This ensures we don't accidentally attempt to utilize memory that is
+    // not actually for us to use.
     lock_pages(
-        (void*)FROM_FRAME_POINTER(uintptr_t(0)),
-        TotalFrameCount + 1);
-    // With all pages in the bitmap locked, free only the EFI conventional memory segments.
-    // We may be able to be a little more aggressive in what memory we take in the future.
-    FreeFrameCount = 0;
+        (void*)FROM_FRAME_POINTER(uintptr_t(InitialPageBitmapMaxAddress)),
+        TotalFrameCount + 1 - InitialPageBitmapPageCount);
+
+    // Anything we ignored previously due to the size constraints of the
+    // initial bitmap may now be utilized.
     for (u64 i = 0; i < entries; ++i) {
         auto* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
-        if (desc->type == 7) {
+        if (desc->type == 7
+            and uintptr_t(desc->physicalAddress) >= InitialPageBitmapMaxAddress) {
             free_pages(
                 (void*)FROM_FRAME_POINTER(desc->physicalAddress),
                 desc->numPages);
@@ -339,6 +351,7 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
                 MaxContiguousFreeFrames = desc->numPages;
         }
     }
+
     /* The frame bitmap itself takes up space within the largest free memory segment.
      * As every memory segment was just set back to free in the bitmap, it's
      *   important to re-lock the frame bitmap so it doesn't get trampled on

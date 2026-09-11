@@ -48,15 +48,17 @@ void HeapSegmentHeader::combine_forward() {
     // Can't combine nothing :^).
     if (next == nullptr)
         return;
+
     // Don't combine a header that is in use.
     if (next->free == false)
         return;
-    // Update last header address if it is being changed.
-    if (next == sLastHeader)
-        sLastHeader = this;
+
     // Set next next segment last to this segment.
-    if (next->next != nullptr)
+    if (next->next)
         next->next->last = this;
+    // Update last header address if it is being changed.
+    else
+        sLastHeader = this;
 
     length = length + next->length + sizeof(HeapSegmentHeader);
     next = next->next;
@@ -144,13 +146,14 @@ void init_heap() {
 
 void expand_heap(u64 numBytes) {
     // Get page count (at least one) from number of bytes
-    u64 numPages = (numBytes / PAGE_SIZE) + 1;
+    u64 numPages = (numBytes + PAGE_SIZE - 1) / PAGE_SIZE;
     // Round byte count to page-aligned boundary.
     numBytes = numPages * PAGE_SIZE;
 
     DBGMSG("[Heap]: Expanding by {} bytes\n", numBytes);
 
-    // NOTE: We don't use map_pages here because we request a new page for each one mapped.
+    // NOTE: We don't use map_pages here because we request a new page for
+    // each one mapped.
     for (u64 i = 0; i < numPages * PAGE_SIZE; i += PAGE_SIZE) {
         // Map virtual heap position to physical memory address returned by page frame allocator.
         void* addr = Memory::request_page();
@@ -176,7 +179,7 @@ void expand_heap(u64 numBytes) {
     auto* extension = (HeapSegmentHeader*)sHeapEnd;
     DBGMSG("  extension begin addr={}\n", (void*)extension);
 
-    sHeapEnd = (void*)((u64)extension + numBytes);
+    sHeapEnd = (void*)(uintptr_t(extension) + numBytes);
     DBGMSG("  extension end addr={}\n", sHeapEnd);
 
     extension->free = true;
@@ -185,6 +188,11 @@ void expand_heap(u64 numBytes) {
     sLastHeader = extension;
     extension->next = nullptr;
     extension->length = numBytes - sizeof(HeapSegmentHeader);
+
+    if (not extension->free or extension->length != numBytes - sizeof(HeapSegmentHeader)) {
+        panic("Heap expansion invalid");
+        hang();
+    }
 
     // After expanding, combine with the previous segment (decrease fragmentation).
     extension->combine_backward();

@@ -21,17 +21,28 @@
 #include <integers.h>
 #include <memory.h>
 
+#include <algorithm>
+
 Bitmap::Bitmap(u64 size, u8* bufferAddress)
     : Size(size)
     , Buffer(bufferAddress) {
-    memset(Buffer, 0, Size);
+    // Initialize the buffer to all zeros (ensure known state).
+    if (Size and Buffer)
+        memset(Buffer, 0, Size);
 }
 
-void Bitmap::init(u64 size, u8* bufferAddress) {
-    Size = size;
+void Bitmap::move(u64 newSize, u8* bufferAddress) {
+    // Initialize new buffer
+    if (newSize and bufferAddress)
+        memset(bufferAddress, 0, newSize);
+
+    // Copy set bits from existing map to new map
+    if (Size and Buffer and newSize and bufferAddress)
+        memcpy(bufferAddress, Buffer, std::min(Size, newSize));
+
+    // Update map
+    Size = newSize;
     Buffer = bufferAddress;
-    // Initialize the buffer to all zeros (ensure known state).
-    memset(Buffer, 0, Size);
 }
 
 bool Bitmap::get(u64 index) {
