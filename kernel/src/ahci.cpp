@@ -20,12 +20,11 @@
 #include <ahci.h>
 #include <integers.h>
 
-#include <format>
-
 // Uncomment the following directive for extra debug information output.
 // #define DEBUG_AHCI
 
 #ifdef DEBUG_AHCI
+#include <print>
 #define DBGMSG(...) std::print(__VA_ARGS__)
 #else
 #define DBGMSG(...) void()
