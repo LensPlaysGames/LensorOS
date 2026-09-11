@@ -245,9 +245,9 @@ enum class PageFaultErrorCode {
 
 __attribute__((interrupt)) void page_fault_handler(InterruptFrameError* frame) {
     // Collect faulty address as soon as possible (it may be lost quickly).
-    u64 address;
+    u64 address{0};
     asm volatile("mov %%cr2, %0" : "=r"(address));
-    u64 cr3;
+    u64 cr3{0};
     asm volatile("mov %%cr3, %0" : "=r"(cr3));
 
     // TODO: Detect user process (ring 3) writing to a page that is
@@ -289,35 +289,39 @@ __attribute__((interrupt)) void page_fault_handler(InterruptFrameError* frame) {
     // TODO: Figure out how to perform memory write that caused this
     // page fault again (or if we can just return and that will happen).
 
-    std::print("  Faulty Address: {:#016x}\n", address);
-    std::print("  PageTable Address: {:#016x}\n", cr3);
+    std::print("  Faulty Address: {}\n", (void*)address);
+    std::print("  PageTable Address: {}\n", (void*)cr3);
 
     Memory::PageMapIndexer indexer(address);
-    Memory::PageDirectoryEntry PDE;
-    PDE = ((Memory::PageTable*)cr3)->entries[indexer.page_directory_pointer()];
+    auto* pml4 = (Memory::PageTable*)Memory::FROM_FRAME_POINTER(cr3);
+    Memory::PageDirectoryEntry& PML4PDE = pml4->entries[indexer.page_directory_pointer()];
     std::print("4th lvl permissions | ");
-    Memory::print_pde_flags(PDE);
+    Memory::print_pde_flags(PML4PDE);
     std::print("\n");
 
-    auto* PDP = (Memory::PageTable*)PDE.address();
-    PDE = PDP->entries[indexer.page_directory()];
+    auto* PDP = (Memory::PageTable*)Memory::FROM_FRAME_POINTER(PML4PDE.address());
+    Memory::PageDirectoryEntry& PDPPDE = PDP->entries[indexer.page_directory()];
     std::print("3rd lvl permissions | ");
-    Memory::print_pde_flags(PDE);
+    Memory::print_pde_flags(PDPPDE);
     std::print("\n");
 
-    auto* PD = (Memory::PageTable*)PDE.address();
-    PDE = PD->entries[indexer.page_table()];
+    auto* PD = (Memory::PageTable*)Memory::FROM_FRAME_POINTER(PDPPDE.address());
+    Memory::PageDirectoryEntry& PDPDE = PD->entries[indexer.page_table()];
     std::print("2nd lvl permissions | ");
-    Memory::print_pde_flags(PDE);
+    Memory::print_pde_flags(PDPDE);
     std::print("\n");
 
-    auto* PT = (Memory::PageTable*)PDE.address();
-    PDE = PT->entries[indexer.page()];
-    std::print("1st lvl permissions | ");
-    Memory::print_pde_flags(PDE);
-    std::print("\n");
+    if (PDPDE.flag(Memory::PageTableFlag::LargerPages))
+        std::print("PHYS {:#016x} at VIRT {:#016x}\n", u64(PDPDE.address()), u64(address));
+    else {
+        auto* PT = (Memory::PageTable*)Memory::FROM_FRAME_POINTER(PDPDE.address());
+        Memory::PageDirectoryEntry& PDE = PT->entries[indexer.page()];
+        std::print("1st lvl permissions | ");
+        Memory::print_pde_flags(PDE);
+        std::print("\n");
 
-    std::print("PHYS {:#016x} at VIRT {:#016x}\n", u64(PDE.address()), u64(address));
+        std::print("PHYS {:#016x} at VIRT {:#016x}\n", u64(PDE.address()), u64(address));
+    }
 
     if ((frame->error & (u64)PageFaultErrorCode::ProtectionKeyViolation) > 0)
         std::print("  Protection Key Violation\n");
@@ -423,10 +427,7 @@ __attribute__((interrupt)) void stack_segment_fault_handler(InterruptFrameError*
 }
 
 __attribute__((interrupt)) void general_protection_fault_handler(InterruptFrameError* frame) {
-    if (frame->error == 0)
-        panic(frame, "General protection fault detected (0)!");
-    else
-        panic(frame, "General protection fault detected (selector)!");
+    std::print("\n!!> General Protection Fault <!!\n");
 
     if (frame->error & 0b1)
         std::print("  External\n");
@@ -440,6 +441,13 @@ __attribute__((interrupt)) void general_protection_fault_handler(InterruptFrameE
         std::print("  LDT");
 
     std::print(" Selector Index: {:x}\n", (frame->error & 0b1111'1111'1111'1000) >> 3);
+    hang();
+
+    if (frame->error == 0)
+        panic(frame, "General protection fault detected (0)!");
+    else
+        panic(frame, "General protection fault detected (selector)!");
+
     hang();
 }
 
