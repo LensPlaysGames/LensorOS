@@ -43,6 +43,7 @@
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 #include <mouse.h>
+#include <network.h>
 #include <pci.h>
 #include <pit.h>
 #include <random_lcg.h>
@@ -695,53 +696,25 @@ void kstage2(BootInfo* bInfo) {
         __WHITE,
         __DEFAULT);
 
-    struct EthernetFrameHeader {
-        u8 MACDestination[6];
-        u8 MACSource[6];
-        u16 Ethertype;
-    } __attribute__((packed));
-
-    struct ARPData {
-        /// HTYPE
-        u16 HardwareType;
-        /// PTYPE
-        u16 ProtocolType;
-        /// HLEN
-        u8 HardwareLength;
-        /// PLEN
-        u8 ProtocolLength;
-        /// OPER
-        /// 1 == request
-        /// 2 == reply
-        u16 Operation;
-        /// SHA
-        u8 SenderHardwareAddress[6];
-        /// SPA
-        /// "Internetwork address"
-        u8 SenderProtocolAddress[4];
-        u8 TargetHardwareAddress[6];
-        u8 TargetProtocolAddress[4];
-    } __attribute__((packed));
-
-    EthernetFrameHeader header;
-    ARPData arp;
+    Network::EthernetFrameHeader header;
+    Network::ARPData arp;
 
     /// Set Ethertype to ARP (address resolution protocol)
-    memset(&header.MACDestination, 0xff, 6);
-    memcpy(&header.MACSource, &gE1000.MACAddress, 6);
+    memset(&header.MACDestination, 0xff, sizeof(header.MACDestination));
+    memcpy(&header.MACSource, &gE1000.MACAddress, sizeof(header.MACSource));
     /// host to network byte order (ntohl)
-    header.Ethertype = std::byteswap(u16(0x0806));
+    header.Ethertype = Network::host_to_network(u16(0x0806));
 
     /// Ethernet HTYPE is 1.
-    arp.HardwareType = std::byteswap(u16(1));
-    /// IPv4 is 0x8000.
-    arp.ProtocolType = std::byteswap(u16(0x0800));
+    arp.HardwareType = Network::ARP_HARDWARETYPE_ETHERNET;
+    /// IPv4 is 0x0800.
+    arp.ProtocolType = Network::ARP_PROTOCOLTYPE_IPV4;
     /// Length of MAC address is 6 octets.
-    arp.HardwareLength = 6;
+    arp.HardwareLength = u8(6);
     /// Length of IPv4 address is 4 octets.
-    arp.ProtocolLength = 4;
+    arp.ProtocolLength = u8(4);
     /// Request Operation is 1.
-    arp.Operation = std::byteswap(u16(1));
+    arp.Operation = Network::host_to_network(u16(1));
 
     memcpy(arp.SenderHardwareAddress, &gE1000.MACAddress, 6);
     arp.TargetProtocolAddress[0] = 10;
@@ -749,10 +722,10 @@ void kstage2(BootInfo* bInfo) {
     arp.TargetProtocolAddress[2] = 2;
     arp.TargetProtocolAddress[3] = 2;
 
-    constexpr usz buffer_size = sizeof(EthernetFrameHeader) + sizeof(ARPData);
+    constexpr usz buffer_size = sizeof(header) + sizeof(arp);
     u8* buffer = new u8[buffer_size];
-    memcpy(buffer, &header, sizeof(EthernetFrameHeader));
-    memcpy(buffer + sizeof(EthernetFrameHeader), &arp, sizeof(ARPData));
+    memcpy(buffer, &header, sizeof(header));
+    memcpy(buffer + sizeof(header), &arp, sizeof(arp));
 
     gE1000.write_raw(buffer, buffer_size);
 
