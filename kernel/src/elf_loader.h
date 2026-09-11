@@ -190,13 +190,13 @@ LoadUserspaceElf64Process(
                 Memory::map(
                     pageTable,
                     (void*)(virtAddress + t),
-                    loadedProgram + t,
+                    (void*)Memory::TO_FRAME_POINTER(loadedProgram + t),
                     flags,
                     Memory::ShowDebug::No);
             }
             process->add_memory_region(
                 (void*)virtAddress,
-                (void*)loadedProgram,
+                (void*)Memory::TO_FRAME_POINTER(loadedProgram),
                 pages * PAGE_SIZE,
                 flags);
         }
@@ -221,13 +221,13 @@ LoadUserspaceElf64Process(
     Memory::map_pages(
         pageTable,
         (void*)virtual_stack_bottom,
-        user_stack,
+        (void*)Memory::TO_FRAME_POINTER(user_stack),
         stack_flags,
         UserProcessStackSizePages,
         Memory::ShowDebug::No);
     process->add_memory_region(
         (void*)virtual_stack_bottom,
-        user_stack,
+        (void*)Memory::TO_FRAME_POINTER(user_stack),
         UserProcessStackSize,
         stack_flags);
     // for (auto virtual_page = virtual_stack_bottom; virtual_page < virtual_stack_top; virtual_page += PAGE_SIZE) {
