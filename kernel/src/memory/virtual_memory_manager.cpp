@@ -39,10 +39,12 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
 
     if ((uintptr_t(physicalAddress) & PHYSICAL_BASE) == PHYSICAL_BASE) {
         std::print(
-            "ERROR: Likely a bug in memory map of virtual address {:#016x} to physical address {:#016x}... "
-            "Did you mean to use TO_FRAME_POINTER() on the return value of Memory::request_page()?",
-            uintptr_t(virtualAddress),
-            uintptr_t(physicalAddress));
+            "ERROR: Likely a bug in memory map of virtual address {} to physical address {}...\n"
+            "  Did you mean to use TO_FRAME_POINTER() on the return value of Memory::request_page()?\n",
+            virtualAddress,
+            physicalAddress);
+        panic("Mapping virtual to virtual!");
+        hang();
     }
 
     PageMapIndexer indexer((u64)virtualAddress);
@@ -428,6 +430,9 @@ Memory::PageTable* clone_page_map_copy_on_write(Memory::PageTable* oldPageTable)
         return nullptr;
     }
     memset(newPageTable, 0, PAGE_SIZE);
+
+    oldPageTable = (Memory::PageTable*)FROM_FRAME_POINTER(oldPageTable);
+
     for (u64 i = 0; i < 512; ++i) {
         PDE = oldPageTable->entries[i];
         if (PDE.flag(Memory::PageTableFlag::Present) == false)
@@ -502,6 +507,9 @@ Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable) {
         return nullptr;
     }
     memset(newPageTable, 0, PAGE_SIZE);
+
+    oldPageTable = (Memory::PageTable*)FROM_FRAME_POINTER(oldPageTable);
+
     for (u64 i = 0; i < 512; ++i) {
         PDE = oldPageTable->entries[i];
         if (PDE.flag(Memory::PageTableFlag::Present) == false)
@@ -571,7 +579,7 @@ Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable) {
         PDE.set_address(TO_FRAME_POINTER(newPDP));
         newPageTable->entries[i] = PDE;
     }
-    return newPageTable;
+    return (PageTable*)TO_FRAME_POINTER(newPageTable);
 }
 
 void free_page_map(PageTable* pageTable) {
@@ -583,6 +591,9 @@ void free_page_map(PageTable* pageTable) {
         std::print("[VIRT]: Cannot free currently active page table...\n");
         return;
     }
+
+    pageTable = (PageTable*)FROM_FRAME_POINTER(pageTable);
+
     PageDirectoryEntry PDE;
     for (u64 i = 0; i < 512; ++i) {
         // std::print("  PDP {}\n", i);
@@ -740,6 +751,8 @@ void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filte
         flags = newFlags;
         haveRange = true;
     };
+
+    oldPageTable = (PageTable*)FROM_FRAME_POINTER(oldPageTable);
 
     Memory::PageDirectoryEntry PDE{};
     for (u64 i = 0; i < 512; ++i) {
