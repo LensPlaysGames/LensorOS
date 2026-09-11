@@ -256,12 +256,6 @@ Process* request_process(pid_t parent_pid) {
     }
     process->CR3 = newPageTable;
 
-    Memory::map(
-        newPageTable,
-        newPageTable,
-        newPageTable,
-        (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
-
     constexpr size_t KernelStackSizePages = 2;
     constexpr size_t KernelStackSize = KernelStackSizePages * PAGE_SIZE;
     // constexpr auto KernelStackFlags = (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite;
