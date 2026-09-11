@@ -227,6 +227,7 @@ void map_large(PageTable* pageMapLevelFour, void* virtualAddress, void* physical
     if (debug == ShowDebug::Yes) {
         std::print(
             "Attempting to map large 2MiB virtual {} to physical {} in page directory at {}\n"
+            "  Indices: PML4[{}], PDP[{}], PD[{}], (unused) Page[{}]\n"
             "  Flags:\n"
             "    Present:         {}\n"
             "    Write:           {}\n"
@@ -238,6 +239,10 @@ void map_large(PageTable* pageMapLevelFour, void* virtualAddress, void* physical
             virtualAddress,
             physicalAddress,
             (void*)pageMapLevelFour,
+            indexer.page_directory_pointer(),
+            indexer.page_directory(),
+            indexer.page_table(),
+            indexer.page(),
             present,
             write,
             user,
