@@ -646,7 +646,7 @@ void init_virtual() {
 
 void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filter) {
     // Lambda to avoid duplicating the printing block
-    auto print_range = [&](u64 start, u64 end, u64 currentFlags) {
+    const auto print_range = [&](u64 start, u64 end, u64 currentFlags) {
         if (currentFlags != -1ull
             and (currentFlags & (u64)Memory::PageTableFlag::Present)
             and (currentFlags & (u64)filter) == (u64)filter) {
@@ -664,26 +664,73 @@ void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filte
         }
     };
 
+    bool haveRange = false;
     u64 startAddress = -1ull;
     u64 endAddress = -1ull;
     u64 flags = -1ull;
-    Memory::PageDirectoryEntry PDE;
+
+    const auto flush_range = [&]() {
+        if (not haveRange)
+            return;
+
+        print_range(startAddress, endAddress, flags);
+
+        haveRange = false;
+        startAddress = -1ull;
+        endAddress = -1ull;
+        flags = -1ull;
+    };
+
+    const auto add_to_range = [&](u64 start, u64 end, u64 newFlags) {
+        if (not haveRange) {
+            startAddress = start;
+            endAddress = end;
+            flags = newFlags;
+            haveRange = true;
+            return;
+        }
+
+        bool adjacent = endAddress == start;
+        bool sameFlags = newFlags == flags;
+
+        // For two adjacent ranges with the same flags, we can just increase the
+        // span that we print out.
+        if (adjacent and sameFlags) {
+            endAddress = end;
+            return;
+        }
+
+        flush_range();
+
+        startAddress = start;
+        endAddress = end;
+        flags = newFlags;
+        haveRange = true;
+    };
+
+    Memory::PageDirectoryEntry PDE{};
     for (u64 i = 0; i < 512; ++i) {
         PDE = oldPageTable->entries[i];
-        if (PDE.flag(Memory::PageTableFlag::Present) == false)
+        if (PDE.flag(Memory::PageTableFlag::Present) == false) {
+            flush_range();
             continue;
+        }
 
         auto* oldTable = (Memory::PageTable*)FROM_FRAME_POINTER(PDE.address());
         for (u64 j = 0; j < 512; ++j) {
             PDE = oldTable->entries[j];
-            if (PDE.flag(Memory::PageTableFlag::Present) == false)
+            if (PDE.flag(Memory::PageTableFlag::Present) == false) {
+                flush_range();
                 continue;
+            }
 
             auto* oldPD = (Memory::PageTable*)FROM_FRAME_POINTER(PDE.address());
             for (u64 k = 0; k < 512; ++k) {
                 PDE = oldPD->entries[k];
-                if (PDE.flag(Memory::PageTableFlag::Present) == false)
+                if (PDE.flag(Memory::PageTableFlag::Present) == false) {
+                    flush_range();
                     continue;
+                }
 
                 if (PDE.flag(PageTableFlag::LargerPages)) {
                     u64 virtualAddress = 0;
@@ -696,17 +743,10 @@ void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filte
                     if (virtualAddress & (1ULL << 47))
                         virtualAddress |= 0xffff000000000000ull;
 
-                    endAddress = virtualAddress;
-
-                    if (flags != -1ull && PDE.flags() != flags) {
-                        print_range(startAddress, endAddress, flags);
-                        startAddress = virtualAddress;
-                        flags = PDE.flags();
-                    }
-
-                    if (startAddress == -1ull) startAddress = virtualAddress;
-                    if (flags == -1ull) flags = PDE.flags();
-
+                    add_to_range(
+                        virtualAddress,
+                        virtualAddress + PAGE_SIZE_LARGE,
+                        PDE.flags());
                     continue;
                 }
 
@@ -726,26 +766,15 @@ void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filte
                     if (virtualAddress & (1ULL << 47))
                         virtualAddress |= 0xffff000000000000ull;
 
-                    endAddress = virtualAddress;
-
-                    // If flags does not equal new flags, stop and print.
-                    if (flags != -1ull && PDE.flags() != flags) {
-                        print_range(startAddress, endAddress, flags);
-                        startAddress = endAddress;
-                        flags = PDE.flags();
-                        continue;
-                    }
-
-                    if (startAddress == -1ull)
-                        startAddress = endAddress;
-
-                    if (flags == -1ull)
-                        flags = PDE.flags();
+                    add_to_range(
+                        virtualAddress,
+                        virtualAddress + PAGE_SIZE,
+                        PDE.flags());
                 }
             }
         }
     }
-    print_range(startAddress, endAddress, flags);
+    flush_range();
 }
 
 void print_pde_flags(Memory::PageDirectoryEntry PDE) {
