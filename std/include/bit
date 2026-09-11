@@ -33,6 +33,13 @@ __END_DECLS__
 
 namespace std {
 
+enum class endian {
+    // Thanks GNU :)
+    little = __ORDER_LITTLE_ENDIAN__,
+    big = __ORDER_BIG_ENDIAN__,
+    native = __BYTE_ORDER__
+};
+
 template <typename _To, typename _From>
     requires(sizeof(_To) == sizeof(_From))
 constexpr _To bit_cast(const _From& __from) {
