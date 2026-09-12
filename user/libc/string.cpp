@@ -17,7 +17,9 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#define memcpy __header_memcpy
 #include "string.h"
+#undef memcpy
 
 #include <string>
 #include <string_view>
@@ -29,10 +31,16 @@
 // other way of accessing the kernel CPU data.
 bool __libc_have_erms = false;
 
-_PushIgnoreWarning("-Wunused-parameter")
+_PushIgnoreWarning("-Wunused-parameter");
 
-    /// Copying
-    void* memmove(void* dst, const void* src, size_t n) {
+// Define a global wrapper that the linker can see
+void* memcpy(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n) {
+    // This will call and completely inline your header implementation
+    return __header_memcpy(__dest, __src, __n);
+}
+
+/// Copying
+void* memmove(void* dst, const void* src, size_t n) {
     __extension__ unsigned char tmp[n];
     memcpy(tmp, src, n);
     memcpy(dst, tmp, n);
@@ -302,4 +310,4 @@ size_t strnlen(const char* str, size_t maxlen) {
     return len;
 }
 
-_PopWarnings()
+_PopWarnings();

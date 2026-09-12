@@ -24,12 +24,12 @@
 
 __BEGIN_DECLS__
 
-__constexpr inline int isdigit(int c) { return c >= '0' && c <= '9'; }
-__constexpr inline int isalpha(int c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
-__constexpr inline int isalnum(int c) { return isalpha(c) || isdigit(c); }
-__constexpr inline int isxdigit(int c) { return isdigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'); }
-__constexpr inline int islower(int c) { return c >= 'a' && c <= 'z'; }
-__constexpr inline int isupper(int c) { return c >= 'A' && c <= 'Z'; }
+__constexpr int isdigit(int c) { return c >= '0' && c <= '9'; }
+__constexpr int isalpha(int c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
+__constexpr int isalnum(int c) { return isalpha(c) || isdigit(c); }
+__constexpr int isxdigit(int c) { return isdigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'); }
+__constexpr int islower(int c) { return c >= 'a' && c <= 'z'; }
+__constexpr int isupper(int c) { return c >= 'A' && c <= 'Z'; }
 
 __END_DECLS__
 
