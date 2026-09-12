@@ -57,7 +57,8 @@
 #define SYS_shared_memory_allocate 26
 #define SYS_shared_memory_acquire 27
 #define SYS_cooperative_yield 28
-#define SYS_MAXSYSCALL 28
+#define SYS_shared_memory_release 29
+#define SYS_MAXSYSCALL 29
 #else
 #define SYS_read 0
 #define SYS_write 1

@@ -1260,4 +1260,5 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     (void*)sys$27_shared_memory_acquire,
 
     (void*)sys$28_cooperative_yield,
-};
+
+    (void*)sys$29_shared_memory_release};
