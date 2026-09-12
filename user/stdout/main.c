@@ -179,15 +179,47 @@ void draw_cursor(Framebuffer* fb, size_t cursor_x, size_t cursor_y) {
 }
 
 typedef struct window_t {
+    // pointer to shared memory region between client process and the
+    // compositor, us.
     void* shared_region;
+    // x-axis coordinate of top-left of window.
+    // where the window begins from the left.
     unsigned int x;
+    // y-axis coordinate of top-left of window.
+    // where the window begins from the top.
     unsigned int y;
+    // visible window width
+    // how far the window draws past it's x-axis coordinate position.
     unsigned int width;
+    // visible window height
+    // how far the window draws past it's y-axis coordinate position.
     unsigned int height;
+    // Shared memory region ID we negotiated with the client.
     int shared_region_id;
+    // How we talk to the client.
     int client_fd;
+    // true:  window's canvas is not painted.
+    // false: window's canvas is painted according to Z-value.
+    // default: false
     bool hidden;
+    // true:  window recieves mouse events in the form of ipc_mouse_delta_t.
+    // false: window recieves mouse events in the form of ipc_mouse_postion_t.
+    // default: false
+    bool mouse_delta;
 } window_t;
+
+static inline bool window_valid(const window_t* window) {
+    return window && window->shared_region;
+}
+
+static inline bool point_within_window(
+    const window_t* window,
+    const ssize_t x,
+    const ssize_t y) {
+    return window
+           && x >= window->x && x < window->x + window->width
+           && y >= window->y && y < window->y + window->height;
+}
 
 typedef struct focus_t {
     window_t* window;
@@ -298,61 +330,99 @@ void handle_event_keyboard(Event event, CompositorContext* context) {
     EventData_KeyboardInput* keyboard_data = (EventData_KeyboardInput*)&event.Data[0];
     // printf("[SERVE]: Got keyboard input %d %u\n", keyboard_data->press, keyboard_data->value);
 
-    if (keyboard_data->value == LENSOR_KEY_LEFTCTRL) {
-        context->focus.left_control = keyboard_data->press;
-    }
-    else if (keyboard_data->value == LENSOR_KEY_RIGHTCTRL) {
-        context->focus.right_control = keyboard_data->press;
-    }
-    else if (keyboard_data->value == LENSOR_KEY_LEFTSHIFT) {
-        context->focus.left_shift = keyboard_data->press;
-    }
-    else if (keyboard_data->value == LENSOR_KEY_RIGHTSHIFT) {
-        context->focus.right_shift = keyboard_data->press;
-    }
-    else if (keyboard_data->value == LENSOR_KEY_LEFTALT) {
-        context->focus.left_alt = keyboard_data->press;
-    }
-    else if (keyboard_data->value == LENSOR_KEY_RIGHTALT) {
-        context->focus.right_alt = keyboard_data->press;
-    }
-    else if (keyboard_data->value == LENSOR_KEY_LEFTSUPER) {
-        context->focus.left_super = keyboard_data->press;
-    }
-    else if (keyboard_data->value == LENSOR_KEY_RIGHTSUPER) {
-        context->focus.right_super = keyboard_data->press;
-    }
-    else if (keyboard_data->value == LENSOR_KEY_MOUSE_LEFT) {
-        // If mouse click is over window stack, calculate if it's over an
-        // open window selector; if it is, focus that window. Also move it in Z
-        // ordering.
-        uint32_t window_stack_begin_y = g_framebuffer.pixel_height - window_stack_height;
-        if (context->focus.cursor_y >= window_stack_begin_y) {
-            const uint32_t window_stack_index
-                = context->focus.cursor_x / (window_selector_width + window_selector_separator_width);
+    switch (keyboard_data->value) {
+        case LENSOR_KEY_LEFTCTRL:
+            context->focus.left_control = keyboard_data->press;
+            break;
+        case LENSOR_KEY_RIGHTCTRL:
+            context->focus.right_control = keyboard_data->press;
+            break;
+        case LENSOR_KEY_LEFTSHIFT:
+            context->focus.left_shift = keyboard_data->press;
+            break;
+        case LENSOR_KEY_RIGHTSHIFT:
+            context->focus.right_shift = keyboard_data->press;
+            break;
+        case LENSOR_KEY_LEFTALT:
+            context->focus.left_alt = keyboard_data->press;
+            break;
+        case LENSOR_KEY_RIGHTALT:
+            context->focus.right_alt = keyboard_data->press;
+            break;
+        case LENSOR_KEY_LEFTSUPER:
+            context->focus.left_super = keyboard_data->press;
+            break;
+        case LENSOR_KEY_RIGHTSUPER:
+            context->focus.right_super = keyboard_data->press;
+            break;
+        case LENSOR_KEY_MOUSE_LEFT: {
+            // If mouse click is over window stack, calculate if it's over an
+            // open window selector; if it is, focus that window. Also move it in Z
+            // ordering.
+            uint32_t window_stack_begin_y = g_framebuffer.pixel_height - window_stack_height;
+            if (context->focus.cursor_y >= window_stack_begin_y) {
+                const uint32_t window_stack_index
+                    = context->focus.cursor_x / (window_selector_width + window_selector_separator_width);
 
-            const uint32_t window_count = (sizeof(context->windows) / sizeof(context->windows[0]));
-            if (window_stack_index < window_count) {
-                window_t clicked_window = context->windows[window_stack_index];
-                if (clicked_window.shared_region) {
-                    clicked_window.hidden = false;
-                    // shift all windows before clicked window forward
-                    //   v
-                    // A B C D -> _ A C D
-                    memmove(
-                        &context->windows[1],
-                        &context->windows[0],
-                        window_stack_index * sizeof(context->windows[0]));
-                    // move clicked window to front
-                    // B A C D
-                    context->windows[0] = clicked_window;
-                    context->focus.window = &context->windows[0];
+                const uint32_t window_count = (sizeof(context->windows) / sizeof(context->windows[0]));
+                if (window_stack_index < window_count) {
+                    window_t clicked_window = context->windows[window_stack_index];
+                    if (clicked_window.shared_region) {
+                        clicked_window.hidden = false;
+                        // shift all windows before clicked window forward
+                        //   v
+                        // A B C D -> _ A C D
+                        memmove(
+                            &context->windows[1],
+                            &context->windows[0],
+                            window_stack_index * sizeof(context->windows[0]));
+                        // move clicked window to front
+                        // B A C D
+                        context->windows[0] = clicked_window;
+                        context->focus.window = &context->windows[0];
+                    }
                 }
             }
-        }
-        else {
-            // printf("TODO: process click outside taskbar\n");
-        }
+        } break;
+
+        case LENSOR_KEY_Q:
+            if (keyboard_data->press && context->focus.left_alt) {
+                printf("[SERVE]: got SUPER+Q, closing focused window\n");
+                const uintptr_t window_index = context->focus.window - &context->windows[0];
+                const uint32_t window_count = (sizeof(context->windows) / sizeof(context->windows[0]));
+                // Close focused window
+                window_t* window = context->focus.window;
+                // do not draw it.
+                window->hidden = true;
+                window->shared_region = NULL;
+
+                if (window_index + 1 < window_count) {
+                    //   v
+                    // A B C D -> A C D
+                    memmove(
+                        &context->windows[window_index],
+                        &context->windows[window_index + 1],
+                        sizeof(context->windows[0]) * (window_count - 1 - window_index));
+                }
+                memset(
+                    &context->windows[window_count - 1],
+                    0,
+                    sizeof(context->windows[0]));
+
+                if (window_valid(&context->windows[0]))
+                    context->focus.window = &context->windows[0];
+                else
+                    context->focus.window = NULL;
+
+                // release from shared memory region
+                syscall(SYS_shared_memory_release, window->shared_region_id);
+                // close (our side of) client file descriptor
+                close(window->client_fd);
+                // TODO: unregister kqueue listening for clientFD; or, we could
+                // alternatively listen for a close/EOF event and unregister
+                // automatically.
+            }
+            break;
     }
 
     if (context->focus.window && context->focus.window->shared_region) {
@@ -385,17 +455,36 @@ void handle_event_mouse(Event event, CompositorContext* context) {
     if (context->focus.cursor_y >= g_framebuffer.pixel_height)
         context->focus.cursor_y = g_framebuffer.pixel_height - 1;
 
-    if (context->focus.window && context->focus.window->shared_region) {
-        ipc_mouse_t mouse_message;
-        mouse_message.magic = IPC_MOUSE_MAGIC;
-        mouse_message.delta_x = mouse_data->delta_x;
-        mouse_message.delta_y = mouse_data->delta_y;
-        mouse_message.delta_scroll = mouse_data->wheel_delta;
-        sys_write(
-            context->focus.window->client_fd,
-            (uint8_t*)&mouse_message,
-            sizeof(mouse_message),
-            LENSOROS_SYSCALL_WRITE_FLAG_NOBLOCK);
+    const window_t* window = context->focus.window;
+    const ssize_t cursor_x = context->focus.cursor_x;
+    const ssize_t cursor_y = context->focus.cursor_y;
+    if (window_valid(window)
+        && !window->hidden
+        && point_within_window(window, cursor_x, cursor_y)) {
+        if (window->mouse_delta) {
+            ipc_mouse_delta_t mouse_message;
+            mouse_message.magic = IPC_MOUSE_DELTA_MAGIC;
+            mouse_message.delta_x = mouse_data->delta_x;
+            mouse_message.delta_y = mouse_data->delta_y;
+            // TODO: RING BUFFER
+            sys_write(
+                context->focus.window->client_fd,
+                (uint8_t*)&mouse_message,
+                sizeof(mouse_message),
+                LENSOROS_SYSCALL_WRITE_FLAG_NOBLOCK);
+        }
+        else {
+            ipc_mouse_position_t mouse_message;
+            mouse_message.magic = IPC_MOUSE_POSITION_MAGIC;
+            mouse_message.local_x = cursor_x;
+            mouse_message.local_y = cursor_y;
+            // TODO: ring buffer, yada yada
+            sys_write(
+                window->client_fd,
+                (uint8_t*)&mouse_message,
+                sizeof(mouse_message),
+                LENSOROS_SYSCALL_WRITE_FLAG_NOBLOCK);
+        }
     }
 }
 
