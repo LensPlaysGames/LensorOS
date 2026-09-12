@@ -17,8 +17,11 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <ctype.h>
 #include <framebuffer.h>
 #include <ints.h>
+#include <lensor/ipc.h>
+#include <lensor/keys.h>
 #include <psf.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -33,24 +36,103 @@
 static Framebuffer g_framebuffer;
 static PSF1_FONT g_font;
 
-#define ESCAPE 0x01
-#define BACKSPACE 0x0e
-#define TAB 0x0f
-#define ENTER 0x1c
-#define LCONTROL 0x1d
-#define LSHIFT 0x2a
-#define RSHIFT 0x36
-#define LALT 0x38
-#define SPACE 0x39
-#define CAPSLOCK 0x3a
-#define NUMLOCK 0x45
-#define SCROLLLOCK 0x46
+static uint8_t simple_keymap[LENSOR_KEY_KPDOT + 1] = {
+    '\0',
+    '\0',  // LENSOR_KEY_ESC
+    '1',   // LENSOR_KEY_DIGIT1
+    '2',   // LENSOR_KEY_DIGIT2
+    '3',   // LENSOR_KEY_DIGIT3
+    '4',   // LENSOR_KEY_DIGIT4
+    '5',   // LENSOR_KEY_DIGIT5
+    '6',   // LENSOR_KEY_DIGIT6
+    '7',   // LENSOR_KEY_DIGIT7
+    '8',   // LENSOR_KEY_DIGIT8
+    '9',   // LENSOR_KEY_DIGIT9
+    '0',   // LENSOR_KEY_DIGIT0
+    '-',   // LENSOR_KEY_MINUS
+    '=',   // LENSOR_KEY_EQUAL
+    '\b',  // LENSOR_KEY_BACKSPACE
+    '\t',  // LENSOR_KEY_TAB
+    'q',   // LENSOR_KEY_Q
+    'w',   // LENSOR_KEY_W
+    'e',   // LENSOR_KEY_E
+    'r',   // LENSOR_KEY_R
+    't',   // LENSOR_KEY_T
+    'y',   // LENSOR_KEY_Y
+    'u',   // LENSOR_KEY_U
+    'i',   // LENSOR_KEY_I
+    'o',   // LENSOR_KEY_O
+    'p',   // LENSOR_KEY_P
+    '[',   // LENSOR_KEY_LEFTBRACE
+    ']',   // LENSOR_KEY_RIGHTBRACE
+    '\n',  // LENSOR_KEY_ENTER
+    '\0',  // LENSOR_KEY_LEFTCTRL
+    'a',   // LENSOR_KEY_A
+    's',   // LENSOR_KEY_S
+    'd',   // LENSOR_KEY_D
+    'f',   // LENSOR_KEY_F
+    'g',   // LENSOR_KEY_G
+    'h',   // LENSOR_KEY_H
+    'j',   // LENSOR_KEY_J
+    'k',   // LENSOR_KEY_K
+    'l',   // LENSOR_KEY_L
+    ';',   // LENSOR_KEY_SEMICOLON
+    '\'',  // LENSOR_KEY_APOSTROPHE
+    '`',   // LENSOR_KEY_GRAVE
+    '\0',  // LENSOR_KEY_LEFTSHIFT
+    '\\',  // LENSOR_KEY_BACKSLASH
+    'z',   // LENSOR_KEY_Z
+    'x',   // LENSOR_KEY_X
+    'c',   // LENSOR_KEY_C
+    'v',   // LENSOR_KEY_V
+    'b',   // LENSOR_KEY_B
+    'n',   // LENSOR_KEY_N
+    'm',   // LENSOR_KEY_M
+    ',',   // LENSOR_KEY_COMMA
+    '.',   // LENSOR_KEY_DOT
+    '/',   // LENSOR_KEY_SLASH
+    '\0',  // LENSOR_KEY_RIGHTSHIFT
+    '*',   // LENSOR_KEY_KPASTERISK
+    '\0',  // LENSOR_KEY_LEFTALT
+    ' ',   // LENSOR_KEY_SPACE
+    '\0',  // LENSOR_KEY_CAPSLOCK
+    '\0',  // LENSOR_KEY_F1
+    '\0',  // LENSOR_KEY_F2
+    '\0',  // LENSOR_KEY_F3
+    '\0',  // LENSOR_KEY_F4
+    '\0',  // LENSOR_KEY_F5
+    '\0',  // LENSOR_KEY_F6
+    '\0',  // LENSOR_KEY_F7
+    '\0',  // LENSOR_KEY_F8
+    '\0',  // LENSOR_KEY_F9
+    '\0',  // LENSOR_KEY_F10
+    '\0',  // LENSOR_KEY_NUMLOCK
+    '\0',  // LENSOR_KEY_SCROLLLOCK
+    '7',   // LENSOR_KEY_KP7
+    '8',   // LENSOR_KEY_KP8
+    '9',   // LENSOR_KEY_KP9
+    '-',   // LENSOR_KEY_KPMINUS
+    '4',   // LENSOR_KEY_KP4
+    '5',   // LENSOR_KEY_KP5
+    '6',   // LENSOR_KEY_KP6
+    '+',   // LENSOR_KEY_KPPLUS
+    '1',   // LENSOR_KEY_KP1
+    '2',   // LENSOR_KEY_KP2
+    '3',   // LENSOR_KEY_KP3
+    '0',   // LENSOR_KEY_KP0
+    '.'    // LENSOR_KEY_KPDOT
+};
 
-/// Preceded by 'e0' byte.
-#define ARROW_UP 0x48
-#define ARROW_DOWN 0x50
-#define ARROW_LEFT 0x4b
-#define ARROW_RIGHT 0x4d
+char to_capital(char c) {
+    if (islower(c)) return c - ('a' - 'A');
+
+    const char* lower = "1234567890,./;'\\-";
+    const char* upper = "!@#$%^&*()<>?:\"|_";
+    const char* found = strchr(lower, c);
+    if (found) return upper[found - lower];
+
+    return c;
+}
 
 void fprint_hexnibble(unsigned char byte, FILE* f) {
     if (byte < 10)
@@ -321,30 +403,97 @@ void charbuf_puts(CharacterBuffer* charbuf, const uint32_t* s) {
 /// @param args
 ///   NULL-terminated array of pointers to NULL-terminated strings.
 ///   Passed to `exec` syscall
-void run_program_waitpid(const char* const filepath, const char** args, CharacterBuffer* charbuf) {
-    u64 fds[2] = {-1, -1};
-    syscall(SYS_pipe, fds);
+void run_program_waitpid(ProcFD clientFD, const char* const filepath, const char** args, CharacterBuffer* charbuf) {
+    const uint PIPE_END_READ = 0;
+    const uint PIPE_END_WRITE = 1;
+
+    u64 command_output_pipe[2] = {-1, -1};
+    syscall(SYS_pipe, command_output_pipe);
+
+    u64 command_input_pipe[2] = {-1, -1};
+    syscall(SYS_pipe, command_input_pipe);
+
+    // TODO: We want to
+    // - Read output from command via "command output" pipe.
+    // - Display command output.
+    // - *new* Read ipc messages from our GUI client socket file descriptor.
+    // - *new* Decode keyboard ipc messages, write them to "command input" pipe.
+    // Requires opening command_input_pipe, wiring stdin of child to the read
+    // end of it.
 
     pid_t cpid = fork();
     if (cpid) {
-        // puts("Parent");
-        // printf("PARENT: Closing write end...\n");
-        // fflush(stdout);
-        close(fds[1]);
+        // Close read end of command input pipe
+        close(command_input_pipe[PIPE_END_READ]);
+        // Close write end of command output pipe
+        close(command_output_pipe[PIPE_END_WRITE]);
 
-        // printf("Reading from pipe!\n");
-        // fflush(stdout);
+        // TODO: kqueue listening for:
+        // - clientFD ready to read from
+        // - command output pipe ready to read from
+
+        bool do_capital = false;
+
         char c = 0;
         ssize_t bytes_read = 0;
-        while ((bytes_read = read(fds[0], &c, 1)) && bytes_read != EOF) {
-            // Draw output to stdout (probably DbgOutDriver, AKA UART).
-            putc(c, stdout);
-            charbuf_putc(charbuf, c);
+        while ((bytes_read = sys_read(command_output_pipe[0], &c, 1, LENSOROS_SYSCALL_READ_FLAG_NOBLOCK))) {
+            if (bytes_read > 0) {
+                // Draw output to stdout (probably DbgOutDriver, AKA UART).
+                putc(c, stdout);
+                charbuf_putc(charbuf, c);
+            }
+
+            // Read from gui client socket file descriptor for events. Handle events.
+            uint8_t ipc_buffer[256];
+            ssize_t ipc_bytes_read = sys_read(
+                clientFD,
+                &ipc_buffer[0],
+                sizeof(ipc_buffer),
+                LENSOROS_SYSCALL_READ_FLAG_NOBLOCK);
+
+            if (ipc_bytes_read <= 0) {
+                syscall(SYS_cooperative_yield);
+                continue;
+            }
+
+            // TODO: Handle multiple messages, if necessary.
+            uint8_t magic = ipc_buffer[0];
+            switch (magic) {
+                case IPC_KEYBOARD_MAGIC: {
+                    ipc_keyboard_t* keyboard_ipc = (ipc_keyboard_t*)&ipc_buffer[0];
+
+                    if (keyboard_ipc->value == LENSOR_KEY_LEFTSHIFT
+                        || keyboard_ipc->value == LENSOR_KEY_RIGHTSHIFT)
+                        do_capital = keyboard_ipc->is_pressed;
+                    else if (keyboard_ipc->value == LENSOR_KEY_CAPSLOCK && keyboard_ipc->is_pressed)
+                        do_capital = !do_capital;
+
+                    // Ignore key releases
+                    if (!keyboard_ipc->is_pressed) break;
+
+                    // Translate LENSOR_KEY_* value to UTF8 bytes we can write to the running
+                    // command.
+                    u8 typed_char = 0;
+                    if (keyboard_ipc->value < (sizeof(simple_keymap) / sizeof(simple_keymap[0])))
+                        typed_char = simple_keymap[keyboard_ipc->value];
+
+                    if (do_capital)
+                        typed_char = to_capital(typed_char);
+
+                    // Write keypresses to write end of command input pipe
+                    if (typed_char)
+                        write(command_input_pipe[PIPE_END_WRITE], &typed_char, 1);
+                } break;
+
+                default:
+                    break;
+            }
         }
 
         // printf("PARENT: Closing read end...\n");
         // fflush(stdout);
-        close(fds[0]);
+        close(command_input_pipe[PIPE_END_WRITE]);
+        close(command_output_pipe[PIPE_END_READ]);
 
         // printf("Read from pipe, waiting...\n");
 
@@ -361,11 +510,16 @@ void run_program_waitpid(const char* const filepath, const char** args, Characte
     }
     else {
         // puts("Child");;
-        close(fds[0]);
+        close(command_input_pipe[PIPE_END_WRITE]);
+        close(command_output_pipe[PIPE_END_READ]);
 
-        // Redirect stdout to write end of pipe.
-        syscall(SYS_repfd, fds[1], STDOUT_FILENO);
-        close(fds[1]);
+        // Redirect stdin to read end of command input pipe.
+        syscall(SYS_repfd, command_input_pipe[PIPE_END_READ], STDIN_FILENO);
+        close(command_input_pipe[PIPE_END_READ]);
+
+        // Redirect stdout to write end of command output pipe.
+        syscall(SYS_repfd, command_output_pipe[PIPE_END_WRITE], STDOUT_FILENO);
+        close(command_output_pipe[PIPE_END_WRITE]);
 
         fflush(NULL);
         syscall(SYS_exec, filepath, args);
@@ -474,7 +628,7 @@ int main(int argc, const char** argv) {
         g_framebuffer.pixel_height / psf1_height(g_font));
 
     const char* sh_args[1] = {NULL};
-    run_program_waitpid("/fs0/bin/xish", sh_args, &charbuf);
+    run_program_waitpid(sockFD, "/fs0/bin/xish", sh_args, &charbuf);
 
     printf("[TERM]: teardown\n");
 
