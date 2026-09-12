@@ -30,26 +30,21 @@ HPET gHPET;
  *   registers, so they must be marked as volatile!
  */
 void HPET::writel(u16 offset, u32 value) {
-    volatile_write((u32*)(Header->Address.Address + offset), value);
+    volatile_write(
+        (volatile u32*)(Memory::FROM_FRAME_POINTER(Header->Address.Address) + offset),
+        value);
 }
 
 u32 HPET::readl(u16 offset) {
-    return volatile_read((u32*)(Header->Address.Address + offset));
+    return volatile_read(
+        (volatile u32*)(Memory::FROM_FRAME_POINTER(Header->Address.Address) + offset));
 }
 
-void hpet_init_failed(const char* msg) {
+static void hpet_init_failed(const char* msg) {
     std::print("[HPET]: \033[31mFailed to initialize:\033[0m {}\n", msg);
 }
 
 bool HPET::initialize() {
-#if defined(VBOX)
-    // I can not get the HPET to work in VBOX for the life of me.
-    // It causes a strange crash that shuts down the virtualbox VM.
-    // Luckily, I know exactly what causes it, but (unluckily) not how to fix it.
-    // The first call to `writel` and therefore `volatile_write` crashes.
-    hpet_init_failed("LensorOS HPET implementation is buggy on VirtualBox");
-    return false;
-#else
     // This shouldn't be called by multiple threads ever, but it doesn't hurt :^).
     SpinlockLocker locker(Lock);
     Header = (ACPI::HPETHeader*)ACPI::find_table("HPET");
@@ -62,16 +57,19 @@ bool HPET::initialize() {
         return false;
     }
 
-    if (Header->Address.AddressSpaceID == 0) {
-        Memory::map(
-            (void*)Header->Address.Address,
-            (void*)Header->Address.Address,
-            (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
-    }
-    else {
+    std::print("[HPET]: Header at {}\n", (void*)Header);
+
+    if (Header->Address.AddressSpaceID != 0) {
         hpet_init_failed("Invalid Address Space ID");
         return false;
     }
+
+    std::print("[HPET]: Address at {}\n", (void*)Header->Address.Address);
+    Memory::map(
+        (void*)Memory::FROM_FRAME_POINTER(Header->Address.Address),
+        (void*)Header->Address.Address,
+        (u64)Memory::PageTableFlag::Present
+            | (u64)Memory::PageTableFlag::ReadWrite);
 
     /* If bit 13 of general cap. & ID register is set,
      *   HPET is capable of a 64-bit main counter value.
@@ -107,9 +105,9 @@ bool HPET::initialize() {
      *   unexpected results in current testing environments.
      */
     NumberOfComparators = (Header->ID & 0b11111) + 1;
+    std::print("  Number of Comparators: {}\n", NumberOfComparators);
     if (NumberOfComparators < HPET_MIN_COMPARATORS
-        || NumberOfComparators > HPET_MAX_COMPARATORS) {
-        std::print("  Number of Comparators: {}\n", NumberOfComparators);
+        or NumberOfComparators > HPET_MAX_COMPARATORS) {
         hpet_init_failed("Number of comparators is invalid.");
         return false;
     }
@@ -128,7 +126,6 @@ bool HPET::initialize() {
 
     print_state();
     return Initialized;
-#endif /* defined VBOX */
 }
 
 void HPET::start_main_counter() {
