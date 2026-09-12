@@ -2518,7 +2518,7 @@ void E1000::handle_interrupt() {
 __attribute__((interrupt)) void e1000_interrupt_handler(InterruptFrame* frame);
 
 E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
-    if (!PCIHeader) return;
+    if (not PCIHeader) return;
 
     decode_base_address();
 

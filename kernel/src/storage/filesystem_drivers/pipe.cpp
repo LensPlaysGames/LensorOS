@@ -163,7 +163,7 @@ ssz PipeDriver::read(FileMetadata* meta, usz, usz byteCount, void* buffer, usz f
     // TODO: Read in a loop to fill buffers larger than what is currently written.
     // For now, truncate read if it is too large.
     if (byteCount > pipe->Buffer->Offset) {
-        std::print("[PIPE]:WARN: Read too large; truncating...\n");
+        // std::print("[PIPE]:WARN: Read too large; truncating...\n");
         byteCount = pipe->Buffer->Offset;
     }
 

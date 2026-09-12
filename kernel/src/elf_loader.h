@@ -447,7 +447,6 @@ CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::str
         nullptr);
     vfs.add_file(outmeta, process);
     vfs.add_file(std::move(outmeta), process);
-    vfs.print_debug();
 
 #ifdef DEBUG_ELF
     std::print("[ELF] ProcFds:\n");
