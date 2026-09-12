@@ -385,7 +385,7 @@ void handle_event_keyboard(Event event, CompositorContext* context) {
             }
         } break;
 
-        case LENSOR_KEY_Q:
+        case LENSOR_KEY_Q: {
             if (keyboard_data->press && context->focus.left_alt) {
                 printf("[SERVE]: got SUPER+Q, closing focused window\n");
                 const uintptr_t window_index = context->focus.window - &context->windows[0];
@@ -421,8 +421,9 @@ void handle_event_keyboard(Event event, CompositorContext* context) {
                 // TODO: unregister kqueue listening for clientFD; or, we could
                 // alternatively listen for a close/EOF event and unregister
                 // automatically.
+                return;
             }
-            break;
+        } break;
     }
 
     if (context->focus.window && context->focus.window->shared_region) {
