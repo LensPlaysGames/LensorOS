@@ -71,13 +71,19 @@ ENSURE_USER_ADDRESS(USER_STACK_BASE);
 constexpr inline uintptr_t TO_FRAME_POINTER(uintptr_t p) {
     return p - PHYSICAL_BASE;
 }
-constexpr inline uintptr_t TO_FRAME_POINTER(void* p) {
-    return TO_FRAME_POINTER(uintptr_t(p));
-}
 constexpr inline uintptr_t FROM_FRAME_POINTER(uintptr_t p) {
     return p + PHYSICAL_BASE;
 }
-constexpr inline uintptr_t FROM_FRAME_POINTER(void* p) {
+constexpr inline uintptr_t TO_FRAME_POINTER(const void* p) {
+    return TO_FRAME_POINTER(uintptr_t(p));
+}
+constexpr inline uintptr_t FROM_FRAME_POINTER(const void* p) {
+    return FROM_FRAME_POINTER(uintptr_t(p));
+}
+constexpr inline uintptr_t TO_FRAME_POINTER(volatile const void* p) {
+    return TO_FRAME_POINTER(uintptr_t(p));
+}
+constexpr inline uintptr_t FROM_FRAME_POINTER(volatile const void* p) {
     return FROM_FRAME_POINTER(uintptr_t(p));
 }
 

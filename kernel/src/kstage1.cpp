@@ -702,8 +702,7 @@ void kstage2(BootInfo* bInfo) {
     /// Set Ethertype to ARP (address resolution protocol)
     memset(&header.MACDestination, 0xff, sizeof(header.MACDestination));
     memcpy(&header.MACSource, &gE1000.MACAddress, sizeof(header.MACSource));
-    /// host to network byte order (ntohl)
-    header.Ethertype = Network::host_to_network(u16(0x0806));
+    header.Ethertype = Network::ETHERTYPE_ARP;
 
     /// Ethernet HTYPE is 1.
     arp.HardwareType = Network::ARP_HARDWARETYPE_ETHERNET;

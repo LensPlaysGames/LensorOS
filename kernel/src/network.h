@@ -24,6 +24,8 @@ constexpr inline T network_to_host(T network_value) {
     return network_value;
 }
 
+constexpr u16 ETHERTYPE_ARP = host_to_network(u16(0x0806));
+
 struct EthernetFrameHeader {
     u8 MACDestination[6];
     u8 MACSource[6];

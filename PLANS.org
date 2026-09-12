@@ -1,21 +1,13 @@
-* Make Sure Systems With Different Amounts of RAM Don't Crash
-High Priority
-
-Changing QEMU's memory to 512M causes lots and lots of page faults all the time.
-
 * Implement A Graphical Compositor Program
 Medium Priority
 
-** Window Stack
+** Window Stack Selector Identification
 
-The mouse should be able to select the active window (z order) as well as the focused window (focus state) with mouse clicks.
+Currently, it's hard to tell which selector refers to which window.
+Even just a simple unique color or number inside the box would help.
 
 * Flesh out the Network Stack
 Medium Priority
-
-** ARP -- Address Resolution Protocol
-
-This can get you a gateway address, which means you can talk to the rest of the world. Yay!
 
 ** UDP -- User Datagram Protocol
 

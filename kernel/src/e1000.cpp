@@ -6,6 +6,7 @@
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
+#include <network.h>
 #include <pci.h>
 #include <stdint.h>
 
@@ -2008,7 +2009,8 @@ void E1000::detect_eeprom() {
 u16 E1000::read_eeprom(u8 address) {
     u32 calculatedAddress = 0;
     u32 successMask = 0;
-    if (is_82541xx(PCIHeader->Header.DeviceID) || is_82547_GI_EI(PCIHeader->Header.DeviceID)) {
+    if (is_82541xx(PCIHeader->Header.DeviceID)
+        or is_82547_GI_EI(PCIHeader->Header.DeviceID)) {
         calculatedAddress = EERD_ADDRESS_EXTRA(address);
         successMask = EERD_DONE_EXTRA;
     }
@@ -2069,17 +2071,55 @@ void E1000::decode_base_address() {
     /// acts as the union of a tagged union.
     BARType = PCI::get_bar_type(PCIHeader->BAR0);
     if (BARType == PCI::BarType::Memory) {
-        /// Remove bottom 2 bits from address.
-        BARMemoryAddress = PCIHeader->BAR0 & ~usz(3);
-        /// Map address in virtual page table.
-        Memory::map_pages(Memory::active_page_map(),
-                          (void*)BARMemoryAddress,
-                          (void*)BARMemoryAddress,
-                          (u64)Memory::PageTableFlag::Present
-                              | (u64)Memory::PageTableFlag::ReadWrite,
-                          KiB(128) / PAGE_SIZE,
-                          Memory::ShowDebug::No);
-        std::print("[E1000]: BAR0 is memory! addr={}\n", (void*)BARMemoryAddress);
+        const auto BAR0 = PCIHeader->BAR0;
+        const auto BAR1 = PCIHeader->BAR1;
+
+        uintptr_t BAR = BAR0;
+        const bool is64 = (BAR0 & 0b110) == 0b100;
+        if (is64) std::print("[E1000] BAR is 64-bit\n");
+        // clear bottom four bits
+        BAR &= ~uintptr_t(0xf);
+        if (is64) BAR |= uintptr_t(PCIHeader->BAR1) << 32;
+        BAR = Memory::FROM_FRAME_POINTER(BAR);
+
+        BARMemoryAddress = BAR;
+
+        /* Discover the size of a BAR region using a hardware protocol: write
+         * all-1s (0xFFFFFFFF) to the BAR register, read
+         * the value back, mask off the type bits, and invert. The result is the
+         * size minus one. This is called BAR sizing.
+         */
+        volatile_write(&PCIHeader->BAR0, 0xffffffff);
+        if (is64)
+            volatile_write(&PCIHeader->BAR1, 0xffffffff);
+
+        const uint32_t bar0_size = volatile_read(&PCIHeader->BAR0);
+        // clear bottom four bits
+        usz bar_size = bar0_size & ~usz(0xf);
+        // We do this no matter the 64-bit-ness of the BAR, so that when we flip
+        // bits and everything at the end it still works.
+        uint32_t bar1_size = 0xffffffff;
+        if (is64)
+            bar1_size = volatile_read(&PCIHeader->BAR1);
+        bar_size |= usz(bar1_size) << 32;
+
+        // Calculate the size: invert the bits and add one.
+        bar_size = (~bar_size) + 1;
+
+        // Restore original values to config registers...
+        volatile_write(&PCIHeader->BAR0, BAR0);
+        if (is64)
+            volatile_write(&PCIHeader->BAR1, BAR1);
+
+        // Possible FIXME: Cache Disabled flag?
+        Memory::map_pages(
+            (void*)BARMemoryAddress,
+            (void*)Memory::TO_FRAME_POINTER(BARMemoryAddress),
+            (u64)Memory::PageTableFlag::Present
+                | (u64)Memory::PageTableFlag::ReadWrite,
+            (bar_size + PAGE_SIZE - 1) / PAGE_SIZE);
+
+        std::print("[E1000]: BAR0 is memory! addr={} size={:x}\n", (void*)BARMemoryAddress, bar_size);
     }
     else {
         /// Remove bottom bit from address.
@@ -2131,7 +2171,7 @@ void E1000::initialise_rx() {
     // TODO: What if BARType is IO? We can probably do this same thing through BARIOAddress and 3 in32()s.
     // FIXME: What about REG_RAH??
     u8* base = (u8*)(BARMemoryAddress + REG_RAL_BEGIN);
-    for (uint i = 0; i < 6; ++i, ++base) *base = MACAddress[i];
+    for (uint i = 0; i < sizeof(MACAddress); ++i, ++base) *base = MACAddress[i];
 
     /// Initialize the MTA (Multicast Table Array) to 0b.
     for (uint i = 0; i <= ((REG_MTA_END - REG_MTA_BEGIN) / 4); ++i)
@@ -2147,8 +2187,9 @@ void E1000::initialise_rx() {
     static constexpr uint RXDescCountMax = (pageCount * PAGE_SIZE) / sizeof(E1000::RXDesc);
     RXDescCount = RXDescCountMax;
     RXDescPhysical = (volatile E1000::RXDesc*)Memory::request_pages(pageCount);
-    u32 addressLowBytes = uintptr_t(RXDescPhysical) & 0xffffffff;
-    u32 addressHighBytes = uintptr_t(RXDescPhysical) >> 32;
+    uintptr_t RXDescFramePointer = Memory::TO_FRAME_POINTER(uintptr_t(RXDescPhysical));
+    u32 addressLowBytes = RXDescFramePointer & 0xffffffff;
+    u32 addressHighBytes = RXDescFramePointer >> 32;
     write_command(REG_RXDESCLO, addressLowBytes);
     write_command(REG_RXDESCHI, addressHighBytes);
     write_command(REG_RXDESCLEN, RXDescCount * sizeof(E1000::RXDesc));
@@ -2168,7 +2209,8 @@ void E1000::initialise_rx() {
     /// descriptor ring.
     for (usz i = 0; i < RXDescCount; ++i) {
         volatile E1000::RXDesc* desc = RXDescPhysical + i;
-        desc->Address = (u64)Memory::request_pages(KiB(8) / PAGE_SIZE);
+        auto RxBuffer = Memory::request_pages(KiB(8) / PAGE_SIZE);
+        desc->Address = Memory::TO_FRAME_POINTER(RxBuffer);
         desc->Status = 0;
     }
 
@@ -2196,8 +2238,9 @@ void E1000::initialise_tx() {
     static constexpr uint TXDescCountMax = (pageCount * PAGE_SIZE) / sizeof(E1000::TXDesc);
     TXDescCount = TXDescCountMax;
     TXDescPhysical = (volatile E1000::TXDesc*)Memory::request_pages(pageCount);
-    u32 addressLowBytes = uintptr_t(TXDescPhysical) & 0xffffffff;
-    u32 addressHighBytes = uintptr_t(TXDescPhysical) >> 32;
+    uintptr_t TXDescFramePointer = Memory::TO_FRAME_POINTER(TXDescPhysical);
+    u32 addressLowBytes = TXDescFramePointer & 0xffffffff;
+    u32 addressHighBytes = TXDescFramePointer >> 32;
     write_command(REG_TXDESCLO, addressLowBytes);
     write_command(REG_TXDESCHI, addressHighBytes);
     write_command(REG_TXDESCLEN, TXDescCount * sizeof(E1000::TXDesc));
@@ -2246,9 +2289,10 @@ void E1000::write_raw(void* data, usz length) {
     else
         pages = length / PAGE_SIZE;
 
-    desc->Address = u64(Memory::request_pages(pages));
+    auto physical_memory = Memory::request_pages(pages);
+    desc->Address = Memory::TO_FRAME_POINTER(physical_memory);
     // std::print("Copying {} pages from virtual {} to physical {}\n", pages, data, (void*)desc->Address);
-    memcpy((void*)desc->Address, data, length);
+    memcpy(physical_memory, data, length);
     /// Maximum allowed packet size (16288 bytes).
     if (length > 16288) {
         std::print("[E1000]:write_raw(): Length larger than maximum allowed size (16288 bytes)...\n");
@@ -2322,12 +2366,10 @@ void E1000::handle_interrupt() {
             }
 
             // Reset descriptor so that it can be used again.
-            usz pages = 0;
-            if (txDesc->Length % PAGE_SIZE)
-                pages = 1 + (txDesc->Length / PAGE_SIZE);
-            else
-                pages = txDesc->Length / PAGE_SIZE;
-            Memory::free_pages((void*)txDesc->Address, pages);
+            usz pages = (txDesc->Length + PAGE_SIZE - 1) / PAGE_SIZE;
+            Memory::free_pages(
+                (void*)Memory::FROM_FRAME_POINTER(txDesc->Address),
+                pages);
             txDesc->Address = 0;
             txDesc->Command = 0;
             txDesc->Length = 0;
@@ -2362,14 +2404,20 @@ void E1000::handle_interrupt() {
 
             volatile RXDesc* rxDesc = RXDescPhysical + RXHead;
             if (rxDesc->Status & RXDesc::DONE
-                && rxDesc->Status & RXDesc::END_OF_PACKET) {
+                and rxDesc->Status & RXDesc::END_OF_PACKET) {
                 std::array<u8, 6> macDst;
-                std::copy((u8*)rxDesc->Address, ((u8*)rxDesc->Address) + 6, macDst.begin());
+                auto rxDescAddress = Memory::FROM_FRAME_POINTER(rxDesc->Address);
+                std::copy(
+                    (u8*)rxDescAddress,
+                    (u8*)rxDescAddress + 6,
+                    macDst.begin());
                 std::array<u8, 6> macSrc;
-                std::copy((u8*)rxDesc->Address + 6, ((u8*)rxDesc->Address) + 12, macSrc.begin());
-                u16 ethertype = *((u16*)(rxDesc->Address + 12));
-                // TODO: ntohl  network to host byte order!
-                ethertype = std::byteswap(ethertype);
+                std::copy(
+                    (u8*)rxDescAddress + 6,
+                    (u8*)rxDescAddress + 12,
+                    macSrc.begin());
+                u16 ethertype = *((u16*)(rxDescAddress + 12));
+                ethertype = Network::network_to_host(ethertype);
 
                 usz length = rxDesc->Length;
 
