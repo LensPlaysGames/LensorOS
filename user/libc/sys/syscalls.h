@@ -298,6 +298,10 @@ int sys_directory_data(const char* path, DirectoryEntry* entries, int maxEntries
     return (int)syscall(SYS_directory_data, path, entries, maxEntries);
 }
 
+void sys_cooperative_yield() {
+    syscall(SYS_cooperative_yield);
+}
+
 /// ===========================================================================
 ///  C++ Interface.
 /// ===========================================================================
@@ -415,6 +419,9 @@ inline ProcFD sys_accept(ProcFD socketFD, const sockaddr* address, size_t* addre
 // TODO: kqueue, kevent
 inline int sys_directory_data(const char* path, DirectoryEntry* entries, int maxEntries) {
     return std::__detail::syscall<int>(SYS_directory_data, (uintptr_t)path, (uintptr_t)entries, (uintptr_t)maxEntries);
+}
+inline void sys_cooperative_yield() {
+    std::__detail::syscall(SYS_cooperative_yield);
 }
 
 }  // namespace std

@@ -432,29 +432,32 @@ void run_program_waitpid(ProcFD clientFD, const char* const filepath, const char
         // - clientFD ready to read from
         // - command output pipe ready to read from
 
-        bool do_capital = false;
-
-        char c = 0;
+        uint8_t ipc_buffer[256];
+        ssize_t ipc_bytes_read = 0;
         ssize_t bytes_read = 0;
-        while ((bytes_read = sys_read(command_output_pipe[0], &c, 1, LENSOROS_SYSCALL_READ_FLAG_NOBLOCK))) {
-            if (bytes_read > 0) {
-                // Draw output to stdout (probably DbgOutDriver, AKA UART).
+        bool do_capital = false;
+        char c = 0;
+        while (true) {
+            sys_cooperative_yield();
+
+            while ((bytes_read = sys_read(command_output_pipe[0], (uint8_t*)&c, 1, LENSOROS_SYSCALL_READ_FLAG_NOBLOCK)) > 0) {
                 putc(c, stdout);
                 charbuf_putc(charbuf, c);
             }
+            if (bytes_read == -1)
+                break;
 
-            // Read from gui client socket file descriptor for events. Handle events.
-            uint8_t ipc_buffer[256];
-            ssize_t ipc_bytes_read = sys_read(
+            ipc_bytes_read = sys_read(
                 clientFD,
                 &ipc_buffer[0],
                 sizeof(ipc_buffer),
                 LENSOROS_SYSCALL_READ_FLAG_NOBLOCK);
 
-            if (ipc_bytes_read <= 0) {
-                syscall(SYS_cooperative_yield);
+            if (ipc_bytes_read == -1)
+                break;
+
+            if (ipc_bytes_read <= 0)
                 continue;
-            }
 
             // TODO: Handle multiple messages, if necessary.
             uint8_t magic = ipc_buffer[0];
