@@ -19,6 +19,7 @@
 
 #include <framebuffer.h>
 #include <ints.h>
+#include <lensor/ipc.h>
 #include <lensor/keys.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -131,21 +132,6 @@ size_t hexstring_to_number(const char* str) {
 void run_background_program(const char* const filepath, const char** args) {
     if (fork() == 0) syscall(SYS_exec, filepath, args);
 }
-
-#define IPC_KEYBOARD_MAGIC 0xf8
-typedef struct ipc_keyboard_t {
-    uint8_t magic;
-    uint8_t is_pressed;
-    uint16_t value;
-} ipc_keyboard_t;
-
-#define IPC_MOUSE_MAGIC 0xf9
-typedef struct ipc_mouse_t {
-    uint8_t magic;
-    int32_t delta_x;
-    int32_t delta_y;
-    int32_t delta_scroll;
-} ipc_mouse_t;
 
 const uint32_t mouse_cursor_color = 0xffffffffu;
 // In bits
@@ -310,7 +296,7 @@ void handle_event_incoming_client(Event incoming_client_event, CompositorContext
 
 void handle_event_keyboard(Event event, CompositorContext* context) {
     EventData_KeyboardInput* keyboard_data = (EventData_KeyboardInput*)&event.Data[0];
-    // printf("[SERVE]: Got keyboard input %d %d\n", keyboard_data->press, keyboard_data->value);
+    // printf("[SERVE]: Got keyboard input %d %u\n", keyboard_data->press, keyboard_data->value);
 
     if (keyboard_data->value == LENSOR_KEY_LEFTCTRL) {
         context->focus.left_control = keyboard_data->press;
@@ -364,8 +350,9 @@ void handle_event_keyboard(Event event, CompositorContext* context) {
                 }
             }
         }
-        else
-            printf("TODO: process click outside taskbar\n");
+        else {
+            // printf("TODO: process click outside taskbar\n");
+        }
     }
 
     if (context->focus.window && context->focus.window->shared_region) {
@@ -423,9 +410,8 @@ void handle_event(Event event, CompositorContext* context) {
     else if (event.Type == EVENTTYPE_MOUSE)
         handle_event_mouse(event, context);
 
-    else {
-        printf("[SERVE]: Unhandled kqueue event\n");
-    }
+    else
+        printf("[SERVE]: Unhandled kqueue event (type %u)\n", event.Type);
 }
 
 int main(int argc, const char** argv) {
