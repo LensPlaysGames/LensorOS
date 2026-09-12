@@ -656,7 +656,8 @@ PageTable* clone_active_page_map() {
 
 void init_virtual(PageTable* pageMap) {
     // Higher Half Physical Mapping
-    // Begins at 0xffff800000000000
+    // Begins at 0xffff800000000000 (or whatever Memory::PHYSICAL_BASE is set
+    // to).
     for (u64 t = 0; t < total_ram(); t += PAGE_SIZE_LARGE) {
         map_large<true>(
             pageMap,

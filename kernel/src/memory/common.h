@@ -45,6 +45,11 @@ constexpr usz PAGE_SIZE_LARGE = MiB(2);
 namespace Memory {
 
 // Virtual Layout
+#define ENSURE_KERNEL_ADDRESS(address)         \
+    static_assert(                             \
+        (address & (0xffff800000000000)) != 0, \
+        "Kernel address must be higher half (Intel canonical address)");
+
 #define ENSURE_USER_ADDRESS(address)           \
     static_assert(                             \
         (address & (0xffff800000000000)) == 0, \
@@ -53,14 +58,27 @@ namespace Memory {
 // This is the base address where all physical memory is mapped 1:1. If
 // hardware gives you a physical address and you need to access it, offset
 // it by this.
-constexpr uintptr_t PHYSICAL_BASE = 0xffff800000000000;
+constexpr uintptr_t PHYSICAL_BASE
+    = 0xffff800000000000;
+static_assert((PHYSICAL_BASE & (PAGE_SIZE_LARGE - 1)) == 0, "physical base large page align");
+ENSURE_KERNEL_ADDRESS(PHYSICAL_BASE);
 
-constexpr uintptr_t KERNEL_INTERRUPT_STACK_BASE = 0xffffffff10000000;
+constexpr uintptr_t KERNEL_INTERRUPT_STACK_BASE
+    = 0xffffffff10000000;
+static_assert((PHYSICAL_BASE & (PAGE_SIZE - 1)) == 0, "kernel stack page align");
+ENSURE_KERNEL_ADDRESS(KERNEL_INTERRUPT_STACK_BASE);
 
 // kernel.ld
-constexpr uintptr_t KERNEL_VIRTUAL_OFFSET = 0xffffffff80000000;
-constexpr uintptr_t KERNEL_VIRTUAL_BASE = KERNEL_VIRTUAL_OFFSET + 0x100000;
-constexpr uintptr_t KERNEL_HEAP_VIRTUAL_BASE = 0xffffffffff000000;
+constexpr uintptr_t KERNEL_VIRTUAL_OFFSET
+    = 0xffffffff80000000;
+ENSURE_KERNEL_ADDRESS(KERNEL_VIRTUAL_OFFSET);
+constexpr uintptr_t KERNEL_VIRTUAL_BASE
+    = KERNEL_VIRTUAL_OFFSET + 0x100000;
+ENSURE_KERNEL_ADDRESS(KERNEL_VIRTUAL_BASE);
+
+constexpr uintptr_t KERNEL_HEAP_VIRTUAL_BASE
+    = 0xffffffffff000000;
+ENSURE_KERNEL_ADDRESS(KERNEL_HEAP_VIRTUAL_BASE);
 
 // Scheduler
 constexpr uintptr_t USER_MEMORY_REGION_BASE = 0xf8000000;
