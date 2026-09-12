@@ -1,0 +1,33 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "toolchain-gnu",
+      "binaryDir": "${sourceDir}/buildgnu",
+      "displayName": "GNU Toolchain",
+      "description": "Build using the GNU toolchain",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/toolchain/lensor_gnu_toolchain.cmake"
+      }
+    },
+    {
+      "name": "toolchain-clang",
+      "binaryDir": "${sourceDir}/buildclang",
+      "displayName": "Clang Toolchain",
+      "description": "Build using the Clang toolchain",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/toolchain/lensor_clang_toolchain.cmake"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "buildgnu",
+      "configurePreset": "toolchain-gnu"
+    },
+    {
+      "name": "buildclang",
+      "configurePreset": "toolchain-clang"
+    }
+  ]
+}
