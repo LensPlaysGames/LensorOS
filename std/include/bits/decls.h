@@ -1,40 +1,38 @@
 /* Copyright 2022, Contributors To LensorOS.
-* All rights reserved.
-*
-* This file is part of LensorOS.
-*
-* LensorOS is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* LensorOS is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
-*/
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 #ifndef _LENSOR_OS_DECLS_H
 #define _LENSOR_OS_DECLS_H
 
 #ifdef __cplusplus
-#    define __BEGIN_DECLS__ extern "C" {
-#    define __END_DECLS__ }
-#    define __constexpr constexpr
-#    define __bool bool
-
-/// Raise a compile error.
-#    define __if if constexpr
-#    define __elif else if constexpr
-#    define __else else
+#define __BEGIN_DECLS__ extern "C" {
+#define __END_DECLS__ }
+#define __constexpr constexpr
+#define __bool bool
+#define __if if constexpr
+#define __elif else if constexpr
+#define __else else
 #else
-#    define __BEGIN_DECLS__
-#    define __END_DECLS__
-#    define __constexpr
-#    define __bool _Bool
+#define __BEGIN_DECLS__
+#define __END_DECLS__
+#define __constexpr
+#define __bool _Bool
 #endif
 
 /// Stringification and concatenation.
@@ -45,7 +43,7 @@
 
 /// Attributes
 #ifndef __forceinline
-#    define __forceinline __inline__ __attribute__((__always_inline__))
+#define __forceinline __inline__ __attribute__((__always_inline__))
 #endif
 
 #define _Deprecated(_Msg) __attribute__((__deprecated__(_Msg)))
@@ -53,15 +51,15 @@
 #define _Flatten __attribute__((__flatten__))
 
 #ifdef __cplusplus
-#    define _Nodiscard [[nodiscard]]
+#define _Nodiscard [[nodiscard]]
 #else
-#    define _Nodiscard __attribute__((__warn_unused_result__))
+#define _Nodiscard __attribute__((__warn_unused_result__))
 #endif
 
 /// Pragmas
 #define __Pragma(_Str) _Pragma(#_Str)
 
-#define _PushIgnoreWarning(_W)      \
+#define _PushIgnoreWarning(_W)     \
     _Pragma("GCC diagnostic push") \
     __Pragma(GCC diagnostic ignored _W)
 
@@ -93,4 +91,4 @@ struct __defer_helper {
 #define __defer auto _CAT(__defer_instance_, __COUNTER__) = __defer_helper{} % [&]()
 #endif
 
-#endif // _LENSOR_OS_DECLS_H
+#endif  // _LENSOR_OS_DECLS_H
