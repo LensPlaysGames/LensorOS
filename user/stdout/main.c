@@ -178,6 +178,41 @@ void draw_cursor(Framebuffer* fb, size_t cursor_x, size_t cursor_y) {
     }
 }
 
+[[nodiscard]]
+static uint32_t mkpixel_lighter(const uint32_t color, uint8_t factor) {
+    uint32_t r = (color >> 24) & 0xff;
+    uint32_t g = (color >> 16) & 0xff;
+    uint32_t b = (color >> 8) & 0xff;
+    const uint32_t a = color & 0xff;
+
+    // Scale the RGB channels
+    // factor: 0 = original color, 255 = fully white
+    r = r + (((255 - r) * factor) >> 8);
+    g = g + (((255 - g) * factor) >> 8);
+    b = b + (((255 - b) * factor) >> 8);
+
+    // Pack color channels into a single 32-bit RGBA integer
+    return (r << 24) | (g << 16) | (b << 8) | a;
+}
+
+[[nodiscard]]
+static uint32_t mkpixel_darker(const uint32_t color, uint8_t factor) {
+    uint32_t r = (color >> 24) & 0xff;
+    uint32_t g = (color >> 16) & 0xff;
+    uint32_t b = (color >> 8) & 0xff;
+    const uint32_t a = color & 0xff;
+
+    // Scale the RGB channels
+    // factor: 0 = black, 255 = original color
+    factor -= 0xff;
+    r = (r * factor) / 256;
+    g = (g * factor) / 256;
+    b = (b * factor) / 256;
+
+    // Pack color channels into RGBA
+    return (r << 24) | (g << 16) | (b << 8) | a;
+}
+
 typedef struct window_t {
     // pointer to shared memory region between client process and the
     // compositor, us.
@@ -212,13 +247,30 @@ static inline bool window_valid(const window_t* window) {
     return window && window->shared_region;
 }
 
+static inline bool point_within_rect(
+    const ssize_t x,
+    const ssize_t y,
+    const ssize_t rect_x,
+    const ssize_t rect_y,
+    const ssize_t rect_width,
+    const ssize_t rect_height) {
+    return x >= rect_x
+           && x < rect_x + rect_width
+           && y >= rect_y && y < rect_y + rect_height;
+}
+
 static inline bool point_within_window(
     const window_t* window,
     const ssize_t x,
     const ssize_t y) {
     return window
-           && x >= window->x && x < window->x + window->width
-           && y >= window->y && y < window->y + window->height;
+           && point_within_rect(
+               x,
+               y,
+               window->x,
+               window->y,
+               window->width,
+               window->height);
 }
 
 typedef struct focus_t {
@@ -698,7 +750,7 @@ int main(int argc, const char** argv) {
         int selector_count = 0;
         for (int i = sizeof(context.windows) / sizeof(context.windows[0]); i; --i) {
             const window_t* window = &context.windows[i - 1];
-            if (!window->shared_region) continue;
+            if (!window_valid(window)) continue;
 
             const uint32_t present_window_color = mkpixel(g_framebuffer.format, 0xff + window->shared_region_id * 0x10, 0xff, 0xff, 0xff);
             const uint32_t hidden_window_color = mkpixel(g_framebuffer.format, 0x67, 0x67, 0x67, 0xff);
@@ -711,11 +763,25 @@ int main(int argc, const char** argv) {
                 color = hidden_window_color;
             }
 
+            const size_t window_stack_begin_x
+                = selector_count * window_selector_width
+                  + selector_count * window_selector_separator_width;
+
+            // Hover effect...
+            if (point_within_rect(
+                    context.focus.cursor_x,
+                    context.focus.cursor_y,
+                    window_stack_begin_x,
+                    window_stack_begin_y,
+                    window_selector_width,
+                    window_stack_height)) {
+                color = mkpixel_lighter(color, 0x28);
+            }
+
             fill_rect(
                 g_backbuffer,
                 color,
-                selector_count * window_selector_width
-                    + selector_count * window_selector_separator_width,
+                window_stack_begin_x,
                 window_stack_begin_y,
                 window_selector_width,
                 window_stack_height);
