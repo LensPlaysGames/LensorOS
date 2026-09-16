@@ -280,9 +280,9 @@ int main(int argc, char** argv) {
             if (not resolved_command.empty()) {
                 // Prepare arguments for exec syscall
                 std::vector<char*> argv{};
-                for (const auto& arg : arguments) {
+                argv.push_back((char*)resolved_command.c_str());
+                for (const auto& arg : arguments)
                     argv.push_back((char*)arg.data());
-                }
                 argv.push_back(nullptr);
 
                 run_program_quiet_nowait(resolved_command.c_str(), argv.data());
