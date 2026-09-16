@@ -124,6 +124,11 @@ struct Process {
 
     SinglyLinkedList<std::shared_ptr<shared_memory_region>> SharedMemories{};
 
+    // If process is SLEEPING and this field is non-zero, the scheduler will
+    // wake up the process automatically when the scheduler timer tick passes
+    // the wake up tick value...
+    usz WakeUpTick{};
+
     Process() = default;
 
     /// Processes are not copyable.

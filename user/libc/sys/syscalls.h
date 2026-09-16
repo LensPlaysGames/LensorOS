@@ -58,7 +58,9 @@
 #define SYS_shared_memory_acquire 27
 #define SYS_cooperative_yield 28
 #define SYS_shared_memory_release 29
-#define SYS_MAXSYSCALL 29
+#define SYS_wait_milliseconds 30
+#define SYS_wait_nanoseconds 31
+#define SYS_MAXSYSCALL 31
 #else
 #define SYS_read 0
 #define SYS_write 1
@@ -303,6 +305,13 @@ void sys_cooperative_yield() {
     syscall(SYS_cooperative_yield);
 }
 
+void sys_wait_milliseconds(size_t milliseconds) {
+    syscall(SYS_wait_milliseconds, milliseconds);
+}
+void sys_wait_nanoseconds(size_t nanoseconds) {
+    syscall(SYS_wait_nanoseconds, nanoseconds);
+}
+
 /// ===========================================================================
 ///  C++ Interface.
 /// ===========================================================================
@@ -423,6 +432,13 @@ inline int sys_directory_data(const char* path, DirectoryEntry* entries, int max
 }
 inline void sys_cooperative_yield() {
     std::__detail::syscall(SYS_cooperative_yield);
+}
+
+inline void sys_wait_milliseconds(size_t milliseconds) {
+    std::__detail::syscall(SYS_wait_milliseconds, milliseconds);
+}
+inline void sys_wait_nanoseconds(size_t nanoseconds) {
+    std::__detail::syscall(SYS_wait_nanoseconds, nanoseconds);
 }
 
 }  // namespace std

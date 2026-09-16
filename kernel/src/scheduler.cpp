@@ -289,6 +289,7 @@ bool initialize() {
 
     // IRQ handler in assembly increments PIT ticks counter using this
     // function.
+    // FIXME: This is a mess. why would we not just call it from C++...
     timer_tick = pit_tick;
 
     // Setup currently executing code as the start process with PID 0.
@@ -322,15 +323,32 @@ enum class IncludeGivenProcess {
     No = 1,
 };
 
-SinglyLinkedListNode<Process*>* find_next_viable_process_after(SinglyLinkedListNode<Process*>* startProcess, IncludeGivenProcess include = IncludeGivenProcess::No) {
+SinglyLinkedListNode<Process*>* find_next_viable_process_after(
+    SinglyLinkedListNode<Process*>* startProcess,
+    IncludeGivenProcess include = IncludeGivenProcess::No) {
     auto* NextProcess = startProcess;
 
-    if (NextProcess && include == IncludeGivenProcess::No)
+    if (NextProcess and include == IncludeGivenProcess::No)
         NextProcess = NextProcess->next();
 
-    while (NextProcess && NextProcess->value()) {
-        if (NextProcess->value()->State == Process::RUNNING)
+    while (NextProcess and NextProcess->value()) {
+        auto* candidate = NextProcess->value();
+        // Scheduled Wake Up Functionality
+        if (candidate->State == Process::SLEEPING
+            and candidate->WakeUpTick != 0
+            and gPIT.get() > candidate->WakeUpTick) {
+            // std::print(
+            //     "[SCHED]: unblocking process({}); waiting until tick {}, current tick {}\n",
+            //     candidate->ProcessID,
+            //     candidate->WakeUpTick,
+            //     gPIT.get());
+            candidate->State = Process::RUNNING;
+            candidate->WakeUpTick = 0;
+        }
+
+        if (candidate->State == Process::RUNNING)
             break;
+
         // Advance process pointer.
         NextProcess = NextProcess->next();
     }
@@ -338,7 +356,9 @@ SinglyLinkedListNode<Process*>* find_next_viable_process_after(SinglyLinkedListN
     return NextProcess;
 }
 
-SinglyLinkedListNode<Process*>* next_viable_process(SinglyLinkedListNode<Process*>* startProcess, IncludeGivenProcess include = IncludeGivenProcess::No) {
+SinglyLinkedListNode<Process*>* next_viable_process(
+    SinglyLinkedListNode<Process*>* startProcess,
+    IncludeGivenProcess include = IncludeGivenProcess::No) {
     auto* NextProcess = find_next_viable_process_after(startProcess, include);
     if (NextProcess == nullptr) {
         NextProcess = find_next_viable_process_after(ProcessQueue->head(), IncludeGivenProcess::Yes);

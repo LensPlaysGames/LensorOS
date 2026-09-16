@@ -38,6 +38,7 @@
 #include <memory/paging.h>
 #include <memory/region.h>
 #include <memory/virtual_memory_manager.h>
+#include <pit.h>
 #include <rtc.h>
 #include <scheduler.h>
 #include <storage/file_metadata.h>
@@ -473,9 +474,12 @@ void sys$11_exec(const char* path, const char** args) {
     {  // We create copies of the userspace buffer(s), because during
         // replacing the userspace process, any data within it is
         // invalidated.
-        for (const char** args_it = args; args_it and *args_it; ++args_it)
+        for (const char** args_it = args; args_it and *args_it; ++args_it) {
+            std::print("args_it: {}, *args_it: {} \"{}\"\n", (void*)args_it, (void*)*args_it, *args_it);
             args_vector_impl.push_back(*args_it);
+        }
 
+        args_vector.reserve(args_vector_impl.size());
         for (const auto& s : args_vector_impl)
             args_vector.push_back(s);
     }
@@ -1207,6 +1211,42 @@ void sys$29_shared_memory_release(usz shared_memory_id) {
     process->SharedMemories.remove(index);
 }
 
+void sys$30_wait_milliseconds(usz milliseconds) {
+    DBGMSG(sys$_dbgfmt, 30, "wait_milliseconds");
+
+    // Calculate scheduler time tick that we should wake up
+    // milliseconds = (ticks / PIT_FREQUENCY) * 1000;
+    // milliseconds / 1000 = ticks / PIT_FREQUENCY;
+    // (milliseconds / 1000) * PIT_FREQUENCY = ticks;
+    // ticks = PIT_FREQUENCY * milliseconds / 1000;
+    const size_t wait_ticks = (milliseconds * PIT_FREQUENCY) / 1000;
+    if (wait_ticks == 0) return;
+    // Register wake up event with scheduler before going to sleep
+    // - add us to scheduler wake up later list, go to sleep, and yield.
+    // - wait for the scheduler to wake us up.
+    auto* process = Scheduler::CurrentProcess->value();
+    // - get current scheduler time tick
+    // - add (milliseconds / milliseconds_per_scheduler_time_tick)
+    process->WakeUpTick = gPIT.get() + wait_ticks;
+    process->State = Process::SLEEPING;
+    // Sayonara!
+    Scheduler::yield();
+}
+
+void sys$31_wait_nanoseconds(usz nanoseconds) {
+    DBGMSG(sys$_dbgfmt, 31, "wait_nanoseconds");
+    const size_t wait_ticks = (nanoseconds * PIT_FREQUENCY) / 1000 / 1000000;
+    auto* process = Scheduler::CurrentProcess->value();
+    process->WakeUpTick = gPIT.get() + wait_ticks;
+    process->State = Process::SLEEPING;
+    Scheduler::yield();
+    return;
+
+    // TODO: precision
+    // Convert nanoseconds to high precision timer ticks
+    // call high precision timer blocking wait() function...
+}
+
 // TODO: Reorder this
 // FIXME: Make it easier to reorder this (maybe separate the number
 // from the name? I don't know, something to make this easier...)
@@ -1261,4 +1301,8 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
 
     (void*)sys$28_cooperative_yield,
 
-    (void*)sys$29_shared_memory_release};
+    (void*)sys$29_shared_memory_release,
+
+    (void*)sys$30_wait_milliseconds,
+    (void*)sys$31_wait_nanoseconds,
+};
