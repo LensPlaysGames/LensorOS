@@ -191,6 +191,9 @@ struct LAPIC {
     // occurring entirely.
     void eoi();
 
+    // Setup a periodic interrupt for IRQ0
+    void init_timer();
+
    private:
     uint64_t Id{0};
     uintptr_t Base{0};

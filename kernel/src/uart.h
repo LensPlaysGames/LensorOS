@@ -21,7 +21,7 @@
 #define LENSOR_OS_UART_H
 
 #include <integers.h>
-#include <io.h>
+#include <x86_64/io.h>
 
 #include <string>
 

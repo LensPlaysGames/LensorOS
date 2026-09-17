@@ -38,8 +38,6 @@
 #include <memory/paging.h>
 #include <memory/region.h>
 #include <memory/virtual_memory_manager.h>
-#include <pit.h>
-#include <rtc.h>
 #include <scheduler.h>
 #include <storage/file_metadata.h>
 #include <storage/filesystem_drivers/socket.h>
@@ -47,6 +45,8 @@
 #include <time.h>
 #include <vfs_forward.h>
 #include <virtual_filesystem.h>
+#include <x86_64/pit.h>
+#include <x86_64/rtc.h>
 
 #include <algorithm>
 #include <memory>

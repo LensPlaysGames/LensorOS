@@ -62,11 +62,11 @@ target_include_directories(
 
 add_library(
   Assembly
-  src/cpuid.asm
-  src/gdt.asm
+  src/x86_64/cpuid.asm
+  src/x86_64/gdt.asm
   src/interrupts/syscalls.asm
-  src/prekernel.asm
-  src/scheduler.asm
+  src/x86_64/prekernel.asm
+  src/x86_64/scheduler.asm
 )
 string( APPEND CMAKE_ASM_NASM_COMPILE_OBJECT " -f elf64" )
 
@@ -76,23 +76,18 @@ add_executable(
   src/ahci.cpp
   src/basic_renderer.cpp
   src/bitmap.cpp
-  src/cpuid.cpp
   src/cstr.cpp
   src/debug.cpp
   src/devices/devices.cpp
   src/e1000.cpp
   src/efi_memory.cpp
   src/event.cpp
-  src/gdt.cpp
   src/gpt.cpp
-  src/hpet.cpp
   src/interrupts/idt.cpp
   src/interrupts/syscalls.cpp
   src/kernel.cpp
   src/keyboard.cpp
   src/keyboard_scancode_translation.cpp
-  src/kstage1.cpp
-  src/lapic.cpp
   src/memory.cpp
   src/memory/heap.cpp
   src/memory/physical_memory_manager.cpp
@@ -100,11 +95,9 @@ add_executable(
   src/mouse.cpp
   src/pci.cpp
   src/pci_descriptors.cpp
-  src/pit.cpp
   src/pure_virtuals.cpp
   src/random_lcg.cpp
   src/random_lfsr.cpp
-  src/rtc.cpp
   src/scheduler.cpp
   src/spinlock.cpp
   src/storage/device_drivers/port_controller.cpp
@@ -118,6 +111,13 @@ add_executable(
   src/utf.cpp
   src/virtual_filesystem.cpp
   src/x86_64/cpu.cpp
+  src/x86_64/cpuid.cpp
+  src/x86_64/gdt.cpp
+  src/x86_64/hpet.cpp
+  src/x86_64/kstage1.cpp
+  src/x86_64/lapic.cpp
+  src/x86_64/pit.cpp
+  src/x86_64/rtc.cpp
   src/x86_64/tss.cpp
 )
 set_target_properties( Kernel PROPERTIES OUTPUT_NAME kernel.elf )

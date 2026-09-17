@@ -31,21 +31,21 @@
 #include <cstr.h>
 #include <event.h>
 #include <interrupts/interrupts.h>
-#include <io.h>
 #include <keyboard.h>
 #include <keyboard_scancode_translation.h>
-#include <lapic.h>
 #include <lensor/keys.h>
 #include <memory/paging.h>
 #include <memory/virtual_memory_manager.h>
 #include <mouse.h>
 #include <panic.h>
-#include <pit.h>
-#include <rtc.h>
 #include <scheduler.h>
 #include <system.h>
 #include <uart.h>
 #include <vfs_forward.h>
+#include <x86_64/io.h>
+#include <x86_64/lapic.h>
+#include <x86_64/pit.h>
+#include <x86_64/rtc.h>
 
 #include <format>
 

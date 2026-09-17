@@ -17,7 +17,6 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <hpet.h>
 #include <integers.h>
 #include <interrupts/idt.h>
 #include <interrupts/interrupts.h>
@@ -26,12 +25,13 @@
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
-#include <pit.h>
-#include <rtc.h>
 #include <scheduler.h>
 #include <system.h>
 #include <time.h>
 #include <vfs_forward.h>
+#include <x86_64/hpet.h>
+#include <x86_64/pit.h>
+#include <x86_64/rtc.h>
 
 #include <print>
 

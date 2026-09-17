@@ -17,7 +17,7 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <cpuid.h>
+#include <x86_64/cpuid.h>
 
 void cpuid(u32 code, u32& a, u32& b, u32& c, u32& d) {
     /* Inline Assembly:

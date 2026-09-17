@@ -18,9 +18,9 @@
  */
 
 #include <cstr.h>
-#include <io.h>
 #include <panic.h>
 #include <uart.h>
+#include <x86_64/io.h>
 
 #include <format>
 

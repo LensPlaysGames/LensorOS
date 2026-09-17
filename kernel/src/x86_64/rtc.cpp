@@ -1,5 +1,4 @@
-#include <rtc.h>
-#include <time.h>
+#include <x86_64/rtc.h>
 
 RTC gRTC;
 

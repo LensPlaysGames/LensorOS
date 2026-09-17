@@ -17,7 +17,6 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <gdt.h>
 #include <kernel.h>
 #include <link_definitions.h>
 #include <memory.h>
@@ -26,6 +25,7 @@
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 #include <scheduler.h>
+#include <x86_64/gdt.h>
 #include <x86_64/tss.h>
 
 #include <print>

@@ -20,18 +20,18 @@
 #include <basic_renderer.h>
 #include <boot.h>
 #include <cstr.h>
-#include <hpet.h>
 #include <kernel.h>
 #include <keyboard.h>
-#include <kstage1.h>
 #include <math.h>
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
-#include <pit.h>
-#include <rtc.h>
 #include <scheduler.h>
+#include <x86_64/hpet.h>
+#include <x86_64/kstage1.h>
+#include <x86_64/pit.h>
+#include <x86_64/rtc.h>
 
 #include <print>
 

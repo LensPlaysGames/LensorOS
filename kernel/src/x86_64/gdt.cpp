@@ -17,7 +17,7 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
-#include <gdt.h>
+#include <x86_64/gdt.h>
 
 GDT gGDT;
 GDTDescriptor gGDTD;

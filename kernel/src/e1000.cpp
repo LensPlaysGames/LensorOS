@@ -1,7 +1,6 @@
 #include <e1000.h>
 #include <interrupts/idt.h>
 #include <interrupts/interrupts.h>
-#include <io.h>
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
@@ -9,6 +8,7 @@
 #include <network.h>
 #include <pci.h>
 #include <stdint.h>
+#include <x86_64/io.h>
 
 #include <array>
 #include <bit>

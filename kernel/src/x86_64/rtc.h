@@ -4,7 +4,7 @@
 #define CURRENT_YEAR 2022
 
 #include <integers.h>
-#include <io.h>
+#include <x86_64/io.h>
 
 #define CMOS_ADDR 0x70
 #define CMOS_DATA 0x71

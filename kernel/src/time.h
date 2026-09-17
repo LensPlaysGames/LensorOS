@@ -20,8 +20,8 @@
 #ifndef LENSOR_OS_TIME_H
 #define LENSOR_OS_TIME_H
 
-#include <rtc.h>
 #include <stdint.h>
+#include <x86_64/rtc.h>
 
 #include <format>
 

@@ -19,8 +19,8 @@
 
 #include <bits/decls.h>
 #include <integers.h>
-#include <io.h>
-#include <pit.h>
+#include <x86_64/io.h>
+#include <x86_64/pit.h>
 
 PIT gPIT;
 void pit_tick() { gPIT.tick(); }

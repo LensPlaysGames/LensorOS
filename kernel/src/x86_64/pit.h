@@ -21,7 +21,7 @@
 #define LENSOR_OS_PIT_H
 
 #include <integers.h>
-#include <io.h>
+#include <x86_64/io.h>
 
 #define PIT_MAX_FREQ 1193180
 #if defined QEMU || defined VBOX || defined VMWARE

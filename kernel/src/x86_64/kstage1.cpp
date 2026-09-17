@@ -22,22 +22,17 @@
 #include <basic_renderer.h>
 #include <boot.h>
 #include <cpu.h>
-#include <cpuid.h>
 #include <devices/devices.h>
 #include <e1000.h>
 #include <efi_memory.h>
 #include <elf_loader.h>
-#include <gdt.h>
 #include <gpt.h>
 #include <gpt_partition_type_guids.h>
 #include <guid.h>
-#include <hpet.h>
 #include <interrupts/idt.h>
 #include <interrupts/interrupts.h>
 #include <interrupts/syscalls.h>
 #include <keyboard.h>
-#include <kstage1.h>
-#include <lapic.h>
 #include <link_definitions.h>
 #include <memory/heap.h>
 #include <memory/paging.h>
@@ -46,10 +41,8 @@
 #include <mouse.h>
 #include <network.h>
 #include <pci.h>
-#include <pit.h>
 #include <random_lcg.h>
 #include <random_lfsr.h>
-#include <rtc.h>
 #include <scheduler.h>
 #include <storage/filesystem_drivers/file_allocation_table.h>
 #include <storage/storage_device_driver.h>
@@ -58,6 +51,13 @@
 #include <time.h>
 #include <uart.h>
 #include <utf.h>
+#include <x86_64/cpuid.h>
+#include <x86_64/gdt.h>
+#include <x86_64/hpet.h>
+#include <x86_64/kstage1.h>
+#include <x86_64/lapic.h>
+#include <x86_64/pit.h>
+#include <x86_64/rtc.h>
 
 #include <bit>
 #include <extensions>

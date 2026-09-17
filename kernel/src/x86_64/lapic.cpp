@@ -1,8 +1,8 @@
 #include <interrupts/interrupts.h>
-#include <lapic.h>
 #include <memory/common.h>
 #include <memory/virtual_memory_manager.h>
 #include <x86_64/cpu.h>
+#include <x86_64/lapic.h>
 
 IOAPIC gIOAPIC;
 LAPIC gLAPIC;

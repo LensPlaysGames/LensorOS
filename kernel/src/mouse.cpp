@@ -19,10 +19,10 @@
 
 #include <basic_renderer.h>
 #include <integers.h>
-#include <io.h>
 #include <math.h>
 #include <mouse.h>
 #include <random_lfsr.h>
+#include <x86_64/io.h>
 
 #include <format>
 

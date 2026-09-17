@@ -1,5 +1,5 @@
-#include <gdt.h>
 #include <x86_64/cpu.h>
+#include <x86_64/gdt.h>
 
 #include <print>
 
