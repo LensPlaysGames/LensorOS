@@ -30,6 +30,14 @@
 #define MSR_TIME_STAMP_COUNTER 0x10
 #define MSR_TSC MSR_TIME_STAMP_COUNTER
 
+constexpr inline uint64_t rdtsc() {
+    uint32_t lo;
+    uint32_t hi;
+    // "=a" targets EAX, "=d" targets EDX
+    asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
+    return ((uint64_t)hi << 32) | lo;
+}
+
 struct CPUState {
     u64 RSP;
     u64 RBX;

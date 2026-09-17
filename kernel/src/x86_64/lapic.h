@@ -60,6 +60,7 @@
 // Read/Write
 #define LAPIC_REGOFFSET_LOGICAL_DESTINATION 0xd0
 #define LAPIC_REGOFFSET_DESTINATION_FORMAT 0xe0
+// Sometimes stylized SIVR
 #define LAPIC_REGOFFSET_SPURIOUS_INTERRUPT_VECTOR 0xf0
 #define LAPIC_REGOFFSET_ERROR_STATUS 0x0280
 
@@ -69,9 +70,12 @@
 #define LAPIC_REGOFFSET_LVT_LINT0 0x0350
 #define LAPIC_REGOFFSET_LVT_LINT1 0x0360
 #define LAPIC_REGOFFSET_LVT_ERROR 0x0370
+// Sometimes stylized TICR
 #define LAPIC_REGOFFSET_INITIAL_COUNT 0x0380
+// Sometimes stylized TCCR
 #define LAPIC_REGOFFSET_CURRENT_COUNT 0x0390
 //  Read/Write
+// Sometimes stylized TDCR
 #define LAPIC_REGOFFSET_DIVIDE_CONFIG 0x03e0
 
 #define LAPIC_MSR_ID LAPIC_MSR_FROM_REGOFFSET(LAPIC_REGOFFSET_ID)
@@ -96,6 +100,20 @@
 #define LAPIC_MSR_DIVIDE_CONFIG LAPIC_MSR_FROM_REGOFFSET(LAPIC_REGOFFSET_DIVIDE_CONFIG)
 
 #define LAPIC_SPURIOUS_INT_ENABLE (((uint32_t)1) << 8)
+
+// 0 -> one-shot
+// 1 -> periodic
+#define LAPIC_LVT_TIMER_PERIODIC (((uint32_t)1) << 17)
+#define LAPIC_LVT_TIMER_MASKED (((uint32_t)1) << 16)
+
+#define LAPIC_DIVIDE_CONFIG_BY1 0b1011
+#define LAPIC_DIVIDE_CONFIG_BY2 0b0000
+#define LAPIC_DIVIDE_CONFIG_BY4 0b0001
+#define LAPIC_DIVIDE_CONFIG_BY8 0b0010
+#define LAPIC_DIVIDE_CONFIG_BY16 0b0011
+#define LAPIC_DIVIDE_CONFIG_BY32 0b1000
+#define LAPIC_DIVIDE_CONFIG_BY64 0b1001
+#define LAPIC_DIVIDE_CONFIG_BY128 0b1010
 
 // Much like the RTC, I/O APIC has internal registers that you may only
 // view through a window --- the data register.
@@ -142,6 +160,10 @@ struct IOAPIC {
     // Given an IRQ zero through fifteen, redirect incoming interrupts to the
     // corresponding vector offset.
     void enable_irq(uint8_t irq);
+
+    // Given an IRQ zero through fifteen, mask any incoming interrupts on that
+    // interrupt request line.
+    void disable_irq(uint8_t irq);
 
     void print_debug();
 
@@ -192,7 +214,7 @@ struct LAPIC {
     void eoi();
 
     // Setup a periodic interrupt for IRQ0
-    void init_timer();
+    void init_interrupt();
 
    private:
     uint64_t Id{0};
@@ -205,6 +227,9 @@ struct LAPIC {
     uint32_t read(uint16_t regoffset);
 };
 
+// TODO: Turn these into a tracking structure for all IOAPICS and LAPICs
+
+void process_madt(ACPI::APICHeader* madt, IOAPIC*, LAPIC*);
 // TODO: Turn this into a tracking structure for all IOAPICs
 extern IOAPIC gIOAPIC;
 // TODO: Turn this into a tracking structure for all LAPICs

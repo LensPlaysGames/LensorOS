@@ -64,17 +64,14 @@
 #include <format>
 #include <unordered_map>
 
-#ifdef x86_64
 u8 idt_storage[0x1000];
 size_t Time::unix_boot_time;
-#endif
 
 void prepare_interrupts() {
     // REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
     if constexpr (use_legacy_pic)
         LegacyPIC::remap_pic();
 
-#ifdef x86_64
     // CREATE INTERRUPT DESCRIPTOR TABLE.
     gIDT = IDTR(sizeof(idt_storage) - 1, (u64)&idt_storage[0]);
 
@@ -104,7 +101,6 @@ void prepare_interrupts() {
     gIDT.install_handler((u64)spurious_handler, 0xff, 7);
 
     gIDT.flush();
-#endif
 }
 
 void draw_boot_gfx() {
@@ -351,7 +347,6 @@ void probe_cpu() {
         SystemCPU->set_vendor_id(cpuVendorID);
         std::print("  CPU Vendor ID: {}\n", std::string_view{SystemCPU->get_vendor_id(), 12});
 
-#ifdef x86_64
         CPUIDRegisters regs;
         cpuid(1, regs);
 
@@ -454,7 +449,6 @@ void probe_cpu() {
             }
         }
     }
-#endif
 
     std::print("\n");
 
@@ -538,95 +532,37 @@ void kstage2(BootInfo* bInfo) {
         // TODO: Register RTC as a real time clock timer device within system.
     }
 
+    // Initialize the Programmable Interval Timer.
+    // FIXME: Just assumes PIT exists.
+    gPIT = PIT();
+    std::print(
+        "[kstage1]: {Programmable Interval Timer Initialized}\n"
+        "  Channel 0, H/L Bit Access\n"
+        "  Rate Generator, BCD Disabled\n"
+        "  Periodic interrupts at {}{}hz{}.\n"
+        "\n",
+        __GREEN,
+        __YELLOW,
+        PIT_FREQUENCY,
+        __FG_DEFAULT);
+
+    {
+        const size_t tsc_begin = rdtsc();
+        gPIT.wait_polling(10);
+        const size_t tsc_end = rdtsc();
+        auto tsc_per_10ms = tsc_end - tsc_begin;
+        auto tsc_per_millisecond = tsc_per_10ms / 10;
+        auto tsc_frequency = tsc_per_millisecond * Time::milliseconds_per_second;
+        std::print(
+            "[TSC]: {} per millisecond  freq={}\n",
+            tsc_per_millisecond,
+            tsc_frequency);
+    }
+
+    auto* madt = (ACPI::APICHeader*)ACPI::find_table("APIC");
     gLAPIC = LAPIC();
     gIOAPIC = IOAPIC();
-    auto* madt = (ACPI::APICHeader*)ACPI::find_table("APIC");
-    if (madt) {
-        std::print("[MADT]:\n");
-        // Process records
-        auto header_base = (uintptr_t)madt;
-        auto end = header_base + madt->Length;
-        std::print(
-            ""
-            "  records begin: {:#016x}\n"
-            "  records end:   {:#016x}\n",
-            header_base + sizeof(ACPI::APICHeader),
-            end);
-
-        for (uintptr_t record_base = header_base + sizeof(ACPI::APICHeader);
-             record_base + sizeof(ACPI::APICHeader::Record) < end;) {
-            std::print("  record at {:#016x}\n", record_base);
-            auto* record = (ACPI::APICHeader::Record*)record_base;
-            std::print("  - type {}, length {}\n", record->type, record->length);
-
-            switch (record->type) {
-                case 0: {
-                    auto* record0 = (ACPI::APICHeader::Record0*)(record_base + sizeof(ACPI::APICHeader::Record));
-                    std::print(
-                        "  {}  CPU({:#x}), APIC({:#x})\n",
-                        record0->description,
-                        record0->processor_id,
-                        record0->apic_id);
-                    // NOTE: The first LAPIC structure listed in the MADT is, by convention,
-                    // the bootstrap CPU.
-                } break;
-                case 1: {
-                    auto* record1 = (ACPI::APICHeader::Record1*)(record_base + sizeof(ACPI::APICHeader::Record));
-                    std::print(
-                        "  {}\n"
-                        "    ID: {}\n"
-                        "    Address: {:#016x}\n"
-                        "    Minimum Interrupt: {}\n",
-                        record1->description,
-                        record1->ioapic_id,
-                        (uintptr_t)record1->ioapic_address,
-                        (uint32_t)record1->global_system_interrupt_base);
-                    gIOAPIC.process_ioapic(*record1);
-                } break;
-                case 2: {
-                    auto* record2 = (ACPI::APICHeader::Record2*)(record_base + sizeof(ACPI::APICHeader::Record));
-                    std::print(
-                        "  {} BUS({:#x}), IRQ({:#x}), GSR({:#x})\n",
-                        record2->description,
-                        record2->bus_source,
-                        record2->irq_source,
-                        (uint32_t)record2->global_system_interrupt);
-                    gIOAPIC.process_source_override(*record2);
-                } break;
-                case 3: {
-                    auto* record3 = (ACPI::APICHeader::Record3*)(record_base + sizeof(ACPI::APICHeader::Record));
-                    std::print(
-                        "  {} NMI({:#x}), GSR({:#x})\n",
-                        record3->description,
-                        record3->nmi_source,
-                        (uint32_t)record3->global_system_interrupt);
-                } break;
-                case 4: {
-                    auto* record4 = (ACPI::APICHeader::Record4*)(record_base + sizeof(ACPI::APICHeader::Record));
-                    std::print(
-                        "  {} CPU({:#x}), INT({:#x})\n",
-                        record4->description,
-                        record4->processor_id,
-                        record4->vector);
-                } break;
-                case 5: {
-                    auto* record5 = (ACPI::APICHeader::Record5*)(record_base + sizeof(ACPI::APICHeader::Record));
-                    std::print(
-                        "  {}\n"
-                        "  Setting LAPIC Base to {:#016x}\n",
-                        record5->description,
-                        (uintptr_t)record5->lapic_address);
-                    gLAPIC.set_base(record5->lapic_address);
-                } break;
-                case 9: {
-                    auto* record9 = (ACPI::APICHeader::Record9*)(record_base + sizeof(ACPI::APICHeader::Record));
-                    std::print("  {}\n", record9->description);
-                } break;
-            }
-
-            record_base += record->length;
-        }
-    }
+    process_madt(madt, &gIOAPIC, &gLAPIC);
 
     gLAPIC.init();
     std::print("[APIC]: {Initialized}\n", __GREEN);
@@ -634,23 +570,17 @@ void kstage2(BootInfo* bInfo) {
     gIOAPIC.init(gLAPIC.id());
     std::print("[IOAPIC]: {Initialized}\n", __GREEN);
 
-    if constexpr (use_legacy_pic) {
-        // Enable IRQ interrupts that will be used.
-        LegacyPIC::enable_interrupt(IRQ_SYSTEM_TIMER);
-        LegacyPIC::enable_interrupt(IRQ_PS2_KEYBOARD);
-        LegacyPIC::enable_interrupt(IRQ_CASCADED_PIC);
-        LegacyPIC::enable_interrupt(IRQ_UART_COM1);
-        LegacyPIC::enable_interrupt(IRQ_REAL_TIMER);
-        LegacyPIC::enable_interrupt(IRQ_PS2_MOUSE);
-    }
-    else {
-        gIOAPIC.enable_irq(IRQ_SYSTEM_TIMER);
-        gIOAPIC.enable_irq(IRQ_PS2_KEYBOARD);
-        gIOAPIC.enable_irq(IRQ_UART_COM1);
-        gIOAPIC.enable_irq(IRQ_REAL_TIMER);
-        gIOAPIC.enable_irq(IRQ_PS2_MOUSE);
+    enable_interrupt(IRQ_SYSTEM_TIMER);
+    enable_interrupt(IRQ_PS2_KEYBOARD);
+    enable_interrupt(IRQ_UART_COM1);
+    enable_interrupt(IRQ_REAL_TIMER);
+    enable_interrupt(IRQ_PS2_MOUSE);
+    if constexpr (use_legacy_pic)
+        enable_interrupt(IRQ_CASCADED_PIC);
+    else
         gIOAPIC.print_debug();
-    }
+
+    gLAPIC.init_interrupt();
 
     // Create basic framebuffer renderer.
     std::print("[kstage1]: Setting up Graphics Output Protocol Renderer\n");
@@ -693,20 +623,6 @@ void kstage2(BootInfo* bInfo) {
 
     auto& vfs = SYSTEM->virtual_filesystem();
     vfs.print_debug();
-
-    // Initialize the Programmable Interval Timer.
-    // FIXME: Just assumes PIT exists.
-    gPIT = PIT();
-    std::print(
-        "[kstage1]: {Programmable Interval Timer Initialized}\n"
-        "  Channel 0, H/L Bit Access\n"
-        "  Rate Generator, BCD Disabled\n"
-        "  Periodic interrupts at {}{}hz{}.\n"
-        "\n",
-        __GREEN,
-        __YELLOW,
-        PIT_FREQUENCY,
-        __FG_DEFAULT);
 
     // Setup network device(s)
     for (auto& dev : SYSTEM->Devices) {
@@ -899,12 +815,10 @@ void kstage1(BootInfo* bInfo) {
      *     and gracefully handle the case that they aren't there.
      */
 
-#ifdef x86_64
     // Disable interrupts while doing sensitive
     //   operations (like setting up interrupts :^).
     // TODO: Make architecture agnostic.
     asm("cli");
-#endif
 
     // Don't even attempt to boot unless boot info exists.
     if (bInfo == nullptr) hang();

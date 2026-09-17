@@ -1,8 +1,12 @@
 #include <interrupts/interrupts.h>
 #include <memory/common.h>
 #include <memory/virtual_memory_manager.h>
+#include <time.h>
 #include <x86_64/cpu.h>
 #include <x86_64/lapic.h>
+#include <x86_64/pit.h>
+
+#include <print>
 
 IOAPIC gIOAPIC;
 LAPIC gLAPIC;
@@ -75,6 +79,13 @@ void IOAPIC::enable_irq(uint8_t irq) {
     redirect_gsi_to_idt_vector(
         irq_redirects[irq],
         PIC_IRQ_VECTOR_OFFSET + irq);
+}
+
+void IOAPIC::disable_irq(uint8_t irq) {
+    irq = irq_redirects[irq];
+    auto data = read(IOAPIC_REGINDEX_REDIRECTION_LOW(irq));
+    data |= IOAPIC_REDIRECTION_LOW_MASKED;
+    write(IOAPIC_REGINDEX_REDIRECTION_LOW(irq), data);
 }
 
 void IOAPIC::redirect_gsi_to_idt_vector(uint8_t global_interrupt, uint8_t vector) {
@@ -237,7 +248,7 @@ bool LAPIC::init() {
         "  x2APIC: {}\n"
         "  bootstrap: {}\n"
         "  enabled: {}\n"
-        "  spurious vector: {:#x}",
+        "  spurious vector: {:#x}\n",
         Id,
         (void*)Base,
         MaxLVTCount,
@@ -251,4 +262,186 @@ bool LAPIC::init() {
 
 void LAPIC::eoi() {
     write(LAPIC_REGOFFSET_EOI, 0);
+}
+
+// Setup a periodic interrupt for IRQ0
+void LAPIC::init_interrupt() {
+    // Timer Registers:
+    // Divide Configuration
+    //   Sets the clock divisor (1, 2, 4, 8, 16, 32, 64, 128)
+    //   The APIC clock is the CPU clock, so it can be a bit fast.
+    // LVT Timer
+    //   Sets the interrupt vector, masks/unmasks the timer, and sets the mode
+    //   (Periodic or One-Shot).
+    // Initial Count
+    //   The programmable starting value for the down-counter.
+    // Current Count (read-only)
+    //   The current value of the down-counter.
+
+    // Set the timer divisor to 16
+    // Pattern 0x3 sets divisor to 16 on standard x86 LAPIC
+    write(
+        LAPIC_REGOFFSET_DIVIDE_CONFIG,
+        LAPIC_DIVIDE_CONFIG_BY16);
+
+    // Configure the LVT Timer Register
+    // Set to
+    //   Periodic mode,
+    //   unmasked (bit 16 clear),
+    //   using Interrupt Vector 32 (0x20).
+    constexpr uint32_t timer_vector = PIC_IRQ0;
+    // Keep the APIC timer masked (no interrupts will fire during calibration)
+    write(
+        LAPIC_REGOFFSET_LVT_TIMER,
+        LAPIC_LVT_TIMER_PERIODIC
+            | LAPIC_LVT_TIMER_MASKED
+            | timer_vector);
+
+    constexpr size_t calibration_milliseconds = 40;
+    constexpr size_t trial_count = 4;
+    size_t total_tick_count{0};
+
+    for (size_t i = 0; i < trial_count; ++i) {
+        // Start the timer by setting the initial count
+        // Load the maximum possible value to TICR to start the countdown
+        constexpr uint32_t initial_count = 0xffffffff;
+        write(LAPIC_REGOFFSET_INITIAL_COUNT, initial_count);
+
+        // Use prepared timer to sleep for some duration
+        __asm__ volatile("lfence" ::: "memory");
+        gPIT.wait_polling(calibration_milliseconds);
+        __asm__ volatile("lfence" ::: "memory");
+
+        // Read how many counts are left immediately after the wait
+        const uint32_t current_count = read(LAPIC_REGOFFSET_CURRENT_COUNT);
+
+        // Total elapsed ticks in our window = Initial Max Count - What's Left After Waiting
+        const uint32_t ticks_per_calibration_window = initial_count - current_count;
+
+        total_tick_count += ticks_per_calibration_window;
+    }
+    constexpr size_t total_milliseconds = calibration_milliseconds * trial_count;
+
+    // Divide to get the exact value for our window
+    const uint32_t ticks_per_millisecond = total_tick_count / total_milliseconds;
+    const size_t freqency = ticks_per_millisecond * Time::milliseconds_per_second;
+
+    std::print("[LAPIC Timer]: ticks per ms={}  freq={}hz\n", ticks_per_millisecond, freqency);
+
+    // mask system timer interrupt (PIT)
+    gIOAPIC.disable_irq(0);
+    // unmask timer interrupt
+    write(
+        LAPIC_REGOFFSET_LVT_TIMER,
+        LAPIC_LVT_TIMER_PERIODIC | timer_vector);
+
+    constexpr uint32_t milliseconds_per_timeslice = 20;
+    const uint32_t ticks_per_timeslice = ticks_per_millisecond * milliseconds_per_timeslice;
+    const uint32_t programmed_tick_frequency = Time::milliseconds_per_second / milliseconds_per_timeslice;
+    std::print(
+        "  {} ticks per {}ms time-slice  freq={}hz\n",
+        ticks_per_timeslice,
+        milliseconds_per_timeslice,
+        programmed_tick_frequency);
+
+    // timer_tick still updates gPIT.Ticks ... update frequency.
+    gPIT.Frequency = programmed_tick_frequency;
+
+    // time slice...
+    write(
+        LAPIC_REGOFFSET_INITIAL_COUNT,
+        ticks_per_timeslice);
+}
+
+size_t LAPIC::get() {
+    return read(LAPIC_REGOFFSET_CURRENT_COUNT);
+}
+
+void process_madt(ACPI::APICHeader* madt, IOAPIC* ioapic, LAPIC* lapic) {
+    if ((not madt) or (not ioapic) or (not lapic)) return;
+
+    std::print("[MADT]:\n");
+    // Process records
+    auto header_base = (uintptr_t)madt;
+    auto end = header_base + madt->Length;
+    std::print(
+        ""
+        "  records begin: {:#016x}\n"
+        "  records end:   {:#016x}\n",
+        header_base + sizeof(ACPI::APICHeader),
+        end);
+
+    for (uintptr_t record_base = header_base + sizeof(ACPI::APICHeader);
+         record_base + sizeof(ACPI::APICHeader::Record) < end;) {
+        std::print("  record at {:#016x}\n", record_base);
+        auto* record = (ACPI::APICHeader::Record*)record_base;
+        std::print("  - type {}, length {}\n", record->type, record->length);
+
+        switch (record->type) {
+            case 0: {
+                auto* record0 = (ACPI::APICHeader::Record0*)(record_base + sizeof(ACPI::APICHeader::Record));
+                std::print(
+                    "  {}  CPU({:#x}), APIC({:#x})\n",
+                    record0->description,
+                    record0->processor_id,
+                    record0->apic_id);
+                // NOTE: The first LAPIC structure listed in the MADT is, by convention,
+                // the bootstrap CPU.
+            } break;
+            case 1: {
+                auto* record1 = (ACPI::APICHeader::Record1*)(record_base + sizeof(ACPI::APICHeader::Record));
+                std::print(
+                    "  {}\n"
+                    "    ID: {}\n"
+                    "    Address: {:#016x}\n"
+                    "    Minimum Interrupt: {}\n",
+                    record1->description,
+                    record1->ioapic_id,
+                    (uintptr_t)record1->ioapic_address,
+                    (uint32_t)record1->global_system_interrupt_base);
+                ioapic->process_ioapic(*record1);
+            } break;
+            case 2: {
+                auto* record2 = (ACPI::APICHeader::Record2*)(record_base + sizeof(ACPI::APICHeader::Record));
+                std::print(
+                    "  {} BUS({:#x}), IRQ({:#x}), GSR({:#x})\n",
+                    record2->description,
+                    record2->bus_source,
+                    record2->irq_source,
+                    (uint32_t)record2->global_system_interrupt);
+                ioapic->process_source_override(*record2);
+            } break;
+            case 3: {
+                auto* record3 = (ACPI::APICHeader::Record3*)(record_base + sizeof(ACPI::APICHeader::Record));
+                std::print(
+                    "  {} NMI({:#x}), GSR({:#x})\n",
+                    record3->description,
+                    record3->nmi_source,
+                    (uint32_t)record3->global_system_interrupt);
+            } break;
+            case 4: {
+                auto* record4 = (ACPI::APICHeader::Record4*)(record_base + sizeof(ACPI::APICHeader::Record));
+                std::print(
+                    "  {} CPU({:#x}), INT({:#x})\n",
+                    record4->description,
+                    record4->processor_id,
+                    record4->vector);
+            } break;
+            case 5: {
+                auto* record5 = (ACPI::APICHeader::Record5*)(record_base + sizeof(ACPI::APICHeader::Record));
+                std::print(
+                    "  {}\n"
+                    "  Setting LAPIC Base to {:#016x}\n",
+                    record5->description,
+                    (uintptr_t)record5->lapic_address);
+                lapic->set_base(record5->lapic_address);
+            } break;
+            case 9: {
+                auto* record9 = (ACPI::APICHeader::Record9*)(record_base + sizeof(ACPI::APICHeader::Record));
+                std::print("  {}\n", record9->description);
+            } break;
+        }
+
+        record_base += record->length;
+    }
 }

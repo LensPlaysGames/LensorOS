@@ -19,6 +19,7 @@
 
 #include <bits/decls.h>
 #include <integers.h>
+#include <time.h>
 #include <x86_64/io.h>
 #include <x86_64/pit.h>
 
@@ -31,6 +32,7 @@ PIT::PIT() {
         Access::HighAndLow,
         Mode::RateGenerator,
         PIT_FREQUENCY);
+    Frequency = PIT_FREQUENCY;
     configure_channel(
         Channel::Two,
         Access::HighAndLow,
@@ -39,20 +41,64 @@ PIT::PIT() {
 }
 
 usz PIT::seconds_since_boot() {
-    return (usz)Ticks / PIT_FREQUENCY;
+    return (usz)Ticks / Frequency;
 }
 usz PIT::milliseconds_since_boot() {
-    return (usz)Ticks * 1000 / PIT_FREQUENCY;
+    return (usz)Ticks * 1000 / Frequency;
 }
 
 void PIT::prepare_wait_milliseconds(usz ms) {
-    TicksToWait = ms * PIT_FREQUENCY / 1000;
+    TicksToWait = ms * Frequency / Time::milliseconds_per_second;
+    // std::print("[PIT]: Prepared wait for {} ticks\n", TicksToWait);
 }
 
 void PIT::wait() {
     u64 tickToWaitTo = Ticks + TicksToWait;
+    // std::print(
+    //     "[PIT]: Waiting for {} ticks, current is {}, deadline is {}\n",
+    //     TicksToWait,
+    //     (size_t)Ticks,
+    //     tickToWaitTo);
     while (Ticks < tickToWaitTo)
-        asm volatile("hlt");
+        asm volatile("pause" ::: "memory");
+}
+
+void PIT::wait_polling(usz milliseconds) {
+    auto frequency = Time::milliseconds_per_second / milliseconds;
+    // std::print("wait_polling({}ms): freq={}hz\n", milliseconds, frequency);
+
+    // Ensure channel two can count...
+    enable_speaker();
+
+    // Configure channel two for a one shot count down
+    configure_channel(
+        Channel::Two,
+        Access::HighAndLow,
+        Mode::RateGenerator,
+        frequency);
+
+    uint16_t last_count = 0xffff;
+    while (true) {
+        // Channel 2 Counter Latch Command
+        out8(PIT_CMD, 0x80);
+        uint8_t lsb = in8(PIT_CH2_DAT);
+        uint8_t msb = in8(PIT_CH2_DAT);
+        uint16_t current_count = (((uint16_t)msb) << 8) | lsb;
+
+        // If the count jumps back up or passes zero, our window is finished
+        if (current_count > last_count)
+            break;
+
+        last_count = current_count;
+        asm volatile("pause" ::: "memory");
+    }
+}
+
+void PIT::enable_speaker() {
+    u8 tmp = in8(PIT_PCSPK);
+    tmp &= ~0b11;
+    tmp |= 1;
+    out8(PIT_PCSPK, tmp);
 }
 
 void PIT::start_speaker() {
@@ -68,16 +114,21 @@ void PIT::stop_speaker() {
 }
 
 void PIT::play_sound(u64 frequency, usz ms) {
-    if (frequency == 0 || ms <= 0) return;
+    if (frequency == 0 or ms == 0) return;
 
-    configure_channel(Channel::Two, Access::HighAndLow, Mode::SquareWaveGenerator, frequency);
+    enable_speaker();
+    configure_channel(
+        Channel::Two,
+        Access::HighAndLow,
+        Mode::SquareWaveGenerator,
+        frequency);
 
-    // FIXME: Playing a sound shouldn't block the entire system :^)
-    // I should probably create a separate process that runs sound, or something like that.
-    // Or have a general timer process that runs timers when it is time to.
     prepare_wait_milliseconds(ms);
+
     start_speaker();
+    asm volatile("lfence" ::: "memory");
     wait();
+    asm volatile("lfence" ::: "memory");
     stop_speaker();
 }
 
@@ -108,13 +159,14 @@ void PIT::configure_channel(Channel channel, Access access, Mode mode, u64 frequ
 
     u16 dataPort = PIT_CH0_DAT;
     u16 divisor = PIT_MAX_FREQ / frequency;
+    // std::print("[PIT]: freq={} divisor={}\n", frequency, divisor);
 
     out8(PIT_CMD, command);
 
     if (channel == Channel::Two)
         dataPort = PIT_CH2_DAT;
-    if (access == Access::HighAndLow || access == Access::HighOnly)
+    if (access == Access::HighAndLow or access == Access::HighOnly)
         out8(dataPort, (u8)(divisor & 0x00ff));
-    if (access == Access::HighAndLow || access == Access::LowOnly)
+    if (access == Access::HighAndLow or access == Access::LowOnly)
         out8(dataPort, (u8)((divisor & 0xff00) >> 8));
 }

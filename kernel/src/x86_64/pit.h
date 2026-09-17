@@ -95,6 +95,8 @@ class PIT {
    public:
     PIT();
 
+    usz Frequency{PIT_FREQUENCY};
+
     void tick() { Ticks = Ticks + 1; }
 
     usz get() { return Ticks; }
@@ -112,6 +114,9 @@ class PIT {
     /// Wait for the prepared amount of time.
     void wait();
 
+    // NOTE: milliseconds must be < 55.
+    void wait_polling(usz milliseconds);
+
    private:
     /// Incremented by IRQ0 interrupt handler.
     volatile usz Ticks{0};
@@ -123,6 +128,7 @@ class PIT {
     /* Playing sound out of the PC Speaker by
      *   manipulating bits 0 & 1 of IO port 0x61.
      */
+    void enable_speaker();
     void start_speaker();
     void stop_speaker();
 
