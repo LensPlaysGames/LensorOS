@@ -119,6 +119,8 @@ struct InterruptFrameError {
     u64 ss;
 } __attribute__((packed));
 
+void panic_handler(InterruptFrame* frame);
+
 // HARDWARE INTERRUPT REQUESTS (IRQs)
 void system_timer_handler(InterruptFrame*);
 void keyboard_handler(InterruptFrame*);

@@ -94,28 +94,9 @@ void end_of_interrupt(u8 IRQx) {
     out8(PIC1_COMMAND, PIC_EOI);
 }
 
-_PushIgnoreWarning("-Wvolatile");
-void cause_div_by_zero(volatile u8 one) {
-    one /= one - 1;
-}
-_PopWarnings();
-
-void cause_page_not_present() {
-    u8* badAddr = (u8*)0xdeadc0de;
-    volatile u8 faultHere = *badAddr;
-    (void)faultHere;
-}
-
-void cause_nullptr_dereference() {
-    u8* badAddr = (u8*)nullptr;
-    volatile u8 faultHere = *badAddr;
-    (void)faultHere;
-}
-
-void cause_general_protection() {
-    u8* badAddr = (u8*)0xdeadbeefb00bface;
-    volatile u8 faultHere = *badAddr;
-    (void)faultHere;
+__attribute__((interrupt)) void panic_handler(InterruptFrame* frame) {
+    panic(frame, "Interrupt Occurred...");
+    hang();
 }
 
 // HARDWARE INTERRUPT HANDLERS (IRQs)
@@ -346,7 +327,12 @@ __attribute__((interrupt)) void page_fault_handler(InterruptFrameError* frame) {
     if ((frame->error & (u64)PageFaultErrorCode::Reserved) > 0)
         std::print("  Reserved\n");
 
-    auto pid = Scheduler::CurrentProcess->value()->ProcessID;
+    if ((not Scheduler::CurrentProcess) or (not Scheduler::CurrentProcess->value()))
+        return;
+
+    auto pid = pid_t(-1);
+    if (Scheduler::CurrentProcess and Scheduler::CurrentProcess->value())
+        pid = Scheduler::CurrentProcess->value()->ProcessID;
     std::print("CurrentProcess->ProcessID == {}\n", u64(pid));
 
     if (frame->error & (u64)PageFaultErrorCode::UserSuper)
