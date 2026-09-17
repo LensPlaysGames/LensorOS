@@ -17,6 +17,7 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <hpet.h>
 #include <integers.h>
 #include <interrupts/idt.h>
 #include <interrupts/interrupts.h>
@@ -26,8 +27,10 @@
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 #include <pit.h>
+#include <rtc.h>
 #include <scheduler.h>
 #include <system.h>
+#include <time.h>
 #include <vfs_forward.h>
 
 #include <print>
@@ -281,12 +284,6 @@ Process* request_process(pid_t parent_pid) {
 }
 
 bool initialize() {
-#ifdef x86_64
-    // The Task State Segment in x86_64 is used
-    // for switches between privilege levels.
-    TSS::initialize();
-#endif
-
     // IRQ handler in assembly increments PIT ticks counter using this
     // function.
     // FIXME: This is a mess. why would we not just call it from C++...
@@ -430,6 +427,19 @@ extern "C" Process* switch_process(CPUState* cpu) {
 
     // std::print("switch_process() done...\n");
     return CurrentProcess->value();
+}
+
+size_t current_tick() {
+    // TODO: Pick a timer more better
+    // return gPIT.get();
+    return gRTC.Ticks;
+    // return gHPET.get();
+}
+size_t tick_nanosecond_duration() {
+    // TODO: Pick a timer more better
+    // return Time::frequency_to_nanosecond_duration(PIT_FREQUENCY);
+    return Time::frequency_to_nanosecond_duration(RTC_PERIODIC_HERTZ);
+    // return Time::frequency_to_nanosecond_duration(gHPET.frequency());
 }
 
 }  // namespace Scheduler

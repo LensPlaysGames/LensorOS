@@ -234,6 +234,9 @@ extern std::vector<Memory::PageTable*> PageMapsToFree;
 
 extern Process StartupProcess;
 
+size_t current_tick();
+size_t tick_nanosecond_duration();
+
 extern "C" void yield();
 
 bool initialize();
