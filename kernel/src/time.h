@@ -21,10 +21,72 @@
 #define LENSOR_OS_TIME_H
 
 #include <rtc.h>
+#include <stdint.h>
 
 #include <format>
 
 namespace Time {
+extern size_t unix_boot_time;
+
+constexpr size_t seconds_per_minute = 60;
+constexpr size_t minutes_per_hour = 60;
+constexpr size_t hours_per_day = 24;
+constexpr size_t days_per_week = 7;
+constexpr size_t milliseconds_per_second = 1000;
+constexpr size_t microseconds_per_second = 1000000;
+constexpr size_t nanoseconds_per_second = 1000000000;
+
+constexpr size_t seconds_per_hour = seconds_per_minute * minutes_per_hour;
+constexpr size_t seconds_per_day = seconds_per_hour * hours_per_day;
+constexpr size_t seconds_per_week = seconds_per_day * days_per_week;
+constexpr size_t microseconds_per_millisecond = microseconds_per_second / milliseconds_per_second;
+constexpr size_t nanoseconds_per_millisecond = nanoseconds_per_second / milliseconds_per_second;
+constexpr size_t nanoseconds_per_microsecond = nanoseconds_per_second / microseconds_per_second;
+
+constexpr inline size_t seconds_to_milliseconds(size_t seconds) {
+    return seconds * milliseconds_per_second;
+}
+constexpr inline size_t seconds_to_microseconds(size_t seconds) {
+    return seconds * microseconds_per_second;
+}
+constexpr inline size_t seconds_to_nanoseconds(size_t seconds) {
+    return seconds * nanoseconds_per_second;
+}
+
+constexpr inline size_t milliseconds_to_seconds(size_t milliseconds) {
+    return milliseconds / milliseconds_per_second;
+}
+constexpr inline size_t milliseconds_to_microseconds(size_t milliseconds) {
+    return milliseconds * microseconds_per_millisecond;
+}
+constexpr inline size_t milliseconds_to_nanoseconds(size_t milliseconds) {
+    return milliseconds * nanoseconds_per_millisecond;
+}
+
+constexpr inline size_t microseconds_to_seconds(size_t microseconds) {
+    return microseconds / microseconds_per_second;
+}
+constexpr inline size_t microseconds_to_milliseconds(size_t microseconds) {
+    return microseconds / microseconds_per_millisecond;
+}
+constexpr inline size_t microseconds_to_nanoseconds(size_t microseconds) {
+    return microseconds * nanoseconds_per_microsecond;
+}
+
+constexpr inline size_t nanoseconds_to_seconds(size_t nanoseconds) {
+    return nanoseconds / nanoseconds_per_second;
+}
+constexpr inline size_t nanoseconds_to_milliseconds(size_t nanoseconds) {
+    return nanoseconds / nanoseconds_per_millisecond;
+}
+constexpr inline size_t nanoseconds_to_microseconds(size_t nanoseconds) {
+    return nanoseconds / nanoseconds_per_microsecond;
+}
+
+constexpr inline size_t frequency_to_nanosecond_duration(size_t hertz) {
+    return nanoseconds_per_second / hertz;
+}
+
 struct tm {
     int seconds;                   // seconds,  0--59
     int minutes;                   // minutes,  0--59
@@ -95,7 +157,7 @@ inline constexpr u16 days_into_year_by_month[12] = {
     month_lengths[JAN] + month_lengths[FEB] + month_lengths[MAR] + month_lengths[APR] + month_lengths[MAY] + month_lengths[JUN] + month_lengths[JUL] + month_lengths[AUG] + month_lengths[SEP] + month_lengths[OCT] + month_lengths[NOV],
 };
 
-void fill_tm(tm* time) {
+inline void fill_tm(tm* time) {
     time->seconds = gRTC.Time.second;
     time->minutes = gRTC.Time.minute;
     time->hours = gRTC.Time.hour;
@@ -112,6 +174,37 @@ void fill_tm(tm* time) {
     // Figure it out for yourself, you filthy animal.
     time->is_daylight_savings_time = -1;
 }
+
+inline uint64_t mktime(const tm* t) {
+    uint64_t year = ((uint64_t)t->years_since_1900) + 1900;  // Actual year value
+    uint64_t month = t->month + 1;                           // 1-12
+
+    // Shift the calendar so that March is month 0, and Jan/Feb fall to the
+    // previous year. This moves the "leap day anomaly" to the very end of the
+    // mathematical cycle.
+    year -= (month <= 2);
+    uint64_t era_month = (month <= 2) ? (month + 9) : (month - 3);
+
+    // Compute total historical days since Day 0 (using the Gregorian leap
+    // year rules)
+    uint64_t total_days
+        = (year * 365)
+          + (year / 4) - (year / 100) + (year / 400)
+          + ((era_month * 306 + 5) / 10)
+          + (t->day_of_month - 1);
+
+    // Subtract the days between Day 0 and the Unix Epoch (Jan 1, 1970)
+    constexpr uint64_t DAYS_TO_EPOCH = 719468;
+    uint64_t unix_days = total_days - DAYS_TO_EPOCH;
+
+    // Convert days to total seconds and tack on the hours, minutes, and
+    // seconds
+    return (unix_days * seconds_per_day)
+           + (((uint64_t)t->hours) * seconds_per_hour)
+           + (((uint64_t)t->minutes) * seconds_per_minute)
+           + (uint64_t)t->seconds;
+}
+
 }  // namespace Time
 
 namespace std {
