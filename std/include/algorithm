@@ -22,24 +22,66 @@
 
 #include <stddef.h>
 
+#include <functional>
 #include <utility>
 
 namespace std {
 
-template <typename integer, typename... integers>
-constexpr integer min(integer a, integer b, integers... ints) {
-    if constexpr (sizeof...(ints) == 0)
-        return a < b ? a : b;
-    else
-        return min(a < b ? a : b, ints...);
+template <class _T, class _Compare>
+[[nodiscard]]
+constexpr const _T& min(
+    const _T& __a,
+    const _T& __b,
+    _Compare __compare) {
+    return __compare(__a, __b) ? __a : __b;
 }
 
-template <typename integer, typename... integers>
-constexpr integer max(integer a, integer b, integers... ints) {
-    if constexpr (sizeof...(ints) == 0)
-        return a < b ? a : b;
-    else
-        return max(a < b ? a : b, ints...);
+template <class _T, class _Compare>
+[[nodiscard]]
+constexpr const _T& max(
+    const _T& __a,
+    const _T& __b,
+    _Compare __compare) {
+    return __compare(__a, __b) ? __b : __a;
+}
+
+template <class _T, class _Compare>
+[[nodiscard]]
+constexpr const _T& clamp(
+    const _T& __value,
+    const _T& __lo,
+    const _T& __hi,
+    _Compare __compare) {
+    return __compare(__value, __lo)
+               ? __lo
+               : (__compare(__hi, __value) ? __hi : __value);
+}
+
+// WARNING: Capturing the result by reference produces a dangling
+// reference *if one of the parameters is a temporary* and that parameter
+// is returned.
+template <class _T>
+[[nodiscard]]
+constexpr const _T& min(const _T& __a, const _T& __b) {
+    return min(__a, __b, less{});
+}
+
+// WARNING: Capturing the result by reference produces a dangling
+// reference *if one of the parameters is a temporary* and that parameter
+// is returned.
+template <class _T>
+[[nodiscard]]
+constexpr const _T& max(const _T& __a, const _T& __b) {
+    return max(__a, __b, less{});
+}
+
+// WARNING: Capturing the result by reference produces a dangling
+// reference *if one of the parameters is a temporary* and that parameter
+// is returned.
+template <class _T>
+[[nodiscard]]
+constexpr const _T& clamp(const _T& v, const _T& lo, const _T& hi) {
+    return clamp(v, lo, hi, less{});
 }
 
 template <typename _It, typename _End, typename _Predicate>

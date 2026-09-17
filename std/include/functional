@@ -14,7 +14,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with LensorOS. If not, see <https://www.gnu.org/licenses
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses/>
  */
 
 #ifndef _LENSOROS_FUNCTIONAL_H
@@ -103,7 +103,9 @@ struct hash<float> {
     using argument_type = float;
     using result_type = size_t;
     result_type operator()(argument_type __key) const noexcept {
-        static_assert(sizeof(argument_type) == 4, "Sorry, float must be 4 bytes for current implementation of std::hash");
+        static_assert(
+            sizeof(argument_type) == 4,
+            "Sorry, float must be 4 bytes for current implementation of std::hash");
         return std::__detail::__hash_32bit(std::bit_cast<uint32_t>(__key));
     }
 };
@@ -112,7 +114,9 @@ struct hash<double> {
     using argument_type = double;
     using result_type = size_t;
     result_type operator()(argument_type __key) const noexcept {
-        static_assert(sizeof(argument_type) == 8, "Sorry, double must be 8 bytes for current implementation of std::hash");
+        static_assert(
+            sizeof(argument_type) == 8,
+            "Sorry, double must be 8 bytes for current implementation of std::hash");
         return std::__detail::__hash_64bit(std::bit_cast<uint64_t>(__key));
     }
 };
@@ -128,12 +132,21 @@ struct hash<long double>;
         };                                                                \
     }
 
-#define _DefineBinaryComparisonFunctionObject(name, op)                     \
-    template <class _T = void>                                              \
-    struct name {                                                           \
-        constexpr bool operator()(const _T& __lhs, const _T& __rhs) const { \
-            return __lhs op __rhs;                                          \
-        };                                                                  \
+#define _DefineBinaryComparisonFunctionObject(name, op)                           \
+    template <class _T = void>                                                    \
+    struct name {                                                                 \
+        constexpr bool operator()(const _T& __lhs, const _T& __rhs) const {       \
+            return __lhs op __rhs;                                                \
+        };                                                                        \
+    };                                                                            \
+    template <>                                                                   \
+    struct name<void> {                                                           \
+        template <class _Tp, class _Up>                                           \
+        constexpr auto operator()(_Tp&& __lhs, _Up&& __rhs) const                 \
+            -> decltype(static_cast<_Tp&&>(__lhs) op static_cast<_Up&&>(__rhs)) { \
+            return static_cast<_Tp&&>(__lhs) op static_cast<_Up&&>(__rhs);        \
+        }                                                                         \
+        using is_transparent = void;                                              \
     }
 
 #define _DefineUnaryOperatorFunctionObject(name, op)       \
@@ -154,7 +167,9 @@ _DefineUnaryOperatorFunctionObject(negate, -);
 _DefineBinaryComparisonFunctionObject(equal_to, ==);
 _DefineBinaryComparisonFunctionObject(not_equal_to, !=);
 _DefineBinaryComparisonFunctionObject(greater, >);
+_DefineBinaryComparisonFunctionObject(great, >);
 _DefineBinaryComparisonFunctionObject(lesser, <);
+_DefineBinaryComparisonFunctionObject(less, <);
 _DefineBinaryComparisonFunctionObject(greater_equal, >=);
 _DefineBinaryComparisonFunctionObject(lesser_equal, <=);
 
