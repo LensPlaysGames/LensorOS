@@ -67,6 +67,7 @@ void print_now(Vector2<u64>& position) {
 }
 
 extern "C" void kregulate() {
+    std::print("[KERNEL]: regulating...\n");
     // Tasks that need done by a kernel thread and done frequently should go
     // in this loop.
     for (;;) {
