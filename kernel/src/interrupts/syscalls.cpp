@@ -1219,7 +1219,9 @@ void sys$30_wait_milliseconds(usz milliseconds) {
     // milliseconds / 1000 = ticks / PIT_FREQUENCY;
     // (milliseconds / 1000) * PIT_FREQUENCY = ticks;
     // ticks = PIT_FREQUENCY * milliseconds / 1000;
-    const size_t wait_ticks = (milliseconds * PIT_FREQUENCY) / 1000;
+    const size_t wait_ticks
+        = Time::milliseconds_to_nanoseconds(milliseconds)
+          / Scheduler::tick_nanosecond_duration();
     if (wait_ticks == 0) return;
     // Register wake up event with scheduler before going to sleep
     // - add us to scheduler wake up later list, go to sleep, and yield.
@@ -1227,7 +1229,7 @@ void sys$30_wait_milliseconds(usz milliseconds) {
     auto* process = Scheduler::CurrentProcess->value();
     // - get current scheduler time tick
     // - add (milliseconds / milliseconds_per_scheduler_time_tick)
-    process->WakeUpTick = gPIT.get() + wait_ticks;
+    process->WakeUpTick = Scheduler::current_tick() + wait_ticks;
     process->State = Process::SLEEPING;
     // Sayonara!
     Scheduler::yield();
@@ -1235,9 +1237,10 @@ void sys$30_wait_milliseconds(usz milliseconds) {
 
 void sys$31_wait_nanoseconds(usz nanoseconds) {
     DBGMSG(sys$_dbgfmt, 31, "wait_nanoseconds");
-    const size_t wait_ticks = (nanoseconds * PIT_FREQUENCY) / 1000 / 1000000;
+    const size_t wait_ticks
+        = nanoseconds / Scheduler::tick_nanosecond_duration();
     auto* process = Scheduler::CurrentProcess->value();
-    process->WakeUpTick = gPIT.get() + wait_ticks;
+    process->WakeUpTick = Scheduler::current_tick() + wait_ticks;
     process->State = Process::SLEEPING;
     Scheduler::yield();
     return;
