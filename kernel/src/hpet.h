@@ -120,6 +120,8 @@ class HPET {
      */
     // double seconds();
 
+    u64 frequency() { return Frequency; }
+
     /// Disable counting, set the main counter to the given value, then enable counting.
     void set_main_counter(u64 value);
     /// Disable counting, set main counter to zero, then enable counting.

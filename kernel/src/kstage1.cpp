@@ -65,6 +65,7 @@
 
 #ifdef x86_64
 u8 idt_storage[0x1000];
+size_t Time::unix_boot_time;
 #endif
 
 void prepare_interrupts() {
