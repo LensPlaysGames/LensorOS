@@ -213,6 +213,23 @@ if ( QEMU_PROGRAM )
     # This allows debug messages to reach the terminal.
     -serial stdio
   )
+
+  # Hardware Acceleration
+  if ( CMAKE_HOST_WIN32 )
+    list( APPEND QEMU_FLAGS
+      -accel whpx
+    )
+  elseif( CMAKE_HOST_APPLE )
+    list( APPEND QEMU_FLAGS
+      -accel hvf
+    )
+  elseif( CMAKE_HOST_UNIX )
+    list( APPEND QEMU_FLAGS
+      -enable-kvm
+    )
+  endif()
+
+  # Audio/Speaker Setup
   if ( CMAKE_HOST_WIN32 )
     list( APPEND QEMU_FLAGS
       -audiodev dsound,id=audio_device

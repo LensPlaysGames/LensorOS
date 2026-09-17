@@ -1,7 +1,7 @@
 #ifndef LENSOR_OS_RTC_H
 #define LENSOR_OS_RTC_H
 
-#define CURRENT_YEAR 2022
+#define CURRENT_YEAR 2026
 
 #include <integers.h>
 #include <x86_64/io.h>
@@ -78,8 +78,8 @@ struct RTCData {
     u8 hour{0};
     u8 weekday{0};
     u8 date{0};
-    u8 month{0};
-    u32 year{0};
+    u8 month{0};  // 1-12 (September is 9)
+    u32 year{0};  // contains actual year value (i.e. 2026 for 2026)
     u8 century{0};
 
     RTCData() {}

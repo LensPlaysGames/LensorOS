@@ -163,16 +163,28 @@ inline void fill_tm(tm* time) {
     time->hours = gRTC.Time.hour;
     time->day_of_week = gRTC.Time.weekday;
     time->day_of_month = gRTC.Time.date;
-    time->month = gRTC.Time.month;
+    time->month = gRTC.Time.month - 1;
 
     // TODO: Have some way to tell if we are in leap year or not, and add one.
     time->day_of_year = days_into_year_by_month[gRTC.Time.month] + gRTC.Time.date;
 
-    // This will become inaccurate in the year 2100...
-    time->years_since_1900 = 100 + gRTC.Time.year;
+    time->years_since_1900 = gRTC.Time.year - 1900;
 
     // Figure it out for yourself, you filthy animal.
     time->is_daylight_savings_time = -1;
+
+    std::print("[RTC]: day of month: {}\n", gRTC.Time.date);
+
+    // Verify Values
+    time->seconds = std::min(time->seconds, 59);
+    time->minutes = std::min(time->minutes, 59);
+    time->hours = std::min(time->hours, 23);
+    time->month = std::min(time->month, 11);
+    time->day_of_week = std::min(time->day_of_week, 6);
+    time->day_of_month = std::clamp(time->day_of_month, 1, 31);
+    time->day_of_year = std::min(time->day_of_year, 365);
+
+    std::print("[TIME]: day of month: {}\n", time->day_of_month);
 }
 
 inline uint64_t mktime(const tm* t) {
@@ -205,6 +217,65 @@ inline uint64_t mktime(const tm* t) {
            + (uint64_t)t->seconds;
 }
 
+inline void gmtime(usz unix_time, tm* const result) {
+    if (not result) return;
+
+    // Calculate time of day (Seconds, Minutes, Hours)
+    uint32_t seconds_in_day = (uint32_t)(unix_time % 86400);
+    result->seconds = seconds_in_day % 60;
+    result->minutes = (seconds_in_day % 3600) / 60;
+    result->hours = seconds_in_day / 3600;
+
+    // Compute Weekday (Unix epoch 1970-01-01 was a Thursday = 4)
+    int64_t days_since_epoch = (int64_t)(unix_time / 86400);
+    result->day_of_week = (int)((days_since_epoch + 4) % 7);
+    if (result->day_of_week < 0)
+        result->day_of_week += 7;
+
+    // Shift epoch from 1970-01-01 to a dummy year ending in a leap cycle (March 1, 0000)
+    // This simplifies the leap year math significantly.
+    int64_t days = days_since_epoch + 719468;
+
+    // Era calculation (400-year cycles)
+    int64_t era = (days >= 0 ? days : days - 146096) / 146097;
+    uint64_t day_of_era = (uint64_t)(days - era * 146097);  // Day of era [0, 146096]
+
+    // Year of era [0, 399]
+    uint64_t year_of_era = (day_of_era
+                            - day_of_era / 1460
+                            + day_of_era / 36524
+                            - day_of_era / 146096)
+                           / 365;
+    int64_t year = ((int64_t)year_of_era) + era * 400;
+
+    // Day of year relative to March 1st [0, 365]
+    uint64_t day_of_year = day_of_era
+                           - (365 * year_of_era
+                              + year_of_era / 4
+                              - year_of_era / 100);
+
+    // Month relative to March 1st [0, 11]
+    uint64_t month_shifted = (5 * day_of_year + 2) / 153;
+
+    // Convert back to standard calendar values
+    uint64_t day = day_of_year - (153 * month_shifted + 2) / 5 + 1;
+    uint64_t month = month_shifted < 10 ? month_shifted + 3 : month_shifted - 9;
+
+    // Adjust year if it fell in Jan/Feb of the next absolute year
+    if (month <= 2) ++year;
+
+    result->day_of_month = (int)day;
+    result->month = (int)month;                   // 0-indexed
+    result->years_since_1900 = (int)year - 1900;  // Years since 1900
+    result->is_daylight_savings_time = false;     // UTC does not use DST
+
+    // Calculate day of the year
+    bool is_leap = (year % 4 == 0 and (year % 100 != 0 or year % 400 == 0));
+    result->day_of_year = days_into_year_by_month[result->month]
+                          + result->day_of_month - 1;
+    if (is_leap and result->month >= 2) ++result->day_of_year;
+}
+
 }  // namespace Time
 
 namespace std {
@@ -217,12 +288,13 @@ struct formatter<Time::tm> {
         return format_to(
             ctx.out(),
             "{:02d}:{:02d}:{:02d} {:02d}/{:02d}/{:04d}",
-            t.hours,
-            t.minutes,
-            t.seconds,
-            t.day_of_month,
-            t.month,
-            t.years_since_1900);
+            t.hours,                   // 0-indexed
+            t.minutes,                 // 0-indexed
+            t.seconds,                 // 0-indexed
+            t.day_of_month,            // 1-indexed
+            t.month + 1,               // 0-indexed, display as 1-indexed
+            t.years_since_1900 + 1900  // 1900-indexed
+        );
     }
 };
 }  // namespace std

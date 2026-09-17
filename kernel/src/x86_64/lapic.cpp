@@ -324,9 +324,12 @@ void LAPIC::init_interrupt() {
 
     // Divide to get the exact value for our window
     const uint32_t ticks_per_millisecond = total_tick_count / total_milliseconds;
-    const size_t freqency = ticks_per_millisecond * Time::milliseconds_per_second;
+    const size_t frequency = ticks_per_millisecond * Time::milliseconds_per_second;
+    // Actual frequency APIC would run at if divider was configured to divide
+    // by one.
+    const size_t full_frequency = frequency * 16;
 
-    std::print("[LAPIC Timer]: ticks per ms={}  freq={}hz\n", ticks_per_millisecond, freqency);
+    std::print("[LAPIC Timer]: ticks per ms={}  freq={}hz\n", ticks_per_millisecond, frequency);
 
     // mask system timer interrupt (PIT)
     gIOAPIC.disable_irq(0);
@@ -351,6 +354,25 @@ void LAPIC::init_interrupt() {
     write(
         LAPIC_REGOFFSET_INITIAL_COUNT,
         ticks_per_timeslice);
+
+    std::print(
+        "[LAPIC({}) Timer]: {Initialized}\n"
+        "  Periodic, Interrupt Vector {:#x}\n"
+        "  Full Timer Tick Frequency:       {}hz\n"
+        "  Configured Timer Tick Frequency: {}hz\n"
+        "  Legacy 8259 Programmable Interrupt Controller (PIC) Disabled -- IRQ0 Masked\n"
+        "  Initial Down-counter Value: {}\n"
+        "  Interrupt Frequency: {}{}hz{}\n"
+        "\n",
+        Id,
+        __GREEN,
+        timer_vector,
+        full_frequency,
+        frequency,
+        ticks_per_timeslice,
+        __YELLOW,
+        programmed_tick_frequency,
+        __FG_DEFAULT);
 }
 
 size_t LAPIC::get() {

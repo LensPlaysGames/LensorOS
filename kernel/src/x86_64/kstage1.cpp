@@ -513,8 +513,6 @@ void kstage2(BootInfo* bInfo) {
     Time::tm boot{};
     {  // Initialize the Real Time Clock.
         gRTC = RTC();
-        Time::fill_tm(&boot);
-        Time::unix_boot_time = Time::mktime(&boot);
         gRTC.set_periodic_int_enabled(true);
         std::print(
             "[kstage1]: {Real Time Clock (RTC) initialized}\n"
@@ -527,7 +525,9 @@ void kstage2(BootInfo* bInfo) {
             gRTC.Time.month,
             gRTC.Time.date);
 
-        std::print("[kstage1]: official boot time: {}\n", Time::unix_boot_time);
+        Time::fill_tm(&boot);
+        Time::unix_boot_time = Time::mktime(&boot);
+        std::print("[kstage1]: official boot time: {} ({})\n", Time::unix_boot_time, boot);
 
         // TODO: Register RTC as a real time clock timer device within system.
     }
