@@ -54,6 +54,7 @@
 #include <storage/storage_device_driver.h>
 #include <system.h>
 #include <tests.h>
+#include <time.h>
 #include <uart.h>
 #include <utf.h>
 
@@ -73,20 +74,30 @@ void prepare_interrupts() {
 #ifdef x86_64
     // CREATE INTERRUPT DESCRIPTOR TABLE.
     gIDT = IDTR(sizeof(idt_storage) - 1, (u64)&idt_storage[0]);
+
     // POPULATE TABLE.
     // NOTE: IRQ0 uses this handler by default, but scheduler over-rides this!
-    // gIDT.install_handler((u64)system_timer_handler, PIC_IRQ0);
+    gIDT.install_handler((u64)system_timer_handler, PIC_IRQ0, 5);
     gIDT.install_handler((u64)keyboard_handler, PIC_IRQ1, 5);
     gIDT.install_handler((u64)uart_com1_handler, PIC_IRQ4, 5);
     gIDT.install_handler((u64)rtc_handler, PIC_IRQ8, 5);
     gIDT.install_handler((u64)mouse_handler, PIC_IRQ12, 5);
+
+    // Populate All CPU Exceptions With Generic Panic Handler
+    for (uint i = 0; i < 0x20; ++i)
+        gIDT.install_handler((uintptr_t)panic_handler, i, 7);
+
+    // Specific CPU Exception Handlers
     gIDT.install_handler((u64)divide_by_zero_handler, 0x00, 7);
     gIDT.install_handler((u64)double_fault_handler, 0x08, 1);
     gIDT.install_handler((u64)stack_segment_fault_handler, 0x0c, 6);
     gIDT.install_handler((u64)general_protection_fault_handler, 0x0d, 3);
     gIDT.install_handler((u64)page_fault_handler, 0x0e, 2);
     gIDT.install_handler((u64)simd_exception_handler, 0x13, 7);
+
+    // User Trap
     gIDT.install_handler((u64)system_call_handler_asm, 0x80, 0, IDT_TA_UserInterruptGate);
+
     gIDT.flush();
 #endif
 }
@@ -490,9 +501,21 @@ void kstage2(BootInfo* bInfo) {
 
     SYSTEM = new System();
 
+    probe_cpu();
+
+    // Initialize Advanced Configuration and Power Management Interface.
+    ACPI::initialize(bInfo->rsdp);
+
+    // Find Memory-mapped ConFiguration Table in order to find PCI devices.
+    // Storage devices like AHCIs will be detected here.
+    find_pci_devices();
+
     // FIXME: We just assume the system has an RTC.
+    Time::tm boot{};
     {  // Initialize the Real Time Clock.
         gRTC = RTC();
+        Time::fill_tm(&boot);
+        Time::unix_boot_time = Time::mktime(&boot);
         gRTC.set_periodic_int_enabled(true);
         std::print(
             "[kstage1]: {Real Time Clock (RTC) initialized}\n"
@@ -504,6 +527,8 @@ void kstage2(BootInfo* bInfo) {
             gRTC.Time.year,
             gRTC.Time.month,
             gRTC.Time.date);
+
+        std::print("[kstage1]: official boot time: {}\n", Time::unix_boot_time);
 
         // TODO: Register RTC as a real time clock timer device within system.
     }
@@ -535,15 +560,6 @@ void kstage2(BootInfo* bInfo) {
         gRandomLFSR.seed(gRandomLCG.get(), gRandomLCG.get());
     }
 
-    probe_cpu();
-
-    // Initialize Advanced Configuration and Power Management Interface.
-    ACPI::initialize(bInfo->rsdp);
-
-    // Find Memory-mapped ConFiguration Table in order to find PCI devices.
-    // Storage devices like AHCIs will be detected here.
-    find_pci_devices();
-
     // Detect, establish connection, and initialise hardware devices
     // detected on the system.
     probe_system_devices();
@@ -570,7 +586,7 @@ void kstage2(BootInfo* bInfo) {
         "\n",
         __GREEN,
         __YELLOW,
-        static_cast<double>(PIT_FREQUENCY),
+        PIT_FREQUENCY,
         __FG_DEFAULT);
 
     // Setup network device(s)
@@ -645,7 +661,7 @@ void kstage2(BootInfo* bInfo) {
         if (fds.valid()) vfs.close(fds.Process);
     }
 
-    // Initialize High Precision Event Timer.
+    // Try to initialize High Precision Event Timer.
     (void)gHPET.initialize();
     // Prepare PS2 mouse.
     init_ps2_mouse();
@@ -799,7 +815,8 @@ void kstage1(BootInfo* bInfo) {
     prepare_interrupts();
     disable_all_interrupts();
 
-    // Setup serial communications chip to allow for debug messages as soon as possible.
+    // Setup serial communications chip to allow for debug messages as soon as
+    // possible.
     UART::initialize();
 
     // Fancy boot message, because why not.
@@ -813,6 +830,19 @@ void kstage1(BootInfo* bInfo) {
     // Setup virtual memory (map entire address space as well as kernel).
     Memory::init_virtual();
 
+    // Informational/debug physical memory printout
+    Memory::print_physmem();
+
+    // Setup dynamic memory allocation (`new`, `delete`).
+    init_heap();
+    heap_print_debug_summed();
+
+    // The Task State Segment in x86_64 is used for switches between privilege
+    // levels. LensorOS uses it to ensure interrupts get a safe stack,
+    // reducing triple faults.
+    // NOTE: Requires physical and virtual memory initialized.
+    TSS::initialize();
+
     // Adjust base address from actual physical frame pointer to virtually
     // mapped offset pointer.
     bInfo->framebuffer = (Framebuffer*)Memory::FROM_FRAME_POINTER(bInfo->framebuffer);
@@ -821,12 +851,6 @@ void kstage1(BootInfo* bInfo) {
     bInfo->font->GlyphBuffer = (PSF1_FONT*)Memory::FROM_FRAME_POINTER(bInfo->font->GlyphBuffer);
     bInfo->font->PSF1_Header = (PSF1_HEADER*)Memory::FROM_FRAME_POINTER(bInfo->font->PSF1_Header);
     bInfo->rsdp = (ACPI::RSDP2*)Memory::FROM_FRAME_POINTER(bInfo->rsdp);
-
-    // Setup dynamic memory allocation (`new`, `delete`).
-    init_heap();
-
-    // Informational/debug physical memory printout
-    Memory::print_physmem();
 
     kstage2(bInfo);
 }
