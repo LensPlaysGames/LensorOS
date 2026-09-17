@@ -431,14 +431,14 @@ extern "C" Process* switch_process(CPUState* cpu) {
 
 size_t current_tick() {
     // TODO: Pick a timer more better
-    // return gPIT.get();
-    return gRTC.Ticks;
+    return gPIT.get();
+    // return gRTC.Ticks;
     // return gHPET.get();
 }
 size_t tick_nanosecond_duration() {
     // TODO: Pick a timer more better
-    // return Time::frequency_to_nanosecond_duration(PIT_FREQUENCY);
-    return Time::frequency_to_nanosecond_duration(RTC_PERIODIC_HERTZ);
+    return Time::frequency_to_nanosecond_duration(PIT_FREQUENCY);
+    // return Time::frequency_to_nanosecond_duration(RTC_PERIODIC_HERTZ);
     // return Time::frequency_to_nanosecond_duration(gHPET.frequency());
 }
 
