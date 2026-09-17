@@ -25,6 +25,11 @@
 
 #include <format>
 
+// See Volume 4, Chapter 2 of Intel Software Developer's Manual
+#define MSR_APIC_BASE 0x1b
+#define MSR_TIME_STAMP_COUNTER 0x10
+#define MSR_TSC MSR_TIME_STAMP_COUNTER
+
 struct CPUState {
     u64 RSP;
     u64 RBX;
