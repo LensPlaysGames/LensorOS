@@ -142,6 +142,91 @@ struct MCFGHeader : public SDTHeader {
     u64 Reserved;
 } __attribute__((packed));
 
+/* Memory-mapped ConFiguration Space Header
+ *   44 BYTES
+ *
+ *   https://wiki.osdev.org/PCI_Express
+ */
+struct APICHeader : public SDTHeader {
+    // After the Flags field, starting at offset 0x2c, the rest of the MADT
+    // table contains a sequence of variable length records which enumerate
+    // the interrupt devices on this machine.
+    struct Record {
+        u8 type;
+        u8 length;
+    } __attribute__((packed));
+
+    // Processor/Local APIC Pair
+    struct Record0 {
+        static constexpr const char* description = "Processor/Local APIC Pair";
+        u8 processor_id;
+        u8 apic_id;
+        u32 flags;
+    } __attribute__((packed));
+
+    // I/O APIC
+    struct Record1 {
+        static constexpr const char* description = "I/O APIC";
+        u8 ioapic_id;
+        u8 reserved;
+        u32 ioapic_address;
+        // The global system interrupt base is the first interrupt number that
+        // this I/O APIC handles.
+        // Get max interrupt this I/O APIC handles using IOAPIC_REGINDEX_VERSION
+        // register for redirection entry count to offset this value by.
+        u32 global_system_interrupt_base;
+    } __attribute__((packed));
+
+    // I/O APIC Interrupt Source Override
+    struct Record2 {
+        static constexpr const char* description = "I/O APIC Interrupt Source Override";
+        u8 bus_source;
+        u8 irq_source;
+        u32 global_system_interrupt;
+        u16 flags;
+    } __attribute__((packed));
+
+    // I/O APIC Non-maskable interrupt source
+    struct Record3 {
+        static constexpr const char* description = "I/O APIC Non-maskable Interrupt Source";
+        u8 nmi_source;
+        u8 reserved;
+        u16 flags;
+        u32 global_system_interrupt;
+    } __attribute__((packed));
+
+    // Local APIC Non-maskable interrupts
+    // Configure these with the LINT0 and LINT1 entries in the Local vector
+    // table of the relevant processor's local APIC.
+    struct Record4 {
+        static constexpr const char* description = "Local APIC Non-maskable Interrupt";
+        u8 processor_id;  // 0xff means all processors
+        u16 flags;
+        u8 vector;  // 0 or 1 for LINT0 or LINT1 of LAPIC
+    } __attribute__((packed));
+
+    // Local APIC Address Override
+    // If this exists, it takes precedence over regular LAPIC base address.
+    struct Record5 {
+        static constexpr const char* description = "Local APIC Address Override";
+        u16 reserved;
+        u64 lapic_address;
+    } __attribute__((packed));
+
+    // Processor/Local x2APIC
+    struct Record9 {
+        static constexpr const char* description = "Processor/Local x2APIC Pair";
+        u16 reserved;
+        u32 lapic_id;
+        u32 flags;
+        u32 acpi_id;
+    } __attribute__((packed));
+
+    u32 LocalAPICBaseAddress;
+    u32 Flags;
+} __attribute__((packed));
+static_assert(sizeof(APICHeader) == 44);
+
 /* Generic Address Structure Format
  *   12 BYTES
  *
