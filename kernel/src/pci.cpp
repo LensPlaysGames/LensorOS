@@ -77,7 +77,10 @@ void enumerate_function(u64 deviceAddress, u64 functionNumber) {
     Memory::map(
         (void*)functionAddress,
         (void*)Memory::TO_FRAME_POINTER(functionAddress),
-        (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
+        (u64)Memory::PageTableFlag::Present
+            | (u64)Memory::PageTableFlag::ReadWrite
+            | (u64)Memory::PageTableFlag::CacheDisabled
+            | (u64)Memory::PageTableFlag::WriteThrough);
     auto* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(functionAddress);
     if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
         Memory::unmap((void*)functionAddress);
@@ -126,7 +129,10 @@ void enumerate_device(u64 busAddress, u64 deviceNumber) {
     Memory::map(
         (void*)deviceAddress,
         (void*)Memory::TO_FRAME_POINTER(deviceAddress),
-        (u64)Memory::PageTableFlag::Present | (u64)Memory::PageTableFlag::ReadWrite);
+        (u64)Memory::PageTableFlag::Present
+            | (u64)Memory::PageTableFlag::ReadWrite
+            | (u64)Memory::PageTableFlag::CacheDisabled
+            | (u64)Memory::PageTableFlag::WriteThrough);
     auto* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(deviceAddress);
     if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
         Memory::unmap((void*)deviceAddress);
