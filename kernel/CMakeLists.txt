@@ -92,6 +92,7 @@ add_executable(
   src/keyboard.cpp
   src/keyboard_scancode_translation.cpp
   src/kstage1.cpp
+  src/lapic.cpp
   src/memory.cpp
   src/memory/heap.cpp
   src/memory/physical_memory_manager.cpp

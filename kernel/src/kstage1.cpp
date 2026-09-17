@@ -37,6 +37,7 @@
 #include <interrupts/syscalls.h>
 #include <keyboard.h>
 #include <kstage1.h>
+#include <lapic.h>
 #include <link_definitions.h>
 #include <memory/heap.h>
 #include <memory/paging.h>
@@ -534,6 +535,101 @@ void kstage2(BootInfo* bInfo) {
         // TODO: Register RTC as a real time clock timer device within system.
     }
 
+    // I/O APIC (yes, there may be multiple. not right now)
+    IOAPIC ioapic{};
+    // LAPIC of bootstrap cpu
+    LAPIC lapic{};
+    auto* madt = (ACPI::APICHeader*)ACPI::find_table("APIC");
+    if (madt) {
+        std::print("[MADT]:\n");
+        // Process records
+        auto header_base = (uintptr_t)madt;
+        auto end = header_base + madt->Length;
+        std::print(
+            ""
+            "  records begin: {:#016x}\n"
+            "  records end:   {:#016x}\n",
+            header_base + sizeof(ACPI::APICHeader),
+            end);
+
+        for (uintptr_t record_base = header_base + sizeof(ACPI::APICHeader);
+             record_base + sizeof(ACPI::APICHeader::Record) < end;) {
+            std::print("  record at {:#016x}\n", record_base);
+            auto* record = (ACPI::APICHeader::Record*)record_base;
+            std::print("  - type {}, length {}\n", record->type, record->length);
+
+            switch (record->type) {
+                case 0: {
+                    auto* record0 = (ACPI::APICHeader::Record0*)(record_base + sizeof(ACPI::APICHeader::Record));
+                    std::print(
+                        "  {}  CPU({:#x}), APIC({:#x})\n",
+                        record0->description,
+                        record0->processor_id,
+                        record0->apic_id);
+                } break;
+                case 1: {
+                    auto* record1 = (ACPI::APICHeader::Record1*)(record_base + sizeof(ACPI::APICHeader::Record));
+                    std::print(
+                        "  {}\n"
+                        "    ID: {}\n"
+                        "    Address: {:#016x}\n"
+                        "    Minimum Interrupt: {}\n",
+                        record1->description,
+                        record1->ioapic_id,
+                        (uintptr_t)record1->ioapic_address,
+                        (uint32_t)record1->global_system_interrupt_base);
+                    ioapic.Id = record1->ioapic_id;
+                    ioapic.Base = record1->ioapic_address;
+                    ioapic.MinimumGlobalInterrupt = record1->global_system_interrupt_base;
+                } break;
+                case 2: {
+                    auto* record2 = (ACPI::APICHeader::Record2*)(record_base + sizeof(ACPI::APICHeader::Record));
+                    std::print(
+                        "  {} BUS({:#x}), IRQ({:#x}), GSR({:#x})\n",
+                        record2->description,
+                        record2->bus_source,
+                        record2->irq_source,
+                        (uint32_t)record2->global_system_interrupt);
+                } break;
+                case 3: {
+                    auto* record3 = (ACPI::APICHeader::Record3*)(record_base + sizeof(ACPI::APICHeader::Record));
+                    std::print(
+                        "  {} NMI({:#x}), GSR({:#x})\n",
+                        record3->description,
+                        record3->nmi_source,
+                        (uint32_t)record3->global_system_interrupt);
+                } break;
+                case 4: {
+                    auto* record4 = (ACPI::APICHeader::Record4*)(record_base + sizeof(ACPI::APICHeader::Record));
+                    std::print(
+                        "  {} CPU({:#x}), INT({:#x})\n",
+                        record4->description,
+                        record4->processor_id,
+                        record4->vector);
+                } break;
+                case 5: {
+                    auto* record5 = (ACPI::APICHeader::Record5*)(record_base + sizeof(ACPI::APICHeader::Record));
+                    std::print(
+                        "  {}\n"
+                        "  Setting LAPIC Base to {:#016x}\n",
+                        record5->description,
+                        (uintptr_t)record5->lapic_address);
+                    lapic.set_base(record5->lapic_address);
+                } break;
+                case 9: {
+                    auto* record9 = (ACPI::APICHeader::Record9*)(record_base + sizeof(ACPI::APICHeader::Record));
+                    std::print("  {}\n", record9->description);
+                } break;
+            }
+
+            record_base += record->length;
+        }
+    }
+
+    lapic.init();
+    std::print("[APIC]: {Initialized}\n", __GREEN);
+    (void)ioapic;
+
     // Create basic framebuffer renderer.
     std::print("[kstage1]: Setting up Graphics Output Protocol Renderer\n");
 
@@ -799,7 +895,6 @@ void kstage1(BootInfo* bInfo) {
     // Don't even attempt to boot unless boot info exists.
     if (bInfo == nullptr) hang();
 
-#ifdef x86_64
     /* Tell x86_64 CPU where the GDT is located by populating and loading a
      * GDT descriptor. The global descriptor table contains information about
      * memory segments (like privilege level of executing code, or privilege
@@ -809,7 +904,6 @@ void kstage1(BootInfo* bInfo) {
     gGDTD.Size = sizeof(GDT) - 1;
     gGDTD.Offset = uintptr_t(&gGDT);
     LoadGDT(&gGDTD);
-#endif
 
     // Prepare system interrupts.
     // On x86_64, prepare Interrupt Descriptor Table.
