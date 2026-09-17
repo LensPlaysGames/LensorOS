@@ -22,6 +22,8 @@
 
 #include <integers.h>
 
+constexpr bool use_legacy_pic = false;
+
 /* x86: Interrupt Request Vector Offsets
  *   Programmable Interrupt Chip (some say Peripheral interrupt chip, who knows)
  *   Vector Capacity = 256
@@ -119,7 +121,7 @@ struct InterruptFrameError {
     u64 ss;
 } __attribute__((packed));
 
-void panic_handler(InterruptFrame* frame);
+void spurious_handler();
 
 // HARDWARE INTERRUPT REQUESTS (IRQs)
 void system_timer_handler(InterruptFrame*);
@@ -128,6 +130,7 @@ void uart_com1_handler(InterruptFrame*);
 void rtc_handler(InterruptFrame*);
 void mouse_handler(InterruptFrame*);
 // EXCEPTION HANDLING
+void panic_handler(InterruptFrame* frame);
 void divide_by_zero_handler(InterruptFrame*);
 void double_fault_handler(InterruptFrameError*);
 void stack_segment_fault_handler(InterruptFrameError*);
@@ -135,13 +138,7 @@ void general_protection_fault_handler(InterruptFrameError*);
 void page_fault_handler(InterruptFrameError*);
 void simd_exception_handler(InterruptFrame*);
 
-// HELPER FUNCTIONS TO TRIGGER HANDLERS FOR TESTING
-// TODO: This is *filled* with undefined behaviour. **rather rely on
-// assembly snippets.**
-void cause_div_by_zero(u8 one = 1);
-void cause_page_not_present();
-void cause_general_protection();
-void cause_nullptr_dereference();
+namespace LegacyPIC {
 
 void remap_pic();
 
@@ -151,7 +148,11 @@ void enable_interrupt(u8 irq);
 void disable_interrupt(u8 irq);
 // Disable all IRQs within the PIC masks.
 void disable_all_interrupts();
-
 __attribute__((no_caller_saved_registers)) void end_of_interrupt(u8 IRQx);
+
+}  // namespace LegacyPIC
+
+extern "C" void end_of_interrupt(u8 irq);
+void enable_interrupt(u8 irq);
 
 #endif

@@ -33,6 +33,7 @@
  * xAPIC -> MMIO interface for configuring APIC.
  */
 
+#include <acpi.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -94,6 +95,8 @@
 #define LAPIC_MSR_CURRENT_COUNT LAPIC_MSR_FROM_REGOFFSET(LAPIC_REGOFFSET_CURRENT_COUNT)
 #define LAPIC_MSR_DIVIDE_CONFIG LAPIC_MSR_FROM_REGOFFSET(LAPIC_REGOFFSET_DIVIDE_CONFIG)
 
+#define LAPIC_SPURIOUS_INT_ENABLE (((uint32_t)1) << 8)
+
 // Much like the RTC, I/O APIC has internal registers that you may only
 // view through a window --- the data register.
 // You can move the window by writing to the address register.
@@ -106,7 +109,24 @@
 #define IOAPIC_REGINDEX_REDIRECTION_LOW(n) (0x10 + 2 * (n))
 #define IOAPIC_REGINDEX_REDIRECTION_HIGH(n) IOAPIC_REGINDEX_REDIRECTION_LOW(n) + 1
 
-#define LAPIC_SPURIOUS_INT_ENABLE (((uint32_t)1) << 8)
+// 0 -> Fixed
+#define IOAPIC_REDIRECTION_LOW_DELIVERY_MODE(v) ((uint32_t(v & 0b111)) << 8)
+// How to decode destination field
+// 0 -> Physical
+// 1 -> Logical
+#define IOAPIC_REDIRECTION_LOW_DESTINATION_MODE ((uint32_t(1)) << 11)
+// read-only
+#define IOAPIC_REDIRECTION_LOW_DELIVERY_STATUS ((uint32_t(1)) << 12)
+// 0 -> Active High (ISA default)
+// 1 -> Active Low (PCI default)
+#define IOAPIC_REDIRECTION_LOW_POLARITY ((uint32_t(1)) << 13)
+// read-only
+#define IOAPIC_REDIRECTION_LOW_INTERRUPT_REQUEST ((uint32_t(1)) << 14)
+// 0 -> edge triggered
+// 1 -> level triggered
+#define IOAPIC_REDIRECTION_LOW_LEVEL_TRIGGER ((uint32_t(1)) << 15)
+#define IOAPIC_REDIRECTION_LOW_MASKED ((uint32_t(1)) << 16)
+#define IOAPIC_REDIRECTION_HIGH_DESTINATION(v) ((uint32_t(v & 0xff)) << 24)
 
 struct IOAPIC {
     uint32_t Id{0};
@@ -117,22 +137,59 @@ struct IOAPIC {
 
     uint32_t MaxLVTCount{0};
 
-    bool init();
+    bool init(uintptr_t bootstrap_cpu_id);
+
+    // Given an IRQ zero through fifteen, redirect incoming interrupts to the
+    // corresponding vector offset.
+    void enable_irq(uint8_t irq);
+
+    void print_debug();
+
+    void process_source_override(uint8_t irq_source, uint8_t global_system_interrupt);
+    void process_source_override(ACPI::APICHeader::Record2& record2) {
+        process_source_override(
+            record2.irq_source,
+            record2.global_system_interrupt);
+    }
+
+    void process_ioapic(ACPI::APICHeader::Record1& record1) {
+        // TODO: Handle Multiple I/O APICs
+        Id = record1.ioapic_id;
+        Base = record1.ioapic_address;
+        MinimumGlobalInterrupt = record1.global_system_interrupt_base;
+    }
 
    private:
+    // Each element in this array contains the actual global interrupt vector
+    // that corresponds to the IRQ of the element's index.
+    // So, if IRQ0 (timer) was remapped to global interrupt 2, then element
+    // zero of this array would contain the value 2.
+    uint8_t irq_redirects[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
     void write_address(uint16_t regindex);
 
     void write(uint16_t regindex, uint32_t value);
     uint32_t read(uint16_t regindex);
+
+    // Map global interrupt to given interrupt vector, which is an index into
+    // the IDT for where to find the handler.
+    void redirect_gsi_to_idt_vector(uint8_t global_interrupt, uint8_t vector);
 };
 
 struct LAPIC {
     // Timer tick value
     size_t get();
 
+    uint64_t id() { return Id; }
+
     bool init();
 
     void set_base(uintptr_t base) { Base = base; }
+
+    // Send End Of Interrupt.
+    // If you don't call this from within an interrupt, interrupts will stop
+    // occurring entirely.
+    void eoi();
 
    private:
     uint64_t Id{0};
@@ -144,5 +201,10 @@ struct LAPIC {
     void write(uint16_t regoffset, uint32_t value);
     uint32_t read(uint16_t regoffset);
 };
+
+// TODO: Turn this into a tracking structure for all IOAPICs
+extern IOAPIC gIOAPIC;
+// TODO: Turn this into a tracking structure for all LAPICs
+extern LAPIC gLAPIC;
 
 #endif  // LENSOR_OS_LAPIC_H

@@ -71,7 +71,8 @@ size_t Time::unix_boot_time;
 
 void prepare_interrupts() {
     // REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.
-    remap_pic();
+    if constexpr (use_legacy_pic)
+        LegacyPIC::remap_pic();
 
 #ifdef x86_64
     // CREATE INTERRUPT DESCRIPTOR TABLE.
@@ -99,6 +100,8 @@ void prepare_interrupts() {
 
     // User Trap
     gIDT.install_handler((u64)system_call_handler_asm, 0x80, 0, IDT_TA_UserInterruptGate);
+
+    gIDT.install_handler((u64)spurious_handler, 0xff, 7);
 
     gIDT.flush();
 #endif
@@ -535,10 +538,8 @@ void kstage2(BootInfo* bInfo) {
         // TODO: Register RTC as a real time clock timer device within system.
     }
 
-    // I/O APIC (yes, there may be multiple. not right now)
-    IOAPIC ioapic{};
-    // LAPIC of bootstrap cpu
-    LAPIC lapic{};
+    gLAPIC = LAPIC();
+    gIOAPIC = IOAPIC();
     auto* madt = (ACPI::APICHeader*)ACPI::find_table("APIC");
     if (madt) {
         std::print("[MADT]:\n");
@@ -566,6 +567,8 @@ void kstage2(BootInfo* bInfo) {
                         record0->description,
                         record0->processor_id,
                         record0->apic_id);
+                    // NOTE: The first LAPIC structure listed in the MADT is, by convention,
+                    // the bootstrap CPU.
                 } break;
                 case 1: {
                     auto* record1 = (ACPI::APICHeader::Record1*)(record_base + sizeof(ACPI::APICHeader::Record));
@@ -578,9 +581,7 @@ void kstage2(BootInfo* bInfo) {
                         record1->ioapic_id,
                         (uintptr_t)record1->ioapic_address,
                         (uint32_t)record1->global_system_interrupt_base);
-                    ioapic.Id = record1->ioapic_id;
-                    ioapic.Base = record1->ioapic_address;
-                    ioapic.MinimumGlobalInterrupt = record1->global_system_interrupt_base;
+                    gIOAPIC.process_ioapic(*record1);
                 } break;
                 case 2: {
                     auto* record2 = (ACPI::APICHeader::Record2*)(record_base + sizeof(ACPI::APICHeader::Record));
@@ -590,6 +591,7 @@ void kstage2(BootInfo* bInfo) {
                         record2->bus_source,
                         record2->irq_source,
                         (uint32_t)record2->global_system_interrupt);
+                    gIOAPIC.process_source_override(*record2);
                 } break;
                 case 3: {
                     auto* record3 = (ACPI::APICHeader::Record3*)(record_base + sizeof(ACPI::APICHeader::Record));
@@ -614,7 +616,7 @@ void kstage2(BootInfo* bInfo) {
                         "  Setting LAPIC Base to {:#016x}\n",
                         record5->description,
                         (uintptr_t)record5->lapic_address);
-                    lapic.set_base(record5->lapic_address);
+                    gLAPIC.set_base(record5->lapic_address);
                 } break;
                 case 9: {
                     auto* record9 = (ACPI::APICHeader::Record9*)(record_base + sizeof(ACPI::APICHeader::Record));
@@ -626,9 +628,29 @@ void kstage2(BootInfo* bInfo) {
         }
     }
 
-    lapic.init();
+    gLAPIC.init();
     std::print("[APIC]: {Initialized}\n", __GREEN);
-    (void)ioapic;
+
+    gIOAPIC.init(gLAPIC.id());
+    std::print("[IOAPIC]: {Initialized}\n", __GREEN);
+
+    if constexpr (use_legacy_pic) {
+        // Enable IRQ interrupts that will be used.
+        LegacyPIC::enable_interrupt(IRQ_SYSTEM_TIMER);
+        LegacyPIC::enable_interrupt(IRQ_PS2_KEYBOARD);
+        LegacyPIC::enable_interrupt(IRQ_CASCADED_PIC);
+        LegacyPIC::enable_interrupt(IRQ_UART_COM1);
+        LegacyPIC::enable_interrupt(IRQ_REAL_TIMER);
+        LegacyPIC::enable_interrupt(IRQ_PS2_MOUSE);
+    }
+    else {
+        gIOAPIC.enable_irq(IRQ_SYSTEM_TIMER);
+        gIOAPIC.enable_irq(IRQ_PS2_KEYBOARD);
+        gIOAPIC.enable_irq(IRQ_UART_COM1);
+        gIOAPIC.enable_irq(IRQ_REAL_TIMER);
+        gIOAPIC.enable_irq(IRQ_PS2_MOUSE);
+        gIOAPIC.print_debug();
+    }
 
     // Create basic framebuffer renderer.
     std::print("[kstage1]: Setting up Graphics Output Protocol Renderer\n");
@@ -762,14 +784,6 @@ void kstage2(BootInfo* bInfo) {
     (void)gHPET.initialize();
     // Prepare PS2 mouse.
     init_ps2_mouse();
-
-    // Enable IRQ interrupts that will be used.
-    enable_interrupt(IRQ_SYSTEM_TIMER);
-    enable_interrupt(IRQ_PS2_KEYBOARD);
-    enable_interrupt(IRQ_CASCADED_PIC);
-    enable_interrupt(IRQ_UART_COM1);
-    enable_interrupt(IRQ_REAL_TIMER);
-    enable_interrupt(IRQ_PS2_MOUSE);
 
     // TODO: only if we want to, or whatever.
     run_tests();
@@ -908,7 +922,7 @@ void kstage1(BootInfo* bInfo) {
     // Prepare system interrupts.
     // On x86_64, prepare Interrupt Descriptor Table.
     prepare_interrupts();
-    disable_all_interrupts();
+    LegacyPIC::disable_all_interrupts();
 
     // Setup serial communications chip to allow for debug messages as soon as
     // possible.

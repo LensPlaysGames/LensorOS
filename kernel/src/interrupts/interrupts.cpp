@@ -34,6 +34,7 @@
 #include <io.h>
 #include <keyboard.h>
 #include <keyboard_scancode_translation.h>
+#include <lapic.h>
 #include <lensor/keys.h>
 #include <memory/paging.h>
 #include <memory/virtual_memory_manager.h>
@@ -56,6 +57,56 @@ __attribute__((no_caller_saved_registers)) void printerrupt(std::format_string<_
     vprint(__fmt.get(), std::forward<_Args>(__args)...);
 }
 }  // namespace std
+
+void spurious_handler() {
+    asm volatile("iretq");
+}
+
+namespace LegacyPIC {
+
+void remap_pic() {
+    // SAVE INTERRUPT MASKS.
+    u8 parentMasks;
+    u8 childMasks;
+    parentMasks = in8(PIC1_DATA);
+    io_wait();
+    childMasks = in8(PIC2_DATA);
+    io_wait();
+    // INITIALIZE BOTH CHIPS IN CASCADE MODE.
+    out8(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
+    io_wait();
+    out8(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
+    io_wait();
+    // SET VECTOR OFFSET OF PARENT PIC.
+    //   This allows software to throw low interrupts as normal (0-32)
+    //     without triggering an IRQ that would normally be attributed to hardware.
+    //   Basically, IBM did a dumb with the defaults and borked Intel's
+    //   specification that CPUs reserve all vectors below 32. IBM hard-wired
+    //   the PIC to begin at vectors 8-15...
+    // This configures the Parent PIC to vectors 32-39 (0x20)
+    out8(PIC1_DATA, PIC_IRQ_VECTOR_OFFSET);
+    io_wait();
+    // SET VECTOR OFFSET OF CHILD PIC.
+    // This configures the Parent PIC to vectors 40-47 (0x28)
+    out8(PIC2_DATA, PIC_IRQ_VECTOR_OFFSET + 8);
+    io_wait();
+    // TELL PARENT THERE IS A CHILD ON IRQ2.
+    out8(PIC1_DATA, 4);
+    io_wait();
+    // TELL CHILD IT'S CASCADE IDENTITY.
+    out8(PIC2_DATA, 2);
+    io_wait();
+    // NOT QUITE SURE WHAT THIS DOES YET.
+    out8(PIC1_DATA, ICW4_8086);
+    io_wait();
+    out8(PIC2_DATA, ICW4_8086);
+    io_wait();
+    // RELOAD INTERRUPT MASKS.
+    out8(PIC1_DATA, parentMasks);
+    io_wait();
+    out8(PIC2_DATA, childMasks);
+    io_wait();
+}
 
 void enable_interrupt(u8 irq) {
     if (irq > 15)
@@ -80,18 +131,37 @@ void disable_interrupt(u8 irq) {
     else
         irq -= 8;
     u8 value = in8(port) | IRQ_BIT(irq);
-    out8(port, value);
+    // Send EOI to ensure interrupts are not cached. Basically, even if we
+    // disable an interrupt, there may still be one pending.
+    LegacyPIC::end_of_interrupt(irq);
 }
 
 void disable_all_interrupts() {
-    out8(PIC1_DATA, 0);
-    out8(PIC2_DATA, 0);
+    out8(PIC1_DATA, 0xff);
+    out8(PIC2_DATA, 0xff);
 }
 
 void end_of_interrupt(u8 IRQx) {
     if (IRQx >= 8)
         out8(PIC2_COMMAND, PIC_EOI);
     out8(PIC1_COMMAND, PIC_EOI);
+}
+
+}  // namespace LegacyPIC
+
+void enable_interrupt(u8 irq) {
+    if constexpr (use_legacy_pic)
+        LegacyPIC::enable_interrupt(irq);
+
+    else
+        gIOAPIC.enable_irq(irq);
+}
+extern "C" void end_of_interrupt(u8 irq) {
+    out8(0xe9, 0x10);
+    if constexpr (use_legacy_pic)
+        LegacyPIC::end_of_interrupt(irq);
+    else
+        gLAPIC.eoi();
 }
 
 __attribute__((interrupt)) void panic_handler(InterruptFrame* frame) {
@@ -468,45 +538,6 @@ __attribute__((interrupt)) void simd_exception_handler(InterruptFrame* frame) {
     else
         panic(frame, "Unknown SIMD fault");
     hang();
-}
-
-void remap_pic() {
-    // SAVE INTERRUPT MASKS.
-    u8 parentMasks;
-    u8 childMasks;
-    parentMasks = in8(PIC1_DATA);
-    io_wait();
-    childMasks = in8(PIC2_DATA);
-    io_wait();
-    // INITIALIZE BOTH CHIPS IN CASCADE MODE.
-    out8(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
-    io_wait();
-    out8(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
-    io_wait();
-    // SET VECTOR OFFSET OF MASTER PIC.
-    //   This allows software to throw low interrupts as normal (0-32)
-    //     without triggering an IRQ that would normally be attributed to hardware.
-    out8(PIC1_DATA, PIC_IRQ_VECTOR_OFFSET);
-    io_wait();
-    // SET VECTOR OFFSET OF SLAVE PIC.
-    out8(PIC2_DATA, PIC_IRQ_VECTOR_OFFSET + 8);
-    io_wait();
-    // TELL MASTER THERE IS A SLAVE ON IRQ2.
-    out8(PIC1_DATA, 4);
-    io_wait();
-    // TELL SLAVE IT'S CASCADE IDENTITY.
-    out8(PIC2_DATA, 2);
-    io_wait();
-    // NOT QUITE SURE WHAT THIS DOES YET.
-    out8(PIC1_DATA, ICW4_8086);
-    io_wait();
-    out8(PIC2_DATA, ICW4_8086);
-    io_wait();
-    // LOAD INTERRUPT MASKS.
-    out8(PIC1_DATA, parentMasks);
-    io_wait();
-    out8(PIC2_DATA, childMasks);
-    io_wait();
 }
 
 #include <e1000.h>

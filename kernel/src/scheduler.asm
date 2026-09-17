@@ -20,6 +20,8 @@
 
 ;; A pointer to a function that increments timer ticks by one.
 extern timer_tick
+;; A function that tells hardware the interrupt has been handled
+extern end_of_interrupt
 ;; The unified C++ scheduling logic
 extern switch_process
 ;; The function that updates cr3, doing bookkeeping of the currently
@@ -123,8 +125,9 @@ irq0_handler:
     ; Send End of Interrupt (EOI) command to the PIC/APIC controller
     ; This enables future hardware interrupts to fire safely.
     push rax
-    mov al, 0x20            ; 0x20 = EOI command code
-    out 0x20, al            ; Send to Master PIC command port
+    mov rax, 0x0                ; IRQ0 -> RAX
+    ; TODO: Stack align
+    call end_of_interrupt
     pop rax
 
     ; --- LOAD NEW CONTEXT AND JUMP AWAY ---
