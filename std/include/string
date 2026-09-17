@@ -93,10 +93,10 @@ class basic_string_view {
 
     static constexpr size_t npos = static_cast<size_t>(-1);
 
-    constexpr basic_string_view() {}
-    constexpr basic_string_view(const _Char* __data, size_t __size) : __data(__data), __size(__size) {}
-    constexpr basic_string_view(const _Char* __data) : __data(__data), __size(__constexpr_strlen(__data)) {}
-    constexpr basic_string_view(_Char* __data) : __data(__data), __size(__constexpr_strlen(__data)) {}
+    constexpr basic_string_view() noexcept = default;
+    constexpr basic_string_view(const _Char* __indata, size_t __insize) : __data(__indata), __size(__insize) {}
+    constexpr basic_string_view(const _Char* __indata) : __data(__indata), __size(__constexpr_strlen(__indata)) {}
+    constexpr basic_string_view(_Char* __indata) : __data(__indata), __size(__constexpr_strlen(__indata)) {}
 
     template <size_t __N>
     constexpr basic_string_view(const _Char (&__data)[__N]) : __data(__data), __size(__N - 1) {}
