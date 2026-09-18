@@ -1,10 +1,19 @@
-* Implement A Graphical Compositor Program
+* Dynamic Linker
 Medium Priority
 
-** Window Stack Selector Identification
+It's honestly not that complicated.
 
-Currently, it's hard to tell which selector refers to which window.
-Even just a simple unique color or number inside the box would help.
+The kernel, when it sees a =PT_INTERP= program header in the ELF file it is loading, loads the dynamic linker shared object into memory, the same way it does any other ELF file. The loader goes on to set up the entry point to the dynamic linker shared object, not the loaded executable. It passes arguments to the dynamic linker like the dynamic linker's and the loaded program's object base, symbol table, and string table address.
+
+The dynamic linker in userspace is executing in a prekernel-like environment, where global variables are not accessible due to memory not being mapped yet (it hasn't relocated itself).
+
+Using only the addresses passed to us and local variables, the dynamic linker first finds it's own GOT and applies relocations to itself... It uses it's own dynamic section (=_DYNAMIC= symbol) to find =DT_RELA*= entries for the info of the relocation table, which it can then use to perform it's own relocations (yay, globals!).
+
+Once the dynamic linker is bootstrapped, we then loop through the =DT_NEEDED= entries *of the loaded program*, and load each of those files into memory. The dynamic linker keeps track of all libraries that have been loaded already, such as to not load the same library twice.
+
+Once the loaded program and every dependency, recursively, has been loaded into memory, we perform relocations on each loaded object. Once relocations are performed on an object, the dynamic linker executes =DT_INIT=/=DT_INIT_ARRAY= functions (in reverse load order).
+
+Above describes immediate binding; utilize =-Wl,-z,now=. For lazy binding, we would simply need a runtime resolver function that is called from a state-saving assembly stub (called from the PLT stub), and we'd write the function pointer into the GOT then.
 
 * Flesh out the Network Stack
 Medium Priority
@@ -20,6 +29,14 @@ Technologies built on UDP:
   This lets you turn human-readable URLs into computer-readable IPs!
 - NTP :: Network Time Protocol
   This lets you sync your time with everyone else's time!
+
+* Implement A Graphical Compositor Program
+Low Priority
+
+** Window Stack Selector Identification
+
+Currently, it's hard to tell which selector refers to which window.
+Even just a simple unique color or number inside the box would help.
 
 * PSF Screen Font Sharing
 Low Priority
