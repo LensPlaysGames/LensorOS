@@ -25,11 +25,15 @@ function(add_userspace_library NAME)
   )
   add_dependencies( userspace ${NAME} )
   add_dependencies( userspace-libraries "install-lib${NAME}" )
+  if (TARGET "install-lib${NAME}-headers")
+    add_dependencies( userspace-libraries "install-lib${NAME}-headers" )
+  endif()
 endfunction()
 
 add_userspace_library( c )
 add_userspace_library( m )
 add_userspace_library( stdc++ )
+add_userspace_library( guiclient )
 
 # PROGRAMS
 

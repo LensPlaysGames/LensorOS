@@ -19,33 +19,29 @@
 
 cmake_minimum_required(VERSION 3.14)
 
-project(LensorOS_libm VERSION 0.0.1 LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 23)
+
+project(LensorOS_libguiclient VERSION 0.0.1 LANGUAGES CXX)
 
 # Export compilation database in JSON format.
 # This gives language servers like `clangd` all the info they need.
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
 add_library(
-  m
-  src/stub.cpp
+  guiclient
+  src/startup_teardown.cpp
+  src/event.cpp
 )
 
 target_include_directories(
-  m
+  guiclient
   PUBLIC
-  "${CMAKE_CURRENT_LIST_DIR}"
+  ../../def/
+  inc/
 )
 
-if(USE_DIAGNOSTICS_COLOUR)
-    target_compile_options(
-        m
-        PRIVATE
-        -fdiagnostics-color=always
-    )
-endif()
-
 target_compile_options(
-  m
+  guiclient
   PRIVATE
   -fPIE
   -Wall
@@ -57,26 +53,15 @@ target_compile_options(
   -Wno-unused-variable
 )
 
-target_compile_options(
-    m
-    PUBLIC
-    -fno-stack-protector
-    -fno-exceptions
-    -fno-rtti
-)
-
-target_link_options(
-    m
-    PUBLIC
-    -fno-stack-protector
-    -fno-exceptions
-    -fno-rtti
-)
-
 set(ROOT "${CMAKE_CURRENT_LIST_DIR}/../../root")
 add_custom_target(
-  install-libm ALL
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:m> "${ROOT}/lib"
-  COMMENT "Installing LibM into ${ROOT}/lib"
-  DEPENDS m
+  install-libguiclient ALL
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:guiclient> "${ROOT}/lib"
+  COMMENT "Installing LibGuiClient into ${ROOT}/lib"
+  DEPENDS guiclient
+)
+add_custom_target(
+  install-libguiclient-headers ALL
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_LIST_DIR}/inc/" "${ROOT}/inc/"
+  COMMENT "Installing LibGuiClient headers into ${ROOT}/inc"
 )
