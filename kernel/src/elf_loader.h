@@ -427,7 +427,9 @@ CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::str
         return false;
     }
 
-    pid_t parent_pid = Scheduler::CurrentProcess ? Scheduler::CurrentProcess->value()->ProcessID : pid_t(-1);
+    pid_t parent_pid = Scheduler::CurrentProcess
+                           ? Scheduler::CurrentProcess->value()->ProcessID
+                           : pid_t(-1);
     auto* process = Scheduler::request_process(parent_pid);
 
     if (!LoadUserspaceElf64Process(process, process->CR3, fd, elfHeader, args)) {

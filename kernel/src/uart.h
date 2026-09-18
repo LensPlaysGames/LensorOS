@@ -32,6 +32,7 @@
 #define COM1 0x3f8
 #define COM2 0x2f8
 
+// clang-format off
 #define DATA_PORT(base)           (base + 0)
 #define RECIEVE_BUFFER_PORT(base) (base + 0)
 #define DIVL_PORT(base)           (base + 0)
@@ -45,10 +46,11 @@
 #define MODEM_STATUS_PORT(base)   (base + 6)
 #define SCRATCH_PORT(base)        (base + 7)
 
-#define INTERRUPT_PORT_DATA_AVAILABLE 1
+#define INTERRUPT_PORT_DATA_AVAILABLE                     (1 << 0)
 #define INTERRUPT_PORT_TRANSMITTER_HOLDING_REGISTER_EMPTY (1 << 1)
 #define INTERRUPT_PORT_LINE_STATUS_CHANGED                (1 << 2)
 #define INTERRUPT_PORT_MODEM_STATUS_CHANGED               (1 << 3)
+// clang-format on
 
 // Uncomment the following preprocessor directive to print the
 //   input recieved in COM1 back out to COM1 in the following format.
@@ -169,4 +171,4 @@ void out(u32);
 void out(u16);
 }  // namespace UART
 
-#endif
+#endif  // LENSOR_OS_UART_H
