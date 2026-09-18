@@ -1,3 +1,22 @@
+/* Copyright 2022, Contributors To LensorOS.
+ * All rights reserved.
+ *
+ * This file is part of LensorOS.
+ *
+ * LensorOS is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LensorOS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LensorOS. If not, see <https://www.gnu.org/licenses/>
+ */
+
 #undef TARGET_LENSOR
 #define TARGET_LENSOR 1
 
@@ -36,13 +55,13 @@
 
 /* Additional predefined macros. */
 #undef TARGET_OS_CPP_BUILTINS
-#define TARGET_OS_CPP_BUILTINS()                \
-  do {                                          \
-    builtin_define ("__lensor__");              \
-    builtin_define ("__lensoros__");            \
-    builtin_define ("__unix__");                \
-    builtin_assert ("system=lensor");           \
-    builtin_assert ("system=lensoros");         \
-    builtin_assert ("system=unix");             \
-    builtin_assert ("system=posix");            \
-  } while(0);
+#define TARGET_OS_CPP_BUILTINS()           \
+    do {                                   \
+        builtin_define("__lensor__");      \
+        builtin_define("__lensoros__");    \
+        builtin_define("__unix__");        \
+        builtin_assert("system=lensor");   \
+        builtin_assert("system=lensoros"); \
+        builtin_assert("system=unix");     \
+        builtin_assert("system=posix");    \
+    } while (0);
