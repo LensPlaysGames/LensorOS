@@ -1,3 +1,82 @@
+* Timer Overhaul
+Medium Priority
+
+The LensorOS kernel needs the following time-related functionality; currently, we are kind of configuring multiple pieces of hardware and ending up with multiple ways of doing the same thing. Not only that, but, a lot of things in the kernel are calling into hardware code, rather than a nice abstraction. We want clean layers, and this would be achieving that.
+
+#+begin_example
+USERSPACE
+   |> SYSCALLS
+HIGH LEVEL KERNEL
+   |> HIGH LEVEL KERNEL MODULES (HLKMs)
+KERNEL DRIVERS
+   |> HARDWARE DRIVERS
+HARDWARE
+#+end_example
+
+Currently, the /High Level Kernel/ , or /HLK/, is kind of mixed in with the hardware drivers.
+
+The idea is simple: we define high level kernel modules and APIs to use them, then, syscalls may only use those APIs.
+
+A particular system, at boot, will fill in as many high level kernel module interfaces as possible with corresponding drivers (or wrappers around them).
+
+This just focuses on the first well-defined high level kernel module, the time module.
+
+#+begin_src c++
+  namespace Time {
+
+  // These need to be set by the system initialization; once set, we
+  // don't need to keep finding new solutions for the same problem.
+  namespace Interface {
+
+  // @return approximate UNIX Epoch time when the computer started.
+  uintptr_t unix_time_at_boot = 0;
+
+  // The amound of nanoseconds in-between two timer ticks.
+  uintptr_t tick_duration_in_nanoseconds = 0;
+
+  // Ticks happen at a frequency of @c tick_frequency().
+  // @return the current tick value.
+  const uintptr_t* tick_value = nullptr;
+
+  }  // namespace Interface
+
+  // milliseconds_per_second and friends constexpr constants...
+
+  inline uintptr_t tick_time_now() {
+      if (Interface::tick_value)
+          return *Interface::tick_value;
+      return 0;
+  }
+
+  inline uintptr_t tick_duration_in_nanoseconds() {
+      return Interface::tick_duration_in_nanoseconds;
+  }
+
+  inline uintptr_t tick_frequency() {
+      auto nanosecond_duration = tick_duration_in_nanoseconds();
+      if (nanosecond_duration)
+          return nanoseconds_per_second / nanosecond_duration;
+      return 0;
+  }
+
+  inline uintptr_t unix_time_boot() {
+      return Interface::unix_time_at_boot;
+  }
+
+  inline uintptr_t unix_time_now() {
+      auto ticks_nanoseconds = tick_time_now() * tick_duration_in_nanoseconds();
+      auto ticks_seconds = ticks_nanoseconds / nanoseconds_per_second;
+      return unix_time_at_boot + ticks_seconds;
+  }
+
+  // struct tm
+  // gmtime(), mktime()
+
+  }  // namespace Time
+#+end_src
+
+The basic idea is this: the API is implemented only in terms of the nested =Interface=, and the =Interface= is initialized at boot time (or as possible).
+
 * Dynamic Linker
 Medium Priority
 
