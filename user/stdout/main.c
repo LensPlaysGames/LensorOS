@@ -408,6 +408,11 @@ void handle_event_keyboard(Event event, CompositorContext* context) {
             context->focus.right_super = keyboard_data->press;
             break;
         case LENSOR_KEY_MOUSE_LEFT: {
+            // ignore clicks, only count releases. This allows the user to hold the
+            // button down, move the cursor off of whatever they initially tried to
+            // click (but don't want to), and "release" the click somewhere safe.
+            if (keyboard_data->press) break;
+
             // If mouse click is over window stack, calculate if it's over an
             // open window selector; if it is, focus that window. Also move it in Z
             // ordering.
@@ -434,6 +439,7 @@ void handle_event_keyboard(Event event, CompositorContext* context) {
                         context->focus.window = &context->windows[0];
                     }
                 }
+                return;
             }
         } break;
 
