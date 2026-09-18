@@ -324,11 +324,11 @@ void FileAllocationTableDriver::DirIteratorHelper::Iterator::TryReadNextCluster(
             break;
     }
 
-    const u64 FATsector = Driver.BR.BPB.first_fat_sector()
-                          + (FAToffset / Driver.BR.BPB.NumBytesPerSector);
+    const u64 FATsectorOffset = FAToffset / Driver.BR.BPB.NumBytesPerSector;
+    const u64 FATsector = Driver.BR.BPB.first_fat_sector() + FATsectorOffset;
     const u64 entryOffset = FAToffset % Driver.BR.BPB.NumBytesPerSector;
-
-    const u64 FATsize = Driver.BR.fat_sectors() * Driver.BR.BPB.NumBytesPerSector;
+    const u64 remainingSectors = Driver.BR.fat_sectors() - FATsectorOffset;
+    const u64 FATsize = remainingSectors * Driver.BR.BPB.NumBytesPerSector;
     std::vector<u8> FAT(FATsize);
     Driver.Device->read_raw(
         FATsector * Driver.BR.BPB.NumBytesPerSector,
@@ -479,7 +479,7 @@ std::shared_ptr<FileMetadata> FileAllocationTableDriver::traverse_path(std::stri
     DBGMSG("[FAT]:open(): Translated filename \"{}\" from \"{}\"\n", filename, raw_filename);
 
     for (const auto& Entry : for_each_dir_entry_in(directoryCluster)) {
-        std::print("[FAT]: name:\"{}\", lfn:\"{}\"\n", Entry.FileName, Entry.LongFileName);
+        DBGMSG("[FAT]: name:\"{}\", lfn:\"{}\"\n", Entry.FileName, Entry.LongFileName);
         if (Entry.FileName != filename and Entry.LongFileName != filename) continue;
         // If path and raw_filename are equal, we can not resolve any more
         // filenames from full path; we have found the file.

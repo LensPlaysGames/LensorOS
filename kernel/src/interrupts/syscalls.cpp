@@ -475,7 +475,7 @@ void sys$11_exec(const char* path, const char** args) {
         // replacing the userspace process, any data within it is
         // invalidated.
         for (const char** args_it = args; args_it and *args_it; ++args_it) {
-            std::print("args_it: {}, *args_it: {} \"{}\"\n", (void*)args_it, (void*)*args_it, *args_it);
+            // std::print("args_it: {}, *args_it: {} \"{}\"\n", (void*)args_it, (void*)*args_it, *args_it);
             args_vector_impl.push_back(*args_it);
         }
 
