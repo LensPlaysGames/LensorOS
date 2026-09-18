@@ -96,17 +96,16 @@ int main(int argc, const char** argv) {
                     auto* mouse_event = (ipc_mouse_position_t*)&event[0];
                     cursor_x = mouse_event->local_x;
                     cursor_y = mouse_event->local_y;
+                    if (left_click_pressed)
+                        draw_pixel(*framebuffer, cursor_x, cursor_y, color);
+                    else if (right_click_pressed)
+                        draw_pixel(*framebuffer, cursor_x, cursor_y, BLACK);
                 } break;
 
                 default:
                     break;
             }
         }
-
-        if (left_click_pressed)
-            draw_pixel(*framebuffer, cursor_x, cursor_y, color);
-        else if (right_click_pressed)
-            draw_pixel(*framebuffer, cursor_x, cursor_y, BLACK);
 
         std::sys_cooperative_yield();
     }
