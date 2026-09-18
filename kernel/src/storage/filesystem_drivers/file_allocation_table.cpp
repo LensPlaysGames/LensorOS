@@ -18,21 +18,22 @@
  */
 
 #include <fat_definitions.h>
-#include <format>
 #include <integers.h>
-#include <memory>
 #include <storage/file_metadata.h>
 #include <storage/filesystem_drivers/file_allocation_table.h>
+
+#include <format>
+#include <memory>
 #include <string>
 #include <vector>
 
 // Uncomment the following directive for extra debug information output.
-//#define DEBUG_FAT
+// #define DEBUG_FAT
 
 #ifdef DEBUG_FAT
-#   define DBGMSG(...) std::print(__VA_ARGS__)
+#define DBGMSG(...) std::print(__VA_ARGS__)
 #else
-#   define DBGMSG(...)
+#define DBGMSG(...)
 #endif
 
 std::string FileAllocationTableDriver::pop_filename_from_front_of_path(std::string& raw_path) {
@@ -54,34 +55,38 @@ std::string FileAllocationTableDriver::pop_filename_from_front_of_path(std::stri
 }
 
 void FileAllocationTableDriver::print_fat(BootRecord& br) {
-    std::print("File Allocation Table Boot Record:\n"
-               "  Total Clusters:      {}\n"
-               "  Sectors / Cluster:   {}\n"
-               "  Total Sectors:       {}\n"
-               "  Bytes / Sector:      {}\n"
-               "  Sectors / FAT:       {}\n"
-               "  Sector Offsets:\n"
-               "    FATs:      {}\n"
-               "    Data:      {}\n"
-               "    Root Dir.: {}\n"
-               "\n"
-               , br.total_clusters()
-               , br.BPB.NumSectorsPerCluster
-               , br.BPB.total_sectors()
-               , u16(br.BPB.NumBytesPerSector)
-               , br.fat_sectors()
-               , br.BPB.first_fat_sector()
-               , br.first_data_sector()
-               , br.first_root_directory_sector()
-               );
+    std::print(
+        "File Allocation Table Boot Record:\n"
+        "  Total Clusters:      {}\n"
+        "  Sectors / Cluster:   {}\n"
+        "  Total Sectors:       {}\n"
+        "  Bytes / Sector:      {}\n"
+        "  Sectors / FAT:       {}\n"
+        "  Sector Offsets:\n"
+        "    FATs:      {}\n"
+        "    Data:      {}\n"
+        "    Root Dir.: {}\n"
+        "\n",
+        br.total_clusters(),
+        br.BPB.NumSectorsPerCluster,
+        br.BPB.total_sectors(),
+        u16(br.BPB.NumBytesPerSector),
+        br.fat_sectors(),
+        br.BPB.first_fat_sector(),
+        br.first_data_sector(),
+        br.first_root_directory_sector());
 }
 
 FATType FileAllocationTableDriver::fat_type(BootRecord& br) {
     u64 totalClusters = br.total_clusters();
-    if (totalClusters == 0) return FATType::ExFAT;
-    else if (totalClusters < 4085) return FATType::FAT12;
-    else if (totalClusters < 65525) return FATType::FAT16;
-    else return FATType::FAT32;
+    if (totalClusters == 0)
+        return FATType::ExFAT;
+    else if (totalClusters < 4085)
+        return FATType::FAT12;
+    else if (totalClusters < 65525)
+        return FATType::FAT16;
+    else
+        return FATType::FAT32;
 }
 
 auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> driver) -> std::shared_ptr<FilesystemDriver> {
@@ -95,8 +100,8 @@ auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> 
     }
 
     u64 totalSectors = br.BPB.TotalSectors16 == 0
-                       ? br.BPB.TotalSectors32
-                       : br.BPB.TotalSectors16;
+                           ? br.BPB.TotalSectors32
+                           : br.BPB.TotalSectors16;
 
     /* Validate boot sector is of FAT format.
      * TODO: Use more of these confidence checks before
@@ -121,10 +126,8 @@ auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> 
                 && totalSectors != 0
                 && br.BPB.NumBytesPerSector >= 512
                 && br.BPB.NumBytesPerSector <= 4096
-                && (br.BPB.NumBytesPerSector
-                    & (br.BPB.NumBytesPerSector - 1)) == 0
-                && (br.BPB.NumSectorsPerCluster
-                    & (br.BPB.NumSectorsPerCluster - 1)) == 0
+                && (br.BPB.NumBytesPerSector & (br.BPB.NumBytesPerSector - 1)) == 0
+                && (br.BPB.NumSectorsPerCluster & (br.BPB.NumSectorsPerCluster - 1)) == 0
                 && br.BPB.NumFATsPresent > 0);
 
     if (!out) return nullptr;
@@ -133,7 +136,9 @@ auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> 
     print_fat(br);
 #endif /* DEBUG_FAT */
 
-    auto fs = std::make_shared<FileAllocationTableDriver>(std::move(driver), std::move(br));
+    auto fs = std::make_shared<FileAllocationTableDriver>(
+        std::move(driver),
+        std::move(br));
     fs->This = fs;
     return std::static_pointer_cast<FilesystemDriver>(fs);
 }
@@ -156,7 +161,8 @@ auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename
         DBGMSG("[FAT]: Got perfect 8.3 \"{}\"\n", path);
 
         return path;
-    } else if (path.size() <= 12) {
+    }
+    else if (path.size() <= 12) {
         // "blazeit"    -> "BLAZEIT    "
         // "foo.a"      -> "FOO     A  "
         // "clienttest" -> "clienttest" but in u16
@@ -195,8 +201,8 @@ auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename
             while (name.size() < 8) name += ' ';
 
             return name + extension;
-
-        } else {
+        }
+        else {
             // If no '.' in filename, ensure it's length is less than or equal to 8 bytes.
 
             // If it is longer than eight bytes, return original but in utf16 and hope for LFN.
@@ -253,7 +259,7 @@ auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename
                         continue;
                     }
                     // Trailing byte (shouldn't happen, but malformed input exists)
-                    //if ((c & 0b11000000) == 0b10000000) continue;
+                    // if ((c & 0b11000000) == 0b10000000) continue;
                 }
                 DBGMSG("[FAT]: Path short but filename too long, returning original in utf16 in hopes of LFN: \"{}\"\n", filename_utf16);
                 return filename_utf16;
@@ -267,7 +273,8 @@ auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename
 
             return path;
         }
-    } else {
+    }
+    else {
         // Just return the path, unchanged, as it will be compared
         // against the long-file-name and we should still be able to
         // find it.
@@ -276,8 +283,10 @@ auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename
     // UNREACHABLE();
 }
 
-FileAllocationTableDriver::DirIteratorHelper::Iterator::Iterator(FileAllocationTableDriver& driver, u32 directoryCluster)
-: Driver(driver), ClusterIndex(directoryCluster) {
+FileAllocationTableDriver::DirIteratorHelper::Iterator::Iterator(
+    FileAllocationTableDriver& driver,
+    u32 directoryCluster)
+    : Driver(driver), ClusterIndex(directoryCluster) {
     /// Read first entry. This MUST initialise MoreClusters to false
     /// if there are are no entries at all. In other words, when this
     /// function returns, either MoreClusters is false or Entry contains
@@ -288,19 +297,26 @@ FileAllocationTableDriver::DirIteratorHelper::Iterator::Iterator(FileAllocationT
 
 void FileAllocationTableDriver::DirIteratorHelper::Iterator::ReadNextCluster() {
     const u64 clusterSector = Driver.BR.cluster_to_sector(ClusterIndex);
-    Driver.Device->read_raw(clusterSector * Driver.BR.BPB.NumBytesPerSector, ClusterSize, ClusterContents.data());
+    Driver.Device->read_raw(
+        clusterSector * Driver.BR.BPB.NumBytesPerSector,
+        ClusterSize,
+        ClusterContents.data());
     Entry.CE = reinterpret_cast<ClusterEntry*>(ClusterContents.data());
     Entry.LongFileName.clear();
+    EntryIndex = 0;
     ClearLFN = false;
 }
 
 void FileAllocationTableDriver::DirIteratorHelper::Iterator::TryReadNextCluster() {
-    // Check if this is the last cluster in the chain.
-    const u64 clusterNumber = Entry.CE->get_cluster_number();
+    const u64 clusterNumber = ClusterIndex;
     u64 FAToffset = 0;
     switch (Driver.Type) {
-        case FATType::FAT12: FAToffset = clusterNumber + (clusterNumber / 2); break;
-        case FATType::FAT16: FAToffset = clusterNumber * 2; break;
+        case FATType::FAT12:
+            FAToffset = clusterNumber + (clusterNumber / 2);
+            break;
+        case FATType::FAT16:
+            FAToffset = clusterNumber * 2;
+            break;
         case FATType::ExFAT:
         case FATType::FAT32:
         default:
@@ -308,22 +324,25 @@ void FileAllocationTableDriver::DirIteratorHelper::Iterator::TryReadNextCluster(
             break;
     }
 
-    const u64 FATsector = Driver.BR.BPB.first_fat_sector() + (FAToffset / Driver.BR.BPB.NumBytesPerSector);
+    const u64 FATsector = Driver.BR.BPB.first_fat_sector()
+                          + (FAToffset / Driver.BR.BPB.NumBytesPerSector);
     const u64 entryOffset = FAToffset % Driver.BR.BPB.NumBytesPerSector;
-    if (entryOffset <= 1 || FATsector == LastFATSector) {
-        MoreClusters = false;
-        return;
-    }
 
-    std::vector<u8> FAT(Driver.BR.BPB.NumBytesPerSector);
-    LastFATSector = FATsector;
-    Driver.Device->read_raw(FATsector * Driver.BR.BPB.NumBytesPerSector, Driver.BR.fat_sectors() * Driver.BR.BPB.NumBytesPerSector, FAT.data());
+    const u64 FATsize = Driver.BR.fat_sectors() * Driver.BR.BPB.NumBytesPerSector;
+    std::vector<u8> FAT(FATsize);
+    Driver.Device->read_raw(
+        FATsector * Driver.BR.BPB.NumBytesPerSector,
+        FATsize,
+        FAT.data());
+
     u64 tableValue = 0;
     switch (Driver.Type) {
         case FATType::FAT12:
             tableValue = *(reinterpret_cast<u16*>(&FAT[entryOffset]));
-            if (clusterNumber & 0b1) tableValue >>= 4;
-            else tableValue &= 0x0fff;
+            if (clusterNumber & 0b1)
+                tableValue >>= 4;
+            else
+                tableValue &= 0x0fff;
             if (tableValue >= 0x0ff8) MoreClusters = false;
             // TODO: Hande tableValue == 0x0ff7 (bad cluster)
             break;
@@ -347,16 +366,30 @@ void FileAllocationTableDriver::DirIteratorHelper::Iterator::TryReadNextCluster(
     }
 
     ClusterIndex = tableValue;
+    DBGMSG(
+        "[FAT]: ClusterIndex={} MoreClusters={}\n",
+        ClusterIndex,
+        MoreClusters);
     if (MoreClusters) ReadNextCluster();
 }
 
 auto FileAllocationTableDriver::DirIteratorHelper::Iterator::operator++() -> Iterator& {
     // TODO: ExFAT will need it's own code flow, essentially.
-    Entry.CE++;
+    IncrementClusterEntry();
+
     while (MoreClusters) {
-        while (Entry.CE->FileName[0] != 0) {
-            if (Entry.CE->FileName[0] == 0xe5)
+        while (EntryIndex < EntryCount) {
+            // End of directory marker
+            if (Entry.CE->FileName[0] == 0) {
+                DBGMSG("[FAT]: Explicit End-of-Directory Marker\n");
+                MoreClusters = false;
+                return *this;
+            }
+
+            if (Entry.CE->FileName[0] == 0xe5) {
+                IncrementClusterEntry();
                 continue;
+            }
 
             if (ClearLFN) {
                 Entry.LongFileName.clear();
@@ -365,10 +398,10 @@ auto FileAllocationTableDriver::DirIteratorHelper::Iterator::operator++() -> Ite
 
             if (Entry.CE->long_file_name()) {
                 auto* lfn = reinterpret_cast<LFNClusterEntry*>(Entry.CE);
-                Entry.LongFileName += std::string((const char*) &lfn->Characters1[0], sizeof(u16) * 5);
-                Entry.LongFileName += std::string((const char*) &lfn->Characters2[0], sizeof(u16) * 6);
-                Entry.LongFileName += std::string((const char*) &lfn->Characters3[0], sizeof(u16) * 2);
-                Entry.CE++;
+                Entry.LongFileName += std::string((const char*)&lfn->Characters1[0], sizeof(u16) * 5);
+                Entry.LongFileName += std::string((const char*)&lfn->Characters2[0], sizeof(u16) * 6);
+                Entry.LongFileName += std::string((const char*)&lfn->Characters3[0], sizeof(u16) * 2);
+                IncrementClusterEntry();
                 continue;
             }
 
@@ -389,14 +422,19 @@ auto FileAllocationTableDriver::DirIteratorHelper::Iterator::operator++() -> Ite
             if (Entry.CE->system()) fileType += "system ";
             if (Entry.CE->archive()) fileType += "archive ";
 
-            if (Entry.CE->directory()) fileType += "directory ";
-            else if (Entry.CE->volume_id()) fileType += "volume identifier ";
-            else fileType += "file ";
+            if (Entry.CE->directory())
+                fileType += "directory";
+            else if (Entry.CE->volume_id())
+                fileType += "volume identifier";
+            else
+                fileType += "file";
 
-            std::print("    Found {}named \"{}\" (\"{}\")\n", fileType, Entry.FileName, Entry.LongFileName);
+            std::print("    Found {} named \"{}\" (\"{}\")\n", fileType, Entry.FileName, Entry.LongFileName);
 #endif
 
-            Entry.ByteOffset = Driver.BR.cluster_to_sector(Entry.CE->get_cluster_number()) * Driver.BR.BPB.NumBytesPerSector;
+            Entry.ByteOffset
+                = Driver.BR.cluster_to_sector(Entry.CE->get_cluster_number())
+                  * Driver.BR.BPB.NumBytesPerSector;
             return *this;
         }
 
@@ -412,8 +450,17 @@ std::shared_ptr<FileMetadata> FileAllocationTableDriver::traverse_path(std::stri
         directoryCluster = BR.sector_to_cluster(BR.first_root_directory_sector());
 
     /// Strip leading slash.
-    // FIXME: If it's just a slash, return the root directory.
-    if (raw_path.starts_with("/")) raw_path = raw_path.substr(1);
+    if (raw_path.starts_with("/")) {
+        // FIXME: If it's just a slash, return the root directory.
+        if (raw_path.size() == 1) {
+            // return FileMetadata::Make(FileMetadata::FileType::Directory,
+            //                           raw_path,
+            //                           fsd(This.lock()),
+            //                           0,
+            //                           0);
+        }
+        raw_path = raw_path.substr(1);
+    }
     if (raw_path.size() < 1) {
         DBGMSG("[FAT]:open(): Invalid path: {}\n", raw_path);
         return {};
@@ -432,25 +479,26 @@ std::shared_ptr<FileMetadata> FileAllocationTableDriver::traverse_path(std::stri
     DBGMSG("[FAT]:open(): Translated filename \"{}\" from \"{}\"\n", filename, raw_filename);
 
     for (const auto& Entry : for_each_dir_entry_in(directoryCluster)) {
-        if (Entry.FileName != filename && Entry.LongFileName != filename) continue;
+        std::print("[FAT]: name:\"{}\", lfn:\"{}\"\n", Entry.FileName, Entry.LongFileName);
+        if (Entry.FileName != filename and Entry.LongFileName != filename) continue;
         // If path and raw_filename are equal, we can not resolve any more
         // filenames from full path; we have found the file.
         if (path == raw_filename) {
-            DBGMSG("  Found file at {}!\n"
-                   "    Name: \"{}\"\n"
-                   "    Long: \"{}\"\n"
-                   , path
-                   , Entry.FileName
-                   , Entry.LongFileName
-                   );
-            FileMetadata::FileType ftype = Entry.CE->directory() ? FileMetadata::FileType::Directory : FileMetadata::FileType::Regular;
-            return FileMetadata::Make
-                       (ftype,
-                        std::move(filename),
-                        fsd(This.lock()),
-                        u32(Entry.CE->FileSizeInBytes),
-                        (void*) Entry.ByteOffset
-                        );
+            DBGMSG(
+                "  Found file at {}!\n"
+                "    Name: \"{}\"\n"
+                "    Long: \"{}\"\n",
+                path,
+                Entry.FileName,
+                Entry.LongFileName);
+            FileMetadata::FileType ftype = Entry.CE->directory()
+                                               ? FileMetadata::FileType::Directory
+                                               : FileMetadata::FileType::Regular;
+            return FileMetadata::Make(ftype,
+                                      std::move(filename),
+                                      fsd(This.lock()),
+                                      u32(Entry.CE->FileSizeInBytes),
+                                      (void*)Entry.ByteOffset);
         }
 
         // Otherwise, we need to recurse into the directory.
@@ -461,7 +509,7 @@ std::shared_ptr<FileMetadata> FileAllocationTableDriver::traverse_path(std::stri
 
         // Recurse into directory...
         u32 dirCluster = Entry.CE->get_cluster_number();
-        //std::print("Recursing! Following {} at cluster {}\n", path, dirCluster);
+        // std::print("Recursing! Following {} at cluster {}\n", path, dirCluster);
         return traverse_path(path, dirCluster);
     }
 

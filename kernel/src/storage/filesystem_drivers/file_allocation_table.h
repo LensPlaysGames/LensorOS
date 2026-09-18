@@ -72,6 +72,7 @@ class FileAllocationTableDriver final : public FilesystemDriver {
     struct DirIteratorHelper {
         FileAllocationTableDriver& Driver;
         u32 ClusterIndex = Driver.BR.sector_to_cluster(Driver.BR.first_root_directory_sector());
+        u32 EntryIndex = 0;
 
         /// This does the actual iterating.
         struct Iterator {
@@ -79,11 +80,12 @@ class FileAllocationTableDriver final : public FilesystemDriver {
             u32 ClusterIndex;
 
             /// Constants.
-            const u64 ClusterSize = Driver.BR.BPB.NumSectorsPerCluster * Driver.BR.BPB.NumBytesPerSector;
+            const u64 ClusterSize = Driver.BR.BPB.cluster_size();
+            const u32 EntryCount = ClusterSize / sizeof(ClusterEntry);
 
             /// Iteration data.
             std::vector<u8> ClusterContents = std::vector<u8>(ClusterSize);
-            u64 LastFATSector = 0;
+            u32 EntryIndex = 0;
             bool MoreClusters = true;
             bool ClearLFN = false;
 
@@ -102,6 +104,11 @@ class FileAllocationTableDriver final : public FilesystemDriver {
             bool operator!=(std::default_sentinel_t) const { return MoreClusters; }
 
            private:
+            void IncrementClusterEntry() {
+                ++Entry.CE;
+                ++EntryIndex;
+            }
+
             /// Read the next cluster unconditionally.
             void ReadNextCluster();
 
@@ -120,8 +127,12 @@ class FileAllocationTableDriver final : public FilesystemDriver {
         auto end() -> std::default_sentinel_t { return {}; }
     };
 
-    auto for_each_dir_entry() -> DirIteratorHelper { return DirIteratorHelper{*this}; }
-    auto for_each_dir_entry_in(u32 directoryCluster) -> DirIteratorHelper { return DirIteratorHelper{*this, directoryCluster}; }
+    auto for_each_dir_entry() -> DirIteratorHelper {
+        return DirIteratorHelper{*this};
+    }
+    auto for_each_dir_entry_in(u32 directoryCluster) -> DirIteratorHelper {
+        return DirIteratorHelper{*this, directoryCluster};
+    }
 
     /// Given "/foo/bar/baz.txt" return "foo" and overwrite parameter to "bar/baz.txt"
     /// Given "/bar/" return "bar" and overwrite parameter to "bar"
