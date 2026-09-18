@@ -391,13 +391,6 @@ extern "C" Process* switch_process(CPUState* cpu) {
         //     *(CPUState*)CurrentProcess->value()->kernel_stack);
     }
 
-    // TODO: Check all processes that called `wait(ms)`, and run/
-    // unstop them if the timestamp is greater than the calculated
-    // one.
-    // for (auto* p : time_waitlist)
-    //     if (p->wait_until > now)
-    //         p->unblock();
-
     // std::print("[SCHED]: {} processes to choose from...\n", ProcessQueue->length());
     // print_debug();
     // std::print("\n");
