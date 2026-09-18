@@ -31,4 +31,5 @@ mcopy_file(${SCRIPTS_DIR}/startup.nsh "")
 mcopy_file(${BOOT_DIR}/EFI/BOOT/main.efi /EFI/BOOT)
 mcopy_file(${BOOT_DIR}/LensorOS/kernel.elf /LensorOS)
 mcopy_file(${BOOT_DIR}/LensorOS/dfltfont.psf /LensorOS)
+mcopy_file(${REPO_DIR}/LICENSE /LensorOS)
 
