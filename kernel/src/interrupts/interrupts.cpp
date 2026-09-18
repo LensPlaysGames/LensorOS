@@ -210,9 +210,22 @@ __attribute__((interrupt)) void rtc_handler(InterruptFrame* frame) {
     end_of_interrupt(8);
 }
 
+constexpr Event mouse_click_event(uint32_t value, bool pressed) {
+    Event e{};
+    e.Type = EventType::KEYBOARD;
+    auto* e_data = (EventData_KeyboardInput*)&e.Data;
+    e_data->value = value;
+    e_data->press = pressed;
+    return e;
+}
+
 /// IRQ12: PS/2 MOUSE
 u8 mouse_cycle{0};
 u8 mouse_packet[4];
+// 0 -> LEFT
+// 1 -> RIGHT
+// 2 -> MIDDLE
+bool buttons[3];
 __attribute__((interrupt)) void mouse_handler(InterruptFrame* frame) {
     u8 data = in8(0x60);
 
@@ -230,29 +243,35 @@ __attribute__((interrupt)) void mouse_handler(InterruptFrame* frame) {
         // TODO: Send key event(s) for button(s)
         // Left Mouse Button (LMB)
         if (mouse_packet[0] & PS2_LEFT_BUTTON) {
-            Event e{};
-            e.Type = EventType::KEYBOARD;
-            auto* e_data = (EventData_KeyboardInput*)&e.Data;
-            e_data->value = LENSOR_KEY_MOUSE_LEFT;
-            e_data->press = true;
+            buttons[0] = true;
+            Event e = mouse_click_event(LENSOR_KEY_MOUSE_LEFT, true);
+            gEvents.notify(e);
+        }
+        else if (buttons[0]) {
+            buttons[0] = false;
+            Event e = mouse_click_event(LENSOR_KEY_MOUSE_LEFT, false);
             gEvents.notify(e);
         }
         // Right Mouse Button (RMB)
-        else if (mouse_packet[0] & PS2_RIGHT_BUTTON) {
-            Event e{};
-            e.Type = EventType::KEYBOARD;
-            auto* e_data = (EventData_KeyboardInput*)&e.Data;
-            e_data->value = LENSOR_KEY_MOUSE_RIGHT;
-            e_data->press = true;
+        if (mouse_packet[0] & PS2_RIGHT_BUTTON) {
+            buttons[1] = true;
+            Event e = mouse_click_event(LENSOR_KEY_MOUSE_RIGHT, true);
+            gEvents.notify(e);
+        }
+        else if (buttons[1]) {
+            buttons[1] = false;
+            Event e = mouse_click_event(LENSOR_KEY_MOUSE_RIGHT, false);
             gEvents.notify(e);
         }
         // Middle Mouse Button (MMB)
-        else if (mouse_packet[0] & PS2_MIDDLE_BUTTON) {
-            Event e{};
-            e.Type = EventType::KEYBOARD;
-            auto* e_data = (EventData_KeyboardInput*)&e.Data;
-            e_data->value = LENSOR_KEY_MOUSE_MIDDLE;
-            e_data->press = true;
+        if (mouse_packet[0] & PS2_MIDDLE_BUTTON) {
+            buttons[2] = true;
+            Event e = mouse_click_event(LENSOR_KEY_MOUSE_MIDDLE, true);
+            gEvents.notify(e);
+        }
+        else if (buttons[2]) {
+            buttons[2] = false;
+            Event e = mouse_click_event(LENSOR_KEY_MOUSE_MIDDLE, false);
             gEvents.notify(e);
         }
 
