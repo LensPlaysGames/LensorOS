@@ -94,9 +94,8 @@ int main(int argc, const char** argv) {
                 case IPC_KEYBOARD_MAGIC: {
                     auto* keyboard_event = (ipc_keyboard_t*)&event[0];
                     // make point under cursor sand on left click
-                    if (keyboard_event->value == LENSOR_KEY_MOUSE_LEFT) {
+                    if (keyboard_event->value == LENSOR_KEY_MOUSE_LEFT)
                         click_pressed = keyboard_event->is_pressed;
-                    }
 
                     // ignore releases
                     if (not keyboard_event->is_pressed) break;
