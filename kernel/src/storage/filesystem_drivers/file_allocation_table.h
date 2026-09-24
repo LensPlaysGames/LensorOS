@@ -29,6 +29,10 @@
 #include <string>
 #include <vector>
 
+namespace FAT {
+struct DirectoryIterator;
+}  // namespace FAT
+
 class FileAllocationTableDriver final : public FilesystemDriver {
     /// This constructor is only used internally in try_create() and is always
     /// invoked via std::make_shared().
@@ -67,73 +71,6 @@ class FileAllocationTableDriver final : public FilesystemDriver {
 
     static auto fat_type(BootRecord& br) -> FATType;
 
-    /// This is so we have something that we can call begin() and end() on because
-    /// calling begin()/end() on the driver itself would be a bit weird semantically.
-    struct DirIteratorHelper {
-        FileAllocationTableDriver& Driver;
-        u32 ClusterIndex = Driver.BR.sector_to_cluster(Driver.BR.first_root_directory_sector());
-        u32 EntryIndex = 0;
-
-        /// This does the actual iterating.
-        struct Iterator {
-            FileAllocationTableDriver& Driver;
-            u32 ClusterIndex;
-
-            /// Constants.
-            const u64 ClusterSize = Driver.BR.BPB.cluster_size();
-            const u32 EntryCount = ClusterSize / sizeof(ClusterEntry);
-
-            /// Iteration data.
-            std::vector<u8> ClusterContents = std::vector<u8>(ClusterSize);
-            u32 EntryIndex = 0;
-            bool MoreClusters = true;
-            bool ClearLFN = false;
-
-            /// The current entry.
-            struct EntryType {
-                ClusterEntry* CE{};
-                u64 ByteOffset{};
-                std::string FileName;
-                std::string LongFileName;
-            } Entry{};
-
-            explicit Iterator(FileAllocationTableDriver& driver, u32 directoryCluster);
-            auto operator++() -> Iterator&;
-            auto operator*() -> EntryType& { return Entry; }
-            auto operator->() -> EntryType* { return &Entry; }
-            bool operator!=(std::default_sentinel_t) const { return MoreClusters; }
-
-           private:
-            void IncrementClusterEntry() {
-                ++Entry.CE;
-                ++EntryIndex;
-            }
-
-            /// Read the next cluster unconditionally.
-            void ReadNextCluster();
-
-            /// Read the next cluster if there is one. If there isn’t, set MoreClusters to false.
-            void TryReadNextCluster();
-        };
-
-        DirIteratorHelper(FileAllocationTableDriver& driver) : Driver(driver) {}
-        DirIteratorHelper(FileAllocationTableDriver& driver, u32 directoryCluster)
-            : Driver(driver), ClusterIndex(directoryCluster) {}
-
-        /// Get an iterator that points to the first entry.
-        auto begin() -> Iterator { return Iterator{Driver, ClusterIndex}; }
-
-        /// We don’t really have a predetermined ‘end’, so this just returns a dummy value.
-        auto end() -> std::default_sentinel_t { return {}; }
-    };
-
-    auto for_each_dir_entry() -> DirIteratorHelper {
-        return DirIteratorHelper{*this};
-    }
-    auto for_each_dir_entry_in(u32 directoryCluster) -> DirIteratorHelper {
-        return DirIteratorHelper{*this, directoryCluster};
-    }
-
     /// Given "/foo/bar/baz.txt" return "foo" and overwrite parameter to "bar/baz.txt"
     /// Given "/bar/" return "bar" and overwrite parameter to "bar"
     /// Given "/" return "/"
@@ -142,55 +79,36 @@ class FileAllocationTableDriver final : public FilesystemDriver {
     // Takes a path that points to a directory and returns the directory
     // cluster for that directory, otherwise it returns -1.
     // NOTE: Returns -1 for not-a-directory problems.
-    u32 traverse_path_for_cluster(std::string_view raw_path, u32 directory_cluster) {
-        std::string path(raw_path);
-        auto raw_filename = pop_filename_from_front_of_path(path);
-        auto filename = translate_filename(raw_filename);
-        for (const auto& Entry : for_each_dir_entry_in(directory_cluster)) {
-            // Skip unrelated entries.
-            if (Entry.FileName != filename and Entry.LongFileName != filename) continue;
-
-            // From this point on, we know we are dealing with an entry that refers to
-            // the front component of the path that was just popped off.
-
-            // If path and raw_filename are equal, we can not resolve any more
-            // filenames from full path; we have found the file the path points to.
-            // std::print("path:\"{}\" | raw_filename:\"{}\" | filename:\"{}\" \n", path, raw_filename, filename);
-            if (path == raw_filename) {
-                // If path was valid but doesn't point to directory, we can't get
-                // directory data from a non-directory.
-                if (not Entry.CE->directory()) return -1;
-                // Return the directory cluster.
-                return Entry.CE->get_cluster_number();
-            }
-
-            // Otherwise, there is more in the path to traverse, and we've just
-            // matched a part from the beginning. We need to further recurse into this
-            // directory; if it isn't a directory, then the path doesn't make sense
-            // and we error out.
-            if (!Entry.CE->directory()) return -1;
-
-            // Recurse into directory...
-            return traverse_path_for_cluster(path, Entry.CE->get_cluster_number());
-        }
-        // Didn't find front component of path in directory pointed to by given
-        // directory cluster.
-        return -1;
-    }
+    u32 traverse_path_for_cluster(std::string_view raw_path, u32 directory_cluster);
 
     /// NOTE: If directoryCluster == -1 (default), it will be replaced
     /// with the directory cluster of the root directory.
     std::shared_ptr<FileMetadata> traverse_path(std::string_view raw_path, u32 directoryCluster = -1);
 
+    auto for_each_dir_entry_in(u32 directory_cluster = -1) -> FAT::DirectoryIterator;
+
    public:
+    auto cluster_size() { return BR.BPB.cluster_size(); }
+    auto cluster_count() { return BR.total_clusters(); }
+    auto sector_size() { return BR.BPB.NumBytesPerSector; }
+    auto sector_count() { return BR.BPB.total_sectors(); }
+    auto first_fat_sector() { return BR.BPB.first_fat_sector(); }
+    auto first_data_sector() { return BR.first_data_sector(); }
+    // Number of sectors per FAT
+    auto fat_sector_count() { return BR.fat_sectors(); }
+    auto type() { return Type; }
+    auto root_directory_sector() { return BR.first_root_directory_sector(); }
+    auto root_directory_cluster() { return BR.sector_to_cluster(root_directory_sector()); }
+
+    void read_cluster_into(std::vector<u8>& out, u32 cluster_index);
+    std::vector<u8> read_cluster(u32 cluster_index);
+
     static void print_fat(BootRecord&);
 
     auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
     void close(FileMetadata* file) final { Device->close(file); }
 
-    ssz read(FileMetadata* file, usz offs, usz size, void* buffer, usz flags) final {
-        return Device->read_raw(usz(file->driver_data()) + offs, size, buffer);
-    }
+    ssz read(FileMetadata* file, usz offs, usz size, void* buffer, usz flags) final;
 
     ssz read_raw(usz offs, usz bytes, void* buffer) final {
         return Device->read_raw(offs, bytes, buffer);
@@ -201,85 +119,18 @@ class FileAllocationTableDriver final : public FilesystemDriver {
         // don't want to write past the end of the file, just in case
         // there is stuff there, right? So we will have to figure out
         // how to make a file bigger in FAT.
-        return Device->write(file, usz(file->driver_data()) + offset, size, buffer, flags);
+        return Device->write(
+            file,
+            usz(file->driver_data()) + offset,
+            size,
+            buffer,
+            flags);
     }
 
     ssz flush(FileMetadata* file) final { return -1; };
-
-    ssz directory_data(std::string_view path, usz max_entry_count, DirectoryEntry* out) final {
-        if (not max_entry_count) return 0;
-        if (not out) return -1;
-
-        // Basically, we are doing a path traversal but not ever opening the files
-        // we encounter, instead building dir entries corresponding to them.
-
-        // Begin with traversing root directory
-        u32 directory_cluster = BR.sector_to_cluster(BR.first_root_directory_sector());
-
-        // If path isn't empty and isn't root, traverse path and ensure we end up
-        // in a directory.
-        // FIXME: This is basically three-quarters of `traverse_path`, but it
-        // doesn't return a FileMetadata, just a directory cluster number. Could
-        // abstract.
-        if (path.size() and path != std::string_view("/")) {
-            u32 new_directory_cluster = traverse_path_for_cluster(path, directory_cluster);
-            if (new_directory_cluster == u32(-1)) return -1;
-            directory_cluster = new_directory_cluster;
-        }
-
-        ssz count = 0;
-        for (const auto& Entry : for_each_dir_entry_in(directory_cluster)) {
-            // Skip volume label(s).
-            if (Entry.CE->volume_id()) continue;
-
-            // std::print("Gathered directory entry short=\"{}\" long=\"{}\"\n", Entry.FileName, utf16_to_utf8(Entry.LongFileName));
-
-            // Copy file name into entry name.
-            // Use long file name if it exists, otherwise use regular file name.
-            if (Entry.LongFileName.size()) {
-                // LongFileName is utf-16, need to do conversion
-                auto lfn = utf16_to_utf8(Entry.LongFileName);
-                // std::print("  long name: \"{}\"\n", lfn);
-                memcpy(&out[count].name[0], lfn.data(), std::min(lfn.size(), sizeof(out[count].name)));
-            }
-            else {
-                auto filename = Entry.FileName;
-                if (filename.size() == 11) {
-                    // tolower
-                    for (unsigned int i = 0; i < 11; ++i) {
-                        char c = filename.data()[i];
-                        if (c >= 'A' and c <= 'Z')
-                            filename.data()[i] += 'a' - 'A';
-                    }
-                    // strip spaces off end of filename and extension.
-                    auto name = filename.substr(0, 8);
-                    auto extension = filename.substr(8, 3);
-                    while (name.back() == ' ') name.erase(name.size() - 1);
-                    while (extension.back() == ' ') extension.erase(extension.size() - 1);
-                    // If extension isn't just spaces, add a period inbetween name and extension
-                    if (extension.size())
-                        filename = name + "." + extension;
-                    else
-                        filename = name;
-                }
-                // std::print("  short name: \"{}\"\n", filename);
-                memcpy(&out[count].name[0], filename.data(), std::min(filename.size(), sizeof(out[count].name)));
-            }
-
-            // Set directory vs regular file type.
-            out[count].type = Entry.CE->directory()
-                                  ? FileMetadata::FileType::Directory
-                                  : FileMetadata::FileType::Regular;
-
-            // Ensure we don't write too many entries.
-            if (usz(++count) >= max_entry_count) break;
-        }
-
-        return count;
-    }
+    ssz directory_data(std::string_view path, usz max_entry_count, DirectoryEntry* out) final;
 
     const char* name() final { return "File Allocation Table"; }
-
     auto device() -> std::shared_ptr<StorageDeviceDriver> final { return Device; }
 
     /// Try to create a FileAllocationTableDriver from the given storage device.
