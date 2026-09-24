@@ -53,6 +53,42 @@ void draw_pixel(
     *pixel = color;
 }
 
+void draw_rectangle(
+    const gui_framebuffer_t& framebuffer,
+    size_t x,
+    size_t y,
+    size_t w,
+    size_t h,
+    const uint32_t color) {
+    // Exit if the rectangle is entirely off-screen or has zero area
+    if (x >= framebuffer.pixel_width - 1
+        or y >= framebuffer.pixel_height - 1
+        or w == 0 or h == 0) {
+        return;
+    }
+
+    // Calculate boundaries, clipping against screen edges
+    const size_t x_end = std::min(framebuffer.pixel_width, x + w);
+    const size_t y_end = std::min(framebuffer.pixel_height, y + h);
+
+    auto* const base = (uint8_t*)framebuffer.base_address;
+    const uintptr_t bytes_per_line = framebuffer.pixels_per_line * framebuffer.pixel_byte_width;
+
+    // Loop through each row
+    for (size_t current_y = y; current_y < y_end; ++current_y) {
+        // Find the start of the current row
+        auto* const row = (uint8_t*)(base + (current_y * bytes_per_line));
+
+        // Find the start pixel in this row
+        auto* const row_start_pixel = (uint32_t*)(row + (x * framebuffer.pixel_byte_width));
+
+        // Loop through each pixel in the row
+        const size_t row_width = x_end - x;
+        for (size_t current_x = 0; current_x < row_width; ++current_x)
+            row_start_pixel[current_x] = color;
+    }
+}
+
 int main(int argc, const char** argv) {
     // Get GUI Window Stuffs
     auto gui = gui_startup();
@@ -99,13 +135,15 @@ int main(int argc, const char** argv) {
                     if (left_click_pressed)
                         draw_pixel(*framebuffer, cursor_x, cursor_y, color);
                     else if (right_click_pressed)
-                        draw_pixel(*framebuffer, cursor_x, cursor_y, BLACK);
+                        draw_rectangle(*framebuffer, cursor_x, cursor_y, 12, 12, BLACK);
                 } break;
 
                 default:
                     break;
             }
         }
+
+        draw_rectangle(*framebuffer, 0, 0, 12, 12, color);
 
         std::sys_cooperative_yield();
     }
