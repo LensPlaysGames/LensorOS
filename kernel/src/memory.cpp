@@ -83,3 +83,39 @@ extern "C" void* memmove(void* dst, const void* src, size_t num) {
             ((u8*)dst)[i - 1] = ((u8*)src)[i - 1];
     return dst;
 }
+
+extern "C" void* memchr(const void* __mem, int __char, size_t __n) {
+    auto* block = (const unsigned char*)__mem;
+    for (size_t i = 0; i < __n; ++i)
+        if (block[i] == (unsigned char)__char)
+            return (void*)((size_t)__mem + i);
+    return nullptr;
+}
+
+extern "C" const void* memmem(const void* __haystack, size_t __haystacklen, const void* __needle, size_t __needlelen) {
+    if (__needlelen > __haystacklen) return nullptr;
+    // Stop searching at the last possible position for a match,
+    // which is_haystack[ haystacklen - needlelen + 1 ].
+    __haystacklen -= __needlelen - 1;
+    while (__haystacklen) {
+        // Find the first byte in a potential match
+        unsigned char* z = (unsigned char*)memchr(
+            (unsigned char*)__haystack,
+            *(unsigned char*)__needle,
+            __haystacklen);
+        if (!z) return nullptr;
+        // Check if there is enough space for there to actually be a match.
+        ptrdiff_t delta = z - (unsigned char*)__haystack;
+        ptrdiff_t remaining = (ptrdiff_t)__haystacklen - delta;
+        if (remaining < 1) return nullptr;
+        // Advance pointer and update the amount of __haystack remaining.
+        __haystacklen -= delta;
+        __haystack = z;
+        // Did we find a match?
+        if (!memcmp(__haystack, __needle, __needlelen)) return __haystack;
+        // Ready for next loop
+        __haystack = (unsigned char*)__haystack + 1;
+        __haystacklen -= 1;
+    }
+    return nullptr;
+}

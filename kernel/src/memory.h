@@ -27,6 +27,9 @@ extern "C" int memcmp(const void* src, const void* dest, size_t numBytes);
 extern "C" void* memcpy(void* __restrict__ dest, const void* __restrict__ src, size_t numBytes);
 extern "C" void* memmove(void* destination, const void* source, size_t num);
 
+extern "C" void* memchr(const void* __mem, int __char, size_t __n);
+extern "C" const void* memmem(const void* __haystack, size_t __haystacklen, const void* __needle, size_t __needlelen);
+
 template <typename T>
 T volatile_read(const volatile T* ptr) {
     return *ptr;
