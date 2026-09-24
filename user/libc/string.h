@@ -58,8 +58,13 @@ size_t strcspn(const char*, const char* __reject);
 char* strpbrk(const char*, const char* __accept);
 char* strrchr(const char*, int __c);
 
-/// Returns the length of the initial portion of str1 which consists only of characters that are part of str2.
-/// The search does not include the terminating null-characters of either strings, but ends there.
+/** Returns the length of the initial portion of the given C string
+ * which consists only of characters that are part of the given accept
+ * set.
+ *
+ * The search does not include the terminating null-characters of either
+ * strings, but ends there.
+ */
 size_t strspn(const char*, const char* __accept);
 
 char* strstr(const char* __haystack, const char* __needle);
