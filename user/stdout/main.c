@@ -18,6 +18,7 @@
  */
 
 #include <framebuffer.h>
+#include <guiclient/gui.h>
 #include <ints.h>
 #include <lensor/ipc.h>
 #include <lensor/keys.h>
@@ -362,9 +363,16 @@ void handle_event_incoming_client(Event incoming_client_event, CompositorContext
     // specifically requesting the window to be closed.
 
     // Communicate basic framebuffer data to client through shared memory.
-    *shared_data++ = g_framebuffer.buffer_size;
-    *shared_data++ = g_framebuffer.pixel_width;
-    *shared_data++ = g_framebuffer.pixel_height;
+    initial_shared_memory_state_t* init_state = (initial_shared_memory_state_t*)shared_data;
+    init_state->fb_width = g_framebuffer.pixel_width;
+    init_state->fb_height = g_framebuffer.pixel_height;
+    // TODO: pixel byte count based on format (assumed u32 ARGB right now)
+    init_state->fb_bytes_per_line = g_framebuffer.pixels_per_scanline * 4;
+    init_state->fb_size = g_framebuffer.buffer_size;
+    init_state->fb_format = g_framebuffer.format;
+    init_state->visible = true;
+    init_state->visible_width = init_state->fb_width;
+    init_state->visible_height = init_state->fb_height;
 
     uintptr_t payload[3] = {69, 420, id};
 

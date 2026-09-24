@@ -28,6 +28,17 @@
 
 __BEGIN_DECLS__
 
+typedef struct initial_shared_memory_state_t {
+    uintptr_t fb_width;
+    uintptr_t fb_height;
+    uintptr_t fb_bytes_per_line;
+    uintptr_t fb_size;
+    uint8_t fb_format;
+    bool visible;
+    uint32_t visible_width;
+    uint32_t visible_height;
+} initial_shared_memory_state_t;
+
 typedef struct gui_framebuffer_t {
     // linear framebuffer's base address
     uintptr_t base_address;

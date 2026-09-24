@@ -27,4 +27,5 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS on )
 project( term VERSION ${term_VERSION} LANGUAGES ${term_LANGUAGES} )
 
 add_executable( term framebuffer.c main.c psf.c )
+target_link_libraries( term guiclient )
 target_include_directories( term PRIVATE . )

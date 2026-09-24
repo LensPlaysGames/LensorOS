@@ -19,6 +19,7 @@
 
 #include <ctype.h>
 #include <framebuffer.h>
+#include <guiclient/gui.h>
 #include <ints.h>
 #include <lensor/ipc.h>
 #include <lensor/keys.h>
@@ -403,7 +404,7 @@ void charbuf_puts(CharacterBuffer* charbuf, const uint32_t* s) {
 /// @param args
 ///   NULL-terminated array of pointers to NULL-terminated strings.
 ///   Passed to `exec` syscall
-void run_program_waitpid(ProcFD clientFD, const char* const filepath, const char** args, CharacterBuffer* charbuf) {
+void run_program_waitpid(uintptr_t gui, const char* const filepath, const char** args, CharacterBuffer* charbuf) {
     const uint PIPE_END_READ = 0;
     const uint PIPE_END_WRITE = 1;
 
@@ -429,7 +430,7 @@ void run_program_waitpid(ProcFD clientFD, const char* const filepath, const char
         close(command_output_pipe[PIPE_END_WRITE]);
 
         // TODO: kqueue listening for:
-        // - clientFD ready to read from
+        // - clientFD ready to read from (gui_info_t::client_file_descriptor)
         // - command output pipe ready to read from
 
         uint8_t ipc_buffer[256];
@@ -447,49 +448,38 @@ void run_program_waitpid(ProcFD clientFD, const char* const filepath, const char
             if (bytes_read == -1)
                 break;
 
-            ipc_bytes_read = sys_read(
-                clientFD,
-                &ipc_buffer[0],
-                sizeof(ipc_buffer),
-                LENSOROS_SYSCALL_READ_FLAG_NOBLOCK);
+            while (gui_get_event(gui, &ipc_buffer[0])) {
+                uint8_t magic = ipc_buffer[0];
+                switch (magic) {
+                    case IPC_KEYBOARD_MAGIC: {
+                        ipc_keyboard_t* keyboard_ipc = (ipc_keyboard_t*)&ipc_buffer[0];
 
-            if (ipc_bytes_read == -1)
-                break;
+                        if (keyboard_ipc->value == LENSOR_KEY_LEFTSHIFT
+                            || keyboard_ipc->value == LENSOR_KEY_RIGHTSHIFT)
+                            do_capital = keyboard_ipc->is_pressed;
+                        else if (keyboard_ipc->value == LENSOR_KEY_CAPSLOCK && keyboard_ipc->is_pressed)
+                            do_capital = !do_capital;
 
-            if (ipc_bytes_read <= 0)
-                continue;
+                        // Ignore key releases
+                        if (!keyboard_ipc->is_pressed) break;
 
-            // TODO: Handle multiple messages, if necessary.
-            uint8_t magic = ipc_buffer[0];
-            switch (magic) {
-                case IPC_KEYBOARD_MAGIC: {
-                    ipc_keyboard_t* keyboard_ipc = (ipc_keyboard_t*)&ipc_buffer[0];
+                        // Translate LENSOR_KEY_* value to UTF8 bytes we can write to the running
+                        // command.
+                        u8 typed_char = 0;
+                        if (keyboard_ipc->value < (sizeof(simple_keymap) / sizeof(simple_keymap[0])))
+                            typed_char = simple_keymap[keyboard_ipc->value];
 
-                    if (keyboard_ipc->value == LENSOR_KEY_LEFTSHIFT
-                        || keyboard_ipc->value == LENSOR_KEY_RIGHTSHIFT)
-                        do_capital = keyboard_ipc->is_pressed;
-                    else if (keyboard_ipc->value == LENSOR_KEY_CAPSLOCK && keyboard_ipc->is_pressed)
-                        do_capital = !do_capital;
+                        if (do_capital)
+                            typed_char = to_capital(typed_char);
 
-                    // Ignore key releases
-                    if (!keyboard_ipc->is_pressed) break;
+                        // Write keypresses to write end of command input pipe
+                        if (typed_char)
+                            write(command_input_pipe[PIPE_END_WRITE], &typed_char, 1);
+                    } break;
 
-                    // Translate LENSOR_KEY_* value to UTF8 bytes we can write to the running
-                    // command.
-                    u8 typed_char = 0;
-                    if (keyboard_ipc->value < (sizeof(simple_keymap) / sizeof(simple_keymap[0])))
-                        typed_char = simple_keymap[keyboard_ipc->value];
-
-                    if (do_capital)
-                        typed_char = to_capital(typed_char);
-
-                    // Write keypresses to write end of command input pipe
-                    if (typed_char)
-                        write(command_input_pipe[PIPE_END_WRITE], &typed_char, 1);
-                } break;
-
-                default:
-                    break;
+                    default:
+                        break;
+                }
             }
         }
 
@@ -542,40 +532,18 @@ int main(int argc, const char** argv) {
     // NOTE: Probably not very efficient for the terminal's output to be unbuffered.
     setvbuf(stdout, NULL, _IONBF, BUFSIZ);
 
-    // Get graphical window from opening a connection to the !GUI socket
-    int sockFD = sys_socket(0, 0, 0);
-    sockaddr addr;
-    addr.type = LENSOR16;
-    const char socket_path[] = "!GUI";
-    memset(addr.data, 0, SOCK_ADDR_MAX_SIZE);
-    memcpy(addr.data, &socket_path, sizeof(socket_path) - 1);
-    int rc = sys_connect(sockFD, &addr, sizeof(sockaddr));
-    if (rc) {
-        close(sockFD);
-        printf("[TERM]: Couldn't connect to GUI Server (address: %s)\n", socket_path);
-        fflush(stdout);
-        return rc;
-    }
-    unsigned char data[512];
-    size_t bytes_read = 0;
-    bytes_read += read(sockFD, data, 24);
-    uint64_t* data_it = (uint64_t*)data;
-    uint64_t shared_memory_id = data_it[2];
-    uintptr_t* shared_data = (uintptr_t*)syscall(SYS_shared_memory_acquire, shared_memory_id);
-
-    Framebuffer fb;
-    fb.base_address = shared_data;
-    fb.buffer_size = *shared_data++;
-    fb.pixel_width = *shared_data++;
-    fb.pixel_height = *shared_data++;
-    fb.pixels_per_scanline = fb.pixel_width;
-    // TODO: Pass format from server
-    fb.format = FB_FORMAT_DEFAULT;
-    g_framebuffer = fb;
+    uintptr_t gui = gui_startup();
+    gui_framebuffer_t* fb = gui_get_framebuffer(gui);
+    g_framebuffer.base_address = (void*)fb->base_address;
+    g_framebuffer.pixel_width = fb->pixel_width;
+    g_framebuffer.pixel_height = fb->pixel_height;
+    g_framebuffer.pixels_per_scanline = fb->pixels_per_line;
+    g_framebuffer.buffer_size = fb->buffer_size;
+    g_framebuffer.format = FB_FORMAT_ARGB;  // FIXME:
 
     // clear screen
-    const uint32_t black = mkpixel(fb.format, 22, 23, 24, 0xff);
-    fill_color(fb, black);
+    const uint32_t black = mkpixel(g_framebuffer.format, 22, 23, 24, 0xff);
+    fill_color(g_framebuffer, black);
 
     puts("\n\n[TERM]:\n<==!=!=<  WELCOME TO LensorOS  >=!=!==>\n");
     puts("  LensorOS  Copyright (C) 2022, Contributors To LensorOS.");
@@ -589,7 +557,7 @@ int main(int argc, const char** argv) {
     printf("[TERM]: Successfully opened font at %s\n", fontpath);
 
     PSF1_FONT font;
-    bytes_read = 0;
+    ssize_t bytes_read = 0;
     bytes_read = fread(&font.header, 1, sizeof(PSF1_HEADER), fontfile);
     if (bytes_read != sizeof(PSF1_HEADER)) {
         printf("[TERM]:Error:Could not read PSF1 header from font file.\n");
@@ -631,13 +599,14 @@ int main(int argc, const char** argv) {
         g_framebuffer.pixel_height / psf1_height(g_font));
 
     const char* sh_args[1] = {NULL};
-    run_program_waitpid(sockFD, "/fs0/bin/xish", sh_args, &charbuf);
+    run_program_waitpid(gui, "/fs0/bin/xish", sh_args, &charbuf);
 
     printf("[TERM]: teardown\n");
 
     charbuf_delete(charbuf);
     psf1_delete(font);
-    close(sockFD);
+
+    gui_teardown(gui);
 
     return 0;
 }

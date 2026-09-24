@@ -59,12 +59,13 @@ uintptr_t gui_startup() {
         shared_memory_id);
 
     auto& framebuffer = info->framebuffer;
+    const auto& initial_info = (const initial_shared_memory_state_t&)*shared_data;
     framebuffer.base_address = (uintptr_t)shared_data;
-    framebuffer.buffer_size = *shared_data++;
-    framebuffer.pixel_width = *shared_data++;
-    framebuffer.pixel_height = *shared_data++;
-    // TODO: get from window server
-    framebuffer.pixels_per_line = framebuffer.pixel_width;
+    framebuffer.buffer_size = initial_info.fb_size;
+    framebuffer.pixel_width = initial_info.fb_width;
+    framebuffer.pixel_height = initial_info.fb_height;
+    // TODO: Use format passed from GUI server
+    framebuffer.pixels_per_line = initial_info.fb_bytes_per_line / 4;
     framebuffer.pixel_byte_width = 4;
 
     // clear visual artifact from passing data in shared memory region used by
