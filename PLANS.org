@@ -117,11 +117,6 @@ Low Priority
 Currently, it's hard to tell which selector refers to which window.
 Even just a simple unique color or number inside the box would help.
 
-* PSF Screen Font Sharing
-Low Priority
-
-It's so common that I think we should just map the PSF screen font in every process, since the kernel will always have it loaded anyway. Compositor can take advantage of this, terminal programs, etc. Who doesn't need a font?
-
 * ACPI AML Interpreter
 Low Priority
 
