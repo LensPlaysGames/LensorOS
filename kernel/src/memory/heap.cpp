@@ -95,6 +95,9 @@ HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
                                + splitLength);
     if (next) {
         // Set next segment's last segment to the new segment.
+        // NOTE: If you are getting a fault here when accessing this pointer, it
+        // is likely that the physically previous heap allocation overran it's
+        // data buffer, and this pointer has been botched as a result.
         next->last = splitHeader;
         // Set new segment's next segment.
         splitHeader->next = next;
