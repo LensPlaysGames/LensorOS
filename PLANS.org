@@ -1,3 +1,8 @@
+* Bootloader Transition
+Low Priority
+
+Should be "invisible" to the kernel, but we want to transition to the RADII bootloader.
+
 * Timer Overhaul
 Medium Priority
 
