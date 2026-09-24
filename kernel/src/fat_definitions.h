@@ -22,9 +22,11 @@
 
 #include <integers.h>
 
+#include <array>
+
 #define FAT_DIRECTORY_SIZE_BYTES 32
 
-// FAT File Attributes (ClusterEntry Attributes field)
+// FAT File Attributes (ShortFileNameEntry Attributes field)
 #define FAT_ATTR_READ_ONLY 0b00000001
 #define FAT_ATTR_HIDDEN 0b00000010
 #define FAT_ATTR_SYSTEM 0b00000100
@@ -173,7 +175,7 @@ enum class FATType {
     ExFAT = 4
 };
 
-struct ClusterEntry {
+struct ShortFileNameEntry {
     // First 8 characters = name, last 3 = extension
     u8 FileName[11];
     /// READ_ONLY=0x01,  HIDDEN=0x02,     SYSTEM=0x04,
@@ -193,90 +195,97 @@ struct ClusterEntry {
     u16 ClusterNumberL;
     u32 FileSizeInBytes;
 
-    u32 get_cluster_number() {
+    u32 get_cluster_number() const {
         u32 result = ClusterNumberL;
-        result |= (u32)ClusterNumberH << 16;
+        result |= ((u32)ClusterNumberH) << 16;
         return result;
     }
 
-    bool long_file_name() {
+    bool long_file_name() const {
         return Attributes & 0b0001
                && Attributes & 0b0010
                && Attributes & 0b0100
                && Attributes & 0b1000;
     }
-    bool read_only() {
+    bool read_only() const {
         return Attributes & 0b1;
     }
-    bool hidden() {
+    bool hidden() const {
         return Attributes & 0b10;
     }
-    bool system() {
+    bool system() const {
         return Attributes & 0b100;
     }
-    bool volume_id() {
+    bool volume_id() const {
         return Attributes & 0b1000;
     }
-    bool directory() {
+    bool directory() const {
         return Attributes & 0b10000;
     }
-    bool archive() {
+    bool archive() const {
         return Attributes & 0b100000;
     }
 
-    u8 ctime_second() {
+    u8 ctime_second() const {
         return (CTime >> 11) & 0b11111;
     }
-    u8 ctime_minute() {
+    u8 ctime_minute() const {
         return (CTime >> 5) & 0b111111;
     }
-    u8 ctime_hour() {
+    u8 ctime_hour() const {
         return CTime & 0b11111;
     }
-    u8 cdate_day() {
+    u8 cdate_day() const {
         return (CDate >> 11) & 0b11111;
     }
-    u8 cdate_month() {
+    u8 cdate_month() const {
         return (CDate >> 7) & 0b1111;
     }
-    u8 cdate_year() {
+    u8 cdate_year() const {
         return CDate & 0b1111111;
     }
 
-    u8 adate_day() {
+    u8 adate_day() const {
         return (ADate >> 11) & 0b11111;
     }
-    u8 adate_month() {
+    u8 adate_month() const {
         return (ADate >> 7) & 0b1111;
     }
-    u8 adate_year() {
+    u8 adate_year() const {
         return ADate & 0b1111111;
     }
 
-    u8 mtime_second() {
+    u8 mtime_second() const {
         return (MTime >> 11) & 0b11111;
     }
-    u8 mtime_minute() {
+    u8 mtime_minute() const {
         return (MTime >> 5) & 0b111111;
     }
-    u8 mtime_hour() {
+    u8 mtime_hour() const {
         return MTime & 0b11111;
     }
-    u8 mdate_day() {
+    u8 mdate_day() const {
         return (MDate >> 11) & 0b11111;
     }
-    u8 mdate_month() {
+    u8 mdate_month() const {
         return (MDate >> 7) & 0b1111;
     }
-    u8 mdate_year() {
+    u8 mdate_year() const {
         return MDate & 0b1111111;
+    }
+
+    bool free_to_use() const {
+        return FileName[0] == 0x00;
+    }
+    bool deleted() const {
+        return FileName[0] == 0xe5;
     }
 
 } __attribute__((packed));
 
-/// Long File Name Cluster Entry
-/// ALWAYS placed directly before their 8.3 entry (seen above).
-struct LFNClusterEntry {
+/// Long File Name Entry
+/// ALWAYS placed directly before their 8.3 Short File Name entry (seen above).
+struct LongFileNameEntry {
     u8 Order;
     /// Five two-byte characters.
     u16 Characters1[5];
@@ -291,6 +300,23 @@ struct LFNClusterEntry {
     u16 Zero;
     /// Two two-byte characters.
     u16 Characters3[2];
+
+    std::array<u16, 13> utf16_data() {
+        return {
+            Characters1[0],
+            Characters1[1],
+            Characters1[2],
+            Characters1[3],
+            Characters1[4],
+            Characters2[0],
+            Characters2[1],
+            Characters2[2],
+            Characters2[3],
+            Characters2[4],
+            Characters2[5],
+            Characters3[0],
+            Characters3[1]};
+    }
 } __attribute__((packed));
 
 // ExFAT
