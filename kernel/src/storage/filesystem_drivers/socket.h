@@ -65,10 +65,10 @@ struct FIFOBuffer {
     usz Offset{0};
     /// List of PIDs of processes who are waiting to write into the
     /// txbuffer as it is full.
-    std::vector<pid_t> PIDsWaitingUntilRead;
+    std::vector<pid_t> PIDsWaitingUntilRead{};
     /// List of PIDs of processes who are waiting to read from the
     /// txbuffer as it is empty.
-    std::vector<pid_t> PIDsWaitingUntilWrite;
+    std::vector<pid_t> PIDsWaitingUntilWrite{};
 
     void clear() {
         memset(&Data[0], 0, sizeof(Data));
@@ -169,8 +169,12 @@ struct FIFOBuffer {
 };
 
 // NOTE: We are trying to keep "SocketBuffers" as a single page of memory.
-#define SOCKET_TX_BUFFER_SIZE (PAGE_SIZE / 2)
-#define SOCKET_RX_BUFFER_SIZE ((PAGE_SIZE / 2) - sizeof(usz))
+#define SOCKET_TX_BUFFER_SIZE (PAGE_SIZE / 2     \
+                               - sizeof(usz) * 2 \
+                               - sizeof(std::vector<pid_t>) * 2)
+#define SOCKET_RX_BUFFER_SIZE ((PAGE_SIZE / 2)   \
+                               - sizeof(usz) * 2 \
+                               - sizeof(std::vector<pid_t>) * 2)
 struct SocketBuffers {
     /// FIFO buffer for transmissions from the server.
     /// Server writes to this buffer.
@@ -188,6 +192,7 @@ struct SocketBuffers {
         RXBuffer.clear();
     }
 };
+static_assert(sizeof(SocketBuffers) <= PAGE_SIZE);
 
 enum class SocketType {
     /// A Lensor socket is a socket intended for interprocess
@@ -238,11 +243,14 @@ struct SocketData {
     // FIXME: PID/FD fields are not correct; socket may be `dup`d,
     // closed by `dup2`, copied by `fork`, closed by `exec`, etc.
 
-    /// The ID of the process that opened this socket; mainly used for
-    /// server sockets, so that they can be unblocked upon an incoming
-    /// request.
+    /// For LENSOR client sockets (opened on server upon accepting a
+    /// connection, and open on a client), this will be the PID of the other
+    /// "half" of the process. For clients, this will be the server PID. For
+    /// servers, this will be the client PID.
     pid_t PID{pid_t(-1)};
-    /// The ProcFD of the opened socket when it was created, in `PID`.
+    /// The File Descriptor of this socket within the process with the ID of
+    /// the stored PID. process(PID).files[FD] gets the other "half" of the
+    /// socket.
     ProcFD FD{ProcFD::Invalid};
 
     SocketAddress Address{};
@@ -257,6 +265,7 @@ struct SocketData {
         CLIENT,
         SERVER
     } ClientServer{CLIENT};
+
     // FIXME: This should be a shared ptr.
     void* Data{nullptr};
 };

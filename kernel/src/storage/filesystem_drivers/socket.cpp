@@ -70,6 +70,12 @@ void SocketDriver::close(FileMetadata* meta) {
                 }
                 delete buffers;
             }
+
+            Event e{EventType::READY_TO_READ};
+            e.Filter.ProcessFD = data->FD;
+            e.Flags |= EVENTFLAGS_FILEREADY_EOF;
+            gEvents.notify(e, data->PID);
+
         } break;
     }
     delete data;
@@ -111,21 +117,29 @@ ssz SocketDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer, us
         case SocketType::LENSOR: {
             SocketBuffers* buffers = (SocketBuffers*)data->Data;
             if (!buffers) return -1;
+            ssize_t bytes_written{0};
             switch (data->ClientServer) {
-                case SocketData::CLIENT:
-                    return buffers->RXBuffer.write(
+                case SocketData::CLIENT: {
+                    bytes_written = buffers->RXBuffer.write(
                         Scheduler::CurrentProcess->value()->ProcessID,
                         byteCount,
                         (u8*)buffer,
                         flags);
-                case SocketData::SERVER:
-                    return buffers->TXBuffer.write(
+                } break;
+                case SocketData::SERVER: {
+                    bytes_written = buffers->TXBuffer.write(
                         Scheduler::CurrentProcess->value()->ProcessID,
                         byteCount,
                         (u8*)buffer,
                         flags);
+                } break;
             }
-            UNREACHABLE();
+            Event e{EventType::READY_TO_READ};
+            e.Filter.ProcessFD = data->FD;
+            e.Flags |= EVENTFLAGS_FILEREADY_READ;
+            gEvents.notify(e, data->PID);
+
+            return bytes_written;
         }
     }
     return -1;

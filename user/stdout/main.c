@@ -296,6 +296,7 @@ typedef struct CompositorContext {
     focus_t focus;
 
     ProcFD incoming_client_socket;
+    uintptr_t kqueue_handle;
 } CompositorContext;
 
 void handle_event_incoming_client(Event incoming_client_event, CompositorContext* context) {
@@ -330,6 +331,14 @@ void handle_event_incoming_client(Event incoming_client_event, CompositorContext
         return;
     }
 
+    // Listen to client IPC socket for incoming messages.
+    Event changelist[1];
+    memset(changelist, 0, sizeof(changelist));
+    changelist[0].Type = EVENTTYPE_READY_TO_READ;
+    changelist[0].Filter.ProcessFD = clientFD;
+    changelist[0].Flags |= EVENTFLAGS_CHANGE_ADD_REMOVE;
+    sys_kevent(context->kqueue_handle, changelist, 1, NULL, 0);
+
     window_t* window;
     for (int i = 0; i < sizeof(context->windows) / sizeof(context->windows[0]); ++i) {
         window = &context->windows[i];
@@ -356,11 +365,6 @@ void handle_event_incoming_client(Event incoming_client_event, CompositorContext
     // If no windows are open, automatically focus the first opened window.
     if (context->focus.window == NULL)
         context->focus.window = window;
-
-    // TODO: Register change in kqueue to be notified when clientFD is
-    // closed/EOF status. This is an "easy" way to tell when the process no
-    // longer wants it's window, whether from no longer running or from
-    // specifically requesting the window to be closed.
 
     // Communicate basic framebuffer data to client through shared memory.
     initial_shared_memory_state_t* init_state = (initial_shared_memory_state_t*)shared_data;
@@ -484,9 +488,14 @@ void handle_event_keyboard(Event event, CompositorContext* context) {
                 syscall(SYS_shared_memory_release, window->shared_region_id);
                 // close (our side of) client file descriptor
                 close(window->client_fd);
-                // TODO: unregister kqueue listening for clientFD; or, we could
-                // alternatively listen for a close/EOF event and unregister
-                // automatically.
+
+                // Unregister kqueue listening for clientFD.
+                Event changelist[1];
+                memset(changelist, 0, sizeof(changelist));
+                changelist[0].Type = EVENTTYPE_READY_TO_READ;
+                changelist[0].Filter.ProcessFD = window->client_fd;
+                sys_kevent(context->kqueue_handle, changelist, 1, NULL, 0);
+
                 return;
             }
         } break;
@@ -555,10 +564,42 @@ void handle_event_mouse(Event event, CompositorContext* context) {
     }
 }
 
+void handle_event_client_message(Event event, CompositorContext* context) {
+    printf("!!Got client message: %u\n", event.Filter.ProcessFD);
+
+    EventData_ReadyToReadWrite* e_data = (EventData_ReadyToReadWrite*)&event.Data[0];
+
+    // Find window opened by client that this event originates from.
+    window_t* window = NULL;
+    for (int i = 0; i < sizeof(context->windows) / sizeof(context->windows[0]); ++i) {
+        window_t* candidate = &context->windows[i];
+        if (event.Filter.ProcessFD == candidate->client_fd) {
+            window = candidate;
+            break;
+        }
+    }
+
+    // Event tied to client that no longer exists
+    if (window == NULL) return;
+
+    if (event.Flags & EVENTFLAGS_FILEREADY_EOF) {
+        printf("Client closed\n");
+        // TODO: Ensure client's window is closed; they have closed their IPC
+        // communication socket.
+    }
+    else if (event.Flags & EVENTFLAGS_FILEREADY_READ) {
+        printf("Received client message\n");
+        // TODO: Read IPC message(s) and perform relevant action(s)
+    }
+}
+
 void handle_event(Event event, CompositorContext* context) {
-    if (event.Type == EVENTTYPE_READY_TO_READ
-        && event.Filter.ProcessFD == context->incoming_client_socket)
-        handle_event_incoming_client(event, context);
+    if (event.Type == EVENTTYPE_READY_TO_READ) {
+        if (event.Filter.ProcessFD == context->incoming_client_socket)
+            handle_event_incoming_client(event, context);
+        else
+            handle_event_client_message(event, context);
+    }
 
     else if (event.Type == EVENTTYPE_KEYBOARD)
         handle_event_keyboard(event, context);
@@ -657,8 +698,12 @@ int main(int argc, const char** argv) {
     // In the case of a local socket, that means a process has connected.
     sys_kevent(listen_queue, changelist, 3, NULL, 0);
 
+    // Changes applied
+    memset(changelist, 0, sizeof(changelist));
+
     CompositorContext context = {0};
     context.incoming_client_socket = sockFD;
+    context.kqueue_handle = listen_queue;
 
     if (context.incoming_client_socket == 0) {
         printf("[INIT]:ERROR: Init process internal error: did not set incoming client socket, no windows will be able to open\n");

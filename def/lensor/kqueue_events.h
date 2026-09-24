@@ -104,13 +104,20 @@ struct Event {
     EventFlags Flags = {};
     u8 Data[EVENT_DATA_SIZE] = {0};
 };
-#endif
+#endif  // __cplusplus
 
 // For use in the changelist
 typedef enum EventFlags_Change {
     EVENTFLAGS_CHANGE_ADD_REMOVE = 1 << 0,
     EVENTFLAGS_CHANGE_CANARY
 } EventFlags_Change;
+
+// For use in FILE_READY events
+typedef enum EventFlags_FileReady {
+    EVENTFLAGS_FILEREADY_EOF = 1 << 0,
+    EVENTFLAGS_FILEREADY_READ = 1 << 1,
+    EVENTFLAGS_FILEREADY_WRITE = 1 << 2,
+} EventFlags_FileReady;
 
 /// Both READY_TO_READ and READY_TO_WRITE events have this data sent with them.
 typedef struct EventData_ReadyToReadWrite {

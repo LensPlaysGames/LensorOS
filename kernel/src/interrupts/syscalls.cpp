@@ -832,11 +832,12 @@ int sys$21_connect(ProcFD socketFD, const SocketAddress* givenAddress, usz addre
     }
     ProcFD serverProcFD = serverData->FD;
 
-    serverData->ConnectionQueue.push_back(SocketConnection{data->Address, data, process->ProcessID});
+    serverData->ConnectionQueue.push_back(
+        SocketConnection{address, data, process->ProcessID});
     std::print("[SYS$]:connect: socket {} connected to address!\n", socketFD);
 
     // READY_TO_READ for a listening socket means a connection is waiting to be accepted.
-    Event e;
+    Event e{};
     e.Type = EventType::READY_TO_READ;
     e.Filter.ProcessFD = serverProcFD;
     gEvents.notify(e, serverProcess);
@@ -926,6 +927,11 @@ ProcFD sys$22_accept(ProcFD socketFD, const SocketAddress* address, usz* address
             std::print("[SYS$]:accept:ERROR: Could not add file to accept connection, sorry.\n");
             return ProcFD::Invalid;
         }
+
+        // Update client socket's metadata to point to us...
+        connexion.Socket->PID = Scheduler::CurrentProcess->value()->ProcessID;
+        connexion.Socket->FD = fds.Process;
+
         return fds.Process;
     }
 
