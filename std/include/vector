@@ -166,20 +166,19 @@ struct __vector {
     size_type capacity() const noexcept { return __cap; }
 
     void resize(size_type __n) {
-        if (__n > __cap) {
+        if (__n > __cap)
             reserve(__n);
-        }
+
         __sz = __n;
     }
 
     void resize(size_type __n, const value_type& __val) {
-        if (__n > __cap) {
+        if (__n > __cap)
             reserve(__n);
-        }
+
         if (__n > __sz) {
-            for (size_type i = __sz; i < __n; ++i) {
+            for (size_type i = __sz; i < __n; ++i)
                 __ptr[i] = __val;
-            }
         }
         __sz = __n;
     }
@@ -189,9 +188,9 @@ struct __vector {
         }
         if (__n > __cap) {
             auto __new_ptr = new value_type[__n];
-            for (size_type i = 0; i < __sz; ++i) {
+            for (size_type i = 0; i < __sz; ++i)
                 __new_ptr[i] = std::move(__ptr[i]);
-            }
+
             delete[] __ptr;
             __ptr = __new_ptr;
             __cap = __n;
