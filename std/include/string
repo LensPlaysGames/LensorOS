@@ -34,6 +34,7 @@
 __BEGIN_DECLS__
 void* memcpy(void* __restrict__ __dest, const void* __restrict__ __src, size_t __n);
 int memcmp(const void* src, const void* dest, size_t bytes);
+const void* memmem(const void* __haystack, size_t, const void* __needle, size_t);
 __END_DECLS__
 
 namespace std {
@@ -49,7 +50,7 @@ namespace __detail {
 template <typename _Str, typename _Char>
 constexpr void __remove_trailing(_Str& __str, basic_string_view<_Char> __chars) {
     /// String is empty, so there's nothing to do.
-    if (!__str.size() || !__chars.size()) return;
+    if (!__str.size() or !__chars.size()) return;
 
     /// So long as there are characters left,
     auto __it = __str.rbegin();
@@ -136,7 +137,25 @@ class basic_string_view {
     }
 
     _Nodiscard size_t find(_Char __c, size_t __pos = 0) const { return find(_View(&__c, 1), __pos); }
-    _Nodiscard size_t find(_View __sv, size_t __pos = 0) const { return find(__sv, __pos); }
+    _Nodiscard size_t find(_View __sv, size_t __pos = 0) const {
+        // Bounds Checking (beginning after end, span beyond end)
+        if (__pos > __size or __sv.size() > (__size - __pos))
+            return npos;
+
+        // Handle Empty Search String
+        if (__sv.size() == 0)
+            return __pos;
+
+        auto found = memmem(
+            __data + __pos,
+            __size - __pos,
+            __sv.__data,
+            __sv.size());
+
+        if (found == nullptr)
+            return npos;
+        return ((const char* const)found) - __data;
+    }
 
     _Nodiscard constexpr size_t find_first_of(_View __sv, size_t __pos = 0) const {
         for (size_t __i = __pos; __i < __size; __i++) {
@@ -174,17 +193,30 @@ class basic_string_view {
 
     _Nodiscard bool starts_with(_View __sv) const {
         if (__sv.size() > __size) return false;
-        return memcmp((void*)__data, (void*)__sv.__data, __sv.size() * sizeof(_Char)) == 0;
+        return memcmp(
+                   (void*)__data,
+                   (void*)__sv.__data,
+                   __sv.size() * sizeof(_Char))
+               == 0;
     }
 
     _Nodiscard bool ends_with(_View __sv) const {
         if (__sv.size() > __size) return false;
-        return memcmp((void*)(__data + __size - __sv.size()), (void*)__sv.__data, __sv.size() * sizeof(_Char)) == 0;
+        return memcmp(
+                   (void*)(__data + __size - __sv.size()),
+                   (void*)__sv.__data,
+                   __sv.size() * sizeof(_Char))
+               == 0;
     }
 
     _Nodiscard bool contains(_View __sv) const {
         if (__sv.size() > __size) return false;
-        return memmem(__data, __size, __sv.__data, __sv.size()) != nullptr;
+        return memmem(
+                   __data,
+                   __size,
+                   __sv.__data,
+                   __sv.size())
+               != nullptr;
     }
 
     _Nodiscard bool contains(_Char __c) const {
