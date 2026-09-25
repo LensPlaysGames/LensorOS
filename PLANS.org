@@ -1,3 +1,13 @@
+* GUI Crash
+High Priority
+
+Steps to reproduce the bug:
+- Boot
+- Type =bg sand RET=
+- Switch focus to that GUI window (click selector in taskbar)
+- Hold =Alt= and press =Q=
+- Huzzah! kernel null dereference
+
 * Timer Overhaul
 Medium Priority
 
