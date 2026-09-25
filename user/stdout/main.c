@@ -430,25 +430,33 @@ void handle_event_keyboard(Event event, CompositorContext* context) {
             // ordering.
             uint32_t window_stack_begin_y = g_framebuffer.pixel_height - window_stack_height;
             if (context->focus.cursor_y >= window_stack_begin_y) {
-                const uint32_t window_stack_index
+                const uint32_t window_stack_index_from_end
                     = context->focus.cursor_x / (window_selector_width + window_selector_separator_width);
 
                 const uint32_t window_count = (sizeof(context->windows) / sizeof(context->windows[0]));
-                if (window_stack_index < window_count) {
-                    window_t clicked_window = context->windows[window_stack_index];
-                    if (clicked_window.shared_region) {
-                        clicked_window.hidden = false;
-                        // shift all windows before clicked window forward
-                        //   v
-                        // A B C D -> _ A C D
-                        memmove(
-                            &context->windows[1],
-                            &context->windows[0],
-                            window_stack_index * sizeof(context->windows[0]));
-                        // move clicked window to front
-                        // B A C D
-                        context->windows[0] = clicked_window;
-                        context->focus.window = &context->windows[0];
+                if (window_stack_index_from_end < window_count) {
+                    window_t* window = nullptr;
+                    uint32_t selector_from_end = 0;
+                    for (uint32_t i = 0; i < window_count; ++i) {
+                        const uint32_t window_stack_index = window_count - 1 - i;
+                        window = &context->windows[window_stack_index];
+                        if (!window->shared_region) continue;
+                        if (selector_from_end == window_stack_index_from_end) {
+                            window_t clicked_window = *window;
+                            clicked_window.hidden = false;
+                            // shift all windows before clicked window forward
+                            //   v
+                            // A B C D -> _ A C D
+                            memmove(
+                                &context->windows[1],
+                                &context->windows[0],
+                                window_stack_index * sizeof(context->windows[0]));
+                            // move clicked window to front
+                            // B A C D
+                            context->windows[0] = clicked_window;
+                            context->focus.window = &context->windows[0];
+                        }
+                        ++selector_from_end;
                     }
                 }
                 return;
@@ -821,20 +829,18 @@ int main(int argc, const char** argv) {
             const window_t* window = &context.windows[i - 1];
             if (!window_valid(window)) continue;
 
-            const uint32_t present_window_color = mkpixel(g_framebuffer.format, 0xff + window->shared_region_id * 0x10, 0xff, 0xff, 0xff);
+            const uint32_t present_window_color = mkpixel(g_framebuffer.format, 0xbb, 0xbb, 0xbb, 0xff);
             const uint32_t hidden_window_color = mkpixel(g_framebuffer.format, 0x67, 0x67, 0x67, 0xff);
             const uint32_t focused_window_color = orange;
             uint32_t color = present_window_color;
-            if (window == context.focus.window) {
+            if (window == context.focus.window)
                 color = focused_window_color;
-            }
-            else if (window->hidden) {
+            else if (window->hidden)
                 color = hidden_window_color;
-            }
 
             const size_t window_stack_begin_x
-                = selector_count * window_selector_width
-                  + selector_count * window_selector_separator_width;
+                = selector_count
+                  * (window_selector_width + window_selector_separator_width);
 
             // Hover effect...
             if (point_within_rect(
@@ -854,6 +860,14 @@ int main(int argc, const char** argv) {
                 window_stack_begin_y,
                 window_selector_width,
                 window_stack_height);
+
+            fill_rect(
+                g_backbuffer,
+                black,
+                window_stack_begin_x,
+                window_stack_begin_y,
+                (1 + window->shared_region_id) * 3,
+                (1 + window->shared_region_id) * 3);
 
             ++selector_count;
         }

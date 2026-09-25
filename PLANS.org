@@ -1,6 +1,3 @@
-* FAT Fixups
-Medium Priority
-
 * Timer Overhaul
 Medium Priority
 
@@ -112,18 +109,17 @@ Technologies built on UDP:
 - NTP :: Network Time Protocol
   This lets you sync your time with everyone else's time!
 
-* Implement A Graphical Compositor Program
+* FAT Fixups
 Low Priority
 
-** Window Stack Selector Identification
-
-Currently, it's hard to tell which selector refers to which window.
-Even just a simple unique color or number inside the box would help.
+Creating directories, allocating first cluster for new directories, etc.
 
 * Intel HDA Audio Driver
 Low Priority
 
 Then we can write an audio server, and hook userspace applications up with audio capabilities!
+
+It would be really cool to have an audio visualizer userspace program.
 
 * Bootloader Transition
 Low Priority
