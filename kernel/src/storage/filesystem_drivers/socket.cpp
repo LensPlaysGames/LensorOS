@@ -137,6 +137,8 @@ ssz SocketDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer, us
             Event e{EventType::READY_TO_READ};
             e.Filter.ProcessFD = data->FD;
             e.Flags |= EVENTFLAGS_FILEREADY_READ;
+            EventData_ReadyToReadWrite& e_data = *(EventData_ReadyToReadWrite*)&e.Data[0];
+            e_data.BytesAvailable = bytes_written;
             gEvents.notify(e, data->PID);
 
             return bytes_written;
