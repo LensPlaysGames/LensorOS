@@ -382,7 +382,7 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
         DBGMSG("[FAT]::open(): Found existing file at \"{}\"\n", raw_path);
         return existing;
     }
-    std::print("[FAT]::open(): Creating new file at \"{}\"\n", raw_path);
+    DBGMSG("[FAT]::open(): Creating new file at \"{}\"\n", raw_path);
 
     // File opened at path does not exist; create new file at path.
     std::vector<u8> FAT{};
@@ -399,7 +399,7 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
     const auto last_separator = raw_path.find_last_of("/") + 1;
     auto parent = raw_path.substr(0, last_separator);
     auto filename = raw_path.substr(last_separator);
-    std::print(
+    DBGMSG(
         "  last_separator: {}\n"
         "  parent:\"{}\" filename:\"{}\"\n",
         last_separator,
@@ -412,7 +412,7 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
         extension_separator != std::string::npos
             ? extension_separator + 1
             : std::string::npos);
-    std::print(
+    DBGMSG(
         "  bare-name:\"{}\" extension:\"{}\"\n",
         filename_name,
         filename_extension);
@@ -494,7 +494,7 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
             checksum = ((checksum & 1) ? 0x80 : 0) | (checksum >> 1);
             checksum += terminal.FileName[i];
         }
-        std::print("  checksum:{:#x}\n", checksum);
+        DBGMSG("  checksum:{:#x}\n", checksum);
 
         // >>= LONG FILE NAME ENTRIES <<=
         std::vector<std::string_view> lfn_chunks{};
@@ -536,7 +536,7 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
         }
     }
 
-    std::print("  sfn: \"{}\"\n", std::string_view((const char*)terminal.FileName, 11));
+    DBGMSG("  sfn: \"{}\"\n", std::string_view((const char*)terminal.FileName, 11));
 
     entries.emplace_back(terminal);
 
@@ -560,7 +560,7 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
         ++index;
     }
 
-    std::print(
+    DBGMSG(
         "  run of {} directory entries found at index {}\n",
         run,
         run_begin_index);
@@ -736,7 +736,7 @@ ssz FileAllocationTableDriver::write(FileMetadata* file, usz offset, usz size, v
     auto* data = (FATFileData*)file->driver_data();
 
     if (offset + size > file->file_size()) {
-        std::print(
+        DBGMSG(
             "[FAT]::write(): expanding file \"{}\" to {} bytes (was {})\n",
             file->name(),
             offset + size,
@@ -771,7 +771,7 @@ ssz FileAllocationTableDriver::write(FileMetadata* file, usz offset, usz size, v
             const usz increase_amount_clusters
                 = (increase_amount_bytes_in_new_clusters + cluster_size() - 1)
                   / cluster_size();
-            std::print("[FAT]: increase file {} by {} clusters\n", file->name(), increase_amount_clusters);
+            DBGMSG("[FAT]: increase file {} by {} clusters\n", file->name(), increase_amount_clusters);
 
             std::vector<usz> free_cluster_indices{};
 
@@ -780,7 +780,7 @@ ssz FileAllocationTableDriver::write(FileMetadata* file, usz offset, usz size, v
             for (usz i = 0; i < cluster_count(); ++i) {
                 auto entry = FATdata[i] & 0x0fffffff;
                 if (entry == 0) {
-                    std::print("[FAT]: cluster {} is free\n", i);
+                    DBGMSG("[FAT]: cluster {} is free\n", i);
                     free_cluster_indices.emplace_back(i);
                 }
                 // Once we have found enough clusters to increase the file size by the
@@ -798,14 +798,14 @@ ssz FileAllocationTableDriver::write(FileMetadata* file, usz offset, usz size, v
                 return -1;
             }
             for (usz i = 0; i < free_cluster_indices.size() - 1; ++i) {
-                std::print(
+                DBGMSG(
                     "  pointing cluster {} to cluster {}\n",
                     free_cluster_indices.at(i),
                     free_cluster_indices.at(i + 1));
                 FATdata[free_cluster_indices.at(i)] = free_cluster_indices.at(i + 1);
             }
             // End Of File Cluster Chain Marker
-            std::print(
+            DBGMSG(
                 "  writing end-of-file marker to cluster {}\n",
                 free_cluster_indices.back());
             FATdata[free_cluster_indices.back()] = 0x0fffffff;
@@ -814,14 +814,14 @@ ssz FileAllocationTableDriver::write(FileMetadata* file, usz offset, usz size, v
             // cluster. We only do this if the file actually had clusters allocated to
             // it previously. Linked list analogy: setting last->next only iff last.
             if (last_cluster) {
-                std::print(
+                DBGMSG(
                     "  overwriting old end-of-file marker at cluster {} to cluster {}\n",
                     last_cluster,
                     free_cluster_indices.front());
                 FATdata[last_cluster] = free_cluster_indices.front();
             }
             else {
-                std::print("  first {} clusters allocated for file\n", free_cluster_indices.size());
+                DBGMSG("  first {} clusters allocated for file\n", free_cluster_indices.size());
                 data->first_cluster = free_cluster_indices.front();
             }
 
@@ -829,7 +829,7 @@ ssz FileAllocationTableDriver::write(FileMetadata* file, usz offset, usz size, v
             const usz FAToffset = first_fat_sector() * sector_size();
             for (uint i = 0; i < BR.BPB.NumFATsPresent; ++i) {
                 for (auto c : free_cluster_indices) {
-                    std::print(
+                    DBGMSG(
                         "  writing previously-free cluster entry {} with value {} in FAT {}\n",
                         c,
                         FATdata[c],
@@ -845,7 +845,7 @@ ssz FileAllocationTableDriver::write(FileMetadata* file, usz offset, usz size, v
                 }
 
                 if (last_cluster) {
-                    std::print(
+                    DBGMSG(
                         "  writing previous end-of-chain cluster entry {} with value {} in FAT {}\n",
                         last_cluster,
                         FATdata[last_cluster],
@@ -862,20 +862,19 @@ ssz FileAllocationTableDriver::write(FileMetadata* file, usz offset, usz size, v
             }
 
             // Update directory entry of file with new file size
-            std::print("  directory entry within cluster {}\n", data->parent_entry_cluster);
+            DBGMSG("  directory entry within cluster {}\n", data->parent_entry_cluster);
             const auto entry_sector = BR.cluster_to_sector(data->parent_entry_cluster);
-            std::print(
+            DBGMSG(
                 "  cluster {} at sector {} AKA byte offset {}\n",
                 data->parent_entry_cluster,
                 entry_sector,
                 entry_sector * sector_size());
-            std::print("  entry index {}\n", data->entry_index_within_cluster);
+            DBGMSG("  entry index {}\n", data->entry_index_within_cluster);
             const auto entry_offset = entry_sector * sector_size()
                                       + data->entry_index_within_cluster * sizeof(ShortFileNameEntry);
-            u32 file_size = new_file_size;
-            std::print(
+            DBGMSG(
                 "  writing new file size {}, cluster {} at entry at offset {}\n",
-                file_size,
+                new_file_size,
                 data->first_cluster,
                 entry_offset);
             ShortFileNameEntry entry{};
@@ -930,10 +929,14 @@ ssz FileAllocationTableDriver::write(FileMetadata* file, usz offset, usz size, v
         // Only read cluster if we aren't overwriting entire cluster.
         if (chunk_size != cluster_size())
             read_cluster_into(cluster_data, cluster_index);
+
+        DBGMSG("  writing data into cluster {} at offset {}\n", cluster_index, offset_within_cluster);
         memcpy(
             cluster_data.data() + offset_within_cluster,
             ((u8*)buffer) + bytes_written,
             chunk_size);
+
+        DBGMSG("  writing {} bytes into cluster {} (offset {})\n", chunk_size, cluster_index, cluster_byte_offset);
         if (Device->write(
                 file,
                 cluster_byte_offset,
