@@ -299,6 +299,52 @@ typedef struct CompositorContext {
     uintptr_t kqueue_handle;
 } CompositorContext;
 
+void handle_window_disconnect(window_t* window_ptr, CompositorContext* context) {
+    if (window_ptr == NULL) return;
+
+    const uintptr_t window_count = sizeof(context->windows)
+                                   / sizeof(context->windows[0]);
+    const uintptr_t window_index = window_ptr - &context->windows[0];
+    if (window_index > window_count) return;
+
+    // once we memmove, we can't just read from the window_t pointer; we need
+    // to cache this data.
+    const window_t window = *window_ptr;
+
+    if (window_index + 1 < window_count) {
+        //   v
+        // A B C D -> A C D
+        memmove(
+            &context->windows[window_index],
+            &context->windows[window_index + 1],
+            sizeof(context->windows[0]) * (window_count - 1 - window_index));
+    }
+    memset(
+        &context->windows[window_count - 1],
+        0,
+        sizeof(context->windows[0]));
+
+    if (window_valid(&context->windows[0]))
+        context->focus.window = &context->windows[0];
+    else
+        context->focus.window = NULL;
+
+    // release from shared memory region
+    syscall(SYS_shared_memory_release, window.shared_region_id);
+
+    // close (our side of) client file descriptor
+    close(window.client_fd);
+
+    // Unregister kqueue listening for clientFD.
+    Event changelist[1];
+    memset(changelist, 0, sizeof(changelist));
+    changelist[0].Type = EVENTTYPE_READY_TO_READ;
+    changelist[0].Filter.ProcessFD = window.client_fd;
+    sys_kevent(context->kqueue_handle, changelist, 1, NULL, 0);
+
+    printf("[INIT]: Window %d closed\n", window.shared_region_id);
+}
+
 void handle_event_incoming_client(Event incoming_client_event, CompositorContext* context) {
     if (context == NULL) return;
 
@@ -470,39 +516,7 @@ void handle_event_keyboard(Event event, CompositorContext* context) {
                 const uint32_t window_count = (sizeof(context->windows) / sizeof(context->windows[0]));
                 // Close focused window
                 window_t* window = context->focus.window;
-                // do not draw it.
-                window->hidden = true;
-                window->shared_region = NULL;
-
-                if (window_index + 1 < window_count) {
-                    //   v
-                    // A B C D -> A C D
-                    memmove(
-                        &context->windows[window_index],
-                        &context->windows[window_index + 1],
-                        sizeof(context->windows[0]) * (window_count - 1 - window_index));
-                }
-                memset(
-                    &context->windows[window_count - 1],
-                    0,
-                    sizeof(context->windows[0]));
-
-                if (window_valid(&context->windows[0]))
-                    context->focus.window = &context->windows[0];
-                else
-                    context->focus.window = NULL;
-
-                // release from shared memory region
-                syscall(SYS_shared_memory_release, window->shared_region_id);
-                // close (our side of) client file descriptor
-                close(window->client_fd);
-
-                // Unregister kqueue listening for clientFD.
-                Event changelist[1];
-                memset(changelist, 0, sizeof(changelist));
-                changelist[0].Type = EVENTTYPE_READY_TO_READ;
-                changelist[0].Filter.ProcessFD = window->client_fd;
-                sys_kevent(context->kqueue_handle, changelist, 1, NULL, 0);
+                handle_window_disconnect(window, context);
 
                 return;
             }
@@ -590,8 +604,9 @@ void handle_event_client_message(Event event, CompositorContext* context) {
 
     if (event.Flags & EVENTFLAGS_FILEREADY_EOF) {
         printf("Client closed\n");
-        // TODO: Ensure client's window is closed; they have closed their IPC
+        // Ensure client's window is closed; they have closed their IPC
         // communication socket.
+        handle_window_disconnect(window, context);
     }
     else if (event.Flags & EVENTFLAGS_FILEREADY_READ) {
         printf("Received client message\n");
@@ -818,7 +833,7 @@ int main(int argc, const char** argv) {
         const uint32_t orange = mkpixel(g_framebuffer.format, 0xff, 0x62, 0x00, 0xff);
         fill_rect(
             g_backbuffer,
-            orange,
+            mkpixel_darker(orange, 0xaa),
             0,
             window_stack_begin_y,
             g_framebuffer.pixel_width,
@@ -861,6 +876,8 @@ int main(int argc, const char** argv) {
                 window_selector_width,
                 window_stack_height);
 
+            // FIXME: temporary hack to make each window selector visually
+            // distinguishable, even when moved, focused, hidden, etc.
             fill_rect(
                 g_backbuffer,
                 black,
