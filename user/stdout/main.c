@@ -36,9 +36,12 @@ static Framebuffer g_framebuffer;
 // The canvas that is blitted to the screen
 static Framebuffer g_backbuffer;
 
-const uint32_t window_stack_height = 28;
-const uint32_t window_selector_width = 27;
-const uint32_t window_selector_separator_width = 1;
+const uint32_t window_stack_height = 32;
+const uint32_t window_selector_height = 28;
+const uint32_t window_selector_width = 28;
+const uint32_t window_selector_separator_width = 4;
+
+const uint32_t window_selector_total_width = window_selector_width + window_selector_separator_width;
 
 void fprint_hexnibble(unsigned char byte, FILE* f) {
     if (byte < 10)
@@ -474,20 +477,22 @@ void handle_event_keyboard(Event event, CompositorContext* context) {
             // If mouse click is over window stack, calculate if it's over an
             // open window selector; if it is, focus that window. Also move it in Z
             // ordering.
-            uint32_t window_stack_begin_y = g_framebuffer.pixel_height - window_stack_height;
+            const uint32_t window_stack_begin_y = g_framebuffer.pixel_height - window_stack_height;
             if (context->focus.cursor_y >= window_stack_begin_y) {
-                const uint32_t window_stack_index_from_end
-                    = context->focus.cursor_x / (window_selector_width + window_selector_separator_width);
+                // window selectors are only drawn for valid windows, and since there may
+                // be gaps in the window array between valid windows, we have to convert
+                // the clicked index to the windows that are valid.
+                const uint32_t window_selector_index
+                    = context->focus.cursor_x / window_selector_total_width;
 
-                const uint32_t window_count = (sizeof(context->windows) / sizeof(context->windows[0]));
-                if (window_stack_index_from_end < window_count) {
-                    window_t* window = nullptr;
-                    uint32_t selector_from_end = 0;
-                    for (uint32_t i = 0; i < window_count; ++i) {
-                        const uint32_t window_stack_index = window_count - 1 - i;
-                        window = &context->windows[window_stack_index];
+                if (window_selector_index < MAX_WINDOW_COUNT) {
+                    uint32_t current_selector = 0;
+                    for (uint32_t i = 0; i < MAX_WINDOW_COUNT; ++i) {
+                        const uint32_t window_stack_index = i;
+                        window_t* window = &context->windows[window_stack_index];
                         if (!window->shared_region) continue;
-                        if (selector_from_end == window_stack_index_from_end) {
+
+                        if (current_selector == window_selector_index) {
                             window_t clicked_window = *window;
                             clicked_window.hidden = false;
                             // shift all windows before clicked window forward
@@ -502,7 +507,7 @@ void handle_event_keyboard(Event event, CompositorContext* context) {
                             context->windows[0] = clicked_window;
                             context->focus.window = &context->windows[0];
                         }
-                        ++selector_from_end;
+                        ++current_selector;
                     }
                 }
                 return;
@@ -512,8 +517,6 @@ void handle_event_keyboard(Event event, CompositorContext* context) {
         case LENSOR_KEY_Q: {
             if (keyboard_data->press && context->focus.left_alt) {
                 printf("[SERVE]: got SUPER+Q, closing focused window\n");
-                const uintptr_t window_index = context->focus.window - &context->windows[0];
-                const uint32_t window_count = (sizeof(context->windows) / sizeof(context->windows[0]));
                 // Close focused window
                 window_t* window = context->focus.window;
                 handle_window_disconnect(window, context);
@@ -840,8 +843,8 @@ int main(int argc, const char** argv) {
             window_stack_height / 8);
 
         int selector_count = 0;
-        for (int i = sizeof(context.windows) / sizeof(context.windows[0]); i; --i) {
-            const window_t* window = &context.windows[i - 1];
+        for (uint i = 0; i < MAX_WINDOW_COUNT; ++i) {
+            const window_t* window = &context.windows[i];
             if (!window_valid(window)) continue;
 
             const uint32_t present_window_color = mkpixel(g_framebuffer.format, 0xbb, 0xbb, 0xbb, 0xff);
@@ -853,7 +856,7 @@ int main(int argc, const char** argv) {
             else if (window->hidden)
                 color = hidden_window_color;
 
-            const size_t window_stack_begin_x
+            const size_t window_selector_begin_x
                 = selector_count
                   * (window_selector_width + window_selector_separator_width);
 
@@ -861,7 +864,7 @@ int main(int argc, const char** argv) {
             if (point_within_rect(
                     context.focus.cursor_x,
                     context.focus.cursor_y,
-                    window_stack_begin_x,
+                    window_selector_begin_x,
                     window_stack_begin_y,
                     window_selector_width,
                     window_stack_height)) {
@@ -871,20 +874,31 @@ int main(int argc, const char** argv) {
             fill_rect(
                 g_backbuffer,
                 color,
-                window_stack_begin_x,
-                window_stack_begin_y,
+                window_selector_begin_x,
+                window_stack_begin_y + window_selector_separator_width,
                 window_selector_width,
-                window_stack_height);
+                window_selector_height);
 
             // FIXME: temporary hack to make each window selector visually
             // distinguishable, even when moved, focused, hidden, etc.
             fill_rect(
                 g_backbuffer,
                 black,
-                window_stack_begin_x,
+                window_selector_begin_x,
                 window_stack_begin_y,
-                (1 + window->shared_region_id) * 3,
-                (1 + window->shared_region_id) * 3);
+                ((1 + window->shared_region_id) * 3) % window_selector_width,
+                ((1 + window->shared_region_id) * 3) % window_selector_height);
+
+            // window that is on top and focused gets highlighted.
+            if (context.focus.window == window) {
+                fill_rect(
+                    g_backbuffer,
+                    mkpixel_darker(orange, 0xaa),
+                    window_selector_begin_x + window_selector_width,
+                    window_stack_begin_y,
+                    window_selector_separator_width,
+                    window_stack_height);
+            }
 
             ++selector_count;
         }
