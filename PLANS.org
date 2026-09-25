@@ -1,7 +1,5 @@
-* Bootloader Transition
-Low Priority
-
-Should be "invisible" to the kernel, but we want to transition to the RADII bootloader.
+* FAT Fixups
+Medium Priority
 
 * Timer Overhaul
 Medium Priority
@@ -121,6 +119,16 @@ Low Priority
 
 Currently, it's hard to tell which selector refers to which window.
 Even just a simple unique color or number inside the box would help.
+
+* Intel HDA Audio Driver
+Low Priority
+
+Then we can write an audio server, and hook userspace applications up with audio capabilities!
+
+* Bootloader Transition
+Low Priority
+
+Should be "invisible" to the kernel, but we want to transition to the RADII bootloader.
 
 * ACPI AML Interpreter
 Low Priority
