@@ -565,8 +565,6 @@ void handle_event_mouse(Event event, CompositorContext* context) {
 }
 
 void handle_event_client_message(Event event, CompositorContext* context) {
-    printf("!!Got client message: %u\n", event.Filter.ProcessFD);
-
     EventData_ReadyToReadWrite* e_data = (EventData_ReadyToReadWrite*)&event.Data[0];
 
     // Find window opened by client that this event originates from.
@@ -590,6 +588,18 @@ void handle_event_client_message(Event event, CompositorContext* context) {
     else if (event.Flags & EVENTFLAGS_FILEREADY_READ) {
         printf("Received client message\n");
         // TODO: Read IPC message(s) and perform relevant action(s)
+        uint8_t ipc_buffer[IPC_MAX_SIZE];
+        intptr_t ipc_bytes_read = read(
+            event.Filter.ProcessFD,
+            &ipc_buffer[0],
+            e_data->BytesAvailable);
+
+        printf("  msg: ");
+        for (int i = 0; i < ipc_bytes_read; ++i)
+            printf("%c", ipc_buffer[i]);
+        printf("\n");
+
+        uint8_t magic = ipc_buffer[0];
     }
 }
 

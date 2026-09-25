@@ -541,6 +541,14 @@ int main(int argc, const char** argv) {
     g_framebuffer.buffer_size = fb->buffer_size;
     g_framebuffer.format = FB_FORMAT_ARGB;  // FIXME:
 
+    gui_info_t* gui_info = (gui_info_t*)gui;
+    char data[4];
+    data[0] = 'F';
+    data[1] = 'U';
+    data[2] = 'C';
+    data[3] = 'K';
+    write(gui_info->client_file_descriptor, data, sizeof(data));
+
     // clear screen
     const uint32_t black = mkpixel(g_framebuffer.format, 22, 23, 24, 0xff);
     fill_color(g_framebuffer, black);
