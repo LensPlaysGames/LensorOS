@@ -183,6 +183,17 @@ auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> 
 auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename) -> std::string {
     std::string path = raw_filename;
 
+    const auto extension_separator = raw_filename.find_last_of(".");
+    auto name = raw_filename.substr(0, extension_separator);
+    auto extension = raw_filename.substr(
+        extension_separator != std::string::npos
+            ? extension_separator + 1
+            : std::string::npos);
+
+    // Don't touch Long File Names (LFNs)
+    if (not ShortFileNameEntry::fits(name, extension))
+        return path;
+
     // toupper
     for (usz i = 0; i < path.size(); ++i)
         if (path[i] >= 97 and path[i] <= 122) path[i] -= 32;

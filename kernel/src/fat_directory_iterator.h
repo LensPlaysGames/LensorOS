@@ -252,9 +252,7 @@ struct DirectoryIterator {
                 if (auto i = utf8_lfn.find_first_of(marker); i != std::string::npos)
                     utf8_lfn.erase(i);
 
-                // NOTE/FIXME: It's possible we are meant to prepend segments, not append
-                // them. I don't know :)
-                current_entry.name += utf8_lfn;
+                current_entry.name = utf8_lfn + current_entry.name;
 
                 entry = *++directory_entry_iterator;
             }
