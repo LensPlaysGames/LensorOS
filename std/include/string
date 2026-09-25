@@ -712,6 +712,15 @@ class basic_string {
 };
 
 template <typename _Char>
+constexpr bool operator==(basic_string_view<_Char> __lhs, const _Char* __rhs) noexcept {
+    return __lhs == basic_string_view<_Char>(__rhs);
+}
+template <typename _Char>
+constexpr bool operator==(const _Char* __lhs, basic_string_view<_Char> __rhs) noexcept {
+    return basic_string_view<_Char>(__lhs) == __rhs;
+}
+
+template <typename _Char>
 _Nodiscard bool operator==(const basic_string<_Char>& __a, const basic_string<_Char>& __b) {
     return basic_string_view<_Char>(__a) == basic_string_view<_Char>(__b);
 }
