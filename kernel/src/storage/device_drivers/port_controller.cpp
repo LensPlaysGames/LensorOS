@@ -298,23 +298,17 @@ ssz PortController::write_raw(usz byteOffset, usz byteCount, void* buffer) {
             return -1;
         }
         DBGMSG("WRITE: read_low_level(): \033[32mSUCCEEDED!\033[m\n");
-
-        // Write overwritten data to buffer.
-        memcpy((u8*)Buffer + byteOffsetWithinSector, (u8*)buffer, byteCount);
-
-        if (!write_low_level(sector, sectors)) {
-            std::print("write_low_level(): \033[31mFAILED!\033[m\n");
-            return -1;
-        }
-        DBGMSG("write_low_level(): \033[32mSUCCEEDED!\033[m\n");
     }
-    else {
-        if (!write_low_level(sector, sectors)) {
-            std::print("write_low_level(): \033[31mFAILED!\033[m\n");
-            return -1;
-        }
-        DBGMSG("write_low_level(): \033[32mSUCCEEDED!\033[m\n");
+
+    // Write overwritten data to buffer.
+    memcpy((u8*)Buffer + byteOffsetWithinSector, (u8*)buffer, byteCount);
+
+    if (!write_low_level(sector, sectors)) {
+        std::print("write_low_level(): \033[31mFAILED!\033[m\n");
+        return -1;
     }
+    DBGMSG("write_low_level(): \033[32mSUCCEEDED!\033[m\n");
+
     DBGMSG("write_raw(): \033[32mSUCCEEDED!\033[m\n");
 
     return byteCount;
