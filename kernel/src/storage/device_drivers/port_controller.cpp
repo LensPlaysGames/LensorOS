@@ -69,7 +69,8 @@ bool PortController::read_low_level(u64 sector, u64 sectors) {
     // spinning until it isn't, or giving up.
     const u64 maxSpin = 1000000;
     u64 spin = 0;
-    while ((Port->TaskFileData & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < maxSpin)
+    while ((Port->TaskFileData & (ATA_DEV_BUSY | ATA_DEV_DRQ))
+           and spin < maxSpin)
         spin++;
 
     if (spin >= maxSpin)
@@ -184,7 +185,8 @@ bool PortController::write_low_level(u64 sector, u64 sectors) {
     // giving up.
     const u64 maxSpin = 1000000;
     u64 spin = 0;
-    while ((Port->TaskFileData & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < maxSpin)
+    while ((Port->TaskFileData & (ATA_DEV_BUSY | ATA_DEV_DRQ))
+           and spin < maxSpin)
         spin++;
 
     if (spin >= maxSpin) {
@@ -286,14 +288,14 @@ ssz PortController::write_raw(usz byteOffset, usz byteCount, void* buffer) {
         return -1;
     }
 
-    if (byteOffsetWithinSector || byteCount % BYTES_PER_SECTOR != 0) {
+    if (byteOffsetWithinSector or byteCount % BYTES_PER_SECTOR != 0) {
         // NOTE: We can't just simply call write, because we have to write
         // a sector at a time. This means we first have to read from the
         // disk to fill the buffer with the data that *was* there, update
         // the data within the buffer that needs updating, then write it
         // back. We can get away with not doing this if both the byte
         // offset and byte size are equal to zero when modulo sector size.
-        if (!read_low_level(sector, sectors)) {
+        if (not read_low_level(sector, sectors)) {
             std::print("WRITE: read_low_level(): \033[31mFAILED!\033[m\n");
             return -1;
         }
@@ -303,7 +305,7 @@ ssz PortController::write_raw(usz byteOffset, usz byteCount, void* buffer) {
     // Write overwritten data to buffer.
     memcpy((u8*)Buffer + byteOffsetWithinSector, (u8*)buffer, byteCount);
 
-    if (!write_low_level(sector, sectors)) {
+    if (not write_low_level(sector, sectors)) {
         std::print("write_low_level(): \033[31mFAILED!\033[m\n");
         return -1;
     }
@@ -330,7 +332,7 @@ void PortController::stop_commands() {
     Port->CommandAndStatus &= ~HBA_PxCMD_ST;
     Port->CommandAndStatus &= ~HBA_PxCMD_FRE;
     while (Port->CommandAndStatus & HBA_PxCMD_FR
-           && Port->CommandAndStatus & HBA_PxCMD_CR);
+           and Port->CommandAndStatus & HBA_PxCMD_CR);
 }
 _PopWarnings();
 
