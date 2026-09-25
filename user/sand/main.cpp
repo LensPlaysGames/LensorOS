@@ -32,17 +32,13 @@ constexpr uint32_t COLOR(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 0xff) {
            | (((uint32_t)g) << 8)
            | ((uint32_t)b);
 }
+
 // ARGB
-constexpr uint32_t SAND_COLOR = COLOR(0xff, 0xff, 0xff);
+constexpr uint32_t DEFAULT_SAND_COLOR = COLOR(0xff, 0xff, 0xff);
 // ARGB
 constexpr uint32_t EMPTY_COLOR = COLOR(0x00, 0x00, 0x00);
 
-enum struct Kind : uint8_t {
-    Empty,
-    Sand
-};
-
-uint8_t grid[WIDTH][HEIGHT]{};
+uint32_t grid[WIDTH][HEIGHT]{};
 
 // Update the sand physics
 void update_sand_simulation() {
@@ -51,21 +47,21 @@ void update_sand_simulation() {
     for (int y = HEIGHT - 2; y >= 0; --y) {
         for (int x = 0; x < WIDTH; ++x) {
             // If it's a sand particle
-            if (grid[x][y] == (uint8_t)Kind::Sand) {
+            if (grid[x][y] != 0) {
                 // Can we move straight down?
                 if (grid[x][y + 1] == 0) {
+                    grid[x][y + 1] = grid[x][y];
                     grid[x][y] = 0;
-                    grid[x][y + 1] = 1;
                 }
                 // Can we fall diagonally left?
                 else if (x > 0 && grid[x - 1][y + 1] == 0) {
+                    grid[x - 1][y + 1] = grid[x][y];
                     grid[x][y] = 0;
-                    grid[x - 1][y + 1] = 1;
                 }
                 // Can we fall diagonally right?
                 else if (x < WIDTH - 1 && grid[x + 1][y + 1] == 0) {
+                    grid[x + 1][y + 1] = grid[x][y];
                     grid[x][y] = 0;
-                    grid[x + 1][y + 1] = 1;
                 }
             }
         }
@@ -81,12 +77,7 @@ void draw_grid(const gui_framebuffer_t& framebuffer) {
         uint8_t* const row = (uint8_t*)(base + (y * line_pitch));
         for (int x = 0; x < width; ++x) {
             uint32_t* const pixel = (uint32_t*)(row + (x * framebuffer.pixel_byte_width));
-            if (grid[x][y] == (uint8_t)Kind::Sand) {
-                *pixel = SAND_COLOR;
-            }
-            else if (grid[x][y] == (uint8_t)Kind::Empty) {
-                *pixel = EMPTY_COLOR;
-            }
+            *pixel = grid[x][y];
         }
     }
 }
@@ -104,8 +95,10 @@ int main(int argc, const char** argv) {
 
     bool running{true};
     bool click_pressed{};
+    bool erase_pressed{};
     int32_t cursor_x{};
     int32_t cursor_y{};
+    uint32_t color = DEFAULT_SAND_COLOR;
     while (running) {
         uint8_t event[IPC_MAX_SIZE];
         if (gui_get_event(gui, event)) {
@@ -115,6 +108,8 @@ int main(int argc, const char** argv) {
                     // make point under cursor sand on left click
                     if (keyboard_event->value == LENSOR_KEY_MOUSE_LEFT)
                         click_pressed = keyboard_event->is_pressed;
+                    else if (keyboard_event->value == LENSOR_KEY_MOUSE_RIGHT)
+                        erase_pressed = keyboard_event->is_pressed;
 
                     // ignore releases
                     if (not keyboard_event->is_pressed) break;
@@ -123,6 +118,10 @@ int main(int argc, const char** argv) {
                         std::print("[SAND]: preparing for shutdown...\n");
                         running = false;
                     }
+                    else if (keyboard_event->value == LENSOR_KEY_SPACE)
+                        color = (color * 1664525 + 1013904223) | 0xff000000;
+                    else if (keyboard_event->value == LENSOR_KEY_R)
+                        color = DEFAULT_SAND_COLOR;
                 } break;
 
                 case IPC_MOUSE_POSITION_MAGIC: {
@@ -139,7 +138,16 @@ int main(int argc, const char** argv) {
         if (click_pressed
             and cursor_x < WIDTH
             and cursor_y < HEIGHT) {
-            grid[cursor_x][cursor_y] = (uint8_t)Kind::Sand;
+            grid[cursor_x][cursor_y] = color;
+        }
+        else if (erase_pressed) {
+            constexpr uintptr_t eraser_size = 3;
+            const uintptr_t eraser_x_end = std::min(cursor_x + eraser_size, (uintptr_t)WIDTH);
+            const uintptr_t eraser_y_end = std::min(cursor_y + eraser_size, (uintptr_t)HEIGHT);
+            for (uintptr_t y = cursor_y; y < eraser_y_end; ++y) {
+                for (uintptr_t x = cursor_x; x < eraser_x_end; ++x)
+                    grid[x][y] = 0;
+            }
         }
 
         update_sand_simulation();
