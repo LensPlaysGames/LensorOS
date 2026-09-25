@@ -83,3 +83,85 @@ auto utf16_to_utf8(std::string_view utf16) -> std::string {
     }
     return out;
 }
+
+auto utf8_to_utf16(std::string_view utf8) -> std::string {
+    std::string out{};
+    usz i = 0;
+
+    while (i < utf8.size()) {
+        u8 first_byte = utf8[i];
+        u32 codepoint = 0;
+        usz bytes_to_read = 0;
+
+        // Determine the number of bytes for the current UTF-8 character
+        if ((first_byte & 0x80) == 0) {
+            codepoint = first_byte;
+            bytes_to_read = 1;
+        }
+        else if ((first_byte & 0xe0) == 0xc0) {
+            codepoint = first_byte & 0x1f;
+            bytes_to_read = 2;
+        }
+        else if ((first_byte & 0xf0) == 0xe0) {
+            codepoint = first_byte & 0x0f;
+            bytes_to_read = 3;
+        }
+        else if ((first_byte & 0xf8) == 0xf0) {
+            codepoint = first_byte & 0b111;
+            bytes_to_read = 4;
+        }
+        else {
+            // Invalid starting byte, skip it
+            i += 1;
+            continue;
+        }
+
+        // Check if the full character fits in the remaining input
+        // Malformed/truncated trailing sequence
+        if (i + bytes_to_read > utf8.size()) break;
+
+        // Consume the continuation bytes
+        bool valid_sequence = true;
+        for (usz j = 1; j < bytes_to_read; ++j) {
+            u8 next_byte = utf8[i + j];
+            if ((next_byte & 0xc0) != 0x80) {
+                valid_sequence = false;
+                break;
+            }
+            codepoint = (codepoint << 6) | (next_byte & 0x3f);
+        }
+
+        // Skip the bad byte and try to recover
+        if (not valid_sequence) {
+            i += 1;
+            continue;
+        }
+
+        i += bytes_to_read;
+
+        // Helper lambda to append a 16-bit code unit as 2 bytes (Little-Endian)
+        auto append_u16 = [&](u16 code_unit) {
+            out += char(code_unit & 0xff);
+            out += char((code_unit >> 8) & 0xff);
+        };
+
+        // Encode codepoint into UTF-16 code units
+        if (codepoint <= 0xffff) {
+            // Direct mapping
+            append_u16(u16(codepoint));
+        }
+        else if (codepoint <= 0x10ffff) {
+            // Encode as a surrogate pair
+            codepoint -= 0x10000;
+            auto high_surrogate = u16((codepoint >> 10) + 0xd800);
+            auto low_surrogate = u16((codepoint & 0x3ff) + 0xdc00);
+
+            append_u16(high_surrogate);
+            append_u16(low_surrogate);
+        }
+        // Codepoints above 0x10ffff are invalid in standard UTF-8/UTF-16 and are
+        // therefore ignored.
+    }
+
+    return out;
+}

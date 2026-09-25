@@ -28,4 +28,7 @@ void append_codepoint_as_utf8(std::string& appendee, u32 codepoint);
 // Fairly lax, will ignore most invalid utf16 in a best effort approach.
 auto utf16_to_utf8(std::string_view utf16) -> std::string;
 
+// utf8 -> utf16
+auto utf8_to_utf16(std::string_view utf16) -> std::string;
+
 #endif /* LENSOR_OS_UTF_H */
