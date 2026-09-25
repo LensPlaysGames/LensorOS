@@ -21,8 +21,11 @@
 #define LENSOR_OS_FAT_DEFINITIONS_H
 
 #include <integers.h>
+#include <utf.h>
 
 #include <array>
+#include <span>
+#include <string_view>
 
 #define FAT_DIRECTORY_SIZE_BYTES 32
 
@@ -176,24 +179,26 @@ enum class FATType {
 };
 
 struct ShortFileNameEntry {
+    constexpr static auto banned_chars = std::string_view(" .\"*/:<>?\\|");
+
     // First 8 characters = name, last 3 = extension
-    u8 FileName[11];
+    u8 FileName[11]{};
     /// READ_ONLY=0x01,  HIDDEN=0x02,     SYSTEM=0x04,
     /// VOLUME_ID=0x08,  DIRECTORY=0x10,  ARCHIVE=0x20,
     /// LFN=0x0f
-    u8 Attributes;
-    u8 Reserved0;
-    u8 CTimeTenthsSecond;
+    u8 Attributes{};
+    u8 Reserved0{0};
+    u8 CTimeTenthsSecond{};
     /// 5 bits for seconds, 6 bits for minutes, 5 bits for hour.
-    u16 CTime;
+    u16 CTime{};
     /// 5 bits for day, 4 bits for month, 7 bits for year.
-    u16 CDate;
-    u16 ADate;
-    u16 ClusterNumberH;
-    u16 MTime;
-    u16 MDate;
-    u16 ClusterNumberL;
-    u32 FileSizeInBytes;
+    u16 CDate{0x2101};
+    u16 ADate{0x2101};
+    u16 ClusterNumberH{};
+    u16 MTime{};
+    u16 MDate{0x2101};
+    u16 ClusterNumberL{};
+    u32 FileSizeInBytes{};
 
     u32 get_cluster_number() const {
         u32 result = ClusterNumberL;
@@ -222,8 +227,16 @@ struct ShortFileNameEntry {
     bool directory() const {
         return Attributes & 0b10000;
     }
+    void directory(bool new_value) {
+        Attributes &= ~0b10000;
+        if (new_value) Attributes |= 0b10000;
+    }
     bool archive() const {
         return Attributes & 0b100000;
+    }
+    void archive(bool new_value) {
+        Attributes &= ~0b100000;
+        if (new_value) Attributes |= 0b100000;
     }
 
     u8 ctime_second() const {
@@ -281,7 +294,62 @@ struct ShortFileNameEntry {
         return FileName[0] == 0xe5;
     }
 
+    static bool fits(std::string_view name, std::string_view extension) {
+        // Simple bounds checking
+        if (name.empty() or name.size() > 8 or extension.size() > 3)
+            return false;
+
+        // If we find any of these illegal characters in the name or extension,
+        // it's a no-go.
+        if (name.find_first_of(banned_chars) != std::string::npos
+            or extension.find_first_of(banned_chars) != std::string::npos)
+            return false;
+
+        // If the file name appears sane, assure that it doesn't contain illegal
+        // control characters; while we are at it, generate an upcased version of
+        // the file name, if we know it fits in the short file name. That way, if
+        // it doesn't contain any control characters, and still looks like it
+        // fits, we can compare it against known illegal names.
+        u8 upcased_name_buffer[8];
+        memcpy(&upcased_name_buffer[0], name.data(), name.size());
+        for (uint i = 0; i < name.size(); ++i) {
+            if (upcased_name_buffer[i] >= 'a' and upcased_name_buffer[i] <= 'z')
+                upcased_name_buffer[i] -= 'a' - 'A';
+
+            // Name contains control characters: no-go.
+            // ensure unsigned
+            if (upcased_name_buffer[i] < 32 or upcased_name_buffer[i] == 127)
+                return false;
+        }
+        for (u8 c : extension)
+            if (c < 32 or c == 127) return false;
+
+        // For ease of use: comparison operator
+        auto upcased_name = std::string_view(
+            (const char*)&upcased_name_buffer[0],
+            name.size());
+
+        bool is_device_name = (upcased_name.size() == 3
+                               and (upcased_name == "CON"
+                                    or upcased_name == "PRN"
+                                    or upcased_name == "AUX"
+                                    or upcased_name == "NUL"))
+                              or (upcased_name.size() == 4
+                                  and (upcased_name.starts_with("LPT") or upcased_name.starts_with("COM"))
+                                  and upcased_name[3] >= '0' and upcased_name[3] <= '9');
+
+        return not is_device_name;
+    }
 } __attribute__((packed));
+static_assert(sizeof(ShortFileNameEntry) == 32);
+
+namespace FAT {
+constexpr void replace_banned_chars_with(std::span<char> in, char replacement) {
+    for (usz i = 0; i < in.size(); ++i)
+        if (ShortFileNameEntry::banned_chars.contains(in[i]))
+            in[i] = replacement;
+}
+}  // namespace FAT
 
 /// Long File Name Entry
 /// ALWAYS placed directly before their 8.3 Short File Name entry (seen above).
@@ -290,9 +358,9 @@ struct LongFileNameEntry {
     /// Five two-byte characters.
     u16 Characters1[5];
     /// Always 0x0f.
-    u8 Attribute;
+    u8 Attribute{0x0f};
     /// Zero for name entries.
-    u8 LongEntryType;
+    u8 LongEntryType{0};
     /// Checksum generated from short file-name when file was created.
     u8 Checksum;
     /// Six two-byte characters.
@@ -301,7 +369,7 @@ struct LongFileNameEntry {
     /// Two two-byte characters.
     u16 Characters3[2];
 
-    std::array<u16, 13> utf16_data() {
+    std::array<u16, 13> utf16_data() const {
         return {
             Characters1[0],
             Characters1[1],
@@ -317,7 +385,41 @@ struct LongFileNameEntry {
             Characters3[0],
             Characters3[1]};
     }
+
+    void from_utf8(std::string_view in) {
+        Attribute = 0x0f;
+        Zero = 0;
+        std::array<u16, 13> staging{};
+        memset(
+            staging.data(),
+            0xff,
+            staging.size() * sizeof(u16));
+        auto data = utf8_to_utf16(in);
+        const usz total_units = std::min<usz>(data.size() / 2, 13);
+
+        for (usz i = 0; i < total_units; ++i) {
+            u8 lower = u8(data[i * 2]);
+            u8 upper = u8(data[i * 2 + 1]);
+            staging[i] = u16(lower) | (u16(upper) << 8);
+        }
+        if (total_units < 13)
+            staging[total_units] = 0x0000;
+
+        memcpy(
+            &Characters1[0],
+            staging.data(),
+            sizeof(Characters1));
+        memcpy(
+            &Characters2[0],
+            staging.data() + 5,
+            sizeof(Characters2));
+        memcpy(
+            &Characters3[0],
+            staging.data() + 5 + 6,
+            sizeof(Characters3));
+    }
 } __attribute__((packed));
+static_assert(sizeof(LongFileNameEntry) == sizeof(ShortFileNameEntry));
 
 // ExFAT
 // Inspiration taken from https://github.com/dorimanx/exfat-nofuse
