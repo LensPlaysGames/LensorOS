@@ -546,13 +546,33 @@ void kstage2(BootInfo* bInfo) {
         PIT_FREQUENCY,
         __FG_DEFAULT);
 
+    // TODO: if (InvariantTSC)
     {
-        const size_t tsc_begin = rdtsc();
-        gPIT.wait_polling(10);
-        const size_t tsc_end = rdtsc();
-        auto tsc_per_10ms = tsc_end - tsc_begin;
-        auto tsc_per_millisecond = tsc_per_10ms / 10;
-        auto tsc_frequency = tsc_per_millisecond * Time::milliseconds_per_second;
+        constexpr size_t calibration_milliseconds = 10;
+        constexpr size_t trial_count = 4;
+        size_t total_tick_count{0};
+
+        for (size_t i = 0; i < trial_count; ++i) {
+            // Measure counts immediately before waiting a fixed period.
+            __asm__ volatile("lfence" ::: "memory");
+            const size_t tsc_begin = rdtsc();
+
+            // Use prepared timer to sleep for some duration.
+            gPIT.wait_polling(calibration_milliseconds);
+            // Read count immediately after the wait.
+            __asm__ volatile("lfence" ::: "memory");
+            const size_t tsc_end = rdtsc();
+
+            // Total elapsed ticks in our window = Initial Max Count - What's Left After Waiting
+            const size_t tsc_per_calibration_window = tsc_end - tsc_begin;
+
+            total_tick_count += tsc_per_calibration_window;
+        }
+        constexpr size_t total_milliseconds = calibration_milliseconds * trial_count;
+
+        // Divide to get the exact value for our window
+        const size_t tsc_per_millisecond = total_tick_count / total_milliseconds;
+        const size_t tsc_frequency = tsc_per_millisecond * Time::milliseconds_per_second;
         std::print(
             "[TSC]: {} per millisecond  freq={}\n",
             tsc_per_millisecond,
