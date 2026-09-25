@@ -96,6 +96,7 @@ class FileAllocationTableDriver final : public FilesystemDriver {
     auto first_data_sector() { return BR.first_data_sector(); }
     // Number of sectors per FAT
     auto fat_sector_count() { return BR.fat_sectors(); }
+    auto fat_byte_count() { return fat_sector_count() * sector_size(); }
     auto type() { return Type; }
     auto root_directory_sector() { return BR.first_root_directory_sector(); }
     auto root_directory_cluster() { return BR.sector_to_cluster(root_directory_sector()); }
@@ -109,26 +110,14 @@ class FileAllocationTableDriver final : public FilesystemDriver {
     void close(FileMetadata* file) final { Device->close(file); }
 
     ssz read(FileMetadata* file, usz offs, usz size, void* buffer, usz flags) final;
+    ssz write(FileMetadata* file, usz offset, usz size, void* buffer, usz flags) final;
+
+    ssz flush(FileMetadata* file) final { return -1; };
+    ssz directory_data(std::string_view path, usz max_entry_count, DirectoryEntry* out) final;
 
     ssz read_raw(usz offs, usz bytes, void* buffer) final {
         return Device->read_raw(offs, bytes, buffer);
     }
-
-    ssz write(FileMetadata* file, usz offset, usz size, void* buffer, usz flags) final {
-        // TODO: Fail? if this would increase file size. I feel like we
-        // don't want to write past the end of the file, just in case
-        // there is stuff there, right? So we will have to figure out
-        // how to make a file bigger in FAT.
-        return Device->write(
-            file,
-            usz(file->driver_data()) + offset,
-            size,
-            buffer,
-            flags);
-    }
-
-    ssz flush(FileMetadata* file) final { return -1; };
-    ssz directory_data(std::string_view path, usz max_entry_count, DirectoryEntry* out) final;
 
     const char* name() final { return "File Allocation Table"; }
     auto device() -> std::shared_ptr<StorageDeviceDriver> final { return Device; }

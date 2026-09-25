@@ -90,7 +90,8 @@ FATType FileAllocationTableDriver::fat_type(BootRecord& br) {
         return FATType::FAT32;
 }
 
-auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> driver) -> std::shared_ptr<FilesystemDriver> {
+auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> driver)
+    -> std::shared_ptr<FilesystemDriver> {
     if (!driver) return nullptr;
 
     BootRecord br;
@@ -163,7 +164,10 @@ auto FileAllocationTableDriver::translate_filename(std::string_view raw_filename
 void FileAllocationTableDriver::read_cluster_into(std::vector<u8>& out, u32 cluster_index) {
     // Cluster Index Out Of Bounds
     if (cluster_index < 2 or cluster_index > BR.total_clusters()) {
-        std::print("[FAT]: cluster index out of bounds\n");
+        std::print(
+            "[FAT]: cluster index out of bounds ({} out of {})\n",
+            cluster_index,
+            BR.total_clusters());
         return;
     }
 
@@ -191,6 +195,12 @@ std::vector<u8> FileAllocationTableDriver::read_cluster(u32 cluster_index) {
 }
 
 u32 FileAllocationTableDriver::traverse_path_for_cluster(std::string_view raw_path, u32 directory_cluster) {
+    if (directory_cluster == decltype(directory_cluster)(-1))
+        directory_cluster = root_directory_cluster();
+
+    if (raw_path == "/")
+        return directory_cluster;
+
     std::string path(raw_path);
     auto raw_filename = pop_filename_from_front_of_path(path);
     auto filename = translate_filename(raw_filename);
@@ -216,6 +226,8 @@ u32 FileAllocationTableDriver::traverse_path_for_cluster(std::string_view raw_pa
         // directory; if it isn't a directory, then the path doesn't make sense
         // and we error out.
         if (!Entry.directory) return -1;
+
+        if (Entry.cluster_number == 0) break;
 
         // Recurse into directory...
         return traverse_path_for_cluster(path, Entry.cluster_number);
@@ -293,7 +305,13 @@ std::shared_ptr<FileMetadata> FileAllocationTableDriver::traverse_path(
         }
 
         // Recurse into directory...
-        u32 dirCluster = Entry.cluster_number;
+        const u32 dirCluster = Entry.cluster_number;
+
+        // NOTE: Empty directories /may/ have no cluster's actually allocated to
+        // them (the directory entry within their parent directory is the only
+        // thing that "makes them exist").
+        if (dirCluster == 0) break;
+
         // std::print("Recursing! Following {} at cluster {}\n", path, dirCluster);
         return traverse_path(path, dirCluster);
     }
@@ -320,8 +338,280 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
     }
 #endif
 
-    // TODO: Create file if flags ask for it and no existing file is found.
-    return traverse_path(raw_path);
+    auto existing = traverse_path(raw_path);
+    if (existing) {
+        DBGMSG("[FAT]::open(): Found existing file at \"{}\"\n", raw_path);
+        return existing;
+    }
+    std::print("[FAT]::open(): Creating new file at \"{}\"\n", raw_path);
+
+    // File opened at path does not exist; create new file at path.
+    std::vector<u8> FAT{};
+    fresh_fat(FAT);
+    // Find free cluster for initial file data via FAT; mark it with end
+    // of file cluster chain marker.
+    // FIXME: fat iterator for more than just 32-bit.
+    uint32_t* FATdata = (uint32_t*)FAT.data();
+    ssz free_cluster{-1};
+    const usz fat_entry_count = fat_byte_count() / sizeof(uint32_t);
+    for (usz i = 0; i < fat_entry_count; ++i) {
+        if (FATdata[i] == 0) {
+            // FIXME: fat end-of-file-cluster-chain value
+            std::print("[FAT]::open(): Found free cluster: {} --- allocating\n", i);
+            FATdata[i] = 0x0fffffff;
+            free_cluster = i;
+            break;
+        }
+    }
+    if (free_cluster == -1) {
+        std::print(
+            "Attempt to open new file at \"{}\", but the file system is completely full.\n",
+            raw_path);
+        return {};
+    }
+
+    // Find free directory entry in directory; er, we may need to find a
+    // free cluster for the directory as well, if it is out of free directory
+    // entries entirely.
+
+    // TODO: Directory or Regular?
+    const auto ftype = FileType::Regular;
+
+    // 1. Get first cluster of parent directory; create directory entry
+    //    iterator on this directory.
+    const auto last_separator = raw_path.find_last_of("/") + 1;
+    auto parent = raw_path.substr(0, last_separator);
+    auto filename = raw_path.substr(last_separator);
+    std::print(
+        "  last_separator: {}\n"
+        "  parent:\"{}\" filename:\"{}\"\n",
+        last_separator,
+        parent,
+        filename);
+
+    const auto extension_separator = filename.find_last_of(".");
+    auto filename_name = filename.substr(0, extension_separator);
+    auto filename_extension = filename.substr(extension_separator + 1);
+    std::print(
+        "  bare-name:\"{}\" extension:\"{}\"\n",
+        filename_name,
+        filename_extension);
+
+    auto parent_cluster = traverse_path_for_cluster(parent, -1);
+
+    if (parent_cluster == u32(-1)) {
+        std::print("[FAT]::open(): Could not get parent directory \"{}\" for new file at \"{}\"\n", parent, raw_path);
+        return {};
+    }
+
+    if (parent_cluster == 0) {
+        std::print("[FAT]::open(): TODO: Handle allocating first cluster for empty directory {}\n", parent);
+        return {};
+    }
+
+    // 2. Calculate how many contiguous free entries we need for this file,
+    //    *including long file name entries*.
+    bool fits_in_short_filename = filename_name.size() <= 8;
+    if (fits_in_short_filename) {
+        char translated_short_name_buffer[8];
+        memcpy(&translated_short_name_buffer[0], filename_name.data(), filename_name.size());
+        FAT::replace_banned_chars_with(
+            {&translated_short_name_buffer[0], filename_name.size()},
+            '_');
+        auto translated_short_name = std::string_view(translated_short_name_buffer, filename_name.size());
+        fits_in_short_filename = ShortFileNameEntry::fits(translated_short_name, filename_extension);
+    }
+    std::vector<ShortFileNameEntry> entries{};
+
+    ShortFileNameEntry terminal{};
+    memset(terminal.FileName, ' ', sizeof(terminal.FileName));
+    for (uint i = 0; i < std::min(filename_name.size(), usz(8)); ++i)
+        terminal.FileName[i] = filename_name[i];
+
+    for (uint i = 8; i < std::min(filename_extension.size() + 8, usz(3 + 8)); ++i)
+        terminal.FileName[i] = filename_extension[i - 8];
+
+    // toupper
+    for (uint i = 0; i < 11; ++i) {
+        if (terminal.FileName[i] >= 'a' and terminal.FileName[i] <= 'z')
+            terminal.FileName[i] -= 'a' - 'A';
+    }
+
+    if (ftype == FileType::Directory)
+        terminal.directory(true);
+    else
+        terminal.archive(true);
+
+    if (not fits_in_short_filename) {
+        uint tail_num = 1;
+        while (true) {
+            auto tail_str = std::format("~{}", tail_num);
+            if (tail_str.size() > 7) tail_str.erase(7);
+            memcpy(
+                &terminal.FileName[8 - tail_str.size()],
+                tail_str.data(),
+                tail_str.size());
+
+            bool collision = false;
+            auto directory_entry_iterator = FAT::DirectoryEntryIterator(
+                *this,
+                {FAT.data(), FAT.size()},
+                parent_cluster);
+            for (const auto& entry : directory_entry_iterator) {
+                if ((not entry.free_to_use())
+                    and (not entry.deleted())
+                    and memcmp(&entry.FileName[0], &terminal.FileName[0], 11) == 0) {
+                    collision = true;
+                    break;
+                }
+            }
+            if (not collision) break;
+            ++tail_num;
+        }
+
+        u8 checksum = 0;
+        for (int i = 0; i < 11; ++i) {
+            checksum = ((checksum & 1) ? 0x80 : 0) | (checksum >> 1);
+            checksum += terminal.FileName[i];
+        }
+        std::print("  checksum:{:#x}\n", checksum);
+
+        // >>= LONG FILE NAME ENTRIES <<=
+        std::vector<std::string_view> lfn_chunks{};
+        usz byte_idx = 0;
+        while (byte_idx < filename.size()) {
+            usz chunk_start = byte_idx;
+            for (int chars = 0; chars < 13 and byte_idx < filename.size(); ++chars) {
+                u8 b = filename[byte_idx];
+                if ((b & 0x80) == 0)
+                    byte_idx += 1;
+                else if ((b & 0xe0) == 0xc0)
+                    byte_idx += 2;
+                else if ((b & 0xf0) == 0xe0)
+                    byte_idx += 3;
+                else if ((b & 0xf8) == 0xf0)
+                    byte_idx += 4;
+                // Fallback malformed handling
+                else
+                    byte_idx += 1;
+            }
+            lfn_chunks.emplace_back(
+                filename.substr(chunk_start, byte_idx - chunk_start));
+        }
+
+        usz total_lfn_entries = lfn_chunks.size();
+        for (ssz i = total_lfn_entries - 1; i >= 0; --i) {
+            LongFileNameEntry lfn{};
+            lfn.from_utf8(lfn_chunks[i]);
+            lfn.Checksum = checksum;
+
+            // Sequence number allocation. Last written LFN entry gets bit 6 marked high
+            u8 order = u8(i + 1);
+            if (usz(i) == total_lfn_entries - 1)
+                order |= 0b1000000;
+
+            lfn.Order = order;
+
+            entries.emplace_back(*(ShortFileNameEntry*)&lfn);
+        }
+    }
+
+    std::print("  sfn: \"{}\"\n", std::string_view((const char*)terminal.FileName, 11));
+
+    terminal.ClusterNumberL = free_cluster;
+    terminal.ClusterNumberH = free_cluster >> 16;
+    // FIXME: not sure if zero sized files are allowed to have a cluster
+    // allocated, otherwise we'd leave this as zero.
+    terminal.FileSizeInBytes = 1;
+
+    entries.emplace_back(terminal);
+
+    // 3. Find span of free entries.
+    usz index{0};
+    usz run_begin_index{0};
+    usz run{0};
+    auto directory_entry_iterator = FAT::DirectoryEntryIterator(
+        *this,
+        {FAT.data(), FAT.size()},
+        parent_cluster);
+    for (auto e : directory_entry_iterator) {
+        if (not(e.free_to_use() or e.deleted()))
+            run = 0;
+        else {
+            if (run == 0) run_begin_index = index;
+            ++run;
+        }
+        if (run >= entries.size())
+            break;
+        ++index;
+    }
+
+    std::print(
+        "  run of {} directory entries found at index {}\n",
+        run,
+        run_begin_index);
+
+    // TODO:
+    //   3a. If no span found, extend the directory by an extra cluster and
+    //       allocate it there.
+    if (run < entries.size()) {
+        std::print("[FAT]: TODO: Increase directory size while creating file\n");
+        return {};
+    }
+
+    // 4. Populate span of free entries with pre-calculated entries.
+
+    // Get cluster index within directory where this run of entries is stored.
+    const usz entries_per_cluster = (cluster_size() / sizeof(ShortFileNameEntry));
+    const usz cluster_index = run_begin_index / entries_per_cluster;
+    const usz directory_entry_index_offset_within_cluster = run_begin_index % entries_per_cluster;
+
+    // Use a cluster iterator to navigate that many clusters into the directory.
+    auto directory_cluster_iterator = FAT::ClusterIterator(
+        {FAT.data(), FAT.size()},
+        parent_cluster);
+    for (usz i = 0; i < cluster_index; ++i)
+        ++directory_cluster_iterator;
+
+    auto file = FileMetadata::Make(ftype,
+                                   std::string(raw_path),
+                                   fsd(This.lock()),
+                                   0,
+                                   (void*)(uintptr_t)(free_cluster));
+
+    // Calculate the precise byte offset of this specific cluster entry within
+    // the FAT on the disk.
+    const u64 FAToffset = first_fat_sector() * sector_size();
+    const u64 entry_disk_offset = FAToffset + (free_cluster * sizeof(*FATdata));
+
+    // Write FAT(s) back to disk
+    for (uint i = 0; i < BR.BPB.NumFATsPresent; ++i) {
+        std::print(
+            "  writing cluster entry {} with value {} in FAT {}\n",
+            free_cluster,
+            FATdata[free_cluster],
+            i);
+        Device->write(
+            file.get(),
+            entry_disk_offset + i * fat_byte_count(),
+            sizeof(*FATdata),
+            &FATdata[free_cluster],
+            0);
+    }
+
+    // Write directory_cluster
+    const auto directory_cluster_index = *directory_cluster_iterator;
+    // TODO: It's possible the run spans multiple clusters, if the run starts
+    // near the end of a cluster or is really long.
+    Device->write(
+        file.get(),
+        BR.cluster_to_sector(directory_cluster_index) * sector_size()
+            + directory_entry_index_offset_within_cluster * sizeof(ShortFileNameEntry),
+        entries.size() * sizeof(ShortFileNameEntry),
+        entries.data(),
+        0);
+
+    return file;
 }
 
 ssz FileAllocationTableDriver::directory_data(std::string_view path, usz max_entry_count, DirectoryEntry* out) {
@@ -422,6 +712,141 @@ ssz FileAllocationTableDriver::read(FileMetadata* file, usz offset, usz size, vo
         last_cluster_size);
 
     return size;
+}
+
+ssz FileAllocationTableDriver::write(FileMetadata* file, usz offset, usz size, void* buffer, usz flags) {
+    auto FAT = std::vector<uint8_t>(fat_byte_count());
+    fresh_fat(FAT);
+    auto FATspan = std::span(FAT.data(), FAT.size());
+
+    if (offset + size > file->file_size()) {
+        auto last_cluster_iterator = FAT::ClusterIterator(FATspan, (usz)file->driver_data());
+        usz last_cluster = *last_cluster_iterator;
+        while (last_cluster_iterator != last_cluster_iterator.end()) {
+            last_cluster = *last_cluster_iterator;
+            ++last_cluster_iterator;
+        }
+
+        const usz increase_amount_bytes = (offset + size) - file->file_size();
+        const usz new_file_size = file->file_size() + increase_amount_bytes;
+        // - cluster size of 512 bytes
+        // - file size of 500 bytes
+        // -> write of 4 bytes does not need new clusters!
+        const usz remaining_bytes_in_cluster = cluster_size() - (file->file_size() % cluster_size());
+        if (increase_amount_bytes > remaining_bytes_in_cluster) {
+            // Attempt to allocate new clusters for file
+            const usz increase_amount_bytes_in_new_clusters
+                = cluster_size() - (increase_amount_bytes % cluster_size());
+            const usz increase_amount_clusters
+                = (increase_amount_bytes_in_new_clusters + cluster_size() - 1)
+                  / cluster_size();
+            std::print("[FAT]: increase file {} by {} clusters\n", file->name(), increase_amount_clusters);
+
+            std::vector<usz> free_cluster_indices{};
+
+            // TODO: FAT variant handling; this is FAT32 only
+            auto* FATdata = (uint32_t*)FAT.data();
+            for (usz i = 0; i < cluster_count(); ++i) {
+                auto entry = FATdata[i] & 0x0fffffff;
+                if (entry == 0) {
+                    std::print("[FAT]: cluster {} is free\n", i);
+                    free_cluster_indices.emplace_back(i);
+                }
+                // Once we have found enough clusters to increase the file size by the
+                // requested amount, we can stop looking.
+                if (free_cluster_indices.size() >= increase_amount_clusters)
+                    break;
+            }
+            if (free_cluster_indices.size() < increase_amount_clusters) {
+                std::print(
+                    "[FAT]: not enough space to increase size of file \"{}\"\n"
+                    "  needed {} clusters, found {} free\n",
+                    file->name(),
+                    increase_amount_clusters,
+                    free_cluster_indices.size());
+                return -1;
+            }
+            for (usz i = 0; i < free_cluster_indices.size() - 1; ++i) {
+                std::print(
+                    "  pointing cluster {} to cluster {}\n",
+                    free_cluster_indices.at(i),
+                    free_cluster_indices.at(i + 1));
+                FATdata[free_cluster_indices.at(i)] = free_cluster_indices.at(i + 1);
+            }
+            // End Of File Cluster Chain Marker
+            std::print(
+                "  writing end-of-file marker to cluster {}\n",
+                free_cluster_indices.back());
+            FATdata[free_cluster_indices.back()] = 0x0fffffff;
+
+            // Over-write old end-of-file cluster chain marker with first "free"
+            // cluster.
+            std::print(
+                "  overwriting old end-of-file marker at cluster {} to cluster {}\n",
+                last_cluster,
+                free_cluster_indices.front());
+            FATdata[last_cluster] = free_cluster_indices.front();
+        }
+
+        // TODO: Update directory entry of file with new file size
+        (void)new_file_size;
+        // FIXME: Er, how do we find the directory entry related to a file?
+        // 1. We could iterate every directory entry of the parent directory until
+        // we find the entry with the cluster number of this file's cluster. Would
+        // require the parent directory starting cluster.
+        // 2. We could store the cluster within the parent directory that stores
+        // this directory entry somewhere directly, meaning we wouldn't need to
+        // iterate to find this entry in the parent, but we also wouldn't be able
+        // to find the entire parent directory...
+    }
+
+    // Use a ClusterIterator to follow the file's data around the disk.
+    auto iterator = FAT::ClusterIterator(
+        FATspan,
+        (usz)file->driver_data());
+
+    const usz before_clusters = offset / cluster_size();
+    usz offset_within_cluster = offset % cluster_size();
+    for (usz i = 0; i < before_clusters and iterator != iterator.end(); ++i)
+        ++iterator;
+
+    if (iterator == iterator.end()) {
+        std::print("[FAT]: Write to file beyond cluster extents... resize went wrong?\n");
+        return -1;
+    }
+
+    auto cluster_data = std::vector<u8>(cluster_size());
+
+    usz bytes_written{0};
+    while (bytes_written < size and iterator != iterator.end()) {
+        const auto cluster_index = *iterator;
+        const auto cluster_sector = BR.cluster_to_sector(cluster_index);
+        const auto cluster_byte_offset = cluster_sector * sector_size();
+
+        const usz available_in_cluster = cluster_size() - offset_within_cluster;
+        const usz remaining_to_write = size - bytes_written;
+        const usz chunk_size = std::min(available_in_cluster, remaining_to_write);
+
+        read_cluster_into(cluster_data, cluster_index);
+        memcpy(
+            cluster_data.data() + offset_within_cluster,
+            ((u8*)buffer) + bytes_written,
+            chunk_size);
+        if (Device->write(
+                file,
+                cluster_byte_offset,
+                cluster_size(),
+                cluster_data.data(),
+                flags)
+            != (ssz)cluster_size())
+            return -1;
+
+        bytes_written += chunk_size;
+        offset_within_cluster = 0;
+        ++iterator;
+    }
+
+    return bytes_written;
 }
 
 void FileAllocationTableDriver::fresh_fat(std::vector<u8>& FAT) {
