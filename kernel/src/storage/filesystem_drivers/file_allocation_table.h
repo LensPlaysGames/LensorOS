@@ -85,9 +85,9 @@ class FileAllocationTableDriver final : public FilesystemDriver {
     /// with the directory cluster of the root directory.
     std::shared_ptr<FileMetadata> traverse_path(std::string_view raw_path, u32 directoryCluster = -1);
 
-    auto for_each_dir_entry_in(u32 directory_cluster = -1) -> FAT::DirectoryIterator;
-
    public:
+    // Write the most up-to-date FAT into the given vector.
+    void fresh_fat(std::vector<u8>&);
     auto cluster_size() { return BR.BPB.cluster_size(); }
     auto cluster_count() { return BR.total_clusters(); }
     auto sector_size() { return BR.BPB.NumBytesPerSector; }

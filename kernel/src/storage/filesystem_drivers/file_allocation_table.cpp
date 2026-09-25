@@ -423,3 +423,14 @@ ssz FileAllocationTableDriver::read(FileMetadata* file, usz offset, usz size, vo
 
     return size;
 }
+
+void FileAllocationTableDriver::fresh_fat(std::vector<u8>& FAT) {
+    const u64 FAToffset = first_fat_sector() * sector_size();
+    const u64 FATsize = fat_sector_count() * sector_size();
+    FAT.resize(0);
+    FAT.resize(FATsize);
+    Device->read_raw(
+        FAToffset,
+        FATsize,
+        FAT.data());
+}

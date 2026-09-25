@@ -322,13 +322,7 @@ struct FileTraversal {
         if (first_cluster == u32(-1))
             first_cluster = driver.root_directory_cluster();
 
-        const u64 FATsector = driver.first_fat_sector();
-        const u64 FATsize = driver.fat_sector_count() * driver.sector_size();
-        FAT.resize(FATsize);
-        driver.device()->read_raw(
-            FATsector * driver.sector_size(),
-            FATsize,
-            FAT.data());
+        driver.fresh_fat(FAT);
     }
 
     FileDataIterator go_file_data() {
