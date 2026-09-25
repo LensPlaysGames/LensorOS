@@ -101,6 +101,16 @@ int sys$2_read(ProcessFileDescriptor fd, u8* buffer, u64 byteCount, u64 flags) {
     VFS& vfs = SYSTEM->virtual_filesystem();
     auto meta = vfs.file(fd);
 
+    // read from closed file
+    if (not meta) {
+        std::print("[SYS$]:read: file at procFD {} does not exist\n", fd);
+        return -1;
+    }
+    if (meta->invalid()) {
+        std::print("[SYS$]:read: file at procFD {} has invalid metadata\n", fd);
+        return -1;
+    }
+
     if (meta->is_regular()) {
         // If we have read the entire file, offset will be equal to (or greater
         // than) the file's size. This means there is nothing to possibly read.
@@ -161,6 +171,23 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount, u64 flags) 
     }
 
     VFS& vfs = SYSTEM->virtual_filesystem();
+    // validate file
+
+    auto meta = vfs.file(fd);
+    if (not meta) {
+        std::print(
+            "[SYS$]:write() from process({}):ERROR: file at procFD {} does not exist\n",
+            Scheduler::CurrentProcess->value()->ProcessID,
+            fd);
+        return -1;
+    }
+    if (meta->invalid()) {
+        std::print(
+            "[SYS$]:write from process({}):ERROR: file at procFD {} has invalid metadata\n",
+            Scheduler::CurrentProcess->value()->ProcessID,
+            fd);
+        return -1;
+    }
 
     ssz rc = vfs.write(fd, buffer, byteCount, 0, flags);
     if (rc == -2) {
@@ -180,11 +207,8 @@ int sys$3_write(ProcessFileDescriptor fd, u8* buffer, u64 byteCount, u64 flags) 
 
     // If data was written, move the "cursor" of the file metadata forward, so
     // that next time we write we won't overwrite the same data.
-    {
-        auto meta = vfs.file(fd);
-        if (meta->is_regular() and rc > 0)
-            meta->offset += rc;
-    }
+    if (meta and meta->is_regular() and rc > 0)
+        meta->offset += rc;
 
     return rc;
 }
