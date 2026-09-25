@@ -235,7 +235,11 @@ void draw_psf1_char(const Framebuffer fb, const PSF1_FONT font, size_t position_
     if (diffX < size_x) size_x = diffX;
     if (diffY < size_y) size_y = diffY;
 
-    u8* bitmap = psf1_char_bitmap(font, c);
+    // don't draw control characters... (it somehow always ends up happening,
+    // now, doesn't it :P)
+    u8* bitmap = psf1_char_bitmap(
+        font,
+        (c < ' ' || c == 127) ? ' ' : c);
     u32* pixel_ptr = (u32*)fb.base_address;
 
     for (usz y = position_y; y < position_y + size_y; ++y) {

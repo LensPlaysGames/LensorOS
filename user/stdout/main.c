@@ -871,6 +871,7 @@ int main(int argc, const char** argv) {
                 color = mkpixel_lighter(color, 0x28);
             }
 
+            // draw window selector ("icon", basically)
             fill_rect(
                 g_backbuffer,
                 color,
