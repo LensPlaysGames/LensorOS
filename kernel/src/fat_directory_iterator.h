@@ -101,8 +101,12 @@ struct DirectoryEntryIterator {
     // dummy value.
     auto end() const -> std::default_sentinel_t { return {}; }
 
+    auto cluster_index() const { return current_cluster_index; }
+    auto entry_index() const { return current_directory_entry_index; }
+
    private:
     void next_cluster() {
+        ++current_cluster_index;
         current_directory_entry_index = 0;
         ++data_iterator;
     }
@@ -113,12 +117,20 @@ struct DirectoryEntryIterator {
     }
 
     FileDataIterator data_iterator;
+    usz current_cluster_index{0};
     usz current_directory_entry_index{0};
 };
 
 struct DirectoryEntry {
     std::array<uint8_t, 11> short_name{};
     std::string name{};
+
+    // How many clusters full of directory entries come before the cluster
+    // containing this directory entry, within the containing directory.
+    // This directory entry is within cluster `directory_clusters[within_cluster]`.
+    u32 within_cluster{};
+    // Index of directory entry within the cluster it is located in.
+    u32 entry_index{};
 
     u32 cluster_number{};
     u32 file_size_in_bytes{};
@@ -260,6 +272,9 @@ struct DirectoryIterator {
             current_entry.short_name.data(),
             &entry.FileName[0],
             sizeof(entry.FileName));
+
+        current_entry.within_cluster = directory_entry_iterator.cluster_index();
+        current_entry.entry_index = directory_entry_iterator.entry_index();
 
         current_entry.cluster_number = entry.get_cluster_number();
         current_entry.file_size_in_bytes = entry.FileSizeInBytes;

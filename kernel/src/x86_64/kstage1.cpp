@@ -690,10 +690,26 @@ void kstage2(BootInfo* bInfo) {
 
         SYSTEM->set_init(process);
 
-        constexpr const char* programTestFilePath = "/fs0/notexist.ing";
-        std::print("Opening {} just for fun\n", programTestFilePath);
-        fds = vfs.open(programTestFilePath);
-        if (fds.valid()) vfs.close(fds.Process);
+        {
+            constexpr const char* programTestFilePath = "/fs0/notexist.ing";
+            std::print("Opening {} just for fun\n", programTestFilePath);
+            fds = vfs.open(programTestFilePath);
+            if (fds.valid()) vfs.close(fds.Process);
+        }
+        {
+            constexpr const char* programTestFilePath = "/fs0/somereallylongpath.txt";
+            std::print("Opening {} just for fun\n", programTestFilePath);
+            fds = vfs.open(programTestFilePath);
+            if (fds.valid()) {
+                vfs.write(
+                    fds.Process,
+                    (u8*)programTestFilePath,
+                    strlen(programTestFilePath),
+                    0,
+                    0);
+                vfs.close(fds.Process);
+            }
+        }
     }
 
     // Try to initialize High Precision Event Timer.
