@@ -121,6 +121,17 @@ void enumerate_function(u64 deviceAddress, u64 functionNumber) {
             }
         }
     }
+
+    // Class 0x04 == Multimedia Device
+    else if (pciDevHdr->Class == 0x04) {
+        // Subclass 0x03 == Audio Device
+        if (pciDevHdr->Subclass == 0x03) {
+            // ProgIF 0x00 == HDA Compatible
+            if (pciDevHdr->ProgIF == 0x00) {
+                SYSTEM->create_device<Devices::HDADevice>(reinterpret_cast<PCIHeader0*>(pciDevHdr));
+            }
+        }
+    }
 }
 
 void enumerate_device(u64 busAddress, u64 deviceNumber) {

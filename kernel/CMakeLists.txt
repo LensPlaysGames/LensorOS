@@ -113,6 +113,7 @@ add_executable(
   src/x86_64/cpu.cpp
   src/x86_64/cpuid.cpp
   src/x86_64/gdt.cpp
+  src/x86_64/high_definition_audio.cpp
   src/x86_64/hpet.cpp
   src/x86_64/kstage1.cpp
   src/x86_64/lapic.cpp

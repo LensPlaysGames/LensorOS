@@ -226,6 +226,9 @@ if ( QEMU_PROGRAM )
     -rtc base=localtime,clock=host,driftfix=none
     # e1000 network card emulation
     -nic user,ipv6=off,model=e1000,mac=52:54:98:76:54:32
+    # Intel HDA 1.0 Sound
+    -device intel-hda,id=sound0,msi=on
+    -device hda-duplex,id=codec0,bus=sound0.0,audiodev=audio0
     # Show extra information regarding triple faults.
     -d cpu_reset
     # Use stdio as serial input and output.
@@ -251,8 +254,8 @@ if ( QEMU_PROGRAM )
   # Audio/Speaker Setup
   if ( CMAKE_HOST_WIN32 )
     list( APPEND QEMU_FLAGS
-      -audiodev dsound,id=audio_device
-      -machine pcspk-audiodev=audio_device
+      -audiodev dsound,id=audio0
+      -machine pcspk-audiodev=audio0
     )
   else()
     list( APPEND QEMU_FLAGS

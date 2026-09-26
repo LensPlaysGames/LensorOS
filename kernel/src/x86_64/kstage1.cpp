@@ -53,6 +53,7 @@
 #include <utf.h>
 #include <x86_64/cpuid.h>
 #include <x86_64/gdt.h>
+#include <x86_64/high_definition_audio.h>
 #include <x86_64/hpet.h>
 #include <x86_64/kstage1.h>
 #include <x86_64/lapic.h>
@@ -160,7 +161,8 @@ void probe_system_devices() {
                     (void*)(Memory::TO_FRAME_POINTER(containing_page) + t),
                     (u64)Memory::PageTableFlag::Present
                         | (u64)Memory::PageTableFlag::ReadWrite
-                        | (u64)Memory::PageTableFlag::CacheDisabled);
+                        | (u64)Memory::PageTableFlag::CacheDisabled
+                        | (u64)Memory::PageTableFlag::WriteThrough);
             }
 
             u32 ports = ABAR->PortsImplemented;
@@ -181,6 +183,35 @@ void probe_system_devices() {
             }
             // Don't search AHCI controller any further, already found all ports.
             dev->set_flag(SYSDEV_MAJOR_STORAGE_SEARCH, false);
+        }
+        else if (dev->major() == SYSDEV_MAJOR_MULTIMEDIA
+                 && dev->minor() == SYSDEV_MINOR_HDA) {
+            auto controller = static_cast<Devices::HDADevice*>(dev.get());
+            // 3. Keep the original settings, but flip on:
+            // Bit 1: Memory Space Enable (ensures BAR0 responds to reads/writes)
+            // Bit 2: Bus Master Enable (allows the HDA controller to read your CORB/RIRB memory)
+            u16 config = controller->Header->Header.Command;
+            u16 updated_config = config | (1 << 2) | (1 << 1);
+            controller->Header->Header.Command = updated_config;
+
+            HDAController driver{};
+            uintptr_t base = controller->Header->BAR0 & ~(uintptr_t)0xf;
+            base |= ((uintptr_t)controller->Header->BAR1) << 32;
+            base = Memory::FROM_FRAME_POINTER(base);
+            auto offset_in_page = uintptr_t(base) % PAGE_SIZE;
+            auto containing_page = (uintptr_t)base - offset_in_page;
+            // Intel HDA requires 16kb (0x4000 bytes)
+            for (usz t = 0; t < offset_in_page + 0x4000; t += PAGE_SIZE) {
+                Memory::map(
+                    (void*)(uintptr_t(containing_page) + t),
+                    (void*)(Memory::TO_FRAME_POINTER(containing_page) + t),
+                    (u64)Memory::PageTableFlag::Present
+                        | (u64)Memory::PageTableFlag::ReadWrite
+                        | (u64)Memory::PageTableFlag::CacheDisabled
+                        | (u64)Memory::PageTableFlag::WriteThrough);
+            }
+            driver.set_base(base);
+            driver.init();
         }
     }
 }

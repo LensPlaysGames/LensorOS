@@ -45,7 +45,11 @@
  * |
  * |-- 2: Network Device -- TODO: NetworkDeviceDriver at Data1 or whatever
  * |   `-- 0: E1000 Network Controller
- * TODO:
+ * |
+ * |-- 3: Multimedia Device
+ * |   `-- 0: HDA Controller
+ * |
+ * |   TODO:
  * `-- 3: Timer -- TimerInterface at Data1
  *     |-- 0: Monotonic -- PIT :: has tick() and get() :: time_t
  *     |-- 1: Query -- RTC :: has get() :: struct tm
@@ -65,6 +69,12 @@ inline constexpr u64 SYSDEV_MAJOR_NETWORK = 2;
 /* NETWORK DEVICE FLAGS */
 /* NETWORK DEVICE MINOR NUMBERS */
 inline constexpr u64 SYSDEV_MINOR_E1000 = 0;
+
+/* MULTIMEDIA DEVICE MAJOR NUMBERS */
+inline constexpr u64 SYSDEV_MAJOR_MULTIMEDIA = 3;
+/* MULTIMEDIA DEVICE FLAGS */
+/* MULTIMEDIA DEVICE MINOR NUMBERS */
+inline constexpr u64 SYSDEV_MINOR_HDA = 0;
 
 struct System;
 
