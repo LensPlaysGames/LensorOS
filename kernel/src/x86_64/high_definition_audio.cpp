@@ -51,7 +51,7 @@ constexpr inline uint32_t form_command(uint32_t verb, uint32_t param, uint32_t d
 }
 
 uint32_t HDAController::send_command(uint32_t verb, uint32_t param, uint32_t data, uint32_t node, uint32_t codec) {
-    std::print("[HDA]: CORB command: verb={:#x} param={:#x} data={:#x} node={:#x} codec={:#x}\n", verb, param, data, node, codec);
+    // std::print("[HDA]: CORB command: verb={:#x} param={:#x} data={:#x} node={:#x} codec={:#x}\n", verb, param, data, node, codec);
 
     const uint32_t corb_command = form_command(
         verb,
@@ -60,7 +60,7 @@ uint32_t HDAController::send_command(uint32_t verb, uint32_t param, uint32_t dat
         node,
         codec);
 
-    std::print("  command: {:#08x}\n", corb_command);
+    // std::print("  command: {:#08x}\n", corb_command);
 
     // --- WRITE TO CORB ---
     // Read the current hardware write pointer (Offset 0x4A)
@@ -69,17 +69,10 @@ uint32_t HDAController::send_command(uint32_t verb, uint32_t param, uint32_t dat
     // Calculate the next index inside the ring buffer
     auto next_wp = (current_wp + 1) % CORBEntryCount;
 
-    std::print("  current wp: {}  next wp: {}\n", current_wp, next_wp);
+    // std::print("  current wp: {}  next wp: {}\n", current_wp, next_wp);
 
     // Place the constructed command inside the DMA memory block
     CORB[next_wp] = corb_command;
-    std::print(
-        "  CORB wp: {}  CORB rp: {}\n"
-        "  RIRB wp: {}\n"
-        "  ^^before\n",
-        (int)*corb_wp(),
-        (int)*corb_rp(),
-        (int)*rirb_wp());
 
     uint16_t expected_rirbwp = (*rirb_wp() + 1) % RIRBEntryCount;
 
@@ -95,29 +88,13 @@ uint32_t HDAController::send_command(uint32_t verb, uint32_t param, uint32_t dat
     (void)*corb_wp();
     asm volatile("mfence" ::: "memory");
 
-    std::print("  updated wp, now {}...\n", (int)*corb_wp());
-
     // --- WAIT FOR RIRB RESPONSE ---
     // Implement a timeout loop so a dead codec doesn't hang bootup
     uint32_t timeout = 4000000;
-    std::print(
-        "  CORB wp: {}  CORB rp: {}\n"
-        "  RIRB wp: {}  RIRB rp: {}\n",
-        (int)*corb_wp(),
-        (int)*corb_rp(),
-        (int)*rirb_wp(),
-        expected_rirbwp);
     while (*corb_rp() != next_wp and timeout > 0) {
         --timeout;
         asm volatile("pause");
     }
-    std::print(
-        "  CORB wp: {}  CORB rp: {}\n"
-        "  RIRB wp: {}  RIRB rp: {}\n",
-        (int)*corb_wp(),
-        (int)*corb_rp(),
-        (int)*rirb_wp(),
-        expected_rirbwp);
     if (timeout == 0) {
         std::print("[HDA]:ERROR: Command timeout waiting for CORB. Verb: {:#x}\n", verb);
         std::print("  gctl:{:#x} gsts:{:#x}\n", (uint32_t)global_regs()->gctl, (uint32_t)global_regs()->gsts);
@@ -138,9 +115,7 @@ uint32_t HDAController::send_command(uint32_t verb, uint32_t param, uint32_t dat
         // failure sentinel
         return 0xffffffff;
     }
-    std::print("  controller processed command\n");
 
-    std::print("  expecting RIRB[{}]\n", expected_rirbwp);
     timeout = 2000000;
     while (*rirb_wp() != expected_rirbwp and timeout > 0) {
         --timeout;
@@ -151,16 +126,16 @@ uint32_t HDAController::send_command(uint32_t verb, uint32_t param, uint32_t dat
         // failure sentinel
         return 0xffffffff;
     }
-    std::print("  recieved response\n");
 
     // --- READ RESPONSE ---
     // Grab the full 64-bit frame from our physical DMA ring
     auto response = RIRB[expected_rirbwp];
 
-    std::print("  response: {:#016x}\n", response);
-
     // Clear the response interrupt bit in RIRBSTS (Offset 0x5D) to acknowledge processing
-    *rirb_status() = 1;  // Clear RINTFL (write 1 to clear)
+    // Clear RINTFL (bit 0) if set (write 1 to clear)
+    // TODO: Clear RIRBOIS (bit 2) if set
+    if (*rirb_status() & 1)
+        *rirb_status() = 1;
 
     for (volatile int i = 0; i < 1000; i += 1) {
         asm volatile("pause");
@@ -172,7 +147,7 @@ uint32_t HDAController::send_command(uint32_t verb, uint32_t param, uint32_t dat
 
 bool HDAController::initialize_corb() {
     // Stop CORB
-    *corb_control() = *corb_control() & ~0b10;
+    *corb_control() = *corb_control() & ~0b11;
     // Wait for CORB to stop
     uint32_t timeout = 2000000;
     while (*corb_control() & 0b10 and timeout > 0) {
@@ -255,7 +230,7 @@ bool HDAController::initialize_corb() {
 
 bool HDAController::initialize_rirb() {
     // Stop RIRB
-    *rirb_control() = *rirb_control() & ~0b10;
+    *rirb_control() = *rirb_control() & ~0b11;
     // Wait for RIRB to stop
     uint32_t timeout = 2000000;
     while (*rirb_control() & 0b10 and timeout > 0) {
@@ -292,11 +267,16 @@ bool HDAController::initialize_rirb() {
     }
     *rirb_size() = size_value;
 
-    // Set response interrupt count so we recieve every response.
-    *rirb_count() = 2;
+    // Ensure non-zero value here
+    *rirb_count() = 1;
 
     // Start RIRB DMA
-    *rirb_control() = *rirb_control() | 0b10;
+    // NOTE: QEMU has bugs/quirks with regards to internal state breaking when
+    // RINTCTL bit is not set within RIRBCTL. We set it during initialization
+    // no matter what.
+    *rirb_control() = *rirb_control()
+                      | HDA_REG_RIRBCTL_DMA_ENABLE
+                      | HDA_REG_RIRBCTL_INTERRUPT_ENABLE;
     std::print("[HDA] RIRB Initialized\n");
 
     return true;

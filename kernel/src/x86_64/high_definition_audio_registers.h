@@ -46,6 +46,11 @@
 #define HDA_REG_RIRBSTS 0x5d   /**< RIRB Status (1 byte) */
 #define HDA_REG_RIRBSIZE 0x5e  /**< RIRB Size (1 byte) */
 
+#define HDA_REG_RIRBCTL_RINTCTL (1 << 0)
+#define HDA_REG_RIRBCTL_INTERRUPT_ENABLE HDA_REG_RIRBCTL_RINTCTL
+#define HDA_REG_RIRBCTL_RIRBDMAEN (1 << 1)
+#define HDA_REG_RIRBCTL_DMA_ENABLE HDA_REG_RIRBCTL_RIRBDMAEN
+
 /* Immediate Command Interface */
 #define HDA_REG_ICOI 0x60 /**< Immediate Command Output Interface (4 bytes) */
 #define HDA_REG_ICII 0x64 /**< Immediate Command Input Interface (4 bytes) */
