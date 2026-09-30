@@ -65,11 +65,24 @@
  * in the Global Capabilities Register (GCAP).
  *
  * @param _iss  Input Streams Supported count
+ *   Fetch this from the GCAP (Global Capabilities) Register bits [11:8]
  * @param _oss  Output Streams Supported count
+ *   Fetch this from the GCAP (Global Capabilities) Register bits [15:12]
  * @param _bss  Bidirectional Streams Supported count
+ *   Fetch this from the GCAP (Global Capabilities) Register bits [7:3]
  */
 #define HDA_STREAM_BASE_INPUT 0x80
+/**
+ * @param _iss  Input Streams Supported count
+ * Fetch this from the GCAP (Global Capabilities) Register bits [11:8]
+ */
 #define HDA_STREAM_BASE_OUTPUT(_iss) (0x80 + ((_iss) * 0x20))
+/**
+ * @param _iss  Input Streams Supported count
+ *   Fetch this from the GCAP (Global Capabilities) Register bits [11:8]
+ * @param _oss  Output Streams Supported count
+ *   Fetch this from the GCAP (Global Capabilities) Register bits [15:12]
+ */
 #define HDA_STREAM_BASE_BIDIRECT(_iss, _oss) (0x80 + ((_iss) * 0x20) + ((_oss) * 0x20))
 
 /**
@@ -112,6 +125,13 @@
 #define HDA_SD_REG_FMT 0x12   /**< Stream Format (2 bytes) */
 #define HDA_SD_REG_BDPL 0x18  /**< Buffer Descriptor List Pointer - Lower (4 bytes) */
 #define HDA_SD_REG_BDPU 0x1c  /**< Buffer Descriptor List Pointer - Upper (4 bytes) */
+
+/**
+ * Stream Control Register Bits
+ */
+#define HDA_SD_REG_CTL_RESET (1 << 0)
+#define HDA_SD_REG_CTL_RUN (1 << 1)
+#define HDA_SD_REG_CTL_STREAM(_n) (((_n) & 0xf) << 20)
 
 #define HDA_REG_WALCLKA 0x2030                        /**< Wall Clock Counter Alias (4 bytes) */
 #define HDA_REG_SD_LPIBA(_n) (0x2084 + ((_n) * 0x20)) /**< Stream Descriptor 'n' Link Position Alias */

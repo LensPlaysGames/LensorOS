@@ -25,6 +25,8 @@
 #include <stdint.h>
 #include <x86_64/high_definition_audio_registers.h>
 
+#include <bit>
+
 /* Standard HDA Verb IDs */
 // Intel HDA Spec 7.3.3.31
 #define HDA_VERB_GET_PARAMETER 0xf00
@@ -104,8 +106,11 @@ struct PinConfig {
 #define HDA_VERB_GET_CONN_LIST_ENTRY 0xf02
 #define HDA_VERB_SET_CONN_SELECT 0x701
 #define HDA_VERB_SET_POWER_STATE 0x705
+// Intel HDA 7.3.3.11 Converter Stream, Channel
+// Stream is in bits 7:4
+// Channel is in bits 3:0
 #define HDA_VERB_SET_CONV_STREAM_CHAN 0x706
-#define HDA_VERB_SET_CONV_FMT 0x200
+#define HDA_VERB_SET_CONV_FMT 0x2
 
 /* Pin Widget Control Verbs (Crucial to turn the jack on) */
 #define HDA_VERB_SET_PIN_WIDGET_CTL 0x707
@@ -140,16 +145,16 @@ typedef struct IntelHDAGlobalRegs {
     uint16_t statests;  // 0x0E: State Change Status
     uint16_t gsts;      // 0x10: Global Status
 
-    uint16_t output_stream_count() const {
+    uint16_t output_stream_count() volatile const {
         return (gcap >> 12) & 0xf;
     }
-    uint16_t input_stream_count() const {
+    uint16_t input_stream_count() volatile const {
         return (gcap >> 8) & 0xf;
     }
-    uint16_t bidi_stream_count() const {
+    uint16_t bidi_stream_count() volatile const {
         return (gcap >> 3) & 0x1f;
     }
-    uint16_t serial_data_out_signal_count() const {
+    uint16_t serial_data_out_signal_count() volatile const {
         switch ((gcap >> 1) & 0b11) {
             case 0b00:
                 return 1;
@@ -162,7 +167,7 @@ typedef struct IntelHDAGlobalRegs {
         }
         return 0;
     }
-    bool is64() const {
+    bool is64() volatile const {
         return gcap & 1;
     }
 
@@ -174,7 +179,7 @@ typedef struct IntelHDAGlobalRegs {
     // Note that the CORB/RIRB RUN bits and all Stream RUN bits must be
     // verified cleared to 0 before CRST# is written to 0 (asserted) in order
     // to assure a clean restart.
-    bool controller_reset_bit() const {
+    bool controller_reset_bit() volatile const {
         return gctl & 1;
     }
 } IntelHDAGlobalRegs;
@@ -182,29 +187,77 @@ typedef struct IntelHDAGlobalRegs {
 // Layout for a single DMA Stream Engine (e.g., Output Stream 1)
 // On standard Intel HDA, Output Stream 1 typically begins at offset 0x0E0 + (0 * 0x20)
 typedef struct IntelHDAStreamRegs {
-    uint32_t ctl;       // 0x00: Stream Control (3 bytes) + Status (1 byte)
-    uint32_t lpib;      // 0x04: Link Position In Buffer (The hardware tracking register!)
-    uint32_t cbl;       // 0x08: Cyclic Buffer Length (Total size of your DMA buffer pool)
-    uint16_t lvi;       // 0x0C: Last Valid Index (Number of BDL entries minus 1)
-    uint16_t reserved;  // 0x0E
-    uint16_t fifos;     // 0x10: FIFO Size
-    uint16_t fmt;       // 0x12: Stream Format
-    uint32_t bdlpl;     // 0x14: Buffer Descriptor List Pointer Lower 32-bits
-    uint32_t bdlpu;     // 0x18: Buffer Descriptor List Pointer Upper 32-bits
+    volatile uint32_t ctl;       // 0x00: Stream Control (3 bytes) + Status (1 byte)
+    volatile uint32_t lpib;      // 0x04: Link Position In Buffer
+    volatile uint32_t cbl;       // 0x08: Cyclic Buffer Length (Total size of DMA buffer pool)
+    volatile uint16_t lvi;       // 0x0c: Last Valid Index (Number of BDL entries minus 1)
+    volatile uint16_t reserved;  // 0x0e: Reserved
+    volatile uint16_t fifos;     // 0x10: FIFO Size
+    volatile uint16_t fmt;       // 0x12: Stream Format
+    volatile uint64_t bdlp;      // 0x14: Buffer Descriptor List Pointer Lower 32-bits
+
+    uint32_t control() const volatile {
+        return ctl & 0x00ffffff;
+    };
+    uint8_t status() const volatile {
+        return ((ctl >> 24) & 0xff);
+    };
+
+    static constexpr uint32_t build_ctl(uint32_t control, uint8_t status = 0) {
+        return (control & 0xffffff) | (uint32_t(status) << 24);
+    }
+
+    void control(uint32_t new_value) volatile {
+        auto new_ctl = build_ctl(new_value, status());
+        std::print("  control: {:#x} -> {:#x}\n", (uint32_t)ctl, new_ctl);
+        ctl = new_ctl;
+    };
+    // Bits 2, 3, and 4 of status are write-1-to-clear
+    void status_clear() volatile {
+        ctl = build_ctl(control(), 0b111 << 2);
+    };
+
+    void stream_reset() volatile {
+        // Set SRST (Bit 0 of control block -> physical bit 8)
+        auto current = control();
+        control(current | HDA_SD_REG_CTL_RESET);
+
+        // Tiny delay to give hardware time to perform reset (not required).
+        for (volatile auto i = 0u; i < 10000u; i += 1)
+            asm volatile("pause");
+
+        // Clear SRST to bring it back online
+        control(control() & ~HDA_SD_REG_CTL_RESET);
+
+        for (volatile auto i = 0u; i < 10000u; i += 1)
+            asm volatile("pause");
+    }
 } IntelHDAStreamRegs;
+static_assert(
+    offsetof(IntelHDAStreamRegs, fifos) == HDA_SD_REG_FIFOD,
+    "Intel HDA Stream FIFO Register Offset");
+static_assert(
+    offsetof(IntelHDAStreamRegs, bdlp) == HDA_SD_REG_BDPL,
+    "Intel HDA Stream Buffer Descriptor List Register Offset");
+
+static_assert(
+    sizeof(IntelHDAStreamRegs) == 0x20,
+    "Intel HDA Stream Registers are 0x20 bytes");
 
 // Buffer Descriptor entry layout (Must be 128-bit aligned in memory)
 struct alignas(16) IntelHDABdlEntry {
-    uint32_t address_low;
-    uint32_t address_high;
+    uint64_t address;
     uint32_t length;  // Number of bytes in this specific buffer fragment
     uint32_t ioc;     // Bit 0 = Interrupt on Completion (IOC) flag
 };
+static_assert(sizeof(IntelHDABdlEntry) == 16, "[HDA]: BDL Entries are 16 bytes");
 
 struct HDAController {
     bool init();
 
     void set_base(uintptr_t base) { Base = base; }
+
+    void handle_interrupt();
 
    private:
     // spin/busy-wait until response recieved.
@@ -220,13 +273,16 @@ struct HDAController {
 
     // BAR0 address
     uintptr_t Base{0};
+
+    // Command Rings
     volatile uint32_t* CORB{0};
     volatile uint64_t* RIRB{0};
     uintptr_t CORBEntryCount{0};
     uintptr_t RIRBEntryCount{0};
-    // This is the first entry in the RIRB containing a response we have not
-    // yet handled.
-    // uintptr_t RIRBReadPointer{0};
+
+    // Audio Sample Buffers
+    uintptr_t BufferCount{0};
+    uintptr_t CurrentBufferIndex{0};
 
     volatile IntelHDAGlobalRegs* global_regs() { return (volatile IntelHDAGlobalRegs*)Base; };
 
@@ -289,5 +345,7 @@ struct HDAController {
         return (volatile uint32_t*)(Base + HDA_REG_DPIBUBASE);
     }
 };
+
+extern HDAController* hda_interrupt_handler_controller;
 
 #endif  // LENSOR_OS_INTEL_HDA_H

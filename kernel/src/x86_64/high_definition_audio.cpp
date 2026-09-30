@@ -17,12 +17,14 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>
  */
 
+#include <event.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 #include <stdint.h>
 #include <x86_64/high_definition_audio.h>
 
 #include <print>
+#include <vector>
 
 constexpr inline uint32_t form_command(uint32_t verb, uint32_t param, uint32_t data, uint32_t node, uint32_t codec) {
     uint32_t verb_payload = 0;
@@ -35,6 +37,9 @@ constexpr inline uint32_t form_command(uint32_t verb, uint32_t param, uint32_t d
     // > not legal values for 4-bit verbs, as they select the extended 12-bit
     // > identifiers.
     if ((verb & 0xf00) == 0xf00 or (verb & 0xf00) == 0x700) {
+        if (data) {
+            std::print("[HDA]: Boi you dun fucked up; 0x7xx and 0xfxx verbs do not use data parameter; it is simply the bottom 8 bits of param\n");
+        }
         // Extended 12-bit verb layout (e.g., 0xf00, 0xf1c)
         // Verb takes bits [19:8], parameter/data takes bits [7:0]
         verb_payload = ((verb & 0xfff) << 8) | (param & 0xff);
@@ -282,9 +287,17 @@ bool HDAController::initialize_rirb() {
     return true;
 }
 
+HDAController* hda_interrupt_handler_controller{};
+extern "C" void hda_interrupt_handler() {
+    if (hda_interrupt_handler_controller)
+        hda_interrupt_handler_controller->handle_interrupt();
+}
+
 bool HDAController::init() {
     // Base address must be set during PCI enumeration
     if (not Base) return false;
+
+    hda_interrupt_handler_controller = this;
 
     uint32_t timeout = 2000000;
 
@@ -414,6 +427,8 @@ bool HDAController::init() {
             const uint32_t widget_count = HDA_PARAM_NODE_COUNT(function_group_query_result);
             const uint32_t widget_start_i = HDA_PARAM_NODE_START(function_group_query_result);
 
+            auto widget_types = std::vector<u8>(widget_count, u8(-1));
+
             for (uint32_t widget_i = widget_start_i; widget_i < widget_start_i + widget_count; ++widget_i) {
                 std::print("  Widget at {}\n", widget_i);
                 auto widget_capabilities_query_result = send_command(
@@ -423,6 +438,7 @@ bool HDAController::init() {
                     widget_i,
                     codec_i);
                 auto widget_type = HDA_PARAM_WIDGET_TYPE(widget_capabilities_query_result);
+                widget_types[widget_i] = widget_type;
                 switch (widget_type) {
                     case HDA_WIDGET_TYPE_AUDIO_OUTPUT: {
                         std::print("  output\n");
@@ -438,13 +454,18 @@ bool HDAController::init() {
                     } break;
                     case HDA_WIDGET_TYPE_PIN_COMPLEX: {
                         std::print("  pin complex\n");
+
+                        // Power up pin widget
+                        std::print("  ... powering pin complex on\n");
+                        send_command(HDA_VERB_SET_POWER_STATE, 0, 0, widget_i, codec_i);
+                        std::print("  powered on\n");
+
                         auto pin_complex_query_result = send_command(
                             HDA_VERB_GET_CONFIG_DEFAULT,
                             0,
                             0,
                             widget_i,
                             codec_i);
-
                         auto pin_complex_config = PinConfig(pin_complex_query_result);
                         switch (pin_complex_config.port_connectivity()) {
                             case 0b00: {
@@ -524,12 +545,8 @@ bool HDAController::init() {
                             0,
                             widget_i,
                             codec_i);
-                        if ((pin_capabilities & HDA_PIN_CAP_OUTPUT) == 0)
-                            continue;
-
-                        // Power up pin widget
-                        std::print("  powering pin complex on\n");
-                        send_command(HDA_VERB_SET_POWER_STATE, 0, 0, widget_i, codec_i);
+                        std::print("  capable of input: {}\n", (pin_capabilities & HDA_PIN_CAP_INPUT) != 0);
+                        std::print("  capable of output: {}\n", (pin_capabilities & HDA_PIN_CAP_OUTPUT) != 0);
 
                         // Get list of possible inputs, trying to find a path to a DAC, possibly
                         // through some amount of mixer/selector widgets.
@@ -542,68 +559,348 @@ bool HDAController::init() {
                         bool is_long_form = connection_count & 0x80;
                         connection_count &= 0x7f;
                         std::print("  {} connections\n", connection_count);
-                        if (connection_count > 1) {
-                            // Read the connection list elements using HDA_VERB_GET_CONN_LIST_ENTRY
-                            // TODO: Use Set Connection Select (HDA_VERB_SET_CONN_SELECT) to select input path
-                            for (uint32_t connection_group_i = 0; connection_group_i < connection_count;) {
-                                auto connection_entries = send_command(
-                                    HDA_VERB_GET_CONN_LIST_ENTRY,
-                                    connection_group_i,
-                                    0,
-                                    widget_i,
-                                    codec_i);
 
-                                if (is_long_form) {
-                                    // 16-bit Node IDs (2 entries per response payload)
-                                    uint16_t node0 = connection_entries & 0xffff;
-                                    uint16_t node1 = (connection_entries >> 16) & 0xffff;
+                        // Read the connection list elements using HDA_VERB_GET_CONN_LIST_ENTRY
+                        uint dac_id = uint(-1);
+                        for (uint32_t connection_group_i = 0; connection_group_i < connection_count;) {
+                            auto connection_entries = send_command(
+                                HDA_VERB_GET_CONN_LIST_ENTRY,
+                                connection_group_i,
+                                0,
+                                widget_i,
+                                codec_i);
 
-                                    std::print("    connected to node: {}\n", node0);
+                            if (is_long_form) {
+                                // 16-bit Node IDs (2 entries per response payload)
+                                uint16_t node0 = connection_entries & 0xffff;
+                                uint16_t node1 = (connection_entries >> 16) & 0xffff;
+
+                                ++connection_group_i;
+                                std::print("    node: {}\n", node0);
+                                if (widget_types[node0] != u8(-1))
+                                    std::print("    type: {}\n", widget_types[node0]);
+
+                                if (connection_group_i < connection_count) {
+                                    ++connection_group_i;
+                                    std::print("   node: {}\n", node1);
+                                    if (widget_types[node1] != u8(-1))
+                                        std::print("    type: {}\n", widget_types[node1]);
+                                }
+                            }
+                            else {
+                                // 8-bit Node IDs (4 entries per response payload)
+                                for (int shift = 0; shift < 32; shift += 8) {
+                                    if (connection_group_i >= connection_count) break;
                                     ++connection_group_i;
 
-                                    if (connection_group_i < connection_count) {
-                                        std::print("    connected to node: {}\n", node1);
-                                        ++connection_group_i;
-                                    }
-                                }
-                                else {
-                                    // 8-bit Node IDs (4 entries per response payload)
-                                    for (int shift = 0; shift < 32; shift += 8) {
-                                        if (connection_group_i >= connection_count) break;
-                                        uint8_t target_node = (connection_entries >> shift) & 0xFF;
+                                    uint8_t target_node = (connection_entries >> shift) & 0xFF;
 
-                                        // Handle Node ID Ranges (e.g., node X through Y if bit 7 of the byte is set)
-                                        // Note: Advanced range checking can be added here if needed
-                                        std::print("    connected to node: {}\n", target_node);
-                                        ++connection_group_i;
+                                    // Handle Node ID Ranges (e.g., node X through Y if bit 7 of the byte is set)
+                                    // Note: Advanced range checking can be added here if needed
+                                    std::print("    node: {}\n", target_node);
+                                    if (widget_types[target_node] != u8(-1)) {
+                                        std::print("    type: {}\n", widget_types[target_node]);
+                                        // DAC
+                                        if (widget_types[target_node] == HDA_WIDGET_TYPE_AUDIO_OUTPUT) {
+                                            dac_id = target_node;
+                                            break;
+                                        }
                                     }
                                 }
                             }
                         }
 
-                        // Unmute pin widget
-                        const uint32_t volume = 0x40;
+                        // TODO: If we aren't going to use this pin, we could power it down.
+                        if ((pin_capabilities & HDA_PIN_CAP_OUTPUT) == 0)
+                            continue;
+
+                        if (dac_id == uint(-1)) {
+                            std::print("  could not find DAC connected to pin complex\n");
+                            continue;
+                        }
+
+                        if (connection_count > 1) {
+                            // TODO: Use Set Connection Select (HDA_VERB_SET_CONN_SELECT) to select input path
+                        }
+
+                        // enable DAC
+                        // 1. power on
+                        std::print("  (dac): powering on\n");
+                        send_command(HDA_VERB_SET_POWER_STATE, 0, 0, dac_id, codec_i);
+                        // 2. amp gain/unmute
+                        const uint dac_volume = 0x7f;  // 100% == 0x7f
+                        std::print("  (dac): unmuting left, right channels for output. volume:{:#x}\n", dac_volume);
                         send_command(
                             HDA_VERB_SET_AMP_GAIN_MUTE,
                             HDA_AMP_PARAM_SET_LEFT | HDA_AMP_PARAM_SET_RIGHT
                                 | HDA_AMP_PARAM_SET_OUTPUT,
 
-                            volume,
+                            dac_volume,
+                            dac_id,
+                            codec_i);
+                        // 3. configure stream format
+                        // NOTE: 16-bit payload split across param (high byte) and data (low byte)
+                        // Format: Intel HDA 3.7.1 Stream Format Structure
+                        // Bit 15: TYPE
+                        //     0 -> PCM, 1 -> Non-PCM
+                        //     This bit changes the meaning of all other bits.
+                        //     The following is a description of the PCM format.
+                        // Bit 14: BASE
+                        //     0 -> 48kHz, 1 -> 44.1kHz
+                        // Bit 13: RESERVED
+                        // Bits [12:11]: MULT
+                        //     00 -> BASE
+                        //     01 -> x2
+                        //     10 -> x3
+                        //     11 -> x4
+                        // Bits [10:8]: DIV
+                        //     000 -> By 1
+                        //     001 -> By 2
+                        //     010 -> By 3
+                        //     011 -> By 4
+                        //     100 -> By 5
+                        //     101 -> By 6
+                        //     110 -> By 7
+                        //     111 -> By 8
+                        // Bit 7: RESERVED
+                        // Bits [6:4]: BITS
+                        //     Specifies number of bits in each sample.
+                        //     000 ->  8 bits. The data is packed in memory in  8-bit containers on 16-bit boundaries.
+                        //     001 -> 16 bits. The data is packed in memory in 16-bit containers on 16-bit boundaries.
+                        //     010 -> 20 bits. The data is packed in memory in 20-bit containers on 32-bit boundaries.
+                        //     011 -> 24 bits. The data is packed in memory in 24-bit containers on 32-bit boundaries.
+                        //     100 -> 32 bits. The data is packed in memory in 32-bit containers on 32-bit boundaries.
+                        //     101-111 -> RESERVED
+                        // Bit 3:0 CHAN:
+                        //     Specifies the number of channels for this stream in each "sample block"
+                        //     of the "packets" in each "frame" on the link.
+                        //
+                        //     0000 -> 1
+                        //     0001 -> 2
+                        //     ...
+                        //     1111 -> 16
+                        //
+                        //     Effectively, this value is the number of channels minus one, max of 16.
+                        uint16_t format_data{
+                            (uint16_t(0b0) << 15)     // PCM
+                            | (uint16_t(0b0) << 14)   // 48kHz
+                            | (uint16_t(0b00) << 11)  // Multiply by 1
+                            | (uint16_t(0b000) << 8)  // Divide by 1
+                            | (uint16_t(0b001) << 4)  // 16-bits
+                            | uint16_t(0b0001)        // 2 channels (stereo)
+                        };
+                        send_command(
+                            HDA_VERB_SET_CONV_FMT,
+                            format_data >> 8,
+                            format_data & 0xff,
+                            dac_id,
+                            codec_i);
+
+                        // 4. configure stream descriptors
+                        //   4a. first, actually allocate and configure the streams we want to
+                        //       describe.
+                        // An index of a valid output stream (i.e. not in use).
+                        // TODO: Find one by iterating output streams
+                        constexpr auto stream_index = 0;
+                        // Any value 1 thru 15
+                        constexpr auto stream_id = 1;
+                        std::print(
+                            "  utilizing output stream [{}] -> assigning id {}\n",
+                            stream_index,
+                            stream_id);
+                        std::print(
+                            "[HDA] input streams={} output streams={} bidi streams={}\n",
+                            global_regs()->input_stream_count(),
+                            global_regs()->output_stream_count(),
+                            global_regs()->bidi_stream_count());
+                        volatile auto* output_stream_registers
+                            = (volatile IntelHDAStreamRegs*)(Base
+                                                             + HDA_REG_OSD(
+                                                                 global_regs()->input_stream_count(),
+                                                                 stream_index,
+                                                                 0));
+                        std::print(
+                            "[HDA]: status:{:#x} control:{:#x}\n",
+                            output_stream_registers->status(),
+                            output_stream_registers->control());
+                        // Ensure the stream is stopped.
+                        //   clear run bit
+                        std::print("  stopping stream[{}]\n", stream_index);
+                        output_stream_registers->control(
+                            output_stream_registers->control() & ~HDA_SD_REG_CTL_RUN);
+                        std::print(
+                            "[HDA]: status:{:#x} control:{:#x}\n",
+                            output_stream_registers->status(),
+                            output_stream_registers->control());
+
+                        // Write chosen Stream ID to identify active stream.
+                        std::print("  assigning id {} to stream[{}]\n", stream_id, stream_index);
+                        auto control_value = output_stream_registers->control();
+                        control_value &= ~(0xf << 20);
+                        std::print("control value: {:#x}\n", control_value);
+                        // HDA_SD_REG_CTL_STREAM(stream_id) == 1048576 (0x100000)
+                        control_value |= HDA_SD_REG_CTL_STREAM(stream_id);
+                        std::print("control value w/ id: {:#x}\n", control_value);
+                        std::print("expected control value w/o status: {:#x}\n", control_value << 8);
+                        output_stream_registers->control(control_value);
+                        std::print(
+                            "[HDA]: status:{:#x} control:{:#x}\n",
+                            output_stream_registers->status(),
+                            output_stream_registers->control());
+
+                        //   perform hardware reset
+                        // std::print("  resetting stream[{}]\n", stream_index);
+                        // output_stream_registers->stream_reset();
+                        // std::print(
+                        //     "[HDA]: status:{:#x} control:{:#x}\n",
+                        //     output_stream_registers->status(),
+                        //     output_stream_registers->control());
+
+                        // Configure stream format.
+                        std::print("  stream[{}] setting format: {:#x}\n", stream_index, format_data);
+                        output_stream_registers->fmt = format_data;
+                        std::print(
+                            "[HDA]: status:{:#x} control:{:#x}\n",
+                            output_stream_registers->status(),
+                            output_stream_registers->control());
+
+                        // Allocate buffers for BDL
+                        constexpr auto buffer_count = 2u;
+                        constexpr auto buffer_size = PAGE_SIZE * 2;
+                        constexpr auto buffer_pages = buffer_size / PAGE_SIZE;
+                        constexpr auto buffer_total_size = buffer_size * buffer_count;
+
+                        BufferCount = buffer_count;
+
+                        uint32_t total_samples_played = 0;
+
+                        auto* buffer_descriptors = (IntelHDABdlEntry*)Memory::request_page();
+                        memset(buffer_descriptors, 0, PAGE_SIZE);
+                        for (auto i = 0u; i < buffer_count; ++i) {
+                            auto* buffer_base = Memory::request_pages(buffer_pages);
+                            auto buffer_physical = Memory::TO_FRAME_POINTER(buffer_base);
+                            std::print("  allocated audio sample buffer[{}] at {}, length={}\n", i, (void*)buffer_physical, buffer_size);
+                            // silence!
+                            memset(buffer_base, 0, buffer_size);
+                            buffer_descriptors[i].length = buffer_size;
+                            buffer_descriptors[i].address = buffer_physical;
+
+                            /** (!) TEST: SQUARE WAVE (!) **/
+                            {
+                                // 48000 Hz / 100 periods = 480 samples per full wave cycle (a clean 100 Hz bass tone)
+                                // Changing the tone to alternate every 240 samples creates a perfect 100Hz square wave
+                                constexpr auto half_period = 128u;
+
+                                auto* buffer = (int16_t*)buffer_base;
+
+                                for (auto i = 0u; i < buffer_size / sizeof(int16_t); i++) {
+                                    int16_t sample_value;
+
+                                    // Determine if we are in the positive or negative phase of the wave
+                                    if ((total_samples_played / half_period) % 2 == 0) {
+                                        sample_value = 16384;  // Half of the maximum 16-bit range (Safe headroom)
+                                    }
+                                    else {
+                                        sample_value = -16384;  // Half of the minimum 16-bit range
+                                    }
+
+                                    // Fill interleaved Intel HDA stereo channels
+                                    buffer[i * 2] = sample_value;      // Left
+                                    buffer[i * 2 + 1] = sample_value;  // Right
+
+                                    // Increment the global counter safely
+                                    total_samples_played++;
+                                }
+                            }
+
+                            std::print(
+                                "  bdl[{}]: length={} address={} ioc={}\n",
+                                i,
+                                buffer_descriptors[i].length,
+                                (void*)buffer_descriptors[i].address,
+                                buffer_descriptors[i].ioc);
+                        }
+
+                        // Configure BDL
+                        const auto buffer_descriptors_physical = Memory::TO_FRAME_POINTER(buffer_descriptors);
+                        std::print("  buffer descriptor list pointer: {}\n", (void*)buffer_descriptors_physical);
+                        std::print(
+                            "[HDA]: status:{:#x} control:{:#x}\n",
+                            output_stream_registers->status(),
+                            output_stream_registers->control());
+                        output_stream_registers->bdlp = buffer_descriptors_physical;
+                        output_stream_registers->cbl = buffer_total_size;
+                        output_stream_registers->lvi = buffer_count - 1;
+                        std::print(
+                            "[HDA]: bdlp={} cbl={} lvi={}\n",
+                            (void*)output_stream_registers->bdlp,
+                            (uintptr_t)output_stream_registers->cbl,
+                            (uintptr_t)output_stream_registers->lvi);
+                        std::print(
+                            "[HDA]: status:{:#x} control:{:#x}\n",
+                            output_stream_registers->status(),
+                            output_stream_registers->control());
+                        output_stream_registers->status_clear();
+
+                        //   4b. then, tell the DAC to take input from that stream
+                        // Stream is in bits 7:4
+                        // Channel is in bits 3:0
+                        send_command(
+                            HDA_VERB_SET_CONV_STREAM_CHAN,
+                            ((stream_id & 0xf) << 4),
+                            0,
+                            dac_id,
+                            codec_i);
+
+                        // Unmute pin widget
+                        const uint pin_volume = 0x7f;  // 100% == 0x7f
+                        std::print("  unmuting left, right channels for output. volume:{:#x}\n", pin_volume);
+                        send_command(
+                            HDA_VERB_SET_AMP_GAIN_MUTE,
+                            HDA_AMP_PARAM_SET_LEFT | HDA_AMP_PARAM_SET_RIGHT
+                                | HDA_AMP_PARAM_SET_OUTPUT,
+
+                            pin_volume,
                             widget_i,
                             codec_i);
 
                         // Enable pin widget
-                        // TODO: if headphone, configure VRef En (bottom 2 bits) and set bit 7
-                        std::print("  enabling pin complex\n");
+                        std::print("  enabling pin complex for output\n");
                         uint32_t pin_ctl_payload = HDA_PIN_CTL_ENABLE_OUTPUT;
+                        // If headphone, configure VRef En (bottom 2 bits) and set bit 7
                         if (pin_complex_config.default_device() == 2)
-                            pin_ctl_payload |= 5;
+                            pin_ctl_payload |= HDA_PIN_CTL_ENABLE_HP | 5;
                         send_command(
                             HDA_VERB_SET_PIN_WIDGET_CTL,
-                            0,
                             pin_ctl_payload,
+                            0,
                             widget_i,
                             codec_i);
+
+                        std::print(
+                            "[HDA]: status:{:#x} control:{:#x}\n",
+                            output_stream_registers->status(),
+                            output_stream_registers->control());
+
+                        asm volatile("wbinvd" ::: "memory");
+
+                        // Set output stream running
+                        // Set the run bit in the control register
+                        // NOTE: This should cause audio to start playing...
+                        // Ensure status write-1-to-clear bits are clear
+                        output_stream_registers->status_clear();
+                        output_stream_registers->control(
+                            output_stream_registers->control() | HDA_SD_REG_CTL_RUN);
+
+                        for (int i = 8000000; i > 0; --i) {
+                            asm volatile("pause" ::: "memory");
+                            if (i % 20000 == 0) {
+                                std::print(
+                                    "[HDA]: status:{:#x} control:{:#x}\n",
+                                    output_stream_registers->status(),
+                                    output_stream_registers->control());
+                            }
+                        }
 
                     } break;
                     case HDA_WIDGET_TYPE_POWER_STATE: {
@@ -623,4 +920,40 @@ bool HDAController::init() {
     }
 
     return true;
+}
+
+void HDAController::handle_interrupt() {
+    constexpr auto output_stream_index = 0u;
+
+    auto global_stream_index = global_regs()->input_stream_count() + output_stream_index;
+    auto output_stream_mask = (1u << global_stream_index);
+
+    // If this interrupt targets the configured output stream...
+    volatile uint32_t* intsts = (volatile uint32_t*)(Base + HDA_REG_INTSTS);
+    if ((*intsts & output_stream_mask) != 0) {
+        // And the interrupt is a buffer completion interrupt (BCIS) bit set.
+        volatile auto* output_stream_registers
+            = (volatile IntelHDAStreamRegs*)(Base
+                                             + HDA_REG_OSD(
+                                                 global_regs()->input_stream_count(),
+                                                 output_stream_index,
+                                                 0));
+        if (output_stream_registers->status() & (1u << 2)) {
+            // This was a buffer completion interrupt; we need to "swap buffers" (let
+            // audio server know that the current buffer has been played from and is
+            // ready to be written to)
+            auto buffer_ready_for_cpu = CurrentBufferIndex;
+
+            Event e{EventType::AUDIOBUFFER};
+            auto* edata = (EventData_AudioBuffer*)(&e.Data[0]);
+            edata->buffer_viable = buffer_ready_for_cpu;
+            gEvents.notify(e);
+
+            // Flip ping-pong tracking flag for the next cycle
+            CurrentBufferIndex = (CurrentBufferIndex + 1) % BufferCount;
+        }
+
+        // Ensure more interrupts can happen
+        output_stream_registers->status_clear();
+    }
 }

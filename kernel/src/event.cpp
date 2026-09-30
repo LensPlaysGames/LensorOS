@@ -28,7 +28,7 @@ EventManager gEvents;
 
 void EventManager::notify(const Event& event) {
     if (event.Type >= EventType::COUNT) return;
-    static_assert((usz)EventType::COUNT == 5, "Exhaustive handling of process-specific event types in all-process notify().");
+    static_assert((usz)EventType::COUNT == 6, "Exhaustive handling of process-specific event types in all-process notify().");
     if (event.Type == EventType::READY_TO_READ || event.Type == EventType::READY_TO_WRITE) {
         std::print(
             "[Events]: Event manager refuses to notify all processes for process-specific events.\n"

@@ -39,6 +39,7 @@ typedef enum EventType {
     EVENTTYPE_READY_TO_WRITE,
     EVENTTYPE_KEYBOARD,
     EVENTTYPE_MOUSE,
+    EVENTTYPE_AUDIOBUFFER,
     EVENTTYPE_COUNT
 } EventType;
 typedef union EventFilter {
@@ -76,6 +77,9 @@ enum struct EventType : u32 {
     // Human Input
     KEYBOARD,
     MOUSE,  // NOTE: touch, joystick, etc
+
+    // Multimedia
+    AUDIOBUFFER,
 
     COUNT
 };
@@ -132,5 +136,8 @@ typedef struct EventData_MouseInput {
     int32_t delta_y;
     int32_t wheel_delta;
 } EventData_MouseInput;
+typedef struct EventData_AudioBuffer {
+    size_t buffer_viable;
+} EventData_AudioBuffer;
 
 #endif  // LENSOROS_DEFINES_KQUEUE_EVENTS_H
