@@ -117,6 +117,9 @@ class SystemDevice {
 struct System {
     std::vector<std::shared_ptr<SystemDevice>> Devices;
 
+    hardware_audio_t audio_config{};
+    hardware_graphic_t graphic_config{};
+
     System() {}
 
     void set_cpu(const CPUDescription& cpu) {

@@ -21,6 +21,7 @@
 #define _SYSCALLS_H
 
 #include <bits/decls.h>
+#include <lensor/kqueue_events.h>
 #include <lensor/syscalls.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -60,7 +61,8 @@
 #define SYS_shared_memory_release 29
 #define SYS_wait_milliseconds 30
 #define SYS_wait_nanoseconds 31
-#define SYS_MAXSYSCALL 31
+#define SYS_hardware 32
+#define SYS_MAXSYSCALL 32
 #else
 #define SYS_read 0
 #define SYS_write 1
@@ -289,8 +291,6 @@ ProcFD sys_accept(ProcFD socketFD, const sockaddr* address, size_t* addressLengt
     return (ProcFD)syscall(SYS_accept, (uintptr_t)socketFD, (uintptr_t)address, (uintptr_t)addressLength);
 }
 
-#include <lensor/kqueue_events.h>
-
 int sys_kqueue() {
     return (int)syscall(SYS_kqueue);
 }
@@ -310,6 +310,16 @@ void sys_wait_milliseconds(size_t milliseconds) {
 }
 void sys_wait_nanoseconds(size_t nanoseconds) {
     syscall(SYS_wait_nanoseconds, nanoseconds);
+}
+
+int sys_hardware(hardware_query_type_t selector, void* outdata) {
+    return syscall(SYS_hardware, selector, outdata);
+}
+int sys_graphic_hardware(hardware_graphic_t* outdata) {
+    return syscall(SYS_hardware, LENSOR_HARDWARE_GRAPHIC, outdata);
+}
+int sys_audio_hardware(hardware_audio_t* outdata) {
+    return syscall(SYS_hardware, LENSOR_HARDWARE_AUDIO, outdata);
 }
 
 /// ===========================================================================
@@ -426,7 +436,12 @@ inline int sys_connect(ProcFD socketFD, const sockaddr* address, size_t addressL
 inline ProcFD sys_accept(ProcFD socketFD, const sockaddr* address, size_t* addressLength) {
     return std::__detail::syscall<ProcFD>(SYS_accept, (uintptr_t)socketFD, (uintptr_t)address, (uintptr_t)addressLength);
 }
-// TODO: kqueue, kevent
+inline int sys_kqueue() {
+    return std::__detail::syscall<int>(SYS_kqueue);
+}
+inline int sys_kevent(int handle, const Event* changelist, int numChanges, Event* eventlist, int maxEvents) {
+    return std::__detail::syscall<int>(SYS_kevent, handle, changelist, numChanges, eventlist, maxEvents);
+}
 inline int sys_directory_data(const char* path, DirectoryEntry* entries, int maxEntries) {
     return std::__detail::syscall<int>(SYS_directory_data, (uintptr_t)path, (uintptr_t)entries, (uintptr_t)maxEntries);
 }
@@ -439,6 +454,16 @@ inline void sys_wait_milliseconds(size_t milliseconds) {
 }
 inline void sys_wait_nanoseconds(size_t nanoseconds) {
     std::__detail::syscall(SYS_wait_nanoseconds, nanoseconds);
+}
+
+inline int sys_hardware(hardware_query_type_t selector, void* outdata) {
+    return std::__detail::syscall<int>(SYS_hardware, selector, outdata);
+}
+inline int sys_graphic_hardware(hardware_graphic_t* outdata) {
+    return std::__detail::syscall<int>(SYS_hardware, LENSOR_HARDWARE_GRAPHIC, outdata);
+}
+inline int sys_audio_hardware(hardware_audio_t* outdata) {
+    return std::__detail::syscall<int>(SYS_hardware, LENSOR_HARDWARE_AUDIO, outdata);
 }
 
 }  // namespace std

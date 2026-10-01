@@ -20,6 +20,28 @@
 #ifndef LENSOROS_DEFINES_SYSCALLS_H
 #define LENSOROS_DEFINES_SYSCALLS_H
 
+#include <stdint.h>
+
+typedef enum hardware_query_type_t {
+    LENSOR_HARDWARE_GRAPHIC,
+    LENSOR_HARDWARE_AUDIO,
+
+    LENSOR_HARDWARE_COUNT
+} hardware_query_type_t;
+typedef struct hardware_graphic_t {
+    uintptr_t fb_width;
+    uintptr_t fb_height;
+    uintptr_t fb_bytes_per_line;
+    uintptr_t fb_size;
+    uint8_t fb_format;
+    void* fb_base; /**< linear framebuffer mapped into process' memory region */
+} hardware_graphic_t;
+typedef struct hardware_audio_t {
+    void* sample_buffers[8];
+    uint8_t sample_buffer_count;
+    uintptr_t sample_buffer_byte_size;
+} hardware_audio_t;
+
 typedef enum LensorOS_SyscallRead_Flags {
     LENSOROS_SYSCALL_READ_FLAG_NONE = 0,
     // If this bit is set, do *not* block to wait for data.

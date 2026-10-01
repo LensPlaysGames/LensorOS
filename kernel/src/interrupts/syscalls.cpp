@@ -1280,6 +1280,72 @@ void sys$31_wait_nanoseconds(usz nanoseconds) {
     // call high precision timer blocking wait() function...
 }
 
+int sys$32_hardware(hardware_query_type_t t, void* out) {
+    DBGMSG(sys$_dbgfmt, 32, "hardware");
+    auto* process = Scheduler::CurrentProcess->value();
+    if ((not process)
+        or (not process->valid_address(out))
+        or (not SYSTEM))
+        return -1;
+
+    switch (t) {
+        case LENSOR_HARDWARE_GRAPHIC: {
+            auto config = SYSTEM->graphic_config;
+            auto fb_pages = (config.fb_size + PAGE_SIZE - 1) / PAGE_SIZE;
+
+            auto vaddr = process->next_region_vaddr;
+            process->next_region_vaddr += fb_pages * PAGE_SIZE;
+            auto flags = (u64)Memory::PageTableFlag::Present
+                         | (u64)Memory::PageTableFlag::ReadWrite
+                         | (u64)Memory::PageTableFlag::UserSuper;
+            Memory::map_pages(
+                Scheduler::CurrentProcess->value()->CR3,
+                (void*)vaddr,
+                (void*)config.fb_base,
+                flags,
+                fb_pages);
+            process->add_memory_region(
+                (void*)vaddr,
+                config.fb_base,
+                config.fb_size,
+                flags);
+
+            config.fb_base = (void*)vaddr;
+
+            memcpy(out, &config, sizeof(hardware_graphic_t));
+        } break;
+        case LENSOR_HARDWARE_AUDIO: {
+            hardware_audio_t config = SYSTEM->audio_config;
+            auto buffer_pages = (config.sample_buffer_byte_size + PAGE_SIZE - 1) / PAGE_SIZE;
+            auto flags = (u64)Memory::PageTableFlag::Present
+                         | (u64)Memory::PageTableFlag::ReadWrite
+                         | (u64)Memory::PageTableFlag::UserSuper;
+
+            for (uint i = 0; i < config.sample_buffer_count; ++i) {
+                auto vaddr = process->next_region_vaddr;
+                process->next_region_vaddr += buffer_pages * PAGE_SIZE;
+                Memory::map_pages(
+                    Scheduler::CurrentProcess->value()->CR3,
+                    (void*)vaddr,
+                    (void*)config.sample_buffers[i],
+                    flags,
+                    buffer_pages);
+                process->add_memory_region(
+                    (void*)vaddr,
+                    (void*)PhysicalKernelAddress(PhysicalAddress(config.sample_buffers[i])).address,
+                    config.sample_buffer_byte_size,
+                    flags);
+                config.sample_buffers[i] = (void*)vaddr;
+            }
+
+            memcpy(out, &config, sizeof(hardware_audio_t));
+        } break;
+        case LENSOR_HARDWARE_COUNT:
+            return -1;
+    }
+    return 0;
+}
+
 // TODO: Reorder this
 // FIXME: Make it easier to reorder this (maybe separate the number
 // from the name? I don't know, something to make this easier...)
@@ -1338,4 +1404,5 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
 
     (void*)sys$30_wait_milliseconds,
     (void*)sys$31_wait_nanoseconds,
+    (void*)sys$32_hardware,
 };
