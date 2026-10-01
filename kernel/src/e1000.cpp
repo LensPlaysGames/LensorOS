@@ -1981,7 +1981,7 @@ E1000 gE1000 = {};
 
 void E1000::write_command(u16 address, u32 value) {
     if (BARType == PCI::BarType::Memory)
-        volatile_write((volatile u32*)(BARMemoryAddress + address), value);
+        volatile_write((volatile u32*)(BARMemoryAddress.address + address), value);
     else {
         out32(BARIOAddress, address);
         io_wait();
@@ -1990,7 +1990,7 @@ void E1000::write_command(u16 address, u32 value) {
 }
 u32 E1000::read_command(u16 address) {
     if (BARType == PCI::BarType::Memory)
-        return volatile_read<u32>((volatile u32*)(BARMemoryAddress + address));
+        return volatile_read<u32>((volatile u32*)(BARMemoryAddress.address + address));
     else {
         out32(BARIOAddress, address);
         io_wait();
@@ -2077,7 +2077,7 @@ void E1000::get_mac_address() {
     }
     else {
         // TODO: What if BARType is IO? We can probably do this same thing through BARIOAddress and 3 in32()s.
-        u8* base = (u8*)(BARMemoryAddress + REG_RAL_BEGIN);
+        u8* base = (u8*)(BARMemoryAddress.address + REG_RAL_BEGIN);
         for (uint i = 0; i < 6; ++i, ++base) MACAddress[i] = *base;
         if (!MACAddress[0] && !MACAddress[1] && !MACAddress[2] && !MACAddress[3])
             std::print("[E1000]:\033[31mERROR:\033[m First four bytes of MACAddress are zero!\n");
@@ -2091,23 +2091,23 @@ void E1000::decode_base_address() {
     BARType = PCI::get_bar_type(PCIHeader->BAR0);
     if (BARType == PCI::BarType::Memory) {
         BARMemoryAddress = PCI::get_bar_address(PCIHeader);
-
         const auto bar_size = PCI::get_bar_size(PCIHeader);
-
-        // Possible FIXME: Cache Disabled flag?
-        Memory::map_pages(
-            (void*)BARMemoryAddress,
-            (void*)Memory::TO_FRAME_POINTER(BARMemoryAddress),
-            (u64)Memory::PageTableFlag::Present
-                | (u64)Memory::PageTableFlag::ReadWrite,
-            (bar_size + PAGE_SIZE - 1) / PAGE_SIZE);
-
-        std::print("[E1000]: BAR0 is memory! addr={} size={:x}\n", (void*)BARMemoryAddress, bar_size);
+        Memory::map_region_mmio(
+            Memory::startup_handle,
+            BARMemoryAddress,
+            PhysicalAddress(BARMemoryAddress),
+            bar_size);
+        std::print(
+            "[E1000]: BAR0 is memory! addr={} size={:x}\n",
+            (void*)BARMemoryAddress.address,
+            bar_size);
     }
     else {
         /// Remove bottom bit from address.
         BARIOAddress = PCIHeader->BAR0 & ~usz(1);
-        std::print("[E1000]: BAR0 is IO! addr={}\n", (void*)BARIOAddress);
+        std::print(
+            "[E1000]: BAR0 is IO! addr={}\n",
+            (void*)BARIOAddress);
     }
 }
 
@@ -2153,7 +2153,7 @@ void E1000::initialise_rx() {
     /// come from the EEPROM or from any other means
     // TODO: What if BARType is IO? We can probably do this same thing through BARIOAddress and 3 in32()s.
     // FIXME: What about REG_RAH??
-    u8* base = (u8*)(BARMemoryAddress + REG_RAL_BEGIN);
+    u8* base = (u8*)(BARMemoryAddress.address + REG_RAL_BEGIN);
     for (uint i = 0; i < sizeof(MACAddress); ++i, ++base) *base = MACAddress[i];
 
     /// Initialize the MTA (Multicast Table Array) to 0b.
@@ -2170,7 +2170,7 @@ void E1000::initialise_rx() {
     static constexpr uint RXDescCountMax = (pageCount * PAGE_SIZE) / sizeof(E1000::RXDesc);
     RXDescCount = RXDescCountMax;
     RXDescPhysical = (volatile E1000::RXDesc*)Memory::request_pages(pageCount);
-    uintptr_t RXDescFramePointer = Memory::TO_FRAME_POINTER(uintptr_t(RXDescPhysical));
+    uintptr_t RXDescFramePointer = PhysicalAddress(PhysicalKernelAddress(RXDescPhysical)).address;
     u32 addressLowBytes = RXDescFramePointer & 0xffffffff;
     u32 addressHighBytes = RXDescFramePointer >> 32;
     write_command(REG_RXDESCLO, addressLowBytes);
@@ -2193,7 +2193,7 @@ void E1000::initialise_rx() {
     for (usz i = 0; i < RXDescCount; ++i) {
         volatile E1000::RXDesc* desc = RXDescPhysical + i;
         auto RxBuffer = Memory::request_pages(KiB(8) / PAGE_SIZE);
-        desc->Address = Memory::TO_FRAME_POINTER(RxBuffer);
+        desc->Address = PhysicalAddress(PhysicalKernelAddress(RxBuffer)).address;
         desc->Status = 0;
     }
 
@@ -2221,7 +2221,7 @@ void E1000::initialise_tx() {
     static constexpr uint TXDescCountMax = (pageCount * PAGE_SIZE) / sizeof(E1000::TXDesc);
     TXDescCount = TXDescCountMax;
     TXDescPhysical = (volatile E1000::TXDesc*)Memory::request_pages(pageCount);
-    uintptr_t TXDescFramePointer = Memory::TO_FRAME_POINTER(TXDescPhysical);
+    uintptr_t TXDescFramePointer = PhysicalAddress(PhysicalKernelAddress(TXDescPhysical)).address;
     u32 addressLowBytes = TXDescFramePointer & 0xffffffff;
     u32 addressHighBytes = TXDescFramePointer >> 32;
     write_command(REG_TXDESCLO, addressLowBytes);
@@ -2273,7 +2273,7 @@ void E1000::write_raw(void* data, usz length) {
         pages = length / PAGE_SIZE;
 
     auto physical_memory = Memory::request_pages(pages);
-    desc->Address = Memory::TO_FRAME_POINTER(physical_memory);
+    desc->Address = PhysicalAddress(PhysicalKernelAddress(physical_memory)).address;
     // std::print("Copying {} pages from virtual {} to physical {}\n", pages, data, (void*)desc->Address);
     memcpy(physical_memory, data, length);
     /// Maximum allowed packet size (16288 bytes).
@@ -2351,7 +2351,7 @@ void E1000::handle_interrupt() {
             // Reset descriptor so that it can be used again.
             usz pages = (txDesc->Length + PAGE_SIZE - 1) / PAGE_SIZE;
             Memory::free_pages(
-                (void*)Memory::FROM_FRAME_POINTER(txDesc->Address),
+                (void*)Memory::FROM_FRAME_POINTER(PhysicalAddress(txDesc->Address)).address,
                 pages);
             txDesc->Address = 0;
             txDesc->Command = 0;
@@ -2389,7 +2389,7 @@ void E1000::handle_interrupt() {
             if (rxDesc->Status & RXDesc::DONE
                 and rxDesc->Status & RXDesc::END_OF_PACKET) {
                 std::array<u8, 6> macDst;
-                auto rxDescAddress = Memory::FROM_FRAME_POINTER(rxDesc->Address);
+                auto rxDescAddress = Memory::FROM_FRAME_POINTER(PhysicalAddress(rxDesc->Address)).address;
                 std::copy(
                     (u8*)rxDescAddress,
                     (u8*)rxDescAddress + 6,

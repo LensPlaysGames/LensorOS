@@ -34,6 +34,7 @@
 #include <keyboard.h>
 #include <keyboard_scancode_translation.h>
 #include <lensor/keys.h>
+#include <memory/api.h>
 #include <memory/paging.h>
 #include <memory/virtual_memory_manager.h>
 #include <mouse.h>
@@ -363,19 +364,19 @@ __attribute__((interrupt)) void page_fault_handler(InterruptFrameError* frame) {
     std::print("  PageTable Address: {}\n", (void*)cr3);
 
     Memory::PageMapIndexer indexer(address);
-    auto* pml4 = (Memory::PageTable*)Memory::FROM_FRAME_POINTER(cr3);
+    auto* pml4 = (Memory::PageTable*)Memory::FROM_FRAME_POINTER(PhysicalAddress(cr3)).address;
     Memory::PageDirectoryEntry& PML4PDE = pml4->entries[indexer.page_directory_pointer()];
     std::print("4th lvl permissions | ");
     Memory::print_pde_flags(PML4PDE);
     std::print("\n");
 
-    auto* PDP = (Memory::PageTable*)Memory::FROM_FRAME_POINTER(PML4PDE.address());
+    auto* PDP = (Memory::PageTable*)Memory::FROM_FRAME_POINTER(PhysicalAddress(PML4PDE.address())).address;
     Memory::PageDirectoryEntry& PDPPDE = PDP->entries[indexer.page_directory()];
     std::print("3rd lvl permissions | ");
     Memory::print_pde_flags(PDPPDE);
     std::print("\n");
 
-    auto* PD = (Memory::PageTable*)Memory::FROM_FRAME_POINTER(PDPPDE.address());
+    auto* PD = (Memory::PageTable*)Memory::FROM_FRAME_POINTER(PhysicalAddress(PDPPDE.address())).address;
     Memory::PageDirectoryEntry& PDPDE = PD->entries[indexer.page_table()];
     std::print("2nd lvl permissions | ");
     Memory::print_pde_flags(PDPDE);
@@ -384,7 +385,7 @@ __attribute__((interrupt)) void page_fault_handler(InterruptFrameError* frame) {
     if (PDPDE.flag(Memory::PageTableFlag::LargerPages))
         std::print("PHYS {:#016x} at VIRT {:#016x}\n", u64(PDPDE.address()), u64(address));
     else {
-        auto* PT = (Memory::PageTable*)Memory::FROM_FRAME_POINTER(PDPDE.address());
+        auto* PT = (Memory::PageTable*)Memory::FROM_FRAME_POINTER(PhysicalAddress(PDPDE.address())).address;
         Memory::PageDirectoryEntry& PDE = PT->entries[indexer.page()];
         std::print("1st lvl permissions | ");
         Memory::print_pde_flags(PDE);

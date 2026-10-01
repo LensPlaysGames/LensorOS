@@ -22,6 +22,7 @@
 #include <interrupts/interrupts.h>
 #include <linked_list.h>
 #include <memory.h>
+#include <memory/api.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
@@ -470,7 +471,7 @@ pid_t CopyUserspaceProcess(Process* original) {
         Memory::map_pages(
             newProcess->CR3,
             newMemory.vaddr,
-            (void*)Memory::TO_FRAME_POINTER(newMemory.paddr),
+            (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(newMemory.paddr)).address,
             (u64)Memory::PageTableFlag::Present
                 | (u64)Memory::PageTableFlag::ReadWrite
                 | (u64)Memory::PageTableFlag::UserSuper,

@@ -20,6 +20,7 @@
 #include <acpi.h>
 #include <cstr.h>
 #include <integers.h>
+#include <memory/api.h>
 #include <memory/common.h>
 
 #include <format>
@@ -46,8 +47,12 @@ void initialize(RSDP2* rootSystemDescriptorPointer) {
         return;
     }
     gRSDP = (ACPI::SDTHeader*)rootSystemDescriptorPointer;
+
     // eXtended System Descriptor Table
-    gXSDT = (ACPI::SDTHeader*)(Memory::FROM_FRAME_POINTER(rootSystemDescriptorPointer->XSDTAddress));
+    auto xsdt = Memory::FROM_FRAME_POINTER(
+        PhysicalAddress(rootSystemDescriptorPointer->XSDTAddress));
+    gXSDT = (ACPI::SDTHeader*)(xsdt.address);
+
     DBGMSG(
         "  RSDP {}\n"
         "  XSDT: {}\n"
@@ -102,9 +107,15 @@ void* find_table(SDTHeader* header, const char* signature) {
 
     DBGMSG("  {}: {} entries\n", __s(header->Signature), entries);
     for (u64 t = 0; t < entries; ++t) {
-        SDTHeader* sdt
-            = (SDTHeader*)Memory::FROM_FRAME_POINTER(*(
-                (uintptr_t*)((uintptr_t)header + sizeof(SDTHeader)) + t));
+        // SDTHeader* sdt
+        //     = (SDTHeader*)Memory::FROM_FRAME_POINTER(*(
+        //         (uintptr_t*)((uintptr_t)header + sizeof(SDTHeader)) + t));
+
+        auto a = (uintptr_t)header + sizeof(SDTHeader);
+        auto* b = (uintptr_t*)(a) + t;
+        auto c = *b;
+        auto* sdt = (SDTHeader*)Memory::FROM_FRAME_POINTER(PhysicalAddress(c)).address;
+
 #ifdef DEBUG_ACPI
         print_sdt(sdt);
 #endif /* DEBUG_ACPI */

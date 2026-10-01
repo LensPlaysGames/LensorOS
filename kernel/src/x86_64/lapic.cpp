@@ -18,6 +18,7 @@
  */
 
 #include <interrupts/interrupts.h>
+#include <memory/api.h>
 #include <memory/common.h>
 #include <memory/virtual_memory_manager.h>
 #include <time.h>
@@ -172,10 +173,10 @@ void IOAPIC::print_debug() {
 bool IOAPIC::init(uintptr_t bootstrap_cpu_id) {
     if (not Base) return false;
 
-    Base = Memory::FROM_FRAME_POINTER(Base);
+    Base = Memory::FROM_FRAME_POINTER(PhysicalAddress(Base)).address;
     Memory::map(
         (void*)Base,
-        (void*)Memory::TO_FRAME_POINTER(Base),
+        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(Base)).address,
         (u64)Memory::PageTableFlag::Present
             | (u64)Memory::PageTableFlag::ReadWrite
             | (u64)Memory::PageTableFlag::CacheDisabled
@@ -226,10 +227,10 @@ bool LAPIC::init() {
 
     // TODO: Verify address from model-specific register is trustworthy...
 
-    Base = Memory::FROM_FRAME_POINTER(apic_base_from_msr);
+    Base = Memory::FROM_FRAME_POINTER(PhysicalAddress(apic_base_from_msr)).address;
     Memory::map(
         (void*)Base,
-        (void*)Memory::TO_FRAME_POINTER(Base),
+        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(Base)).address,
         (u64)Memory::PageTableFlag::Present
             | (u64)Memory::PageTableFlag::ReadWrite
             | (u64)Memory::PageTableFlag::CacheDisabled

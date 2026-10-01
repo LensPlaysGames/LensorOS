@@ -20,6 +20,7 @@
 #include <kernel.h>
 #include <link_definitions.h>
 #include <memory.h>
+#include <memory/api.h>
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
@@ -64,20 +65,21 @@ void initialize() {
         std::print("[ELF]: Couldn't allocate stack for new userspace process (kernel stack)\n");
         return;
     }
-    const uintptr_t virtual_stack_base = InterruptStackAddress;
-    const uintptr_t virtual_stack_top = virtual_stack_base + InterruptStackSize;
+    const auto virtual_stack_base = VirtualAddress(InterruptStackAddress);
+    const uintptr_t virtual_stack_top = virtual_stack_base.address + InterruptStackSize;
     InterruptStackAddress += InterruptStackSize + PAGE_SIZE;
 
-    Memory::map_pages(
-        (void*)virtual_stack_base,
-        (void*)Memory::TO_FRAME_POINTER(physical_stack_base),
-        interrupt_stack_flags,
-        InterruptStackSizePages);
+    Memory::map_region_kernel(
+        Memory::startup_handle,
+        virtual_stack_base,
+        PhysicalAddress(PhysicalKernelAddress(physical_stack_base)),
+        InterruptStackSize);
 
-    Memory::unmap((void*)(virtual_stack_base - PAGE_SIZE));
+    // Guard pages
+    Memory::unmap((void*)(virtual_stack_base.address - PAGE_SIZE));
     Memory::unmap((void*)virtual_stack_top);
 
-    memset((void*)virtual_stack_base, 0, InterruptStackSize);
+    memset((void*)virtual_stack_base.address, 0, InterruptStackSize);
     // Ring N -> Ring 0 transition loads this stack
     tssEntry.set_stack(virtual_stack_top);
 
@@ -107,7 +109,7 @@ void initialize() {
         const uintptr_t virtual_base = Memory::KERNEL_INTERRUPT_STACK_BASE + virtual_offset;
         Memory::map_pages(
             (void*)virtual_base,
-            (void*)Memory::TO_FRAME_POINTER(physical_base),
+            (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(physical_base)).address,
             interrupt_stack_flags,
             InterruptStackSizePages);
         uintptr_t virtual_top = virtual_base + InterruptStackSize;

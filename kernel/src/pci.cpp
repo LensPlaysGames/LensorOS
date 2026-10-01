@@ -107,7 +107,7 @@ void enumerate_function(u64 deviceAddress, u64 functionNumber) {
     u64 functionAddress = deviceAddress + offset;
     Memory::map(
         (void*)functionAddress,
-        (void*)Memory::TO_FRAME_POINTER(functionAddress),
+        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(functionAddress)).address,
         (u64)Memory::PageTableFlag::Present
             | (u64)Memory::PageTableFlag::ReadWrite
             | (u64)Memory::PageTableFlag::CacheDisabled
@@ -170,7 +170,7 @@ void enumerate_device(u64 busAddress, u64 deviceNumber) {
     u64 deviceAddress = busAddress + offset;
     Memory::map(
         (void*)deviceAddress,
-        (void*)Memory::TO_FRAME_POINTER(deviceAddress),
+        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(deviceAddress)).address,
         (u64)Memory::PageTableFlag::Present
             | (u64)Memory::PageTableFlag::ReadWrite
             | (u64)Memory::PageTableFlag::CacheDisabled
@@ -225,7 +225,7 @@ void enumerate_pci(ACPI::MCFGHeader* mcfg) {
 
         for (u64 bus = devCon->StartBus; bus < devCon->EndBus; ++bus) {
             enumerate_bus(
-                Memory::FROM_FRAME_POINTER(devCon->BaseAddress),
+                PhysicalKernelAddress(PhysicalAddress(devCon->BaseAddress)).address,
                 bus);
         }
     }

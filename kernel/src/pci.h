@@ -21,6 +21,7 @@
 #define LENSOR_OS_PCI_H
 
 #include <integers.h>
+#include <memory/api.h>
 #include <memory/common.h>
 
 namespace ACPI {
@@ -37,14 +38,13 @@ constexpr inline bool bar_is64(u32 BAR0) {
     return (BAR0 & 0b110) == 0b100;
 }
 
-constexpr inline u64 get_bar_address(u32 BAR0, u32 BAR1) {
+constexpr inline PhysicalKernelAddress get_bar_address(u32 BAR0, u32 BAR1) {
     u64 BAR = BAR0;
     // clear bottom four bits
     BAR &= ~u64(0xf);
     if (bar_is64(BAR0))
         BAR |= u64(BAR1) << 32;
-    BAR = Memory::FROM_FRAME_POINTER(BAR);
-    return BAR;
+    return Memory::FROM_FRAME_POINTER(PhysicalAddress(BAR));
 }
 
 constexpr inline BarType get_bar_type(u32 BAR) {
@@ -91,7 +91,7 @@ struct PCIHeader0 {
 };
 
 u64 get_bar_size(PCIHeader0* PCIHeader);
-constexpr inline u64 get_bar_address(const PCIHeader0* PCIHeader) {
+constexpr inline PhysicalKernelAddress get_bar_address(const PCIHeader0* PCIHeader) {
     return get_bar_address(PCIHeader->BAR0, PCIHeader->BAR1);
 }
 

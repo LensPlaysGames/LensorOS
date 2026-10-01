@@ -24,6 +24,7 @@
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
+#include <memory/types.h>
 #include <memory/virtual_memory_manager.h>
 
 #include <print>
@@ -80,32 +81,34 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
             global);
     }
 
-    pageMapLevelFour = (PageTable*)FROM_FRAME_POINTER(pageMapLevelFour);
+    pageMapLevelFour = (PageTable*)PhysicalKernelAddress(PhysicalAddress(pageMapLevelFour)).address;
     PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
     PageTable* PDP;
     if (!PDE.flag(PageTableFlag::Present)) {
         PDP = (PageTable*)request_page();
         memset(PDP, 0, PAGE_SIZE);
-        PDE.set_address(TO_FRAME_POINTER(PDP));
+        PDE.set_address(
+            PhysicalAddress(PhysicalKernelAddress(PDP)).address);
     }
     PDE.or_flag_if(PageTableFlag::Present, present);
     PDE.or_flag_if(PageTableFlag::ReadWrite, write);
     PDE.or_flag_if(PageTableFlag::UserSuper, user);
     pageMapLevelFour->entries[indexer.page_directory_pointer()] = PDE;
-    PDP = (PageTable*)FROM_FRAME_POINTER(PDE.address());
+    PDP = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
 
     PDE = PDP->entries[indexer.page_directory()];
     PageTable* PD;
     if (!PDE.flag(PageTableFlag::Present)) {
         PD = (PageTable*)request_page();
         memset(PD, 0, PAGE_SIZE);
-        PDE.set_address(TO_FRAME_POINTER(PD));
+        PDE.set_address(
+            TO_FRAME_POINTER(PhysicalKernelAddress(PD)).address);
     }
     PDE.or_flag_if(PageTableFlag::Present, present);
     PDE.or_flag_if(PageTableFlag::ReadWrite, write);
     PDE.or_flag_if(PageTableFlag::UserSuper, user);
     PDP->entries[indexer.page_directory()] = PDE;
-    PD = (PageTable*)FROM_FRAME_POINTER(PDE.address());
+    PD = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
 
     PDE = PD->entries[indexer.page_table()];
     PageTable* PT;
@@ -158,7 +161,7 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
         PDE.set_flag(PageTableFlag::LargerPages, false);
         // Clear out 2MiB physical memory address, point it to new Page Table
         // Level 1.
-        PDE.set_address(TO_FRAME_POINTER(PT));
+        PDE.set_address(PhysicalAddress(PhysicalKernelAddress(PT)).address);
 
         // Commit it back to Level 2
         PD->entries[indexer.page_table()] = PDE;
@@ -167,14 +170,14 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
     if (!PDE.flag(PageTableFlag::Present)) {
         PT = (PageTable*)request_page();
         memset(PT, 0, PAGE_SIZE);
-        PDE.set_address((u64)TO_FRAME_POINTER(PT));
+        PDE.set_address(PhysicalAddress(PhysicalKernelAddress(PT)).address);
     }
     PDE.or_flag_if(PageTableFlag::Present, present);
     PDE.or_flag_if(PageTableFlag::ReadWrite, write);
     PDE.or_flag_if(PageTableFlag::UserSuper, user);
     // PDE.or_flag_if(PageTableFlag::NX,            noExecute);
     PD->entries[indexer.page_table()] = PDE;
-    PT = (PageTable*)FROM_FRAME_POINTER(PDE.address());
+    PT = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
 
     PDE = PT->entries[indexer.page()];
     PDE.set_address((u64)physicalAddress);
@@ -264,7 +267,7 @@ void map_large(PageTable* pageMapLevelFour, void* virtualAddress, void* physical
     }
 
     if constexpr (not write_direct)
-        pageMapLevelFour = (PageTable*)FROM_FRAME_POINTER(pageMapLevelFour);
+        pageMapLevelFour = (PageTable*)PhysicalKernelAddress(PhysicalAddress(pageMapLevelFour)).address;
 
     // Page Map Level 4 -> Page Directory Pointer Table Level 3
     PageDirectoryEntry& PML4PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
@@ -273,11 +276,11 @@ void map_large(PageTable* pageMapLevelFour, void* virtualAddress, void* physical
         PDP = (PageTable*)request_page();
         PageTable* write_ptr = PDP;
         if constexpr (write_direct)
-            write_ptr = (PageTable*)TO_FRAME_POINTER(PDP);
+            write_ptr = (PageTable*)PhysicalAddress(PhysicalKernelAddress(PDP)).address;
         // Need to write to TO_FRAME_POINTER here only if write_direct is true
         memset(write_ptr, 0, PAGE_SIZE);
         // Need to store TO_FRAME_POINTER version here no matter what
-        PML4PDE.set_address(TO_FRAME_POINTER(PDP));
+        PML4PDE.set_address(PhysicalAddress(PhysicalKernelAddress(PDP)).address);
     }
     PML4PDE.or_flag_if(PageTableFlag::Present, present);
     PML4PDE.or_flag_if(PageTableFlag::ReadWrite, write);
@@ -285,7 +288,7 @@ void map_large(PageTable* pageMapLevelFour, void* virtualAddress, void* physical
 
     PDP = (PageTable*)PML4PDE.address();
     if constexpr (not write_direct)
-        PDP = (PageTable*)FROM_FRAME_POINTER(PDP);
+        PDP = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PDP)).address;
 
     // Page Directory Pointer Table Level 3 -> Page Directory Level 2
     PageDirectoryEntry& PDPPDE = PDP->entries[indexer.page_directory()];
@@ -295,11 +298,11 @@ void map_large(PageTable* pageMapLevelFour, void* virtualAddress, void* physical
 
         PageTable* write_ptr = PD;
         if constexpr (write_direct)
-            write_ptr = (PageTable*)TO_FRAME_POINTER(PD);
+            write_ptr = (PageTable*)PhysicalAddress(PhysicalKernelAddress(PD)).address;
 
         memset(write_ptr, 0, PAGE_SIZE);
 
-        PDPPDE.set_address(TO_FRAME_POINTER(PD));
+        PDPPDE.set_address(PhysicalAddress(PhysicalKernelAddress(PD)).address);
     }
     PDPPDE.or_flag_if(PageTableFlag::Present, present);
     PDPPDE.or_flag_if(PageTableFlag::ReadWrite, write);
@@ -307,7 +310,7 @@ void map_large(PageTable* pageMapLevelFour, void* virtualAddress, void* physical
 
     PD = (PageTable*)PDPPDE.address();
     if constexpr (not write_direct)
-        PD = (PageTable*)FROM_FRAME_POINTER(PD);
+        PD = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PD)).address;
 
     // Page Directory Level 2 -> Page Directory Entry (large)
     PageDirectoryEntry& PDPDE = PD->entries[indexer.page_table()];
@@ -354,11 +357,11 @@ void unmap(PageTable* pageMapLevelFour, void* virtualAddress, ShowDebug debug) {
     PageDirectoryEntry PDE;
 
     // Page Map Level 4 -> Page Directory Pointer Table Level 3
-    pageMapLevelFour = (PageTable*)FROM_FRAME_POINTER(pageMapLevelFour);
+    pageMapLevelFour = (PageTable*)PhysicalKernelAddress(PhysicalAddress(pageMapLevelFour)).address;
     PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
     if (not PDE.flag(PageTableFlag::Present))  // Already unmapped.
         return;
-    auto* PDP = (PageTable*)FROM_FRAME_POINTER(PDE.address());
+    auto* PDP = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
 
     // Page Directory Pointer Table Level 3 -> Page Directory Level 2
     PDE = PDP->entries[indexer.page_directory()];
@@ -373,7 +376,7 @@ void unmap(PageTable* pageMapLevelFour, void* virtualAddress, ShowDebug debug) {
             std::print("  \033[32mUnmapped\033[0m (1GiB large page)\n\n");
         return;
     }
-    auto* PD = (PageTable*)FROM_FRAME_POINTER(PDE.address());
+    auto* PD = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
 
     // Page Directory Level 2 -> Page Table Level 1
     PDE = PD->entries[indexer.page_table()];
@@ -386,7 +389,7 @@ void unmap(PageTable* pageMapLevelFour, void* virtualAddress, ShowDebug debug) {
             std::print("  \033[32mUnmapped\033[0m (2MiB large page)\n\n");
         return;
     }
-    auto* PT = (PageTable*)FROM_FRAME_POINTER(PDE.address());
+    auto* PT = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
 
     // Page Table Level 1 -> Page Table Entry
     PDE = PT->entries[indexer.page()];
@@ -431,7 +434,7 @@ Memory::PageTable* clone_page_map_copy_on_write(Memory::PageTable* oldPageTable)
     }
     memset(newPageTable, 0, PAGE_SIZE);
 
-    oldPageTable = (Memory::PageTable*)FROM_FRAME_POINTER(oldPageTable);
+    oldPageTable = (Memory::PageTable*)PhysicalKernelAddress(PhysicalAddress(oldPageTable)).address;
 
     for (u64 i = 0; i < 512; ++i) {
         PDE = oldPageTable->entries[i];
@@ -444,7 +447,7 @@ Memory::PageTable* clone_page_map_copy_on_write(Memory::PageTable* oldPageTable)
             return nullptr;
         }
         memset(newPDP, 0, PAGE_SIZE);
-        auto* oldTable = (Memory::PageTable*)FROM_FRAME_POINTER(PDE.address());
+        auto* oldTable = (Memory::PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
         for (u64 j = 0; j < 512; ++j) {
             PDE = oldTable->entries[j];
             if (PDE.flag(Memory::PageTableFlag::Present) == false)
@@ -456,7 +459,7 @@ Memory::PageTable* clone_page_map_copy_on_write(Memory::PageTable* oldPageTable)
                 return nullptr;
             }
             memset(newPD, 0, PAGE_SIZE);
-            auto* oldPD = (Memory::PageTable*)FROM_FRAME_POINTER(PDE.address());
+            auto* oldPD = (Memory::PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
             for (u64 k = 0; k < 512; ++k) {
                 PDE = oldPD->entries[k];
                 if (PDE.flag(Memory::PageTableFlag::Present) == false)
@@ -468,7 +471,7 @@ Memory::PageTable* clone_page_map_copy_on_write(Memory::PageTable* oldPageTable)
                     return nullptr;
                 }
                 memset(newPT, 0, PAGE_SIZE);
-                auto* oldPT = (Memory::PageTable*)FROM_FRAME_POINTER(PDE.address());
+                auto* oldPT = (Memory::PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
                 // memcpy(newPT, oldPT, PAGE_SIZE);
                 for (u64 l = 0; l < 512; ++l) {
                     PDE = oldPT->entries[l];
@@ -479,17 +482,17 @@ Memory::PageTable* clone_page_map_copy_on_write(Memory::PageTable* oldPageTable)
                     newPT->entries[l] = PDE;
                 }
                 PDE = oldPD->entries[k];
-                PDE.set_address(TO_FRAME_POINTER(newPT));
+                PDE.set_address(PhysicalAddress(PhysicalKernelAddress(newPT)).address);
                 make_pde_cow(PDE);
                 newPD->entries[k] = PDE;
             }
             PDE = oldTable->entries[j];
-            PDE.set_address(TO_FRAME_POINTER(newPD));
+            PDE.set_address(PhysicalAddress(PhysicalKernelAddress(newPD)).address);
             make_pde_cow(PDE);
             newPDP->entries[j] = PDE;
         }
         PDE = oldPageTable->entries[i];
-        PDE.set_address(TO_FRAME_POINTER(newPDP));
+        PDE.set_address(PhysicalAddress(PhysicalKernelAddress(newPDP)).address);
         make_pde_cow(PDE);
         newPageTable->entries[i] = PDE;
     }
@@ -508,7 +511,7 @@ Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable) {
     }
     memset(newPageTable, 0, PAGE_SIZE);
 
-    oldPageTable = (Memory::PageTable*)FROM_FRAME_POINTER(oldPageTable);
+    oldPageTable = (Memory::PageTable*)PhysicalKernelAddress(PhysicalAddress(oldPageTable)).address;
 
     for (u64 i = 0; i < 512; ++i) {
         PDE = oldPageTable->entries[i];
@@ -527,7 +530,7 @@ Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable) {
             return nullptr;
         }
         memset(newPDP, 0, PAGE_SIZE);
-        auto* oldPDP = (Memory::PageTable*)FROM_FRAME_POINTER(PDE.address());
+        auto* oldPDP = (Memory::PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
         for (u64 j = 0; j < 512; ++j) {
             PDE = oldPDP->entries[j];
             if (PDE.flag(Memory::PageTableFlag::Present) == false)
@@ -539,7 +542,7 @@ Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable) {
                 return nullptr;
             }
             memset(newPD, 0, PAGE_SIZE);
-            auto* oldPD = (Memory::PageTable*)FROM_FRAME_POINTER(PDE.address());
+            auto* oldPD = (Memory::PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
             for (u64 k = 0; k < 512; ++k) {
                 PDE = oldPD->entries[k];
                 if (PDE.flag(Memory::PageTableFlag::Present) == false)
@@ -558,7 +561,7 @@ Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable) {
                     return nullptr;
                 }
                 memset(newPT, 0, PAGE_SIZE);
-                auto* oldPT = (Memory::PageTable*)FROM_FRAME_POINTER(PDE.address());
+                auto* oldPT = (Memory::PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
                 // memcpy(newPT, oldPT, PAGE_SIZE);
                 for (u64 l = 0; l < 512; ++l) {
                     PDE = oldPT->entries[l];
@@ -568,18 +571,18 @@ Memory::PageTable* clone_page_map(Memory::PageTable* oldPageTable) {
                     newPT->entries[l] = PDE;
                 }
                 PDE = oldPD->entries[k];
-                PDE.set_address(TO_FRAME_POINTER(newPT));
+                PDE.set_address(PhysicalAddress(PhysicalKernelAddress(newPT)).address);
                 newPD->entries[k] = PDE;
             }
             PDE = oldPDP->entries[j];
-            PDE.set_address(TO_FRAME_POINTER(newPD));
+            PDE.set_address(PhysicalAddress(PhysicalKernelAddress(newPD)).address);
             newPDP->entries[j] = PDE;
         }
         PDE = oldPageTable->entries[i];
-        PDE.set_address(TO_FRAME_POINTER(newPDP));
+        PDE.set_address(PhysicalAddress(PhysicalKernelAddress(newPDP)).address);
         newPageTable->entries[i] = PDE;
     }
-    return (PageTable*)TO_FRAME_POINTER(newPageTable);
+    return (PageTable*)PhysicalAddress(PhysicalKernelAddress(newPageTable)).address;
 }
 
 void free_page_map(PageTable* pageTable) {
@@ -592,7 +595,7 @@ void free_page_map(PageTable* pageTable) {
         return;
     }
 
-    pageTable = (PageTable*)FROM_FRAME_POINTER(pageTable);
+    pageTable = (PageTable*)PhysicalKernelAddress(PhysicalAddress(pageTable)).address;
 
     PageDirectoryEntry PDE;
     for (u64 i = 0; i < 512; ++i) {
@@ -601,7 +604,7 @@ void free_page_map(PageTable* pageTable) {
         if (!PDE.flag(PageTableFlag::Present))
             continue;
 
-        auto* PDP = (PageTable*)FROM_FRAME_POINTER(PDE.address());
+        auto* PDP = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
         // For some reason a ton of these addresses have all garbage in them...
         if ((usz)PDP == 0x000ffffffffff000 || (usz)PDP > Memory::total_ram() || (usz)PDP % PAGE_SIZE != 0)
             continue;
@@ -613,7 +616,7 @@ void free_page_map(PageTable* pageTable) {
             if (!PDE.flag(PageTableFlag::Present))
                 continue;
 
-            auto* PD = (PageTable*)FROM_FRAME_POINTER(PDE.address());
+            auto* PD = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
             if ((usz)PD == 0x000ffffffffff000 || (usz)PD > Memory::total_ram() || (usz)PD % PAGE_SIZE != 0)
                 continue;
 
@@ -624,7 +627,7 @@ void free_page_map(PageTable* pageTable) {
                 if ((not PDE.flag(PageTableFlag::Present)) or PDE.flag(PageTableFlag::LargerPages))
                     continue;
 
-                auto* PT = (PageTable*)FROM_FRAME_POINTER(PDE.address());
+                auto* PT = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
                 if ((usz)PT == 0x000ffffffffff000 || (usz)PT > Memory::total_ram() || (usz)PT % PAGE_SIZE != 0)
                     continue;
 
@@ -681,7 +684,8 @@ void init_virtual(PageTable* pageMap) {
 
 void init_virtual() {
     auto* table = (Memory::PageTable*)
-        Memory::TO_FRAME_POINTER(Memory::request_page());
+                      PhysicalAddress(PhysicalKernelAddress(Memory::request_page()))
+                          .address;
     memset(table, 0, PAGE_SIZE);
     std::print("[VIRT]: Initial page map allocated at {}\n", (void*)table);
     init_virtual(table);
@@ -753,7 +757,7 @@ void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filte
         haveRange = true;
     };
 
-    oldPageTable = (PageTable*)FROM_FRAME_POINTER(oldPageTable);
+    oldPageTable = (PageTable*)FROM_FRAME_POINTER(PhysicalAddress(oldPageTable)).address;
 
     Memory::PageDirectoryEntry PDE{};
     for (u64 i = 0; i < 512; ++i) {
@@ -763,7 +767,7 @@ void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filte
             continue;
         }
 
-        auto* oldTable = (Memory::PageTable*)FROM_FRAME_POINTER(PDE.address());
+        auto* oldTable = (Memory::PageTable*)FROM_FRAME_POINTER(PhysicalAddress(PDE.address())).address;
         for (u64 j = 0; j < 512; ++j) {
             PDE = oldTable->entries[j];
             if (PDE.flag(Memory::PageTableFlag::Present) == false) {
@@ -771,7 +775,7 @@ void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filte
                 continue;
             }
 
-            auto* oldPD = (Memory::PageTable*)FROM_FRAME_POINTER(PDE.address());
+            auto* oldPD = (Memory::PageTable*)FROM_FRAME_POINTER(PhysicalAddress(PDE.address())).address;
             for (u64 k = 0; k < 512; ++k) {
                 PDE = oldPD->entries[k];
                 if (PDE.flag(Memory::PageTableFlag::Present) == false) {
@@ -797,7 +801,7 @@ void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filte
                     continue;
                 }
 
-                auto* oldPT = (Memory::PageTable*)FROM_FRAME_POINTER(PDE.address());
+                auto* oldPT = (Memory::PageTable*)FROM_FRAME_POINTER(PhysicalAddress(PDE.address())).address;
                 for (u64 l = 0; l < 512; ++l) {
                     PDE = oldPT->entries[l];
 
@@ -849,6 +853,34 @@ std::string stringify_pde_flags(Memory::PageDirectoryEntry PDE) {
 
 void print_pde_flags(Memory::PageDirectoryEntry PDE) {
     std::print("{}", stringify_pde_flags(PDE));
+}
+
+void map_region(
+    memory_space_handle handle,
+    VirtualAddress virtual_address,
+    PhysicalAddress physical_address,
+    uintptr_t byte_count,
+    Flags inflags) {
+    u64 flags{};
+    if ((inflags & Flag::Readable) or (inflags & Flag::Writable))
+        flags |= (u64)Memory::PageTableFlag::Present;
+    if (inflags & Flag::Writable)
+        flags |= (u64)Memory::PageTableFlag::ReadWrite;
+    if (inflags & Flag::User)
+        flags |= (u64)Memory::PageTableFlag::UserSuper;
+    if (inflags & Flag::DisableReadCache)
+        flags |= (u64)Memory::PageTableFlag::CacheDisabled;
+    if (inflags & Flag::DisableWriteCache)
+        flags |= (u64)Memory::PageTableFlag::WriteThrough;
+    if (inflags & Flag::CopyOnWrite)
+        flags |= (u64)Memory::PageTableFlag::Lensor_CopyOnWrite;
+    const uintptr_t page_count = (byte_count + PAGE_SIZE - 1) / PAGE_SIZE;
+    map_pages(
+        (PageTable*)handle,
+        (void*)virtual_address.address,
+        (void*)physical_address.address,
+        flags,
+        page_count);
 }
 
 }  // namespace Memory

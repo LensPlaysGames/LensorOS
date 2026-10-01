@@ -35,7 +35,7 @@ extern u64 READ_ONLY_DATA_END;
 extern u64 BLOCK_STARTING_SYMBOLS_START;
 extern u64 BLOCK_STARTING_SYMBOLS_END;
 
-#define V2P(addr) ((u64)(addr) - (u64)&KERNEL_VIRTUAL)
-#define P2V(addr) ((u64)(addr) + (u64)&KERNEL_VIRTUAL)
+#define V2P(addr) ((u64)(addr) - (u64) & KERNEL_VIRTUAL)
+#define P2V(addr) ((u64)(addr) + (u64) & KERNEL_VIRTUAL)
 
 #endif /* LENSOR_OS_LINK_DEFINITIONS_H */

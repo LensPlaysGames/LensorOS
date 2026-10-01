@@ -17,6 +17,7 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <memory/api.h>
 #include <storage/device_drivers/port_controller.h>
 
 // Uncomment the following directive for extra debug information output.
@@ -41,22 +42,22 @@ PortController::PortController(PortType type, u64 portNumber, HBAPort* portAddre
     void* base = Memory::request_page();
     memset(base, 0, 1024);
     Port->set_command_list_base(
-        (void*)Memory::TO_FRAME_POINTER(base));
+        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(base)).address);
     // Allocate memory for Frame Information Structure.
     void* fisBase = Memory::request_page();
     memset(fisBase, 0, 256);
     Port->set_frame_information_structure_base(
-        (void*)Memory::TO_FRAME_POINTER(fisBase));
+        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(fisBase)).address);
     // Populate command list with command tables.
     auto* commandHeader = reinterpret_cast<HBACommandHeader*>(
-        Memory::FROM_FRAME_POINTER(Port->command_list_base()));
+        Memory::FROM_FRAME_POINTER(PhysicalAddress(Port->command_list_base())).address);
     for (u8 i = 0; i < 32; ++i) {
         // 8 PRDT entries per command table, aka 256 bytes.
         commandHeader[i].PRDTLength = 8;
         void* commandTableAddress = Memory::request_page();
         u64 address = reinterpret_cast<u64>(commandTableAddress) + (i << 8);
         commandHeader[i].set_command_table_base(
-            (void*)Memory::TO_FRAME_POINTER(address));
+            (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(address)).address);
         memset(reinterpret_cast<void*>(address), 0, 256);
     }
     start_commands();
@@ -76,21 +77,24 @@ bool PortController::read_low_level(u64 sector, u64 sectors) {
     if (spin >= maxSpin)
         return false;
 
+    if (Port->CommandIssue & 1)
+        return false;
+
     // Disable interrupts during command construction.
     Port->InterruptStatus = (u32)-1;
     auto* commandHeader = reinterpret_cast<HBACommandHeader*>(
-        Memory::FROM_FRAME_POINTER(Port->command_list_base()));
+        Memory::FROM_FRAME_POINTER(PhysicalAddress(Port->command_list_base())).address);
     commandHeader->CommandFISLength = sizeof(FIS_REG_H2D) / sizeof(u32);
     commandHeader->Write = 0;
     commandHeader->PRDTLength = 1;
 
     auto* commandTable = reinterpret_cast<HBACommandTable*>(
-        Memory::FROM_FRAME_POINTER(commandHeader->command_table_base()));
+        Memory::FROM_FRAME_POINTER(PhysicalAddress(commandHeader->command_table_base())).address);
     memset(
         commandTable,
         0,
         sizeof(HBACommandTable) + ((commandHeader->PRDTLength - 1) * sizeof(HBA_PRDTEntry)));
-    commandTable->PRDTEntry[0].set_data_base(Memory::TO_FRAME_POINTER(Buffer));
+    commandTable->PRDTEntry[0].set_data_base(Memory::TO_FRAME_POINTER(PhysicalKernelAddress(Buffer)).address);
     commandTable->PRDTEntry[0].set_byte_count((sectors << 9) - 1);
     commandTable->PRDTEntry[0].set_interrupt_on_completion(true);
     auto* commandFIS = reinterpret_cast<FIS_REG_H2D*>(&commandTable->CommandFIS);
@@ -181,6 +185,8 @@ ssz PortController::read_raw(usz byteOffset, usz byteCount, void* buffer) {
 }
 
 bool PortController::write_low_level(u64 sector, u64 sectors) {
+    DBGMSG("[AHCI]::write_low_level({}, {})\n", sector, sectors);
+
     // Ensure hardware port is not busy by spinning until it isn't, or
     // giving up.
     const u64 maxSpin = 1000000;
@@ -197,19 +203,19 @@ bool PortController::write_low_level(u64 sector, u64 sectors) {
     // Disable interrupts during command construction.
     Port->InterruptStatus = (u32)-1;
     auto* commandHeader = reinterpret_cast<HBACommandHeader*>(
-        Memory::FROM_FRAME_POINTER(Port->command_list_base()));
+        Memory::FROM_FRAME_POINTER(PhysicalAddress(Port->command_list_base())).address);
     commandHeader->CommandFISLength = sizeof(FIS_REG_H2D) / sizeof(u32);
     commandHeader->Write = 1;
     commandHeader->PRDTLength = 1;
 
     auto* commandTable = reinterpret_cast<HBACommandTable*>(
-        Memory::FROM_FRAME_POINTER(commandHeader->command_table_base()));
+        Memory::FROM_FRAME_POINTER(PhysicalAddress(commandHeader->command_table_base())).address);
     memset(
         commandTable,
         0,
         sizeof(HBACommandTable)
             + ((commandHeader->PRDTLength - 1) * sizeof(HBA_PRDTEntry)));
-    commandTable->PRDTEntry[0].set_data_base(Memory::TO_FRAME_POINTER(Buffer));
+    commandTable->PRDTEntry[0].set_data_base(Memory::TO_FRAME_POINTER(PhysicalKernelAddress(Buffer)).address);
     commandTable->PRDTEntry[0].set_byte_count((sectors << 9) - 1);
     commandTable->PRDTEntry[0].set_interrupt_on_completion(true);
     auto* commandFIS = reinterpret_cast<FIS_REG_H2D*>(
@@ -223,6 +229,13 @@ bool PortController::write_low_level(u64 sector, u64 sectors) {
     commandFIS->DeviceRegister = 1 << 6;
     // Set sector count.
     commandFIS->set_count(static_cast<u16>(sectors));
+
+    // Ensure buffer is flushed from cache
+    volatile u8* ptr = (volatile u8*)Buffer;
+    for (usz i = 0; i < PORT_BUFFER_BYTES; i += 64)
+        asm volatile("clflush (%0)" ::"r"(ptr + i) : "memory");
+    asm volatile("mfence" ::: "memory");
+
     // Issue command in first slot.
     Port->CommandIssue = 1;
 

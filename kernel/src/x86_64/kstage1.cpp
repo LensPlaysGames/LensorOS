@@ -152,13 +152,13 @@ void probe_system_devices() {
             && dev->flag(SYSDEV_MAJOR_STORAGE_SEARCH) != 0) {
             std::print("[kstage1]: Probing AHCI Controller\n");
             auto controller = static_cast<Devices::AHCIController*>(dev.get());
-            auto* ABAR = reinterpret_cast<AHCI::HBAMemory*>(Memory::FROM_FRAME_POINTER(controller->Header->BAR5));
+            auto* ABAR = reinterpret_cast<AHCI::HBAMemory*>(Memory::FROM_FRAME_POINTER(PhysicalAddress(controller->Header->BAR5)).address);
             auto offset_in_page = uintptr_t(ABAR) % PAGE_SIZE;
             auto containing_page = (uintptr_t)ABAR - offset_in_page;
             for (usz t = 0; t < offset_in_page + sizeof(AHCI::HBAMemory); t += PAGE_SIZE) {
                 Memory::map(
                     (void*)(uintptr_t(containing_page) + t),
-                    (void*)(Memory::TO_FRAME_POINTER(containing_page) + t),
+                    (void*)(Memory::TO_FRAME_POINTER(PhysicalKernelAddress(containing_page)).address + t),
                     (u64)Memory::PageTableFlag::Present
                         | (u64)Memory::PageTableFlag::ReadWrite
                         | (u64)Memory::PageTableFlag::CacheDisabled
@@ -197,14 +197,14 @@ void probe_system_devices() {
             HDAController driver{};
             uintptr_t base = controller->Header->BAR0 & ~(uintptr_t)0xf;
             base |= ((uintptr_t)controller->Header->BAR1) << 32;
-            base = Memory::FROM_FRAME_POINTER(base);
+            base = Memory::FROM_FRAME_POINTER(PhysicalAddress(base)).address;
             auto offset_in_page = uintptr_t(base) % PAGE_SIZE;
             auto containing_page = (uintptr_t)base - offset_in_page;
             // Intel HDA requires 16kb (0x4000 bytes)
             for (usz t = 0; t < offset_in_page + 0x4000; t += PAGE_SIZE) {
                 Memory::map(
                     (void*)(uintptr_t(containing_page) + t),
-                    (void*)(Memory::TO_FRAME_POINTER(containing_page) + t),
+                    (void*)(Memory::TO_FRAME_POINTER(PhysicalKernelAddress(containing_page)).address + t),
                     (u64)Memory::PageTableFlag::Present
                         | (u64)Memory::PageTableFlag::ReadWrite
                         | (u64)Memory::PageTableFlag::CacheDisabled
@@ -540,6 +540,15 @@ void kstage2(BootInfo* bInfo) {
     // Storage devices like AHCIs will be detected here.
     find_pci_devices();
 
+    // TODO: Initialize linear graphics config for hardware query syscall
+    SYSTEM->graphic_config.fb_size = bInfo->framebuffer->BufferSize;
+    SYSTEM->graphic_config.fb_base = bInfo->framebuffer->BaseAddress;
+    SYSTEM->graphic_config.fb_width = bInfo->framebuffer->PixelWidth;
+    SYSTEM->graphic_config.fb_height = bInfo->framebuffer->PixelHeight;
+    SYSTEM->graphic_config.fb_bytes_per_line = bInfo->framebuffer->PixelWidth * 4;
+    // TODO: 32-bit ABGR
+    SYSTEM->graphic_config.fb_format = 0;
+
     // FIXME: We just assume the system has an RTC.
     Time::tm boot{};
     {  // Initialize the Real Time Clock.
@@ -729,7 +738,7 @@ void kstage2(BootInfo* bInfo) {
             Memory::map(
                 process->CR3,
                 (void*)(fb_virt_addr + t),
-                (void*)Memory::TO_FRAME_POINTER(fb_phys_addr + t),
+                (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(fb_phys_addr + t)).address,
                 flags,
                 Memory::ShowDebug::No);
         }
@@ -919,6 +928,7 @@ void kstage1(BootInfo* bInfo) {
     Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     // Setup virtual memory (map entire address space as well as kernel).
     Memory::init_virtual();
+    Memory::startup_handle = (Memory::memory_space_handle)(Memory::active_page_map());
 
     // Informational/debug physical memory printout
     Memory::print_physmem();
@@ -935,12 +945,12 @@ void kstage1(BootInfo* bInfo) {
 
     // Adjust base address from actual physical frame pointer to virtually
     // mapped offset pointer.
-    bInfo->framebuffer = (Framebuffer*)Memory::FROM_FRAME_POINTER(bInfo->framebuffer);
-    bInfo->framebuffer->BaseAddress = (Framebuffer*)Memory::FROM_FRAME_POINTER(bInfo->framebuffer->BaseAddress);
-    bInfo->font = (PSF1_FONT*)Memory::FROM_FRAME_POINTER(bInfo->font);
-    bInfo->font->GlyphBuffer = (PSF1_FONT*)Memory::FROM_FRAME_POINTER(bInfo->font->GlyphBuffer);
-    bInfo->font->PSF1_Header = (PSF1_HEADER*)Memory::FROM_FRAME_POINTER(bInfo->font->PSF1_Header);
-    bInfo->rsdp = (ACPI::RSDP2*)Memory::FROM_FRAME_POINTER(bInfo->rsdp);
+    bInfo->framebuffer = (Framebuffer*)Memory::FROM_FRAME_POINTER(PhysicalAddress(bInfo->framebuffer)).address;
+    bInfo->framebuffer->BaseAddress = (Framebuffer*)Memory::FROM_FRAME_POINTER(PhysicalAddress(bInfo->framebuffer->BaseAddress)).address;
+    bInfo->font = (PSF1_FONT*)Memory::FROM_FRAME_POINTER(PhysicalAddress(bInfo->font)).address;
+    bInfo->font->GlyphBuffer = (PSF1_FONT*)Memory::FROM_FRAME_POINTER(PhysicalAddress(bInfo->font->GlyphBuffer)).address;
+    bInfo->font->PSF1_Header = (PSF1_HEADER*)Memory::FROM_FRAME_POINTER(PhysicalAddress(bInfo->font->PSF1_Header)).address;
+    bInfo->rsdp = (ACPI::RSDP2*)Memory::FROM_FRAME_POINTER(PhysicalAddress(bInfo->rsdp)).address;
 
     kstage2(bInfo);
 }

@@ -22,6 +22,7 @@
 #include <debug.h>
 #include <efi_memory.h>
 #include <link_definitions.h>
+#include <memory/api.h>
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
@@ -40,6 +41,8 @@
 #endif
 
 namespace Memory {
+memory_space_handle startup_handle;
+
 Bitmap FrameBitmap{0, nullptr};
 
 u64 TotalFrameCount{0};
@@ -85,7 +88,7 @@ void print_physmem() {
 }
 
 void lock_page(void* address) {
-    u64 index = TO_FRAME_POINTER(address) / PAGE_SIZE;
+    u64 index = PhysicalAddress(PhysicalKernelAddress(address)).address / PAGE_SIZE;
     // Page already locked.
     if (FrameBitmap.get(index))
         return;
@@ -102,7 +105,7 @@ void lock_pages(void* address, u64 numberOfPages) {
 }
 
 void free_page_impl(void* address) {
-    u64 index = TO_FRAME_POINTER(address) / PAGE_SIZE;
+    u64 index = PhysicalAddress(PhysicalKernelAddress(address)).address / PAGE_SIZE;
     if (FrameBitmap.set(index, false)) {
         if (index < FirstFreeFrame) {
             FirstFreeFrame = index;
@@ -156,7 +159,7 @@ void* request_page() {
         MaxContiguousFreeFrames);
     for (; FirstFreeFrame < TotalFrameCount; ++FirstFreeFrame) {
         if (FrameBitmap.get(FirstFreeFrame) == false) {
-            void* addr = (void*)(FROM_FRAME_POINTER(FirstFreeFrame * PAGE_SIZE));
+            void* addr = (void*)(FROM_FRAME_POINTER(PhysicalAddress(FirstFreeFrame * PAGE_SIZE))).address;
             lock_page(addr);
             FirstFreeFrame += 1;  // Eat current page.
             DBGMSG(
@@ -224,7 +227,7 @@ void* request_pages(u64 numberOfPages) {
                 return nullptr;
             }
             if (run >= numberOfPages) {
-                void* out = (void*)(FROM_FRAME_POINTER(i * PAGE_SIZE));
+                void* out = (void*)(FROM_FRAME_POINTER(PhysicalAddress(i * PAGE_SIZE)).address);
                 lock_pages(out, numberOfPages);
                 DBGMSG(
                     "  Successfully fulfilled memory request: {}\n"
@@ -286,7 +289,7 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
         (u8*)&InitialPageBitmap[0]);
     // Lock all pages in initial bitmap.
     lock_pages(
-        (void*)FROM_FRAME_POINTER(uintptr_t(0)),
+        (void*)FROM_FRAME_POINTER(PhysicalAddress(uintptr_t(0))).address,
         InitialPageBitmapPageCount);
 
     // Unlock free pages in bitmap.
@@ -300,7 +303,7 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
                 desc->numPages,
                 (uintptr_t)desc->physicalAddress);
             free_pages(
-                (void*)FROM_FRAME_POINTER(desc->physicalAddress),
+                (void*)FROM_FRAME_POINTER(PhysicalAddress(desc->physicalAddress)).address,
                 desc->numPages);
             if (desc->numPages > MaxContiguousFreeFrames)
                 MaxContiguousFreeFrames = desc->numPages;
@@ -313,9 +316,11 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
     //     largestFreeMemorySegmentPageCount);
 
     // Lock the kernel (in case it was just freed).
-    usz kernelByteCount = (u64)&KERNEL_END - (u64)&KERNEL_START;
-    usz kernelPageCount = kernelByteCount / PAGE_SIZE;
-    lock_pages((void*)FROM_FRAME_POINTER(&KERNEL_PHYSICAL), kernelPageCount);
+    const usz kernelByteCount = (u64)&KERNEL_END - (u64)&KERNEL_START;
+    const usz kernelPageCount = kernelByteCount / PAGE_SIZE;
+    lock_pages(
+        (void*)FROM_FRAME_POINTER(PhysicalAddress(&KERNEL_PHYSICAL)).address,
+        kernelPageCount);
 
     // Map up to the entire amount of physical memory
     // present or the max amount addressable given the
@@ -325,7 +330,7 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
     for (u64 t = 0;
          t < TotalFrameCount * PAGE_SIZE;
          t += PAGE_SIZE_LARGE) {
-        void* virt = (void*)FROM_FRAME_POINTER(t);
+        void* virt = (void*)FROM_FRAME_POINTER(PhysicalAddress(t)).address;
         map_large<true>(
             activePML4,
             virt,
@@ -357,7 +362,7 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
     // This ensures we don't accidentally attempt to utilize memory that is
     // not actually for us to use.
     lock_pages(
-        (void*)FROM_FRAME_POINTER(uintptr_t(InitialPageBitmapMaxAddress)),
+        (void*)FROM_FRAME_POINTER(PhysicalAddress(uintptr_t(InitialPageBitmapMaxAddress))).address,
         TotalFrameCount + 1 - InitialPageBitmapPageCount);
 
     // Anything we ignored previously due to the size constraints of the
@@ -367,7 +372,7 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
         if (desc->type == 7
             and uintptr_t(desc->physicalAddress) >= InitialPageBitmapMaxAddress) {
             free_pages(
-                (void*)FROM_FRAME_POINTER(desc->physicalAddress),
+                (void*)FROM_FRAME_POINTER(PhysicalAddress(desc->physicalAddress)).address,
                 desc->numPages);
             if (desc->numPages > MaxContiguousFreeFrames)
                 MaxContiguousFreeFrames = desc->numPages;
@@ -385,7 +390,7 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
 
     // Lock the kernel in the new frame bitmap (in case it already isn't).
     lock_pages(
-        (void*)FROM_FRAME_POINTER(&KERNEL_PHYSICAL),
+        (void*)FROM_FRAME_POINTER(PhysicalAddress(&KERNEL_PHYSICAL)).address,
         kernelPageCount);
 
     // Calculate space that is lost due to page alignment.

@@ -28,6 +28,7 @@
 #include <memory/heap.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
+#include <memory/types.h>
 #include <memory/virtual_memory_manager.h>
 #include <scheduler.h>
 #include <storage/file_metadata.h>
@@ -190,7 +191,7 @@ LoadUserspaceElf64Process(
                 Memory::map(
                     pageTable,
                     (void*)(virtAddress + t),
-                    (void*)Memory::TO_FRAME_POINTER(loadedProgram + t),
+                    (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(loadedProgram + t)).address,
                     flags,
                     Memory::ShowDebug::No);
             }
@@ -221,7 +222,7 @@ LoadUserspaceElf64Process(
     Memory::map_pages(
         pageTable,
         (void*)virtual_stack_bottom,
-        (void*)Memory::TO_FRAME_POINTER(user_stack),
+        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(user_stack)).address,
         stack_flags,
         UserProcessStackSizePages,
         Memory::ShowDebug::No);

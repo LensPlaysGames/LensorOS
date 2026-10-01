@@ -19,6 +19,7 @@
 
 #include <integers.h>
 #include <memory.h>
+#include <memory/api.h>
 #include <memory/virtual_memory_manager.h>
 #include <x86_64/hpet.h>
 
@@ -31,13 +32,19 @@ HPET gHPET;
  */
 void HPET::writel(u16 offset, u32 value) {
     volatile_write(
-        (volatile u32*)(Memory::FROM_FRAME_POINTER(Header->Address.Address) + offset),
+        (volatile u32*)(Memory::FROM_FRAME_POINTER(
+                            PhysicalAddress(Header->Address.Address))
+                            .address
+                        + offset),
         value);
 }
 
 u32 HPET::readl(u16 offset) {
     return volatile_read(
-        (volatile u32*)(Memory::FROM_FRAME_POINTER(Header->Address.Address) + offset));
+        (volatile u32*)(Memory::FROM_FRAME_POINTER(
+                            PhysicalAddress(Header->Address.Address))
+                            .address
+                        + offset));
 }
 
 static void hpet_init_failed(const char* msg) {
@@ -66,7 +73,7 @@ bool HPET::initialize() {
 
     std::print("[HPET]: Address at {}\n", (void*)Header->Address.Address);
     Memory::map(
-        (void*)Memory::FROM_FRAME_POINTER(Header->Address.Address),
+        (void*)Memory::FROM_FRAME_POINTER(PhysicalAddress(Header->Address.Address)).address,
         (void*)Header->Address.Address,
         (u64)Memory::PageTableFlag::Present
             | (u64)Memory::PageTableFlag::ReadWrite);

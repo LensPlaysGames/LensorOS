@@ -287,7 +287,7 @@ void* sys$6_map(void* address, usz size, u64 flags) {
     Memory::map_pages(
         process->CR3,
         address,
-        (void*)Memory::TO_FRAME_POINTER(paddr),
+        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(paddr)).address,
         memory_flags,
         pages,
         Memory::ShowDebug::No);
@@ -1153,7 +1153,7 @@ int sys$26_shared_memory_allocate(void** ptr, size_t size) {
     Memory::map_pages(
         process->CR3,
         *ptr,
-        (void*)Memory::TO_FRAME_POINTER(physical_address),
+        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(physical_address)).address,
         memory_flags,
         pages,
         Memory::ShowDebug::No);
@@ -1198,7 +1198,7 @@ void* sys$27_shared_memory_acquire(int id) {
     Memory::map_pages(
         process->CR3,
         address,
-        (void*)Memory::TO_FRAME_POINTER(memory_region->physical_address),
+        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(memory_region->physical_address)).address,
         memory_flags,
         pages,
         Memory::ShowDebug::No);

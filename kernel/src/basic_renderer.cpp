@@ -20,6 +20,7 @@
 #include <basic_renderer.h>
 #include <integers.h>
 #include <math.h>
+#include <memory/api.h>
 #include <memory/common.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
@@ -39,7 +40,7 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
 
     Memory::map_pages(
         render->BaseAddress,
-        (void*)Memory::TO_FRAME_POINTER(render->BaseAddress),
+        (void*)PhysicalAddress(PhysicalKernelAddress(render->BaseAddress)).address,
         (usz)Memory::PageTableFlag::Present | (usz)Memory::PageTableFlag::ReadWrite,
         fbPages);
 

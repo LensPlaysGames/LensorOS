@@ -19,8 +19,10 @@
 
 #include <event.h>
 #include <memory/physical_memory_manager.h>
+#include <memory/types.h>
 #include <memory/virtual_memory_manager.h>
 #include <stdint.h>
+#include <system.h>
 #include <x86_64/high_definition_audio.h>
 
 #include <print>
@@ -164,7 +166,8 @@ bool HDAController::initialize_corb() {
         return false;
     }
 
-    const auto CORB_physical = Memory::TO_FRAME_POINTER(CORB);
+    const auto CORB_physical = Memory::TO_FRAME_POINTER(
+        PhysicalKernelAddress(CORB));
     *corb_lower() = (uintptr_t)CORB_physical;
     *corb_upper() = (uintptr_t)CORB_physical >> 32;
 
@@ -247,7 +250,8 @@ bool HDAController::initialize_rirb() {
         return false;
     }
 
-    const auto RIRB_physical = Memory::TO_FRAME_POINTER(RIRB);
+    const auto RIRB_physical = Memory::TO_FRAME_POINTER(
+        PhysicalKernelAddress(RIRB));
     *rirb_lower() = (uintptr_t)RIRB_physical;
     *rirb_upper() = (uintptr_t)RIRB_physical >> 32;
 
@@ -354,7 +358,7 @@ bool HDAController::init() {
 
     Memory::map(
         (void*)CORB,
-        (void*)Memory::TO_FRAME_POINTER(CORB),
+        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(CORB)).address,
         (u64)Memory::PageTableFlag::Present
             | (u64)Memory::PageTableFlag::ReadWrite
             | (u64)Memory::PageTableFlag::CacheDisabled
@@ -774,16 +778,22 @@ bool HDAController::init() {
 
                         uint32_t total_samples_played = 0;
 
+                        SYSTEM->audio_config.sample_buffer_byte_size = buffer_size;
+                        SYSTEM->audio_config.sample_buffer_count = buffer_count;
+
                         auto* buffer_descriptors = (IntelHDABdlEntry*)Memory::request_page();
                         memset(buffer_descriptors, 0, PAGE_SIZE);
                         for (auto i = 0u; i < buffer_count; ++i) {
                             auto* buffer_base = Memory::request_pages(buffer_pages);
-                            auto buffer_physical = Memory::TO_FRAME_POINTER(buffer_base);
-                            std::print("  allocated audio sample buffer[{}] at {}, length={}\n", i, (void*)buffer_physical, buffer_size);
+                            auto buffer_physical = Memory::TO_FRAME_POINTER(PhysicalKernelAddress(buffer_base));
+                            std::print("  allocated audio sample buffer[{}] at {}, length={}\n", i, (void*)buffer_physical.address, buffer_size);
                             // silence!
                             memset(buffer_base, 0, buffer_size);
                             buffer_descriptors[i].length = buffer_size;
-                            buffer_descriptors[i].address = buffer_physical;
+                            buffer_descriptors[i].address = buffer_physical.address;
+
+                            // Initialize audio config for hardware query syscall
+                            SYSTEM->audio_config.sample_buffers[i] = (void*)buffer_physical.address;
 
                             /** (!) TEST: SQUARE WAVE (!) **/
                             {
@@ -822,13 +832,13 @@ bool HDAController::init() {
                         }
 
                         // Configure BDL
-                        const auto buffer_descriptors_physical = Memory::TO_FRAME_POINTER(buffer_descriptors);
-                        std::print("  buffer descriptor list pointer: {}\n", (void*)buffer_descriptors_physical);
+                        const auto buffer_descriptors_physical = Memory::TO_FRAME_POINTER(PhysicalKernelAddress(buffer_descriptors));
+                        std::print("  buffer descriptor list pointer: {}\n", (void*)buffer_descriptors_physical.address);
                         std::print(
                             "[HDA]: status:{:#x} control:{:#x}\n",
                             output_stream_registers->status(),
                             output_stream_registers->control());
-                        output_stream_registers->bdlp = buffer_descriptors_physical;
+                        output_stream_registers->bdlp = buffer_descriptors_physical.address;
                         output_stream_registers->cbl = buffer_total_size;
                         output_stream_registers->lvi = buffer_count - 1;
                         std::print(

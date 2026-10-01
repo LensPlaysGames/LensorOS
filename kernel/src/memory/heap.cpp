@@ -25,6 +25,7 @@
 #include <memory/heap.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
+#include <memory/types.h>
 #include <memory/virtual_memory_manager.h>
 #include <scheduler.h>
 
@@ -125,7 +126,7 @@ void init_heap() {
         // allocator.
         Memory::map(
             (void*)(Memory::KERNEL_HEAP_VIRTUAL_BASE + i),
-            (void*)Memory::TO_FRAME_POINTER(Memory::request_page()),
+            (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(Memory::request_page())).address,
             (u64)Memory::PageTableFlag::Present
                 | (u64)Memory::PageTableFlag::ReadWrite);
     }
@@ -167,7 +168,7 @@ void expand_heap(u64 numBytes) {
         *(volatile uint8_t*)addr = 0xaa;
         DBGMSG("[Heap]: first byte at {} -- {}\n", addr, (uint8_t)*(volatile uint8_t*)addr);
 
-        uintptr_t frame = Memory::TO_FRAME_POINTER(addr);
+        uintptr_t frame = Memory::TO_FRAME_POINTER(PhysicalKernelAddress(addr)).address;
         DBGMSG("[Heap]: frame at {}\n", (void*)frame);
         uintptr_t virt = (uintptr_t)sHeapEnd + i;
 

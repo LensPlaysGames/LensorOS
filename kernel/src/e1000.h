@@ -21,6 +21,7 @@
 #define LENSOR_OS_E1000_H
 
 #include <integers.h>
+#include <memory/api.h>
 #include <pci.h>
 
 class E1000 {
@@ -119,7 +120,7 @@ class E1000 {
     /// Tagged union
     PCI::BarType BARType;
     union {
-        usz BARMemoryAddress;
+        PhysicalKernelAddress BARMemoryAddress;
         usz BARIOAddress;
     };
 
