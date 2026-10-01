@@ -20,6 +20,7 @@
 #ifndef LENSOROS_DEFINES_FILES_H
 #define LENSOROS_DEFINES_FILES_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #ifndef __cplusplus
