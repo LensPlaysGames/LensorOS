@@ -2090,45 +2090,9 @@ void E1000::decode_base_address() {
     /// acts as the union of a tagged union.
     BARType = PCI::get_bar_type(PCIHeader->BAR0);
     if (BARType == PCI::BarType::Memory) {
-        const auto BAR0 = PCIHeader->BAR0;
-        const auto BAR1 = PCIHeader->BAR1;
+        BARMemoryAddress = PCI::get_bar_address(PCIHeader);
 
-        uintptr_t BAR = BAR0;
-        const bool is64 = (BAR0 & 0b110) == 0b100;
-        if (is64) std::print("[E1000] BAR is 64-bit\n");
-        // clear bottom four bits
-        BAR &= ~uintptr_t(0xf);
-        if (is64) BAR |= uintptr_t(PCIHeader->BAR1) << 32;
-        BAR = Memory::FROM_FRAME_POINTER(BAR);
-
-        BARMemoryAddress = BAR;
-
-        /* Discover the size of a BAR region using a hardware protocol: write
-         * all-1s (0xFFFFFFFF) to the BAR register, read
-         * the value back, mask off the type bits, and invert. The result is the
-         * size minus one. This is called BAR sizing.
-         */
-        volatile_write(&PCIHeader->BAR0, 0xffffffff);
-        if (is64)
-            volatile_write(&PCIHeader->BAR1, 0xffffffff);
-
-        const uint32_t bar0_size = volatile_read(&PCIHeader->BAR0);
-        // clear bottom four bits
-        usz bar_size = bar0_size & ~usz(0xf);
-        // We do this no matter the 64-bit-ness of the BAR, so that when we flip
-        // bits and everything at the end it still works.
-        uint32_t bar1_size = 0xffffffff;
-        if (is64)
-            bar1_size = volatile_read(&PCIHeader->BAR1);
-        bar_size |= usz(bar1_size) << 32;
-
-        // Calculate the size: invert the bits and add one.
-        bar_size = (~bar_size) + 1;
-
-        // Restore original values to config registers...
-        volatile_write(&PCIHeader->BAR0, BAR0);
-        if (is64)
-            volatile_write(&PCIHeader->BAR1, BAR1);
+        const auto bar_size = PCI::get_bar_size(PCIHeader);
 
         // Possible FIXME: Cache Disabled flag?
         Memory::map_pages(

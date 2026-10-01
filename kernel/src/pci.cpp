@@ -34,8 +34,39 @@
 #endif
 
 namespace PCI {
-BarType get_bar_type(u32 BAR) {
-    return BAR & 1 ? BarType::IO : BarType::Memory;
+u64 get_bar_size(PCIHeader0* PCIHeader) {
+    /* Discover the size of a BAR region using a hardware protocol: write
+     * all-1s (0xFFFFFFFF) to the BAR register, read
+     * the value back, mask off the type bits, and invert. The result is the
+     * size minus one. This is called BAR sizing.
+     */
+    const auto BAR0 = PCIHeader->BAR0;
+    const auto BAR1 = PCIHeader->BAR1;
+    const auto is64 = bar_is64(BAR0);
+
+    volatile_write(&PCIHeader->BAR0, 0xffffffff);
+    if (is64)
+        volatile_write(&PCIHeader->BAR1, 0xffffffff);
+
+    const uint32_t bar0_size = volatile_read(&PCIHeader->BAR0);
+    // clear bottom four bits
+    usz bar_size = bar0_size & ~usz(0xf);
+    // We do this no matter the 64-bit-ness of the BAR, so that when we flip
+    // bits and everything at the end it still works.
+    uint32_t bar1_size = 0xffffffff;
+    if (is64)
+        bar1_size = volatile_read(&PCIHeader->BAR1);
+    bar_size |= usz(bar1_size) << 32;
+
+    // Calculate the size: invert the bits and add one.
+    bar_size = (~bar_size) + 1;
+
+    // Restore original values to config registers...
+    volatile_write(&PCIHeader->BAR0, BAR0);
+    if (is64)
+        volatile_write(&PCIHeader->BAR1, BAR1);
+
+    return bar_size;
 }
 
 void print_device_header(PCIDeviceHeader* pci) {
