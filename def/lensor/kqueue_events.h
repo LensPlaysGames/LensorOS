@@ -64,7 +64,7 @@ typedef struct Event {
 
 /// NOTE: Each one of these (except invalid) should have a struct
 /// defined that the "data" field of the event can be cast to.
-enum struct EventType : u32 {
+enum struct EventType : uint32_t {
     INVALID,
     // TODO: Reduce this to just "FILE_READY" and have ready for read/write be
     // a flag.
@@ -106,7 +106,7 @@ struct Event {
     // For READY_TO_READ, this would be a file descriptor.
     EventFilter Filter = {};
     EventFlags Flags = {};
-    u8 Data[EVENT_DATA_SIZE] = {0};
+    uint8_t Data[EVENT_DATA_SIZE] = {0};
 };
 #endif  // __cplusplus
 
