@@ -754,8 +754,10 @@ int main(int argc, const char** argv) {
     // blocking) via
     //     if (sys_kevent(listen_queue, NULL, 0, eventlist, eventlist_size) == 0)
 
-    // Open terminal program in background
     const char* sh_args[1] = {NULL};
+    // Open audio server in background
+    run_background_program("/fs0/bin/serdio", sh_args);
+    // Open terminal program in background
     run_background_program("/fs0/bin/term", sh_args);
 
     while (true) {
