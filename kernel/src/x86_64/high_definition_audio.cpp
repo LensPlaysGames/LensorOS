@@ -816,7 +816,7 @@ bool HDAController::init() {
 
                                 auto* buffer = (int16_t*)buffer_base;
 
-                                for (auto i = 0u; i < buffer_size / sizeof(int16_t); i++) {
+                                for (auto i = 0u; i + 1 < buffer_size / sizeof(int16_t); i += 2) {
                                     int16_t sample_value;
 
                                     // Determine if we are in the positive or negative phase of the wave
@@ -828,8 +828,8 @@ bool HDAController::init() {
                                     }
 
                                     // Fill interleaved Intel HDA stereo channels
-                                    buffer[i * 2] = sample_value;      // Left
-                                    buffer[i * 2 + 1] = sample_value;  // Right
+                                    buffer[i] = sample_value;      // Left
+                                    buffer[i + 1] = sample_value;  // Right
 
                                     // Increment the global counter safely
                                     total_samples_played++;
