@@ -625,7 +625,8 @@ void kstage2(BootInfo* bInfo) {
     // Storage devices like AHCIs will be detected here.
     find_pci_devices();
 
-    // TODO: Initialize linear graphics config for hardware query syscall
+    // Initialize linear framebuffer graphics config for hardware query
+    // syscall.
     SYSTEM->graphic_config.fb_size = bInfo->framebuffer->BufferSize;
     SYSTEM->graphic_config.fb_base = bInfo->framebuffer->BaseAddress;
     SYSTEM->graphic_config.fb_width = bInfo->framebuffer->PixelWidth;
@@ -634,9 +635,11 @@ void kstage2(BootInfo* bInfo) {
     // TODO: 32-bit ABGR
     SYSTEM->graphic_config.fb_format = 0;
 
-    // FIXME: We just assume the system has an RTC.
+    // Get boot time
     Time::tm boot{};
-    {  // Initialize the Real Time Clock.
+    {
+        // FIXME: We just assume the system has an RTC.
+        // Initialize the Real Time Clock.
         gRTC = RTC();
         gRTC.set_periodic_int_enabled(true);
         std::print(
@@ -671,7 +674,6 @@ void kstage2(BootInfo* bInfo) {
         PIT_FREQUENCY,
         __FG_DEFAULT);
 
-    // TODO: if (InvariantTSC)
     {
         constexpr size_t calibration_milliseconds = 10;
         constexpr size_t trial_count = 4;
@@ -699,9 +701,10 @@ void kstage2(BootInfo* bInfo) {
         const size_t tsc_per_millisecond = total_tick_count / total_milliseconds;
         const size_t tsc_frequency = tsc_per_millisecond * Time::milliseconds_per_second;
         std::print(
-            "[TSC]: {} per millisecond  freq={}\n",
+            "[TSC]: {} per millisecond  freq={}{}\n",
             tsc_per_millisecond,
-            tsc_frequency);
+            tsc_frequency,
+            SYSTEM->cpu().reliable_tsc_enabled() ? "" : "  -- unreliable");
     }
 
     auto* madt = (ACPI::APICHeader*)ACPI::find_table("APIC");
