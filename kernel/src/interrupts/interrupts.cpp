@@ -564,3 +564,9 @@ __attribute__((interrupt)) void e1000_interrupt_handler(InterruptFrame* frame) {
     gE1000.handle_interrupt();
     end_of_interrupt(gE1000.irq_number());
 }
+
+#include <x86_64/high_definition_audio.h>
+__attribute__((interrupt)) void hda_interrupt_handler(InterruptFrame* frame) {
+    if (hda_interrupt_handler_controller)
+        hda_interrupt_handler_controller->handle_interrupt();
+}

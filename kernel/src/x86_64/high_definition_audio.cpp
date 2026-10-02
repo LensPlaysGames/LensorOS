@@ -292,10 +292,6 @@ bool HDAController::initialize_rirb() {
 }
 
 HDAController* hda_interrupt_handler_controller{};
-extern "C" void hda_interrupt_handler() {
-    if (hda_interrupt_handler_controller)
-        hda_interrupt_handler_controller->handle_interrupt();
-}
 
 bool HDAController::init() {
     // Base address must be set during PCI enumeration

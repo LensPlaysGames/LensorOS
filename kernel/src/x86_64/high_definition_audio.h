@@ -22,10 +22,9 @@
 
 /* Intel High Definition Audio 1.0 */
 
+#include <interrupts/interrupts.h>
 #include <stdint.h>
 #include <x86_64/high_definition_audio_registers.h>
-
-#include <bit>
 
 /* Standard HDA Verb IDs */
 // Intel HDA Spec 7.3.3.31
@@ -271,6 +270,8 @@ struct HDAController {
     bool initialize_corb();
     bool initialize_rirb();
 
+    uintptr_t IDTVector{0x40};
+
     // BAR0 address
     uintptr_t Base{0};
 
@@ -344,8 +345,20 @@ struct HDAController {
     volatile uint32_t* dma_position_upper() {
         return (volatile uint32_t*)(Base + HDA_REG_DPIBUBASE);
     }
+
+    volatile const uint32_t* wall_clock_counter() {
+        return (volatile const uint32_t*)(Base + HDA_REG_WALCLK);
+    }
+
+    volatile uint32_t* interrupt_control() {
+        return (volatile uint32_t*)(Base + HDA_REG_INTCTL);
+    }
+    volatile uint32_t* interrupt_status() {
+        return (volatile uint32_t*)(Base + HDA_REG_INTSTS);
+    }
 };
 
 extern HDAController* hda_interrupt_handler_controller;
+extern "C" __attribute__((interrupt)) void hda_interrupt_handler(InterruptFrame* frame);
 
 #endif  // LENSOR_OS_INTEL_HDA_H
