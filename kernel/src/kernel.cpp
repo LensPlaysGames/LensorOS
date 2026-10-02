@@ -67,7 +67,7 @@ void print_now(Vector2<u64>& position) {
 }
 
 extern "C" void kregulate() {
-    std::print("[KERNEL]: regulating...\n");
+    std::print("kregulate()\n");
     // Tasks that need done by a kernel thread and done frequently should go
     // in this loop.
     for (;;) {
@@ -101,6 +101,8 @@ extern "C" void kregulate() {
 extern "C" void kmain(BootInfo* bInfo) {
     // The heavy lifting is done within the kstage1 function.
     kstage1(bInfo);
+
+    std::print("kmain()\n");
 
     // I'm lovin' it :^) (Plays Maccy's theme).
     constexpr usz MACCYS_BPM = 125;
