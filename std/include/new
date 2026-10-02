@@ -25,10 +25,12 @@
 __BEGIN_DECLS__
 
 /// Declare these here to avoid having to include stdlib.h in the kernel.
-__attribute__((__malloc__, __alloc_size__(1))) void* malloc(size_t numBytes);
-// void free(void* address);
 void __free_impl(void* ptr, const char* file, int line);
+#ifndef free
+void free(void*);
 #define free(__ptr) __free_impl((__ptr), __FILE__, __LINE__)
+#endif
+__attribute__((__malloc__, __alloc_size__(1))) void* malloc(size_t numBytes);
 
 __END_DECLS__
 

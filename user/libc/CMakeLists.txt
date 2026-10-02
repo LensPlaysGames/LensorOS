@@ -42,6 +42,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
 add_library(c)
 
+target_compile_definitions(c PUBLIC _LIBC)
+
 target_include_directories(
   c
   PUBLIC
@@ -57,6 +59,7 @@ target_sources(
   crti.s
   crtn.s
   abi.cpp
+  ctype.cpp
   stdio.cpp
   stdlib.cpp
   string.cpp

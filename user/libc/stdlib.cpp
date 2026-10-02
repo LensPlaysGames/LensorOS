@@ -529,3 +529,8 @@ void operator delete(void* ptr) noexcept { free(ptr); }
 void operator delete[](void* ptr) noexcept { free(ptr); }
 void operator delete(void* ptr, size_t) noexcept { free(ptr); }
 void operator delete[](void* ptr, size_t) noexcept { free(ptr); }
+
+#undef free
+extern "C" void free(void* ptr) {
+    __free_impl(ptr, __FILE__, __LINE__);
+}
