@@ -41,7 +41,11 @@ struct client_header_t {
 };
 
 struct Client {
+    // The shared memory region between server and client.
     client_header_t* shared_region{nullptr};
+    // The file descriptor the server uses to talk to the client.
+    ProcFD client_fd;
+    // How many samples fit in the process' region.
     uintptr_t sample_count{0};
 };
 
@@ -76,14 +80,12 @@ void mix_audio(int16_t* dma_buffer, const std::vector<Client>& clients, size_t s
 
 int main(int argc, const char** argv) {
     auto kqueue = std::sys_kqueue();
-
     {
         Event change{};
         change.Type = EventType::AUDIOBUFFER;
         std::sys_kevent(kqueue, &change, 1, nullptr, 0);
     }
 
-    // TODO: We need to get all of this from the kernel, somehow.
     hardware_audio_t hardware{};
     auto rc = std::sys_audio_hardware(&hardware);
     if (rc != 0) {
@@ -97,13 +99,33 @@ int main(int argc, const char** argv) {
         memset(hardware.sample_buffers[i], 0, hardware.sample_buffer_byte_size);
     }
 
+    // Open audio socket for listening
+    auto sockFD = std::sys_socket(0, 0, 0);
+    sockaddr addr;
+    addr.type = sockaddr::LENSOR16;
+    const char socket_path[] = "!SFX";
+    memset(addr.data, 0, SOCK_ADDR_MAX_SIZE);
+    memcpy(addr.data, &socket_path, sizeof(socket_path) - 1);
+    // bind (set our address)
+    std::sys_bind(sockFD, &addr, sizeof(sockaddr));
+    // listen (mark self as server)
+    std::sys_listen(sockFD, 32);
+
+    // register to listen for incoming connections
+    {
+        Event change{};
+        change.Type = EventType::READY_TO_READ;
+        change.Filter.ProcessFD = sockFD;
+        change.Flags |= EVENTFLAGS_CHANGE_ADD_REMOVE;
+        std::sys_kevent(kqueue, &change, 1, nullptr, 0);
+    }
+
+    Event event{};
     size_t active_sample_buffer_index{0};
     std::vector<Client> clients{};
     bool running = true;
     while (running) {
-        Event event{};
         auto rc = std::sys_kevent(kqueue, nullptr, 0, &event, 1);
-
         if (rc >= 0) {
             if (event.Type == EventType::AUDIOBUFFER) {
                 auto* active_sample_buffer = (int16_t*)hardware.sample_buffers[active_sample_buffer_index];
@@ -114,6 +136,16 @@ int main(int argc, const char** argv) {
 
                 active_sample_buffer_index = (active_sample_buffer_index + 1)
                                              % hardware.sample_buffer_count;
+            }
+            else if (
+                event.Type == EventType::READY_TO_READ
+                and event.Filter.ProcessFD == sockFD) {
+                std::print("[SerDio]: Incoming Client\n");
+                // TODO: accept new client connection
+                auto new_client = Client();
+                // TODO: allocate shared memory region(s); send client shared memory
+                // region ID(s) over socket.
+                clients.emplace_back(new_client);
             }
         }
     }
