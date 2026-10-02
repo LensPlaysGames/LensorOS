@@ -978,8 +978,7 @@ void kstage1(BootInfo* bInfo) {
 
     // Disable interrupts while doing sensitive
     //   operations (like setting up interrupts :^).
-    // TODO: Make architecture agnostic.
-    asm("cli");
+    asm volatile("cli");
 
     // Don't even attempt to boot unless boot info exists.
     if (bInfo == nullptr) hang();
