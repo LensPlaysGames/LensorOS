@@ -560,6 +560,10 @@ void probe_cpu() {
                 SystemCPU->set_avx_enabled();
             }
         }
+
+        cpuid(0x80000007, regs);
+        if (regs.D & (1u << 8))
+            SystemCPU->set_reliable_tsc_enabled();
     }
 
     std::print("\n");

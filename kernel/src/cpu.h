@@ -166,6 +166,7 @@ class CPUDescription {
     void set_xsave_enabled() { XSAVEEnabled = true; }
     void set_avx_capable() { AVXCapable = true; }
     void set_avx_enabled() { AVXEnabled = true; }
+    void set_reliable_tsc_enabled() { ReliableTSCEnabled = true; }
     // Feature flag getters
     bool cpuid_capable() { return CPUIDCapable; }
     bool fxsr_capable() { return FXSRCapable; }
@@ -178,6 +179,7 @@ class CPUDescription {
     bool xsave_enabled() { return XSAVEEnabled; }
     bool avx_capable() { return AVXCapable; }
     bool avx_enabled() { return AVXEnabled; }
+    bool reliable_tsc_enabled() { return ReliableTSCEnabled; }
 
    private:
     // Used for CPU Logical/Physical core number calculation from APIC ID.
@@ -197,6 +199,7 @@ class CPUDescription {
     bool XSAVEEnabled{false};
     bool AVXCapable{false};
     bool AVXEnabled{false};
+    bool ReliableTSCEnabled{false};
     // 12-character string that represents the CPU vendor
     char VendorID[12]{' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '};
     // List of central processing units (why call them central anymore??)
