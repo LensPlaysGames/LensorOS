@@ -958,17 +958,15 @@ void kstage2(BootInfo* bInfo) {
 
 void kstage1(BootInfo* bInfo) {
     /* This function is monstrous, so the functionality is outlined here.
-     *     - Disable interrupts (if they weren't already)
-     *     - Ensure BootInfo pointer is valid (non-null)
-     * x86 - Load Global Descriptor Table
-     * x86 - Load Interrupt Descriptor Table
-     *     - Prepare UART serial communications driver
-     *     - Prepare physical/virtual memory
-     *       - Initialize Physical Memory Manager
-     *       - Initialize Virtual Memory Manager
-     *       - Prepare the heap (`new` and `delete`)
-     *
-     * x86 = The step is inherently x86-only (not implementation based).
+     * - Disable interrupts (if they weren't already)
+     * - Ensure BootInfo pointer is valid (non-null)
+     * - Load Global Descriptor Table
+     * - Load Interrupt Descriptor Table
+     * - Prepare UART serial communications driver
+     * - Prepare physical/virtual memory
+     *   - Initialize Physical Memory Manager
+     *   - Initialize Virtual Memory Manager
+     *   - Prepare the heap (`new` and `delete`)
      *
      * TODO:
      * `-- A lot of hardware is just assumed to be there;
