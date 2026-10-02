@@ -158,7 +158,6 @@ void enable_interrupt(u8 irq) {
         gIOAPIC.enable_irq(irq);
 }
 extern "C" void end_of_interrupt(u8 irq) {
-    out8(0xe9, 0x10);
     if constexpr (use_legacy_pic)
         LegacyPIC::end_of_interrupt(irq);
     else
