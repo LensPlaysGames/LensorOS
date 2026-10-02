@@ -742,6 +742,22 @@ bool HDAController::init() {
                         control_value |= HDA_SD_REG_CTL_STREAM(stream_id);
                         std::print("control value w/ id: {:#x}\n", control_value);
                         std::print("expected control value w/o status: {:#x}\n", control_value << 8);
+
+                        // Enable Interrupt On Completion (IOC), if it is set in the entry in the
+                        // Buffer Descriptor List (BDL).
+                        control_value |= (1u << 2);
+                        // NOTE: ensure interrupts are enabled globally
+                        // - BDL entry: IOC field must be set to recieve interrupt
+                        // - Connected stream: IOC bit (bit 2) must be set in SDnCTL register.
+                        // - Controller stream mask: bit N for stream N must be set in INTCTL
+                        //   register.
+                        // - Controller: Global Interrupt Enable (bit 31) must be set in INTCTL
+                        //   register.
+                        // So, 4 different bits in 3 different places must be set.
+                        *interrupt_control() = *interrupt_control()
+                                               | (1u << 31)
+                                               | (1u << (stream_index + global_regs()->input_stream_count()));
+
                         output_stream_registers->control(control_value);
                         std::print(
                             "[HDA]: status:{:#x} control:{:#x}\n",
@@ -787,6 +803,7 @@ bool HDAController::init() {
                             memset(buffer_base, 0, buffer_size);
                             buffer_descriptors[i].length = buffer_size;
                             buffer_descriptors[i].address = buffer_physical.address;
+                            buffer_descriptors[i].ioc = 1;
 
                             // Initialize audio config for hardware query syscall
                             SYSTEM->audio_config.sample_buffers[i] = (void*)buffer_physical.address;
@@ -898,15 +915,11 @@ bool HDAController::init() {
                         output_stream_registers->control(
                             output_stream_registers->control() | HDA_SD_REG_CTL_RUN);
 
-                        for (int i = 8000000; i > 0; --i) {
-                            asm volatile("pause" ::: "memory");
-                            if (i % 20000 == 0) {
-                                std::print(
-                                    "[HDA]: status:{:#x} control:{:#x}\n",
-                                    output_stream_registers->status(),
-                                    output_stream_registers->control());
-                            }
-                        }
+                        std::print(
+                            "[HDA]: status:{:#x} control:{:#x}\n",
+                            output_stream_registers->status(),
+                            output_stream_registers->control());
+                        std::print("  output stream running\n");
 
                     } break;
                     case HDA_WIDGET_TYPE_POWER_STATE: {
@@ -935,8 +948,7 @@ void HDAController::handle_interrupt() {
     auto output_stream_mask = (1u << global_stream_index);
 
     // If this interrupt targets the configured output stream...
-    volatile uint32_t* intsts = (volatile uint32_t*)(Base + HDA_REG_INTSTS);
-    if ((*intsts & output_stream_mask) != 0) {
+    if (*interrupt_status() & output_stream_mask) {
         // And the interrupt is a buffer completion interrupt (BCIS) bit set.
         volatile auto* output_stream_registers
             = (volatile IntelHDAStreamRegs*)(Base
@@ -962,4 +974,6 @@ void HDAController::handle_interrupt() {
         // Ensure more interrupts can happen
         output_stream_registers->status_clear();
     }
+
+    end_of_interrupt(IDTVector);
 }

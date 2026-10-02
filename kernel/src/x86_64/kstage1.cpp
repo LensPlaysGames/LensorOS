@@ -191,8 +191,88 @@ void probe_system_devices() {
             // Bit 1: Memory Space Enable (ensures BAR0 responds to reads/writes)
             // Bit 2: Bus Master Enable (allows the HDA controller to read your CORB/RIRB memory)
             u16 config = controller->Header->Header.Command;
-            u16 updated_config = config | (1 << 2) | (1 << 1);
+            u16 updated_config = config | PCI::COMMAND_BUS_MASTERING | (1u << 1);
             controller->Header->Header.Command = updated_config;
+
+            // TODO: Request free IDT slot
+            constexpr usz idt_vector = 0x40;
+            const auto target_lapic_id = gLAPIC.id();
+
+            auto pci_status = controller->Header->Header.Status;
+            // Bit 4 of PCI Status -> Capable of Capabilities
+            auto msi_offset = 0;
+            if (pci_status & (1u << 4)) {
+                auto capability_ptr = controller->Header->CapabilitiesPtr;
+                while (capability_ptr) {
+                    auto capability_id = *(((u8*)controller->Header) + capability_ptr);
+                    if (capability_id == 0x5) {
+                        msi_offset = capability_ptr;
+                        break;
+                    }
+                    capability_ptr = *(((u8*)controller->Header) + capability_ptr + 1);
+                }
+            }
+
+            if (msi_offset) {
+                // Configure message signal interrupts (MSI)
+
+                std::print("[HDA]: Installing interrupt handler at vector {:#x}\n", idt_vector);
+                gIDT.install_handler((u64)hda_interrupt_handler, idt_vector, 4);
+                gIDT.flush();
+
+                // Get register pointers
+                auto* const msi_control_reg
+                    = (volatile uint16_t*)(((u8*)controller->Header)
+                                           + msi_offset
+                                           + PCI::MSI_REG_CONTROL);
+
+                const uint16_t msi_control = *msi_control_reg;
+                const bool is64 = msi_control & PCI::MSI_CTRL_64BIT;
+
+                volatile uint16_t* msi_data_reg = nullptr;
+                if (is64) {
+                    msi_data_reg = ((volatile uint16_t*)(((u8*)controller->Header)
+                                                         + msi_offset
+                                                         + PCI::MSI_REG_DATA_64));
+                }
+                else {
+                    msi_data_reg = ((volatile uint16_t*)(((u8*)controller->Header)
+                                                         + msi_offset
+                                                         + PCI::MSI_REG_DATA_32));
+                }
+
+                // Configure MSI Address register
+                uint32_t msi_address = 0xfee00000 | (uint32_t(target_lapic_id) << 12);
+                auto* const msi_address_reg
+                    = ((volatile uint32_t*)(((u8*)controller->Header)
+                                            + msi_offset
+                                            + PCI::MSI_REG_ADDRESS));
+                *msi_address_reg = msi_address;
+                if (is64) {
+                    auto* const msi_address_high_reg
+                        = ((volatile uint32_t*)(((u8*)controller->Header)
+                                                + msi_offset
+                                                + PCI::MSI_REG_ADDRESS
+                                                + 4));
+                    *msi_address_high_reg = 0;
+                }
+
+                // Configure MSI Data Register
+                uint16_t msi_data = idt_vector & 0xff;
+                *msi_data_reg = msi_data;
+
+                // Disable IRQ
+                controller->Header->Header.Command = controller->Header->Header.Command
+                                                     | PCI::COMMAND_INT_DISABLE;
+
+                // Enable MSI
+                *msi_control_reg = msi_control | PCI::MSI_CTRL_ENABLE;
+                std::print("[HDA]: MSI Enabled\n");
+            }
+            else {
+                std::print("[HDA]: MSI not supported, falling back to legacy IRQ\n");
+                std::print("[HDA]: TODO: audio likely broken: implement shared IRQ handling for HDA controller\n");
+            }
 
             HDAController driver{};
             uintptr_t base = controller->Header->BAR0 & ~(uintptr_t)0xf;
@@ -201,6 +281,7 @@ void probe_system_devices() {
             auto offset_in_page = uintptr_t(base) % PAGE_SIZE;
             auto containing_page = (uintptr_t)base - offset_in_page;
             // Intel HDA requires 16kb (0x4000 bytes)
+            // TODO: bar sizing?
             for (usz t = 0; t < offset_in_page + 0x4000; t += PAGE_SIZE) {
                 Memory::map(
                     (void*)(uintptr_t(containing_page) + t),

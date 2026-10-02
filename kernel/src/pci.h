@@ -102,5 +102,19 @@ const char* get_vendor_name(u16 vendorID);
 const char* get_device_name(u16 vendorID, u16 deviceID);
 const char* get_subclass_name(u8 classCode, u8 subclassCode);
 const char* get_prog_if_name(u8 _class, u8 subclass, u8 progIF);
+
+// PCIDeviceHeader::Command
+constexpr uint16_t COMMAND_BUS_MASTERING = (1u << 2);
+constexpr uint16_t COMMAND_INT_DISABLE = (1u << 10);
+
+// MSI Capability Offsets (Relative to Capability Base Offset)
+constexpr uint8_t MSI_REG_CONTROL = 0x02;  // 16-bit
+constexpr uint8_t MSI_REG_ADDRESS = 0x04;  // 32-bit
+constexpr uint8_t MSI_REG_DATA_32 = 0x08;
+constexpr uint8_t MSI_REG_DATA_64 = 0x0c;
+// Message Control Register Bits
+constexpr uint16_t MSI_CTRL_ENABLE = (1 << 0);
+constexpr uint16_t MSI_CTRL_64BIT = (1 << 7);
+
 }  // namespace PCI
 #endif
