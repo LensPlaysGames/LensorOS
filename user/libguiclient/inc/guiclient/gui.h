@@ -21,6 +21,7 @@
 #define LENSOROS_LIBGUICLIENT_GUI_H
 
 #include <bits/decls.h>
+#include <lensor/files.h>
 #include <lensor/ipc.h>
 #include <lensor/keys.h>
 #include <stddef.h>
@@ -58,7 +59,7 @@ typedef struct gui_framebuffer_t {
 typedef struct gui_info_t {
     gui_framebuffer_t framebuffer;
     // socket file descriptor that we talk to server with
-    uintptr_t client_file_descriptor;
+    ProcFD client_file_descriptor;
 } gui_info_t;
 
 // @return handle

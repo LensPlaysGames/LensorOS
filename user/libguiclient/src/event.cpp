@@ -26,7 +26,7 @@
 bool gui_get_event(uintptr_t handle, uint8_t event[IPC_MAX_SIZE]) {
     if (not handle) return false;
     gui_info_t* info = (gui_info_t*)handle;
-    if (info->client_file_descriptor == (uintptr_t)ProcFD::Invalid)
+    if (info->client_file_descriptor == ProcFD::Invalid)
         return false;
 
     // non-blocking read

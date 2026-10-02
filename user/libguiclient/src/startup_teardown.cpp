@@ -83,7 +83,7 @@ void gui_teardown(uintptr_t handle) {
         syscall(SYS_shared_memory_release, info->framebuffer.base_address);
     info->framebuffer.base_address = 0;
 
-    if (info->client_file_descriptor != (uintptr_t)ProcFD::Invalid)
+    if (info->client_file_descriptor != ProcFD::Invalid)
         std::sys_close(info->client_file_descriptor);
-    info->client_file_descriptor = (uintptr_t)ProcFD::Invalid;
+    info->client_file_descriptor = ProcFD::Invalid;
 }

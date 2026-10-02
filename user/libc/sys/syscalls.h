@@ -21,6 +21,7 @@
 #define _SYSCALLS_H
 
 #include <bits/decls.h>
+#include <lensor/files.h>
 #include <lensor/kqueue_events.h>
 #include <lensor/syscalls.h>
 #include <stdbool.h>
@@ -182,8 +183,6 @@ typedef struct tm {
     int day_of_year;               // day in the year, 0--365
     int is_daylight_savings_time;  // daylight saving time
 } tm;
-
-#include <lensor/files.h>
 
 __END_DECLS__
 
@@ -355,9 +354,6 @@ inline _Ret syscall(uintptr_t __sys, _Args&&... __args) {
 }
 
 }  // namespace __detail
-
-using ProcessFileDescriptor = uint64_t;
-using ProcFD = ProcessFileDescriptor;
 
 inline ProcFD sys_open(const char* path) {
     return std::__detail::syscall<ProcFD>(SYS_open, path);
