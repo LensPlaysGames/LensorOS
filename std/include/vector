@@ -55,6 +55,18 @@ struct __vector {
     size_type __sz{};
     size_type __cap{};
 
+    void swap(__vector& __other) noexcept {
+        value_type* __t_ptr = __ptr;
+        __ptr = __other.__ptr;
+        __other.__ptr = __t_ptr;
+        size_type __t_sz = __sz;
+        __sz = __other.__sz;
+        __other.__sz = __t_sz;
+        size_type __t_cap = __cap;
+        __cap = __other.__cap;
+        __other.__cap = __t_cap;
+    }
+
    public:
     /// =======================================================================
     ///  Constructors.
@@ -109,28 +121,24 @@ struct __vector {
     }
 
     __vector& operator=(const __vector& __other) {
-        if (this == addressof(__other)) {
-            return *this;
-        }
-        __sz = __other.__sz;
-        __cap = __other.__cap;
-        __ptr = new value_type[__sz];
-        for (size_type i = 0; i < __sz; ++i) {
-            __ptr[i] = __other.__ptr[i];
+        if (this != addressof(__other)) {
+            // Leverage copy constructor
+            __vector __temp(__other);
+            swap(__temp);
         }
         return *this;
     }
 
     __vector& operator=(__vector&& __other) noexcept {
-        if (this == addressof(__other)) {
-            return *this;
+        if (this != addressof(__other)) {
+            delete[] __ptr;
+            __ptr = __other.__ptr;
+            __sz = __other.__sz;
+            __cap = __other.__cap;
+            __other.__ptr = nullptr;
+            __other.__sz = 0;
+            __other.__cap = 0;
         }
-        __ptr = __other.__ptr;
-        __sz = __other.__sz;
-        __cap = __other.__cap;
-        __other.__ptr = nullptr;
-        __other.__sz = 0;
-        __other.__cap = 0;
         return *this;
     }
 
