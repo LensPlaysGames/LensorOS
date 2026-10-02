@@ -109,7 +109,7 @@ Process StartupProcess;
 
 SinglyLinkedList<Process*>* ProcessQueue{nullptr};
 SinglyLinkedListNode<Process*>* CurrentProcess{nullptr};
-std::vector<Memory::PageTable*> PageMapsToFree;
+std::vector<Memory::PageTable*> PageMapsToFree{};
 
 void print_debug() {
     std::print(
@@ -488,7 +488,7 @@ pid_t CopyUserspaceProcess(Process* original) {
     // ProcFDs need to remain equal, while the values that they index
     // in the sparse_vector need to be replaced with a new shared ptr.
     // ***************
-    std::vector<ProcFD> garbage_fds_to_erase;
+    std::vector<ProcFD> garbage_fds_to_erase{};
     for (const auto& [procfd, sysfd] : original->FileDescriptors.pairs()) {
         // In order to account for holes in the file descriptors vector
         // we are copying from, we need to push garbage values until we
