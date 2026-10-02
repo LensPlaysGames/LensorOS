@@ -26,10 +26,18 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    DirectoryEntry entries[8] = {};
-
-    int entry_count = syscall(SYS_directory_data, argv[1], &entries[0], 8);
-    if (entry_count == -1) return 1;
+    auto entries = std::vector<DirectoryEntry>(16);
+    int entry_count = 0;
+    for (int i = 0; i < 8; ++i) {
+        entry_count = std::sys_directory_data(argv[1], entries.data(), entries.size());
+        if (entry_count == -1) return 1;
+        if (entry_count == -2) continue;
+        if (entry_count < entries.size()) {
+            entries.resize(entry_count);
+            break;
+        }
+        entries.resize(entries.size() * 2);
+    }
 
     printf("%s:\n", argv[1]);
     for (int i = 0; i < entry_count; ++i) {
