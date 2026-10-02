@@ -40,14 +40,17 @@ const char* EFI_MEMORY_TYPE_STRINGS[]{
     "EfiMemoryMappedIO",
     "EfiMemoryMappedIOPortSpace",
     "EfiPalCode",
+    "EfiPersistentMemory",
 };
+constexpr auto EFI_MEMORY_TYPE_STRINGS_SIZE
+    = sizeof EFI_MEMORY_TYPE_STRINGS / sizeof *EFI_MEMORY_TYPE_STRINGS;
 
 void print_efi_memory_map(EFI_MEMORY_DESCRIPTOR* map, u64 mapSize, u64 mapDescSize) {
     u64 mapEntries = mapSize / mapDescSize;
     for (u64 i = 0; i < mapEntries; ++i) {
         auto* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)map + (i * mapDescSize));
         std::print("\033[36m[MEMORY REGION]: ");
-        if (desc->type < (sizeof EFI_MEMORY_TYPE_STRINGS / sizeof *EFI_MEMORY_TYPE_STRINGS)) {
+        if (desc->type < EFI_MEMORY_TYPE_STRINGS_SIZE) {
             std::print("{}", EFI_MEMORY_TYPE_STRINGS[desc->type]);
         }
         else {

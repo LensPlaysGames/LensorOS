@@ -246,6 +246,8 @@ void* request_pages(u64 numberOfPages) {
 constexpr u64 InitialPageBitmapMaxAddress = MiB(64);
 constexpr u64 InitialPageBitmapPageCount = InitialPageBitmapMaxAddress / PAGE_SIZE;
 constexpr u64 InitialPageBitmapSize = InitialPageBitmapPageCount / 8;
+// TODO: Place in .init section or something so we can reclaim this after
+// kernel is booted.
 u8 InitialPageBitmap[InitialPageBitmapSize];
 
 void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
@@ -287,9 +289,12 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
     FrameBitmap.move(
         InitialPageBitmapSize,
         (u8*)&InitialPageBitmap[0]);
+    FreeFrameCount = TotalFrameCount;
+    UsedFrameCount = 0;
+
     // Lock all pages in initial bitmap.
     lock_pages(
-        (void*)FROM_FRAME_POINTER(PhysicalAddress(uintptr_t(0))).address,
+        (void*)PhysicalKernelAddress(PhysicalAddress(uintptr_t(0))).address,
         InitialPageBitmapPageCount);
 
     // Unlock free pages in bitmap.
@@ -303,29 +308,29 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
                 desc->numPages,
                 (uintptr_t)desc->physicalAddress);
             free_pages(
-                (void*)FROM_FRAME_POINTER(PhysicalAddress(desc->physicalAddress)).address,
+                (void*)PhysicalKernelAddress(PhysicalAddress(desc->physicalAddress)).address,
                 desc->numPages);
             if (desc->numPages > MaxContiguousFreeFrames)
                 MaxContiguousFreeFrames = desc->numPages;
         }
     }
 
-    // The largest free memory segment is going to be used by the next frame bitmap
-    // lock_pages(
-    //     (void*)FROM_FRAME_POINTER(largestFreeMemorySegment),
-    //     largestFreeMemorySegmentPageCount);
+    /** NO ALLOCATION ALLOWED UNTIL KERNEL AND BITMAP ARE LOCKED */
 
     // Lock the kernel (in case it was just freed).
+    // NOTE: initial bitmap is within kernel, so this accomplishes both.
     const usz kernelByteCount = (u64)&KERNEL_END - (u64)&KERNEL_START;
     const usz kernelPageCount = kernelByteCount / PAGE_SIZE;
     lock_pages(
         (void*)FROM_FRAME_POINTER(PhysicalAddress(&KERNEL_PHYSICAL)).address,
         kernelPageCount);
 
-    // Map up to the entire amount of physical memory
-    // present or the max amount addressable given the
-    // size limitation of the pre-allocated bitmap.
+    // Map up to the entire amount of physical memory present or the max
+    // amount addressable given the size limitation of the pre-allocated
+    // bitmap.
     // TODO: `.text` + `.rodata` should be read only.
+    // We should probably wait until we can parse the kernel executable file,
+    // then just re-map those as not writable.
     PageTable* activePML4 = active_page_map();
     for (u64 t = 0;
          t < TotalFrameCount * PAGE_SIZE;
@@ -362,18 +367,22 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
     // This ensures we don't accidentally attempt to utilize memory that is
     // not actually for us to use.
     lock_pages(
-        (void*)FROM_FRAME_POINTER(PhysicalAddress(uintptr_t(InitialPageBitmapMaxAddress))).address,
+        (void*)PhysicalKernelAddress(PhysicalAddress(uintptr_t(InitialPageBitmapMaxAddress))).address,
         TotalFrameCount + 1 - InitialPageBitmapPageCount);
 
     // Anything we ignored previously due to the size constraints of the
     // initial bitmap may now be utilized.
     for (u64 i = 0; i < entries; ++i) {
         auto* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
-        if (desc->type == 7
+        if (desc->type == (u32)EFI::MemoryDescriptorType::ConventionalMemory
             and uintptr_t(desc->physicalAddress) >= InitialPageBitmapMaxAddress) {
             free_pages(
-                (void*)FROM_FRAME_POINTER(PhysicalAddress(desc->physicalAddress)).address,
+                (void*)PhysicalKernelAddress(PhysicalAddress(desc->physicalAddress)).address,
                 desc->numPages);
+            if (desc->numPages > largestFreeMemorySegmentPageCount) {
+                largestFreeMemorySegment = desc->physicalAddress;
+                largestFreeMemorySegmentPageCount = desc->numPages;
+            };
             if (desc->numPages > MaxContiguousFreeFrames)
                 MaxContiguousFreeFrames = desc->numPages;
         }
@@ -393,6 +402,12 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
         (void*)FROM_FRAME_POINTER(PhysicalAddress(&KERNEL_PHYSICAL)).address,
         kernelPageCount);
 
+    std::print(
+        "[PHYS]: {}MiB\n"
+        "        {}MiB contiguous\n",
+        TO_MiB(TotalFrameCount * PAGE_SIZE),
+        TO_MiB(largestFreeMemorySegmentPageCount * PAGE_SIZE));
+
     // Calculate space that is lost due to page alignment.
     u64 deadSpace{0};
     // NOTE: very closely linked to kernel.ld linker script.
@@ -409,6 +424,7 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
                      - reinterpret_cast<u64>(&READ_ONLY_DATA_START);
     u64 bssSize = reinterpret_cast<u64>(&BLOCK_STARTING_SYMBOLS_END)
                   - reinterpret_cast<u64>(&BLOCK_STARTING_SYMBOLS_START);
+
     std::print(
         "\033[32m"
         "Physical memory initialized"
