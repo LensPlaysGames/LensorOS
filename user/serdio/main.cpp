@@ -148,5 +148,6 @@ int main(int argc, const char** argv) {
                 clients.emplace_back(new_client);
             }
         }
+        std::sys_cooperative_yield();
     }
 }
