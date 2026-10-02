@@ -28,10 +28,8 @@ typedef uint64_t ProcessFileDescriptor;
 typedef ProcessFileDescriptor ProcFD;
 #else
 typedef uint64_t FileDescriptor;
-
 enum struct ProcessFileDescriptor : FileDescriptor { Invalid = static_cast<FileDescriptor>(-1) };
 enum struct GlobalFileDescriptor : FileDescriptor { Invalid = static_cast<FileDescriptor>(-1) };
-
 using ProcFD = ProcessFileDescriptor;
 using SysFD = GlobalFileDescriptor;
 #endif
