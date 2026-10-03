@@ -173,8 +173,6 @@ inline void fill_tm(tm* time) {
     // Figure it out for yourself, you filthy animal.
     time->is_daylight_savings_time = -1;
 
-    std::print("[RTC]: day of month: {}\n", gRTC.Time.date);
-
     // Verify Values
     time->seconds = std::min(time->seconds, 59);
     time->minutes = std::min(time->minutes, 59);
@@ -183,8 +181,6 @@ inline void fill_tm(tm* time) {
     time->day_of_week = std::min(time->day_of_week, 6);
     time->day_of_month = std::clamp(time->day_of_month, 1, 31);
     time->day_of_year = std::min(time->day_of_year, 365);
-
-    std::print("[TIME]: day of month: {}\n", time->day_of_month);
 }
 
 inline uint64_t mktime(const tm* t) {
