@@ -20,6 +20,8 @@
 #ifndef _LENSOROS_FORMAT
 #define _LENSOROS_FORMAT
 
+#undef _LIBC
+
 #include <bits/terminate.h>
 #include <ctype.h>
 
