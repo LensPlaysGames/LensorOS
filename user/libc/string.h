@@ -88,6 +88,19 @@ size_t strnlen(const char*, size_t __maxlen);
 char* strdup(const char*);
 char* strndup(const char*, size_t);
 
+/** HISTORICAL COMPATIBILITY EXTENSION
+ ** <strings.h> -- POSIX
+ ** provides:
+ ** size_t
+ ** locale_t
+ ** int ffs(int); // find first set bit
+ ** int strcasecmp(const char *, const char *);
+ ** int strcasecmp_l(const char *, const char *, locale_t);
+ ** int strncasecmp(const char *, const char *, size_t);
+ ** int strncasecmp_l(const char *, const char *, size_t, locale_t);
+ **/
+#include "strings.h"
+
 __END_DECLS__
 
 #endif
