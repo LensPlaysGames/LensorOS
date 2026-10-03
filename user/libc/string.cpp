@@ -21,6 +21,8 @@
 #include "string.h"
 #undef memcpy
 
+#include <stdlib.h>
+
 #include <string>
 #include <string_view>
 
@@ -308,6 +310,35 @@ size_t strnlen(const char* str, size_t maxlen) {
     for (; len < maxlen && *str; str++)
         len++;
     return len;
+}
+
+char* strdup(const char* s) {
+    if (not s) return nullptr;
+
+    // Allocate memory (including space for the null terminator)
+    size_t len = strlen(s) + 1;
+    char* dup = (char*)malloc(len);
+
+    if (dup) memcpy(dup, s, len);
+
+    return dup;
+}
+
+char* strndup(const char* s, size_t n) {
+    if (not s) return nullptr;
+
+    // Find the actual length to copy (stops at n or the null terminator).
+    size_t len = strnlen(s, n);
+
+    // Allocate enough memory for the mandatory null terminator.
+    char* dup = (char*)malloc(len + 1);
+
+    if (dup) {
+        memcpy(dup, s, len);
+        dup[len] = '\0';  // Force null-termination
+    }
+
+    return dup;
 }
 
 _PopWarnings();

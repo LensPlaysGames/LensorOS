@@ -85,6 +85,9 @@ char* strerror(int __errnum);
 size_t strlen(const char*);
 size_t strnlen(const char*, size_t __maxlen);
 
+char* strdup(const char*);
+char* strndup(const char*, size_t);
+
 __END_DECLS__
 
 #endif
