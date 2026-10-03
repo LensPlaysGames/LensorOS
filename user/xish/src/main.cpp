@@ -187,6 +187,10 @@ int main(int argc, char** argv) {
     PATH.emplace_back("/sbin/");
 #endif
 
+    // TODO:
+    //   -c <command>
+    //   take in a command, and run it. do not pass go. do not collect $200.
+
     for (;;) {
         input_command.clear();
 
