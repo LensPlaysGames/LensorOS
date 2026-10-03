@@ -420,8 +420,11 @@ __attribute__((interrupt)) void page_fault_handler(InterruptFrameError* frame) {
         return;
 
     auto pid = pid_t(-1);
-    if (Scheduler::CurrentProcess and Scheduler::CurrentProcess->value())
-        pid = Scheduler::CurrentProcess->value()->ProcessID;
+    Process* process = nullptr;
+    if (Scheduler::CurrentProcess and Scheduler::CurrentProcess->value()) {
+        process = Scheduler::CurrentProcess->value();
+        pid = process->ProcessID;
+    }
     std::print("CurrentProcess->ProcessID == {}\n", u64(pid));
 
     if (frame->error & (u64)PageFaultErrorCode::UserSuper)
@@ -453,6 +456,17 @@ __attribute__((interrupt)) void page_fault_handler(InterruptFrameError* frame) {
                 panic(frame, std::format("#PF: User process {} attempted to read from a page that is not present", u64(pid)).data());
             else
                 panic(frame, std::format("#PF: User process {} attempted to read from a page and caused a protection fault", u64(pid)).data());
+        }
+        if (process) {
+            // At least halt the process so it doesn't run any more.
+            process->State = Process::SLEEPING;
+            bool success = Scheduler::remove_process(pid, -1);
+            if (not success)
+                std::print("[#PF] Failure to remove process {}\n", pid);
+            else
+                std::print("[#PF] -- Removed process {}\n", pid);
+
+            Scheduler::yield();
         }
     }
     else {
