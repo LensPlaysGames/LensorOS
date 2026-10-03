@@ -33,7 +33,6 @@
 #include "bits/io_defs.h"
 #include "bits/stub.h"
 #include "errno.h"
-#include "extensions"
 #include "stdarg.h"
 #include "stdlib.h"
 #include "string.h"

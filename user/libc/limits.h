@@ -24,6 +24,10 @@
 extern "C" {
 #endif
 
+#define INT32_MIN 0x80000000
+#define INT32_MAX 0x7fffffff
+#define UINT32_MAX 0xffffffffu
+
 #define INT_MAX INT32_MAX
 #define INT_MIN INT32_MIN
 

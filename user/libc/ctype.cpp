@@ -28,7 +28,18 @@ int isalnum(int c) { return isalpha(c) || isdigit(c); }
 int isxdigit(int c) { return isdigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'); }
 int islower(int c) { return c >= 'a' && c <= 'z'; }
 int isupper(int c) { return c >= 'A' && c <= 'Z'; }
-
+int isascii(int c) { return c < 128; }
+int isspace(int c) { return c == ' '; }
+int isblank(int c) { return isspace(c); }
+int iscntrl(int c) { return c < ' ' || c == 127; }
+int isprint(int c) { return c >= ' ' && c < 127; }
+int isgraph(int c) { return c != ' ' && isprint(c); }
+int ispunct(int c) {
+    return (c >= 0x21 && c <= 0x2f)
+           || (c >= 0x3a && c <= 0x40)
+           || (c >= 0x5b && c <= 0x60)
+           || (c >= 0x7b && c <= 0x7e);
+}
 int tolower(int c) {
     if (isupper(c)) c += 'a' - 'A';
     return c;

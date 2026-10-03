@@ -17,17 +17,22 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef _TIME_H
-#define _TIME_H
+#ifndef _LENSOR_OS_LIBC_FCNTL_H
+#define _LENSOR_OS_LIBC_FCNTL_H
 
-#include <bits/decls.h>
+#include <sys/types.h>
 
-__BEGIN_DECLS__
+struct flock {
+    short l_type;    // Type of lock; F_RDLCK, F_WRLCK, F_UNLCK.
+    short l_whence;  // Flag for starting offset.
+    off_t l_start;   //  Relative offset in bytes.
+    off_t l_len;     // Size; if 0 then until EOF.
+    pid_t l_pid;     // Process ID of the process holding the lock; returned with F_GETLK.
+};
 
-typedef struct timespec {
-    int todo;
-} timespec;
+int creat(const char*, mode_t);
+int fcntl(int, int, ...);
+int open(const char*, int, ...);
+int openat(int, const char*, int, ...);
 
-__END_DECLS__
-
-#endif /* _TIME_H */
+#endif  // _LENSOR_OS_LIBC_FCNTL_H
