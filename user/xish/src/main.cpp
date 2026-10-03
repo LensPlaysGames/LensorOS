@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
 
     std::print("Welcome to XiSH\n");
     std::print("  XiSH is the main userspace shell for LensorOS.\n");
-    std::print("  Try \"/fs0/bin/ls /fs0/bin\"\n");
+    std::print("  Try \"ls /\"\n");
 
     int rc = 0;
 
