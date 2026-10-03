@@ -496,8 +496,8 @@ void run_program_waitpid(uintptr_t gui, const char* const filepath, const char**
 
         fflush(NULL);
         int command_status;
-        waitpid(cpid, &command_status, 0);
-        if (command_status == -1) {
+        auto waitpid_rc = waitpid(cpid, &command_status, 0);
+        if (waitpid_rc == -1) {
             printf("[TERM]: `waitpid` failure! pid=%d\n", (int)cpid);
             return;
         }
