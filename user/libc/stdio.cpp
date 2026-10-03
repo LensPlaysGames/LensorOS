@@ -877,8 +877,7 @@ int vsnprintf(char* __restrict__ str, size_t size, const char* __restrict__ form
                 case 's': {
                     const char* str_val = va_arg(args, const char*);
                     while (*str_val and written < size)
-                        safe_write(str++, size, written, *str_val++);
-                    safe_write(str, size, written, '\0');
+                        safe_write(str, size, written, *str_val++);
                 }
                     continue;
 
@@ -906,7 +905,7 @@ int vsnprintf(char* __restrict__ str, size_t size, const char* __restrict__ form
                     if (i == max_digits) digits[--i] = '0';
 
                     for (const char* it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
-                        safe_write(str++, size, written, *it);
+                        safe_write(str, size, written, *it);
                 }
                     continue;
 
@@ -930,23 +929,23 @@ int vsnprintf(char* __restrict__ str, size_t size, const char* __restrict__ form
                     if (i == max_digits) digits[--i] = '0';
 
                     if (negative)
-                        safe_write(str++, size, written, '-');
+                        safe_write(str, size, written, '-');
                     for (const char* it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
-                        safe_write(str++, size, written, *it);
+                        safe_write(str, size, written, *it);
                 }
                     continue;
 
                 case '\0':
-                    safe_write(str++, size, written, '%');
+                    safe_write(str, size, written, '%');
                     safe_write(str, size, written, '\0');
                     return 0;
 
                 default:
-                    safe_write(str++, size, written, '%');
+                    safe_write(str, size, written, '%');
                     break;
             }
         }
-        safe_write(str++, size, written, *fmt);
+        safe_write(str, size, written, *fmt);
     }
 
     // Ensure NUL byte termination
