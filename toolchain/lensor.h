@@ -25,6 +25,8 @@
  * developmental use.
  */
 
+#define SUPPORTS_INIT_PRIORITY 1
+
 /* Default arguments
  * `-- `-lc`
  *         Link to C Standard Library

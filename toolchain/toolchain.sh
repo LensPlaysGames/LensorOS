@@ -34,11 +34,11 @@ TARGET="x86_64-lensor"
 PREFIX="$ToolchainDir/cross"
 SYSROOT="$ToolchainDir/../root"
 if [ -z "$BINUTILS_VERSION" ]; then
-    BINUTILS_VERSION="2.38";
+    BINUTILS_VERSION="2.47";
 fi
 BINUTILS_STRING="binutils-$BINUTILS_VERSION"
 if [ -z "$GCC_VERSION" ]; then
-    GCC_VERSION="12.1.0"
+    GCC_VERSION="16.2.0"
 fi
 GCC_STRING="gcc-$GCC_VERSION"
 # Ensure known working directory (assuming script wasn't moved).
@@ -110,11 +110,12 @@ if [ ! -d $GCC_STRING"-build" ] ; then
         --disable-nls                    \
         --disable-werror                 \
         --enable-languages=c,c++         \
+        --disable-gcov                   \
         --with-sysroot="$SYSROOT"
     # Build GCC.
     echo -e "\n\n -> Building & Installing GNU Compiler Collection\n\n"
-    make all-gcc -j
-    make all-target-libgcc -j
+    make all-gcc -j 5
+    make all-target-libgcc -j 5
     make install-gcc -j
     make install-target-libgcc -j
     cd ..

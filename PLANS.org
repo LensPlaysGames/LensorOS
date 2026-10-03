@@ -1,3 +1,23 @@
+* Update GNU Toolchain To Force =.init_array=
+Medium Priority
+
+Currently, our toolchain is configured as a cross compiler, which means any and all host checks fail immediately. GCC uses host checks to determine whether to support =.init_array= or =.ctors= sections for global initialization, and, that means they always fail for our cross compiler.
+
+This means our GCC toolchain is producing executables with the legacy =.ctors= section. Now, this is no problem when compiling *and linking* with our GCC toolchain. But, if we were to build our =libc.a= static library with the GCC toolchain, and then attempt to link a program using the clang toolchain (or any non-GNU linker), the =.ctors= section is *not* automatically merged into the =.init_array= section.
+
+This means legacy =.ctors= section remains, and the executable is broken because our libc has a different expectation of where the constructor pointers are located.
+
+- =gcc/config.gcc= :: =gcc_cv_initfini_array=yes=
+- =gcc/config/lensor.h= :: =#define SUPPORTS_INIT_PRIORITY 1=
+= =configure= argument :: =--enable-initfini-array=
+
+* Abstract Socket Server Architecture to Abstract Server Interface Library
+Low Priority
+
+Currently, userspace IPC servers (like =pawzit=/=stdout= or =serdio=) are all using syscalls and bespoke functionality in order to open their socket, keep track of clients, etc. This may be the approach we want to take, but, I want to try something.
+
+I wonder if it'd be possible to abstract this functionality to a userspace library? So, both =pawzit= and =serdio= would use the same startup code, much like =libguiclient=, but, ya know, for servers.
+
 * Timer Overhaul
 Medium Priority
 

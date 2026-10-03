@@ -67,11 +67,13 @@ set(
 )
 
 # TODO Should we add -mno-red-zone here?
-set( LENSOR_FLAGS "-fno-stack-protector -fno-exceptions -fno-rtti" )
-set( CMAKE_C_FLAGS_INIT "${LENSOR_FLAGS}" )
-set( CMAKE_CXX_FLAGS_INIT "${LENSOR_FLAGS}" )
-set( CMAKE_EXE_LINKER_FLAGS_INIT "${LENSOR_FLAGS}" )
-set( CMAKE_SHARED_LINKER_FLAGS_INIT "${LENSOR_FLAGS}" )
+set( CMAKE_C_FLAGS_INIT "" )
+set(
+  CMAKE_CXX_FLAGS_INIT
+  " -fno-stack-protector -fno-exceptions -fno-rtti"
+)
+set( CMAKE_EXE_LINKER_FLAGS_INIT "" )
+set( CMAKE_SHARED_LINKER_FLAGS_INIT "" )
 
 # LensorOS toolchain is GCC 16 or greater, so we're good here.
 set( CMAKE_CXX_STANDARD 23 )

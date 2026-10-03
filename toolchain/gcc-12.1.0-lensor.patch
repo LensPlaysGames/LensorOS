@@ -50,30 +50,6 @@ diff -bruN -x '*.cache' untouched/gcc-12.1.0/fixincludes/mkfixinc.sh gcc-12.1.0/
      i?86-*-cygwin* | \
      i?86-*-mingw32* | \
      x86_64-*-mingw32* | \
-diff -bruN -x '*.cache' untouched/gcc-12.1.0/gcc/c/c-typeck.cc gcc-12.1.0/gcc/c/c-typeck.cc
---- untouched/gcc-12.1.0/gcc/c/c-typeck.cc	2022-05-06 00:30:56.000000000 -0700
-+++ gcc-12.1.0/gcc/c/c-typeck.cc	2022-10-26 13:14:53.342657200 -0700
-@@ -2572,17 +2572,10 @@
- 
-       return ref;
-     }
--  else if (should_suggest_deref_p (type))
-+  else if (code == POINTER_TYPE)
-     {
--      /* Special-case the error message for "ptr.field" for the case
--	 where the user has confused "." vs "->".  */
--      rich_location richloc (line_table, loc);
--      /* "loc" should be the "." token.  */
--      richloc.add_fixit_replace ("->");
--      error_at (&richloc,
--		"%qE is a pointer; did you mean to use %<->%>?",
--		datum);
--      return error_mark_node;
-+      tree deref = build_indirect_ref(loc, datum, RO_UNARY_STAR);
-+      return build_component_ref(loc, deref, component, component_loc);
-     }
-   else if (code != ERROR_MARK)
-     error_at (loc,
 diff -bruN -x '*.cache' untouched/gcc-12.1.0/gcc/config/i386/t-lensor gcc-12.1.0/gcc/config/i386/t-lensor
 --- untouched/gcc-12.1.0/gcc/config/i386/t-lensor	1969-12-31 16:00:00.000000000 -0800
 +++ gcc-12.1.0/gcc/config/i386/t-lensor	2022-10-26 12:54:27.879524000 -0700
