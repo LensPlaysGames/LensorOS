@@ -111,7 +111,10 @@ struct raw_stderr_insert_iterator {
 template <typename... _Args>
 void debug_print(std::format_string<_Args...> __fmt, _Args&&... __args) {
     using _Output = raw_stderr_insert_iterator;
-    std::basic_format_context<_Output, char> __ctx(_Output{}, std::__detail::__make_args<_Output, char, _Args...>(std::forward<_Args>(__args)...));
+    std::basic_format_context<_Output, char> __ctx(
+        _Output{},
+        std::__detail::__make_args<_Output, char, _Args...>(
+            std::forward<_Args>(__args)...));
     std::__detail::__format(std::move(__ctx), __fmt.get());
 }
 
@@ -192,22 +195,31 @@ void __libc_init() noexcept {
 
     DBGMSG("[LibC] Calling global constructors\n");
 
-    DBGMSG("[LibC] Searching preinit array at {}\n", (void*)__preinit_array_start);
-    for (init_cb* cb = __preinit_array_start; cb != __preinit_array_end; ++cb)
+    DBGMSG("[LibC] Searching preinit array at {} - {}\n", (void*)__preinit_array_start, (void*)__preinit_array_end);
+    for (init_cb* cb = __preinit_array_start; cb < __preinit_array_end; ++cb)
         DBGMSG("    Found preinit callback at {}\n", (void*)*cb);
 
-    DBGMSG("[LibC] Searching init array at {}\n", (void*)__init_array_start);
-    for (init_cb* cb = __init_array_start; cb != __init_array_end; ++cb)
-        DBGMSG("    Found init callback at {}\n", (void*)*cb);
+    DBGMSG("[LibC] Searching init array at {} - {}\n", (void*)__init_array_start, (void*)__init_array_end);
+    for (init_cb* cb = __init_array_start; cb < __init_array_end; ++cb) {
+        DBGMSG("    init callback at {}\n", (void*)cb);
+        DBGMSG("    Found init callback at {} ({} - {})\n", (void*)*cb, (void*)__init_array_start, (void*)__init_array_end);
+    }
 
-    for (init_cb* cb = __preinit_array_start; cb != __preinit_array_end; ++cb) {
+    for (init_cb* cb = __preinit_array_start; cb < __preinit_array_end; ++cb) {
         (*cb)();
         DBGMSG("    Ran preinit callback at {}\n", (void*)*cb);
     }
-    for (init_cb* cb = __init_array_start; cb != __init_array_end; ++cb) {
+    for (init_cb* cb = __init_array_start; cb < __init_array_end; ++cb) {
         (*cb)();
         DBGMSG("    Ran init callback at {}\n", (void*)*cb);
     }
+
+    // Confidence
+    if (stdout == nullptr) {
+        DBGMSG("[LibC]: Failed to initialize stdio\n");
+        exit(1);
+    }
+
     DBGMSG("[LibC] Initialized\n");
 }
 
@@ -223,9 +235,11 @@ void __libc_fini() noexcept {
 /// Run the program.
 int __libc_run_main(int argc, char** argv, char** envp) {
     __libc_init();
-    DBGMSG("Running main() (at {})\n", (void*)main);
+    DBGMSG("[LibC]: Running main() (at {})\n", (void*)main);
     int ret = __extension__ main(argc, argv, envp);
+    DBGMSG("[LibC]: main() returned {}\n", ret);
     __libc_fini();
+    DBGMSG("[LIbC]: Teardown Complete\n");
     return ret;
 }
 
