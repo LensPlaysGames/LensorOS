@@ -63,7 +63,8 @@
 #define SYS_wait_milliseconds 30
 #define SYS_wait_nanoseconds 31
 #define SYS_hardware 32
-#define SYS_MAXSYSCALL 32
+#define SYS_current_millisecond 33
+#define SYS_MAXSYSCALL 33
 #else
 #define SYS_read 0
 #define SYS_write 1
@@ -244,8 +245,8 @@ void sys_unmap(void* address) {
 void sys_time(tm* time) {
     syscall(SYS_time, (uintptr_t)time);
 }
-int sys_waitpid(pid_t pid) {
-    return (int)syscall(SYS_waitpid, (uintptr_t)pid);
+int sys_waitpid(pid_t pid, int* status) {
+    return (int)syscall(SYS_waitpid, (uintptr_t)pid, (uintptr_t)status);
 }
 pid_t sys_fork() {
     return (pid_t)syscall(SYS_fork);
@@ -321,6 +322,10 @@ int sys_audio_hardware(hardware_audio_t* outdata) {
     return syscall(SYS_hardware, LENSOR_HARDWARE_AUDIO, outdata);
 }
 
+uint64_t sys_current_millisecond() {
+    return syscall(SYS_current_millisecond);
+}
+
 /// ===========================================================================
 ///  C++ Interface.
 /// ===========================================================================
@@ -382,8 +387,8 @@ inline void sys_unmap(void* address) {
 inline void sys_time(tm* time) {
     std::__detail::syscall(SYS_time, (uintptr_t)time);
 }
-inline int sys_waitpid(pid_t pid) {
-    return std::__detail::syscall<int>(SYS_waitpid, (uintptr_t)pid);
+inline int sys_waitpid(pid_t pid, int* status) {
+    return std::__detail::syscall<int>(SYS_waitpid, (uintptr_t)pid, (uintptr_t)status);
 }
 inline pid_t sys_fork() {
     return std::__detail::syscall<pid_t>(SYS_fork);
@@ -460,6 +465,10 @@ inline int sys_graphic_hardware(hardware_graphic_t* outdata) {
 }
 inline int sys_audio_hardware(hardware_audio_t* outdata) {
     return std::__detail::syscall<int>(SYS_hardware, LENSOR_HARDWARE_AUDIO, outdata);
+}
+
+inline uint64_t sys_current_millisecond() {
+    return std::__detail::syscall(SYS_current_millisecond);
 }
 
 }  // namespace std

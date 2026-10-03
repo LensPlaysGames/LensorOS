@@ -1269,6 +1269,9 @@ void sys$31_wait_nanoseconds(usz nanoseconds) {
     DBGMSG(sys$_dbgfmt, 31, "wait_nanoseconds");
     const size_t wait_ticks
         = nanoseconds / Scheduler::tick_nanosecond_duration();
+    // TODO: If waiting for zero ticks, might as well just block within this
+    // thread.
+    // TODO: Use high precision timer and countdown value for precise wait.
     auto* process = Scheduler::CurrentProcess->value();
     process->WakeUpTick = Scheduler::current_tick() + wait_ticks;
     process->State = Process::SLEEPING;
@@ -1346,6 +1349,13 @@ int sys$32_hardware(hardware_query_type_t t, void* out) {
     return 0;
 }
 
+u64 sys$33_current_millisecond(hardware_query_type_t t, void* out) {
+    // FIXME: Not actually the PIT; hacky thing where whatever timer is
+    // running sets gPIT frequency and ticks...
+    return Time::unix_boot_time * Time::milliseconds_per_second
+           + gPIT.milliseconds_since_boot();
+}
+
 // TODO: Reorder this
 // FIXME: Make it easier to reorder this (maybe separate the number
 // from the name? I don't know, something to make this easier...)
@@ -1405,4 +1415,5 @@ void* syscalls[LENSOR_OS_NUM_SYSCALLS] = {
     (void*)sys$30_wait_milliseconds,
     (void*)sys$31_wait_nanoseconds,
     (void*)sys$32_hardware,
+    (void*)sys$33_current_millisecond,
 };
