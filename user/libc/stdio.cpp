@@ -765,7 +765,7 @@ int vfprintf(FILE* __restrict__ stream, const char* __restrict__ format, va_list
 
                 case 'p': {
                     void* addr = va_arg(args, void*);
-                    std::print("{}", addr);
+                    std::print(stream, "{}", addr);
                 }
                     continue;
 
