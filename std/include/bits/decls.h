@@ -51,9 +51,13 @@
 #define _Flatten __attribute__((__flatten__))
 
 #ifdef __cplusplus
+#define _Noreturn [[noreturn]]
 #define _Nodiscard [[nodiscard]]
+#define _Restrict
 #else
+#define _Noreturn __attribute((noreturn))
 #define _Nodiscard __attribute__((__warn_unused_result__))
+#define _Restrict restrict
 #endif
 
 /// Pragmas
