@@ -31,6 +31,7 @@
 #include "assert.h"
 #include "bits/cdtors.h"
 #include "bits/file_struct.h"
+#include "ctype.h"
 #include "errno.h"
 #include "stddef.h"
 #include "stdio.h"
@@ -501,6 +502,98 @@ void __free_impl(void* ptr, const char* file, int line) {
         free_list->prev = block;
     }
     free_list = block;
+}
+
+double atof(const char* str) {
+    if (not str) return 0.0;
+
+    int i = 0;
+    double sign = 1.0;
+    double result = 0.0;
+
+    // Skip leading whitespace
+    while (isspace(str[i]))
+        ++i;
+
+    // Handle optional '+' or '-' sign
+    if (str[i] == '-' or str[i] == '+') {
+        if (str[i] == '-')
+            sign = -1.0;
+        ++i;
+    }
+
+    // Parse integer part (before decimal point)
+    while (isdigit(str[i])) {
+        result = result * 10.0 + (str[i] - '0');
+        ++i;
+    }
+
+    // Parse fractional part (after decimal point)
+    if (str[i] == '.') {
+        ++i;
+        double factor = 1.0;
+        while (isdigit(str[i])) {
+            factor *= 0.1;
+            result += (str[i] - '0') * factor;
+            ++i;
+        }
+    }
+
+    return sign * result;
+}
+int atoi(const char* str) {
+    // Handle null pointer
+    if (not str) return 0;
+
+    int i = 0;
+    int sign = 1;
+    long long result = 0;
+
+    // Skip leading whitespace
+    while (isspace(str[i])) {
+        i++;
+    }
+
+    // 3. Handle optional '+' or '-' sign
+    if (str[i] == '-' or str[i] == '+') {
+        if (str[i] == '-') {
+            sign = -1;
+        }
+        i++;
+    }
+
+    // 4. Convert digits and stop at the first non-digit character
+    while (isdigit(str[i])) {
+        result = result * 10 + (str[i] - '0');
+
+        // Simple standard integer overflow safety checks
+        if (sign * result > 2147483647) return 2147483647;    // INT_MAX
+        if (sign * result < -2147483648) return -2147483648;  // INT_MIN
+
+        i++;
+    }
+
+    return int(sign * result);
+}
+
+int system(const char* command) {
+    auto p = std::sys_fork();
+    if (p == 0) {
+        // Child; yeet ourselves into requested command.
+        const char* argv[4];
+        argv[0] = "sh";
+        argv[1] = "-c";
+        argv[2] = command;
+        argv[3] = nullptr;
+        execv("/fs0/bin/xish", (char**)&argv[0]);
+        return -1;
+    }
+
+    // Parent; wait for child process to finish.
+    int command_status{};
+    auto wait_rc = waitpid(p, &command_status, 0);
+    if (wait_rc == -1) return -1;
+    return WEXITSTATUS(command_status);
 }
 
 __END_DECLS__
