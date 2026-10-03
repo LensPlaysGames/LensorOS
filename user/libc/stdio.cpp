@@ -860,35 +860,31 @@ int vscanf(const char* __restrict__ format, va_list args) {
     return vfscanf(stdin, format, args);
 }
 
-int vsnprintf(char* __restrict__ str, size_t size, const char* __restrict__ format, va_list args) {
-    /// FIXME: Stub.
-    (void)str;
-    (void)size;
-    (void)format;
-    (void)args;
-    _LIBC_STUB();
-    return -1;
+static void safe_write(char* __restrict__ str, size_t size, size_t& written, char c) {
+    if (written < size)
+        str[written] = c;
+    ++written;
 }
 
-int vsprintf(char* __restrict__ str, const char* __restrict__ format, va_list args) {
+int vsnprintf(char* __restrict__ str, size_t size, const char* __restrict__ format, va_list args) {
+    size_t written{0};
+
     for (const char* fmt = format; *fmt; ++fmt) {
         if (*fmt == '%') {
             ++fmt;
             switch (*fmt) {
-                    // TODO: Support more format specifiers
-
+                // TODO: Support more format specifiers
                 case 's': {
                     const char* str_val = va_arg(args, const char*);
-                    while (*str_val) {
-                        *str++ = *str_val++;
-                    }
-                    *str = '\0';
+                    while (*str_val and written < size)
+                        safe_write(str++, size, written, *str_val++);
+                    safe_write(str, size, written, '\0');
                 }
                     continue;
 
                 case 'c': {
                     int c = va_arg(args, int);
-                    *str++ = (char)c;
+                    safe_write(str, size, written, (char)c);
                 }
                     continue;
 
@@ -910,7 +906,7 @@ int vsprintf(char* __restrict__ str, const char* __restrict__ format, va_list ar
                     if (i == max_digits) digits[--i] = '0';
 
                     for (const char* it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
-                        *str++ = *it;
+                        safe_write(str++, size, written, *it);
                 }
                     continue;
 
@@ -933,25 +929,41 @@ int vsprintf(char* __restrict__ str, const char* __restrict__ format, va_list ar
 
                     if (i == max_digits) digits[--i] = '0';
 
-                    if (negative) *str++ = '-';
+                    if (negative)
+                        safe_write(str++, size, written, '-');
                     for (const char* it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
-                        *str++ = *it;
+                        safe_write(str++, size, written, *it);
                 }
                     continue;
 
                 case '\0':
-                    *str++ = '%';
-                    *str = '\0';
+                    safe_write(str++, size, written, '%');
+                    safe_write(str, size, written, '\0');
                     return 0;
 
                 default:
-                    *str++ = '%';
+                    safe_write(str++, size, written, '%');
                     break;
             }
         }
-        *str++ = *fmt;
+        safe_write(str++, size, written, *fmt);
     }
+
+    // Ensure NUL byte termination
+    if (size > 0) {
+        // If written count exceeded bounds, terminate at the absolute edge:
+        // size - 1.
+        if (written >= size)
+            str[size - 1] = '\0';
+        else
+            str[written] = '\0';
+    }
+
     return 0;
+}
+
+int vsprintf(char* __restrict__ str, const char* __restrict__ format, va_list args) {
+    return vsnprintf(str, SIZE_MAX, format, args);
 }
 
 int vsscanf(const char* __restrict__ str, const char* __restrict__ format, va_list args) {
