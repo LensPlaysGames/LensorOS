@@ -683,8 +683,12 @@ int main(int argc, const char** argv) {
     fill_color(fb, black);
 
     // Allocate back buffer
-    // TODO: flags
-    void* back_buffer = (void*)syscall(SYS_map, NULL, fb.buffer_size, 0);
+    void* back_buffer = (void*)syscall(
+        SYS_map,
+        NULL,  // any address will do, kernel can pick
+        fb.buffer_size,
+        LENSOROS_SYSCALL_MAP_FLAG_PROT_READ
+            | LENSOROS_SYSCALL_MAP_FLAG_PROT_WRITE);
     if (!back_buffer) {
         printf("[INIT]: could not allocate graphical back buffer\n");
         return 1;

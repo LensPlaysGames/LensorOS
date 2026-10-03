@@ -247,21 +247,32 @@ void* sys$6_map(void* address, usz size, u64 flags) {
     DBGMSG(
         "  address: {}\n"
         "  size:    {}\n"
-        "  flags:   {}\n"
+        "  flags:   {:#x}\n"
         "\n",
         address,
         size,
         flags);
 
+    /** Size Parameter Is Zero */
+    if (not size) return nullptr;
+
+    /** Address Parameter Not Aligned */
+    if ((uintptr_t(address) % PAGE_SIZE) != 0) {
+        std::print("[SYS$]:map(): address not aligned\n");
+        return nullptr;
+    }
+
+    /** PROT_NONE with present flags */
+    if ((flags & LENSOROS_SYSCALL_MAP_FLAG_PROT_NONE)
+        and ((flags & LENSOROS_SYSCALL_MAP_FLAG_PROT_READ)
+             or (flags & LENSOROS_SYSCALL_MAP_FLAG_PROT_WRITE))) {
+        std::print("[SYS$]:map(): PROT_NONE with present flags\n");
+        return nullptr;
+    }
+
     Process* process = Scheduler::CurrentProcess->value();
 
-    usz pages = size / PAGE_SIZE;
-    if (size % PAGE_SIZE)
-        ++pages;
-
-    // Allocate physical RAM
-    // TODO: There isn't really any reason these need to be contiguous.
-    void* paddr = Memory::request_pages(pages);
+    const usz pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
 
     // If address is NULL, pick an address to place memory at.
     if (not address) {
@@ -269,30 +280,55 @@ void* sys$6_map(void* address, usz size, u64 flags) {
         process->next_region_vaddr += pages * PAGE_SIZE;
     }
 
-    // FIXME: Major problem: we need to check for overlapping regions
-    // here. If the user asks for the same memory twice. If the user
-    // asks for an address out of the range of addresses allowed in
-    // userspace, etc.
+    /** Virtual Address Already Mapped */
+    if (process->valid_address(address)) {
+        return nullptr;
+    }
+
+    /** Virtual Address Is Outside Of Userspace Bounds */
+    // TODO: bool is_kernel_address()
+    if ((uintptr_t(address) & (0xffff800000000000)) != 0) {
+        return nullptr;
+    }
+
+    if (flags & LENSOROS_SYSCALL_MAP_FLAG_PROT_NONE) {
+        // We probably want to actually map these so that they page fault properly
+        // with EACCERR or whatever.
+        return address;
+    }
+
+    u64 memory_flags = 0;
+    if ((flags & LENSOROS_SYSCALL_MAP_FLAG_PROT_READ)
+        or (flags & LENSOROS_SYSCALL_MAP_FLAG_PROT_WRITE))
+        memory_flags |= (u64)Memory::PageTableFlag::Present
+                        | (u64)Memory::PageTableFlag::UserSuper;
+    // Memory::Flag::Readable | Memory::Flag::User;
+    if (flags & LENSOROS_SYSCALL_MAP_FLAG_PROT_WRITE)
+        memory_flags |= (u64)Memory::PageTableFlag::ReadWrite;
+    // Memory::Flag::Writable;
+
+    // Allocate physical RAM
+    // TODO: There isn't really any reason these need to be contiguous.
+    auto paddr = PhysicalKernelAddress(
+        Memory::request_pages(pages));
 
     // Add memory region to current process
-    // TODO: Convert given flags to Memory::PageTableFlag
-    // TODO: Figure out what flags we are given (libc, ig).
-    usz memory_flags = 0;
-    memory_flags |= (usz)Memory::PageTableFlag::Present;
-    memory_flags |= (usz)Memory::PageTableFlag::UserSuper;
-    memory_flags |= (usz)Memory::PageTableFlag::ReadWrite;
-    process->add_memory_region(address, paddr, size, memory_flags);
+    process->add_memory_region(
+        address,
+        (void*)paddr.address,
+        size,
+        memory_flags);
 
     // Map virtual address to physical with proper flags
     Memory::map_pages(
         process->CR3,
         address,
-        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(paddr)).address,
+        (void*)PhysicalAddress(PhysicalKernelAddress(paddr)).address,
         memory_flags,
         pages,
         Memory::ShowDebug::No);
 
-    DBGMSG("[SYS$]:map: Mapped {} pages at {} (physical {})\n", pages, (void*)address, (void*)paddr);
+    DBGMSG("[SYS$]:map: Mapped {} pages at {} (physical {})\n", pages, (void*)address, (void*)paddr.address);
 
     // Return usable address.
     return address;

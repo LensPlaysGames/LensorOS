@@ -54,4 +54,13 @@ typedef enum LensorOS_SyscallWrite_Flags {
     LENSOROS_SYSCALL_WRITE_FLAG_NOBLOCK = 1 << 0,
 } LensorOS_SyscallWrite_Flags;
 
+typedef enum LensorOS_SyscallMap_Flags {
+    LENSOROS_SYSCALL_MAP_FLAG_NONE = 0,
+    LENSOROS_SYSCALL_MAP_FLAG_PROT_READ = 1 << 0,
+    LENSOROS_SYSCALL_MAP_FLAG_PROT_WRITE = 1 << 1,
+    // If this bit is set, allocate virtual memory space, but not physical
+    // memory. Call mmap() with READ or WRITE flags to allocate physical.
+    LENSOROS_SYSCALL_MAP_FLAG_PROT_NONE = 1 << 2,
+} LensorOS_SyscallMMap_Flags;
+
 #endif /* LENSOROS_DEFINES_SYSCALLS_H */

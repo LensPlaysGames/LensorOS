@@ -52,7 +52,10 @@ int __errno{0};
 // NOTE: All of these should be initialised with libc, i.e. in
 // `__libc_init_malloc()`.
 char* heap_base;
+char* heap_end;
+char* heap_virtual_end;
 size_t heap_size;
+size_t heap_virtual_size;
 char* heap_ptr;
 
 /// Keep track of allocated blocks.
@@ -91,7 +94,11 @@ alloc_header* free_headers;
 /// ===========================================================================
 /// Check if the heap has enough space for a new allocation.
 bool heap_has_space(size_t size) {
-    return heap_ptr + size < heap_base + heap_size;
+    return heap_ptr + size < heap_end;
+}
+
+bool heap_has_virtual_space(size_t size) {
+    return heap_ptr + size < heap_virtual_end;
 }
 
 /// Allocate a new pointer on the heap.
@@ -239,13 +246,29 @@ void __libc_init_malloc() {
     __stdio_destructed = true;
 
     /// Initialise the heap.
-    // FIXME: Proper flags...
-    heap_size = 1 << 20;
-    heap_base = (char*)syscall(SYS_map, nullptr, heap_size, 0);
-    heap_ptr = heap_base;
     alloc_list = nullptr;
     free_list = nullptr;
     free_headers = nullptr;
+
+    // Maximum size: a gigabyte.
+    heap_virtual_size = 1u * 1024 * 1024 * 1024;
+    heap_base = (char*)syscall(
+        SYS_map,
+        nullptr,
+        heap_virtual_size,
+        LENSOROS_SYSCALL_MAP_FLAG_PROT_NONE);
+    heap_virtual_end = heap_base + heap_virtual_size;
+    heap_ptr = heap_base;
+
+    // Initial size: 64 kilobytes.
+    heap_size = 64u * 1024;
+    (void)syscall(
+        SYS_map,
+        heap_base,
+        heap_size,
+        LENSOROS_SYSCALL_MAP_FLAG_PROT_READ
+            | LENSOROS_SYSCALL_MAP_FLAG_PROT_WRITE);
+    heap_end = heap_base + heap_size;
 }
 
 void __libc_fini_malloc() {
@@ -393,9 +416,31 @@ __attribute__((malloc, alloc_size(1))) void* malloc(size_t bytes) {
     /// We need to allocate a new block. Make sure we have enough space in the
     /// heap for both the block and the memory we need to allocate.
     static constexpr size_t block_sz = align_to_max_align_t(sizeof(alloc_header));
-    if (heap_ptr + bytes + block_sz >= heap_base + heap_size) {
+    const size_t allocation_size = bytes + block_sz;
+    if (not heap_has_virtual_space(allocation_size)) {
+        /** Heap would exceed max size */
         __errno = ENOMEM;
         return nullptr;
+    }
+    if (not heap_has_space(allocation_size)) {
+        // grow heap by at least allocation size
+        constexpr size_t grow_align = 0x10000;
+        const size_t grow_amount = (allocation_size + grow_align - 1)
+                                   / grow_align;
+
+        auto rc = std::sys_map(
+            heap_end,
+            grow_amount,
+            LENSOROS_SYSCALL_MAP_FLAG_PROT_READ
+                | LENSOROS_SYSCALL_MAP_FLAG_PROT_WRITE);
+        if (rc == nullptr) {
+            /** Could not grow heap */
+            __errno = ENOMEM;
+            return nullptr;
+        }
+
+        heap_size += grow_amount;
+        heap_end += grow_amount;
     }
 
     /// Allocate memory for the block.
