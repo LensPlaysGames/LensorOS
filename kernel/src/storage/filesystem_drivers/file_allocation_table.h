@@ -106,7 +106,7 @@ class FileAllocationTableDriver final : public FilesystemDriver {
 
     static void print_fat(BootRecord&);
 
-    auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
+    auto open(std::string_view path, u64 flags) -> std::shared_ptr<FileMetadata> final;
     void close(FileMetadata* file) final;
 
     ssz read(FileMetadata* file, usz offs, usz size, void* buffer, usz flags) final;

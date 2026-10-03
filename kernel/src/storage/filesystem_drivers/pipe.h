@@ -100,7 +100,7 @@ struct NamedPipeBuffer {
 
 struct PipeDriver final : FilesystemDriver {
     void close(FileMetadata* meta) final;
-    auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
+    auto open(std::string_view path, u64 flags) -> std::shared_ptr<FileMetadata> final;
 
     ssz read(FileMetadata* meta, usz, usz byteCount, void* buffer, usz flags) final;
     ssz read_raw(usz, usz, void*) final { return -1; };

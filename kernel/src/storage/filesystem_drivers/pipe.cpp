@@ -102,7 +102,7 @@ void PipeDriver::close(FileMetadata* meta) {
     // std::print("[PIPE]: Closed pipe buffer at {}\n", (void*)pipeBuffer);
 }
 
-auto PipeDriver::open(std::string_view path) -> std::shared_ptr<FileMetadata> {
+auto PipeDriver::open(std::string_view path, u64 flags) -> std::shared_ptr<FileMetadata> {
     // FIXME: All horribly wrong
 
     panic("TODO: Support opening named pipes");

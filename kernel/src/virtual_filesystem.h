@@ -170,7 +170,7 @@ struct VFS {
         return true;
     }
 
-    FileDescriptors open(std::string_view);
+    FileDescriptors open(std::string_view, u64 flags);
 
     bool close(ProcFD procfd);
     bool close(Process*, ProcFD procfd);

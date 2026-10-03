@@ -29,6 +29,11 @@
 #include <string>
 #include <utility>
 
+enum struct FileOpenFlag {
+    NONE = 0,
+    CREATE = 1u << 0,
+};
+
 struct FileMetadata {
     using FileType = ::FileType;
 

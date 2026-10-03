@@ -22,6 +22,7 @@
 #include <storage/file_metadata.h>
 #include <virtual_filesystem.h>
 
+#include <filesystem>
 #include <format>
 
 // Uncomment the following directive for extra debug information output.
@@ -115,7 +116,7 @@ void VFS::free_fd(SysFD fd, ProcFD procfd) {
     free_fd(Scheduler::CurrentProcess->value(), fd, procfd);
 }
 
-FileDescriptors VFS::open(std::string_view path) {
+FileDescriptors VFS::open(std::string_view path, u64 flags) {
     u64 fullPathLength = path.size();
 
     if (fullPathLength <= 1) {
@@ -123,9 +124,15 @@ FileDescriptors VFS::open(std::string_view path) {
         return {};
     }
 
-    if (path[0] != '/') {
-        std::print("[VFS]: path does not start with slash, {}\n", fullPathLength);
-        return {};
+    // relative to PWD, if possible
+    std::string path_data{};
+    std::filesystem::path p;
+    if (path[0] != '/' and Scheduler::CurrentProcess and Scheduler::CurrentProcess->value()) {
+        auto process = Scheduler::CurrentProcess->value();
+        p = std::filesystem::path(process->WorkingDirectory) / std::filesystem::path(path);
+        std::print("[VFS]:open: pwd-relative path: \"{}\"\n", p);
+        path_data = p.string();
+        path = path_data;
     }
 
     DBGMSG("[VFS]: Attempting to open file at path {}\n", path);
@@ -138,7 +145,7 @@ FileDescriptors VFS::open(std::string_view path) {
 
         /// Try to open the file.
         DBGMSG("[VFS]: Attempting to open file at path {} on mount {}\n", fs_path, mount.Path);
-        if (auto meta = mount.FS->open(fs_path)) {
+        if (auto meta = mount.FS->open(fs_path, flags)) {
             DBGMSG(
                 "  Metadata:\n"
                 "    Name: {}\n"

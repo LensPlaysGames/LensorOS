@@ -57,7 +57,7 @@ struct NamedInputBuffer {
 
 struct InputDriver final : FilesystemDriver {
     void close(FileMetadata* file) final;
-    std::shared_ptr<FileMetadata> open(std::string_view path) final;
+    std::shared_ptr<FileMetadata> open(std::string_view path, u64 flags) final;
 
     ssz read_raw(usz, usz, void*) final { return -1; }
     ssz flush(FileMetadata* file) final { return -1; };

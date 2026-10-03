@@ -31,11 +31,11 @@ struct FileMetadata;
 struct StorageDeviceDriver {
     virtual ~StorageDeviceDriver() = default;
     virtual void close(FileMetadata* file) = 0;
-    virtual auto open(std::string_view path) -> std::shared_ptr<FileMetadata> = 0;
+    virtual auto open(std::string_view path, u64 flags) -> std::shared_ptr<FileMetadata> = 0;
     [[gnu::nonnull(2)]]
-    virtual ssz read(FileMetadata* file, usz offs, usz bytes, void* buffer, usz flags) = 0;
+    virtual ssz read(FileMetadata* file, usz offs, usz bytes, void* buffer, u64 flags) = 0;
     virtual ssz read_raw(usz offs, usz bytes, void* buffer) = 0;
-    virtual ssz write(FileMetadata* file, usz offs, usz bytes, void* buffer, usz flags) = 0;
+    virtual ssz write(FileMetadata* file, usz offs, usz bytes, void* buffer, u64 flags) = 0;
 };
 
 /// Helper function to convert a Driver to a StorageDeviceDriver.

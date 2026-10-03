@@ -66,14 +66,16 @@
 [[maybe_unused]]
 constexpr const char* sys$_dbgfmt = "[SYS$]: {} -- {}\n";
 
-ProcessFileDescriptor sys$0_open(const char* path) {
+ProcessFileDescriptor sys$0_open(const char* path, u64 inflags) {
     DBGMSG(sys$_dbgfmt, 0, "open");
     // Validate path pointer.
-    if (not Scheduler::CurrentProcess->value()->valid_address(path)) {
+    auto process = Scheduler::CurrentProcess->value();
+    if (not process->valid_address(path)) {
         std::print("[SYS$]:open:ERROR: path address invalid: {}\n", (void*)path);
         return ProcFD::Invalid;
     }
-    return SYSTEM->virtual_filesystem().open(path).Process;
+    // TODO: translate flags?
+    return SYSTEM->virtual_filesystem().open(path, inflags).Process;
 }
 
 void sys$1_close(ProcessFileDescriptor fd) {
@@ -492,11 +494,13 @@ void sys$11_exec(const char* path, const char** args) {
 
     // std::print("[EXEC]: path=\"{}\", args={}\n", path, (void*)args);
 
-    if (not path) {
-        std::print("[SYS$]:exec: Can not execute NULL path\n");
+    Process* process = Scheduler::CurrentProcess->value();
+
+    if (not process->valid_address(path)) {
+        std::print("[SYS$]:exec:ERROR: path address invalid: {}\n", (void*)path);
         return;
     }
-    Process* process = Scheduler::CurrentProcess->value();
+
     // std::print("[EXEC]: process: {:#016x}, kernel_stack: {:#016x}, cpu: {:#016x}\n", (uintptr_t)process, process->kernel_stack, (uintptr_t)cpu);
     process->kernel_stack = (uintptr_t)cpu;
 
@@ -512,7 +516,7 @@ void sys$11_exec(const char* path, const char** args) {
     std::print("  endargs\n");
 #endif
     // Load executable at path with virtual filesystem.
-    FileDescriptors fds = SYSTEM->virtual_filesystem().open(path);
+    FileDescriptors fds = SYSTEM->virtual_filesystem().open(path, (u64)FileOpenFlag::NONE);
     if (fds.invalid()) {
         std::print("[SYS$]:exec: Could not load file when path == {}\n", path);
         return;

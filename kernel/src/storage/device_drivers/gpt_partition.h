@@ -39,8 +39,8 @@ struct GPTPartitionDriver final : StorageDeviceDriver {
         , Offset(startSector * sectorSize) {}
 
     void close(FileMetadata* file) final { Driver->close(file); }
-    auto open(std::string_view name) -> std::shared_ptr<FileMetadata> final {
-        return Driver->open(name);
+    auto open(std::string_view name, u64 flags) -> std::shared_ptr<FileMetadata> final {
+        return Driver->open(name, flags);
     }
 
     ssz read(FileMetadata* file, usz offs, usz byteCount, void* buffer, usz flags) final {

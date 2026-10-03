@@ -371,7 +371,7 @@ std::shared_ptr<FileMetadata> FileAllocationTableDriver::traverse_path(
     return {};
 }
 
-auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_ptr<FileMetadata> {
+auto FileAllocationTableDriver::open(std::string_view raw_path, u64 flags) -> std::shared_ptr<FileMetadata> {
     DBGMSG("[FAT]: Attempting to open file {}\n", raw_path);
     if (Device == nullptr) {
         /// Should never get here.
@@ -393,9 +393,13 @@ auto FileAllocationTableDriver::open(std::string_view raw_path) -> std::shared_p
         DBGMSG("[FAT]::open(): Found existing file at \"{}\"\n", raw_path);
         return existing;
     }
-    DBGMSG("[FAT]::open(): Creating new file at \"{}\"\n", raw_path);
+
+    // File does not exist, and we have not been asked to create it.
+    if ((flags & u64(FileOpenFlag::CREATE)) == 0)
+        return {};
 
     // File opened at path does not exist; create new file at path.
+    DBGMSG("[FAT]::open(): Creating new file at \"{}\"\n", raw_path);
     std::vector<u8> FAT{};
     fresh_fat(FAT);
     // Find free directory entry in directory; er, we may need to find a

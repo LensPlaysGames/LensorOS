@@ -35,7 +35,7 @@ struct DbgOutDriver final : FilesystemDriver {
     ssz flush(FileMetadata* file) final {
         return -1;
     };
-    std::shared_ptr<FileMetadata> open(std::string_view path) final {
+    std::shared_ptr<FileMetadata> open(std::string_view path, u64 flags) final {
         return {};
     };
     void close(FileMetadata* file) final {

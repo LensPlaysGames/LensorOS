@@ -41,7 +41,7 @@ void InputDriver::close(FileMetadata* file) {
     FreeInputBuffers.push_back(input);
 }
 
-std::shared_ptr<FileMetadata> InputDriver::open(std::string_view path) {
+std::shared_ptr<FileMetadata> InputDriver::open(std::string_view path, u64 flags) {
     // FIXME: We may want to disallow empty paths.
 
     for (const auto& existing_buffer : InputBuffers)

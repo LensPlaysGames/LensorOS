@@ -284,7 +284,7 @@ struct SocketBinding {
 
 struct SocketDriver final : FilesystemDriver {
     void close(FileMetadata* meta) final;
-    auto open(std::string_view path) -> std::shared_ptr<FileMetadata> final;
+    auto open(std::string_view path, u64 flags) -> std::shared_ptr<FileMetadata> final;
 
     auto socket(SocketType domain, int type, int protocol) -> std::shared_ptr<FileMetadata>;
 

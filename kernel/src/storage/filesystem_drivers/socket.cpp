@@ -25,7 +25,7 @@
 
 #include <memory>
 
-std::shared_ptr<FileMetadata> SocketDriver::open(std::string_view path) {
+std::shared_ptr<FileMetadata> SocketDriver::open(std::string_view path, u64 flags) {
     SocketData* data = new SocketData;
     if (!data) return {};
     // FIXME: We aren't *entirely* sure that the "current process" is
@@ -150,7 +150,7 @@ ssz SocketDriver::write(FileMetadata* meta, usz, usz byteCount, void* buffer, us
 auto SocketDriver::socket(SocketType domain, int type, int protocol) -> std::shared_ptr<FileMetadata> {
     switch (domain) {
         case SocketType::LENSOR: {
-            auto f = open("");
+            auto f = open("", 0);
             if (!f) return {};
             SocketData* data = (SocketData*)f->driver_data();
             data->Data = new SocketBuffers;

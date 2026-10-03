@@ -28,7 +28,7 @@ struct PortController final : StorageDeviceDriver {
 
     /// Not valid for this driver, but required by the interface.
     void close(FileMetadata*) final {}
-    auto open(std::string_view) -> std::shared_ptr<FileMetadata> final {
+    auto open(std::string_view, u64 flags) -> std::shared_ptr<FileMetadata> final {
         return std::shared_ptr<FileMetadata>{nullptr};
     }
 

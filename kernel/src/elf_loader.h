@@ -440,7 +440,7 @@ CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::str
     }
 
     // Open stdin.
-    vfs.add_file(vfs.StdinDriver->open("stdin"), process);
+    vfs.add_file(vfs.StdinDriver->open("stdin", u64(FileOpenFlag::NONE)), process);
     // Open stdout and stderr
     auto outmeta = FileMetadata::Make(
         FileMetadata::FileType::Regular,

@@ -805,7 +805,7 @@ void kstage2(BootInfo* bInfo) {
             argv.emplace_back(arg);
 
         std::print("Opening {} with VFS\n", programTwoFilePath);
-        auto fds = vfs.open(programTwoFilePath);
+        auto fds = vfs.open(programTwoFilePath, (u64)FileOpenFlag::NONE);
         std::print("  Got FileDescriptors. {}, {}\n", fds.Process, fds.Global);
         if (fds.valid()) {
             if (ELF::CreateUserspaceElf64Process(fds.Process, argv))
@@ -841,13 +841,13 @@ void kstage2(BootInfo* bInfo) {
         {
             constexpr const char* programTestFilePath = "/fs0/notexist.ing";
             std::print("Opening {} just for fun\n", programTestFilePath);
-            fds = vfs.open(programTestFilePath);
+            fds = vfs.open(programTestFilePath, (u64)FileOpenFlag::NONE);
             if (fds.valid()) vfs.close(fds.Process);
         }
         {
             constexpr const char* programTestFilePath = "/fs0/somereallylongpath.txt";
             std::print("Opening {} just for fun\n", programTestFilePath);
-            fds = vfs.open(programTestFilePath);
+            fds = vfs.open(programTestFilePath, (u64)FileOpenFlag::NONE);
             if (fds.valid()) {
                 vfs.write(
                     fds.Process,
