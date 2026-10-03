@@ -103,7 +103,7 @@ bool heap_has_virtual_space(size_t size) {
 
 /// Allocate a new pointer on the heap.
 __attribute__((malloc)) void* heap_alloc(size_t size) {
-    if (!heap_has_space(size))
+    if (not heap_has_space(size))
         return nullptr;
     void* ptr = heap_ptr;
     heap_ptr += size;
@@ -425,8 +425,8 @@ __attribute__((malloc, alloc_size(1))) void* malloc(size_t bytes) {
     if (not heap_has_space(allocation_size)) {
         // grow heap by at least allocation size
         constexpr size_t grow_align = 0x10000;
-        const size_t grow_amount = (allocation_size + grow_align - 1)
-                                   / grow_align;
+        const size_t grow_amount = ((allocation_size + grow_align - 1) / grow_align)
+                                   * grow_align;
 
         auto rc = std::sys_map(
             heap_end,
