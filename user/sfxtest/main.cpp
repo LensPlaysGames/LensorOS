@@ -100,16 +100,16 @@ int main(int argc, const char** argv) {
         std::print("Audio prepared\n");
 
         shared_data->ready = true;
-        // TODO: sleep until the audio server wakes us up again (kqueue listen to
-        // client file descriptor for write).
-        // Fill with more (maybe even different) audio!
     }
 
-    while (shared_data->ready) {
-        std::sys_cooperative_yield();
+    for (int i = 0; i < 4; ++i) {
+        shared_data->ready = true;
+        while (shared_data->ready)
+            std::sys_cooperative_yield();
+        std::sys_wait_milliseconds(125);
     }
 
-    std::print("Played sound!\n");
+    std::print("Played sounds!\n");
 
     return 0;
 }
