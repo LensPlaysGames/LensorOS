@@ -1,3 +1,8 @@
+* VFS File Creation Behind Flag
+High Priority
+
+Currently, we just create a file if it doesn't exist unconditionally; _not what we want_.
+
 * Abstract Socket Server Architecture to Abstract Server Interface Library
 Low Priority
 
