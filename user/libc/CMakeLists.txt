@@ -42,7 +42,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
 add_library(c)
 
-target_compile_definitions(c PUBLIC _LIBC)
+target_compile_definitions(c PRIVATE _LIBC)
 
 target_include_directories(
   c
@@ -63,8 +63,10 @@ target_sources(
   stdio.cpp
   stdlib.cpp
   string.cpp
-  unistd.cpp
+  strings.cpp
+  sys/stat.cpp
   sys/wait.cpp
+  unistd.cpp
 )
 
 if(USE_DIAGNOSTICS_COLOUR)
