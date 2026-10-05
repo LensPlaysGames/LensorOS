@@ -163,9 +163,7 @@ auto FileAllocationTableDriver::try_create(std::shared_ptr<StorageDeviceDriver> 
 
     if (not out) return nullptr;
 
-#ifdef DEBUG_FAT
     print_fat(br);
-#endif /* DEBUG_FAT */
 
     auto fs = std::make_shared<FileAllocationTableDriver>(
         std::move(driver),
@@ -709,12 +707,14 @@ ssz FileAllocationTableDriver::read(FileMetadata* file, usz offset, usz size, vo
     // the last. This is because the requested data may reside in the middle
     // of an actual cluster.
     auto& first_cluster = *data_iterator;
-    ++data_iterator;
-    auto first_cluster_size = std::min(cluster_size() - offset_within_cluster, size);
+    auto first_cluster_size = std::min(
+        cluster_size() - offset_within_cluster,
+        size);
     memcpy(
         buffer,
         first_cluster.data() + offset_within_cluster,
         first_cluster_size);
+    ++data_iterator;
     uintptr_t bytes_read = first_cluster_size;
 
     if (bytes_read == size) return size;
@@ -724,14 +724,16 @@ ssz FileAllocationTableDriver::read(FileMetadata* file, usz offset, usz size, vo
         if (data_iterator == data_iterator.end())
             return bytes_read;
         auto& cluster = *data_iterator;
-        ++data_iterator;
         memcpy(((uint8_t*)buffer) + bytes_read,
                cluster.data(),
                cluster_size());
+        ++data_iterator;
         bytes_read += cluster_size();
     }
 
-    if (bytes_read == size) return size;
+    if (bytes_read == size
+        or data_iterator == data_iterator.end())
+        return bytes_read;
 
     auto& last_cluster = *data_iterator;
     auto last_cluster_size = size - bytes_read;
