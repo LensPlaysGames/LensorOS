@@ -271,6 +271,13 @@ struct HBA_PRDTEntry {
     }
 
     void set_byte_count(u32 newByteCount) {
+        if (newByteCount & ~0b1111111111111111111111) {
+            std::print(
+                "[AHCI]: Warning! truncating byte count {} to {}\n",
+                newByteCount,
+                newByteCount & 0b1111111111111111111111);
+        }
+
         // Clear byte count bits to zero.
         Information &= ~0b1111111111111111111111;
         // Set byte count bits from new byte count.
