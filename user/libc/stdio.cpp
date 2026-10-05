@@ -214,6 +214,10 @@ int _IO_File::seek(_IO_off_t offset, int whence) {
     __f_has_ungotten = false;
     __f_eof = false;
 
+    // Empty the read buffer (we have now moved positions in the file, and the
+    // read buffer is invalidated).
+    __rdbuf.__offs = 0;
+
     /// Flush the stream.
     if (not flush()) return -1;
 
