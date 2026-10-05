@@ -47,7 +47,7 @@ int strcasecmp_l(const char* s1, const char* s2, locale_t) {
     while (true) {
         auto c1 = tolower(*s1);
         auto c2 = tolower(*s2);
-        if (c1 != c2 || c1 == '\0')
+        if (c1 != c2 or c1 == '\0')
             return c1 - c2;
 
         ++s1;
