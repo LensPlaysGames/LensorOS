@@ -57,15 +57,17 @@ char* strcpy(char* dst, const char* src) {
 }
 
 char* strncpy(char* dst, const char* src, size_t n) {
-    while (n--) {
-        *dst++ = *src++;
-        if (*src == '\0') {
-            while (n--)
-                *dst++ = '\0';
-            break;
+    auto out = dst;
+    while (n > 0) {
+        if (*src != '\0') {
+            *dst++ = *src++;
         }
+        else {
+            *dst++ = '\0';
+        }
+        --n;
     }
-    return dst;
+    return out;
 }
 
 /// Concatenation
