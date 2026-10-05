@@ -310,27 +310,41 @@ void* sys$6_map(void* address, usz size, u64 flags) {
     // Memory::Flag::Writable;
 
     // Allocate physical RAM
-    // TODO: There isn't really any reason these need to be contiguous.
-    auto paddr = PhysicalKernelAddress(
-        Memory::request_pages(pages));
+    // TODO: "contiguous" flag?
+    usz attempt_page_count = pages;
+    // Attempt to get memory in contiguous chunks, starting with fetching the
+    // entire requested block of memory at once. Keep making the requested
+    // contiguous portion smaller, until it succeeds.
+    for (usz i = 0; i < pages; i += attempt_page_count) {
+        auto paddr = PhysicalKernelAddress(
+            Memory::request_pages(attempt_page_count));
 
-    // Add memory region to current process
-    process->add_memory_region(
-        address,
-        (void*)paddr.address,
-        size,
-        memory_flags);
+        if (not paddr.address) {
+            attempt_page_count >>= 1;
+            if (not attempt_page_count) {
+                std::print("[SYS$]:map: Out of memory\n");
+                return nullptr;
+            }
+            continue;
+        }
 
-    // Map virtual address to physical with proper flags
-    Memory::map_pages(
-        process->CR3,
-        address,
-        (void*)PhysicalAddress(PhysicalKernelAddress(paddr)).address,
-        memory_flags,
-        pages,
-        Memory::ShowDebug::No);
+        // Add memory region to current process
+        process->add_memory_region(
+            (void*)((uintptr_t)address + i * PAGE_SIZE),
+            (void*)paddr.address,
+            attempt_page_count * PAGE_SIZE,
+            memory_flags);
 
-    DBGMSG("[SYS$]:map: Mapped {} pages at {} (physical {})\n", pages, (void*)address, (void*)paddr.address);
+        // Map virtual address to physical with proper flags
+        Memory::map_pages(
+            process->CR3,
+            (void*)((uintptr_t)address + i * PAGE_SIZE),
+            (void*)PhysicalAddress(PhysicalKernelAddress(paddr)).address,
+            memory_flags,
+            attempt_page_count);
+
+        DBGMSG("[SYS$]:map: Mapped {} pages at {} (physical {})\n", pages, (void*)address, (void*)paddr.address);
+    }
 
     // Return usable address.
     return address;
