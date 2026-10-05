@@ -100,7 +100,8 @@ struct ClusterIterator {
 
    private:
     uint32_t current_cluster_entry_32() {
-        return *(uint32_t*)(table.data() + (current_index * sizeof(uint32_t)));
+        return (*(uint32_t*)(table.data() + (current_index * sizeof(uint32_t))))
+               & 0x0fffffff;
     }
     uint16_t current_cluster_entry_16() {
         return *(uint16_t*)(table.data() + (current_index * sizeof(uint16_t)));
