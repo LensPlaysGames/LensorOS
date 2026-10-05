@@ -358,14 +358,12 @@ struct FIS_REG_H2D {
     u8 Reserved1[4];
 
     void set_logical_block_addresses(u64 sector) {
-        u32 sectorLow = static_cast<u32>(sector);
-        u32 sectorHigh = static_cast<u32>(sector >> 32);
-        LBA0 = static_cast<u8>(sectorLow);
-        LBA1 = static_cast<u8>(sectorLow >> 8);
-        LBA2 = static_cast<u8>(sectorLow >> 16);
-        LBA3 = static_cast<u8>(sectorHigh);
-        LBA4 = static_cast<u8>(sectorHigh >> 8);
-        LBA5 = static_cast<u8>(sectorHigh >> 16);
+        LBA0 = static_cast<u8>(sector);
+        LBA1 = static_cast<u8>(sector >> 8);
+        LBA2 = static_cast<u8>(sector >> 16);
+        LBA3 = static_cast<u8>(sector >> 24);
+        LBA4 = static_cast<u8>(sector >> 32);
+        LBA5 = static_cast<u8>(sector >> 40);
     }
 
     void set_feature(u16 newFeature) {
