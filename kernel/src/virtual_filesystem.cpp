@@ -228,7 +228,6 @@ ssz VFS::write(ProcFD fd, u8* buffer, usz byteCount, usz byteOffset, usz flags) 
            );
     */
 
-    // SEE COMMENTS ON CONCURRENCY AND (B)LOCKING IN VFS::read()
     auto meta = file(fd);
     if (not meta) return -1;
 
