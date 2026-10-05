@@ -338,9 +338,11 @@ struct FIS_REG_H2D {
     // replace bitfields with fields that are large enough to store
     // them, then just write functions to access them.
     u8 Type;
-    u8 PortMultiplier : 4;
-    u8 Reserved0 : 3;
-    u8 CommandControl : 1;
+    // 0b00000000
+    //       ==== Port Multiplier
+    //    ===     Reserved
+    //   =        CommandControl
+    u8 ControlAndMultiplier;
     u8 Command;
     u8 FeatureLow;
     u8 LBA0;
@@ -356,6 +358,18 @@ struct FIS_REG_H2D {
     u8 ISOCommandCompletion;
     u8 Control;
     u8 Reserved1[4];
+
+    bool PortMultiplier() { return ControlAndMultiplier & 0xf; }
+    void PortMultiplier(u8 new_multiplier) {
+        ControlAndMultiplier &= ~0xf;
+        ControlAndMultiplier |= new_multiplier & 0xf;
+    }
+
+    bool CommandControl() { return ControlAndMultiplier >> 7; }
+    void CommandControl(bool new_value) {
+        ControlAndMultiplier &= ~0b10000000;
+        ControlAndMultiplier |= u8(new_value) << 7;
+    }
 
     void set_logical_block_addresses(u64 sector) {
         LBA0 = static_cast<u8>(sector);

@@ -100,7 +100,7 @@ bool PortController::read_low_level(u64 sector, u64 sectors) {
     auto* commandFIS = reinterpret_cast<FIS_REG_H2D*>(&commandTable->CommandFIS);
     commandFIS->Type = FIS_TYPE::REG_H2D;
     // Take control of command structure.
-    commandFIS->CommandControl = 1;
+    commandFIS->CommandControl(true);
     commandFIS->Command = ATA_CMD_READ_DMA_EXT;
     commandFIS->set_logical_block_addresses(sector);
     // Use lba mode.
@@ -222,7 +222,7 @@ bool PortController::write_low_level(u64 sector, u64 sectors) {
         &commandTable->CommandFIS);
     commandFIS->Type = FIS_TYPE::REG_H2D;
     // Take control of command structure.
-    commandFIS->CommandControl = 1;
+    commandFIS->CommandControl(true);
     commandFIS->Command = ATA_CMD_WRITE_DMA_EXT;
     commandFIS->set_logical_block_addresses(sector);
     // Use lba mode.
