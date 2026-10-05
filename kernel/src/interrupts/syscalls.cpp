@@ -669,7 +669,6 @@ int sys$14_seek(ProcessFileDescriptor fd, ssz offset, int whence) {
             return 0;
 
         case SEEK_END: {
-            // FIXME: Cannot seek past end of file...
             if (offset > 0)
                 return 1;
             file->offset = file->file_size() + offset;
@@ -679,7 +678,6 @@ int sys$14_seek(ProcessFileDescriptor fd, ssz offset, int whence) {
         case SEEK_SET: {
             if (offset < 0)
                 return 1;
-            // FIXME: Cannot seek past end of file...
             if ((usz)offset >= file->file_size())
                 return 1;
             file->offset = offset;
