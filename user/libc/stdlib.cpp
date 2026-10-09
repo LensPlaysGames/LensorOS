@@ -621,6 +621,37 @@ int atoi(const char* str) {
     return int(sign * result);
 }
 
+char* getenv(const char* name) {
+    if ((not name) or (not *name)
+        or (not environ) or (not *environ))
+        return nullptr;
+
+    // Calculate length of the name up to its null terminator.
+    size_t name_length = 0;
+    while (name[name_length]) {
+        if (name[name_length] == '=') return nullptr;
+        ++name_length;
+    }
+
+    for (size_t i = 0; environ[i] != nullptr; ++i) {
+        auto* entry = environ[i];
+
+        size_t j = 0;
+        while (j < name_length
+               and entry[j]
+               and entry[j] == name[j])
+            ++j;
+
+        // It's a match ONLY if we consumed the whole name AND the entry has
+        // an '=' next.
+        // If so, return pointer to the value immediately following '='.
+        if (j == name_length and entry[j] == '=')
+            return &entry[j + 1];
+    }
+
+    return nullptr;
+}
+
 int system(const char* command) {
     auto p = std::sys_fork();
     if (p == 0) {
