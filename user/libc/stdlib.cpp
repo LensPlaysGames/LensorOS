@@ -621,6 +621,48 @@ int atoi(const char* str) {
     return int(sign * result);
 }
 
+void qsort(void* base, size_t nitems, size_t size, int (*compar)(const void*, const void*)) {
+    if (nitems < 2) return;
+
+    uint8_t* base_bytes = (uint8_t*)base;
+    auto* pivot = base_bytes + (nitems / 2) * size;
+
+    size_t i = 0;
+    size_t j = nitems - 1;
+
+    while (true) {
+        while (compar(base_bytes + i * size, pivot) < 0)
+            ++i;
+        while (compar(base_bytes + j * size, pivot) > 0)
+            --j;
+
+        if (i >= j) break;
+
+        {
+            auto* a = base_bytes + i * size;
+            auto* b = base_bytes + j * size;
+            for (size_t swap_index = 0; swap_index < size; ++swap_index)
+                std::swap(a[swap_index], b[swap_index]);
+        }
+
+        // Track the pivot if it was swapped
+        if (pivot == base_bytes + i * size)
+            pivot = base_bytes + j * size;
+        else if (pivot == base_bytes + j * size)
+            pivot = base_bytes + i * size;
+
+        ++i;
+        --j;
+    }
+
+    // Recursively sort sub-arrays
+    if (j > 0)
+        qsort(base_bytes, j + 1, size, compar);
+
+    if (nitems - 1 > i)
+        qsort(base_bytes + i * size, nitems - i, size, compar);
+}
+
 char* getenv(const char* name) {
     if ((not name) or (not *name)
         or (not environ) or (not *environ))
