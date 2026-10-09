@@ -1,18 +1,7 @@
 cmake_minimum_required( VERSION 3.20 )
 project( LensorOSPorts VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGES} )
 
-set(
-  LENSOROS_APP_DOOMGENERIC
-  OFF
-  CACHE PATH
-  "Include doomgeneric port for LensorOS."
-)
-set(
-  LENSOROS_LIB_FREETYPE
-  OFF
-  CACHE PATH
-  "Include FreeType port for LensorOS."
-)
+include(config.cmake)
 
 set(
   PORT_OUTPUT_DIRECTORY
