@@ -2,7 +2,7 @@ if (NOT DEFINED LENSOROS_APP_DOOMGENERIC OR NOT LENSOROS_APP_DOOMGENERIC)
   return()
 endif()
 function(msg MESSAGE)
-  message(STATUS "[PORT]:DOOM (doomgeneric): ${MESSAGE}")
+  message(STATUS "[PORT]: application -- DOOM (doomgeneric): ${MESSAGE}")
 endfunction()
 msg("enabled")
 
