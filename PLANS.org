@@ -1,8 +1,3 @@
-* VFS File Creation Behind Flag
-High Priority
-
-Currently, we just create a file if it doesn't exist unconditionally; _not what we want_.
-
 * Abstract Socket Server Architecture to Abstract Server Interface Library
 Low Priority
 
@@ -126,10 +121,8 @@ Low Priority
 
 Creating directories, allocating first cluster for new directories, etc.
 
-* Intel HDA Audio Driver
+* Userspace Audio Visualizer
 Low Priority
-
-Then we can write an audio server, and hook userspace applications up with audio capabilities!
 
 It would be really cool to have an audio visualizer userspace program.
 
