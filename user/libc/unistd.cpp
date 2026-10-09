@@ -27,6 +27,9 @@
 
 extern "C" {
 
+static char* environ_init[1]{nullptr};
+char** environ = &environ_init[0];
+
 int open(const char* path, int flags, int mode) {
     (void)flags;
     (void)mode;

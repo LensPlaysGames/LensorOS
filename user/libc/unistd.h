@@ -80,6 +80,8 @@ char* getcwd(char* buf, size_t size);
 ///   Memory allocation has failed (malloc()/realloc() returned NULL).
 char* get_current_dir_name(void);
 
+extern char** environ;
+
 __END_DECLS__
 
 #endif /* _UNISTD_H */

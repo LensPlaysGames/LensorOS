@@ -234,6 +234,9 @@ void __libc_fini() noexcept {
 
 /// Run the program.
 int __libc_run_main(int argc, char** argv, char** envp) {
+    if (envp and *envp)
+        environ = envp;
+
     __libc_init();
     DBGMSG("[LibC]: Running main() (at {})\n", (void*)main);
     int ret = __extension__ main(argc, argv, envp);
