@@ -25,11 +25,16 @@
 __BEGIN_DECLS__
 
 /// Declare these here to avoid having to include stdlib.h in the kernel.
-void __free_impl(void* ptr, const char* file, int line);
+
+#ifdef LENSOROS_DBGFREE
 #ifndef free
 void free(void*);
 #define free(__ptr) __free_impl((__ptr), __FILE__, __LINE__)
 #endif
+#else   // LENSOROS_DBGFREE
+void free(void*);
+#endif  // LENSOROS_DBGFREE
+
 __attribute__((__malloc__, __alloc_size__(1))) void* malloc(size_t numBytes);
 
 __END_DECLS__

@@ -50,10 +50,18 @@ void srand(unsigned seed);
 
 /// Dynamic memory management
 void __free_impl(void* ptr, const char* file, int line);
+
+#ifdef LENSOROS_DBGFREE
+
 #ifndef free
 void free(void*);
 #define free(__ptr) __free_impl((__ptr), __FILE__, __LINE__)
 #endif
+
+#else   // LENSOROS_DBGFREE
+void free(void*);
+#endif  // LENSOROS_DBGFREE
+
 __attribute__((malloc, alloc_size(1))) void* malloc(size_t);
 __attribute__((malloc, alloc_size(1, 2))) void* calloc(size_t nitems, size_t);
 __attribute__((alloc_size(2))) void* realloc(void* ptr, size_t);
