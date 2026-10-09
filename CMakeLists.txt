@@ -82,6 +82,7 @@ if (CMAKE_HOST_UNIX)
 endif()
 
 add_subdirectory( user EXCLUDE_FROM_ALL )
+add_subdirectory( ports EXCLUDE_FROM_ALL )
 add_subdirectory( kernel EXCLUDE_FROM_ALL )
 set_target_properties( Kernel PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/boot/LensorOS )
 

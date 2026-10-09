@@ -1,5 +1,10 @@
 # The LensorOS Toolchain
-LensorOS is compiled with a special version of the GNU Compiler Collection (GCC).
+LensorOS may be compiled with a special version of the GNU Compiler
+  Collection (GCC) (recommended), or, alternatively, using LLVM's
+  `clang`.
+
+Toolchain files are provided for either, such that configuring CMake
+  simply requires passing the corresponding toolchain file.
 
 This special version allows for a host machine that is not running
   LensorOS to build programs that may run on LensorOS.

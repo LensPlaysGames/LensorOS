@@ -26,6 +26,10 @@ set( CMAKE_SYSTEM_VERSION ${LensorOS_VERSION} )
 # Set sysroot.
 set( CMAKE_SYSROOT "${CMAKE_CURRENT_LIST_DIR}/../root" )
 if( NOT EXISTS "${CMAKE_SYSROOT}" )
+  set(PROJECT_ROOT "${CMAKE_CURRENT_LIST_DIR}/..")
+  include("${CMAKE_CURRENT_LIST_DIR}/../scripts/sysroot.cmake")
+endif()
+if( NOT EXISTS "${CMAKE_SYSROOT}" )
   message(
     FATAL_ERROR
     "The sysroot at ${CMAKE_SYSROOT} does not exist"
