@@ -23,6 +23,11 @@ function(add_userspace_library NAME)
     TARGET ${NAME}
     PROPERTY RUNTIME_OUTPUT_DIRECTORY ${USERSPACE_OUTPUT_DIRECTORY}
   )
+  target_compile_definitions(
+    ${NAME}
+    PRIVATE
+    LENSOROS_DBGFREE
+  )
   add_dependencies( userspace ${NAME} )
   add_dependencies( userspace-libraries "install-lib${NAME}" )
   if (TARGET "install-lib${NAME}-headers")
@@ -46,6 +51,11 @@ function(add_userspace_program NAME )
   set_property(
     TARGET ${NAME}
     PROPERTY RUNTIME_OUTPUT_DIRECTORY ${USERSPACE_OUTPUT_DIRECTORY}
+  )
+  target_compile_definitions(
+    ${NAME}
+    PRIVATE
+    LENSOROS_DBGFREE
   )
   add_dependencies( userspace ${NAME} )
 endfunction()
