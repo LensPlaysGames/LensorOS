@@ -1,3 +1,29 @@
+* Flesh out the Network Stack
+Medium Priority
+
+- ARP :: Address Resolution Protocol
+Use this to convert IP -> MAC address
+
+** UDP :: User Datagram Protocol
+
+A very simple header you can bang on to just about any payload.
+
+Technologies built on UDP:
+- DHCP :: Dynamic Host Configuration Protocol
+  This lets you get an IP address! Then you can respond to your very own ARPs.
+- DNS :: Domain Name System
+  This lets you turn human-readable URLs into computer-readable IPs!
+- NTP :: Network Time Protocol
+  This lets you sync your time with everyone else's time!
+
+** Implementation
+
+Userspace will open an IPv4 socket (rather than a LENSOR type socket for local IPC).
+
+When userspace =write()='s to the socket, the payload is wrapped in the appropriate IPv4 and Ethernet frame headers, then sent to the network subsystem to send the packet out.
+
+When we recieve an IPv4 packet in the network subsystem, we need to look up any relevant open sockets (by address) and send the packet there.
+
 * Abstract Socket Server Architecture to Abstract Server Interface Library
 Low Priority
 
@@ -100,21 +126,6 @@ Once the dynamic linker is bootstrapped, we then loop through the =DT_NEEDED= en
 Once the loaded program and every dependency, recursively, has been loaded into memory, we perform relocations on each loaded object. Once relocations are performed on an object, the dynamic linker executes =DT_INIT=/=DT_INIT_ARRAY= functions (in reverse load order).
 
 Above describes immediate binding; utilize =-Wl,-z,now=. For lazy binding, we would simply need a runtime resolver function that is called from a state-saving assembly stub (called from the PLT stub), and we'd write the function pointer into the GOT then.
-
-* Flesh out the Network Stack
-Medium Priority
-
-** UDP -- User Datagram Protocol
-
-A very simple header you can bang on to just about any payload.
-
-Technologies built on UDP:
-- DHCP :: Dynamic Host Configuration Protocol
-  This lets you get an IP address! Then you can respond to your very own ARPs.
-- DNS :: Domain Name System
-  This lets you turn human-readable URLs into computer-readable IPs!
-- NTP :: Network Time Protocol
-  This lets you sync your time with everyone else's time!
 
 * FAT Fixups
 Low Priority
