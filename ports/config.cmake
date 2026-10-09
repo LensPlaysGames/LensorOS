@@ -1,12 +1,12 @@
 set(
   LENSOROS_APP_DOOMGENERIC
-  ON
+  OFF
   CACHE PATH
   "Include doomgeneric port for LensorOS."
 )
 set(
   LENSOROS_LIB_FREETYPE
-  ON
+  OFF
   CACHE PATH
   "Include FreeType port for LensorOS."
 )
