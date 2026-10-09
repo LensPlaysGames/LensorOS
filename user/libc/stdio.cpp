@@ -870,86 +870,217 @@ static void safe_write(char* __restrict__ str, size_t size, size_t& written, cha
     ++written;
 }
 
+constexpr const size_t max_digits = 32;
+static_assert(max_digits != 0, "Can not print into zero-length buffer");
+constexpr const size_t default_radix = 10;
+static_assert(default_radix != 0, "Can not print zero-base numbers");
+/** Writes the textual integer representation of the value of the given
+ ** integer parameter into the given character buffer.
+ **
+ ** Fills the back of the buffer.
+ ** If 0 is passed as a value, buffer[max_digits - 1] == '0', and 1 is
+ ** returned.
+ **
+ ** @return the amount of digits written.
+ **/
+static size_t write_integer_to_buffer(char digits[max_digits], size_t val, bool negative, size_t base) {
+    size_t i = max_digits;
+    for (
+        size_t tmp_val = val;
+        tmp_val and i;
+        tmp_val /= base, --i)
+        digits[i - 1] = __digit_from_value(tmp_val % base);
+
+    if (i == max_digits) digits[--i] = '0';
+    return max_digits - i;
+}
+
 int vsnprintf(char* __restrict__ str, size_t size, const char* __restrict__ format, va_list args) {
     size_t written{0};
 
-    for (const char* fmt = format; *fmt; ++fmt) {
-        if (*fmt == '%') {
+    for (const char* fmt = format; *fmt; /** (!) **/) {
+        if (*fmt != '%') {
+            safe_write(str, size, written, *fmt);
             ++fmt;
-            switch (*fmt) {
-                // TODO: Support more format specifiers
-                case 's': {
-                    const char* str_val = va_arg(args, const char*);
-                    while (*str_val and written < size)
-                        safe_write(str, size, written, *str_val++);
-                }
-                    continue;
+            continue;
+        }
 
-                case 'c': {
-                    int c = va_arg(args, int);
-                    safe_write(str, size, written, (char)c);
-                }
-                    continue;
+        // Yeet '%'
+        ++fmt;
 
-                case 'u': {
-                    unsigned int val = va_arg(args, unsigned int);
+        // Parse Flags
+        // TODO: Actually take them into account when needed
+        bool flag_left_align = false;
+        bool flag_zero = false;
+        bool flag_sign = false;
+        bool flag_space = false;
+        bool flag_alternative = false;
+        while (*fmt == '-'
+               or *fmt == '0'
+               or *fmt == '+'
+               or *fmt == ' '
+               or *fmt == '#') {
+            if (*fmt == '-')
+                flag_left_align = true;
+            else if (*fmt == '0')
+                flag_zero = true;
+            else if (*fmt == '+')
+                flag_sign = true;
+            else if (*fmt == ' ')
+                flag_space = true;
+            else if (*fmt == '#')
+                flag_alternative = true;
+            ++fmt;
+        }
 
-                    // TODO: Abstract + parameterise number printing
-                    constexpr const size_t radix = 10;
-                    static_assert(radix != 0, "Can not print zero-base numbers");
-
-                    constexpr const size_t max_digits = 32;
-                    static_assert(max_digits != 0, "Can not print into zero-length buffer");
-                    char digits[max_digits] = {0};
-
-                    size_t i = max_digits;
-                    for (size_t tmp_val = val; tmp_val && i; tmp_val /= radix, --i)
-                        digits[i - 1] = __digit_from_value(tmp_val % radix);
-
-                    if (i == max_digits) digits[--i] = '0';
-
-                    for (const char* it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
-                        safe_write(str, size, written, *it);
-                }
-                    continue;
-
-                case 'i':
-                case 'd': {
-                    int val = va_arg(args, int);
-                    bool negative = val < 0;
-
-                    // TODO: Abstract + parameterise number printing
-                    constexpr const size_t radix = 10;
-                    static_assert(radix != 0, "Can not print zero-base numbers");
-
-                    constexpr const size_t max_digits = 32;
-                    static_assert(max_digits != 0, "Can not print into zero-length buffer");
-                    char digits[max_digits] = {0};
-
-                    size_t i = max_digits;
-                    for (size_t tmp_val = negative ? -val : val; tmp_val && i; tmp_val /= radix, --i)
-                        digits[i - 1] = __digit_from_value(tmp_val % radix);
-
-                    if (i == max_digits) digits[--i] = '0';
-
-                    if (negative)
-                        safe_write(str, size, written, '-');
-                    for (const char* it = &digits[i]; it < &digits[0] + max_digits && *it; ++it)
-                        safe_write(str, size, written, *it);
-                }
-                    continue;
-
-                case '\0':
-                    safe_write(str, size, written, '%');
-                    safe_write(str, size, written, '\0');
-                    return 0;
-
-                default:
-                    safe_write(str, size, written, '%');
-                    break;
+        // Parse Width
+        int width = 0;
+        if (*fmt == '*') {
+            width = va_arg(args, int);
+            ++fmt;
+        }
+        else {
+            while (isdigit(*fmt)) {
+                width = width * 10 + (*fmt - '0');
+                ++fmt;
             }
         }
-        safe_write(str, size, written, *fmt);
+
+        int precision = -1;
+        if (*fmt == '.') {
+            // Yeet '.'
+            ++fmt;
+            if (*fmt == '*') {
+                precision = va_arg(args, int);
+                ++fmt;
+            }
+            else {
+                precision = 0;
+                while (isdigit(*fmt)) {
+                    precision = precision * 10 + (*fmt - '0');
+                    ++fmt;
+                }
+            }
+        }
+
+        char length_mod = 0;
+        if (*fmt == 'h' or *fmt == 'l'
+            or *fmt == 'z' or *fmt == 'j'
+            or *fmt == 't') {
+            length_mod = *fmt;
+            ++fmt;
+            // Handle double length modifiers like 'll' or 'hh' by recording uppercase.
+            if ((*fmt == 'l' and length_mod == 'l')
+                or (*fmt == 'h' and length_mod == 'h')) {
+                length_mod += 32;
+                ++fmt;
+            }
+        }
+
+        // For integer formatting
+        char digits[max_digits]{};
+        size_t base = 10;
+
+        char specifier = *fmt;
+        // Yeet specifier
+        ++fmt;
+
+        switch (specifier) {
+            default:
+                safe_write(str, size, written, '%');
+                safe_write(str, size, written, specifier);
+                break;
+
+            case '%':
+                safe_write(str, size, written, '%');
+                break;
+
+            // TODO: Support more format specifiers
+            case 's': {
+                const char* str_val = va_arg(args, const char*);
+                if (not str_val) str_val = "(null)";
+                while (*str_val and written < size
+                       and (precision == -1 or precision-- > 0))
+                    safe_write(str, size, written, *str_val++);
+            } break;
+
+            case 'c': {
+                int c = va_arg(args, int);
+                safe_write(str, size, written, (char)c);
+            } break;
+
+            case 'X':
+            case 'x':
+                base = 16;
+                [[fallthrough]];
+            case 'u': {
+                size_t val = 0;
+                if (length_mod == 'l')
+                    val = va_arg(args, unsigned long);
+                else if (length_mod == 'L')
+                    val = va_arg(args, unsigned long long);
+                else if (length_mod == 'z')
+                    val = va_arg(args, size_t);
+                else if (length_mod == 'j')
+                    val = va_arg(args, uintmax_t);
+                else if (length_mod == 't')
+                    val = (size_t)va_arg(args, ptrdiff_t);
+                else
+                    val = va_arg(args, unsigned int);
+
+                size_t digits_written = write_integer_to_buffer(digits, val, false, base);
+                for (
+                    const char* it = &digits[max_digits - digits_written];
+                    it < (&digits[0] + max_digits) and *it;
+                    ++it)
+                    safe_write(str, size, written, *it);
+            } break;
+
+            case 'i':
+            case 'd': {
+                ssize_t val = 0;
+                if (length_mod == 'l')
+                    val = va_arg(args, long);
+                else if (length_mod == 'L')
+                    val = va_arg(args, long long);
+                else if (length_mod == 'z')
+                    val = va_arg(args, ssize_t);
+                else if (length_mod == 'j')
+                    val = va_arg(args, intmax_t);
+                else if (length_mod == 't')
+                    val = va_arg(args, ptrdiff_t);
+                else
+                    val = va_arg(args, int);
+
+                bool negative = val < 0;
+
+                size_t uval = (size_t)(negative ? -val : val);
+                size_t digits_written = write_integer_to_buffer(digits, uval, negative, base);
+
+                if (width > 0 or precision >= 0) {
+                    const size_t target_width = (size_t)((width > 0)
+                                                             ? width
+                                                             : precision);
+                    const size_t total_character_count = digits_written
+                                                         + (negative ? 1 : 0);
+                    if (target_width < max_digits and total_character_count < max_digits) {
+                        for (
+                            size_t j = max_digits - target_width;
+                            j < max_digits - total_character_count;
+                            ++j)
+                            safe_write(str, size, written, '0');
+                    }
+                }
+
+                if (negative)
+                    safe_write(str, size, written, '-');
+                for (
+                    const char* it = &digits[max_digits - digits_written];
+                    it < &digits[0] + max_digits and *it;
+                    ++it)
+                    safe_write(str, size, written, *it);
+            } break;
+        }
     }
 
     // Ensure NUL byte termination
