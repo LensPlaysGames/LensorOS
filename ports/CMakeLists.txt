@@ -3,7 +3,7 @@ project( LensorOSPorts VERSION ${LensorOS_VERSION} LANGUAGES ${LensorOS_LANGUAGE
 
 set(
   LENSOROS_APP_DOOMGENERIC
-  ON
+  OFF
   CACHE PATH
   "Include doomgeneric port for LensorOS."
 )
