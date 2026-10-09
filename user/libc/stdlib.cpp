@@ -549,6 +549,132 @@ void __free_impl(void* ptr, const char* file, int line) {
     free_list = block;
 }
 
+static constexpr int digit_to_value(char c) {
+    if (c >= '0' and c <= '9') return c - '0';
+    if (c >= 'a' and c <= 'z') return c - 'a' + 10;
+    if (c >= 'A' and c <= 'Z') return c - 'A' + 10;
+    return -1;
+}
+
+long long strtoll(const char* str, char** endptr, int base) {
+    const char* s = str;
+
+    // Skip leading whitespace
+    while (isspace(*s)) {
+        s++;
+    }
+
+    // Handle sign
+    bool negative = false;
+    if (*s == '-') {
+        negative = true;
+        s++;
+    }
+    else if (*s == '+') {
+        s++;
+    }
+
+    // Detect or validate base
+    if (base == 0) {
+        if (*s == '0') {
+            if (s[1] == 'x' or s[1] == 'X') {
+                base = 16;
+                s += 2;
+            }
+            else
+                base = 8;
+        }
+        else
+            base = 10;
+    }
+    else if (base == 16) {
+        if (*s == '0' && (s[1] == 'x' or s[1] == 'X'))
+            s += 2;
+    }
+
+    unsigned long long result = 0;
+    bool any_digits = false;
+
+    // Parse digits
+    while (*s) {
+        auto val = digit_to_value(*s);
+        if (val < 0 or val >= base)
+            break;
+        result = result * base + val;
+        any_digits = true;
+        s++;
+    }
+
+    // Update endptr if requested
+    if (endptr)
+        *endptr = (char*)(any_digits
+                              ? s
+                              : str);
+
+    if (not any_digits) return 0;
+    return negative
+               ? -(long long)(result)
+               : (long long)(result);
+}
+long strtol(const char* str, char** endptr, int base) {
+    return (long)strtoll(str, endptr, base);
+}
+
+unsigned long long strtoull(const char* str, char** endptr, int base) {
+    const char* s = str;
+
+    // Skip leading whitespace
+    while (isspace(*s))
+        ++s;
+
+    // Handle sign
+    if (*s == '+')
+        ++s;
+
+    // Detect or validate base
+    if (base == 0) {
+        if (*s == '0') {
+            if (s[1] == 'x' or s[1] == 'X') {
+                base = 16;
+                s += 2;
+            }
+            else
+                base = 8;
+        }
+        else
+            base = 10;
+    }
+    else if (base == 16) {
+        if (*s == '0' && (s[1] == 'x' or s[1] == 'X'))
+            s += 2;
+    }
+
+    unsigned long long result = 0;
+    bool any_digits = false;
+
+    // Parse digits
+    while (*s) {
+        auto val = digit_to_value(*s);
+        if (val < 0 or val >= base)
+            break;
+        result = result * base + val;
+        any_digits = true;
+        s++;
+    }
+
+    // Update endptr if requested
+    if (endptr)
+        *endptr = (char*)(any_digits
+                              ? s
+                              : str);
+
+    if (not any_digits) return 0;
+    return result;
+}
+unsigned long strtoul(const char* str, char** endptr, int base) {
+    return (unsigned long)strtoull(str, endptr, base);
+}
+
 double atof(const char* str) {
     if (not str) return 0.0;
 
