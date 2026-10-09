@@ -43,3 +43,4 @@ endfunction()
 add_ported_library(libfreetype)
 
 add_ported_program(doomgeneric)
+add_ported_program(freetypetest)

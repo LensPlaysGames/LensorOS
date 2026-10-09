@@ -214,7 +214,7 @@ LoadUserspaceElf64Process(
         std::print("[ELF]: Couldn't allocate process structure for new userspace process\n");
         return false;
     }
-    constexpr size_t UserProcessStackSizePages = 4;
+    constexpr size_t UserProcessStackSizePages = 8;
     constexpr size_t UserProcessStackSize = UserProcessStackSizePages * PAGE_SIZE;
     constexpr uintptr_t virtual_stack_bottom = Memory::USER_STACK_BASE;
     constexpr uintptr_t virtual_stack_top = virtual_stack_bottom + UserProcessStackSize;
