@@ -24,6 +24,21 @@ When userspace =write()='s to the socket, the payload is wrapped in the appropri
 
 When we recieve an IPv4 packet in the network subsystem, we need to look up any relevant open sockets (by address) and send the packet there.
 
+* MOAR Ports
+Low Priority
+
+- =gzip=
+- =libpng=
+- =Info-ZIP= (=zip=/=unzip= utilities)
+- =cURL=
+- =ffmpeg=
+- =vlc=
+- =Lua=
+- =LCC= (Lensor Compiler Collection)
+- =Python= maybe MicroPython or CPython
+- =LITE=
+- =libretro= (RetroArch)
+
 * Abstract Socket Server Architecture to Abstract Server Interface Library
 Low Priority
 
