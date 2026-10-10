@@ -402,6 +402,10 @@ void handle_event_incoming_client(Event incoming_client_event, CompositorContext
     uintptr_t* shared_data = NULL;
     int id = syscall(SYS_shared_memory_allocate, &shared_data, g_framebuffer.buffer_size);
     printf("[INIT]: shmem -- id:%d data:%p\n", id, shared_data);
+    if (!shared_data) {
+        printf("[INIT]: could not create window (shared memory allocation for framebuffer failed)\n");
+        return;
+    }
 
     // Book-keep shared_data pointer and id (create new window)
     window->shared_region = shared_data;
@@ -414,6 +418,16 @@ void handle_event_incoming_client(Event incoming_client_event, CompositorContext
     // If no windows are open, automatically focus the first opened window.
     if (context->focus.window == NULL)
         context->focus.window = window;
+
+    Framebuffer client_fb = {
+        shared_data,
+        g_framebuffer.buffer_size,
+        g_framebuffer.pixel_width,
+        g_framebuffer.pixel_height,
+        g_framebuffer.pixels_per_scanline,
+        g_framebuffer.format};
+    const uint32_t black = mkpixel(client_fb.format, 22, 23, 24, 0xff);
+    fill_color(client_fb, black);
 
     // Communicate basic framebuffer data to client through shared memory.
     initial_shared_memory_state_t* init_state = (initial_shared_memory_state_t*)shared_data;
