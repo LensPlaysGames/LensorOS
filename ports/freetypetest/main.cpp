@@ -1,6 +1,7 @@
 #include <ft2build.h>
-#include <stdint.h>
 #include FT_FREETYPE_H
+
+#include <stdint.h>
 
 #include <print>
 
@@ -76,30 +77,12 @@ int main(int argc, char** argv) {
     FT_Bitmap bitmap = face->glyph->bitmap;
     for (size_t y = 0; y < bitmap.rows; ++y) {
         for (size_t x = 0; x < bitmap.width; ++x) {
-            uint8_t pixel_value = bitmap.buffer[y * bitmap.pitch + x];
+            constexpr uint8_t max_pixel_value = 0xff; /** (!) **/
+
             // Display different shades based on pixel intensity
-            if (pixel_value == 0)
-                std::print(" ");
-            else if (pixel_value < 26)
-                std::print(".");
-            else if (pixel_value < 51)
-                std::print(",");
-            else if (pixel_value < 76)
-                std::print(":");
-            else if (pixel_value < 102)
-                std::print("-");
-            else if (pixel_value < 128)
-                std::print("=");
-            else if (pixel_value < 152)
-                std::print("+");
-            else if (pixel_value < 178)
-                std::print("*");
-            else if (pixel_value < 205)
-                std::print("#");
-            else if (pixel_value < 232)
-                std::print("%");
-            else
-                std::print("@");
+            uint8_t pixel_value = bitmap.buffer[y * bitmap.pitch + x];
+            auto shades = std::string_view(" .,:-=+*&#%@");
+            std::print("{}", shades[pixel_value / (0xff / shades.size())]);
         }
         std::print("\n");
     }
