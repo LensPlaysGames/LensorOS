@@ -10,3 +10,9 @@ set(
   CACHE PATH
   "Include FreeType port for LensorOS."
 )
+set(
+  LENSOROS_LIB_Z
+  OFF
+  CACHE PATH
+  "Include zlib port for LensorOS."
+)

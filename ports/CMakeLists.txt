@@ -40,6 +40,7 @@ function(add_ported_program NAME )
   endif()
 endfunction()
 
+add_ported_library(libz)
 add_ported_library(libfreetype)
 
 add_ported_program(doomgeneric)

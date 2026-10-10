@@ -20,25 +20,26 @@
 #ifndef _ERRNO_H
 #define _ERRNO_H
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+#include <bits/decls.h>
+
+__BEGIN_DECLS__
 
 extern int* __errno_location(void);
 
 #define errno (*__errno_location())
 
-#define EPERM 1    /* Not permitted */
-#define ENOENT 2   /* No file (or directory) */
-#define ESRCH 3    /* Process doesn't exist */
-#define EINTR 4    /* System call interrupted */
-#define EIO 5      /* Input/Output error */
-#define ENXIO 6    /* No device (or address) */
-#define E2BIG 7    /* Too many arguments */
-#define ENOEXEC 8  /* `exec` syscall (format) error */
-#define EBADF 9    /* Bad file */
-#define ECHILD 10  /* No child processes exist */
-#define EAGAIN 11  /* If this is returned, try again */
+#define EPERM 1   /* Not permitted */
+#define ENOENT 2  /* No file (or directory) */
+#define ESRCH 3   /* Process doesn't exist */
+#define EINTR 4   /* System call interrupted */
+#define EIO 5     /* Input/Output error */
+#define ENXIO 6   /* No device (or address) */
+#define E2BIG 7   /* Too many arguments */
+#define ENOEXEC 8 /* `exec` syscall (format) error */
+#define EBADF 9   /* Bad file */
+#define ECHILD 10 /* No child processes exist */
+#define EAGAIN 11 /* If this is returned, try again */
+#define EWOULDBLOCK EAGAIN
 #define ENOMEM 12  /* No memory */
 #define EACCES 13  /* Access violation */
 #define EFAULT 14  /* Bad address */
@@ -63,8 +64,6 @@ extern int* __errno_location(void);
 #define EDOM 33    /* Math argument out of domain of func */
 #define ERANGE 34  /* Math result not representable */
 
-#if defined(__cplusplus)
-} /* extern "C" */
-#endif
+__END_DECLS__
 
 #endif /* _ERRNO_H */

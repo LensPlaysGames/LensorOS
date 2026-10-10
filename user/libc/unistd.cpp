@@ -56,6 +56,10 @@ ssize_t write(int fd, const void* buffer, size_t count) {
     return rc;
 }
 
+off_t lseek(int fd, off_t offset, int whence) {
+    return std::sys_seek(ProcFD(fd), offset, whence);
+}
+
 int pipe(int out[2]) {
     size_t fds[2] = {size_t(-1), size_t(-1)};
 

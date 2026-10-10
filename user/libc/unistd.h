@@ -22,6 +22,7 @@
 
 #include <bits/decls.h>
 
+#include "fcntl.h"
 #include "sys/types.h"
 #include "sys/wait.h"
 
@@ -31,7 +32,6 @@ __BEGIN_DECLS__
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
 
-int open(const char* path, int flags, int mode);
 int close(int fd);
 
 ssize_t read(int fd, const void* buffer, size_t count);
@@ -79,6 +79,8 @@ char* getcwd(char* buf, size_t size);
 /// ENOMEM
 ///   Memory allocation has failed (malloc()/realloc() returned NULL).
 char* get_current_dir_name(void);
+
+off_t lseek(int fd, off_t offset, int whence);
 
 extern char** environ;
 
