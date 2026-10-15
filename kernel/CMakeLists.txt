@@ -169,7 +169,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 target_link_options(
   Kernel PRIVATE
-  -T ${CMAKE_CURRENT_LIST_DIR}/kernel.ld
+  -T ${CMAKE_CURRENT_LIST_DIR}/src/${ARCH}/kernel.ld
   -static
   -Bsymbolic
   -nostdlib
