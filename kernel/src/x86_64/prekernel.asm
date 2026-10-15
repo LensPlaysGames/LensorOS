@@ -20,8 +20,8 @@ extern kmain
 
 ;;# Virtual to physical and Physical to virtual address conversion.
 ;;# These are needed because the kernel is loaded physically lower than it is linked.
-%define V2P(a) ((a)-0xffffffff80000000)
-%define P2V(a) ((a)+0xffffffff80000000)
+%define V2P(a) ((a)-(0xffffffff80000000 - 0x100000))
+%define P2V(a) ((a)+(0xffffffff80000000 - 0x100000))
 
 ;;# Paging
 %define PAGE_SIZE               0x1000
@@ -29,13 +29,7 @@ extern kmain
 %define PAGE_PRESENT            1
 %define PAGE_READ_WRITE         1<<1
 %define PAGE_USER_SUPER         1<<2
-%define PAGE_WRITE_THROUGH      1<<3
-%define PAGE_CACHE_DISABLED     1<<4
-%define PAGE_ACCESSED           1<<5
-%define PAGE_DIRTY              1<<6
 %define PAGE_LARGER_PAGES       1<<7
-%define PAGE_GLOBAL             1<<8
-%define PAGE_NX                 1<<63
 
 ;;# Allocate known good stack
 SECTION .bss
@@ -49,7 +43,7 @@ boot_info:
     resb 48
 
 SECTION .data
-align 0x1000
+align PAGE_SIZE
 prekernel_pml4:
     dq V2P(prekernel_pml3) + (PAGE_PRESENT | PAGE_READ_WRITE)
 %rep ENTRIES_PER_PAGE_TABLE - 2
@@ -61,21 +55,36 @@ prekernel_pml3:
 %rep ENTRIES_PER_PAGE_TABLE - 1
     dq 0
 %endrep
-prekernel_pml3_high:
-%rep ENTRIES_PER_PAGE_TABLE - 2
-    dq 0
-%endrep
-    dq V2P(prekernel_pml2) + (PAGE_PRESENT | PAGE_READ_WRITE)
-    dq 0
 prekernel_pml2:
     dq V2P(prekernel_pml1) + (PAGE_PRESENT | PAGE_READ_WRITE)
 %rep ENTRIES_PER_PAGE_TABLE - 1
     dq 0
 %endrep
 prekernel_pml1:
-%rep ENTRIES_PER_PAGE_TABLE
+    %assign i 0
+    %rep ENTRIES_PER_PAGE_TABLE
+        dq (i * PAGE_SIZE) + (PAGE_PRESENT | PAGE_READ_WRITE)
+        %assign i i+1
+    %endrep
+
+prekernel_pml3_high:
+%rep ENTRIES_PER_PAGE_TABLE - 2
     dq 0
 %endrep
+    dq V2P(prekernel_pml2_high) + (PAGE_PRESENT | PAGE_READ_WRITE)
+    dq 0
+prekernel_pml2_high:
+    dq V2P(prekernel_pml1_high) + (PAGE_PRESENT | PAGE_READ_WRITE)
+%rep ENTRIES_PER_PAGE_TABLE - 1
+    dq 0
+%endrep
+prekernel_pml1_high:
+%assign j 0
+%rep 512
+    dq (0x100000 + (j * PAGE_SIZE)) + (PAGE_PRESENT | PAGE_READ_WRITE)
+%assign j j+1
+%endrep
+
 
 [BITS 64]
 SECTION .text
@@ -105,16 +114,9 @@ _start:
     rep movsb
     mov rax, 0xffffffff80000000
     add rdx, rax
+    mov rax, 0x100000
+    sub rdx, rax
     mov QWORD [V2P(boot_info) + 16], rdx
-
-    ;# Prepare an identity mapped Page Map Level One (PML1)
-    mov rax, V2P(prekernel_pml1)
-%assign i 0
-%rep ENTRIES_PER_PAGE_TABLE
-    mov QWORD [rax], (i << 12) + (PAGE_PRESENT | PAGE_READ_WRITE)
-    add rax, 8
-%assign i i+1
-%endrep
 
     ;# Load prekernel Page Map Level Four (PML4).
     mov rax, V2P(prekernel_pml4)
@@ -127,6 +129,8 @@ higher_half_init:
     ;# Move stack pointer to higher half
     mov rax, 0xffffffff80000000
     add rsp, rax
+    mov rax, 0x100000
+    sub rsp, rax
     mov rbp, rsp
 
     ;# Jump to kmain()

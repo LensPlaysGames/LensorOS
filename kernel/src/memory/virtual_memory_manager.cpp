@@ -32,6 +32,7 @@
 namespace Memory {
 PageTable* ActivePageMap;
 
+template <bool write_direct>
 void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddress, u64 mappingFlags, ShowDebug debug) {
     if (pageMapLevelFour == nullptr) {
         panic("Mapping into nullptr!");
@@ -81,34 +82,48 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
             global);
     }
 
-    pageMapLevelFour = (PageTable*)PhysicalKernelAddress(PhysicalAddress(pageMapLevelFour)).address;
+    if constexpr (not write_direct)
+        pageMapLevelFour = (PageTable*)PhysicalKernelAddress(PhysicalAddress(pageMapLevelFour)).address;
+
     PDE = pageMapLevelFour->entries[indexer.page_directory_pointer()];
     PageTable* PDP;
     if (!PDE.flag(PageTableFlag::Present)) {
         PDP = (PageTable*)request_page();
-        memset(PDP, 0, PAGE_SIZE);
-        PDE.set_address(
-            PhysicalAddress(PhysicalKernelAddress(PDP)).address);
+        PageTable* write_ptr = PDP;
+        if constexpr (write_direct)
+            write_ptr = (PageTable*)PhysicalAddress(PhysicalKernelAddress(PDP)).address;
+        // Need to write to TO_FRAME_POINTER here only if write_direct is true
+        memset(write_ptr, 0, PAGE_SIZE);
+        // Need to store TO_FRAME_POINTER version here no matter what
+        PDE.set_address(PhysicalAddress(PhysicalKernelAddress(PDP)).address);
     }
     PDE.or_flag_if(PageTableFlag::Present, present);
     PDE.or_flag_if(PageTableFlag::ReadWrite, write);
     PDE.or_flag_if(PageTableFlag::UserSuper, user);
     pageMapLevelFour->entries[indexer.page_directory_pointer()] = PDE;
-    PDP = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
+    PDP = (PageTable*)PDE.address();
+    if constexpr (not write_direct)
+        PDP = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PDP)).address;
 
     PDE = PDP->entries[indexer.page_directory()];
     PageTable* PD;
     if (!PDE.flag(PageTableFlag::Present)) {
         PD = (PageTable*)request_page();
-        memset(PD, 0, PAGE_SIZE);
-        PDE.set_address(
-            TO_FRAME_POINTER(PhysicalKernelAddress(PD)).address);
+        PageTable* write_ptr = PD;
+        if constexpr (write_direct)
+            write_ptr = (PageTable*)PhysicalAddress(PhysicalKernelAddress(PD)).address;
+        // Need to write to TO_FRAME_POINTER here only if write_direct is true
+        memset(write_ptr, 0, PAGE_SIZE);
+        // Need to store TO_FRAME_POINTER version here no matter what
+        PDE.set_address(PhysicalAddress(PhysicalKernelAddress(PD)).address);
     }
     PDE.or_flag_if(PageTableFlag::Present, present);
     PDE.or_flag_if(PageTableFlag::ReadWrite, write);
     PDE.or_flag_if(PageTableFlag::UserSuper, user);
     PDP->entries[indexer.page_directory()] = PDE;
-    PD = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
+    PD = (PageTable*)PDE.address();
+    if constexpr (not write_direct)
+        PD = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PD)).address;
 
     PDE = PD->entries[indexer.page_table()];
     PageTable* PT;
@@ -119,6 +134,9 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
 
         // Allocate a Page Table Level 1
         PT = (PageTable*)request_page();
+        if constexpr (write_direct)
+            PT = (PageTable*)PhysicalAddress(PhysicalKernelAddress(PT)).address;
+
         memset(PT, 0, PAGE_SIZE);
 
         // Extract the physical base address of the 2MiB page
@@ -177,7 +195,9 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
     PDE.or_flag_if(PageTableFlag::UserSuper, user);
     // PDE.or_flag_if(PageTableFlag::NX,            noExecute);
     PD->entries[indexer.page_table()] = PDE;
-    PT = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PDE.address())).address;
+    PT = (PageTable*)PDE.address();
+    if constexpr (not write_direct)
+        PT = (PageTable*)PhysicalKernelAddress(PhysicalAddress(PT)).address;
 
     PDE = PT->entries[indexer.page()];
     PDE.set_address((u64)physicalAddress);
@@ -223,11 +243,26 @@ void map_large(PageTable* pageMapLevelFour, void* virtualAddress, void* physical
         hang();
     }
 
-    if (uintptr_t(virtualAddress) & (MiB(1) - 1)) {
+    if (uintptr_t(virtualAddress) & (MiB(2) - 1)) {
         panic("Mapping large page -- Virtual Address Misaligned");
         // aligned address -> address bitwise AND with alignment minus one.
         //     Address = address & ~(align - 1)
         virtualAddress = (void*)(uintptr_t(virtualAddress) & (~(MiB(1) - 1)));
+    };
+    if (uintptr_t(physicalAddress) & (MiB(2) - 1)) {
+        panic("Mapping large page -- Physical Address Misaligned");
+        physicalAddress = (void*)(uintptr_t(physicalAddress) & (~(MiB(1) - 1)));
+
+        for (usz t = 0; t < PAGE_SIZE_LARGE; t += PAGE_SIZE) {
+            map<write_direct>(
+                pageMapLevelFour,
+                (void*)((uintptr_t)virtualAddress + t),
+                (void*)((uintptr_t)physicalAddress + t),
+                mappingFlags,
+                debug);
+        }
+
+        return;
     };
 
     PageMapIndexer indexer((u64)virtualAddress);
@@ -341,7 +376,7 @@ void map_large(PageTable* pageMapLevelFour, void* virtualAddress, void* physical
             (void*)PD,
             PDPDE.flag(PageTableFlag::Present),
             stringify_pde_flags(PDPDE),
-            (void*)PDPDE.address());
+            (void*)PDPDE.address_large());
     }
 }
 
@@ -669,15 +704,17 @@ void init_virtual(PageTable* pageMap) {
             (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite,
             ShowDebug::No);
     }
-    u64 kPhysicalStart = (u64)&KERNEL_PHYSICAL;
     u64 kernelBytesNeeded = 1 + ((u64)&KERNEL_END - (u64)&KERNEL_START);
-    for (u64 t = kPhysicalStart; t < kPhysicalStart + kernelBytesNeeded; t += PAGE_SIZE_LARGE) {
+    for (u64 t = 0; t < kernelBytesNeeded; t += PAGE_SIZE_LARGE) {
         map_large<true>(
             pageMap,
             (void*)(t + (u64)&KERNEL_VIRTUAL),
-            (void*)t,
-            (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite);
+            (void*)(t + (u64)&KERNEL_PHYSICAL),
+            (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite,
+            ShowDebug::Yes);
     }
+    std::print("[VIRT]: Initial page map configured, flushing\n");
+    print_page_map(pageMap);
     // Update current page map.
     flush_page_map(pageMap);
 }

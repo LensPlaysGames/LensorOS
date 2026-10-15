@@ -23,33 +23,38 @@ SECTIONS
 {
     KERNEL_PHYSICAL = 0x100000;
     KERNEL_VIRTUAL = 0xffffffff80000000;
-    . = KERNEL_PHYSICAL + KERNEL_VIRTUAL;
+    . = KERNEL_VIRTUAL;
     KERNEL_START = .;
-    .text ALIGN (0x1000) : AT(ADDR(.text) - KERNEL_VIRTUAL)
+    KERNEL_PHYSICAL_CURSOR = ALIGN(KERNEL_PHYSICAL, 0x1000);
+
+    .text ALIGN (0x1000) : AT(KERNEL_PHYSICAL_CURSOR)
     {
         TEXT_START = .;
         *(.text*)
         *(.gnu.linkonce.t*)
         TEXT_END = .;
     }
+    KERNEL_PHYSICAL_CURSOR = ALIGN(KERNEL_PHYSICAL_CURSOR + SIZEOF(.text), 0x1000);
 
-    .data ALIGN (0x1000) : AT(ADDR(.data) - KERNEL_VIRTUAL)
+    .data ALIGN (0x1000) : AT(KERNEL_PHYSICAL_CURSOR)
     {
         DATA_START = .;
         *(.data*)
         *(.gnu.linkonce.d*)
         DATA_END = .;
     }
+    KERNEL_PHYSICAL_CURSOR = ALIGN(KERNEL_PHYSICAL_CURSOR + SIZEOF(.data), 0x1000);
 
-    .rodata ALIGN (0x1000) : AT(ADDR(.rodata) - KERNEL_VIRTUAL)
+    .rodata ALIGN (0x1000) : AT(KERNEL_PHYSICAL_CURSOR)
     {
         READ_ONLY_DATA_START = .;
         *(.rodata*)
         *(.gnu.linkonce.r*)
         READ_ONLY_DATA_END = .;
     }
+    KERNEL_PHYSICAL_CURSOR = ALIGN(KERNEL_PHYSICAL_CURSOR + SIZEOF(.rodata), 0x1000);
 
-    .bss ALIGN (0x1000) : AT(ADDR(.bss) - KERNEL_VIRTUAL)
+    .bss ALIGN (0x1000) : AT(KERNEL_PHYSICAL_CURSOR)
     {
         BLOCK_STARTING_SYMBOLS_START = .;
         *(COMMON)
@@ -57,12 +62,16 @@ SECTIONS
         *(.gnu.linkonce.b*)
         BLOCK_STARTING_SYMBOLS_END = .;
     }
+    KERNEL_PHYSICAL_CURSOR = ALIGN(KERNEL_PHYSICAL_CURSOR + SIZEOF(.bss), 0x1000);
+
     KERNEL_END = .;
 
     /DISCARD/ :
     {
         *(.ctors)
         *(.dtors)
+        *(.init_array)
+        *(.fini_array)
         *(.comment)
         *(.eh_frame)
         *(.note.gnu.build-id)

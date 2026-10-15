@@ -41,6 +41,7 @@ enum class ShowDebug {
 /* Map a virtual address to a physical
  *   address in the given page map level four.
  */
+template <bool write_direct = false>
 void map(
     PageTable*,
     void* virtualAddress,
