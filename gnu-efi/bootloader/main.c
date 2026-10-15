@@ -6,24 +6,45 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define KERNEL_PHYSICAL 0x100000
-#define KERNEL_VIRTUAL  0xffffffff80000000
+#define ENTRY_BASE_TYPE(NAME) void (*NAME)(BootInfo*)
+// TODO: Don't hard-code. Get from linker script or something.
+#define KERNEL_VIRTUAL 0xffffffff80000000
 
-EFI_HANDLE        gImageHandle;
+#if defined(aarch64)
+#define HALT(...) __asm__ volatile("wfi")
+#define ENTRY_TYPE(NAME) ENTRY_BASE_TYPE(NAME)
+#define ELF_MACHINE EM_X86_64
+// TODO: Don't hard-code. Get from linker script or something.
+#define KERNEL_PHYSICAL 0x40000000
+#elif defined(x86_64)
+#define HALT(...) __asm__ volatile("hlt")
+#define ENTRY_TYPE(NAME) __attribute__((sysv_abi)) ENTRY_BASE_TYPE(NAME)
+#define ELF_MACHINE EM_ARM
+// TODO: Don't hard-code. Get from linker script or something.
+#define KERNEL_PHYSICAL 0x100000
+#endif
+
+#define V2P(ADDRESS) ((ADDRESS) - (KERNEL_VIRTUAL - KERNEL_PHYSICAL))
+
+EFI_HANDLE gImageHandle;
 EFI_SYSTEM_TABLE* gSystemTable;
 EFI_BOOT_SERVICES* gBootServices;
 
-int memcmp (const void* aptr, const void* bptr, size_t n) {
+int memcmp(const void* aptr, const void* bptr, size_t n) {
     const unsigned char* a = aptr;
     const unsigned char* b = bptr;
     for (size_t i = 0; i < n; i++) {
-        if (a[i] < b[i]) { return -1; }
-        else if (a[i] > b[i]) { return 1; }
+        if (a[i] < b[i]) {
+            return -1;
+        }
+        else if (a[i] > b[i]) {
+            return 1;
+        }
     }
     return 0;
 }
 
-UINTN strcmp (CHAR8* a, CHAR8* b, UINTN length) {
+UINTN strcmp(CHAR8* a, CHAR8* b, UINTN length) {
     for (UINTN i = 0; i < length; ++i) {
         if (*a != *b)
             return 0;
@@ -53,8 +74,7 @@ EFI_FILE* LoadFile(EFI_FILE* dir, CHAR16* path) {
         fileSystem->OpenVolume(fileSystem, &dir);
     }
 
-    EFI_STATUS status = dir->Open(dir, &loadedFile, path,
-                                  EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY);
+    EFI_STATUS status = dir->Open(dir, &loadedFile, path, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY);
     if (status == EFI_SUCCESS) {
         return loadedFile;
     }
@@ -86,12 +106,15 @@ typedef struct {
 
 PSF1_FONT* LoadPSF1Font(EFI_FILE* dir, CHAR16* path) {
     EFI_FILE* font = LoadFile(dir, path);
-    if (font == NULL) { return NULL; }
+    if (font == NULL) {
+        return NULL;
+    }
 
     PSF1_HEADER* font_hdr;
-    gBootServices->AllocatePool(EfiLoaderData
-                                , sizeof(PSF1_HEADER)
-                                , (VOID**)&font_hdr);
+    gBootServices->AllocatePool(
+        EfiLoaderData,
+        sizeof(PSF1_HEADER),
+        (VOID**)&font_hdr);
     if (font_hdr == 0) {
         Print(L"ERROR: Failed to allocate pool for PSF1 font header.\n");
         return NULL;
@@ -101,8 +124,7 @@ PSF1_FONT* LoadPSF1Font(EFI_FILE* dir, CHAR16* path) {
     font->Read(font, &size, font_hdr);
 
     if (font_hdr->Magic[0] != PSF1_MAGIC0
-        || font_hdr->Magic[1] != PSF1_MAGIC1)
-    {
+        || font_hdr->Magic[1] != PSF1_MAGIC1) {
         Print(L"ERROR: Invalid font format");
         return NULL;
     }
@@ -111,14 +133,15 @@ PSF1_FONT* LoadPSF1Font(EFI_FILE* dir, CHAR16* path) {
     // FIXME: This value checked against Mode may be wrong.
     if (font_hdr->Mode == 1) {
         // 512 glyph mode
-        glyphBufferSize  = font_hdr->CharacterSize * 512;
+        glyphBufferSize = font_hdr->CharacterSize * 512;
     }
 
     // Read glyph buffer from font file after header
     VOID* glyphBuffer = NULL;
-    gBootServices->AllocatePool(EfiLoaderData
-                                , glyphBufferSize
-                                , &glyphBuffer);
+    gBootServices->AllocatePool(
+        EfiLoaderData,
+        glyphBufferSize,
+        &glyphBuffer);
     if (glyphBuffer == NULL) {
         Print(L"ERROR: Failed to allocate pool for PSF1 font glyph buffer.\n");
         return NULL;
@@ -127,7 +150,10 @@ PSF1_FONT* LoadPSF1Font(EFI_FILE* dir, CHAR16* path) {
     font->Read(font, &glyphBufferSize, glyphBuffer);
 
     PSF1_FONT* final_font = NULL;
-    gBootServices->AllocatePool(EfiLoaderData, sizeof(PSF1_FONT), (VOID**)&final_font);
+    gBootServices->AllocatePool(
+        EfiLoaderData,
+        sizeof(PSF1_FONT),
+        (VOID**)&final_font);
     if (final_font == NULL) {
         Print(L"ERROR: Failed to allocate pool for final PSF1 font.\n");
         return NULL;
@@ -140,11 +166,16 @@ PSF1_FONT* LoadPSF1Font(EFI_FILE* dir, CHAR16* path) {
 Framebuffer framebuffer;
 Framebuffer* InitializeGOP() {
     EFI_GUID gopGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
-    EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
+    EFI_GRAPHICS_OUTPUT_PROTOCOL* gop;
     EFI_STATUS status;
 
-    status = uefi_call_wrapper(BS->LocateProtocol, 3, &gopGuid, NULL, (void**)&gop);
-    if(EFI_ERROR(status)) {
+    status = uefi_call_wrapper(
+        BS->LocateProtocol,
+        3,
+        &gopGuid,
+        NULL,
+        (void**)&gop);
+    if (EFI_ERROR(status)) {
         Print(L"ERROR: Unable to locate Graphics Output Protocol\n");
         return NULL;
     }
@@ -167,11 +198,11 @@ typedef struct {
     void* RSDP;
 } BootInfo;
 
-EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
+EFI_STATUS efi_main(EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     gImageHandle = IH;
     gSystemTable = ST;
     gBootServices = gSystemTable->BootServices;
-    
+
     InitializeLib(gImageHandle, gSystemTable);
 
     Print(L"!==-- LensorOS BOOTLOADER --==!\n");
@@ -196,11 +227,12 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
         Print(L"ERROR: Failed to load default font\n");
     }
     else {
-        Print(L"Default font loaded successfully\n"
-              L"  Mode:           %d\n"
-              L"  Character Size: 8x%d\n",
-              dflt_font->PSF1_Header->Mode,
-              dflt_font->PSF1_Header->CharacterSize);
+        Print(
+            L"Default font loaded successfully\n"
+            L"  Mode:           %d\n"
+            L"  Character Size: 8x%d\n",
+            dflt_font->PSF1_Header->Mode,
+            dflt_font->PSF1_Header->CharacterSize);
     }
 
     // Unload LensorOS directory.
@@ -216,15 +248,14 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
      * |-- Is formatted with least significant byte at the lowest address.
      * |-- Is an executable.
      * `-- Was built for an x86_64 machine.
-     * `-- Was built with this elf loader's version of ELF.    
+     * `-- Was built with this elf loader's version of ELF.
      */
     if (memcmp(&elf_header.e_ident[EI_MAG0], ELFMAG, SELFMAG) != 0
         || elf_header.e_ident[EI_CLASS] != ELFCLASS64
         || elf_header.e_ident[EI_DATA] != ELFDATA2LSB
         || elf_header.e_type != ET_EXEC
-        || elf_header.e_machine != EM_X86_64
-        || elf_header.e_version != EV_CURRENT)
-    {
+        || elf_header.e_machine != ELF_MACHINE
+        || elf_header.e_version != EV_CURRENT) {
         Print(L"ERROR: Invalid kernel format\n");
         return 1;
     }
@@ -234,9 +265,10 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     Elf64_Phdr* program_hdrs;
     kernel->SetPosition(kernel, elf_header.e_phoff);
     UINTN programHeaderTableSize = elf_header.e_phnum * elf_header.e_phentsize;
-    gBootServices->AllocatePool(EfiLoaderData
-                                , programHeaderTableSize
-                                , (void**)&program_hdrs);
+    gBootServices->AllocatePool(
+        EfiLoaderData,
+        programHeaderTableSize,
+        (void**)&program_hdrs);
     if (program_hdrs == 0) {
         Print(L"ERROR: Failed to allocate memory for kernel program headers table.\n");
         return 1;
@@ -246,13 +278,8 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     for (
         Elf64_Phdr* phdr = program_hdrs;
         (char*)phdr < (char*)program_hdrs + elf_header.e_phnum * elf_header.e_phentsize;
-        phdr = (Elf64_Phdr*)((char*)phdr + elf_header.e_phentsize))
-    {
+        phdr = (Elf64_Phdr*)((char*)phdr + elf_header.e_phentsize)) {
         if (phdr->p_type == PT_LOAD) {
-            /* TODO: Allocate any pages for kernel, not just a fixed address.
-             *       This would require setting up paging in the 
-             *       bootloader and not the prekernel, though.
-             */
             unsigned pages = (phdr->p_memsz + 0x1000 - 1) / 0x1000;
             Elf64_Addr segment = phdr->p_paddr;
             EFI_MEMORY_TYPE MemoryType = EfiLoaderData;
@@ -260,18 +287,22 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
                 MemoryType = EfiLoaderCode;
 
             do {
-                gBootServices->AllocatePages(AllocateAddress
-                                             , MemoryType
-                                             , pages, &segment);
-            }
-            while (segment == 0);
+                gBootServices->AllocatePages(
+                    AllocateAddress,
+                    MemoryType,
+                    pages,
+                    &segment);
+            } while (segment == 0);
             gBootServices->SetMem((VOID*)segment, phdr->p_memsz, 0);
             kernel->SetPosition(kernel, phdr->p_offset);
             UINTN fileSize = phdr->p_filesz;
             kernel->Read(kernel, &fileSize, (VOID*)segment);
-            Print(L"LOADED: Kernel Program at 0x%x "
-                  "(%d bytes loaded, %d bytes allocated)\n"
-                  , segment, fileSize, phdr->p_memsz);
+            Print(
+                L"LOADED: Kernel Program at 0x%x "
+                "(%d bytes loaded, %d bytes allocated)\n",
+                segment,
+                fileSize,
+                phdr->p_memsz);
         }
     }
     Print(L"Kernel loaded successfully\n");
@@ -279,27 +310,26 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     // Initialize Unified Extensible Firmware Interface Graphics Output Protocol.
     // Let's call that the 'GOP' from now on.
     Framebuffer* gop_fb = InitializeGOP();
-    Print(L"  Base: 0x%08x\n"
-          L"  Size: 0x%x\n"
-          L"  Pixel Width: %d\n"
-          L"  Pixel Height: %d\n"
-          L"  Pixels Per Scanline: %d\n",
-          gop_fb->BaseAddress,
-          gop_fb->BufferSize,
-          gop_fb->PixelWidth,
-          gop_fb->PixelHeight,
-          gop_fb->PixelsPerScanLine);
+    Print(
+        L"  Base: 0x%08x\n"
+        L"  Size: 0x%x\n"
+        L"  Pixel Width: %d\n"
+        L"  Pixel Height: %d\n"
+        L"  Pixels Per Scanline: %d\n",
+        gop_fb->BaseAddress,
+        gop_fb->BufferSize,
+        gop_fb->PixelWidth,
+        gop_fb->PixelHeight,
+        gop_fb->PixelsPerScanLine);
 
     // Load EFI Memory map to pass to kernel.
     EFI_MEMORY_DESCRIPTOR* Map = NULL;
     UINTN MapSize, MapKey;
     UINTN DescriptorSize;
     UINT32 DescriptorVersion;
-    gBootServices->GetMemoryMap(&MapSize, Map, &MapKey
-                                , &DescriptorSize, &DescriptorVersion);
+    gBootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
     gBootServices->AllocatePool(EfiLoaderData, MapSize, (void**)&Map);
-    gBootServices->GetMemoryMap(&MapSize, Map, &MapKey
-                                , &DescriptorSize, &DescriptorVersion);
+    gBootServices->GetMemoryMap(&MapSize, Map, &MapKey, &DescriptorSize, &DescriptorVersion);
     Print(L"EFI memory map successfully parsed\n");
 
     // ACPI 2.0
@@ -309,8 +339,10 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     for (UINTN index = 0; index < gSystemTable->NumberOfTableEntries; index++) {
         if (CompareGuid(&ConfigTable[index].VendorGuid, &ACPI2TableGuid)) {
             if (strcmp((CHAR8*)"RSD PTR ", (CHAR8*)ConfigTable->VendorTable, 8)) {
-                Print(L"Found Root System Descriptor Pointer (RSDP) Table 2.0:\n"
-                      L"  Address: 0x%x\n", (void*)ConfigTable->VendorTable);
+                Print(
+                    L"Found Root System Descriptor Pointer (RSDP) Table 2.0:\n"
+                    L"  Address: 0x%x\n",
+                    (void*)ConfigTable->VendorTable);
                 UINTN sum = 0;
                 // Validate checksum.
                 // RSDP2.0 table = 36 bytes, trailing three are reserved (not included).
@@ -320,7 +352,7 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
                 UINT8 checksum = (UINT8)sum;
                 Print(L"  Checksum: %d\n", checksum);
                 if (checksum == 0)
-                  rsdp = (void*)ConfigTable->VendorTable;
+                    rsdp = (void*)ConfigTable->VendorTable;
             }
         }
         ConfigTable++;
@@ -335,8 +367,7 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     info.RSDP = rsdp;
 
     Print(L"Kernel entry point: 0x%x\n", elf_header.e_entry);
-    Print(L"Calculated kernel entry point: 0x%x\n"
-          , elf_header.e_entry - KERNEL_VIRTUAL);
+    Print(L"Calculated kernel entry point: 0x%x\n", V2P(elf_header.e_entry));
 
     // Exit boot services: free system resources dedicated to UEFI boot services,
     //   as well as prevent UEFI from shutting down automatically after 5 minutes.
@@ -344,12 +375,12 @@ EFI_STATUS efi_main (EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     gBootServices->ExitBootServices(gImageHandle, MapKey);
 
     // Define kernel entry point.
-    void (*KernelStart)(BootInfo*) = ((__attribute__((sysv_abi)) void (*)(BootInfo*)) elf_header.e_entry - KERNEL_VIRTUAL);
+    ENTRY_TYPE(KernelStart) = ((ENTRY_TYPE())V2P(elf_header.e_entry));
     KernelStart(&info);
 
     // Once boot services have been exited, must never return!
     while (1)
-        __asm__ ("hlt");
+        HALT();
 
     return EFI_SUCCESS;
 }

@@ -44,6 +44,7 @@ TOPDIR = $(SRCDIR)/..
 
 CDIR=$(TOPDIR)/..
 LINUX_HEADERS = /usr/src/sys/build
+CFLAGS += -D$(ARCH)
 CPPFLAGS += -D__KERNEL__ -I$(LINUX_HEADERS)/include
 CRTOBJS = $(TOPDIR)/${ARCH}/gnuefi/crt0-efi-$(ARCH).o
 
@@ -52,7 +53,7 @@ ifneq (,$(findstring FreeBSD,$(OS)))
 LDSCRIPT = $(TOPDIR)/gnuefi/elf_$(ARCH)_fbsd_efi.lds
 endif
 
-LDFLAGS += -shared -Bsymbolic -L$(TOPDIR)/$(ARCH)/lib -L$(TOPDIR)/$(ARCH)/gnuefi $(CRTOBJS) --no-warn-execstack
+LDFLAGS += -shared -Bsymbolic -L$(TOPDIR)/$(ARCH)/lib -L$(TOPDIR)/$(ARCH)/gnuefi $(CRTOBJS) --no-warn-execstack --no-warn-rwx-segments
 
 LOADLIBES += -lefi -lgnuefi
 LOADLIBES += $(LIBGCC)
