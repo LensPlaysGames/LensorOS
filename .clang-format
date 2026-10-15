@@ -1,6 +1,7 @@
 ---
 BasedOnStyle: Google
 IndentWidth: 4
+AccessModifierOffset: -4
 
 # Use spaces instead of tabs
 UseTab: Never
