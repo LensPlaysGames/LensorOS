@@ -31,6 +31,7 @@ set_property(
   CACHE ARCH
   PROPERTY STRINGS
   "x86_64"
+  "aarch64"
 )
 set(
   MACHINE "VBOX"

@@ -214,28 +214,106 @@ if ( QEMU_PROGRAM )
   )
   set(
     QEMU_FLAGS
-    -machine q35
-    # cpu: Broadwell, Cascadelake-Server, Cooperlake, Conroe, core2duo,
-    #      Denverton, Dhyana, EPYC, Haswell, IvyBridge, kvm64, max,
-    #      Nehalem, Penryn, qemu64, SandyBridge, Skylake-[Client|Server],
-    #      Snowridge, Westmere
-    -cpu qemu64
-    # Multiple processors (commented until utilized).
-    #-smp 8,sockets=2,cores=2,threads=2,maxcpus=8
-    -m 256M
-    # Use local time as real time clock base.
-    -rtc base=localtime,clock=host,driftfix=none
-    # e1000 network card emulation
-    -nic user,ipv6=off,model=e1000,mac=52:54:98:76:54:32
-    # Intel HDA 1.0 Sound
-    -device intel-hda,id=sound0,msi=on
-    -device hda-duplex,id=codec0,bus=sound0.0,audiodev=audio0
-    # Show extra information regarding triple faults.
-    -d cpu_reset
-    # Use stdio as serial input and output.
-    # This allows debug messages to reach the terminal.
-    -serial stdio
+      # Show extra information regarding triple faults.
+      # NOTE: "int" is extremely noisy, literal gigabytes of text
+      # -d int,cpu_reset
+      -d cpu_reset,invalid_mem
+      # -D "${CMAKE_CURRENT_LIST_DIR}/qemu.log"
+      -no-reboot -no-shutdown
+      # Use stdio as serial input and output.
+      # This allows debug messages to reach the terminal.
+      -serial stdio
   )
+  if (${ARCH} MATCHES "x86_64")
+    list( APPEND QEMU_FLAGS
+      -machine q35
+      # cpu: Broadwell, Cascadelake-Server, Cooperlake, Conroe, core2duo,
+      #      Denverton, Dhyana, EPYC, Haswell, IvyBridge, kvm64, max,
+      #      Nehalem, Penryn, qemu64, SandyBridge, Skylake-[Client|Server],
+      #      Snowridge, Westmere
+      -cpu qemu64
+      # Multiple processors (commented until utilized).
+      #-smp 8,sockets=2,cores=2,threads=2,maxcpus=8
+      -m 256M
+      # Use local time as real time clock base.
+      -rtc base=localtime,clock=host,driftfix=none
+      # e1000 network card emulation
+      -nic user,ipv6=off,model=e1000,mac=52:54:98:76:54:32
+      # Intel HDA 1.0 Sound
+      -device intel-hda,id=sound0,msi=on
+      -device hda-duplex,id=codec0,bus=sound0.0,audiodev=audio0
+    )
+
+    set( OVMF_CODE "${REPO_DIR}/OVMFbin/OVMF_CODE-pure-efi.fd" )
+    set( OVMF_VARS "${REPO_DIR}/OVMFbin/OVMF_VARS_LensorOS.fd" )
+  elseif(${ARCH} MATCHES "aarch64")
+    list( APPEND QEMU_FLAGS
+      -machine virt
+      # CPU:
+      # a64fx, arm1026, arm1136, arm1136-r2, arm1176, arm11mpcore, arm926,
+      # arm946, cortex-a15, cortex-a35, cortex-a53, cortex-a55, cortex-a57,
+      # cortex-a7, cortex-a710, cortex-a72, cortex-a76, cortex-a78ae, cortex-
+      # a8, cortex-a9, cortex-m0, cortex-m3, cortex-m33, cortex-m4, cortex-m55,
+      # cortex-m7, cortex-r5, cortex-r52, cortex-r5f, max, neoverse-n1,
+      # neoverse-n2, neoverse-v1, sa1100, sa1110, ti925t
+      -cpu cortex-a53
+      # Multiple processors (commented until utilized).
+      #-smp 4
+      -m 512M
+    )
+
+    if (NOT EXISTS "${REPO_DIR}/OVMFbin/OVMF_CODE-aarch64.fd")
+      # Fedora (presumably others, too) provides DNF system packages to provide
+      # UEFI firmware for QEMU testing for various archictectures.
+      #
+      # Red Hat:
+      #     sudo dnf install edk2-aarch64
+      #
+      # Debian:
+      #     sudo apt install qemu-efi-aarch64
+      #
+      # NOTE (Windows): "C:\Program Files\qemu\share\" or something
+      #
+      # You can also follow instructions inside OVMFbin/README.md, modifying
+      # x64 specific stuff to aarch64 as needed, to produce these files yourself.
+      if (EXISTS "/usr/share/edk2/aarch64/QEMU_EFI-pflash.raw")
+        file(
+          COPY_FILE
+          "/usr/share/edk2/aarch64/QEMU_EFI-pflash.raw"
+          "${REPO_DIR}/OVMFbin/OVMF_CODE-aarch64.fd"
+        )
+        file(
+          COPY_FILE
+          "/usr/share/edk2/aarch64/QEMU_EFI-qemuvars-pflash.raw"
+          "${REPO_DIR}/OVMFbin/OVMF_VARS-aarch64.fd"
+        )
+      elseif (EXISTS "/usr/share/AAVMF/AAVMF_CODE.fd")
+        file(
+          COPY_FILE
+          "/usr/share/AAVMF/AAVMF_CODE.fd"
+          "${REPO_DIR}/OVMFbin/OVMF_CODE-aarch64.fd"
+        )
+        file(
+          COPY_FILE
+          "/usr/share/AAVMF/AAVMF_VARS.fd"
+          "${REPO_DIR}/OVMFbin/OVMF_VARS-aarch64.fd"
+        )
+      else()
+        message(
+          FATAL_ERROR
+          "Could not find QEMU UEFI EDK2 Firmware for ${ARCH}"
+        )
+      endif()
+    endif()
+
+    set( OVMF_CODE "${REPO_DIR}/OVMFbin/OVMF_CODE-aarch64.fd" )
+    set( OVMF_VARS "${REPO_DIR}/OVMFbin/OVMF_VARS-aarch64.fd" )
+  else()
+    message(
+      FATAL_ERROR
+      "unrecognized architecture (QEMU flags): QEMU:'${QEMU_PROGRAM}' ARCH:${ARCH}"
+    )
+  endif()
 
   # Hardware Acceleration
   if ( CMAKE_HOST_WIN32 )
@@ -264,11 +342,11 @@ if ( QEMU_PROGRAM )
       -machine pcspk-audiodev=audio0
     )
   endif()
+
   if( QEMU_DEBUG )
     list( APPEND QEMU_FLAGS -S -s )
   endif()
-  set( OVMF_CODE "${REPO_DIR}/OVMFbin/OVMF_CODE-pure-efi.fd" )
-  set( OVMF_VARS "${REPO_DIR}/OVMFbin/OVMF_VARS_LensorOS.fd" )
+
   cmake_path(
     NATIVE_PATH
     OVMF_CODE
@@ -334,6 +412,17 @@ if ( QEMU_PROGRAM )
     VERBATIM
   )
   add_custom_target(
+    dbghda_qemu
+    COMMAND # TODO: open new shell window and run gdb in it
+    COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
+    -drive format=raw,file=${IMAGE_DIR}/LensorOS.bin
+    -S -s
+    COMMENT "Running QEMU(Debug) for ${ARCH} from GPT `LensorOS.bin`"
+    USES_TERMINAL
+    WORKING_DIRECTORY ${REPO_DIR}
+    VERBATIM
+  )
+  add_custom_target(
     runiso_qemu
     COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
     -drive format=raw,file=${IMAGE_DIR}/LensorOS.iso,media=cdrom
@@ -342,6 +431,14 @@ if ( QEMU_PROGRAM )
     WORKING_DIRECTORY ${REPO_DIR}
     VERBATIM
   )
+  add_custom_target(
+    runusb_qemu
+    COMMAND ${QEMU_PROGRAM} ${QEMU_FLAGS}
+    -machine usb=on
+    -device qemu-xhci,id=xhci
+    -device usb-storage,bus=xhci.0,drive=usbdisk,removable=on
+    -drive if=none,id=usbdisk,format=raw,file=${IMAGE_DIR}/LensorOS.bin
+  )
   # Dependencies
   add_dependencies( run_qemu Kernel )
   if( TARGET image_raw )
@@ -349,6 +446,8 @@ if ( QEMU_PROGRAM )
   endif()
   if( TARGET image_gpt )
     add_dependencies( runhda_qemu image_gpt )
+    add_dependencies( dbghda_qemu image_gpt )
+    add_dependencies( runusb_qemu image_gpt )
   endif()
   if( TARGET image_iso )
     add_dependencies( runiso_qemu image_iso )
