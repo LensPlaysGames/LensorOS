@@ -424,7 +424,6 @@ typedef struct fdt_property_header {
 ///   device to be used for boot console input. If the character “:” is
 ///   present in the value it terminates the path. The value may be an alias.
 
-inline void dump_device_tree() {
-}
+void dump_device_tree(fdt_header* dt);
 
 #endif /* LENSOROS_DEVICE_TREE_H */
