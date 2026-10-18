@@ -23,7 +23,193 @@
 #include <integers.h>
 
 #include <print>
+#include <span>
 #include <string>
+#include <string_view>
+
+enum class FDTTokenType {
+    NONE = 0,
+    BEGIN_NODE = FDT_BEGIN_NODE,
+    END_NODE = FDT_END_NODE,
+    PROPERTY = FDT_PROP,
+    NOP = FDT_NOP,
+    END = FDT_END,
+};
+
+struct fdt_stringlist {
+    const char* const base;
+    const usz size;
+
+    const char* current{nullptr};
+    usz offset{0};
+
+    fdt_stringlist(const u8* base, usz size)
+        : base((const char*)base), size(size) {}
+
+    [[nodiscard]]
+    std::string_view next_string() {
+        if (offset >= size) return {};
+        current = base + offset;
+        const auto out = current;
+        const auto length = strlen(current);
+        offset += length + 1;
+        return std::string_view(out, length);
+    }
+};
+
+struct fdt_property_value {
+    const char* name;
+    const u8* data;
+    u32 name_length;
+    u32 data_byte_size;
+
+    fdt_property_value() = delete;
+    fdt_property_value(u32 data_size, const char* name, const u8* data)
+        : name(name)
+        , data(data)
+        , name_length(strlen(name))
+        , data_byte_size(data_size) {};
+
+    /// <u32> property type
+    u32 as_u32() {
+        return data_byte_size == sizeof(u32) ? *(u32*)data : 0;
+    }
+    u32 as_phandle() { return as_u32(); }
+    /// <u64> property type
+    u32 as_u64() {
+        return data_byte_size == sizeof(u64) ? *(u64*)data : 0;
+    }
+    /// <string> property type
+    std::string_view as_string() {
+        return std::string_view((char*)data, data_byte_size);
+    }
+    /// <stringlist> property type
+    fdt_stringlist as_stringlist() {
+        return fdt_stringlist(data, data_byte_size);
+    }
+    /// <prop-encoded-array> property type
+    /// data format is specific to property
+    std::span<u8> as_prop_encoded_array() {
+        return std::span((u8*)data, data_byte_size);
+    }
+};
+
+struct fdt_token {
+    FDTTokenType type{FDTTokenType::NONE};
+    const char* name{nullptr};
+    fdt_property_value property{0, nullptr, nullptr};
+};
+
+struct fdt_structure_parse_context {
+    const u8* const structure{};
+    const u8* const strings{};
+    const usz structure_byte_size{};
+    const usz strings_byte_size{};
+
+    usz offset{};
+    fdt_token current{};
+
+    fdt_structure_parse_context() = delete;
+
+    [[nodiscard]]
+    fdt_structure_parse_context(u8* structure, u8* strings, usz structure_size, usz strings_size)
+        : structure(structure)
+        , strings(strings)
+        , structure_byte_size(structure_size)
+        , strings_byte_size(strings_size) {}
+
+    void next_token() {
+        if (offset >= structure_byte_size) {
+            current.type = FDTTokenType::END;
+            return;
+        }
+
+        auto token = *(u32*)(structure + offset);
+        offset += sizeof(u32);  // eat token
+
+        switch (token) {
+            default:
+            case FDT_END:
+                current.type = FDTTokenType::END;
+                return;
+
+            case FDT_NOP:
+                next_token();
+                return;
+
+            case FDT_BEGIN_NODE: {
+                current.type = FDTTokenType::BEGIN_NODE;
+                current.name = big_endian_to_cpu((char*)(structure + offset));
+                offset += strlen(current.name) + 1;
+                // 4-byte align
+                offset = (offset + 3) & ~usz(3);
+            } break;
+
+            case FDT_END_NODE:
+                current.type = FDTTokenType::END_NODE;
+                break;
+
+            case FDT_PROP: {
+                current.type = FDTTokenType::PROPERTY;
+                auto* property
+                    = (fdt_property_header*)(structure + offset);
+                offset += sizeof(fdt_property_header);
+                auto* value = structure + offset;
+                auto property_length = big_endian_to_cpu(property->length);
+                offset += property_length;
+                // 4-byte align
+                offset = (offset + 3) & ~usz(3);
+                auto* name
+                    = (const char*)(strings + big_endian_to_cpu(property->name_offset));
+
+                current.property = fdt_property_value(
+                    property_length,
+                    name,
+                    value);
+
+                std::string_view compat_string = "compatible";
+                if (name == compat_string) {
+                    auto s_list = current.property.as_stringlist();
+                    std::string_view s;
+                    while ((s = s_list.next_string()).size()) {
+                        if (s == "amlogic,meson-ao-uart") {
+                            // found amlogic uart! we need to figure out it's base address ('reg'
+                            // property), and it's interrupt information.
+                            // https://github.com/torvalds/linux/blob/master/arch/arm64/boot/dts/amlogic/meson-gx.dtsi
+                            // https://devicetree-specification.readthedocs.io/en/latest/chapter2-devicetree-basics.html#devicetree-structure-and-conventions
+                            // file:///home/lens_r/Downloads/extensible-host-controler-interface-usb-xhci.pdf
+                        }
+                    }
+                }
+            } break;
+        }
+    }
+};
+
+// goal is to find hardware information
+// - memory nodes
+// - reserved memory nodes
+// - cpus node
+// - aobus (always-on bus)
+// - |-- uart_AO
+// - `-- sysctrl_AO
+// - timer
+// - interrupt controller (gic)
+// - network interface card (nic), "ethmac"
+// (like uart device so we can setup printing, and dump the device tree)
+void parse_device_tree(fdt_header* dt) {
+    auto* base = (u8*)dt;
+    auto* strings = base + big_endian_to_cpu(dt->off_dt_strings);
+    auto* structure = base + big_endian_to_cpu(dt->off_dt_struct);
+    auto structure_byte_size = big_endian_to_cpu(dt->size_dt_struct);
+    auto strings_byte_size = big_endian_to_cpu(dt->size_dt_strings);
+
+    auto parse_context = fdt_structure_parse_context(
+        structure,
+        strings,
+        structure_byte_size,
+        strings_byte_size);
+}
 
 void dump_device_tree(fdt_header* dt) {
     auto* base = (u8*)dt;
@@ -79,7 +265,7 @@ void dump_device_tree(fdt_header* dt) {
                     = (const char*)(strings + big_endian_to_cpu(property->name_offset));
 
                 std::print("{}name=\"{}\"\n", indent, name);
-                std::print("{}value=\"{}", indent);
+                std::print("{}value=\"", indent);
                 for (auto i = usz(0); i < property_length; ++i)
                     std::print("  {:02x}", *(value + i));
                 std::print("\"\n");
