@@ -37,6 +37,31 @@
 static Framebuffer g_framebuffer;
 static PSF1_FONT g_font;
 
+typedef uint32_t color_t;
+static color_t default_foreground = 0;
+static color_t default_background = 0;
+static color_t default_black = 0;
+static color_t default_red = 0;
+static color_t default_green = 0;
+static color_t default_yellow = 0;
+static color_t default_blue = 0;
+static color_t default_magenta = 0;
+static color_t default_cyan = 0;
+static color_t default_white = 0;
+
+typedef struct Cursor {
+    size_t x;
+    size_t y;
+} Cursor;
+typedef struct CharacterBuffer {
+    uint32_t* data;
+    Cursor cursor;
+    size_t width;
+    size_t height;
+    uint32_t foreground;
+    uint32_t background;
+} CharacterBuffer;
+
 static uint8_t simple_keymap[LENSOR_KEY_KPDOT + 1] = {
     '\0',
     '\0',  // LENSOR_KEY_ESC
@@ -221,10 +246,7 @@ size_t hexstring_to_number(const char* str) {
     return out;
 }
 
-void draw_psf1_char(const Framebuffer fb, const PSF1_FONT font, size_t position_x, size_t position_y, const u8 c) {
-    const u32 fg_color = mkpixel(fb.format, 0xff, 0xff, 0xff, 0xff);
-    const u32 bg_color = mkpixel(fb.format, 22, 23, 24, 0xff);
-
+void draw_psf1_char(const Framebuffer fb, const PSF1_FONT font, const CharacterBuffer* charbuf, size_t position_x, size_t position_y, const u8 c) {
     clamp_draw_position(fb, &position_x, &position_y);
 
     usz size_x = psf1_width(font);
@@ -244,11 +266,11 @@ void draw_psf1_char(const Framebuffer fb, const PSF1_FONT font, size_t position_
 
     for (usz y = position_y; y < position_y + size_y; ++y) {
         for (usz x = position_x; x < position_x + size_x; ++x) {
-            u32 color = bg_color;
+            u32 color = charbuf->background;
 
             usz byte = ((x - position_x) + ((y - position_y) * initX)) / 8;
             if ((bitmap[byte] & (0b10000000 >> ((x - position_x) % 8))) > 0)
-                color = fg_color;
+                color = charbuf->foreground;
 
             write_pixel(fb, color, x, y);
         }
@@ -268,7 +290,7 @@ static void draw_psf1_crlf(const Framebuffer fb, const PSF1_FONT font, size_t* x
     draw_psf1_lf(fb, font, y);
 }
 
-void draw_psf1_string_view(Framebuffer fb, const PSF1_FONT font, size_t* x, size_t* y, const char* str, size_t length) {
+void draw_psf1_string_view(Framebuffer fb, const PSF1_FONT font, const CharacterBuffer* charbuf, size_t* x, size_t* y, const char* str, size_t length) {
     char c;
     while ((c = *str++) && length--) {
         if (c == '\n')
@@ -278,13 +300,13 @@ void draw_psf1_string_view(Framebuffer fb, const PSF1_FONT font, size_t* x, size
         else if (c == '\b')
             *x -= psf1_width(font);
         else {
-            draw_psf1_char(fb, font, *x, *y, c);
+            draw_psf1_char(fb, font, charbuf, *x, *y, c);
             *x += psf1_width(font);
         }
     }
 }
 
-void draw_psf1_string(Framebuffer fb, const PSF1_FONT font, size_t* x, size_t* y, const char* str) {
+void draw_psf1_string(Framebuffer fb, const PSF1_FONT font, const CharacterBuffer* charbuf, size_t* x, size_t* y, const char* str) {
     char c;
     while ((c = *str++)) {
         if (c == '\n')
@@ -294,29 +316,18 @@ void draw_psf1_string(Framebuffer fb, const PSF1_FONT font, size_t* x, size_t* y
         else if (c == '\b')
             *x -= psf1_width(font);
         else {
-            draw_psf1_char(fb, font, *x, *y, c);
+            draw_psf1_char(fb, font, charbuf, *x, *y, c);
             *x += psf1_width(font);
         }
     }
 }
 
-void draw_psf1_int(Framebuffer fb, const PSF1_FONT font, size_t* x, size_t* y, int val) {
+void draw_psf1_int(Framebuffer fb, const PSF1_FONT font, const CharacterBuffer* charbuf, size_t* x, size_t* y, int val) {
     char numstr[32];
     memset(numstr, 0, 32);
     sprintf(numstr, "%d", val);
-    draw_psf1_string(fb, font, x, y, numstr);
+    draw_psf1_string(fb, font, charbuf, x, y, numstr);
 }
-
-typedef struct Cursor {
-    size_t x;
-    size_t y;
-} Cursor;
-typedef struct CharacterBuffer {
-    uint32_t* data;
-    Cursor cursor;
-    size_t width;
-    size_t height;
-} CharacterBuffer;
 
 // width and height in amount of characters.
 CharacterBuffer charbuf_create(size_t width, size_t height) {
@@ -392,7 +403,13 @@ void charbuf_putc(CharacterBuffer* charbuf, const uint32_t c) {
         charbuf_write(charbuf, charbuf->cursor.x, charbuf->cursor.y, c);
 
         // Draw graphical character into framebuffer at x, y position
-        draw_psf1_char(g_framebuffer, g_font, charbuf->cursor.x * psf1_width(g_font), charbuf->cursor.y * psf1_height(g_font), c);
+        draw_psf1_char(
+            g_framebuffer,
+            g_font,
+            charbuf,
+            charbuf->cursor.x * psf1_width(g_font),
+            charbuf->cursor.y * psf1_height(g_font),
+            c);
 
         // Update cursor position.
         charbuf->cursor.x += 1;
@@ -442,11 +459,169 @@ void run_program_waitpid(uintptr_t gui, const char* const filepath, const char**
         ssize_t bytes_read = 0;
         bool do_capital = false;
         char c = 0;
+        bool got_escape = false;
+        bool in_escape_sequence = false;
+        size_t escape_sequence_parameter_index = 0;
+        ssize_t escape_sequence_parameters[8];
         while (true) {
             sys_cooperative_yield();
 
             while ((bytes_read = sys_read(command_output_pipe[0], (uint8_t*)&c, 1, LENSOROS_SYSCALL_READ_FLAG_NOBLOCK)) > 0) {
                 putc(c, stdout);
+
+                if (in_escape_sequence) {
+                    if (c == ';') continue;
+
+                    // apply parameters as styling modes
+                    if (c == 'm') {
+                        in_escape_sequence = false;
+                        for (size_t i = 0; i < escape_sequence_parameter_index; ++i) {
+                            ssize_t parameter = escape_sequence_parameters[i];
+                            switch (parameter) {
+                                default:
+                                    break;
+
+                                case 0: {
+                                    charbuf->foreground = default_foreground;
+                                    charbuf->background = default_background;
+                                    // TODO: reset bold/light, etc
+                                } break;
+                                case 1: {
+                                    // TODO: set bold
+                                } break;
+                                case 2: {
+                                    // TODO: set faint
+                                } break;
+                                case 3: {
+                                    // TODO: set italic
+                                } break;
+                                case 4: {
+                                    // TODO: set underline
+                                } break;
+                                case 5: {
+                                    // TODO: set slow blink
+                                } break;
+                                case 7: {
+                                    // invert fg/bg
+                                    const color_t tmp_fg = charbuf->foreground;
+                                    charbuf->foreground = charbuf->background;
+                                    charbuf->background = tmp_fg;
+                                } break;
+
+                                case 30: {
+                                    charbuf->foreground = default_black;
+                                } break;
+                                case 31: {
+                                    charbuf->foreground = default_red;
+                                } break;
+                                case 32: {
+                                    charbuf->foreground = default_green;
+                                } break;
+                                case 33: {
+                                    charbuf->foreground = default_yellow;
+                                } break;
+                                case 34: {
+                                    charbuf->foreground = default_blue;
+                                } break;
+                                case 35: {
+                                    charbuf->foreground = default_magenta;
+                                } break;
+                                case 36: {
+                                    charbuf->foreground = default_cyan;
+                                } break;
+                                case 37: {
+                                    charbuf->foreground = default_white;
+                                } break;
+
+                                case 39: {
+                                    charbuf->foreground = default_foreground;
+                                } break;
+
+                                case 40: {
+                                    charbuf->background = default_black;
+                                } break;
+                                case 41: {
+                                    charbuf->background = default_red;
+                                } break;
+                                case 42: {
+                                    charbuf->background = default_green;
+                                } break;
+                                case 43: {
+                                    charbuf->background = default_yellow;
+                                } break;
+                                case 44: {
+                                    charbuf->background = default_blue;
+                                } break;
+                                case 45: {
+                                    charbuf->background = default_magenta;
+                                } break;
+                                case 46: {
+                                    charbuf->background = default_cyan;
+                                } break;
+                                case 47: {
+                                    charbuf->background = default_white;
+                                } break;
+                                case 49: {
+                                    charbuf->background = default_background;
+                                } break;
+                            }
+                        }
+                        continue;
+                    }
+
+                    // cursor control
+                    if (c == 'A') {
+                        in_escape_sequence = false;
+                        // TODO: apply parameter[0] as move cursor up N lines
+                        continue;
+                    }
+                    if (c == 'B') {
+                        in_escape_sequence = false;
+                        // TODO: apply parameter[0] as move cursor down N lines
+                        continue;
+                    }
+                    if (c == 'C') {
+                        in_escape_sequence = false;
+                        // TODO: apply parameter[0] as move cursor right N lines
+                        continue;
+                    }
+                    if (c == 'D') {
+                        in_escape_sequence = false;
+                        // TODO: apply parameter[0] as move cursor left N lines
+                        continue;
+                    }
+                    if (c == 'H') {
+                        in_escape_sequence = false;
+                        // TODO: apply parameters as cursor position
+                        continue;
+                    }
+
+                    if (c == 'J') {
+                        in_escape_sequence = false;
+                        // TODO: apply parameters for erasing
+                        continue;
+                    }
+                    if (c == 'K') {
+                        in_escape_sequence = false;
+                        // TODO: apply parameters for erasing line
+                        continue;
+                    }
+
+                    // Unknown terminator; ignore sequence
+                    in_escape_sequence = false;
+                }
+
+                if (got_escape && c == '[') {
+                    in_escape_sequence = true;
+                    got_escape = false;
+                    continue;
+                }
+
+                if (c == '\033') {
+                    got_escape = true;
+                    continue;
+                }
+
                 charbuf_putc(charbuf, c);
             }
             if (bytes_read == -1)
@@ -545,6 +720,18 @@ int main(int argc, const char** argv) {
     g_framebuffer.buffer_size = fb->buffer_size;
     g_framebuffer.format = FB_FORMAT_ARGB;  // FIXME:
 
+    default_black = mkpixel(g_framebuffer.format, 22, 23, 24, 0xff);
+    default_red = mkpixel(g_framebuffer.format, 0xff, 0x00, 0x00, 0xff);
+    default_green = mkpixel(g_framebuffer.format, 0x00, 0xff, 0x00, 0xff);
+    default_yellow = mkpixel(g_framebuffer.format, 0xff, 0xff, 0x00, 0xff);
+    default_blue = mkpixel(g_framebuffer.format, 0x00, 0x00, 0xff, 0xff);
+    default_magenta = mkpixel(g_framebuffer.format, 0xff, 0xff, 0xff, 0xff);
+    default_cyan = mkpixel(g_framebuffer.format, 0x00, 0xff, 0xff, 0xff);
+    default_white = mkpixel(g_framebuffer.format, 0xff, 0xff, 0xff, 0xff);
+
+    default_foreground = default_white;
+    default_background = default_black;
+
     gui_info_t* gui_info = (gui_info_t*)gui;
     char data[4];
     data[0] = 'F';
@@ -609,6 +796,8 @@ int main(int argc, const char** argv) {
     CharacterBuffer charbuf = charbuf_create(
         g_framebuffer.pixel_width / psf1_width(g_font),
         g_framebuffer.pixel_height / psf1_height(g_font));
+    charbuf.foreground = default_foreground;
+    charbuf.background = default_background;
 
     const char* sh_args[1] = {NULL};
     run_program_waitpid(gui, "/fs0/bin/xish", sh_args, &charbuf);
