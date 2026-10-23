@@ -94,6 +94,7 @@ $(SUBDIRS):
 #
 	@if [ "$@" = "bootloader" ]; then\
 		mkdir -p $(SRCDIR)/../boot/EFI/BOOT;\
+	    install $(OBJDIR)/$@/main.efi $(SRCDIR)/../bin/boot_$(ARCH).efi;\
 		install $(OBJDIR)/$@/main.efi $(SRCDIR)/../boot/EFI/BOOT/main.efi;\
 	fi
 
