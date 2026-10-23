@@ -3,7 +3,7 @@
 ## Dependencies
 
 ``` shell
-sudo dnf install binutils clang cmake g++ gcc git lld make nasm qemu
+sudo dnf install binutils clang cmake g++ gcc git lld make nasm qemu qemu-system-aarch64 qemu-system-x86_64
 ```
 
 NOTE: `clang`/`lld` required either for `clang` toolchain (only required by certain **optional** third-party ports).
