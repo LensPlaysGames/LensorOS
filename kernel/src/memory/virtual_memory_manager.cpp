@@ -35,7 +35,7 @@ PageTable* ActivePageMap;
 template <bool write_direct>
 void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddress, u64 mappingFlags, ShowDebug debug) {
     if (pageMapLevelFour == nullptr) {
-        panic("Mapping into nullptr!");
+        // panic("Mapping into nullptr!");
         return;
     }
 
@@ -45,7 +45,7 @@ void map(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddres
             "  Did you mean to use TO_FRAME_POINTER() on the return value of Memory::request_page()?\n",
             virtualAddress,
             physicalAddress);
-        panic("Mapping virtual to virtual!");
+        // panic("Mapping virtual to virtual!");
         hang();
     }
 
@@ -232,7 +232,7 @@ void map_pages(void* virtualAddress, void* physicalAddress, u64 mappingFlags, us
 template <bool write_direct>
 void map_large(PageTable* pageMapLevelFour, void* virtualAddress, void* physicalAddress, u64 mappingFlags, ShowDebug debug) {
     if (pageMapLevelFour == nullptr) {
-        panic("Mapping into nullptr!");
+        // panic("Mapping into nullptr!");
         return;
     }
 
@@ -244,14 +244,14 @@ void map_large(PageTable* pageMapLevelFour, void* virtualAddress, void* physical
     }
 
     if (uintptr_t(virtualAddress) & (MiB(2) - 1)) {
-        panic("Mapping large page -- Virtual Address Misaligned");
+        // panic("Mapping large page -- Virtual Address Misaligned");
         // aligned address -> address bitwise AND with alignment minus one.
         //     Address = address & ~(align - 1)
-        virtualAddress = (void*)(uintptr_t(virtualAddress) & (~(MiB(1) - 1)));
+        virtualAddress = (void*)(uintptr_t(virtualAddress) & (~(MiB(2) - 1)));
     };
     if (uintptr_t(physicalAddress) & (MiB(2) - 1)) {
-        panic("Mapping large page -- Physical Address Misaligned");
-        physicalAddress = (void*)(uintptr_t(physicalAddress) & (~(MiB(1) - 1)));
+        // panic("Mapping large page -- Physical Address Misaligned");
+        // physicalAddress = (void*)(uintptr_t(physicalAddress) & (~(MiB(2) - 1)));
 
         for (usz t = 0; t < PAGE_SIZE_LARGE; t += PAGE_SIZE) {
             map<write_direct>(
@@ -697,35 +697,50 @@ void init_virtual(PageTable* pageMap) {
     // Begins at 0xffff800000000000 (or whatever Memory::PHYSICAL_BASE is set
     // to).
     for (u64 t = 0; t < total_ram(); t += PAGE_SIZE_LARGE) {
-        map_large<true>(
+        map_large<false>(
             pageMap,
             (void*)(t + Memory::PHYSICAL_BASE),
             (void*)t,
             (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite,
             ShowDebug::No);
     }
+    std::print(
+        "[VIRT]: Identity mapped physical memory -- {} bytes ({} MiB) at {:016x}\n",
+        total_ram(),
+        TO_MiB(total_ram()),
+        Memory::PHYSICAL_BASE);
     u64 kernelBytesNeeded = 1 + ((u64)&KERNEL_END - (u64)&KERNEL_START);
     for (u64 t = 0; t < kernelBytesNeeded; t += PAGE_SIZE_LARGE) {
-        map_large<true>(
+        map_large<false>(
             pageMap,
             (void*)(t + (u64)&KERNEL_VIRTUAL),
-            (void*)(t + (u64)&KERNEL_PHYSICAL),
+            (void*)(t + (u64)KERNEL_PHYSICAL),
             (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite,
             ShowDebug::Yes);
     }
+    std::print(
+        "[VIRT]: Mapped higher half kernel -- {} bytes ({} MiB, {} KiB) at {}\n",
+        kernelBytesNeeded,
+        TO_MiB(kernelBytesNeeded),
+        TO_KiB(kernelBytesNeeded % MiB(1)),
+        (void*)&KERNEL_VIRTUAL);
     std::print("[VIRT]: Initial page map configured, flushing\n");
     print_page_map(pageMap);
     // Update current page map.
     flush_page_map(pageMap);
+    std::print("[VIRT]: Flushed\n");
 }
 
 void init_virtual() {
-    auto* table = (Memory::PageTable*)
-                      PhysicalAddress(PhysicalKernelAddress(Memory::request_page()))
-                          .address;
+    auto* table = (Memory::PageTable*)Memory::request_page();
+    // NOTE: We should probably "guarantee" that pointers returned from
+    // request_page() are already mapped in the kernel physical address
+    // space (0xffff800000000000).
+    std::print("write_ptr8: {}\n", (void*)table);
     memset(table, 0, PAGE_SIZE);
     std::print("[VIRT]: Initial page map allocated at {}\n", (void*)table);
-    init_virtual(table);
+    auto* physical_table = (PageTable*)PhysicalAddress(PhysicalKernelAddress(table)).address;
+    init_virtual(physical_table);
 }
 
 void print_page_map(Memory::PageTable* oldPageTable, Memory::PageTableFlag filter) {
@@ -938,3 +953,7 @@ extern "C" void flush_page_map(Memory::PageTable* pageMapLevelFour) {
                  : "r"(pageMapLevelFour)
                  : "memory");
 }
+
+// explicit instantiation
+template void Memory::map_large<true>(Memory::PageTable*, void*, void*, unsigned long, Memory::ShowDebug);
+template void Memory::map_large<false>(Memory::PageTable*, void*, void*, unsigned long, Memory::ShowDebug);

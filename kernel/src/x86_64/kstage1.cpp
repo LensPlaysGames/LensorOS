@@ -959,7 +959,9 @@ void kstage2(BootInfo* bInfo) {
     // std::print("[kstage1]: {Interrupts enabled}\n", __GREEN);
 }
 
-void kstage1(BootInfo* bInfo) {
+void kstage1(uintptr_t base, BootInfo* bInfo) {
+    KERNEL_PHYSICAL = (uintptr_t)base;
+
     /* This function is monstrous, so the functionality is outlined here.
      * - Disable interrupts (if they weren't already)
      * - Ensure BootInfo pointer is valid (non-null)

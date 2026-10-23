@@ -1,0 +1,12 @@
+* UEFI Configuration Table
+
+Vendor-provided mapping of GUID to Pointer.
+
+- =aarch64= Goal :: Find base of flattened device tree.
+- =x86_64= Goal :: Find base of ACPI RSDP 2.0+.
+
+This will allow the kernel to properly enumerate the hardware of the machine upon startup.
+
+** Resources
+- https://uefi.org/specs/UEFI/2.9_A/07_Services_Boot_Services.html#memory-allocation-services
+- https://uefi.org/specs/UEFI/2.10/04_EFI_System_Table.html#efi-configuration-table

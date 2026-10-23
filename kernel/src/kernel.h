@@ -23,7 +23,7 @@
 #include <boot.h>
 
 // Prekernel enters kernel here.
-extern "C" void kmain(BootInfo*);
+extern "C" void kmain(uintptr_t base, BootInfo*);
 
 // Main kernel process runs this function when multi-tasking gets enabled.
 extern "C" void kregulate();

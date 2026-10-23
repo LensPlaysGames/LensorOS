@@ -40,6 +40,8 @@
 #define DBGMSG(...)
 #endif
 
+uintptr_t KERNEL_PHYSICAL;
+
 namespace Memory {
 memory_space_handle startup_handle;
 
@@ -322,7 +324,7 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
     const usz kernelByteCount = (u64)&KERNEL_END - (u64)&KERNEL_START;
     const usz kernelPageCount = kernelByteCount / PAGE_SIZE;
     lock_pages(
-        (void*)FROM_FRAME_POINTER(PhysicalAddress(&KERNEL_PHYSICAL)).address,
+        (void*)FROM_FRAME_POINTER(PhysicalAddress(KERNEL_PHYSICAL)).address,
         kernelPageCount);
 
     // Map up to the entire amount of physical memory present or the max
@@ -336,7 +338,7 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
          t < TotalFrameCount * PAGE_SIZE;
          t += PAGE_SIZE_LARGE) {
         void* virt = (void*)FROM_FRAME_POINTER(PhysicalAddress(t)).address;
-        map_large<true>(
+        map_large<false>(
             activePML4,
             virt,
             (void*)t,
@@ -399,7 +401,7 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
 
     // Lock the kernel in the new frame bitmap (in case it already isn't).
     lock_pages(
-        (void*)FROM_FRAME_POINTER(PhysicalAddress(&KERNEL_PHYSICAL)).address,
+        (void*)FROM_FRAME_POINTER(PhysicalAddress(KERNEL_PHYSICAL)).address,
         kernelPageCount);
 
     std::print(
@@ -441,8 +443,8 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
         PHYSICAL_BASE,
         PHYSICAL_BASE + total_ram(),
         TO_MiB(total_ram()),
-        u64(&KERNEL_PHYSICAL),
-        TO_MiB(&KERNEL_PHYSICAL),
+        u64(KERNEL_PHYSICAL),
+        TO_MiB(KERNEL_PHYSICAL),
         u64(&KERNEL_START),
         u64(&KERNEL_END),
         TO_KiB(kernelSize),

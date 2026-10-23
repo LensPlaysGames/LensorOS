@@ -18,13 +18,12 @@
 
 extern kmain
 
-;;# Virtual to physical and Physical to virtual address conversion.
-;;# These are needed because the kernel is loaded physically lower than it is linked.
-%define V2P(a) ((a)-(0xffffffff80000000 - 0x100000))
-%define P2V(a) ((a)+(0xffffffff80000000 - 0x100000))
+;;# KERNEL_VIRTUAL -- linker provided symbol
+extern KERNEL_VIRTUAL
 
 ;;# Paging
 %define PAGE_SIZE               0x1000
+%define PAGE_SIZE_LARGE         0x200000
 %define ENTRIES_PER_PAGE_TABLE  512
 %define PAGE_PRESENT            1
 %define PAGE_READ_WRITE         1<<1
@@ -40,49 +39,47 @@ prekernel_stack_bottom:
 prekernel_stack_top:
 
 boot_info:
-    resb 48
+    resb 56
 
 SECTION .data
 align PAGE_SIZE
 prekernel_pml4:
-    dq V2P(prekernel_pml3) + (PAGE_PRESENT | PAGE_READ_WRITE)
-%rep ENTRIES_PER_PAGE_TABLE - 2
+%rep ENTRIES_PER_PAGE_TABLE
     dq 0
 %endrep
-    dq V2P(prekernel_pml3_high) + (PAGE_PRESENT | PAGE_READ_WRITE)
 prekernel_pml3:
-    dq V2P(prekernel_pml2) + (PAGE_PRESENT | PAGE_READ_WRITE)
-%rep ENTRIES_PER_PAGE_TABLE - 1
+%rep ENTRIES_PER_PAGE_TABLE
     dq 0
 %endrep
 prekernel_pml2:
-    dq V2P(prekernel_pml1) + (PAGE_PRESENT | PAGE_READ_WRITE)
-%rep ENTRIES_PER_PAGE_TABLE - 1
+%rep ENTRIES_PER_PAGE_TABLE
     dq 0
 %endrep
 prekernel_pml1:
-    %assign i 0
-    %rep ENTRIES_PER_PAGE_TABLE
-        dq (i * PAGE_SIZE) + (PAGE_PRESENT | PAGE_READ_WRITE)
-        %assign i i+1
-    %endrep
-
-prekernel_pml3_high:
-%rep ENTRIES_PER_PAGE_TABLE - 2
+%rep ENTRIES_PER_PAGE_TABLE
     dq 0
 %endrep
-    dq V2P(prekernel_pml2_high) + (PAGE_PRESENT | PAGE_READ_WRITE)
+
+prekernel_pml3_ident:
+%rep ENTRIES_PER_PAGE_TABLE
     dq 0
+%endrep
+prekernel_pml2_ident:
+%rep ENTRIES_PER_PAGE_TABLE
+    dq 0
+%endrep
+
+prekernel_pml3_high:
+%rep ENTRIES_PER_PAGE_TABLE
+    dq 0
+%endrep
 prekernel_pml2_high:
-    dq V2P(prekernel_pml1_high) + (PAGE_PRESENT | PAGE_READ_WRITE)
-%rep ENTRIES_PER_PAGE_TABLE - 1
+%rep ENTRIES_PER_PAGE_TABLE
     dq 0
 %endrep
 prekernel_pml1_high:
-%assign j 0
-%rep 512
-    dq (0x100000 + (j * PAGE_SIZE)) + (PAGE_PRESENT | PAGE_READ_WRITE)
-%assign j j+1
+%rep ENTRIES_PER_PAGE_TABLE
+    dq 0
 %endrep
 
 
@@ -90,55 +87,175 @@ prekernel_pml1_high:
 SECTION .text
 GLOBAL _start
 _start:
+    ;# RDI -> void* :: kernel loaded at this address
+    ;# RSI -> BootInfo* :: boot information
+    ;#        Note: Could be (likely) located outside kernel image. Copy somewhere
+    ;#        inside kernel image as soon as possible, and BEFORE switching page
+    ;#        tables.
+
     cli
 
+    mov r8, rdi
+
     ;# Move stack pointer to known good stack.
-    mov rsp, V2P(prekernel_stack_top)
+    lea rsp, [rel prekernel_stack_top]
     mov rbp, rsp
 
     ;# Copy boot info structure.
-    mov rcx, 48
-    mov rsi, rdi
-    mov rdi, V2P(boot_info)
+    mov rcx, 56
+    ;# NOTE: RSI already contains BootInfo*
+    lea rdi, [rel boot_info]
     cld
     rep movsb
 
     ;# Copy EFI Memory Map to prekernel stack, update pointer in boot info.
-    ;# Map size in 8 bytes is at boot_info + 24
-    mov rcx, QWORD [V2P(boot_info) + 24] ; RCX = total map size in bytes
+    ;# Map size in 8 bytes is at boot_info + 40
+    mov rcx, QWORD [rel boot_info + 40] ; RCX = total map size in bytes
     sub rsp, rcx
-    mov rsi, QWORD [V2P(boot_info) + 16]
     mov rdx, rsp
+    mov rsi, QWORD [rel boot_info + 32]
     mov rdi, rsp
     cld
     rep movsb
-    mov rax, 0xffffffff80000000
-    add rdx, rax
-    mov rax, 0x100000
-    sub rdx, rax
-    mov QWORD [V2P(boot_info) + 16], rdx
+
+    lea rdx, [rel KERNEL_VIRTUAL + rdx]
+    sub rdx, r8 ;# RDX -> P2V(EFI_MEMORY_DESCRIPTOR*)
+    mov QWORD [rel boot_info + 32], rdx
+
+    ;# Since we don't know the physical location at compile time, we use R8
+    ;# (the physical base) to dynamically map our static structures.
+
+    ;# --- Map Kernel Image Identity Page Tables ---
+    ;# We need to figure out which page table entries correspond to our
+    ;# dynamic base (R8).
+    ;# A 64-bit address is split into:
+    ;#   PML4 Index = (address >> 39) & 0x1ff
+    ;#   PML3 Index = (address >> 30) & 0x1ff
+    ;#   PML2 Index = (address >> 21) & 0x1ff
+
+    ;# --- Calculate PML4 Entry Offset ---
+    mov rax, r8
+    shr rax, 39
+    and rax, 0x1ff                          ;# RAX = PML4 Index for dynamic base
+
+    lea rbx, [rel prekernel_pml3]
+    or  rbx, (PAGE_PRESENT | PAGE_READ_WRITE)
+    lea rdi, [rel prekernel_pml4]
+    mov [rdi + rax * 8], rbx                ;# PML4[Dynamic Index] -> prekernel_pml3
+
+    ;# --- Calculate PML3 Entry Offset ---
+    mov rax, r8
+    shr rax, 30
+    and rax, 0x1ff                          ;# RAX = PML3 Index for dynamic base
+
+    lea rbx, [rel prekernel_pml2]
+    or  rbx, (PAGE_PRESENT | PAGE_READ_WRITE)
+    lea rdi, [rel prekernel_pml3]
+    mov [rdi + rax * 8], rbx                ;# PML3[Dynamic Index] -> prekernel_pml2
+
+    ;# --- Calculate PML2 Entry Offset ---
+    mov rax, r8
+    shr rax, 21
+    and rax, 0x1ff                          ;# RAX = PML2 Index for dynamic base
+
+    lea rbx, [rel prekernel_pml1]
+    or  rbx, (PAGE_PRESENT | PAGE_READ_WRITE)
+    lea rdi, [rel prekernel_pml2]
+    mov [rdi + rax * 8], rbx                ;# PML2[Dynamic Index] -> prekernel_pml1
+
+    ;# --- Populate Lower PML1 Frame Base ---
+    ;# We align our starting physical mapping address to a 2 MiB boundary relative to R8
+    mov rax, r8
+    shr rax, 21
+    shl rax, 21                             ;# Align RAX to the nearest 2MB boundary
+    or  rax, (PAGE_PRESENT | PAGE_READ_WRITE)
+
+    lea rdi, [rel prekernel_pml1]
+    mov rcx, ENTRIES_PER_PAGE_TABLE
+.loop_lower_pml1:
+    mov [rdi], rax
+    add rdi, 8
+    add rax, PAGE_SIZE
+    loop .loop_lower_pml1
+
+
+    ;# --- Map 64MB Identity-Mapped Page Tables ---
+    ;# This allows the physical memory manager to return allocated pages
+    ;# within this mapped range, without worrying about the chicken-and-egg
+    ;# problem of having to have the region mapped which requires allocating
+    ;# page tables which requires writing to them which requires having them
+    ;# mapped, etc.
+
+    ;# PML4[256] -> PML3_IDENT
+    lea rax, [rel prekernel_pml3_ident]
+    or rax, (PAGE_PRESENT | PAGE_READ_WRITE)
+    mov [rel prekernel_pml4 + 256 * 8], rax
+
+    ;# PML3[0] -> PML2_IDENT
+    lea rax, [rel prekernel_pml2_ident]
+    or rax, (PAGE_PRESENT | PAGE_READ_WRITE)
+    mov [rel prekernel_pml3_ident + 0 * 8], rax
+
+    ;# Loop to fill the entire PML2 table with 512 Huge Pages (2 MiB each = 1 GiB total)
+    mov rax, 0
+    or  rax, (PAGE_PRESENT | PAGE_READ_WRITE | PAGE_LARGER_PAGES)
+    lea rdi, [rel prekernel_pml2_ident]
+    mov rcx, ENTRIES_PER_PAGE_TABLE
+.loop_identity_pml2_huge:
+    mov [rdi], rax
+    add rdi, 8
+    add rax, PAGE_SIZE_LARGE            ; Advance physical address by exactly 2 MiB
+    loop .loop_identity_pml2_huge
+
+
+    ;# --- Map Higher-Half Page Tables ---
+
+    ;# PML4[511] -> PML3_HIGH
+    lea rax, [rel prekernel_pml3_high]
+    or  rax, (PAGE_PRESENT | PAGE_READ_WRITE)
+    mov [rel prekernel_pml4 + 511 * 8], rax
+
+    ;# PML3_HIGH[510] -> PML2_HIGH
+    lea rax, [rel prekernel_pml2_high]
+    or  rax, (PAGE_PRESENT | PAGE_READ_WRITE)
+    mov [rel prekernel_pml3_high + 510 * 8], rax
+
+    ;# PML2_HIGH[0] -> PML1_HIGH
+    lea rax, [rel prekernel_pml1_high]
+    or  rax, (PAGE_PRESENT | PAGE_READ_WRITE)
+    mov [rel prekernel_pml2_high], rax
+
+    ;# Populate High PML1 to map virtual higher-half to the dynamic physical base
+    lea rdi, [rel prekernel_pml1_high]
+    mov rcx, ENTRIES_PER_PAGE_TABLE
+    ;# Map back to same dynamic physical base
+    mov rax, r8
+    or  rax, (PAGE_PRESENT | PAGE_READ_WRITE)
+.loop_high:
+    mov [rdi], rax
+    add rdi, 8
+    add rax, PAGE_SIZE
+    loop .loop_high
 
     ;# Load prekernel Page Map Level Four (PML4).
-    mov rax, V2P(prekernel_pml4)
+    lea rax, [rel prekernel_pml4]
     mov cr3, rax
+
+    ;# Move stack pointer to higher half
+    lea rsp, [rel KERNEL_VIRTUAL + rsp]
+    sub rsp, r8
+    lea rbp, [rel KERNEL_VIRTUAL + rbp]
+    sub rbp, r8
 
     mov rax, higher_half_init
     jmp rax
 
 higher_half_init:
-    ;# Move stack pointer to higher half
-    mov rax, 0xffffffff80000000
-    add rsp, rax
-    mov rax, 0x100000
-    sub rsp, rax
-    mov rbp, rsp
-
     ;# Jump to kmain()
-    mov rdi, boot_info
-    mov rax, kmain
-    call rax
+    mov rdi, r8
+    mov rsi, boot_info
+    jmp kmain
 
-    mov rax, hlt_forever
 hlt_forever:
     hlt
-    jmp [rax]
+    jmp [rel hlt_forever]

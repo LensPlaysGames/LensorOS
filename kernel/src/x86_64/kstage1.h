@@ -22,6 +22,6 @@
 
 #include <boot.h>
 
-void kstage1(BootInfo*);
+void kstage1(uintptr_t base, BootInfo*);
 
 #endif /* LENSOR_OS_KSTAGE1_H */

@@ -25,13 +25,21 @@
 #include <efi_memory.h>
 #include <integers.h>
 
-struct BootInfo {
+typedef struct {
+    /// GOP Pointer (UEFI Graphics Output Protocol)
+    /// Linear Pixel Framebuffer
     Framebuffer* framebuffer;
-    PSF1_FONT* font;
+
+    ACPI::RSDP2* rsdp; /**< Firmware device description. **/
+                       /**< RSDP, Device Tree Blob, etc. **/
+
+    usz base;        /**< Base address of loaded kernel image. **/
+    PSF1_FONT* font; /**< Base address of loaded PSF font. **/
+
     EFI_MEMORY_DESCRIPTOR* map;
-    u64 mapSize;
-    u64 mapDescSize;
-    ACPI::RSDP2* rsdp;
-};
+    usz mapSize;
+    usz mapDescSize;
+
+} BootInfo;
 
 #endif /* LENSOR_OS_BOOT_H */

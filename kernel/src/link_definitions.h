@@ -22,7 +22,6 @@
 
 #include <integers.h>
 
-extern u64 KERNEL_PHYSICAL;
 extern u64 KERNEL_VIRTUAL;
 extern u64 KERNEL_START;
 extern u64 KERNEL_END;
@@ -35,8 +34,8 @@ extern u64 READ_ONLY_DATA_END;
 extern u64 BLOCK_STARTING_SYMBOLS_START;
 extern u64 BLOCK_STARTING_SYMBOLS_END;
 
-#define MEMDIFF ((u64)(&KERNEL_VIRTUAL) - (u64)(&KERNEL_PHYSICAL)))
-#define V2P(addr) ((u64)(addr) - MEMDIFF)
-#define P2V(addr) ((u64)(addr) + MEMDIFF)
+#define MEMDIFF ((usz)(&KERNEL_VIRTUAL) - (usz)(KERNEL_PHYSICAL)))
+#define V2P(addr) ((usz)(addr) - MEMDIFF)
+#define P2V(addr) ((usz)(addr) + MEMDIFF)
 
 #endif /* LENSOR_OS_LINK_DEFINITIONS_H */

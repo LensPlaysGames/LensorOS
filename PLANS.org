@@ -37,7 +37,7 @@ Low Priority
 - =LCC= (Lensor Compiler Collection)
 - =Python= maybe MicroPython or CPython
 - =LITE=
-- =libretro= (RetroArch)
+- =libretro= (=2048=, =mGBA=, =Gambatte=, =snes9x=)
 
 * Abstract Socket Server Architecture to Abstract Server Interface Library
 Low Priority

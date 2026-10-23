@@ -42,6 +42,8 @@ size_t operator "" KiB(unsigned long long sz) {
 constexpr usz PAGE_SIZE = KiB(4);
 constexpr usz PAGE_SIZE_LARGE = MiB(2);
 
+extern "C" uintptr_t KERNEL_PHYSICAL;
+
 namespace Memory {
 
 // Virtual Layout

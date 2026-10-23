@@ -98,9 +98,9 @@ extern "C" void kregulate() {
     }
 }
 
-extern "C" void kmain(BootInfo* bInfo) {
+extern "C" void kmain(uintptr_t base, BootInfo* bInfo) {
     // The heavy lifting is done within the kstage1 function.
-    kstage1(bInfo);
+    kstage1(base, bInfo);
 
     std::print("kmain()\n");
 
