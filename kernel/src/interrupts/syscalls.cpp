@@ -1174,9 +1174,7 @@ int sys$26_shared_memory_allocate(void** ptr, size_t size) {
             return -1;
     }
 
-    usz pages = size / PAGE_SIZE;
-    if (size % PAGE_SIZE)
-        ++pages;
+    usz pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
 
     // Allocate physical RAM
     // TODO: There isn't really any reason these need to be contiguous.
