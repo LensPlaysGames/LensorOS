@@ -23,7 +23,7 @@ include( "${CMAKE_CURRENT_LIST_DIR}/config.cmake" )
 set( CMAKE_SYSTEM_NAME Generic )
 set( CMAKE_SYSTEM_VERSION ${LensorOS_VERSION} )
 
-set(TARGET_TRIPLE x86_64-unknown-none-elf CACHE STRING "")
+set(TARGET_TRIPLE ${ARCH}-unknown-none-elf CACHE STRING "")
 
 # Set sysroot.
 set( CMAKE_SYSROOT "${CMAKE_CURRENT_LIST_DIR}/../root" )
