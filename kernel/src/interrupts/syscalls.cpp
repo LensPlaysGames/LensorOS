@@ -34,6 +34,7 @@
 #include <interrupts/syscalls.h>
 #include <lensor/syscalls.h>
 #include <linked_list.h>
+#include <memory/api.h>
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/region.h>
@@ -299,15 +300,12 @@ void* sys$6_map(void* address, usz size, u64 flags) {
         return address;
     }
 
-    u64 memory_flags = 0;
+    Memory::Flags memory_flags = Memory::Flags::None;
     if ((flags & LENSOROS_SYSCALL_MAP_FLAG_PROT_READ)
         or (flags & LENSOROS_SYSCALL_MAP_FLAG_PROT_WRITE))
-        memory_flags |= (u64)Memory::PageTableFlag::Present
-                        | (u64)Memory::PageTableFlag::UserSuper;
-    // Memory::Flag::Readable | Memory::Flag::User;
+        memory_flags |= Memory::Flag::Readable | Memory::Flag::User;
     if (flags & LENSOROS_SYSCALL_MAP_FLAG_PROT_WRITE)
-        memory_flags |= (u64)Memory::PageTableFlag::ReadWrite;
-    // Memory::Flag::Writable;
+        memory_flags |= Memory::Flag::Writable;
 
     // Allocate physical RAM
     // TODO: "contiguous" flag?
@@ -316,8 +314,8 @@ void* sys$6_map(void* address, usz size, u64 flags) {
     // entire requested block of memory at once. Keep making the requested
     // contiguous portion smaller, until it succeeds.
     for (usz i = 0; i < pages; i += attempt_page_count) {
-        auto paddr = PhysicalKernelAddress(
-            Memory::request_pages(attempt_page_count));
+        auto paddr = Memory::request_memory(
+            attempt_page_count * PAGE_SIZE);
 
         if (not paddr.address) {
             attempt_page_count >>= 1;
@@ -329,19 +327,20 @@ void* sys$6_map(void* address, usz size, u64 flags) {
         }
 
         // Add memory region to current process
+        uintptr_t vaddr = ((uintptr_t)address) + i * PAGE_SIZE;
         process->add_memory_region(
-            (void*)((uintptr_t)address + i * PAGE_SIZE),
+            (void*)vaddr,
             (void*)paddr.address,
             attempt_page_count * PAGE_SIZE,
-            memory_flags);
+            (u64)memory_flags);
 
         // Map virtual address to physical with proper flags
-        Memory::map_pages(
-            (Memory::PageTable*)process->CR3,
-            (void*)((uintptr_t)address + i * PAGE_SIZE),
-            (void*)PhysicalAddress(PhysicalKernelAddress(paddr)).address,
-            memory_flags,
-            attempt_page_count);
+        Memory::map_region(
+            process->CR3,
+            VirtualAddress(vaddr),
+            PhysicalAddress(paddr),
+            attempt_page_count * PAGE_SIZE,
+            memory_flags);
 
         DBGMSG("[SYS$]:map: Mapped {} pages at {} (physical {})\n", pages, (void*)address, (void*)paddr.address);
     }
