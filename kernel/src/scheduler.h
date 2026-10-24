@@ -121,7 +121,7 @@ struct Process {
 
     /// Used to save/restore CPU state when a context switch occurs.
     // Memory::memory_space_handle MemorySpace;
-    Memory::PageTable* CR3;
+    Memory::memory_space_handle CR3;
 #ifdef x86_64
     /* Data for extra CPU info (fxsave, etc). */
     /* NOTE: fxsave and friends leave bytes 464:511 available for software use. */

@@ -388,7 +388,7 @@ ReplaceUserspaceElf64Process(Process* process, ProcessFileDescriptor fd, const s
 
     // Unmap and free old process memory, if header is valid and things look good to go.
     for (const auto& region : process->Memories) {
-        Memory::unmap_pages(process->CR3, region.vaddr, region.pages);
+        Memory::unmap_pages((Memory::PageTable*)process->CR3, region.vaddr, region.pages);
         Memory::free_pages(region.paddr, region.pages);
     }
     // Clear memories list.
@@ -405,7 +405,7 @@ ReplaceUserspaceElf64Process(Process* process, ProcessFileDescriptor fd, const s
     // TODO: Verify bounds
     process->kernel_stack += sizeof(CPUState);
 
-    return LoadUserspaceElf64Process(process, process->CR3, fd, elfHeader, args);
+    return LoadUserspaceElf64Process(process, (Memory::PageTable*)process->CR3, fd, elfHeader, args);
 }
 
 /// @param args  Should NEVER be empty, as argv[0] should ALWAYS contain executable invocation (filepath).
@@ -433,7 +433,7 @@ CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::str
                            : pid_t(-1);
     auto* process = Scheduler::request_process(parent_pid);
 
-    if (!LoadUserspaceElf64Process(process, process->CR3, fd, elfHeader, args)) {
+    if (!LoadUserspaceElf64Process(process, (Memory::PageTable*)process->CR3, fd, elfHeader, args)) {
         // Remove process from process list
         Scheduler::remove_process(process->ProcessID, -1);
         return false;

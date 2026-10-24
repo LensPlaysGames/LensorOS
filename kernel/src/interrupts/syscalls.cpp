@@ -337,7 +337,7 @@ void* sys$6_map(void* address, usz size, u64 flags) {
 
         // Map virtual address to physical with proper flags
         Memory::map_pages(
-            process->CR3,
+            (Memory::PageTable*)process->CR3,
             (void*)((uintptr_t)address + i * PAGE_SIZE),
             (void*)PhysicalAddress(PhysicalKernelAddress(paddr)).address,
             memory_flags,
@@ -374,7 +374,7 @@ void sys$7_unmap(void* address) {
 
     // Unmap memory from current process page table.
     // Don't forget to unmap all pages!
-    Memory::unmap_pages(process->CR3, address, region->value().pages);
+    Memory::unmap_pages((Memory::PageTable*)process->CR3, address, region->value().pages);
 
     // Free physical memory referred to by region.
     Memory::free_pages(region->value().paddr, region->value().pages);
@@ -1203,7 +1203,7 @@ int sys$26_shared_memory_allocate(void** ptr, size_t size) {
 
     // Map virtual address to physical with proper flags
     Memory::map_pages(
-        process->CR3,
+        (Memory::PageTable*)process->CR3,
         *ptr,
         (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(physical_address)).address,
         memory_flags,
@@ -1248,7 +1248,7 @@ void* sys$27_shared_memory_acquire(int id) {
     process->next_region_vaddr += pages * PAGE_SIZE;
 
     Memory::map_pages(
-        process->CR3,
+        (Memory::PageTable*)process->CR3,
         address,
         (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(memory_region->physical_address)).address,
         memory_flags,
@@ -1354,7 +1354,7 @@ int sys$32_hardware(hardware_query_type_t t, void* out) {
                          | (u64)Memory::PageTableFlag::ReadWrite
                          | (u64)Memory::PageTableFlag::UserSuper;
             Memory::map_pages(
-                Scheduler::CurrentProcess->value()->CR3,
+                (Memory::PageTable*)Scheduler::CurrentProcess->value()->CR3,
                 (void*)vaddr,
                 (void*)config.fb_base,
                 flags,
@@ -1380,7 +1380,7 @@ int sys$32_hardware(hardware_query_type_t t, void* out) {
                 auto vaddr = process->next_region_vaddr;
                 process->next_region_vaddr += buffer_pages * PAGE_SIZE;
                 Memory::map_pages(
-                    Scheduler::CurrentProcess->value()->CR3,
+                    (Memory::PageTable*)Scheduler::CurrentProcess->value()->CR3,
                     (void*)vaddr,
                     (void*)config.sample_buffers[i],
                     flags,

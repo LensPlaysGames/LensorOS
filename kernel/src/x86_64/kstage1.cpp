@@ -824,7 +824,7 @@ void kstage2(BootInfo* bInfo) {
 
         for (usz t = 0; t < bInfo->framebuffer->BufferSize; t += PAGE_SIZE) {
             Memory::map(
-                process->CR3,
+                (Memory::PageTable*)process->CR3,
                 (void*)(fb_virt_addr + t),
                 (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(fb_phys_addr + t)).address,
                 flags,

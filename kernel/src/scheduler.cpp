@@ -81,7 +81,7 @@ void Process::destroy(int status) {
     // well as loaded program regions, the stack, etc.
     for (const auto& region : Memories) {
         Memory::free_pages(region.paddr, region.pages);
-        Memory::unmap_pages(CR3, region.vaddr, region.pages);
+        Memory::unmap_pages((Memory::PageTable*)CR3, region.vaddr, region.pages);
     }
 
     // Clear memories list.
@@ -95,7 +95,7 @@ void Process::destroy(int status) {
     }
 
     if (CR3)
-        Scheduler::PageMapsToFree.push_back(CR3);
+        Scheduler::PageMapsToFree.push_back((Memory::PageTable*)CR3);
 }
 
 namespace Scheduler {
@@ -265,7 +265,7 @@ Process* request_process(pid_t parent_pid) {
         Scheduler::remove_process(pid, -1);
         return nullptr;
     }
-    process->CR3 = newPageTable;
+    process->CR3 = (Memory::memory_space_handle)newPageTable;
 
     constexpr size_t KernelStackSizePages = 2;
     constexpr size_t KernelStackSize = KernelStackSizePages * PAGE_SIZE;
@@ -292,7 +292,7 @@ bool initialize() {
 
     // Setup currently executing code as the start process with PID 0.
     StartupProcess.ExecutablePath = "/boot/LensorOS/kernel.elf";
-    StartupProcess.CR3 = Memory::active_page_map();
+    StartupProcess.CR3 = (Memory::memory_space_handle)Memory::active_page_map();
     StartupProcess.State = Process::RUNNING;
     StartupProcess.ProcessID = 0;
 
@@ -469,7 +469,7 @@ pid_t CopyUserspaceProcess(Process* original) {
 
         // Map virtual addresses to new physical addresses.
         Memory::map_pages(
-            newProcess->CR3,
+            (Memory::PageTable*)newProcess->CR3,
             newMemory.vaddr,
             (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(newMemory.paddr)).address,
             (u64)Memory::PageTableFlag::Present
@@ -532,7 +532,7 @@ void Scheduler::map_pages_in_all_processes(void* virtualAddress, void* physicalA
     if (not ProcessQueue) return;
     for (SinglyLinkedListNode<Process*>* it = ProcessQueue->head(); it and it->value(); it = it->next()) {
         Memory::map_pages(
-            it->value()->CR3,
+            (Memory::PageTable*)it->value()->CR3,
             virtualAddress,
             physicalAddress,
             mappingFlags,
