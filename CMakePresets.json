@@ -2,32 +2,70 @@
   "version": 3,
   "configurePresets": [
     {
-      "name": "toolchain-gnu",
+      "name": "base-gnu",
+      "hidden": true,
       "binaryDir": "${sourceDir}/buildgnu",
-      "displayName": "GNU Toolchain",
-      "description": "Build using the GNU toolchain",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/toolchain/lensor_gnu_toolchain.cmake"
       }
     },
     {
-      "name": "toolchain-clang",
+      "name": "base-clang",
+      "hidden": true,
       "binaryDir": "${sourceDir}/buildclang",
-      "displayName": "Clang Toolchain",
-      "description": "Build using the Clang toolchain",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/toolchain/lensor_clang_toolchain.cmake"
       }
+    },
+    {
+      "name": "x86_64-gnu",
+      "inherits": ["base-gnu"],
+      "binaryDir": "${sourceDir}/buildgnu_x86_64",
+      "displayName": "GNU Toolchain -- x86_64",
+      "description": "Build for x86_64 using the GNU toolchain",
+      "cacheVariables": { "ARCH": "x86_64" }
+    },
+    {
+      "name": "x86_64-clang",
+      "inherits": ["base-clang"],
+      "binaryDir": "${sourceDir}/buildclang_x86_64",
+      "displayName": "Clang Toolchain -- x86_64",
+      "description": "Build for x86_64 using the Clang toolchain",
+      "cacheVariables": { "ARCH": "x86_64" }
+    },
+    {
+      "name": "aarch64-gnu",
+      "inherits": ["base-gnu"],
+      "binaryDir": "${sourceDir}/buildgnu_aarch64",
+      "displayName": "GNU Toolchain -- aarch64",
+      "description": "Build for aarch64 using the GNU toolchain",
+      "cacheVariables": { "ARCH": "aarch64" }
+    },
+    {
+      "name": "aarch64-clang",
+      "inherits": ["base-clang"],
+      "binaryDir": "${sourceDir}/buildclang_aarch64",
+      "displayName": "Clang Toolchain -- aarch64",
+      "description": "Build for aarch64 using the Clang toolchain",
+      "cacheVariables": { "ARCH": "aarch64" }
     }
   ],
   "buildPresets": [
     {
-      "name": "buildgnu",
-      "configurePreset": "toolchain-gnu"
+      "name": "buildgnu_x86_64",
+      "configurePreset": "x86_64-gnu"
     },
     {
-      "name": "buildclang",
-      "configurePreset": "toolchain-clang"
+      "name": "buildclang_x86_64",
+      "configurePreset": "x86_64-clang"
+    },
+    {
+      "name": "buildgnu_aarch64",
+      "configurePreset": "aarch64-gnu"
+    },
+    {
+      "name": "buildclang_aarch64",
+      "configurePreset": "aarch64-clang"
     }
   ]
 }
