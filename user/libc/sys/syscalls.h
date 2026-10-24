@@ -82,6 +82,7 @@ __BEGIN_DECLS__
 
 /// Syscall argument registers.
 #if defined(__lensor__)
+#if defined(x86_64)
 #define _R1 "D"
 #define _R2 "S"
 #define _R3 "d"
@@ -90,6 +91,18 @@ __BEGIN_DECLS__
 #define _R6 "r9"
 #define _SYSCALL "int $0x80"
 #define _SYSCALL_CLOBBERS
+#elif defined(aarch64)
+#define _R1(__var) "x0"
+#define _R2(__var) "x1"
+#define _R3(__var) "x2"
+#define _R4(__var) "x3"
+#define _R5(__var) "x4"
+#define _R6(__var) "x5"
+#define _SYSCALL "svc #0"
+#define _SYSCALL_CLOBBERS , "cc"
+#else
+#error "Unsupported architecture (LensorOS syscall argument registers)"
+#endif
 #elif defined(__linux__)
 // TODO: We need to clobber rcx and r10 on every syscall on linux
 #define _R1 "D"
@@ -103,6 +116,8 @@ __BEGIN_DECLS__
 #else
 #error "Unsupported platform (syscall argument registers)."
 #endif
+
+#if defined(x86_64)
 
 #define _DEFINE_SYSCALL(_N, _Args, ...)                                                 \
     __attribute__((__always_inline__, __artificial__)) inline __a __syscall##_N _Args { \
@@ -153,6 +168,108 @@ __attribute__((__always_inline__, __artificial__)) inline __a __syscall6(__a __n
                          : "memory" _SYSCALL_CLOBBERS);
     return __result;
 }
+
+#elif defined(aarch64)
+__attribute__((__always_inline__, __artificial__)) inline __a __syscall0(__a __n) {
+    register __a __sys_num __asm__("x8") = __n;
+    register __a __result __asm__("x0");
+    __asm__ __volatile__(_SYSCALL
+                         : "=r"(__result)
+                         : "r"(__sys_num)
+                         : "memory" _SYSCALL_CLOBBERS);
+    return __result;
+}
+
+__attribute__((__always_inline__, __artificial__)) inline __a __syscall1(__a __n, __a __1) {
+    register __a __sys_num __asm__("x8") = __n;
+    register __a __r0 __asm__("x0") = __1;
+    register __a __result __asm__("x0");
+
+    __asm__ __volatile__(_SYSCALL
+                         : "=r"(__result)
+                         : "r"(__sys_num), "r"(__r0)
+                         : "memory" _SYSCALL_CLOBBERS);
+    return __result;
+}
+
+__attribute__((__always_inline__, __artificial__)) inline __a __syscall2(__a __n, __a __1, __a __2) {
+    register __a __sys_num __asm__("x8") = __n;
+    register __a __r0 __asm__("x0") = __1;
+    register __a __r1 __asm__("x1") = __2;
+    register __a __result __asm__("x0");
+
+    __asm__ __volatile__(_SYSCALL
+                         : "=r"(__result)
+                         : "r"(__sys_num), "r"(__r0), "r"(__r1)
+                         : "memory" _SYSCALL_CLOBBERS);
+    return __result;
+}
+
+__attribute__((__always_inline__, __artificial__)) inline __a __syscall3(__a __n, __a __1, __a __2, __a __3) {
+    register __a __sys_num __asm__("x8") = __n;
+    register __a __r0 __asm__("x0") = __1;
+    register __a __r1 __asm__("x1") = __2;
+    register __a __r2 __asm__("x2") = __3;
+    register __a __result __asm__("x0");
+
+    __asm__ __volatile__(_SYSCALL
+                         : "=r"(__result)
+                         : "r"(__sys_num), "r"(__r0), "r"(__r1), "r"(__r2)
+                         : "memory" _SYSCALL_CLOBBERS);
+    return __result;
+}
+
+__attribute__((__always_inline__, __artificial__)) inline __a __syscall4(__a __n, __a __1, __a __2, __a __3, __a __4) {
+    register __a __sys_num __asm__("x8") = __n;
+    register __a __r0 __asm__("x0") = __1;
+    register __a __r1 __asm__("x1") = __2;
+    register __a __r2 __asm__("x2") = __3;
+    register __a __r3 __asm__("x3") = __4;
+    register __a __result __asm__("x0");
+
+    __asm__ __volatile__(_SYSCALL
+                         : "=r"(__result)
+                         : "r"(__sys_num), "r"(__r0), "r"(__r1), "r"(__r2), "r"(__r3)
+                         : "memory" _SYSCALL_CLOBBERS);
+    return __result;
+}
+
+__attribute__((__always_inline__, __artificial__)) inline __a __syscall5(__a __n, __a __1, __a __2, __a __3, __a __4, __a __5) {
+    register __a __sys_num __asm__("x8") = __n;
+    register __a __r0 __asm__("x0") = __1;
+    register __a __r1 __asm__("x1") = __2;
+    register __a __r2 __asm__("x2") = __3;
+    register __a __r3 __asm__("x3") = __4;
+    register __a __r4 __asm__("x4") = __5;
+    register __a __result __asm__("x0");
+
+    __asm__ __volatile__(_SYSCALL
+                         : "=r"(__result)
+                         : "r"(__sys_num), "r"(__r0), "r"(__r1), "r"(__r2), "r"(__r3), "r"(__r4)
+                         : "memory" _SYSCALL_CLOBBERS);
+    return __result;
+}
+
+__attribute__((__always_inline__, __artificial__)) inline __a __syscall6(__a __n, __a __1, __a __2, __a __3, __a __4, __a __5, __a __6) {
+    register __a __sys_num __asm__("x8") = __n;
+    register __a __r0 __asm__("x0") = __1;
+    register __a __r1 __asm__("x1") = __2;
+    register __a __r2 __asm__("x2") = __3;
+    register __a __r3 __asm__("x3") = __4;
+    register __a __r4 __asm__("x4") = __5;
+    register __a __r5 __asm__("x5") = __6;
+    register __a __result __asm__("x0");
+
+    __asm__ __volatile__(_SYSCALL
+                         : "=r"(__result)
+                         : "r"(__sys_num), "r"(__r0), "r"(__r1), "r"(__r2), "r"(__r3), "r"(__r4), "r"(__r5)
+                         : "memory" _SYSCALL_CLOBBERS);
+    return __result;
+}
+
+#else
+#error "Unsupported architecture (syscall assembly definition)"
+#endif
 
 #undef __a
 #undef _R1
