@@ -169,6 +169,7 @@ void out(const u8* buffer, u64 numberOfBytes);
 void out(u64);
 void out(u32);
 void out(u16);
+
 }  // namespace UART
 
 #endif  // LENSOR_OS_UART_H
