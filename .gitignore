@@ -33,7 +33,10 @@
 
 # Builds
 **/bld/
+**/bld*/
 **/build/
+**/buildgnu*/
+**/buildclang*/
 **/builds/
 **/win/
 **/winja/
