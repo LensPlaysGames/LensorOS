@@ -1180,7 +1180,7 @@ int sys$26_shared_memory_allocate(void** ptr, size_t size) {
 
     // Allocate physical RAM
     // TODO: There isn't really any reason these need to be contiguous.
-    void* physical_address = Memory::request_pages(pages);
+    auto physical_address = Memory::request_memory(pages * PAGE_SIZE);
 
     // If address is NULL, pick an address to place memory at.
     if (not *ptr) {
@@ -1189,15 +1189,9 @@ int sys$26_shared_memory_allocate(void** ptr, size_t size) {
     }
 
     // Add memory region to current process
-    // TODO: Convert given flags to Memory::PageTableFlag
-    // TODO: Figure out what flags we are given (libc, ig).
-    usz memory_flags = (usz)Memory::PageTableFlag::Present
-                       | (usz)Memory::PageTableFlag::UserSuper
-                       | (usz)Memory::PageTableFlag::ReadWrite;
-
     auto new_region_id = ++next_shared_memory_id;
     auto new_region = std::make_shared<shared_memory_region>(
-        physical_address,
+        (void*)physical_address.address,
         pages * PAGE_SIZE,
         new_region_id);
 
@@ -1206,18 +1200,16 @@ int sys$26_shared_memory_allocate(void** ptr, size_t size) {
     process->SharedMemories.add(new_region);
 
     // Map virtual address to physical with proper flags
-    Memory::map_pages(
-        (Memory::PageTable*)process->CR3,
-        *ptr,
-        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(physical_address)).address,
-        memory_flags,
-        pages,
-        Memory::ShowDebug::No);
+    Memory::map_region_user(
+        process->CR3,
+        VirtualAddress(*ptr),
+        PhysicalAddress(physical_address),
+        pages * PAGE_SIZE);
 
     std::print(
         "Allocated shared memory region, id={} base={} mapped to {} in process({})\n",
         new_region_id,
-        physical_address,
+        (void*)physical_address.address,
         *ptr,
         process->ProcessID);
 
