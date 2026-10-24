@@ -18,8 +18,8 @@
  */
 
 #include <integers.h>
-#include <interrupts/idt.h>
 #include <memory.h>
+#include <x86_64/idt.h>
 
 #include <print>
 

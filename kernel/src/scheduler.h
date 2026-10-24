@@ -120,7 +120,8 @@ struct Process {
     std::string WorkingDirectory{""};
 
     /// Used to save/restore CPU state when a context switch occurs.
-    Memory::memory_space_handle MemorySpace;
+    // Memory::memory_space_handle MemorySpace;
+    Memory::PageTable* CR3;
 #ifdef x86_64
     /* Data for extra CPU info (fxsave, etc). */
     /* NOTE: fxsave and friends leave bytes 464:511 available for software use. */
@@ -228,7 +229,8 @@ extern void (*timer_tick)();
 #ifdef x86_64
 // For switch_context_asm in scheduler.asm
 static_assert(offsetof(Process, kernel_stack) == 64);
-static_assert(offsetof(Process, MemorySpace) == 240);
+// static_assert(offsetof(Process, MemorySpace) == 240);
+static_assert(offsetof(Process, CR3) == 240);
 static_assert(offsetof(Process, CPUExtra) == 256);
 static_assert(offsetof(Process, CPUExtraSet) == 768);
 #endif

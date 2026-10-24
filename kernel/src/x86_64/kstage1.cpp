@@ -29,7 +29,6 @@
 #include <gpt.h>
 #include <gpt_partition_type_guids.h>
 #include <guid.h>
-#include <interrupts/idt.h>
 #include <interrupts/interrupts.h>
 #include <interrupts/syscalls.h>
 #include <keyboard.h>
@@ -56,6 +55,7 @@
 #include <x86_64/gdt.h>
 #include <x86_64/high_definition_audio.h>
 #include <x86_64/hpet.h>
+#include <x86_64/idt.h>
 #include <x86_64/lapic.h>
 #include <x86_64/pit.h>
 #include <x86_64/rtc.h>
