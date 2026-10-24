@@ -191,7 +191,7 @@ struct Process {
 
     /// Set the return value within CPU state.
     void set_return_value(usz value) {
-        syscall_return_register(*(CPUState*)kernel_stack) = value;
+        *syscall_return_register(*(CPUState*)kernel_stack) = value;
     }
 
     /// Set the process state to running.

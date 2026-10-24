@@ -40,4 +40,7 @@ using s32 = int32_t;
 using s64 = int64_t;
 using ssz = intptr_t;
 
+typedef u32 __attribute__((aligned(1))) unaligned_u32;
+typedef u64 __attribute__((aligned(1))) unaligned_u64;
+
 #endif

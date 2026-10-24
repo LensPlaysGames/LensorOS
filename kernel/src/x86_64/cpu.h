@@ -22,6 +22,7 @@
 
 #include <integers.h>
 #include <interrupts/interrupts.h>
+#include <x86_64/interrupts.h>
 
 #include <format>
 
@@ -63,8 +64,8 @@ struct CPUState {
 static_assert(offsetof(CPUState, RCX) == 16);
 static_assert(offsetof(CPUState, Frame) == 144);
 
-inline u64& syscall_return_register(CPUState& cpu) {
-    return cpu.RAX;
+inline unaligned_u64* syscall_return_register(CPUState& cpu) {
+    return &cpu.RAX;
 }
 
 [[nodiscard]]

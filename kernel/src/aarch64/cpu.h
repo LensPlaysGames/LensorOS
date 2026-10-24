@@ -65,8 +65,8 @@ struct CPUState {
     u64 X31;
 } __attribute__((packed));
 
-inline u64& syscall_return_register(CPUState& cpu) {
-    return cpu.X0;
+inline unaligned_u64* syscall_return_register(CPUState& cpu) {
+    return &cpu.X0;
 }
 
 [[nodiscard]]
