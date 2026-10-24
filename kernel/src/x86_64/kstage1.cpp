@@ -33,6 +33,7 @@
 #include <interrupts/interrupts.h>
 #include <interrupts/syscalls.h>
 #include <keyboard.h>
+#include <kstage1.h>
 #include <link_definitions.h>
 #include <memory/heap.h>
 #include <memory/paging.h>
@@ -55,7 +56,6 @@
 #include <x86_64/gdt.h>
 #include <x86_64/high_definition_audio.h>
 #include <x86_64/hpet.h>
-#include <x86_64/kstage1.h>
 #include <x86_64/lapic.h>
 #include <x86_64/pit.h>
 #include <x86_64/rtc.h>
@@ -957,6 +957,18 @@ void kstage2(BootInfo* bInfo) {
     std::print("[kstage1]: Enabling interrupts\n");
     asm("sti");
     // std::print("[kstage1]: {Interrupts enabled}\n", __GREEN);
+
+    // I'm lovin' it :^) (Plays Maccy's theme).
+    constexpr usz MACCYS_BPM = 125;
+    constexpr usz MACCYS_STEP_LENGTH_MILLISECONDS = (60 * 1000 / MACCYS_BPM) / 4;
+    gPIT.play_sound(262, MACCYS_STEP_LENGTH_MILLISECONDS);  // C4
+    gPIT.play_sound(294, MACCYS_STEP_LENGTH_MILLISECONDS);  // D4
+    gPIT.wait();                                            // Rest
+    gPIT.play_sound(330, MACCYS_STEP_LENGTH_MILLISECONDS);  // E4
+    gPIT.wait();                                            // Rest
+    gPIT.play_sound(440, MACCYS_STEP_LENGTH_MILLISECONDS);  // A4
+    gPIT.wait();                                            // Rest
+    gPIT.play_sound(392, MACCYS_STEP_LENGTH_MILLISECONDS);  // G4
 }
 
 void kstage1(uintptr_t base, BootInfo* bInfo) {

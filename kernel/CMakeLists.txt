@@ -46,12 +46,6 @@ target_compile_options(
   -fno-fast-math
   -fno-associative-math
 
-  -mcmodel=kernel
-  -mgeneral-regs-only
-  -mno-red-zone
-  -mno-sse
-  -mno-sse2
-
   -c
 )
 target_include_directories(
@@ -60,15 +54,38 @@ target_include_directories(
   src/
 )
 
-add_library(
-  Assembly
-  src/x86_64/cpuid.asm
-  src/x86_64/gdt.asm
-  src/interrupts/syscalls.asm
-  src/x86_64/prekernel.asm
-  src/x86_64/scheduler.asm
-)
-string( APPEND CMAKE_ASM_NASM_COMPILE_OBJECT " -f elf64" )
+if (${ARCH} MATCHES "x86_64")
+  target_compile_options(
+    Interrupts PRIVATE
+    -mcmodel=kernel
+    -mgeneral-regs-only
+    -mno-red-zone
+    -mno-sse
+    -mno-sse2
+  )
+
+  add_library(
+    Assembly
+    src/x86_64/cpuid.asm
+    src/x86_64/gdt.asm
+    src/interrupts/syscalls.asm
+    src/x86_64/prekernel.asm
+    src/x86_64/scheduler.asm
+  )
+  string( APPEND CMAKE_ASM_NASM_COMPILE_OBJECT " -f elf64" )
+elseif(${ARCH} MATCHES "aarch64")
+  target_compile_options(
+    Interrupts PRIVATE
+    # +nofp -- no floating point (floats/doubles)
+    # +nosimd -- no single instruction multiple data (vectors)
+    -march=armv8-a+nofp+nosimd
+  )
+
+  add_library(
+    Assembly
+    src/aarch64/prekernel.s
+  )
+endif()
 
 add_executable(
   Kernel
@@ -107,20 +124,31 @@ add_executable(
   src/storage/filesystem_drivers/socket.cpp
   src/system.cpp
   src/tests.cpp
-  src/uart.cpp
   src/utf.cpp
   src/virtual_filesystem.cpp
-  src/x86_64/cpu.cpp
-  src/x86_64/cpuid.cpp
-  src/x86_64/gdt.cpp
-  src/x86_64/high_definition_audio.cpp
-  src/x86_64/hpet.cpp
-  src/x86_64/kstage1.cpp
-  src/x86_64/lapic.cpp
-  src/x86_64/pit.cpp
-  src/x86_64/rtc.cpp
-  src/x86_64/tss.cpp
 )
+if (${ARCH} MATCHES "x86_64")
+  target_sources(
+    Kernel PRIVATE
+    src/x86_64/cpu.cpp
+    src/x86_64/cpuid.cpp
+    src/x86_64/gdt.cpp
+    src/x86_64/high_definition_audio.cpp
+    src/x86_64/hpet.cpp
+    src/x86_64/kstage1.cpp
+    src/x86_64/lapic.cpp
+    src/x86_64/pit.cpp
+    src/x86_64/rtc.cpp
+    src/x86_64/tss.cpp
+    src/x86_64/uart.cpp
+  )
+elseif(${ARCH} MATCHES "aarch64")
+  target_sources(
+    Kernel PRIVATE
+    src/aarch64/device_tree_dump.c
+    src/aarch64/kstage1.cpp
+  )
+endif()
 set_target_properties( Kernel PROPERTIES OUTPUT_NAME kernel.elf )
 target_compile_definitions(
   Kernel PRIVATE
