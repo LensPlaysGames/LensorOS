@@ -24,6 +24,8 @@
 
 namespace Memory {
 
+extern memory_space_handle startup_handle;
+
 /** TODO:
  ** Ensure the following Memory API is ready to use, including requesting
  ** new physical memory frames and mapping those physical frames to
@@ -48,6 +50,11 @@ void map_region(
     PhysicalAddress physical_address,
     uintptr_t byte_count,
     Flags flags);
+
+void unmap_region(
+    memory_space_handle handle,
+    VirtualAddress address,
+    uintptr_t byte_count);
 
 /** Map a region of memory in the specified space for kernel (read and
  ** write) access.
@@ -112,6 +119,7 @@ inline void map_region_mmio(
  ** marked as allocated.
  **/
 PhysicalKernelAddress request_memory(size_t byte_amount);
+void release_memory(PhysicalKernelAddress address, size_t byte_amount);
 
 }  // namespace Memory
 

@@ -62,8 +62,6 @@ namespace Memory {
 
 using memory_space_handle = uintptr_t;
 
-extern memory_space_handle startup_handle;
-
 constexpr inline PhysicalAddress TO_FRAME_POINTER(PhysicalKernelAddress p) {
     return PhysicalAddress(p.address - PHYSICAL_BASE);
 }
@@ -72,6 +70,7 @@ constexpr inline PhysicalKernelAddress FROM_FRAME_POINTER(PhysicalAddress p) {
 }
 
 enum class Flags : uint32_t {
+    None,
     Readable = uint32_t(1u) << 0,
     Writable = uint32_t(1u) << 1,
     User = uint32_t(1u) << 2,

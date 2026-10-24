@@ -30,6 +30,8 @@
 #include <print>
 
 namespace Memory {
+memory_space_handle startup_handle;
+
 PageTable* ActivePageMap;
 
 template <bool write_direct>
@@ -693,6 +695,8 @@ PageTable* clone_active_page_map() {
 }
 
 void init_virtual(PageTable* pageMap) {
+    startup_handle = (memory_space_handle)pageMap;
+
     // Higher Half Physical Mapping
     // Begins at 0xffff800000000000 (or whatever Memory::PHYSICAL_BASE is set
     // to).
@@ -933,6 +937,16 @@ void map_region(
         (void*)physical_address.address,
         flags,
         page_count);
+}
+
+void unmap_region(
+    memory_space_handle handle,
+    VirtualAddress address,
+    uintptr_t byte_count) {
+    unmap_pages(
+        (PageTable*)handle,
+        (void*)address.address,
+        (byte_count + PAGE_SIZE - 1) / PAGE_SIZE);
 }
 
 }  // namespace Memory

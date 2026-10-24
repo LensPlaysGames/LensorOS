@@ -43,8 +43,6 @@
 uintptr_t KERNEL_PHYSICAL;
 
 namespace Memory {
-memory_space_handle startup_handle;
-
 Bitmap FrameBitmap{0, nullptr};
 
 u64 TotalFrameCount{0};
@@ -493,4 +491,17 @@ void print_debug() {
     else
         print_debug_kib();
 }
+
+PhysicalKernelAddress request_memory(size_t byte_amount) {
+    return PhysicalKernelAddress(
+        request_pages(
+            (byte_amount + PAGE_SIZE - 1) / PAGE_SIZE));
+}
+
+void release_memory(PhysicalKernelAddress address, size_t byte_amount) {
+    free_pages(
+        (void*)address.address,
+        (byte_amount + PAGE_SIZE - 1) / PAGE_SIZE);
+}
+
 }  // namespace Memory
