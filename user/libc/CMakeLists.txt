@@ -55,9 +55,9 @@ target_include_directories(
 target_sources(
   c
   PUBLIC
-  crt0.s
-  crti.s
-  crtn.s
+  ${ARCH}/crt0.s
+  ${ARCH}/crti.s
+  ${ARCH}/crtn.s
   abi.cpp
   ctype.cpp
   stdio.cpp
@@ -136,9 +136,9 @@ if (NOT LENSOR_OS_LIBC_BUILD_HOST)
   add_custom_target(
     install-libc ALL
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:c> "${ROOT}/lib"
-    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/c.dir/crt0.s.obj" "${ROOT}/lib/crt0.o"
-    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/c.dir/crti.s.obj" "${ROOT}/lib/crti.o"
-    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/c.dir/crtn.s.obj" "${ROOT}/lib/crtn.o"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/c.dir/${ARCH}/crt0.s.obj" "${ROOT}/lib/crt0.o"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/c.dir/${ARCH}/crti.s.obj" "${ROOT}/lib/crti.o"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/c.dir/${ARCH}/crtn.s.obj" "${ROOT}/lib/crtn.o"
     COMMENT "Installing LibC Objects"
 
     DEPENDS c
