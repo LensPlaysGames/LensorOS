@@ -1341,20 +1341,19 @@ int sys$32_hardware(hardware_query_type_t t, void* out) {
 
             auto vaddr = process->next_region_vaddr;
             process->next_region_vaddr += fb_pages * PAGE_SIZE;
-            auto flags = (u64)Memory::PageTableFlag::Present
-                         | (u64)Memory::PageTableFlag::ReadWrite
-                         | (u64)Memory::PageTableFlag::UserSuper;
-            Memory::map_pages(
-                (Memory::PageTable*)Scheduler::CurrentProcess->value()->CR3,
-                (void*)vaddr,
-                (void*)config.fb_base,
-                flags,
-                fb_pages);
+            Memory::Flags flags = Memory::Flag::Readable
+                                  | Memory::Flag::Writable
+                                  | Memory::Flag::User;
+            Memory::map_region_user(
+                Scheduler::CurrentProcess->value()->CR3,
+                VirtualAddress(vaddr),
+                PhysicalAddress(config.fb_base),
+                fb_pages * PAGE_SIZE);
             process->add_memory_region(
                 (void*)vaddr,
                 config.fb_base,
                 config.fb_size,
-                flags);
+                (u64)flags);
 
             config.fb_base = (void*)vaddr;
 
@@ -1363,24 +1362,25 @@ int sys$32_hardware(hardware_query_type_t t, void* out) {
         case LENSOR_HARDWARE_AUDIO: {
             hardware_audio_t config = SYSTEM->audio_config;
             auto buffer_pages = (config.sample_buffer_byte_size + PAGE_SIZE - 1) / PAGE_SIZE;
-            auto flags = (u64)Memory::PageTableFlag::Present
-                         | (u64)Memory::PageTableFlag::ReadWrite
-                         | (u64)Memory::PageTableFlag::UserSuper;
+            constexpr Memory::Flags flags = Memory::Flag::Readable
+                                            | Memory::Flag::Writable
+                                            | Memory::Flag::User;
 
             for (uint i = 0; i < config.sample_buffer_count; ++i) {
                 auto vaddr = process->next_region_vaddr;
                 process->next_region_vaddr += buffer_pages * PAGE_SIZE;
-                Memory::map_pages(
-                    (Memory::PageTable*)Scheduler::CurrentProcess->value()->CR3,
-                    (void*)vaddr,
-                    (void*)config.sample_buffers[i],
-                    flags,
-                    buffer_pages);
+
+                Memory::map_region_user(
+                    Scheduler::CurrentProcess->value()->CR3,
+                    VirtualAddress(vaddr),
+                    PhysicalAddress(config.sample_buffers[i]),
+                    buffer_pages * PAGE_SIZE);
                 process->add_memory_region(
                     (void*)vaddr,
                     (void*)PhysicalKernelAddress(PhysicalAddress(config.sample_buffers[i])).address,
                     config.sample_buffer_byte_size,
-                    flags);
+                    (u64)flags);
+
                 config.sample_buffers[i] = (void*)vaddr;
             }
 
