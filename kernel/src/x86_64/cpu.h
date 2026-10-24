@@ -63,6 +63,10 @@ struct CPUState {
 static_assert(offsetof(CPUState, RCX) == 16);
 static_assert(offsetof(CPUState, Frame) == 144);
 
+inline u64& syscall_return_register(CPUState& cpu) {
+    return cpu.RAX;
+}
+
 [[nodiscard]]
 bool verify(const CPUState&);
 

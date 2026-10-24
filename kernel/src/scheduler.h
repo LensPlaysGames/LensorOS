@@ -28,14 +28,20 @@
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/region.h>
+#include <memory/types.h>
 #include <memory/virtual_memory_manager.h>
 #include <storage/file_metadata.h>
 #include <vfs_forward.h>
-#include <x86_64/cpu.h>
 
 #include <extensions>
 #include <memory>
 #include <vector>
+
+#if defined(x86_64)
+#include <x86_64/cpu.h>
+#elif defined(aarch64)
+#include <aarch64/cpu.h>
+#endif
 
 namespace Memory {
 struct PageTable;
@@ -63,6 +69,7 @@ struct shared_memory_region {
         if (size % PAGE_SIZE) ++pages;
         Memory::free_pages(physical_address, pages);
         shared_memory.erase(id);
+        std::print("Freed shared memory region {} at {:#x} ({} bytes)\n", id, (uintptr_t)physical_address, size);
     }
 };
 
@@ -113,9 +120,8 @@ struct Process {
     std::string WorkingDirectory{""};
 
     /// Used to save/restore CPU state when a context switch occurs.
+    Memory::memory_space_handle MemorySpace;
 #ifdef x86_64
-    Memory::PageTable* CR3{nullptr};
-
     /* Data for extra CPU info (fxsave, etc). */
     /* NOTE: fxsave and friends leave bytes 464:511 available for software use. */
     alignas(16) u8 CPUExtra[512] = {0};
@@ -185,7 +191,7 @@ struct Process {
 
     /// Set the return value within CPU state.
     void set_return_value(usz value) {
-        ((CPUState*)kernel_stack)->RAX = value;
+        syscall_return_register(*(CPUState*)kernel_stack) = value;
     }
 
     /// Set the process state to running.
@@ -219,11 +225,13 @@ struct Process {
 /// External symbols for 'scheduler.asm', defined in `scheduler.cpp`
 extern void (*timer_tick)();
 
+#ifdef x86_64
 // For switch_context_asm in scheduler.asm
 static_assert(offsetof(Process, kernel_stack) == 64);
-static_assert(offsetof(Process, CR3) == 240);
+static_assert(offsetof(Process, MemorySpace) == 240);
 static_assert(offsetof(Process, CPUExtra) == 256);
 static_assert(offsetof(Process, CPUExtraSet) == 768);
+#endif
 
 namespace Scheduler {
 /// External symbol defined in `scheduler.cpp`
