@@ -18,7 +18,6 @@
  */
 
 #include <e1000.h>
-#include <interrupts/idt.h>
 #include <interrupts/interrupts.h>
 #include <memory/common.h>
 #include <memory/paging.h>
@@ -27,11 +26,19 @@
 #include <network.h>
 #include <pci.h>
 #include <stdint.h>
-#include <x86_64/io.h>
+#include <x86_64/idt.h>
 
 #include <array>
 #include <bit>
 #include <format>
+
+#if defined(x86_64)
+__attribute__((interrupt)) void e1000_interrupt_handler(InterruptFrame* frame);
+#elif defined(aarch64)
+void e1000_interrupt_handler();
+#else
+#error "Unsupported architecture (e1000 interrupt handler definition)"
+#endif
 
 /* TODO: Move all this into documentation of some sort, somewhere else.
  *
@@ -1982,20 +1989,11 @@ E1000 gE1000 = {};
 void E1000::write_command(u16 address, u32 value) {
     if (BARType == PCI::BarType::Memory)
         volatile_write((volatile u32*)(BARMemoryAddress.address + address), value);
-    else {
-        out32(BARIOAddress, address);
-        io_wait();
-        out32(BARIOAddress + 4, value);
-    }
 }
 u32 E1000::read_command(u16 address) {
     if (BARType == PCI::BarType::Memory)
         return volatile_read<u32>((volatile u32*)(BARMemoryAddress.address + address));
-    else {
-        out32(BARIOAddress, address);
-        io_wait();
-        return in32(BARIOAddress + 4);
-    }
+    return -1;
 }
 
 void E1000::detect_eeprom() {
@@ -2498,8 +2496,6 @@ void E1000::handle_interrupt() {
     read_command(REG_ICR);
 }
 
-__attribute__((interrupt)) void e1000_interrupt_handler(InterruptFrame* frame);
-
 E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
     if (not PCIHeader) return;
 
@@ -2524,8 +2520,8 @@ E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
 
     /// Register interrupt handler in IDT!!
     std::print("[E1000]: Interrupt line: {:#x} ({:#x})\n", interrupt_line(), irq_number());
-    gIDT.install_handler((u64)e1000_interrupt_handler, interrupt_line(), 4);
-    gIDT.flush();
+
+    install_interrupt_handler((void*)e1000_interrupt_handler, interrupt_line());
     enable_interrupt(irq_number());
 
     /// Program the Interrupt Mask Set/Read (IMS) register to enable any
@@ -2550,4 +2546,4 @@ E1000::E1000(PCI::PCIHeader0* header) : PCIHeader(header) {
 }
 
 uint E1000::irq_number() { return PCIHeader->InterruptLine; }
-uint E1000::interrupt_line() { return PIC_IRQ_VECTOR_OFFSET + PCIHeader->InterruptLine; }
+uint E1000::interrupt_line() { return IRQ_VECTOR_OFFSET + PCIHeader->InterruptLine; }

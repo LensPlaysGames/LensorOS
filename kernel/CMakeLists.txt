@@ -33,7 +33,7 @@ add_definitions(-D__kernel__)
 # Interrupts must be compiled with general registers only.
 add_library(
   Interrupts
-  src/interrupts/interrupts.cpp
+  src/${ARCH}/interrupts.cpp
   src/panic.cpp
 )
 target_compile_options(
@@ -47,6 +47,10 @@ target_compile_options(
   -fno-associative-math
 
   -c
+)
+target_compile_definitions(
+  Interrupts PRIVATE
+  ${MACHINE} ${ARCH}
 )
 target_include_directories(
   Interrupts
@@ -68,7 +72,7 @@ if (${ARCH} MATCHES "x86_64")
     Assembly
     src/x86_64/cpuid.asm
     src/x86_64/gdt.asm
-    src/interrupts/syscalls.asm
+    src/x86_64/syscalls.asm
     src/x86_64/prekernel.asm
     src/x86_64/scheduler.asm
   )
@@ -100,7 +104,6 @@ add_executable(
   src/efi_memory.cpp
   src/event.cpp
   src/gpt.cpp
-  src/interrupts/idt.cpp
   src/interrupts/syscalls.cpp
   src/kernel.cpp
   src/keyboard.cpp
@@ -128,6 +131,13 @@ add_executable(
   src/virtual_filesystem.cpp
 )
 if (${ARCH} MATCHES "x86_64")
+  target_compile_options(
+    Kernel PRIVATE
+    -mcmodel=kernel
+    -mno-red-zone
+    -mno-sse
+    -mno-sse2
+  )
   target_sources(
     Kernel PRIVATE
     src/x86_64/cpu.cpp
@@ -135,6 +145,7 @@ if (${ARCH} MATCHES "x86_64")
     src/x86_64/gdt.cpp
     src/x86_64/high_definition_audio.cpp
     src/x86_64/hpet.cpp
+    src/x86_64/idt.cpp
     src/x86_64/kstage1.cpp
     src/x86_64/lapic.cpp
     src/x86_64/pit.cpp
@@ -172,12 +183,6 @@ target_compile_options(
   -fno-tree-vectorize
   -fno-fast-math
   -fno-associative-math
-
-  -mcmodel=kernel
-
-  -mno-red-zone
-  -mno-sse
-  -mno-sse2
 
   -Wall
   -Wextra

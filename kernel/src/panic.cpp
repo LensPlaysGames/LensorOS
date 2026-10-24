@@ -22,6 +22,12 @@
 #include <interrupts/interrupts.h>
 #include <panic.h>
 
+#if defined(x86_64)
+#include <x86_64/interrupts.h>
+#elif defined(aarch64)
+#include <aarch64/interrupts.h>
+#endif
+
 #include <format>
 
 Vector2<u64> PanicLocation = {PanicStartX, PanicStartY};
@@ -38,6 +44,7 @@ __attribute__((no_caller_saved_registers)) void panic(const char* message) {
     gRend.swap({PanicStartX, PanicStartY}, {80000, 80000});
 }
 
+#ifdef x86_64
 __attribute__((no_caller_saved_registers)) void panic(InterruptFrame* frame, const char* panicMessage) {
     panic(panicMessage);
     std::print(
@@ -71,6 +78,7 @@ __attribute__((no_caller_saved_registers)) void panic(InterruptFrameError* frame
     // Update entire bottom-right of screen starting at (PanicStartX, PanicStartY).
     gRend.swap({PanicStartX, PanicStartY}, {80000, 80000});
 }
+#endif
 
 void hang() {
 #if defined(x86_64)

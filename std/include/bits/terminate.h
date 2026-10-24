@@ -39,13 +39,13 @@ inline void __terminate_with_message(const char* __msg) noexcept {
 [[noreturn]]
 inline void terminate() noexcept {
     panic("terminate() called");
-    for (;;) __asm__ __volatile__("hlt");
+    hang();
 }
 
 [[noreturn]]
 inline void __terminate_with_message(const char* __msg) noexcept {
     panic(__msg ?: "terminate() called");
-    for (;;) __asm__ __volatile__("hlt");
+    hang();
 }
 #endif
 

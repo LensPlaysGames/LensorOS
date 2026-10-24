@@ -114,7 +114,7 @@ template <typename _Char>
 class __str_insert_iterator {
     string* __str{};
 
-   public:
+public:
     explicit constexpr __str_insert_iterator() : __str(nullptr) {}
     explicit constexpr __str_insert_iterator(string& __s) : __str(&__s) {}
 
@@ -151,7 +151,7 @@ struct __nop_insert_iterator {
 class __file_insert_iterator {
     FILE* __file{};
 
-   public:
+public:
     explicit constexpr __file_insert_iterator() : __file(nullptr) {}
     explicit constexpr __file_insert_iterator(FILE* __f) : __file(__f) {}
 
@@ -208,14 +208,14 @@ struct basic_format_parse_context {
     using const_iterator = typename basic_string_view<_Char>::const_iterator;
     using iterator = const_iterator;
 
-   private:
+private:
     iterator __begin{};
     iterator __end{};
     /*size_t __next_arg_id{};
     size_t __num_args{};*/
     /*enum struct __indexing { __unknown, __automatic, __manual } __idxing{__indexing::none};*/
 
-   public:
+public:
     constexpr explicit basic_format_parse_context(basic_string_view<_Char> __fmt, size_t = 0) noexcept
         : __begin(__fmt.begin()), __end(__fmt.end()) /*, __num_args(__args)*/ {}
 
@@ -245,11 +245,11 @@ struct basic_format_context {
     template <typename _Ty>
     using formatter_type = formatter<_Ty, _Char>;
 
-   private:
+private:
     iterator __out{};
     basic_format_args<basic_format_context> __args{};
 
-   public:
+public:
     constexpr basic_format_context(iterator __o, basic_format_args<basic_format_context> __a) noexcept
         : __out(__o), __args(__a) {}
 
@@ -276,7 +276,7 @@ template <typename _Context>
 class basic_format_arg {
     using _Char = typename _Context::char_type;
 
-   public:
+public:
     class handle {
         const void* __ptr;
         void (*__format)(basic_format_parse_context<_Char>&, _Context&, const void*);
@@ -298,7 +298,7 @@ class basic_format_arg {
 
         friend class basic_format_arg<_Context>;
 
-       public:
+    public:
         void format(basic_format_parse_context<_Char>& __parse_ctx, _Context& __ctx) const {
             __format(__parse_ctx, __ctx, __ptr);
         }
@@ -306,7 +306,7 @@ class basic_format_arg {
 
     struct __none {};
 
-   private:
+private:
     enum struct __arg_type {
         __none,
         __character,
@@ -327,13 +327,15 @@ class basic_format_arg {
         _Char __character;
         bool __bool_;
         const void* __vptr;
+#ifndef __kernel__
         float __f32;
         double __f64;
+#endif
         basic_string_view<_Char> __str;
         handle __handle;
     } __value{};
 
-   public:
+public:
     /// Construct a dummy argument.
     template <typename _Ty>
     consteval basic_format_arg(__detail::__parse_only_tag, type_identity<_Ty>) noexcept
@@ -346,10 +348,12 @@ class basic_format_arg {
                 return __arg_type::__u64;
             else if constexpr (is_same_v<_Ty, _Char>)
                 return __arg_type::__character;
+#ifndef __kernel__
             else if constexpr (is_same_v<_Ty, float>)
                 return __arg_type::__f32;
             else if constexpr (is_same_v<_Ty, double>)
                 return __arg_type::__f64;
+#endif
             else if constexpr (is_convertible_v<_Ty, basic_string_view<_Char>>)
                 return __arg_type::__str;
             else if constexpr (is_same_v<_Ty, void*>)
@@ -367,10 +371,12 @@ class basic_format_arg {
                 return __value_type{.__u64 = {}};
             else if constexpr (is_same_v<_Ty, _Char>)
                 return __value_type{.__character = {}};
+#ifndef __kernel__
             else if constexpr (is_same_v<_Ty, float>)
                 return __value_type{.__f32 = {}};
             else if constexpr (is_same_v<_Ty, double>)
                 return __value_type{.__f64 = {}};
+#endif
             else if constexpr (is_convertible_v<_Ty, basic_string_view<_Char>>)
                 return __value_type{.__str = {}};
             else if constexpr (is_same_v<_Ty, void*>)
@@ -378,7 +384,8 @@ class basic_format_arg {
             else
                 return __value_type{.__handle = handle{__detail::__parse_only_tag{}, type_identity<_Ty>{}}};
             __builtin_unreachable();
-        }()) {}
+        }()) {
+    }
 
     template <typename _Int>
         requires(std::is_signed_v<_Int> and not __char<_Int> and not is_same_v<_Int, bool>)
@@ -391,8 +398,10 @@ class basic_format_arg {
     constexpr explicit basic_format_arg(same_as<bool> auto __b) : __type(__arg_type::__bool_), __value{.__bool_ = __b} {}
     constexpr explicit basic_format_arg(same_as<_Char> auto __c) : __type(__arg_type::__character), __value{.__character = __c} {}
     constexpr explicit basic_format_arg(void* __p) : __type(__arg_type::__vptr), __value{.__vptr = __p} {}
+#ifndef __kernel__
     constexpr explicit basic_format_arg(float __f) : __type(__arg_type::__f32), __value{.__f32 = __f} {}
     constexpr explicit basic_format_arg(double __f) : __type(__arg_type::__f64), __value{.__f64 = __f} {}
+#endif
     constexpr explicit basic_format_arg(basic_string_view<_Char> __s) : __type(__arg_type::__str), __value{.__str = __s} {}
 
     template <typename _Ty>
@@ -444,7 +453,7 @@ class basic_format_args {
     size_t __size{};
     const basic_format_arg<_Context>* __args{};
 
-   public:
+public:
     constexpr basic_format_args() noexcept {}
 
     template <typename... _Args>
@@ -797,10 +806,12 @@ constexpr decltype(auto) visit_format_arg(_Visitor&& __vis, basic_format_arg<_Co
             return __vis(__arg.__value.__i64);
         case __ty::__vptr:
             return __vis(__arg.__value.__vptr);
+#ifndef __kernel__
         case __ty::__f32:
             return __vis(__arg.__value.__f32);
         case __ty::__f64:
             return __vis(__arg.__value.__f64);
+#endif
         case __ty::__str:
             return __vis(__arg.__value.__str);
         case __ty::__handle:
@@ -941,7 +952,7 @@ template <typename _Char, typename... _Args>
 class basic_format_string {
     basic_string_view<_Char> __sv;
 
-   public:
+public:
     template <typename _Str>
         requires(convertible_to<const _Str&, basic_string_view<_Char>>)
     consteval basic_format_string(const _Str& __str) : __sv(__str) {

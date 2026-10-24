@@ -43,6 +43,8 @@
 #include <system.h>
 #include <uart.h>
 #include <vfs_forward.h>
+#include <x86_64/idt.h>
+#include <x86_64/interrupts.h>
 #include <x86_64/io.h>
 #include <x86_64/lapic.h>
 #include <x86_64/pit.h>
@@ -58,6 +60,11 @@ __attribute__((no_caller_saved_registers)) void printerrupt(std::format_string<_
     vprint(__fmt.get(), std::forward<_Args>(__args)...);
 }
 }  // namespace std
+
+void install_interrupt_handler(void* handler, u8 vector) {
+    gIDT.install_handler((usz)handler, vector, 4);
+    gIDT.flush();
+}
 
 void spurious_handler() {
     asm volatile("iretq");
