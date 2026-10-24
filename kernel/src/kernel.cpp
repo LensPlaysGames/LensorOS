@@ -22,6 +22,7 @@
 #include <cstr.h>
 #include <kernel.h>
 #include <keyboard.h>
+#include <kstage1.h>
 #include <math.h>
 #include <memory/common.h>
 #include <memory/paging.h>
@@ -29,7 +30,6 @@
 #include <memory/virtual_memory_manager.h>
 #include <scheduler.h>
 #include <x86_64/hpet.h>
-#include <x86_64/kstage1.h>
 #include <x86_64/pit.h>
 #include <x86_64/rtc.h>
 
@@ -103,18 +103,6 @@ extern "C" void kmain(uintptr_t base, BootInfo* bInfo) {
     kstage1(base, bInfo);
 
     std::print("kmain()\n");
-
-    // I'm lovin' it :^) (Plays Maccy's theme).
-    constexpr usz MACCYS_BPM = 125;
-    constexpr usz MACCYS_STEP_LENGTH_MILLISECONDS = (60 * 1000 / MACCYS_BPM) / 4;
-    gPIT.play_sound(262, MACCYS_STEP_LENGTH_MILLISECONDS);  // C4
-    gPIT.play_sound(294, MACCYS_STEP_LENGTH_MILLISECONDS);  // D4
-    gPIT.wait();                                            // Rest
-    gPIT.play_sound(330, MACCYS_STEP_LENGTH_MILLISECONDS);  // E4
-    gPIT.wait();                                            // Rest
-    gPIT.play_sound(440, MACCYS_STEP_LENGTH_MILLISECONDS);  // A4
-    gPIT.wait();                                            // Rest
-    gPIT.play_sound(392, MACCYS_STEP_LENGTH_MILLISECONDS);  // G4
 
     kregulate();
 
