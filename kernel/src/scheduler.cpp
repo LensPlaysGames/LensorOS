@@ -18,7 +18,6 @@
  */
 
 #include <integers.h>
-#include <interrupts/idt.h>
 #include <interrupts/interrupts.h>
 #include <linked_list.h>
 #include <memory.h>
@@ -31,6 +30,7 @@
 #include <time.h>
 #include <vfs_forward.h>
 #include <x86_64/hpet.h>
+#include <x86_64/idt.h>
 #include <x86_64/pit.h>
 #include <x86_64/rtc.h>
 
