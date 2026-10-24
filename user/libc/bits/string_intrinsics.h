@@ -203,10 +203,31 @@ __huge:
 /// Declared in the header so that it can be inlined.
 __inline__ void* __memcpy_naive(void* __restrict__ __dest, const void* __restrict__ __src, __SIZE_TYPE__ __n) {
     void* __original_dst = __dest;
-    __asm__ __volatile__("rep movsb"
-                         : "+D"(__dest), "+S"(__src), "+c"(__n)
-                         :  // No inputs
-                         : "memory");
+#if defined(x86_64)
+    __asm__ __volatile__(
+        "rep movsb"
+        : "+D"(__dest), "+S"(__src), "+c"(__n)
+        :  // No inputs
+        : "memory");
+
+#elif defined(aarch64)
+    if (__n > 0) {
+        unsigned char* __d = (unsigned char*)__dest;
+        const unsigned char* __s = (const unsigned char*)__src;
+        __SIZE_TYPE__ __tmp_n = __n;
+
+        __asm__ __volatile__(
+            "1:\n\t"
+            "ldrb    w3, [%1], #1\n\t"  // Load byte from src, post-increment src
+            "strb    w3, [%0], #1\n\t"  // Store byte to dest, post-increment dest
+            "subs    %2, %2, #1\n\t"    // Decrement counter
+            "b.ne    1b"                // Loop if counter != 0
+            : "+r"(__d), "+r"(__s), "+r"(__tmp_n)
+            :  // No inputs
+            : "w3", "memory");
+    }
+
+#endif
     return __original_dst;
 }
 
