@@ -720,7 +720,7 @@ void init_virtual(PageTable* pageMap) {
             (void*)(t + (u64)&KERNEL_VIRTUAL),
             (void*)(t + (u64)KERNEL_PHYSICAL),
             (u64)PageTableFlag::Present | (u64)PageTableFlag::ReadWrite,
-            ShowDebug::Yes);
+            ShowDebug::No);
     }
     std::print(
         "[VIRT]: Mapped higher half kernel -- {} bytes ({} MiB, {} KiB) at {}\n",
