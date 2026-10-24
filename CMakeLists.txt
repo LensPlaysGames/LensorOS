@@ -93,6 +93,17 @@ add_custom_target(
   DEPENDS
   Kernel
 )
+add_custom_target(
+  install-bootloader
+  COMMAND
+  ${CMAKE_COMMAND} -E copy
+  "${CMAKE_CURRENT_LIST_DIR}/bin/boot_${ARCH}.efi"
+  "${CMAKE_CURRENT_LIST_DIR}/boot/EFI/BOOT/main.efi"
+  COMMENT "Installed ${ARCH} UEFI Bootloader"
+  USES_TERMINAL
+  VERBATIM
+)
+add_dependencies( kernel-userspace install-bootloader )
 
 
 set( REPO_DIR ${CMAKE_CURRENT_LIST_DIR} )
