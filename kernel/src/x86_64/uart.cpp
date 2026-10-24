@@ -21,6 +21,7 @@
 #include <panic.h>
 #include <uart.h>
 #include <x86_64/io.h>
+#include <x86_64/uart.h>
 
 #include <format>
 
