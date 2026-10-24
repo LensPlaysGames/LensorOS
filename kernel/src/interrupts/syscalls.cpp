@@ -373,10 +373,15 @@ void sys$7_unmap(void* address) {
 
     // Unmap memory from current process page table.
     // Don't forget to unmap all pages!
-    Memory::unmap_pages((Memory::PageTable*)process->CR3, address, region->value().pages);
+    Memory::unmap_region(
+        process->CR3,
+        VirtualAddress(address),
+        region->value().pages * PAGE_SIZE);
 
     // Free physical memory referred to by region.
-    Memory::free_pages(region->value().paddr, region->value().pages);
+    Memory::release_memory(
+        PhysicalKernelAddress(region->value().paddr),
+        region->value().pages * PAGE_SIZE);
 
     DBGMSG("[SYS$]:unmap: Unmapped {} pages at {} (physical {})\n", region->value().pages, (void*)address, (void*)region->value().paddr);
 
