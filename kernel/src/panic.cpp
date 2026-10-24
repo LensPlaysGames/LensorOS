@@ -73,6 +73,21 @@ __attribute__((no_caller_saved_registers)) void panic(InterruptFrameError* frame
 }
 
 void hang() {
+#if defined(x86_64)
+    // disable interrupts
+    asm volatile("cli");
+    // TODO: If multi-processor, halt all cores.
+    // spin
     while (true)
         asm volatile("hlt");
+#elif defined(aarch64)
+    // disable interrupts
+    asm volatile("msr daifset, 3");
+    // TODO: If multi-processor, halt all cores.
+    // spin
+    while (true)
+        asm volatile("wfi");
+#else
+#error "unsupported architecture (kernel 'hang forever' implementation)"
+#endif
 }
