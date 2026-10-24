@@ -24,6 +24,7 @@
 #include <file.h>
 #include <integers.h>
 #include <link_definitions.h>
+#include <memory/api.h>
 #include <memory/common.h>
 #include <memory/heap.h>
 #include <memory/paging.h>
@@ -53,6 +54,7 @@
 #endif
 
 namespace ELF {
+
 /// Return zero when ELF header is of expected format.
 inline bool
 VerifyElf64Header(const Elf64_Ehdr& ElfHeader) {
@@ -119,16 +121,16 @@ VerifyElf64Header(const Elf64_Ehdr& ElfHeader) {
 inline bool
 LoadUserspaceElf64Process(
     Process* process,
-    Memory::PageTable* pageTable,
+    Memory::memory_space_handle pageTable,
     ProcessFileDescriptor fd,
     const Elf64_Ehdr& elfHeader,
     const std::vector<std::string_view>& args = {},
     const std::vector<std::string_view>& env = {}) {
     VFS& vfs = SYSTEM->virtual_filesystem();
 
-    size_t stack_flags = (size_t)Memory::PageTableFlag::Present
-                         | (size_t)Memory::PageTableFlag::ReadWrite
-                         | (size_t)Memory::PageTableFlag::UserSuper;
+    constexpr Memory::Flag stack_flags = Memory::Flag::Readable
+                                         | Memory::Flag::Writable
+                                         | Memory::Flag::User;
 
     // Load PT_LOAD program headers, mapping to vaddr as necessary.
     u64 programHeadersTableSize = elfHeader.e_phnum * elfHeader.e_phentsize;
@@ -159,8 +161,8 @@ LoadUserspaceElf64Process(
             // Allocate pages for program.
             u64 pages = (size_to_load + PAGE_SIZE - 1) / PAGE_SIZE;
 
-            // Should I just use the kernel heap for this? It could grow very large...
-            u8* loadedProgram = reinterpret_cast<u8*>(Memory::request_pages(pages));
+            u8* loadedProgram = reinterpret_cast<u8*>(
+                Memory::request_memory(pages * PAGE_SIZE).address);
             // Zero out the allocated memory.
             memset(loadedProgram, 0, pages * PAGE_SIZE);
 
@@ -178,33 +180,33 @@ LoadUserspaceElf64Process(
             DBGMSG("[ELF]: Loaded program header ({} bytes) from file {} at byte offset {}\n", phdr->p_filesz, fd, phdr->p_offset);
 
             // Virtually map allocated pages.
-            size_t flags = 0;
-            flags |= (size_t)Memory::PageTableFlag::Present;
-            flags |= (size_t)Memory::PageTableFlag::UserSuper;
+            Memory::Flags flags = Memory::Flag::Readable
+                                  | Memory::Flag::User;
             if (phdr->p_flags & PF_W)
-                flags |= (size_t)Memory::PageTableFlag::ReadWrite;
-            if (!(phdr->p_flags & PF_X))
-                flags |= (size_t)Memory::PageTableFlag::NX;
+                flags |= Memory::Flag::Writable;
+            // TODO: Execute Never flag
+            // if (!(phdr->p_flags & PF_X))
+            // flags |= Memory::Flag::NX;
 
-            u64 virtAddress = phdr->p_vaddr - offset;  // page align
-            for (u64 t = 0; t < pages * PAGE_SIZE; t += PAGE_SIZE) {
-                Memory::map(
-                    pageTable,
-                    (void*)(virtAddress + t),
-                    (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(loadedProgram + t)).address,
-                    flags,
-                    Memory::ShowDebug::No);
-            }
+            usz virtAddress = phdr->p_vaddr - offset;  // page align
+            Memory::map_region(
+                pageTable,
+                VirtualAddress(virtAddress),
+                PhysicalAddress(PhysicalKernelAddress(loadedProgram)),
+                pages * PAGE_SIZE,
+                flags);
+
             process->add_memory_region(
                 (void*)virtAddress,
                 (void*)loadedProgram,
                 pages * PAGE_SIZE,
-                flags);
+                (u64)flags);
         }
         else if (phdr->p_type == PT_GNU_STACK) {
             DBGMSG("[ELF]: Stack permissions set by GNU_STACK program header.\n");
             if (!(phdr->p_flags & PF_X)) {
-                stack_flags |= (size_t)Memory::PageTableFlag::NX;
+                // TODO: Execute Never Flag (for stack)
+                // stack_flags |= (size_t)Memory::PageTableFlag::NX;
             }
         }
     }
@@ -219,18 +221,17 @@ LoadUserspaceElf64Process(
     constexpr uintptr_t virtual_stack_bottom = Memory::USER_STACK_BASE;
     constexpr uintptr_t virtual_stack_top = virtual_stack_bottom + UserProcessStackSize;
     auto user_stack = Memory::request_pages(UserProcessStackSizePages);
-    Memory::map_pages(
+    Memory::map_region(
         pageTable,
-        (void*)virtual_stack_bottom,
-        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(user_stack)).address,
-        stack_flags,
-        UserProcessStackSizePages,
-        Memory::ShowDebug::No);
+        VirtualAddress(virtual_stack_bottom),
+        PhysicalAddress(PhysicalKernelAddress(user_stack)),
+        UserProcessStackSize,
+        stack_flags);
     process->add_memory_region(
         (void*)virtual_stack_bottom,
         (void*)user_stack,
         UserProcessStackSize,
-        stack_flags);
+        (u64)stack_flags);
     // for (auto virtual_page = virtual_stack_bottom; virtual_page < virtual_stack_top; virtual_page += PAGE_SIZE) {
     //     auto physical_page = Memory::request_page();
     //     if (physical_page == 0) {
@@ -250,7 +251,7 @@ LoadUserspaceElf64Process(
     // process' stack; the kernel is higher-half mapped in every page table,
     // so it "should run smoothly".
     auto cr3 = Memory::active_page_map();
-    Memory::flush_page_map(pageTable);
+    Memory::flush_page_map((Memory::PageTable*)pageTable);
 
     // Copy environment contents to the stack, keeping track of addresses.
     uintptr_t stack_top_address = virtual_stack_top;
@@ -388,8 +389,13 @@ ReplaceUserspaceElf64Process(Process* process, ProcessFileDescriptor fd, const s
 
     // Unmap and free old process memory, if header is valid and things look good to go.
     for (const auto& region : process->Memories) {
-        Memory::unmap_pages((Memory::PageTable*)process->CR3, region.vaddr, region.pages);
-        Memory::free_pages(region.paddr, region.pages);
+        Memory::unmap_region(
+            process->CR3,
+            VirtualAddress(region.vaddr),
+            region.pages * PAGE_SIZE);
+        Memory::release_memory(
+            PhysicalKernelAddress(region.paddr),
+            region.pages * PAGE_SIZE);
     }
     // Clear memories list.
     while (process->Memories.remove(0));
@@ -405,7 +411,7 @@ ReplaceUserspaceElf64Process(Process* process, ProcessFileDescriptor fd, const s
     // TODO: Verify bounds
     process->kernel_stack += sizeof(CPUState);
 
-    return LoadUserspaceElf64Process(process, (Memory::PageTable*)process->CR3, fd, elfHeader, args);
+    return LoadUserspaceElf64Process(process, process->CR3, fd, elfHeader, args);
 }
 
 /// @param args  Should NEVER be empty, as argv[0] should ALWAYS contain executable invocation (filepath).
@@ -433,7 +439,7 @@ CreateUserspaceElf64Process(ProcessFileDescriptor fd, const std::vector<std::str
                            : pid_t(-1);
     auto* process = Scheduler::request_process(parent_pid);
 
-    if (!LoadUserspaceElf64Process(process, (Memory::PageTable*)process->CR3, fd, elfHeader, args)) {
+    if (!LoadUserspaceElf64Process(process, process->CR3, fd, elfHeader, args)) {
         // Remove process from process list
         Scheduler::remove_process(process->ProcessID, -1);
         return false;
