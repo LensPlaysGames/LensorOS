@@ -1221,10 +1221,6 @@ void* sys$27_shared_memory_acquire(int id) {
 
     auto* process = Scheduler::CurrentProcess->value();
 
-    auto memory_flags = (usz)Memory::PageTableFlag::Present
-                        | (usz)Memory::PageTableFlag::UserSuper
-                        | (usz)Memory::PageTableFlag::ReadWrite;
-
     if (not shared_memory.contains(id))
         return nullptr;
 
@@ -1243,13 +1239,12 @@ void* sys$27_shared_memory_acquire(int id) {
     auto address = (void*)process->next_region_vaddr;
     process->next_region_vaddr += pages * PAGE_SIZE;
 
-    Memory::map_pages(
-        (Memory::PageTable*)process->CR3,
-        address,
-        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(memory_region->physical_address)).address,
-        memory_flags,
-        pages,
-        Memory::ShowDebug::No);
+    Memory::map_region_user(
+        process->CR3,
+        VirtualAddress(address),
+        PhysicalAddress(
+            PhysicalKernelAddress(memory_region->physical_address)),
+        pages * PAGE_SIZE);
 
     std::print(
         "Acquired shared memory region, id={} base={} mapped to {} in process({})\n",
