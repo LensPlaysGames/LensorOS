@@ -720,7 +720,9 @@ bool HDAController::init() {
                                                                  stream_index,
                                                                  0));
                         std::print(
-                            "[HDA]: status:{:#x} control:{:#x}\n",
+                            "[HDA]:stream{}[{}]: status:{:#x} control:{:#x}\n",
+                            stream_id,
+                            stream_index,
                             output_stream_registers->status(),
                             output_stream_registers->control());
                         // Ensure the stream is stopped.
@@ -864,6 +866,10 @@ bool HDAController::init() {
                             output_stream_registers->status(),
                             output_stream_registers->control());
                         output_stream_registers->status_clear();
+                        std::print(
+                            "[HDA]: status:{:#x} control:{:#x}\n",
+                            output_stream_registers->status(),
+                            output_stream_registers->control());
 
                         //   4b. then, tell the DAC to take input from that stream
                         // Stream is in bits 7:4
@@ -877,7 +883,7 @@ bool HDAController::init() {
 
                         // Unmute pin widget
                         const uint pin_volume = 0x7f;  // 100% == 0x7f
-                        std::print("  unmuting left, right channels for output. volume:{:#x}\n", pin_volume);
+                        std::print("  unmuting left, right channels for outp volume:{:#x}\n", pin_volume);
                         send_command(
                             HDA_VERB_SET_AMP_GAIN_MUTE,
                             HDA_AMP_PARAM_SET_LEFT | HDA_AMP_PARAM_SET_RIGHT
@@ -912,8 +918,18 @@ bool HDAController::init() {
                         // NOTE: This should cause audio to start playing...
                         // Ensure status write-1-to-clear bits are clear
                         output_stream_registers->status_clear();
+                        asm volatile("wbinvd" ::: "memory");
+
+                        std::print(
+                            "[HDA]: status:{:#x} control:{:#x}\n",
+                            output_stream_registers->status(),
+                            output_stream_registers->control());
+                        std::print("  setting up output stream to run\n");
+
                         output_stream_registers->control(
                             output_stream_registers->control() | HDA_SD_REG_CTL_RUN);
+
+                        asm volatile("wbinvd" ::: "memory");
 
                         std::print(
                             "[HDA]: status:{:#x} control:{:#x}\n",
@@ -942,38 +958,92 @@ bool HDAController::init() {
 }
 
 void HDAController::handle_interrupt() {
-    constexpr auto output_stream_index = 0u;
+    // std::print(
+    //     "HDA: interrupt status:{:#08x})\n",
+    //     (uint32_t)*interrupt_status());
 
-    auto global_stream_index = global_regs()->input_stream_count() + output_stream_index;
-    auto output_stream_mask = (1u << global_stream_index);
+    u32 intsts = *interrupt_status();
 
-    // If this interrupt targets the configured output stream...
-    if (*interrupt_status() & output_stream_mask) {
-        // And the interrupt is a buffer completion interrupt (BCIS) bit set.
-        volatile auto* output_stream_registers
-            = (volatile IntelHDAStreamRegs*)(Base
-                                             + HDA_REG_OSD(
-                                                 global_regs()->input_stream_count(),
-                                                 output_stream_index,
-                                                 0));
-        if (output_stream_registers->status() & (1u << 2)) {
-            // This was a buffer completion interrupt; we need to "swap buffers" (let
-            // audio server know that the current buffer has been played from and is
-            // ready to be written to)
-            auto buffer_ready_for_cpu = CurrentBufferIndex;
+    u32 bit_index = 0;
 
-            Event e{EventType::AUDIOBUFFER};
-            auto* edata = (EventData_AudioBuffer*)(&e.Data[0]);
-            edata->buffer_viable = buffer_ready_for_cpu;
-            gEvents.notify(e);
-
-            // Flip ping-pong tracking flag for the next cycle
-            CurrentBufferIndex = (CurrentBufferIndex + 1) % BufferCount;
+    // Process Input Streams
+    const u32 input_count = global_regs()->input_stream_count();
+    for (u32 i = 0; i < input_count; ++i, ++bit_index) {
+        if (intsts & (u32(1) << bit_index)) {
+            // std::print("[HDA]: interrupt input stream {}\n", i);
+            volatile auto* regs = (volatile IntelHDAStreamRegs*)(Base + HDA_REG_ISD(i, 0));
+            handle_stream_interrupt(regs, bit_index);
         }
+    }
 
-        // Ensure more interrupts can happen
-        output_stream_registers->status_clear();
+    // Process Output Streams
+    const u32 output_count = global_regs()->output_stream_count();
+    for (u32 i = 0; i < output_count; ++i, ++bit_index) {
+        if (intsts & (u32(1) << bit_index)) {
+            // std::print("[HDA]: interrupt output stream {}\n", i);
+            volatile auto* regs = (volatile IntelHDAStreamRegs*)(Base + HDA_REG_OSD(input_count, i, 0));
+            // std::print("  stream {} at {}\n", bit_index, (void*)regs);
+            handle_stream_interrupt(regs, bit_index);
+        }
+    }
+
+    // Process Bidirectional Streams
+    const u32 bidi_count = global_regs()->bidi_stream_count();
+    for (u32 i = 0; i < bidi_count; ++i, ++bit_index) {
+        if (intsts & (u32(1) << bit_index)) {
+            // std::print("[HDA]: interrupt bidi stream {}\n", i);
+            volatile auto* regs = (volatile IntelHDAStreamRegs*)(Base + HDA_REG_BSD(input_count, output_count, i, 0));
+            handle_stream_interrupt(regs, bit_index);
+        }
+    }
+
+    // Clear Controller Ring Buffer Interrupts (If Bit 30 is active)
+    if (intsts & (1u << 30)) {
+        // std::print("[HDA]: interrupt CORB/RIRB\n");
+
+        uint8_t active_rirb = *rirb_status();
+        uint8_t active_corb = *corb_status();
+
+        if (active_rirb) *rirb_status() = active_rirb;  // Clear RINTFL / RFOER
+        if (active_corb) *corb_status() = active_corb;  // Clear CMEI
+    }
+
+    // Clear Codec State / Wake-up Interrupts (If Bits 24-27 are active)
+    if (intsts & (u32(1) << 27)) {
+        // std::print("[HDA]: interrupt SDIWAKE\n");
+        uint16_t active_state = global_regs()->statests;
+        if (active_state) global_regs()->statests = active_state;  // Clear SDIWAKE lines
     }
 
     end_of_interrupt(IDTVector);
+}
+
+void HDAController::handle_stream_interrupt(volatile IntelHDAStreamRegs* stream_registers, u32 stream_index) {
+    // std::print(
+    //     "[HDA]: stream[{}] interrupt status={:#x}\n",
+    //     stream_index,
+    //     (u32)stream_registers->status());
+
+    // if the interrupt is a buffer completion interrupt (BCIS) bit set.
+    if (stream_registers->status() & (1u << 2)) {
+        // This was a buffer completion interrupt; we need to "swap buffers" (let
+        // audio server know that the current buffer has been played from and is
+        // ready to be written to)
+        auto buffer_ready_for_cpu = CurrentBufferIndex;
+
+        Event e{EventType::AUDIOBUFFER};
+        auto* edata = (EventData_AudioBuffer*)(&e.Data[0]);
+        edata->buffer_viable = buffer_ready_for_cpu;
+        gEvents.notify(e);
+
+        // Flip ping-pong tracking flag for the next cycle
+        CurrentBufferIndex = (CurrentBufferIndex + 1) % BufferCount;
+    }
+
+    // Ensure more interrupts can happen
+    stream_registers->status_clear();
+
+    // std::print("  lpib:{:#x}\n", (u32)stream_registers->lpib);
+    // std::print("  lvi: {:#x}\n", (u32)stream_registers->lvi);
+    // std::print("  stream[{}] status:{:#x}\n", stream_index, (u32)stream_registers->status());
 }

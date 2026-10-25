@@ -162,7 +162,7 @@ void enable_interrupt(u8 irq) {
         LegacyPIC::enable_interrupt(irq);
 
     else
-        gIOAPIC.enable_irq(irq);
+        gIOAPIC.enable_irq(irq, PIC_IRQ_VECTOR_OFFSET + irq);
 }
 extern "C" void end_of_interrupt(u8 irq) {
     if constexpr (use_legacy_pic)

@@ -159,7 +159,7 @@ struct IOAPIC {
 
     // Given an IRQ zero through fifteen, redirect incoming interrupts to the
     // corresponding vector offset.
-    void enable_irq(uint8_t irq);
+    void enable_irq(uint8_t irq, uint8_t vector);
 
     // Given an IRQ zero through fifteen, mask any incoming interrupts on that
     // interrupt request line.
@@ -181,7 +181,7 @@ struct IOAPIC {
         MinimumGlobalInterrupt = record1.global_system_interrupt_base;
     }
 
-   private:
+private:
     // Each element in this array contains the actual global interrupt vector
     // that corresponds to the IRQ of the element's index.
     // So, if IRQ0 (timer) was remapped to global interrupt 2, then element
@@ -216,7 +216,7 @@ struct LAPIC {
     // Setup a periodic interrupt for IRQ0
     void init_interrupt();
 
-   private:
+private:
     uint64_t Id{0};
     uintptr_t Base{0};
     unsigned int MaxLVTCount{0xff};

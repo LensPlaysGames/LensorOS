@@ -291,7 +291,7 @@ bool initialize() {
     timer_tick = pit_tick;
 
     // Setup currently executing code as the start process with PID 0.
-    StartupProcess.ExecutablePath = "/boot/LensorOS/kernel.elf";
+    StartupProcess.ExecutablePath = "/efi/BOOT/LensorOS/kernel.elf";
     StartupProcess.CR3 = (Memory::memory_space_handle)Memory::active_page_map();
     StartupProcess.State = Process::RUNNING;
     StartupProcess.ProcessID = 0;
@@ -308,9 +308,16 @@ bool initialize() {
 #ifdef x86_64
     // Install IRQ0 handler found in `scheduler.asm` (over-write default
     // system timer handler).
-    gIDT.install_handler((u64)irq0_handler, PIC_IRQ0, 0);
+    /** TODO: fetch from somewhere in memory, set during timer init
+     ** See x86_64/lapic.cpp for timer_vector
+     **/
+    u8 timer_vector = 0xf8;
+    if constexpr (use_legacy_pic)
+        timer_vector = PIC_IRQ0;
+
+    gIDT.install_handler((u64)irq0_handler, timer_vector, 0);
     gIDT.flush();
-    std::print("Flushed IDT after installing new IRQ0 handler\n");
+    std::print("Flushed IDT after installing new IRQ0 handler at vector {:#x}\n", PIC_IRQ0);
 #endif
 
     return true;

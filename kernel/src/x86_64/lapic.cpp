@@ -83,7 +83,7 @@ uint32_t IOAPIC::read(uint16_t regindex) {
     return *(volatile uint32_t*)(((uintptr_t)Base) + IOAPIC_REGOFFSET_DATA);
 }
 
-void IOAPIC::enable_irq(uint8_t irq) {
+void IOAPIC::enable_irq(uint8_t irq, uint8_t vector) {
     if (irq >= 16) {
         // panic()? hang()?
         std::print("[IOAPIC]: invalid irq: {}\n", irq);
@@ -98,7 +98,7 @@ void IOAPIC::enable_irq(uint8_t irq) {
 
     redirect_gsi_to_idt_vector(
         irq_redirects[irq],
-        PIC_IRQ_VECTOR_OFFSET + irq);
+        vector);
 }
 
 void IOAPIC::disable_irq(uint8_t irq) {
@@ -308,8 +308,12 @@ void LAPIC::init_interrupt() {
     // Set to
     //   Periodic mode,
     //   unmasked (bit 16 clear),
-    //   using Interrupt Vector 32 (0x20).
-    constexpr uint32_t timer_vector = PIC_IRQ0;
+    // NOTE: WE DO !NOT! use PIC_IRQ0, because that is a very *low* vector
+    // number, and the APIC does things backwards compared to the PIC; in the
+    // APIC, *higher* vector numbers take *higher* priority, whereas in the
+    // PIC, *lower* vector numbers had *higher* priority...
+    // 250-255 are generally reserved for spurious and CPU interrupts...
+    constexpr uint32_t timer_vector = 0xf8;
     // Keep the APIC timer masked (no interrupts will fire during calibration)
     write(
         LAPIC_REGOFFSET_LVT_TIMER,
@@ -351,8 +355,8 @@ void LAPIC::init_interrupt() {
 
     std::print("[LAPIC Timer]: ticks per ms={}  freq={}hz\n", ticks_per_millisecond, frequency);
 
-    // mask system timer interrupt (PIT)
-    gIOAPIC.disable_irq(0);
+    // unmask APIC system timer interrupt
+    gIOAPIC.enable_irq(0, timer_vector);
     // unmask timer interrupt
     write(
         LAPIC_REGOFFSET_LVT_TIMER,

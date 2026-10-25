@@ -274,7 +274,7 @@ void probe_system_devices() {
                 std::print("[HDA]: TODO: audio likely broken: implement shared IRQ handling for HDA controller\n");
             }
 
-            HDAController driver{};
+            auto* driver = new HDAController();
             uintptr_t base = controller->Header->BAR0 & ~(uintptr_t)0xf;
             base |= ((uintptr_t)controller->Header->BAR1) << 32;
             base = Memory::FROM_FRAME_POINTER(PhysicalAddress(base)).address;
@@ -291,8 +291,8 @@ void probe_system_devices() {
                         | (u64)Memory::PageTableFlag::CacheDisabled
                         | (u64)Memory::PageTableFlag::WriteThrough);
             }
-            driver.set_base(base);
-            driver.init();
+            driver->set_base(base);
+            driver->init();
         }
     }
 }
@@ -725,10 +725,10 @@ void kstage2(BootInfo* bInfo) {
     enable_interrupt(IRQ_PS2_MOUSE);
     if constexpr (use_legacy_pic)
         enable_interrupt(IRQ_CASCADED_PIC);
-    else
-        gIOAPIC.print_debug();
 
     gLAPIC.init_interrupt();
+
+    gIOAPIC.print_debug();
 
     // Create basic framebuffer renderer.
     std::print("[kstage1]: Setting up Graphics Output Protocol Renderer\n");
@@ -956,7 +956,7 @@ void kstage2(BootInfo* bInfo) {
     // Allow interrupts to trigger.
     std::print("[kstage1]: Enabling interrupts\n");
     asm("sti");
-    // std::print("[kstage1]: {Interrupts enabled}\n", __GREEN);
+    std::print("[kstage1]: {Interrupts enabled}\n", __GREEN);
 
     // I'm lovin' it :^) (Plays Maccy's theme).
     constexpr usz MACCYS_BPM = 125;

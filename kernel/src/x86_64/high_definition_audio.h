@@ -25,6 +25,9 @@
 #include <interrupts/interrupts.h>
 #include <stdint.h>
 #include <x86_64/high_definition_audio_registers.h>
+#include <x86_64/interrupts.h>
+
+#include <print>
 
 /* Standard HDA Verb IDs */
 // Intel HDA Spec 7.3.3.31
@@ -185,21 +188,35 @@ typedef struct IntelHDAGlobalRegs {
 
 // Layout for a single DMA Stream Engine (e.g., Output Stream 1)
 // On standard Intel HDA, Output Stream 1 typically begins at offset 0x0E0 + (0 * 0x20)
-typedef struct IntelHDAStreamRegs {
-    volatile uint32_t ctl;       // 0x00: Stream Control (3 bytes) + Status (1 byte)
-    volatile uint32_t lpib;      // 0x04: Link Position In Buffer
-    volatile uint32_t cbl;       // 0x08: Cyclic Buffer Length (Total size of DMA buffer pool)
-    volatile uint16_t lvi;       // 0x0c: Last Valid Index (Number of BDL entries minus 1)
-    volatile uint16_t reserved;  // 0x0e: Reserved
-    volatile uint16_t fifos;     // 0x10: FIFO Size
-    volatile uint16_t fmt;       // 0x12: Stream Format
-    volatile uint64_t bdlp;      // 0x14: Buffer Descriptor List Pointer Lower 32-bits
+typedef struct [[gnu::packed]] IntelHDAStreamRegs {
+    volatile uint32_t ctl;        // 0x00: Stream Control (3 bytes) + Status (1 byte)
+    volatile uint32_t lpib;       // 0x04: Link Position In Buffer
+    volatile uint32_t cbl;        // 0x08: Cyclic Buffer Length (Total size of DMA buffer pool)
+    volatile uint16_t lvi;        // 0x0c: Last Valid Index (Number of BDL entries minus 1)
+    volatile uint16_t reserved0;  // 0x0e: Reserved
+    volatile uint16_t fifos;      // 0x10: FIFO Size
+    volatile uint16_t fmt;        // 0x12: Stream Format
+    volatile uint32_t reserved1;  //
+    volatile uint64_t bdlp;       // 0x18: Buffer Descriptor List Pointer Lower 32-bits
+
+    struct status_control_t {
+        uint32_t control;
+        uint8_t status;
+    };
+
+    status_control_t status_control() const volatile {
+        return {ctl & 0x00ffffff, u8(ctl >> 24)};
+    }
+
+    volatile uint8_t* status_direct() const volatile {
+        return ((volatile uint8_t*)&ctl) + 3;
+    }
 
     uint32_t control() const volatile {
-        return ctl & 0x00ffffff;
+        return status_control().control;
     };
     uint8_t status() const volatile {
-        return ((ctl >> 24) & 0xff);
+        return *status_direct();
     };
 
     static constexpr uint32_t build_ctl(uint32_t control, uint8_t status = 0) {
@@ -213,7 +230,9 @@ typedef struct IntelHDAStreamRegs {
     };
     // Bits 2, 3, and 4 of status are write-1-to-clear
     void status_clear() volatile {
-        ctl = build_ctl(control(), 0b111 << 2);
+        // NOTE: QEMU gets *very* broken if you try to do a 32-bit write including
+        // ctl. Direct addressing required due to QEMU register write masks.
+        *status_direct() = *status_direct() & (0b111 << 2);
     };
 
     void stream_reset() volatile {
@@ -257,8 +276,9 @@ struct HDAController {
     void set_base(uintptr_t base) { Base = base; }
 
     void handle_interrupt();
+    void handle_stream_interrupt(volatile IntelHDAStreamRegs* stream_registers, u32 stream_index);
 
-   private:
+private:
     // spin/busy-wait until response recieved.
     uint32_t send_command(
         uint32_t verb,
