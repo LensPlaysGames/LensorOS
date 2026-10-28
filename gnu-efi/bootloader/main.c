@@ -13,7 +13,7 @@
 #if defined(aarch64)
 #define HALT(...) __asm__ volatile("wfi")
 #define ENTRY_TYPE(NAME) ENTRY_BASE_TYPE(NAME)
-#define ELF_MACHINE EM_ARM
+#define ELF_MACHINE EM_AARCH64
 #elif defined(x86_64)
 #define HALT(...) __asm__ volatile("hlt")
 #define ENTRY_TYPE(NAME) __attribute__((sysv_abi)) ENTRY_BASE_TYPE(NAME)
@@ -565,6 +565,16 @@ EFI_STATUS efi_main(EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
 
     Print(L"Kernel entry point: 0x%x\n", kernel_info.entry);
     Print(L"Calculated kernel entry point: 0x%x\n", V2P(kernel_info.entry));
+
+    if (V2P(kernel_info.entry) < kernel_info.base
+        || V2P(kernel_info.entry) >= (kernel_info.base + kernel_info.size)) {
+        Print(
+            L"!! Calculated kernel entry, 0x%x, is not within kernel region 0x%x -- 0x%x\n",
+            V2P(kernel_info.entry),
+            kernel_info.base,
+            kernel_info.base + kernel_info.size);
+        return EFI_LOAD_ERROR;
+    }
 
     // Exit boot services: free system resources dedicated to UEFI boot services,
     //   as well as prevent UEFI from shutting down automatically after 5 minutes.
