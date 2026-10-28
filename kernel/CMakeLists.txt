@@ -126,6 +126,7 @@ add_executable(
   src/storage/filesystem_drivers/socket.cpp
   src/system.cpp
   src/tests.cpp
+  src/time.cpp
   src/utf.cpp
   src/virtual_filesystem.cpp
 )
