@@ -38,7 +38,7 @@ struct client_header_t {
      ** Server should set this to false when it has mixed the samples.
      **/
     volatile bool ready{false};
-    volatile int16_t* samples() const volatile { return (int16_t*)(this + 1); };
+    volatile int16_t* samples() const volatile { return (int16_t*)(this + 2); };
 };
 
 int main(int argc, const char** argv) {
