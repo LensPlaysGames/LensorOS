@@ -156,7 +156,7 @@ if (${ARCH} MATCHES "x86_64")
 elseif(${ARCH} MATCHES "aarch64")
   target_sources(
     Kernel PRIVATE
-    src/aarch64/device_tree_dump.c
+    src/aarch64/device_tree_dump.cpp
     src/aarch64/kstage1.cpp
   )
 endif()
