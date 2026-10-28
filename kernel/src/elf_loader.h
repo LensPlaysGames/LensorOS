@@ -347,6 +347,7 @@ LoadUserspaceElf64Process(
     // Zero out forged frame.
     memset(forged_frame, 0, sizeof(CPUState));
 
+#if defined(x86_64)
     // User stack.
     forged_frame->Frame.sp = (u64)(stack_top_address);
     // Entry point.
@@ -360,6 +361,11 @@ LoadUserspaceElf64Process(
     // New stack.
     forged_frame->RBP = process->kernel_stack;
     forged_frame->RSP = process->kernel_stack;
+#elif defined(aarch64)
+// TODO
+#else
+#error "Kernel ELF Loader: unsupported arch"
+#endif
 
 #ifdef DEBUG_ELF
     Scheduler::print_debug();

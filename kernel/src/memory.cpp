@@ -39,6 +39,7 @@ extern "C" int memcmp(const void* aPtr, const void* bPtr, size_t numBytes) {
 extern "C" void* memcpy(void* __restrict__ dest, const void* __restrict__ src, size_t numBytes) {
     void* result = dest;
 
+#if defined(x86_64)
     asm volatile(
         "shrq $3, %%rcx\n\t"  // Divide byte count by 8 to get QWORD count
         "rep movsq\n\t"       // Copy 8-byte blocks. Modifies RDI and RSI.
@@ -51,6 +52,39 @@ extern "C" void* memcpy(void* __restrict__ dest, const void* __restrict__ src, s
         : "c"(numBytes), [numBytes] "r"(numBytes)  // Pass size into RCX ("c") and another GPR
         : "memory"                                 // Memory barrier to protect cache sequencing
     );
+
+#elif defined(aarch64)
+    asm volatile(
+        // Handle cases smaller than 16 bytes
+        "cmp    %[numBytes], #16\n\t"
+        "blt    2f\n\t"
+
+        // Main loop copying 16 bytes at a time using Load/Store Pair
+        "1:\n\t"
+        "ldp    x4, x5, [%[src]], #16\n\t"   // Load 16 bytes, post-index src
+        "stp    x4, x5, [%[dest]], #16\n\t"  // Store 16 bytes, post-index dest
+        "sub    %[numBytes], %[numBytes], #16\n\t"
+        "cmp    %[numBytes], #16\n\t"
+        "bge    1b\n\t"
+
+        // Clean up remaining 0-15 bytes using a branchless overlap
+        "2:\n\t"
+        "cbz    %[numBytes], 3f\n\t"  // If perfectly divisible by 16, we are done
+
+        // Rewind src and dest pointers back by (16 - remaining_bytes)
+        "mov    x4, #16\n\t"
+        "sub    x4, x4, %[numBytes]\n\t"   // x4 = 16 - remaining
+        "sub    %[src], %[src], x4\n\t"    // Adjust pointers backward so the final
+        "sub    %[dest], %[dest], x4\n\t"  // 16-byte copy aligns exactly with the buffer end
+
+        "ldp    x4, x5, [%[src]]\n\t"   // Read final 16 bytes (some bytes will overlap)
+        "stp    x4, x5, [%[dest]]\n\t"  // Write final 16 bytes safely
+        "3:\n\t"
+
+        : [dest] "+r"(dest), [src] "+r"(src), [numBytes] "+r"(numBytes)
+        :
+        : "x4", "x5", "cc", "memory");
+#endif
 
     return result;
 }

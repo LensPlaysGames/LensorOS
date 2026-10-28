@@ -679,6 +679,7 @@ void free_page_map(PageTable* pageTable) {
 }
 
 PageTable* active_page_map() {
+#if defined(x86_64)
     // if (!ActivePageMap) {
     asm volatile(
         "mov %%cr3, %%rax\n\t"
@@ -687,6 +688,13 @@ PageTable* active_page_map() {
         :  // No inputs
         : "rax");
     // }
+#elif defined(aarch64)
+    asm volatile(
+        "mrs %0, ttbr1_el1"
+        : "=r"(ActivePageMap));
+#else
+#error "Kernel VIRT Memory Manager: Unsupported architecture (fetch page map)"
+#endif
     return ActivePageMap;
 }
 
@@ -961,11 +969,23 @@ extern "C" void flush_page_map(Memory::PageTable* pageMapLevelFour) {
     // Store physical frame pointer.
     Memory::ActivePageMap = pageMapLevelFour;
 
+#if defined(x86_64)
     // Actually load CR3 register with physical frame pointer.
     asm volatile("mov %0, %%cr3"
                  : /** No Outputs */
                  : "r"(pageMapLevelFour)
                  : "memory");
+#elif defined(aarch64)
+    asm volatile(
+        "msr ttbr1_el1, %0\n\t"
+        "isb"
+        : /** (!) No Outputs (!) **/
+        : "r"(pageMapLevelFour)
+        : "memory");
+
+#else
+#error "Kernel VIRT Memory Manager: flush_page_map() implementation for architecture"
+#endif
 }
 
 // explicit instantiation

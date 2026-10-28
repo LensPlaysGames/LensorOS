@@ -231,10 +231,12 @@ bool PortController::write_low_level(u64 sector, u64 sectors) {
     commandFIS->set_count(static_cast<u16>(sectors));
 
     // Ensure buffer is flushed from cache
+#ifdef x86_64
     volatile u8* ptr = (volatile u8*)Buffer;
     for (usz i = 0; i < PORT_BUFFER_BYTES; i += 64)
         asm volatile("clflush (%0)" ::"r"(ptr + i) : "memory");
     asm volatile("mfence" ::: "memory");
+#endif
 
     // Issue command in first slot.
     Port->CommandIssue = 1;

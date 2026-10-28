@@ -112,7 +112,6 @@ add_executable(
   src/memory/heap.cpp
   src/memory/physical_memory_manager.cpp
   src/memory/virtual_memory_manager.cpp
-  src/mouse.cpp
   src/pci.cpp
   src/pci_descriptors.cpp
   src/pure_virtuals.cpp
@@ -148,6 +147,7 @@ if (${ARCH} MATCHES "x86_64")
     src/x86_64/idt.cpp
     src/x86_64/kstage1.cpp
     src/x86_64/lapic.cpp
+    src/x86_64/mouse.cpp
     src/x86_64/pit.cpp
     src/x86_64/rtc.cpp
     src/x86_64/time.cpp

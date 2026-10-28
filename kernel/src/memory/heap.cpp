@@ -182,7 +182,9 @@ void expand_heap(u64 numBytes) {
         // no matter what.
         Memory::map((void*)virt, (void*)frame, flags);
 
+#ifdef x86_64
         asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
+#endif
 
         DBGMSG("[Heap]: Mapped {} to {}\n", (void*)virt, (void*)frame);
     }

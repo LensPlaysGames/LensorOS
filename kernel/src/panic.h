@@ -23,13 +23,16 @@
 #define PanicStartX 400
 #define PanicStartY 500
 
+#if defined(x86_64)
 __attribute__((no_caller_saved_registers)) void panic(const char* panicMessage);
 
-#ifdef x86_64
 struct InterruptFrame;
 struct InterruptFrameError;
 __attribute__((no_caller_saved_registers)) void panic(InterruptFrame*, const char* panicMessage);
 __attribute__((no_caller_saved_registers)) void panic(InterruptFrameError*, const char* panicMessage);
+
+#else
+void panic(const char* panicMessage);
 #endif
 
 #define ASSERT(cond, msg) \

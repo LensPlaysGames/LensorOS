@@ -18,8 +18,10 @@
  */
 
 #include <spinlock.h>
+#include <stdint.h>
 
 bool SpinlockLocker::compare_and_swap_lock() {
+#if defined(x86_64)
     /* Inline Assembly:
      * |- Desc:
      * |  |- `lock`                  -- Ensures that the following instruction runs atomically.
@@ -41,9 +43,34 @@ bool SpinlockLocker::compare_and_swap_lock() {
         : "r"(true), "m"(Lock.locked), "a"(false)
         : "memory");
     return ret;
+#elif defined(aarch64)
+
+    uint32_t actual;
+    uint32_t store_failed;
+
+    asm volatile(
+        "1:\n\t"
+        "ldaxrb  %w[actual], [%[ptr]]\n\t"  // Load current byte value with Acquire ordering
+        "cmp     %w[actual], #0\n\t"        // Check if it matches expected (false/0)
+        "bne     2f\n\t"                    // If not 0 (already locked), exit immediately
+
+        "stlxrb  %w[failed], %w[desired], [%[ptr]]\n\t"  // Try storing desired (true/1) with Release ordering
+        "cbnz    %w[failed], 1b\n\t"                     // If store failed (bus contention), retry loop
+
+        "2:\n\t"
+        : [actual] "=&r"(actual), [failed] "=&r"(store_failed), "+m"(Lock.locked)
+        : [ptr] "r"(&Lock.locked), [desired] "r"(1)
+        : "memory", "cc");
+
+    return actual == 0;
+
+#else
+#error "kernel spinlock: unsupported arch"
+#endif
 }
 
 bool SpinlockLocker::test_and_set_lock() {
+#if defined(x86_64)
     /* In x86, when an instruction is prefixed with `lock`,
      *   it is guaranteed to be run atomically (thread-safe).
      * The `xchg` instruction sets a memory address or register
@@ -66,6 +93,24 @@ bool SpinlockLocker::test_and_set_lock() {
     bool old_value;
     asm volatile("lock xchg %0, %1" : "=a"(old_value) : "m"(Lock.locked), "r"(true));
     return old_value;
+#elif defined(aarch64)
+
+    uint32_t old_value;
+    uint32_t store_failed;
+
+    asm volatile(
+        "1:\n\t"
+        "ldaxrb  %w[old], [%[ptr]]\n\t"                  // Load old byte value with Acquire ordering
+        "stlxrb  %w[failed], %w[desired], [%[ptr]]\n\t"  // Attempt to store true (1) with Release ordering
+        "cbnz    %w[failed], 1b\n\t"                     // If store failed (bus contention), retry loop
+        : [old] "=&r"(old_value), [failed] "=&r"(store_failed), "+m"(Lock.locked)
+        : [ptr] "r"(&Lock.locked), [desired] "r"(1)
+        : "memory");
+
+    return (bool)old_value;
+#else
+#error "kernel spinlock: unsupported arch"
+#endif
 }
 
 SpinlockLocker::SpinlockLocker(Spinlock& l)
