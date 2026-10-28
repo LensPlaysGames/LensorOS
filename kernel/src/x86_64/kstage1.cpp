@@ -66,7 +66,6 @@
 #include <unordered_map>
 
 u8 idt_storage[0x1000];
-size_t Time::unix_boot_time;
 
 void prepare_interrupts() {
     // REMAP PIC CHIP IRQs OUT OF THE WAY OF GENERAL SOFTWARE EXCEPTIONS.

@@ -19,7 +19,40 @@
 
 #include <time.h>
 
+#define CACHE_LINE_SIZE 64
+
 namespace Time {
+size_t unix_boot_time{0};
+
+namespace detail {
+// alignas(CACHE_LINE_SIZE) to prevent cache-thrashing, where updating
+// Ticks invalidates Frequency.
+alignas(CACHE_LINE_SIZE) volatile size_t Ticks{0};
+alignas(CACHE_LINE_SIZE) size_t Frequency{1};
+size_t ApproxNanosecondsPer{nanoseconds_per_second};
+}  // namespace detail
+
+size_t current_tick() {
+    return detail::Ticks;
+}
+size_t nanoseconds_per_tick() {
+    return detail::ApproxNanosecondsPer;
+}
+extern "C" void do_tick() {
+    detail::Ticks += 1;
+}
+void set_frequency(size_t hertz) {
+    if (hertz == 0) return;
+    detail::Frequency = hertz;
+    detail::ApproxNanosecondsPer = nanoseconds_per_second / hertz;
+}
+
+size_t seconds_since_boot() {
+    return detail::Ticks / detail::Frequency;
+}
+size_t milliseconds_since_boot() {
+    return detail::Ticks * 1000 / detail::Frequency;
+}
 
 uint64_t mktime(const tm* t) {
     uint64_t year = ((uint64_t)t->years_since_1900) + 1900;  // Actual year value

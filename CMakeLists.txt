@@ -253,13 +253,16 @@ if ( QEMU_PROGRAM )
       # Intel HDA 1.0 Sound
       -device intel-hda,id=sound0,msi=on
       -device hda-duplex,id=codec0,bus=sound0.0,audiodev=audio0
+      -machine pcspk-audiodev=audio0
     )
 
     set( OVMF_CODE "${REPO_DIR}/OVMFbin/OVMF_CODE-pure-efi.fd" )
-    set( OVMF_VARS "${REPO_DIR}/OVMFbin/OVMF_VARS_LensorOS.fd" )
+    set( OVMF_VARS "${REPO_DIR}/OVMFbin/OVMF_VARS-pure-efi.fd" )
+
   elseif(${ARCH} MATCHES "aarch64")
     list( APPEND QEMU_FLAGS
       -machine virt
+      -nodefaults
       # CPU:
       # a64fx, arm1026, arm1136, arm1136-r2, arm1176, arm11mpcore, arm926,
       # arm946, cortex-a15, cortex-a35, cortex-a53, cortex-a55, cortex-a57,
@@ -271,6 +274,7 @@ if ( QEMU_PROGRAM )
       # Multiple processors (commented until utilized).
       #-smp 4
       -m 512M
+      -device ramfb
     )
 
     if (NOT EXISTS "${REPO_DIR}/OVMFbin/OVMF_CODE-aarch64.fd")
@@ -327,30 +331,31 @@ if ( QEMU_PROGRAM )
   endif()
 
   # Hardware Acceleration
-  if ( CMAKE_HOST_WIN32 )
-    list( APPEND QEMU_FLAGS
-      -accel whpx
-    )
-  elseif( CMAKE_HOST_APPLE )
-    list( APPEND QEMU_FLAGS
-      -accel hvf
-    )
-  elseif( CMAKE_HOST_UNIX )
-    list( APPEND QEMU_FLAGS
-      -enable-kvm
-    )
-  endif()
+  # if ( CMAKE_HOST_WIN32 )
+  #   list( APPEND QEMU_FLAGS
+  #     -accel whpx
+  #   )
+  # elseif( CMAKE_HOST_APPLE )
+  #   list( APPEND QEMU_FLAGS
+  #     -accel hvf
+  #   )
+  # elseif( CMAKE_HOST_UNIX )
+  #   list( APPEND QEMU_FLAGS
+  #     -enable-kvm
+  #   )
+  # endif()
+  list( APPEND QEMU_FLAGS
+    -accel tcg,thread=multi
+  )
 
   # Audio/Speaker Setup
   if ( CMAKE_HOST_WIN32 )
     list( APPEND QEMU_FLAGS
       -audiodev dsound,id=audio0
-      -machine pcspk-audiodev=audio0
     )
   else()
     list( APPEND QEMU_FLAGS
       -audiodev pa,id=audio0
-      -machine pcspk-audiodev=audio0
     )
   endif()
 
@@ -374,11 +379,6 @@ if ( QEMU_PROGRAM )
     APPEND QEMU_FLAGS
     -drive if=pflash,format=raw,unit=0,file=${OVMF_CODE},readonly=on
     -drive if=pflash,format=raw,unit=1,file=${OVMF_VARS}
-  )
-  file(
-    COPY_FILE
-    "${REPO_DIR}/OVMFbin/OVMF_VARS-pure-efi.fd"
-    "${OVMF_VARS}"
   )
   set( FAT_BOOT_DIR "${IMAGE_DIR}/fat" )
   add_custom_target(

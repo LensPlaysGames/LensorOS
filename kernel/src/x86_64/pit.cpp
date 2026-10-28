@@ -51,16 +51,16 @@ usz PIT::milliseconds_since_boot() {
 void PIT::prepare_wait_milliseconds(usz ms) {
     TicksToWait = (ms * Time::nanoseconds_per_millisecond)
                   / Time::nanoseconds_per_tick();
-    std::print("[PIT]: Prepared wait for {} ticks\n", TicksToWait);
+    // std::print("[PIT]: Prepared wait for {} ticks\n", TicksToWait);
 }
 
 void PIT::wait() {
     u64 tickToWaitTo = Time::current_tick() + TicksToWait;
-    std::print(
-        "[PIT]: Waiting for {} ticks, current is {}, deadline is {}\n",
-        TicksToWait,
-        Time::current_tick(),
-        tickToWaitTo);
+    // std::print(
+    //     "[PIT]: Waiting for {} ticks, current is {}, deadline is {}\n",
+    //     TicksToWait,
+    //     Time::current_tick(),
+    //     tickToWaitTo);
     while (Time::current_tick() < tickToWaitTo)
         asm volatile("pause" ::: "memory");
 }

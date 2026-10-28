@@ -20,4 +20,6 @@
 #ifndef LENSOR_OS_AARCH64_INTERRUPTS_H
 #define LENSOR_OS_AARCH64_INTERRUPTS_H
 
+#include <interrupts/interrupts.h>
+
 #endif  // LENSOR_OS_AARCH64_INTERRUPTS_H

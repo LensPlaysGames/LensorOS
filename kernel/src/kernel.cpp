@@ -61,7 +61,7 @@ void print_memory_info(Vector2<u64>& position) {
 }
 
 void print_now(Vector2<u64>& position) {
-    Time::tm now;
+    Time::tm now{};
     Time::mktime(&now);
     u32 startOffset = position.x;
     gRend.puts(

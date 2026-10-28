@@ -88,6 +88,7 @@ elseif(${ARCH} MATCHES "aarch64")
   add_library(
     Assembly
     src/aarch64/prekernel.s
+    src/aarch64/scheduler.s
   )
 endif()
 
@@ -127,6 +128,7 @@ add_executable(
   src/system.cpp
   src/tests.cpp
   src/time.cpp
+  src/uart.cpp
   src/utf.cpp
   src/virtual_filesystem.cpp
 )
@@ -158,8 +160,11 @@ if (${ARCH} MATCHES "x86_64")
 elseif(${ARCH} MATCHES "aarch64")
   target_sources(
     Kernel PRIVATE
+    src/aarch64/cpu.cpp
     src/aarch64/device_tree_dump.cpp
     src/aarch64/kstage1.cpp
+    src/aarch64/time.cpp
+    src/aarch64/uart.cpp
   )
 endif()
 set_target_properties( Kernel PROPERTIES OUTPUT_NAME kernel.elf )

@@ -40,7 +40,6 @@ enum class Chip {
     _16750,
 } chip{Chip::NONE};
 
-namespace {
 void out_raw(u8 byte) {
     if (Initialized == false)
         return;
@@ -56,7 +55,6 @@ void out_raw(u8 byte) {
 
     out8(COM1, byte);
 }
-}  // namespace
 
 const char* get_uart_chip_name(Chip ch) {
     switch (ch) {
@@ -164,87 +162,4 @@ u8 read() {
     return data;
 }
 
-void out(u8 byte) {
-    if (byte == '\0') {
-        out_raw('\\');
-        out_raw('0');
-        // out_raw('N');
-        // out_raw('U');
-        // out_raw('L');
-    }
-    if (byte == '\n') out_raw('\r');
-    out_raw(byte);
-}
-
-void out(std::string_view str) {
-    if (Initialized == false)
-        return;
-
-    // Set current character to beginning of string.
-    const char* c = str.data();
-    // Check for null-terminator at current character.
-    while (*c != '\0') {
-#ifdef LENSOR_OS_UART_HIDE_COLOR_CODES
-        if (*c == '\033') {
-            // Loop until null terminator or 'm'.
-            do {
-                c++;
-            } while (*c != 'm' && *c != '\0');
-            // Don't read memory past null terminator!
-            if (*c == '\0')
-                return;
-            // Skip the 'm'.
-            c++;
-            if (*c == '\0')
-                return;
-        }
-#endif /* defined LENSOR_OS_UART_HIDE_COLOR_CODES */
-        out((u8)*c);
-        c++;
-    }
-}
-
-void out(const u8* str, u64 numberOfBytes) {
-    if (Initialized == false)
-        return;
-
-    /// Sanity check.
-    if (numberOfBytes > 1'000'000'000'000llu) {
-        std::print("[UART]: Refusing to output more than 1'000'000'000'000 bytes\n");
-        panic("Buffer overflow");
-        hang();
-    }
-
-    while (numberOfBytes > 0) {
-#ifdef LENSOR_OS_UART_HIDE_COLOR_CODES
-        if (*str == '\033') {
-            // Loop until no more chars or 'm'
-            do {
-                str++;
-                numberOfBytes--;
-            } while (*str != 'm' && numberOfBytes > 0);
-
-            if (numberOfBytes > 0) {
-                str++;
-                numberOfBytes--;
-            }
-
-            continue;
-        }
-#endif /* defined LENSOR_OS_UART_HIDE_COLOR_CODES */
-        out(*str);
-        str++;
-        numberOfBytes--;
-    }
-}
-
-void out(u64 number) {
-    out(std::to_string(number));
-}
-void out(u32 number) {
-    out(std::to_string(number));
-}
-void out(u16 number) {
-    out(std::to_string(number));
-}
 }  // namespace UART

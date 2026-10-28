@@ -22,6 +22,7 @@
 
 #include <integers.h>
 
+#include <format>
 #include <string_view>
 
 #define BAUD_FREQ 115200
@@ -40,8 +41,11 @@ const char* get_uart_chip_name(Chip);
 u8 read();
 
 // Write a singular byte verbatim to serial output.
+void out_raw(u8);
+
+// Write a singular character to serial output.
 void out(u8);
-inline void outc(char c) {
+static inline void outc(char c) {
     out((u8)c);
 }
 
@@ -50,9 +54,15 @@ void out(std::string_view str);
 // Write a number of bytes from a given buffer to serial output.
 void out(const u8* buffer, u64 numberOfBytes);
 // Write the given number as a string to serial output.
-void out(u64);
-void out(u32);
-void out(u16);
+static inline void out(u64 number) {
+    out(std::to_string(number));
+}
+static inline void out(u32 number) {
+    out(std::to_string(number));
+}
+static inline void out(u16 number) {
+    out(std::to_string(number));
+}
 
 }  // namespace UART
 

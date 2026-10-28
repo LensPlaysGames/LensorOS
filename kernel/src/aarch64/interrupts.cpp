@@ -18,3 +18,20 @@
  */
 
 #include <aarch64/interrupts.h>
+#include <interrupts/interrupts.h>
+
+extern "C" void end_of_interrupt(u8 irq) {
+    // TODO
+}
+void enable_interrupt(u8 irq) {
+    // TODO
+}
+void install_interrupt_handler(void* handler, u8 vector) {
+    // TODO
+}
+
+#include <e1000.h>
+void e1000_interrupt_handler() {
+    gE1000.handle_interrupt();
+    end_of_interrupt(gE1000.irq_number());
+}
