@@ -7,17 +7,19 @@
 #include <stdint.h>
 
 #define ENTRY_BASE_TYPE(NAME) void (*NAME)(uintptr_t base, BootInfo*)
-// TODO: Don't hard-code. Get from linker script or something.
-#define KERNEL_VIRTUAL 0xffffffff80000000
 
 #if defined(aarch64)
 #define HALT(...) __asm__ volatile("wfi")
 #define ENTRY_TYPE(NAME) ENTRY_BASE_TYPE(NAME)
 #define ELF_MACHINE EM_AARCH64
+// TODO: Don't hard-code. Get from linker script or something.
+#define KERNEL_VIRTUAL 0xffff000000000000
 #elif defined(x86_64)
 #define HALT(...) __asm__ volatile("hlt")
 #define ENTRY_TYPE(NAME) __attribute__((sysv_abi)) ENTRY_BASE_TYPE(NAME)
 #define ELF_MACHINE EM_X86_64
+// TODO: Don't hard-code. Get from linker script or something.
+#define KERNEL_VIRTUAL 0xffffffff80000000
 #endif
 
 #define V2P(ADDRESS) ((ADDRESS) - (KERNEL_VIRTUAL - kernel_info.base))
@@ -566,11 +568,12 @@ EFI_STATUS efi_main(EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     Print(L"Kernel entry point: 0x%x\n", kernel_info.entry);
     Print(L"Calculated kernel entry point: 0x%x\n", V2P(kernel_info.entry));
 
-    if (V2P(kernel_info.entry) < kernel_info.base
-        || V2P(kernel_info.entry) >= (kernel_info.base + kernel_info.size)) {
+    UINTN physical_kernel_entry = V2P(kernel_info.entry);
+    UINTN kernel_end = kernel_info.base + kernel_info.size;
+    if (physical_kernel_entry < kernel_info.base || physical_kernel_entry >= kernel_end) {
         Print(
-            L"!! Calculated kernel entry, 0x%x, is not within kernel region 0x%x -- 0x%x\n",
-            V2P(kernel_info.entry),
+            L"!! Calculated kernel entry, 0x%llx, is not within kernel region 0x%llx -- 0x%llx\n",
+            physical_kernel_entry,
             kernel_info.base,
             kernel_info.base + kernel_info.size);
         return EFI_LOAD_ERROR;
@@ -582,7 +585,7 @@ EFI_STATUS efi_main(EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST) {
     gBootServices->ExitBootServices(gImageHandle, Map.Key);
 
     // Define kernel entry point.
-    ENTRY_TYPE(KernelStart) = ((ENTRY_TYPE())V2P(kernel_info.entry));
+    ENTRY_TYPE(KernelStart) = ((ENTRY_TYPE())physical_kernel_entry);
     KernelStart(kernel_info.base, &info);
 
     // Once boot services have been exited, must never return!
