@@ -89,7 +89,7 @@ class basic_string_view {
         return __len;
     }
 
-   public:
+public:
     using const_iterator = const _Char*;
 
     static constexpr size_t npos = static_cast<size_t>(-1);
@@ -310,7 +310,7 @@ class basic_string {
         return (1 << (sizeof(size_t) - static_cast<size_t>(__builtin_clzll(size() + __n)))) * sizeof(_Char);
     }
 
-   public:
+public:
     using iterator = const char*;
 
     /// Invalid index.
@@ -571,6 +571,52 @@ class basic_string {
         delete[] __large.__data;
         __large.__data = __p;
         __large.__cap = __size + 1;
+    }
+
+    void resize(size_t __n, _Char __ch) {
+        auto __curr_size = size();
+
+        if (__n < __curr_size) {
+            // --- Truncation ---
+            if (not __is_large()) {
+                __small.__rem_cap = __max_chars_small - __n;
+                // Maintain null-terminator
+                __small.__data[__n] = _Char(0);
+            }
+            else {
+                __large.__sz = __n;
+                // Maintain null-terminator
+                __large.__data[__n] = _Char(0);
+            }
+        }
+        else if (__n > __curr_size) {
+            // --- Expansion ---
+
+            // Let reserve handle allocation and SSO transitions if needed
+            reserve(__n);
+
+            // Get the active data pointer based on the state after reserving
+            _Char* __p = (not __is_large())
+                             ? __small.__data
+                             : __large.__data;
+
+            // Fill the new slots with the padding character
+            for (size_t __i = __curr_size; __i < __n; ++__i)
+                __p[__i] = __ch;
+
+            // Update the size tracking and add the trailing null terminator
+            if (!__is_large())
+                __small.__rem_cap = __max_chars_small - __n;
+            else
+                __large.__sz = __n;
+
+            __p[__n] = _Char(0);
+        }
+        // NOTE: If __n == __curr_size, do nothing.
+    }
+
+    void resize(size_t __n) {
+        resize(__n, _Char(0));
     }
 
     basic_string& operator+=(const _Str& __s) {
