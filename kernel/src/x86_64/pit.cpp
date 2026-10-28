@@ -33,6 +33,7 @@ PIT::PIT() {
         Mode::RateGenerator,
         PIT_FREQUENCY);
     Frequency = PIT_FREQUENCY;
+    Time::set_frequency(PIT_FREQUENCY);
     configure_channel(
         Channel::Two,
         Access::HighAndLow,
@@ -48,22 +49,23 @@ usz PIT::milliseconds_since_boot() {
 }
 
 void PIT::prepare_wait_milliseconds(usz ms) {
-    TicksToWait = ms * Frequency / Time::milliseconds_per_second;
-    // std::print("[PIT]: Prepared wait for {} ticks\n", TicksToWait);
+    TicksToWait = (ms * Time::nanoseconds_per_millisecond)
+                  / Time::nanoseconds_per_tick();
+    std::print("[PIT]: Prepared wait for {} ticks\n", TicksToWait);
 }
 
 void PIT::wait() {
-    u64 tickToWaitTo = Ticks + TicksToWait;
-    // std::print(
-    //     "[PIT]: Waiting for {} ticks, current is {}, deadline is {}\n",
-    //     TicksToWait,
-    //     (size_t)Ticks,
-    //     tickToWaitTo);
-    while (Ticks < tickToWaitTo)
+    u64 tickToWaitTo = Time::current_tick() + TicksToWait;
+    std::print(
+        "[PIT]: Waiting for {} ticks, current is {}, deadline is {}\n",
+        TicksToWait,
+        Time::current_tick(),
+        tickToWaitTo);
+    while (Time::current_tick() < tickToWaitTo)
         asm volatile("pause" ::: "memory");
 }
 
-void PIT::wait_polling(usz milliseconds) {
+void PIT::wait_polling(usz milliseconds, Channel channel) {
     auto frequency = Time::milliseconds_per_second / milliseconds;
     // std::print("wait_polling({}ms): freq={}hz\n", milliseconds, frequency);
 
@@ -72,17 +74,21 @@ void PIT::wait_polling(usz milliseconds) {
 
     // Configure channel two for a one shot count down
     configure_channel(
-        Channel::Two,
+        channel,
         Access::HighAndLow,
         Mode::RateGenerator,
         frequency);
 
+    u8 channel_port = PIT_CH0_DAT;
+    if (channel == Channel::Two)
+        channel_port = PIT_CH2_DAT;
+
     uint16_t last_count = 0xffff;
     while (true) {
         // Channel 2 Counter Latch Command
-        out8(PIT_CMD, 0x80);
-        uint8_t lsb = in8(PIT_CH2_DAT);
-        uint8_t msb = in8(PIT_CH2_DAT);
+        out8(PIT_CMD, channel);
+        uint8_t lsb = in8(channel_port);
+        uint8_t msb = in8(channel_port);
         uint16_t current_count = (((uint16_t)msb) << 8) | lsb;
 
         // If the count jumps back up or passes zero, our window is finished

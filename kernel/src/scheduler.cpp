@@ -29,19 +29,16 @@
 #include <system.h>
 #include <time.h>
 #include <vfs_forward.h>
-#include <x86_64/hpet.h>
-#include <x86_64/idt.h>
-#include <x86_64/pit.h>
-#include <x86_64/rtc.h>
 
 #include <print>
 
 #ifdef x86_64
+#include <x86_64/hpet.h>
+#include <x86_64/idt.h>
+#include <x86_64/pit.h>
+#include <x86_64/rtc.h>
 #include <x86_64/tss.h>
 #endif
-
-/// External symbol definitions for `scheduler.asm`
-void (*timer_tick)();
 
 void Process::destroy(int status) {
     // std::print("Destroying process {}\n", ProcessID);
@@ -129,6 +126,7 @@ void print_debug() {
             (void*)process.CR3);
         if (cpu
             and uintptr_t(cpu) <= process.kernel_stack_top - sizeof(CPUState)) {
+#if defined(x86_64)
             std::print(
                 "      RAX:      {:#016x}\n"
                 "      RBX:      {:#016x}\n"
@@ -173,6 +171,12 @@ void print_debug() {
                 u64(cpu->Frame.flags),
                 u64(cpu->Frame.sp),
                 u64(cpu->Frame.ss));
+
+#elif defined(aarch64)
+            std::print("      TODO: aarch64 cpustate\n");
+#else
+#error "Unsupported architecture: kernel scheduler CPU debug print-out"
+#endif
         }
         else
             std::print("      No CPU State\n");
@@ -246,11 +250,13 @@ Process* request_process(pid_t parent_pid) {
     // Allocate process before cloning page table in case it causes
     // heap to expand.
     auto* process = new Process{};
+#ifdef x86_64
     if ((uintptr_t)&process->CPUExtra % 16 != 0) {
         std::print("[ELF]: Process allocated with invalid alignment (CPUExtra not 16-byte aligned).\n");
         delete process;
         return nullptr;
     }
+#endif
     process->ParentProcess = parent_pid;
     process->State = Process::ProcessState::SLEEPING;
     pid_t pid = Scheduler::add_process(process);
@@ -285,11 +291,6 @@ Process* request_process(pid_t parent_pid) {
 }
 
 bool initialize() {
-    // IRQ handler in assembly increments PIT ticks counter using this
-    // function.
-    // FIXME: This is a mess. why would we not just call it from C++...
-    timer_tick = pit_tick;
-
     // Setup currently executing code as the start process with PID 0.
     StartupProcess.ExecutablePath = "/efi/BOOT/LensorOS/kernel.elf";
     StartupProcess.CR3 = (Memory::memory_space_handle)Memory::active_page_map();
@@ -311,6 +312,7 @@ bool initialize() {
     /** TODO: fetch from somewhere in memory, set during timer init
      ** See x86_64/lapic.cpp for timer_vector
      **/
+
     u8 timer_vector = 0xf8;
     if constexpr (use_legacy_pic)
         timer_vector = PIC_IRQ0;
@@ -330,6 +332,7 @@ enum class IncludeGivenProcess {
 
 SinglyLinkedListNode<Process*>* find_next_viable_process_after(
     SinglyLinkedListNode<Process*>* startProcess,
+    size_t current_tick,
     IncludeGivenProcess include = IncludeGivenProcess::No) {
     auto* NextProcess = startProcess;
 
@@ -341,7 +344,7 @@ SinglyLinkedListNode<Process*>* find_next_viable_process_after(
         // Scheduled Wake Up Functionality
         if (candidate->State == Process::SLEEPING
             and candidate->WakeUpTick != 0
-            and gPIT.get() > candidate->WakeUpTick) {
+            and current_tick > candidate->WakeUpTick) {
             // std::print(
             //     "[SCHED]: unblocking process({}); waiting until tick {}, current tick {}\n",
             //     candidate->ProcessID,
@@ -364,12 +367,17 @@ SinglyLinkedListNode<Process*>* find_next_viable_process_after(
 SinglyLinkedListNode<Process*>* next_viable_process(
     SinglyLinkedListNode<Process*>* startProcess,
     IncludeGivenProcess include = IncludeGivenProcess::No) {
-    auto* NextProcess = find_next_viable_process_after(startProcess, include);
+    auto current_tick = Time::current_tick();
+    auto* NextProcess = find_next_viable_process_after(startProcess, current_tick, include);
     if (NextProcess == nullptr) {
-        NextProcess = find_next_viable_process_after(ProcessQueue->head(), IncludeGivenProcess::Yes);
+        NextProcess = find_next_viable_process_after(
+            ProcessQueue->head(),
+            current_tick,
+            IncludeGivenProcess::Yes);
         if (NextProcess == nullptr) {
             // Process list has zero viable processes.
             // FIXME: I honestly don't know how to handle this correctly.
+            // Maybe we give the user an option to start up an init process? I dunno.
             std::print("[SCHED]: I don't know what to do when there are no processes!\n");
             // Hang forever.
             hang();
@@ -382,6 +390,7 @@ SinglyLinkedListNode<Process*>* next_viable_process(
 /// A stupid simple round-robin process switcher.
 extern "C" Process* switch_process(CPUState* cpu) {
     // std::print("switch_process()...\n");
+    Time::do_tick();
 
     // Save address of stack frame
     if (CurrentProcess and CurrentProcess->value()) {
@@ -414,10 +423,12 @@ extern "C" Process* switch_process(CPUState* cpu) {
     // CurrentProcess.
     // std::print("[SCHED]: Switching to process {}\n", CurrentProcess->value()->ProcessID);
 
+#if defined(x86_64)
     // Update kernel stack that will be returned to with this process' saved
     // kernel stack.
     // std::print("  Setting TSS RSP to 0x{:016x} (was 0x{:016x})\n", CurrentProcess->value()->kernel_stack_top, TSS::tssEntry.get_stack());
     TSS::tssEntry.set_stack(CurrentProcess->value()->kernel_stack_top);
+#endif
 
     // std::print("Kernel Stack: 0x{:016x}\n", CurrentProcess->value()->kernel_stack);
     // std::print(
@@ -428,19 +439,6 @@ extern "C" Process* switch_process(CPUState* cpu) {
 
     // std::print("switch_process() done...\n");
     return CurrentProcess->value();
-}
-
-size_t current_tick() {
-    // TODO: Pick a timer more better
-    return gPIT.get();
-    // return gRTC.Ticks;
-    // return gHPET.get();
-}
-size_t tick_nanosecond_duration() {
-    // TODO: Pick a timer more better
-    return Time::frequency_to_nanosecond_duration(PIT_FREQUENCY);
-    // return Time::frequency_to_nanosecond_duration(RTC_PERIODIC_HERTZ);
-    // return Time::frequency_to_nanosecond_duration(gHPET.frequency());
 }
 
 }  // namespace Scheduler

@@ -223,9 +223,6 @@ struct Process {
     void destroy(int status);
 };
 
-/// External symbols for 'scheduler.asm', defined in `scheduler.cpp`
-extern void (*timer_tick)();
-
 #ifdef x86_64
 // For switch_context_asm in scheduler.asm
 static_assert(offsetof(Process, kernel_stack) == 64);
@@ -243,9 +240,6 @@ extern SinglyLinkedListNode<Process*>* CurrentProcess;
 extern std::vector<Memory::PageTable*> PageMapsToFree;
 
 extern Process StartupProcess;
-
-size_t current_tick();
-size_t tick_nanosecond_duration();
 
 extern "C" void yield();
 

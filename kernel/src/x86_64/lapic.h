@@ -202,7 +202,8 @@ struct LAPIC {
     // Timer tick value
     size_t get();
 
-    uint64_t id() { return Id; }
+    uint64_t id() const { return Id; }
+    uint64_t frequency() const { return ProgrammedFrequency; }
 
     bool init();
 
@@ -218,6 +219,7 @@ struct LAPIC {
 
 private:
     uint64_t Id{0};
+    uint64_t ProgrammedFrequency{1};
     uintptr_t Base{0};
     unsigned int MaxLVTCount{0xff};
     bool bootstrap{};

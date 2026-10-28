@@ -18,8 +18,6 @@
 
 [BITS 64]
 
-;; A pointer to a function that increments timer ticks by one.
-extern timer_tick
 ;; A function that tells hardware the interrupt has been handled
 extern end_of_interrupt
 ;; The unified C++ scheduling logic
@@ -108,12 +106,6 @@ irq0_handler:
     push rdx
     push rcx
     push rbx
-    push rsp
-
-    ; FIXME: 16-byte stack alignment?
-    call [rel timer_tick]
-
-    pop rsp
     push rsp
 
     ; --- HAND CONTROL TO THE SCHEDULER ---

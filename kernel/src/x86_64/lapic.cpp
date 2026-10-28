@@ -355,13 +355,6 @@ void LAPIC::init_interrupt() {
 
     std::print("[LAPIC Timer]: ticks per ms={}  freq={}hz\n", ticks_per_millisecond, frequency);
 
-    // unmask APIC system timer interrupt
-    gIOAPIC.enable_irq(0, timer_vector);
-    // unmask timer interrupt
-    write(
-        LAPIC_REGOFFSET_LVT_TIMER,
-        LAPIC_LVT_TIMER_PERIODIC | timer_vector);
-
     constexpr uint32_t milliseconds_per_timeslice = 20;
     const uint32_t ticks_per_timeslice = ticks_per_millisecond * milliseconds_per_timeslice;
     const uint32_t programmed_tick_frequency = Time::milliseconds_per_second / milliseconds_per_timeslice;
@@ -371,8 +364,19 @@ void LAPIC::init_interrupt() {
         milliseconds_per_timeslice,
         programmed_tick_frequency);
 
-    // timer_tick still updates gPIT.Ticks ... update frequency.
-    gPIT.Frequency = programmed_tick_frequency;
+    ProgrammedFrequency = programmed_tick_frequency;
+    // We have bullied/stolen the system timer, so we must update the time
+    // subsystem.
+    Time::set_frequency(programmed_tick_frequency);
+
+    gIOAPIC.enable_irq(0, timer_vector);
+    // mask IRQ0; the LAPIC is wired directly to the CPU and *does not* pass
+    // through the I/O APIC or IRQ lines or anything.
+    gIOAPIC.disable_irq(0);
+    // unmask timer interrupt
+    write(
+        LAPIC_REGOFFSET_LVT_TIMER,
+        LAPIC_LVT_TIMER_PERIODIC | timer_vector);
 
     // time slice...
     write(

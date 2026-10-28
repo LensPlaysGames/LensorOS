@@ -57,7 +57,7 @@
  *     1 1 =      low/high
  *   Select Channel:
  *     0 0 =      channel 0
- *     0 1 =      channel 1
+ *     0 1 =      channel 1 (DO NOT USE THIS. EVER!)
  *     1 0 =      channel 2
  *     1 1 =      read-back command (8254 only)
  */
@@ -68,14 +68,6 @@
  * `- Implement Read-Back command support.
  */
 class PIT {
-    // IO Port of PIT channel
-    // Channel One is not guaranteed to be
-    //   implemented, especially on modern hardware.
-    enum Channel {
-        Zero = 0b00000000,
-        Two = 0b10000000,
-    };
-
     enum Access {
         LatchCount = 0b00000000,
         LowOnly = 0b00010000,
@@ -92,7 +84,22 @@ class PIT {
         HardwareStrobe = 0b00001010,
     };
 
-   public:
+public:
+    // IO Port of PIT channel
+    // Channel One is RESERVED.
+    //   Old IBM PCs uses channel one as "DMA Refresh", and it was hard-wired
+    //   directly to the memory controller in order to keep DRAM voltages within
+    //   acceptable levels, telling the controller to perform a "dummy read" to
+    //   bring the memory capacitors back up to charge.
+    // Obviously, since 1985, this hasn't been the case, but Intel's 386-and-
+    // on line of CPUs is famously backward compatible (thanks to AMD).
+    // Channel One is not guaranteed to be
+    //   implemented, especially on modern hardware.
+    enum Channel {
+        Zero = 0b00000000,
+        Two = 0b10000000,
+    };
+
     PIT();
 
     usz Frequency{PIT_FREQUENCY};
@@ -115,9 +122,9 @@ class PIT {
     void wait();
 
     // NOTE: milliseconds must be < 55.
-    void wait_polling(usz milliseconds);
+    void wait_polling(usz milliseconds, Channel = Channel::Two);
 
-   private:
+private:
     /// Incremented by IRQ0 interrupt handler.
     volatile usz Ticks{0};
     /* `wait()` stops spinning as soon `Ticks` reaches

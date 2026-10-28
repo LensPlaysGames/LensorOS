@@ -29,11 +29,21 @@
 #include <memory/physical_memory_manager.h>
 #include <memory/virtual_memory_manager.h>
 #include <scheduler.h>
-#include <x86_64/hpet.h>
-#include <x86_64/pit.h>
-#include <x86_64/rtc.h>
+#include <time.h>
 
 #include <print>
+
+#if defined(x86_64)
+#define DISABLE_INTERRUPTS asm volatile("cli")
+#define ENABLE_INTERRUPTS asm volatile("sti")
+#elif defined(aarch64)
+#define DISABLE_INTERRUPTS                                     \
+    uint64_t __flags;                                          \
+    asm volatile("mrs %0, daif" : "=r"(__flags) : : "memory"); \
+    asm volatile("msr daifset, #3" : : : "memory");
+#define ENABLE_INTERRUPTS \
+    asm volatile("msr daif, %0" : : "r"(__flags) : "memory");
+#endif
 
 void print_memory_info(Vector2<u64>& position) {
     u32 startOffset = position.x;
@@ -51,18 +61,19 @@ void print_memory_info(Vector2<u64>& position) {
 }
 
 void print_now(Vector2<u64>& position) {
-    const RTCData& tm = gRTC.Time;
+    Time::tm now;
+    Time::mktime(&now);
     u32 startOffset = position.x;
     gRend.puts(
         position,
         std::format(
             "Now is {}:{}:{} on {}/{}/{}",
-            tm.hour,
-            tm.minute,
-            tm.second,
-            tm.date,
-            tm.month,
-            tm.year));
+            now.hours,
+            now.minutes,
+            now.seconds,
+            now.day_of_month,
+            now.month + 1,
+            now.years_since_1900 + 1900));
     gRend.crlf(position, startOffset);
 }
 
@@ -73,11 +84,10 @@ extern "C" void kregulate() {
     for (;;) {
         // Free pages which previously housed page maps (or portions thereof).
         if (Scheduler::PageMapsToFree.size() > 15) {
-            // TODO: Abstract x86_64
             // Disable interrupts; we do this to prevent a timer interrupt causing a
             // yield away from this thread, which could invalidate the iterator in the
             // following loop.
-            asm volatile("cli");
+            DISABLE_INTERRUPTS;
             std::print("[KERNEL]: Disabled interrupts; freeing {} page tables\n", Scheduler::PageMapsToFree.size());
 
             for (Memory::PageTable* table : Scheduler::PageMapsToFree) {
@@ -88,10 +98,9 @@ extern "C" void kregulate() {
             // Once we free a page map, we no longer need to free it.
             Scheduler::PageMapsToFree.clear();
 
-            // TODO: Abstract x86_64
             // Enable interrupts (allow yielding away as it now won't cause iterator invalidation or anything)
             std::print("[KERNEL]: Enabling interrupts after freeing page tables\n");
-            asm volatile("sti");
+            ENABLE_INTERRUPTS;
         }
 
         Scheduler::yield();

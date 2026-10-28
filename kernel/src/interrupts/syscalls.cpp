@@ -46,8 +46,6 @@
 #include <time.h>
 #include <vfs_forward.h>
 #include <virtual_filesystem.h>
-#include <x86_64/pit.h>
-#include <x86_64/rtc.h>
 
 #include <algorithm>
 #include <memory>
@@ -59,6 +57,15 @@
 #define DBGMSG(...) std::print(__VA_ARGS__)
 #else
 #define DBGMSG(...)
+#endif
+
+#if defined(x86_64)
+#define FETCH_CPUSTATE(cpu_ptr) asm volatile("mov %%r11, %0\n" : "=r"(cpu_ptr));
+#elif defined(aarch64)
+#define FETCH_CPUSTATE(cpu_ptr) /** (!) TODO (!) **/
+
+#else
+#error "Kernel Syscalls: CPUState* Fetcher for architecture"
 #endif
 
 /// SYSCALL NAMING SCHEME:
@@ -475,8 +482,7 @@ int sys$9_waitpid(pid_t pid, int* status) {
 /// zero, parent gets child's PID).
 pid_t sys$10_fork() {
     CPUState* cpu = nullptr;
-    asm volatile("mov %%r11, %0\n"
-                 : "=r"(cpu));
+    FETCH_CPUSTATE(cpu);
 
     DBGMSG(sys$_dbgfmt, 10, "fork");
 
@@ -505,8 +511,7 @@ pid_t sys$10_fork() {
 // FIXME: This really needs to be updated to a type-safe API. This stinks like scanf().
 void sys$11_exec(const char* path, const char** args) {
     CPUState* cpu = nullptr;
-    asm volatile("mov %%r11, %0\n"
-                 : "=r"(cpu));
+    FETCH_CPUSTATE(cpu);
 
     DBGMSG(sys$_dbgfmt, 11, "exec");
 
@@ -1292,7 +1297,7 @@ void sys$30_wait_milliseconds(usz milliseconds) {
     // ticks = PIT_FREQUENCY * milliseconds / 1000;
     const size_t wait_ticks
         = Time::milliseconds_to_nanoseconds(milliseconds)
-          / Scheduler::tick_nanosecond_duration();
+          / Time::nanoseconds_per_tick();
     if (wait_ticks == 0) return;
     // Register wake up event with scheduler before going to sleep
     // - add us to scheduler wake up later list, go to sleep, and yield.
@@ -1300,7 +1305,7 @@ void sys$30_wait_milliseconds(usz milliseconds) {
     auto* process = Scheduler::CurrentProcess->value();
     // - get current scheduler time tick
     // - add (milliseconds / milliseconds_per_scheduler_time_tick)
-    process->WakeUpTick = Scheduler::current_tick() + wait_ticks;
+    process->WakeUpTick = Time::current_tick() + wait_ticks;
     process->State = Process::SLEEPING;
     // Sayonara!
     Scheduler::yield();
@@ -1309,12 +1314,12 @@ void sys$30_wait_milliseconds(usz milliseconds) {
 void sys$31_wait_nanoseconds(usz nanoseconds) {
     DBGMSG(sys$_dbgfmt, 31, "wait_nanoseconds");
     const size_t wait_ticks
-        = nanoseconds / Scheduler::tick_nanosecond_duration();
+        = nanoseconds / Time::nanoseconds_per_tick();
     // TODO: If waiting for zero ticks, might as well just block within this
     // thread.
     // TODO: Use high precision timer and countdown value for precise wait.
     auto* process = Scheduler::CurrentProcess->value();
-    process->WakeUpTick = Scheduler::current_tick() + wait_ticks;
+    process->WakeUpTick = Time::current_tick() + wait_ticks;
     process->State = Process::SLEEPING;
     Scheduler::yield();
     return;
@@ -1394,7 +1399,7 @@ u64 sys$33_current_millisecond(hardware_query_type_t t, void* out) {
     // FIXME: Not actually the PIT; hacky thing where whatever timer is
     // running sets gPIT frequency and ticks...
     return Time::unix_boot_time * Time::milliseconds_per_second
-           + gPIT.milliseconds_since_boot();
+           + Time::milliseconds_since_boot();
 }
 
 // TODO: Reorder this

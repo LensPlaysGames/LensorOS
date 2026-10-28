@@ -150,6 +150,7 @@ if (${ARCH} MATCHES "x86_64")
     src/x86_64/lapic.cpp
     src/x86_64/pit.cpp
     src/x86_64/rtc.cpp
+    src/x86_64/time.cpp
     src/x86_64/tss.cpp
     src/x86_64/uart.cpp
   )
