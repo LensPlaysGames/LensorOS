@@ -30,8 +30,10 @@ typedef struct {
     /// Linear Pixel Framebuffer
     Framebuffer* framebuffer;
 
-    ACPI::RSDP2* rsdp; /**< Firmware device description. **/
-                       /**< RSDP, Device Tree Blob, etc. **/
+    /** Firmware device description.
+     ** RSDP, Device Tree Blob, etc.
+     **/
+    void* devices;
 
     usz base;        /**< Base address of loaded kernel image. **/
     PSF1_FONT* font; /**< Base address of loaded PSF font. **/

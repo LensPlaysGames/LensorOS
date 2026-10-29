@@ -247,18 +247,16 @@ map_l3_loop:
 
     // Map 32 sequential 2MB blocks (64MiB total) into k_l2_ram page
     mov     x14, #0   // Loop counter
-    mov     x13, #32  // 32 iterations
     mov     x7, xzr   // Physical frame pointer starting at 0x00000000
-    mov     x8, #0    // Entry index tracking inside k_l2_ram
 ram_map_loop:
     mov     x4, #0x0705
     orr     x4, x7, x4
-    str     x4, [x12, x8, lsl #3]       // Safely populated without scratching kernel code mappings
+    str     x4, [x12, x14, lsl #3]
+
     add     x7, x7, #0x00200000         // Jump base PA forward by 2MB
-    add     x8, x8, #1                  // Advance to next descriptor index slot
     add     x14, x14, #1
-    cmp     x14, x13
-    b.ne    ram_map_loop
+    cmp     x14, #32
+    b.lt    ram_map_loop
 
 
     // ------------------------------------------------------------------------

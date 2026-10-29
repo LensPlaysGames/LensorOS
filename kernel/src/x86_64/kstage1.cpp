@@ -618,7 +618,7 @@ void kstage2(BootInfo* bInfo) {
     probe_cpu();
 
     // Initialize Advanced Configuration and Power Management Interface.
-    ACPI::initialize(bInfo->rsdp);
+    ACPI::initialize((ACPI::RSDP2*)bInfo->devices);
 
     // Find Memory-mapped ConFiguration Table in order to find PCI devices.
     // Storage devices like AHCIs will be detected here.
@@ -1048,7 +1048,7 @@ void kstage1(uintptr_t base, BootInfo* bInfo) {
     bInfo->font = (PSF1_FONT*)Memory::FROM_FRAME_POINTER(PhysicalAddress(bInfo->font)).address;
     bInfo->font->GlyphBuffer = (PSF1_FONT*)Memory::FROM_FRAME_POINTER(PhysicalAddress(bInfo->font->GlyphBuffer)).address;
     bInfo->font->PSF1_Header = (PSF1_HEADER*)Memory::FROM_FRAME_POINTER(PhysicalAddress(bInfo->font->PSF1_Header)).address;
-    bInfo->rsdp = (ACPI::RSDP2*)Memory::FROM_FRAME_POINTER(PhysicalAddress(bInfo->rsdp)).address;
+    bInfo->devices = (void*)Memory::FROM_FRAME_POINTER(PhysicalAddress(bInfo->devices)).address;
 
     kstage2(bInfo);
 }

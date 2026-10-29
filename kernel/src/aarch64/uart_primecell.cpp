@@ -17,32 +17,56 @@
  * along with LensorOS. If not, see <https://www.gnu.org/licenses
  */
 
+#include <stdint.h>
 #include <uart.h>
 
 namespace UART {
+uintptr_t Base{0};
 bool Initialized{false};
 bool initialized() {
-    return Initialized;
+    return Initialized and Base != 0;
 };
 
-void initialize();
+void initialize() {
+    Initialized = true;
+}
 
-enum class Chip;
-const char* get_uart_chip_name(Chip);
+// UART data register
+volatile uint8_t* uartdr() { return (uint8_t*)(Base + 0); }
+// UART flags register
+volatile uint32_t* uartfr() { return (uint32_t*)(Base + 12); }
 
 // Called from the UART interrupt handler when data is received.
 uint8_t read() {
     if (not initialized()) return 0;
 
-    uint8_t r{};
-    return r;
+    uint maxSpins = 1000000u;
+    // bit 6 -- receive FIFO empty
+    while ((*uartfr() & (1u << 6)) and maxSpins > 0)
+        maxSpins--;
+
+    if (maxSpins == 0)
+        return 0;
+
+    return *uartdr();
 }
 
 void out_raw(uint8_t byte) {
     if (initialized() == false)
         return;
 
-    // TODO
+    // Wait for UART chip to empty it's transmit buffer before potentially
+    // over-writing data that was not yet sent, or causing a "FIFO written
+    // while full" error.
+    uint maxSpins = 1000000u;
+    // bit 5 -- transmit FIFO full
+    while ((*uartfr() & (1u << 5)) and maxSpins > 0)
+        maxSpins--;
+
+    if (maxSpins == 0)
+        return;
+
+    *uartdr() = byte;
 }
 
 }  // namespace UART
