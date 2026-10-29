@@ -127,6 +127,8 @@ struct fdt_structure_parse_context {
             return;
         }
 
+        hang();
+
         auto token = big_endian_to_cpu(*(u32*)(structure + offset));
         offset += sizeof(u32);  // eat token
 
@@ -192,8 +194,6 @@ void parse_device_tree(fdt_header* dt) {
     auto structure_byte_size = big_endian_to_cpu(dt->size_dt_struct);
     auto strings_byte_size = big_endian_to_cpu(dt->size_dt_strings);
 
-    hang();
-
     auto parse_context = fdt_structure_parse_context(
         structure,
         strings,
@@ -208,6 +208,7 @@ void parse_device_tree(fdt_header* dt) {
     // For example, the aobus is @c8100000, and the UART is @4c0 within it.
     // If we just tried to use the "reg" from the UART, we'd be writing to the
     // WRONG memory address, by like a lot.
+    // By walking the frames, we would get the appropriate address @c81004c0.
     struct stackframe {
         uintptr_t address{0};
         uintptr_t size{0};
