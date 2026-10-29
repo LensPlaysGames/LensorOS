@@ -27,14 +27,24 @@ bool initialized() {
     return Initialized and Base != 0;
 };
 
+// UART data register
+volatile uint32_t* uartdr() { return (uint32_t*)(Base + 0); }
+// UART flags register
+volatile uint32_t* uartfr() { return (uint32_t*)(Base + 0x18); }
+// UART line control register
+volatile uint32_t* uartlcr() { return (uint32_t*)(Base + 0x2c); }
+// UART control register
+volatile uint32_t* uartcr() { return (uint32_t*)(Base + 0x30); }
+
+static constexpr uint32_t CR_TXEN = (1 << 8);
+static constexpr uint32_t CR_UARTEN = (1 << 0);
+
+static constexpr uint32_t LCR_FEN = (1 << 4);
+static constexpr uint32_t LCR_STP2 = (1 << 3);
+
 void initialize() {
     Initialized = true;
 }
-
-// UART data register
-volatile uint8_t* uartdr() { return (uint8_t*)(Base + 0); }
-// UART flags register
-volatile uint32_t* uartfr() { return (uint32_t*)(Base + 12); }
 
 // Called from the UART interrupt handler when data is received.
 uint8_t read() {
