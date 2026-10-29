@@ -189,6 +189,7 @@ zero_all_tables:
     // ------------------------------------------------------------------------
     // Configure TTBR0: 4-Level Identity Map
     // ------------------------------------------------------------------------
+    // Target 1: Kernel Image (x0)
     // Link Level 0 -> Level 1
     lsr     x13, x0, #39                // Level 0 bits: [47:39]
     and     x13, x13, #0x1ff
@@ -202,10 +203,29 @@ zero_all_tables:
     str     x4, [x2, x13, lsl #3]
 
     // Drop 2MB Block Descriptor into Level 2
-    lsr     x13, x0, #21        // Level 2 bits: [29:21]
+    lsr     x13, x0, #21                // Level 2 bits: [29:21]
     and     x13, x13, #0x1ff
-    mov     x4, #0x0705         // Normal Memory block attributes
-    orr     x4, x0, x4 // Output physical matched perfectly to virtual
+    mov     x4, #0x0705                 // Normal Memory block attributes
+    orr     x4, x0, x4                  // Output physical matched perfectly to virtual
+    str     x4, [x3, x13, lsl #3]
+
+    // Target 2: Device Tree Blob
+    ldr     x0, [x25, #8]       // Load device tree pointer into x0
+
+    // Align x0 down to 1GB boundary
+    bic     x0, x0, #0x3fffffff   // 0x3fffffff covers 30 bits
+
+    // Link Level 0 -> Level 1
+    lsr     x13, x0, #39        // Level 0 bits: [47:39]
+    and     x13, x13, #0x1ff
+    orr     x4, x2, #0x3        // Table descriptor flag
+    str     x4, [x1, x13, lsl #3]
+
+    // Drop 1GB Block Descriptor into Level 1
+    lsr     x13, x0, #30        // Level 1 bits: [38:30]
+    and     x13, x13, #0x1ff
+    mov     x4, #0x0705
+    orr     x4, x0, x4
     str     x4, [x3, x13, lsl #3]
 
     // ------------------------------------------------------------------------
@@ -369,6 +389,8 @@ kernel_virtual_entry:
     // isb
 
     // Call your C/C++ kernel main function
+    mov x0, x19
+    mov x1, x25
     bl kmain
 
 /*
