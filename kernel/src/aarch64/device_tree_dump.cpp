@@ -187,17 +187,20 @@ struct fdt_structure_parse_context {
 // (like uart device so we can setup printing, and dump the device tree)
 void parse_device_tree(fdt_header* dt) {
     auto* base = (u8*)dt;
-    hang();
     auto* strings = base + big_endian_to_cpu(dt->off_dt_strings);
     auto* structure = base + big_endian_to_cpu(dt->off_dt_struct);
     auto structure_byte_size = big_endian_to_cpu(dt->size_dt_struct);
     auto strings_byte_size = big_endian_to_cpu(dt->size_dt_strings);
+
+    hang();
 
     auto parse_context = fdt_structure_parse_context(
         structure,
         strings,
         structure_byte_size,
         strings_byte_size);
+
+    hang();
 
     // we get a "reg", we record the address in a stack.
     // whenever we want to actually know what a particular "reg" refers to, we
