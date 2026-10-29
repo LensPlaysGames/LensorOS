@@ -261,8 +261,9 @@ if ( QEMU_PROGRAM )
 
   elseif(${ARCH} MATCHES "aarch64")
     list( APPEND QEMU_FLAGS
-      -machine virt
+      -machine virt,acpi=off
       -nodefaults
+      -monitor vc
       # CPU:
       # a64fx, arm1026, arm1136, arm1136-r2, arm1176, arm11mpcore, arm926,
       # arm946, cortex-a15, cortex-a35, cortex-a53, cortex-a55, cortex-a57,
