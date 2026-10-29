@@ -52,9 +52,9 @@ struct fdt_stringlist {
         if (offset >= size) return {};
         current = base + offset;
         const auto out = current;
-        const auto length = strlen(current);
-        offset += length + 1;
-        return std::string_view(out, length);
+        const auto length = cstring_length(current);
+        offset += length;
+        return std::string_view(out, length - 1);
     }
 };
 
@@ -68,29 +68,34 @@ struct fdt_property_value {
     fdt_property_value(u32 data_size, const char* name, const u8* data)
         : name(name)
         , data(data)
-        , name_length(strlen(name))
+        , name_length(cstring_length(name) - 1)
         , data_byte_size(data_size) {};
 
+    std::string_view name_string() {
+        return std::string_view(name, name_length);
+    }
+
     /// <u32> property type
-    u32 as_u32() {
+    u32 as_u32() const {
         return data_byte_size == sizeof(u32) ? big_endian_to_cpu(*(u32*)data) : 0;
     }
-    u32 as_phandle() { return as_u32(); }
+    u32 as_phandle() const { return as_u32(); }
     /// <u64> property type
-    u32 as_u64() {
+    u32 as_u64() const {
+        // TODO: does this have to be split into two u32 reads?
         return data_byte_size == sizeof(u64) ? big_endian_to_cpu(*(u64*)data) : 0;
     }
     /// <string> property type
-    std::string_view as_string() {
+    std::string_view as_string() const {
         return std::string_view((char*)data, data_byte_size);
     }
     /// <stringlist> property type
-    fdt_stringlist as_stringlist() {
+    fdt_stringlist as_stringlist() const {
         return fdt_stringlist(data, data_byte_size);
     }
     /// <prop-encoded-array> property type
     /// data format is specific to property
-    std::span<u8> as_prop_encoded_array() {
+    std::span<u8> as_prop_encoded_array() const {
         return std::span((u8*)data, data_byte_size);
     }
 };
@@ -122,56 +127,73 @@ struct fdt_structure_parse_context {
     }
 
     void next_token() {
-        if (offset >= structure_byte_size) {
+        current = {};
+
+        if (offset + sizeof(u32) > structure_byte_size) {
             current.type = FDTTokenType::END;
             return;
         }
 
-        hang();
+        while (true) {
+            auto token = big_endian_to_cpu(*(u32*)(structure + offset));
+            offset += sizeof(u32);  // eat token
 
-        auto token = big_endian_to_cpu(*(u32*)(structure + offset));
-        offset += sizeof(u32);  // eat token
+            switch (token) {
+                default:
+                case FDT_END:
+                    current.type = FDTTokenType::END;
+                    return;
 
-        switch (token) {
-            default:
-            case FDT_END:
-                current.type = FDTTokenType::END;
-                return;
+                case FDT_NOP:
+                    continue;
 
-            case FDT_NOP:
-                next_token();
-                return;
+                case FDT_BEGIN_NODE: {
+                    current.type = FDTTokenType::BEGIN_NODE;
+                    current.name = (char*)(structure + offset);
+                    offset += cstring_length(current.name);
+                    // 4-byte align
+                    offset = (offset + 3) & ~usz(3);
+                    return;
+                }
 
-            case FDT_BEGIN_NODE: {
-                current.type = FDTTokenType::BEGIN_NODE;
-                current.name = (char*)(structure + offset);
-                offset += strlen(current.name) + 1;
-                // 4-byte align
-                offset = (offset + 3) & ~usz(3);
-            } break;
+                case FDT_END_NODE:
+                    current.type = FDTTokenType::END_NODE;
+                    return;
 
-            case FDT_END_NODE:
-                current.type = FDTTokenType::END_NODE;
-                break;
+                case FDT_PROP: {
+                    if (offset + sizeof(fdt_property_header) > structure_byte_size) {
+                        current.type = FDTTokenType::END;
+                        return;
+                    }
 
-            case FDT_PROP: {
-                current.type = FDTTokenType::PROPERTY;
-                auto* property
-                    = (fdt_property_header*)(structure + offset);
-                offset += sizeof(fdt_property_header);
-                auto* value = structure + offset;
-                auto property_length = big_endian_to_cpu(property->length);
-                offset += property_length;
-                // 4-byte align
-                offset = (offset + 3) & ~usz(3);
-                auto* name
-                    = (const char*)(strings + big_endian_to_cpu(property->name_offset));
+                    auto* property
+                        = (fdt_property_header*)(structure + offset);
+                    offset += sizeof(fdt_property_header);
 
-                current.property = fdt_property_value(
-                    property_length,
-                    name,
-                    value);
-            } break;
+                    auto property_length = big_endian_to_cpu(property->length);
+                    auto property_name_offset = big_endian_to_cpu(property->name_offset);
+
+                    if (offset + property_length > structure_byte_size) {
+                        current.type = FDTTokenType::END;
+                        return;
+                    }
+
+                    auto* value = structure + offset;
+                    offset += property_length;
+                    offset = (offset + 3) & ~usz(3);  // 4-byte align
+
+                    auto* name = "";
+                    if (property_name_offset < strings_byte_size)
+                        name = (const char*)(strings + property_name_offset);
+
+                    current.type = FDTTokenType::PROPERTY;
+                    current.property = fdt_property_value(
+                        property_length,
+                        name,
+                        value);
+                    return;
+                }
+            }
         }
     }
 };
@@ -188,6 +210,8 @@ struct fdt_structure_parse_context {
 // - network interface card (nic), "ethmac"
 // (like uart device so we can setup printing, and dump the device tree)
 void parse_device_tree(fdt_header* dt) {
+    if (dt == nullptr) return;
+
     auto* base = (u8*)dt;
     auto* strings = base + big_endian_to_cpu(dt->off_dt_strings);
     auto* structure = base + big_endian_to_cpu(dt->off_dt_struct);
@@ -200,8 +224,6 @@ void parse_device_tree(fdt_header* dt) {
         structure_byte_size,
         strings_byte_size);
 
-    hang();
-
     // we get a "reg", we record the address in a stack.
     // whenever we want to actually know what a particular "reg" refers to, we
     // can walk the stack to calculate address ranges appropriately.
@@ -210,43 +232,65 @@ void parse_device_tree(fdt_header* dt) {
     // WRONG memory address, by like a lot.
     // By walking the frames, we would get the appropriate address @c81004c0.
     struct stackframe {
+        // keep track of node's address
         uintptr_t address{0};
         uintptr_t size{0};
-        // for decoding next "reg" entries
-        uint16_t address_cells{2};  // 4-byte cells
-        uint16_t size_cells{2};     // 4-byte cells
+
+        // for adusting child addresses
+        uintptr_t range_address{0};
+        uintptr_t translate_address{0};
+        uintptr_t range_size{0};
+
+        // for decoding *child* "reg" entries
+        uint address_cells{2};  // # of 4-byte cells
+        uint size_cells{2};     // # of 4-byte cells
+
+        bool has_range{false};
     };
+
     stackframe fdtstack[24]{};
     size_t current_fdtstack_index{0};
 
     bool within_uart{false};
     while ((int)parse_context.current.type != FDT_END) {
         if ((int)parse_context.current.type == FDT_BEGIN_NODE) {
-            fdtstack[current_fdtstack_index++] = {};
+            ++current_fdtstack_index;
+            fdtstack[current_fdtstack_index] = {};
             within_uart = false;
+
+            auto& new_frame = fdtstack[current_fdtstack_index];
+            auto& parent_frame = fdtstack[current_fdtstack_index - 1];
+            new_frame.address_cells = parent_frame.address_cells;
+            new_frame.size_cells = parent_frame.size_cells;
         }
 
         else if ((int)parse_context.current.type == FDT_END_NODE) {
             if (within_uart) {
-                uintptr_t uart_base_address{};
-                for (size_t i = current_fdtstack_index; i; --i)
-                    uart_base_address += fdtstack[i].address;
+                uintptr_t uart_base_address = fdtstack[current_fdtstack_index].address;
+
+                for (size_t i = current_fdtstack_index; i > 1; --i) {
+                    auto& parent_frame = fdtstack[i - 1];
+                    if (
+                        parent_frame.has_range
+                        and uart_base_address >= parent_frame.range_address
+                        and uart_base_address < (parent_frame.range_address + parent_frame.range_size))
+                        uart_base_address = (uart_base_address - parent_frame.translate_address) + parent_frame.range_address;
+                }
 
                 UART::Base = uart_base_address;
                 UART::initialize();
                 UART::out("\n\ndid it work?\n\n");
             }
 
-            --current_fdtstack_index;
+            if (current_fdtstack_index > 0)
+                --current_fdtstack_index;
         }
 
         else if ((int)parse_context.current.type == FDT_PROP) {
-            constexpr std::string_view reg_string = "reg";
-            constexpr std::string_view reg_address_cells_string = "#address-cells";
-            constexpr std::string_view reg_size_cells_string = "#size-cells";
-            constexpr std::string_view compat_string = "compatible";
-            if (parse_context.current.property.name == compat_string) {
-                auto s_list = parse_context.current.property.as_stringlist();
+            const auto& property = parse_context.current.property;
+            const auto property_name = parse_context.current.property.name_string();
+            if (property_name == "compatible") {
+                auto s_list = property.as_stringlist();
                 std::string_view s;
                 while ((s = s_list.next_string()).size()) {
                     if (s == "amlogic,meson-ao-uart" or s == "arm,pl011") {
@@ -260,25 +304,48 @@ void parse_device_tree(fdt_header* dt) {
                     }
                 }
             }
-            else if (parse_context.current.property.name == reg_string) {
-                stackframe& newframe = fdtstack[current_fdtstack_index];
+            else if (property_name == "reg") {
+                stackframe& parent_frame = fdtstack[current_fdtstack_index - 1];
+                stackframe& new_frame = fdtstack[current_fdtstack_index];
 
-                size_t shift{0};
-                auto* regdata = (uint32_t*)parse_context.current.property.data;
-                for (uint16_t i = 0; i < newframe.address_cells; ++i) {
-                    newframe.address |= ((uintptr_t)big_endian_to_cpu(regdata[i])) << shift;
-                    shift += 32;
+                auto* regdata = (uint32_t*)property.data;
+                for (uint i = 0; i < parent_frame.address_cells; ++i) {
+                    uint32_t cell = big_endian_to_cpu(regdata[i]);
+                    new_frame.address = (((uintptr_t)new_frame.address) << 32) | cell;
                 }
-                regdata += newframe.address_cells;
-                for (uint16_t i = 0; i < newframe.size_cells; ++i) {
-                    newframe.size |= ((uintptr_t)big_endian_to_cpu(regdata[i])) << shift;
-                    shift += 32;
+                regdata += parent_frame.address_cells;
+                for (uint i = 0; i < parent_frame.size_cells; ++i) {
+                    uint32_t cell = big_endian_to_cpu(regdata[i]);
+                    new_frame.size = (((uintptr_t)new_frame.size) << 32) | cell;
                 }
             }
-            else if (parse_context.current.property.name == reg_address_cells_string) {
+            else if (property_name == "ranges") {
+                auto& current_frame = fdtstack[current_fdtstack_index];
+                current_frame.has_range = true;
+
+                auto* rangesdata = (uint32_t*)property.data;
+                for (uint i = 0; i < current_frame.address_cells; ++i) {
+                    uint32_t cell = big_endian_to_cpu(rangesdata[i]);
+                    current_frame.translate_address = (current_frame.translate_address << 32) | cell;
+                }
+                rangesdata += current_frame.address_cells;
+
+                auto& parent_frame = fdtstack[current_fdtstack_index];
+                for (uint i = 0; i < parent_frame.address_cells; ++i) {
+                    uint32_t cell = big_endian_to_cpu(rangesdata[i]);
+                    current_frame.range_address = (current_frame.range_address << 32) | cell;
+                }
+                rangesdata += parent_frame.address_cells;
+
+                for (uint i = 0; i < current_frame.size_cells; ++i) {
+                    uint32_t cell = big_endian_to_cpu(rangesdata[i]);
+                    current_frame.range_size = (current_frame.range_size << 32) | cell;
+                }
+            }
+            else if (property_name == "#address-cells") {
                 fdtstack[current_fdtstack_index].address_cells = parse_context.current.property.as_u32();
             }
-            else if (parse_context.current.property.name == reg_size_cells_string) {
+            else if (property_name == "#size-cells") {
                 fdtstack[current_fdtstack_index].size_cells = parse_context.current.property.as_u32();
             }
         }
@@ -314,7 +381,7 @@ void dump_device_tree(fdt_header* dt) {
                 std::print("{}node\n", indent);
                 indent += "  ";
                 auto* name = (const char*)(structure + structure_offset);
-                structure_offset += strlen(name) + 1;
+                structure_offset += cstring_length(name);
                 // 4-byte align
                 structure_offset = (structure_offset + 3) & ~usz(3);
                 std::print("{}name=\"{}\"\n", indent, name);

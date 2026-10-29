@@ -34,12 +34,12 @@ constexpr const char* falseString = "False";
 /* String Length
  *   Returns the number of characters including null terminator.
  */
-extern "C" size_t strlen(const char* a);
+extern "C" size_t cstring_length(const char* a);
 
 /* String Compare
  *   Returns `true` only if all characters within
  *   both strings up to length are exactly equal.
  */
-bool strcmp(const char* a, const char* b, u64 length);
+bool cstring_compare(const char* a, const char* b, u64 length);
 
 #endif

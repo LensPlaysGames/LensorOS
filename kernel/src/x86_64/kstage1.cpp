@@ -851,7 +851,7 @@ void kstage2(BootInfo* bInfo) {
                 vfs.write(
                     fds.Process,
                     (u8*)programTestFilePath,
-                    strlen(programTestFilePath),
+                    cstring_length(programTestFilePath),
                     0,
                     0);
                 vfs.close(fds.Process);

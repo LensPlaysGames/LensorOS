@@ -21,7 +21,7 @@
 
 const char to_hex_not_supported[] = "TYPE_NOT_SUPPORTED";
 
-extern "C" size_t strlen(const char* a) {
+extern "C" size_t cstring_length(const char* a) {
     size_t out = 0;
     if (not a) return out;
     while (true) {
@@ -33,7 +33,7 @@ extern "C" size_t strlen(const char* a) {
     }
 }
 
-bool strcmp(const char* a, const char* b, u64 length) {
+bool cstring_compare(const char* a, const char* b, u64 length) {
     if ((not a) or (not b)) return false;
     for (u64 i = 0; i < length; ++i) {
         if (*a != *b)
