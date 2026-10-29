@@ -144,7 +144,7 @@ struct fdt_structure_parse_context {
 
             case FDT_BEGIN_NODE: {
                 current.type = FDTTokenType::BEGIN_NODE;
-                current.name = big_endian_to_cpu((char*)(structure + offset));
+                current.name = (char*)(structure + offset);
                 offset += strlen(current.name) + 1;
                 // 4-byte align
                 offset = (offset + 3) & ~usz(3);
