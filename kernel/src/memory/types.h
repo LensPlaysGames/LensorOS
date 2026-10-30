@@ -101,6 +101,11 @@ constexpr inline Flags operator~(const Flag a) noexcept {
     return Flags(~(uint32_t(a)));
 }
 
+enum class ShowDebug {
+    Yes,
+    No,
+};
+
 }  // namespace Memory
 
 constexpr inline PhysicalAddress::PhysicalAddress(const PhysicalKernelAddress address) noexcept

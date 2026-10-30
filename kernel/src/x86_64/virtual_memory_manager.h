@@ -21,7 +21,9 @@
 #define LENSOR_OS_VIRTUAL_MEMORY_MANAGER_H
 
 #include <integers.h>
+#include <memory/api.h>
 #include <memory/paging.h>
+#include <memory/types.h>
 
 extern "C" void flush_page_map(Memory::PageTable*);
 
@@ -32,11 +34,6 @@ namespace Memory {
  */
 void init_virtual(PageTable*);
 void init_virtual();
-
-enum class ShowDebug {
-    Yes = 0,
-    No = 1,
-};
 
 /* Map a virtual address to a physical
  *   address in the given page map level four.
