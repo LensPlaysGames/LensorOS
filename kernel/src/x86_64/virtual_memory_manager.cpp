@@ -957,6 +957,14 @@ void unmap_region(
         (byte_count + PAGE_SIZE - 1) / PAGE_SIZE);
 }
 
+memory_space_handle active_memory_space() {
+    return (memory_space_handle)active_page_map();
+}
+
+void free_memory_space(memory_space_handle handle) {
+    free_page_map((PageTable*)handle);
+}
+
 }  // namespace Memory
 
 extern "C" void flush_page_map(Memory::PageTable* pageMapLevelFour) {

@@ -43,10 +43,6 @@
 #include <aarch64/cpu.h>
 #endif
 
-namespace Memory {
-struct PageTable;
-}
-
 /// Interrupt handler function found in `scheduler.asm`
 extern "C" void irq0_handler();
 
@@ -237,7 +233,7 @@ namespace Scheduler {
 // The list node of the currently executing process.
 extern SinglyLinkedListNode<Process*>* CurrentProcess;
 
-extern std::vector<Memory::PageTable*> PageMapsToFree;
+extern std::vector<Memory::memory_space_handle> PageMapsToFree;
 
 extern Process StartupProcess;
 

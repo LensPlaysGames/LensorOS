@@ -121,6 +121,16 @@ inline void map_region_mmio(
 PhysicalKernelAddress request_memory(size_t byte_amount);
 void release_memory(PhysicalKernelAddress address, size_t byte_amount);
 
+/// The kernel is running with paging enabled, meaning it is within a
+/// memory space. This gets the handle to that memory space for use with
+/// other virtual memory functions.
+memory_space_handle active_memory_space();
+/// memory spaces may be nested within each other; this helper frees all
+/// memory related to the given memory space, ending with the given memory
+/// space itself.
+/// recursively deletes page tables.
+void free_memory_space(memory_space_handle);
+
 }  // namespace Memory
 
 #endif  // LENSOR_OS_HIGH_LEVEL_MEMORY_API_H

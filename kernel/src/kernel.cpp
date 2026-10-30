@@ -24,6 +24,7 @@
 #include <keyboard.h>
 #include <kstage1.h>
 #include <math.h>
+#include <memory/api.h>
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
@@ -93,9 +94,9 @@ extern "C" void kregulate() {
             DISABLE_INTERRUPTS;
             std::print("[KERNEL]: Disabled interrupts; freeing {} page tables\n", Scheduler::PageMapsToFree.size());
 
-            for (Memory::PageTable* table : Scheduler::PageMapsToFree) {
+            for (auto table : Scheduler::PageMapsToFree) {
                 // std::print("[KERNEL]: Freeing page table at {}\n", (void*)table);
-                Memory::free_page_map(table);
+                Memory::free_memory_space(table);
             }
 
             // Once we free a page map, we no longer need to free it.

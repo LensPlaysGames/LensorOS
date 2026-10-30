@@ -89,7 +89,7 @@ void Process::destroy(int status) {
     }
 
     if (CR3)
-        Scheduler::PageMapsToFree.push_back((Memory::PageTable*)CR3);
+        Scheduler::PageMapsToFree.push_back(CR3);
 }
 
 namespace Scheduler {
@@ -103,7 +103,7 @@ Process StartupProcess;
 
 SinglyLinkedList<Process*>* ProcessQueue{nullptr};
 SinglyLinkedListNode<Process*>* CurrentProcess{nullptr};
-std::vector<Memory::PageTable*> PageMapsToFree{};
+std::vector<Memory::memory_space_handle> PageMapsToFree{};
 
 void print_debug() {
     std::print(
