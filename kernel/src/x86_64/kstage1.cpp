@@ -1026,7 +1026,7 @@ void kstage1(uintptr_t base, BootInfo* bInfo) {
     Memory::init_physical(bInfo->map, bInfo->mapSize, bInfo->mapDescSize);
     // Setup virtual memory (map entire address space as well as kernel).
     Memory::init_virtual();
-    Memory::startup_handle = (Memory::memory_space_handle)(Memory::active_page_map());
+    Memory::startup_handle = Memory::active_memory_space();
 
     // Informational/debug physical memory printout
     Memory::print_physmem();

@@ -173,8 +173,7 @@ void expand_heap(u64 numBytes) {
         DBGMSG("[Heap]: frame at {}\n", (void*)frame.address);
         uintptr_t virt = (uintptr_t)sHeapEnd + i;
 
-        constexpr auto flags = (u64)Memory::PageTableFlag::Present
-                               | (u64)Memory::PageTableFlag::ReadWrite;
+        constexpr auto flags = Memory::Flag::Readable | Memory::Flag::Writable;
 
         // We don't know whether or not the scheduler is up and running or how
         // many processes are on the system.

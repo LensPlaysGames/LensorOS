@@ -74,8 +74,8 @@ void Process::destroy(int status) {
     // Free memory regions. This includes mmap()ed memory as
     // well as loaded program regions, the stack, etc.
     for (const auto& region : Memories) {
-        Memory::free_pages(region.paddr, region.pages);
-        Memory::unmap_pages((Memory::PageTable*)CR3, region.vaddr, region.pages);
+        Memory::release_memory(PhysicalKernelAddress(region.paddr), region.pages * PAGE_SIZE);
+        Memory::unmap_region(CR3, VirtualAddress(region.vaddr), region.pages * PAGE_SIZE);
     }
 
     // Clear memories list.
@@ -262,8 +262,8 @@ Process* request_process(pid_t parent_pid) {
     // TODO: Use clone_pag_map_copy_on_write, and remove "copy each
     // memory region" section below. Or put it behind #ifdef
     // LENSOR_OS_NO_COPY_ON_WRITE or smth
-    auto* newPageTable = Memory::clone_active_page_map();
-    if (newPageTable == nullptr) {
+    auto newPageTable = Memory::copy_memory_space(Memory::active_memory_space());
+    if (newPageTable == 0) {
         std::print("[ELF]: Failed to clone current page map for new process page map.\n");
         Scheduler::remove_process(pid, -1);
         return nullptr;
@@ -290,7 +290,7 @@ Process* request_process(pid_t parent_pid) {
 bool initialize() {
     // Setup currently executing code as the start process with PID 0.
     StartupProcess.ExecutablePath = "/efi/BOOT/LensorOS/kernel.elf";
-    StartupProcess.CR3 = (Memory::memory_space_handle)Memory::active_page_map();
+    StartupProcess.CR3 = Memory::active_memory_space();
     StartupProcess.State = Process::RUNNING;
     StartupProcess.ProcessID = 0;
 
@@ -469,15 +469,11 @@ pid_t CopyUserspaceProcess(Process* original) {
         memcpy(newMemory.paddr, memory.paddr, memory.length);
 
         // Map virtual addresses to new physical addresses.
-        Memory::map_pages(
-            (Memory::PageTable*)newProcess->CR3,
-            newMemory.vaddr,
-            (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(newMemory.paddr)).address,
-            (u64)Memory::PageTableFlag::Present
-                | (u64)Memory::PageTableFlag::ReadWrite
-                | (u64)Memory::PageTableFlag::UserSuper,
-            newMemory.pages,
-            Memory::ShowDebug::No);
+        Memory::map_region_user(
+            newProcess->CR3,
+            VirtualAddress(newMemory.vaddr),
+            PhysicalAddress(PhysicalKernelAddress(newMemory.paddr)),
+            newMemory.pages * PAGE_SIZE);
 
         // Add new memory region to new process.
         newProcess->add_memory_region(newMemory);
@@ -529,15 +525,14 @@ pid_t CopyUserspaceProcess(Process* original) {
     return newProcess->ProcessID;
 }
 
-void Scheduler::map_pages_in_all_processes(void* virtualAddress, void* physicalAddress, u64 mappingFlags, usz pages, Memory::ShowDebug d) {
+void Scheduler::map_pages_in_all_processes(void* virtualAddress, void* physicalAddress, Memory::Flags mappingFlags, usz pages, Memory::ShowDebug d) {
     if (not ProcessQueue) return;
     for (SinglyLinkedListNode<Process*>* it = ProcessQueue->head(); it and it->value(); it = it->next()) {
-        Memory::map_pages(
-            (Memory::PageTable*)it->value()->CR3,
-            virtualAddress,
-            physicalAddress,
-            mappingFlags,
-            pages,
-            d);
+        Memory::map_region(
+            it->value()->CR3,
+            VirtualAddress(virtualAddress),
+            PhysicalAddress(physicalAddress),
+            pages * PAGE_SIZE,
+            mappingFlags);
     }
 }

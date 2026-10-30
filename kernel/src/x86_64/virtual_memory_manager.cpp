@@ -998,6 +998,10 @@ void print_memory_space(memory_space_handle handle) {
     print_page_map((Memory::PageTable*)handle);
 }
 
+memory_space_handle copy_memory_space(memory_space_handle in) {
+    return (memory_space_handle)clone_page_map((Memory::PageTable*)in);
+}
+
 }  // namespace Memory
 
 extern "C" void flush_page_map(Memory::PageTable* pageMapLevelFour) {

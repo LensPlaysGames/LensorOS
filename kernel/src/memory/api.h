@@ -125,6 +125,13 @@ void release_memory(PhysicalKernelAddress address, size_t byte_amount);
 /// memory space. This gets the handle to that memory space for use with
 /// other virtual memory functions.
 memory_space_handle active_memory_space();
+
+/// memory spaces may be nested within each other; this helper copies all
+/// memory related to the given memory space, ending with copying the given
+/// memory space itself.
+/// recursively copies page tables.
+memory_space_handle copy_memory_space(memory_space_handle);
+
 /// memory spaces may be nested within each other; this helper frees all
 /// memory related to the given memory space, ending with the given memory
 /// space itself.

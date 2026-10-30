@@ -279,7 +279,12 @@ Process* request_process(pid_t parent_pid);
 
 // Call `map_pages` with the given data on every process in the
 // process queue.
-void map_pages_in_all_processes(void* virtualAddress, void* physicalAddress, u64 mappingFlags, size_t pages, Memory::ShowDebug d = Memory::ShowDebug::No);
+void map_pages_in_all_processes(
+    void* virtualAddress,
+    void* physicalAddress,
+    Memory::Flags mappingFlags,
+    size_t pages,
+    Memory::ShowDebug d = Memory::ShowDebug::No);
 
 }  // namespace Scheduler
 
