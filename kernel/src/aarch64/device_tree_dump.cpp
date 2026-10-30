@@ -22,6 +22,7 @@
 #include <cstr.h>
 #include <endian.h>
 #include <integers.h>
+#include <memory/api.h>
 
 #include <print>
 #include <span>
@@ -224,12 +225,24 @@ void parse_device_tree(fdt_header* dt) {
         structure_byte_size,
         strings_byte_size);
 
-    // we get a "reg", we record the address in a stack.
+    // every node gets a stackframe.
+    //
+    // when we get a "reg", we record the current node's address and size in
+    // this stackframe.
+    //
+    // when we get a "ranges", we record the child nodes' address space
+    // translation details in this stackframe.
+    //
+    // when we get a "#*-cells", we record the size for the child nodes' "reg"
+    // decoding in this stackframe.
+    //
     // whenever we want to actually know what a particular "reg" refers to, we
     // can walk the stack to calculate address ranges appropriately.
+    //
     // For example, the aobus is @c8100000, and the UART is @4c0 within it.
     // If we just tried to use the "reg" from the UART, we'd be writing to the
     // WRONG memory address, by like a lot.
+    //
     // By walking the frames, we would get the appropriate address @c81004c0.
     struct stackframe {
         // keep track of node's address
@@ -277,7 +290,29 @@ void parse_device_tree(fdt_header* dt) {
                         uart_base_address = (uart_base_address - parent_frame.translate_address) + parent_frame.range_address;
                 }
 
-                UART::Base = uart_base_address;
+                // NOTE: Right here is where we are failing. Basically, we need to map the
+                // UART in virtual address space before attempting to use it...
+                hang();
+
+                // Map uart MMIO starting at
+                //   uart_base_address until offset fdtstack[current_fdtstack_index].size
+                Memory::memory_space_handle memory_handle{};
+                asm volatile(
+                    "mrs %0, ttbr1_el1\n\t"
+                    : "=r"(memory_handle)
+                    : /** (!) No Inputs (!) **/
+                    : "memory");
+
+                auto uart_physical = PhysicalAddress(uart_base_address);
+                auto uart_virtual = PhysicalKernelAddress(uart_physical);
+
+                Memory::map_region_mmio(
+                    memory_handle,
+                    uart_virtual,
+                    uart_physical,
+                    fdtstack[current_fdtstack_index].size);
+
+                UART::Base = uart_virtual.address;
                 UART::initialize();
                 UART::out("\n\ndid it work?\n\n");
             }
@@ -355,77 +390,55 @@ void parse_device_tree(fdt_header* dt) {
 }
 
 void dump_device_tree(fdt_header* dt) {
+    if (dt == nullptr) return;
+
     auto* base = (u8*)dt;
     auto* strings = base + big_endian_to_cpu(dt->off_dt_strings);
     auto* structure = base + big_endian_to_cpu(dt->off_dt_struct);
     auto structure_byte_size = big_endian_to_cpu(dt->size_dt_struct);
+    auto strings_byte_size = big_endian_to_cpu(dt->size_dt_strings);
 
     std::print("[DevTree]: dumping...\n");
+
+    auto parse_context = fdt_structure_parse_context(
+        structure,
+        strings,
+        structure_byte_size,
+        strings_byte_size);
 
     std::string indent{};
     indent.reserve(64);
 
-    bool got_end{false};
-    for (
-        auto structure_offset = usz(0);
-        structure_offset < structure_byte_size and (not got_end);
-        /** (!) No Increment (!) **/) {
-        // handle padding possibly inserted for 4-byte token alignment.
-        structure_offset += 4 - (structure_offset % 4);
-
-        auto token = *(u32*)(structure + structure_offset);
-        structure_offset += sizeof(u32);  // eat token
-
-        switch (token) {
-            case FDT_BEGIN_NODE: {
+    while ((int)parse_context.current.type != FDT_END) {
+        switch (parse_context.current.type) {
+            case FDTTokenType::BEGIN_NODE: {
                 std::print("{}node\n", indent);
                 indent += "  ";
-                auto* name = (const char*)(structure + structure_offset);
-                structure_offset += cstring_length(name);
-                // 4-byte align
-                structure_offset = (structure_offset + 3) & ~usz(3);
-                std::print("{}name=\"{}\"\n", indent, name);
+                std::print("{}name=\"{}\"\n", indent, parse_context.current.name);
             } break;
-            case FDT_END_NODE: {
+            case FDTTokenType::END_NODE: {
                 if (indent.size() >= 2)
                     indent.resize(indent.size() - 2);
             } break;
-
-            case FDT_PROP: {
+            case FDTTokenType::PROPERTY: {
                 std::print("{}property\n", indent);
                 indent += "  ";
 
-                auto* property
-                    = (fdt_property_header*)(structure + structure_offset);
-                structure_offset += sizeof(fdt_property_header);
-                auto* value = structure + structure_offset;
-                auto property_length = big_endian_to_cpu(property->length);
-                structure_offset += property_length;
-                // 4-byte align
-                structure_offset = (structure_offset + 3) & ~usz(3);
-
-                auto* name
-                    = (const char*)(strings + big_endian_to_cpu(property->name_offset));
-
-                std::print("{}name=\"{}\"\n", indent, name);
+                auto& property = parse_context.current.property;
+                std::print("{}name=\"{}\"\n", indent, property.name);
                 std::print("{}value=\"", indent);
-                for (auto i = usz(0); i < property_length; ++i)
-                    std::print("  {:02x}", *(value + i));
+                for (auto i = usz(0); i < property.data_byte_size; ++i)
+                    std::print("  {:02x}", *(property.data + i));
                 std::print("\"\n");
 
                 indent.resize(indent.size() - 2);
             } break;
 
-            case FDT_END: {
-                got_end = true;
-            } break;
-
-            case FDT_NOP:
+            case FDTTokenType::NOP:
+            case FDTTokenType::NONE:
+            case FDTTokenType::END:
                 break;
-
-            default:
-                std::print("{}[DevTree]:ERROR: unknown token type {:#x}\n", indent, token);
-                return;
         }
+        parse_context.next_token();
     }
 }
