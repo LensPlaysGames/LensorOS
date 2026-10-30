@@ -390,7 +390,6 @@ SinglyLinkedListNode<Process*>* next_viable_process(
 /// A stupid simple round-robin process switcher.
 extern "C" Process* switch_process(CPUState* cpu) {
     // std::print("switch_process()...\n");
-    Time::do_tick();
 
     // Save address of stack frame
     if (CurrentProcess and CurrentProcess->value()) {

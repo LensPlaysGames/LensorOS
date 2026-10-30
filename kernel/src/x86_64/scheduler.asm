@@ -25,6 +25,9 @@ extern switch_process
 ;; The function that updates cr3, doing bookkeeping of the currently
 ;; active page map.
 extern flush_page_map
+;; increment timer tick when timer interrupt happens, but not when
+;; yielding cooperatively.
+extern do_tick
 
 ; ==============================================================================
 ; VOLUNTARY YIELD WRAPPER
@@ -107,6 +110,8 @@ irq0_handler:
     push rcx
     push rbx
     push rsp
+
+    call do_tick
 
     ; --- HAND CONTROL TO THE SCHEDULER ---
     ; Pass the pointer to this completed CPUState struct (RSP) into C++

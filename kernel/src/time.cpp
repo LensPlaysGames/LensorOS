@@ -51,7 +51,7 @@ size_t seconds_since_boot() {
     return detail::Ticks / detail::Frequency;
 }
 size_t milliseconds_since_boot() {
-    return detail::Ticks * 1000 / detail::Frequency;
+    return (detail::Ticks * 1000) / detail::Frequency;
 }
 
 uint64_t mktime(const tm* t) {
