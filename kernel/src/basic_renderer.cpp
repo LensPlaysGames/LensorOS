@@ -24,10 +24,6 @@
 #include <memory/common.h>
 #include <memory/physical_memory_manager.h>
 
-#ifdef x86_64
-#include <x86_64/virtual_memory_manager.h>
-#endif
-
 #include <format>
 
 // Define global renderer for use anywhere within the kernel.
@@ -41,11 +37,11 @@ BasicRenderer::BasicRenderer(Framebuffer* render, PSF1_FONT* f)
     u64 fbSize = render->BufferSize + PAGE_SIZE;
     u64 fbPages = fbSize / PAGE_SIZE + 1;
 
-    Memory::map_pages(
-        render->BaseAddress,
-        (void*)PhysicalAddress(PhysicalKernelAddress(render->BaseAddress)).address,
-        (usz)Memory::PageTableFlag::Present | (usz)Memory::PageTableFlag::ReadWrite,
-        fbPages);
+    Memory::map_region_kernel(
+        Memory::active_memory_space(),
+        VirtualAddress(render->BaseAddress),
+        PhysicalAddress(PhysicalKernelAddress(render->BaseAddress)),
+        fbPages * PAGE_SIZE);
 
     // Allocate physical pages for Render framebuffer.
     Memory::lock_pages(render->BaseAddress, fbPages);
