@@ -679,7 +679,6 @@ void free_page_map(PageTable* pageTable) {
 }
 
 PageTable* active_page_map() {
-#if defined(x86_64)
     // if (!ActivePageMap) {
     asm volatile(
         "mov %%cr3, %%rax\n\t"
@@ -688,13 +687,6 @@ PageTable* active_page_map() {
         :  // No inputs
         : "rax");
     // }
-#elif defined(aarch64)
-    asm volatile(
-        "mrs %0, ttbr1_el1"
-        : "=r"(ActivePageMap));
-#else
-#error "Kernel VIRT Memory Manager: Unsupported architecture (fetch page map)"
-#endif
     return ActivePageMap;
 }
 
@@ -938,11 +930,39 @@ void map_region(
         flags |= (u64)Memory::PageTableFlag::WriteThrough;
     if (inflags & Flag::CopyOnWrite)
         flags |= (u64)Memory::PageTableFlag::Lensor_CopyOnWrite;
-    const uintptr_t page_count = (byte_count + PAGE_SIZE - 1) / PAGE_SIZE;
+
+    usz large_page_count{0};
+
+    // 2MiB aligned...
+    constexpr auto large_page_mask = uintptr_t(MiB(2)) - 1;
+    if (
+        (virtual_address.address & large_page_mask) == 0
+        and (physical_address.address & large_page_mask) == 0) {
+        large_page_count = byte_count / PAGE_SIZE_LARGE;
+
+        for (usz i = 0; i < large_page_count; ++i) {
+            uintptr_t offset = i * PAGE_SIZE_LARGE;
+            map_large(
+                (PageTable*)handle,
+                (void*)(virtual_address.address + offset),
+                (void*)(physical_address.address + offset),
+                flags);
+        }
+    }
+
+    const auto bytes_mapped = PAGE_SIZE_LARGE * large_page_count;
+    const auto remaining = byte_count - bytes_mapped;
+    const auto page_count = (remaining + PAGE_SIZE - 1) / PAGE_SIZE;
+
+    if (page_count == 0) return;
+
+    const uintptr_t remaining_virtual = virtual_address.address + bytes_mapped;
+    const uintptr_t remaining_physical = physical_address.address + bytes_mapped;
+
     map_pages(
         (PageTable*)handle,
-        (void*)virtual_address.address,
-        (void*)physical_address.address,
+        (void*)remaining_virtual,
+        (void*)remaining_physical,
         flags,
         page_count);
 }
@@ -963,6 +983,19 @@ memory_space_handle active_memory_space() {
 
 void free_memory_space(memory_space_handle handle) {
     free_page_map((PageTable*)handle);
+}
+
+void invalidate_tlb() {
+    asm volatile(
+        "mov %%cr3, %%rax\n\t"
+        "mov %%rax, %%cr3"
+        : /** No outputs **/
+        : /** No inputs **/
+        : "memory", "rax");
+}
+
+void print_memory_space(memory_space_handle handle) {
+    print_page_map((Memory::PageTable*)handle);
 }
 
 }  // namespace Memory

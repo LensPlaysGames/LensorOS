@@ -131,6 +131,13 @@ memory_space_handle active_memory_space();
 /// recursively deletes page tables.
 void free_memory_space(memory_space_handle);
 
+/// non-necessary (stub okay)
+void print_memory_space(memory_space_handle);
+
+/// ensure any cached virtual mappings are re-read from the actual page
+/// tables, or something like that.
+void invalidate_tlb();
+
 }  // namespace Memory
 
 #endif  // LENSOR_OS_HIGH_LEVEL_MEMORY_API_H

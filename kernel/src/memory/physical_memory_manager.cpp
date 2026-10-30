@@ -334,25 +334,21 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
     // TODO: `.text` + `.rodata` should be read only.
     // We should probably wait until we can parse the kernel executable file,
     // then just re-map those as not writable.
-    PageTable* activePML4 = active_page_map();
-    for (u64 t = 0;
-         t < TotalFrameCount * PAGE_SIZE;
-         t += PAGE_SIZE_LARGE) {
-        void* virt = (void*)FROM_FRAME_POINTER(PhysicalAddress(t)).address;
-        map_large<false>(
-            activePML4,
-            virt,
-            (void*)t,
-            (u64)PageTableFlag::Present
-                | (u64)PageTableFlag::ReadWrite,
-            t == 0 ? ShowDebug::Yes : ShowDebug::No);
-    }
+    auto activePML4 = Memory::active_memory_space();
+    auto phys = PhysicalAddress(uintptr_t(0));
+    auto virt = FROM_FRAME_POINTER(phys);
+    map_region_kernel(
+        activePML4,
+        virt,
+        phys,
+        TotalFrameCount * PAGE_SIZE);
+
     // TLB flush (virtual -> physical mappings cache reset)
-    flush_page_map(activePML4);
+    invalidate_tlb();
 
     // Debug Check-in
     print_physmem();
-    Memory::print_page_map(activePML4);
+    Memory::print_memory_space(activePML4);
 
     // Calculate total number of bytes needed for a physical page
     // bitmap that covers hardware's actual amount of memory present.
