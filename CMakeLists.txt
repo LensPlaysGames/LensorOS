@@ -332,22 +332,24 @@ if ( QEMU_PROGRAM )
   endif()
 
   # Hardware Acceleration
-  # if ( CMAKE_HOST_WIN32 )
-  #   list( APPEND QEMU_FLAGS
-  #     -accel whpx
-  #   )
-  # elseif( CMAKE_HOST_APPLE )
-  #   list( APPEND QEMU_FLAGS
-  #     -accel hvf
-  #   )
-  # elseif( CMAKE_HOST_UNIX )
-  #   list( APPEND QEMU_FLAGS
-  #     -enable-kvm
-  #   )
-  # endif()
-  list( APPEND QEMU_FLAGS
-    -accel tcg,thread=multi
-  )
+  # Only possible if guest architecture is same as host (i.e. x86_64
+  # LensorOS running on QEMU running on an x86_64 machine).
+  if ( CMAKE_HOST_WIN32 )
+    list( APPEND QEMU_FLAGS
+      -accel whpx
+    )
+  elseif( CMAKE_HOST_APPLE )
+    list( APPEND QEMU_FLAGS
+      -accel hvf
+    )
+  elseif( CMAKE_HOST_UNIX )
+    list( APPEND QEMU_FLAGS
+      -enable-kvm
+    )
+  endif()
+  # list( APPEND QEMU_FLAGS
+  #   -accel tcg,thread=multi
+  # )
 
   # Audio/Speaker Setup
   if ( CMAKE_HOST_WIN32 )
