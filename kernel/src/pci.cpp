@@ -24,10 +24,6 @@
 #include <pci.h>
 #include <system.h>
 
-#ifdef x86_64
-#include <x86_64/virtual_memory_manager.h>
-#endif
-
 // Uncomment the following directive for extra debug information output.
 // #define DEBUG_PCI
 
@@ -106,19 +102,21 @@ void print_device_header(PCIDeviceHeader* pci) {
         pci->BIST);
 }
 
-void enumerate_function(u64 deviceAddress, u64 functionNumber) {
-    u64 offset = functionNumber << 12;
-    u64 functionAddress = deviceAddress + offset;
-    Memory::map(
-        (void*)functionAddress,
-        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(functionAddress)).address,
-        (u64)Memory::PageTableFlag::Present
-            | (u64)Memory::PageTableFlag::ReadWrite
-            | (u64)Memory::PageTableFlag::CacheDisabled
-            | (u64)Memory::PageTableFlag::WriteThrough);
+void enumerate_function(uintptr_t deviceAddress, uintptr_t functionNumber) {
+    uintptr_t offset = functionNumber << 12;
+    uintptr_t functionAddress = deviceAddress + offset;
+    const auto handle = Memory::active_memory_space();
+    Memory::map_region_mmio(
+        handle,
+        VirtualAddress(functionAddress),
+        Memory::TO_FRAME_POINTER(PhysicalKernelAddress(functionAddress)),
+        PAGE_SIZE);
     auto* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(functionAddress);
     if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
-        Memory::unmap((void*)functionAddress);
+        Memory::unmap_region(
+            handle,
+            VirtualAddress(functionAddress),
+            PAGE_SIZE);
         return;
     }
 
@@ -169,19 +167,21 @@ void enumerate_function(u64 deviceAddress, u64 functionNumber) {
     }
 }
 
-void enumerate_device(u64 busAddress, u64 deviceNumber) {
-    u64 offset = deviceNumber << 15;
-    u64 deviceAddress = busAddress + offset;
-    Memory::map(
-        (void*)deviceAddress,
-        (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(deviceAddress)).address,
-        (u64)Memory::PageTableFlag::Present
-            | (u64)Memory::PageTableFlag::ReadWrite
-            | (u64)Memory::PageTableFlag::CacheDisabled
-            | (u64)Memory::PageTableFlag::WriteThrough);
+void enumerate_device(uintptr_t busAddress, uintptr_t deviceNumber) {
+    uintptr_t offset = deviceNumber << 15;
+    uintptr_t deviceAddress = busAddress + offset;
+    const auto handle = Memory::active_memory_space();
+    Memory::map_region_mmio(
+        handle,
+        PhysicalKernelAddress(deviceAddress),
+        Memory::TO_FRAME_POINTER(PhysicalKernelAddress(deviceAddress)),
+        PAGE_SIZE);
     auto* pciDevHdr = reinterpret_cast<PCIDeviceHeader*>(deviceAddress);
     if (pciDevHdr->DeviceID == 0x0000 || pciDevHdr->DeviceID == 0xffff) {
-        Memory::unmap((void*)deviceAddress);
+        Memory::unmap_region(
+            handle,
+            PhysicalKernelAddress(deviceAddress),
+            PAGE_SIZE);
         return;
     }
     DBGMSG(
@@ -193,9 +193,9 @@ void enumerate_device(u64 busAddress, u64 deviceNumber) {
         enumerate_function(deviceAddress, function);
 }
 
-void enumerate_bus(u64 baseAddress, u64 busNumber) {
-    u64 offset = busNumber << 20;
-    u64 busAddress = baseAddress + offset;
+void enumerate_bus(uintptr_t baseAddress, uintptr_t busNumber) {
+    uintptr_t offset = busNumber << 20;
+    uintptr_t busAddress = baseAddress + offset;
     // Memory::map((void*)bus_address, (void*)bus_address);
     DBGMSG(
         "[PCI]: Bus {}\n"
