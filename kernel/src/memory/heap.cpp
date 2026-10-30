@@ -21,16 +21,13 @@
 #include <debug.h>
 #include <integers.h>
 #include <memory.h>
+#include <memory/api.h>
 #include <memory/common.h>
 #include <memory/heap.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/types.h>
 #include <scheduler.h>
-
-#ifdef x86_64
-#include <x86_64/virtual_memory_manager.h>
-#endif
 
 #include <format>
 #include <string>
@@ -124,14 +121,15 @@ HeapSegmentHeader* HeapSegmentHeader::split(u64 splitLength) {
 void init_heap() {
     u64 numBytes = HEAP_INITIAL_PAGES * PAGE_SIZE;
     // NOTE: We don't use map_pages here because we request a new page for each one mapped.
+    auto handle = Memory::active_memory_space();
     for (u64 i = 0; i < HEAP_INITIAL_PAGES * PAGE_SIZE; i += PAGE_SIZE) {
         // Map virtual heap position to physical memory address returned by frame
         // allocator.
-        Memory::map(
-            (void*)(Memory::KERNEL_HEAP_VIRTUAL_BASE + i),
-            (void*)Memory::TO_FRAME_POINTER(PhysicalKernelAddress(Memory::request_page())).address,
-            (u64)Memory::PageTableFlag::Present
-                | (u64)Memory::PageTableFlag::ReadWrite);
+        Memory::map_region_kernel(
+            handle,
+            VirtualAddress(Memory::KERNEL_HEAP_VIRTUAL_BASE + i),
+            Memory::TO_FRAME_POINTER(PhysicalKernelAddress(Memory::request_page())),
+            PAGE_SIZE);
     }
     sHeapStart = (void*)Memory::KERNEL_HEAP_VIRTUAL_BASE;
     sHeapEnd = (void*)((u64)sHeapStart + numBytes);
@@ -171,8 +169,8 @@ void expand_heap(u64 numBytes) {
         *(volatile uint8_t*)addr = 0xaa;
         DBGMSG("[Heap]: first byte at {} -- {}\n", addr, (uint8_t)*(volatile uint8_t*)addr);
 
-        uintptr_t frame = Memory::TO_FRAME_POINTER(PhysicalKernelAddress(addr)).address;
-        DBGMSG("[Heap]: frame at {}\n", (void*)frame);
+        auto frame = Memory::TO_FRAME_POINTER(PhysicalKernelAddress(addr));
+        DBGMSG("[Heap]: frame at {}\n", (void*)frame.address);
         uintptr_t virt = (uintptr_t)sHeapEnd + i;
 
         constexpr auto flags = (u64)Memory::PageTableFlag::Present
@@ -180,10 +178,14 @@ void expand_heap(u64 numBytes) {
 
         // We don't know whether or not the scheduler is up and running or how
         // many processes are on the system.
-        Scheduler::map_pages_in_all_processes((void*)virt, (void*)frame, flags, 1);
+        Scheduler::map_pages_in_all_processes((void*)virt, (void*)frame.address, flags, 1);
         // Ensure whatever thread/process this code is running in gets it mapped
         // no matter what.
-        Memory::map((void*)virt, (void*)frame, flags);
+        Memory::map_region_kernel(
+            Memory::active_memory_space(),
+            VirtualAddress(virt),
+            frame,
+            PAGE_SIZE);
 
 #ifdef x86_64
         asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
