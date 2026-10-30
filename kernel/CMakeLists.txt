@@ -166,6 +166,7 @@ elseif(${ARCH} MATCHES "aarch64")
     src/aarch64/time.cpp
     # src/aarch64/uart_meson.cpp
     src/aarch64/uart_primecell.cpp
+    src/aarch64/virtual_memory.cpp
   )
 endif()
 set_target_properties( Kernel PROPERTIES OUTPUT_NAME kernel.elf )
