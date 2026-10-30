@@ -1002,6 +1002,13 @@ memory_space_handle copy_memory_space(memory_space_handle in) {
     return (memory_space_handle)clone_page_map((Memory::PageTable*)in);
 }
 
+memory_space_handle get_user_memory_space() {
+    return active_memory_space();
+}
+void set_user_memory_space(memory_space_handle handle) {
+    flush_page_map((Memory::PageTable*)handle);
+}
+
 }  // namespace Memory
 
 extern "C" void flush_page_map(Memory::PageTable* pageMapLevelFour) {

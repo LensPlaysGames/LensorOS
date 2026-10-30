@@ -126,6 +126,10 @@ void release_memory(PhysicalKernelAddress address, size_t byte_amount);
 /// other virtual memory functions.
 memory_space_handle active_memory_space();
 
+/// @return the current user-level memory space handle.
+memory_space_handle get_user_memory_space();
+void set_user_memory_space(memory_space_handle);
+
 /// memory spaces may be nested within each other; this helper copies all
 /// memory related to the given memory space, ending with copying the given
 /// memory space itself.

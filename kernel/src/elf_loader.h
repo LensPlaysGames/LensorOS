@@ -34,7 +34,6 @@
 #include <storage/file_metadata.h>
 #include <system.h>
 #include <virtual_filesystem.h>
-#include <x86_64/virtual_memory_manager.h>
 
 #include <print>
 #include <string_view>
@@ -42,6 +41,7 @@
 
 #ifdef x86_64
 #include <x86_64/tss.h>
+#include <x86_64/virtual_memory_manager.h>
 #endif
 
 // Uncomment the following directive for extra debug output.
@@ -250,8 +250,9 @@ LoadUserspaceElf64Process(
     // Switch to process' virtual address space while we are writing to the
     // process' stack; the kernel is higher-half mapped in every page table,
     // so it "should run smoothly".
-    auto cr3 = Memory::active_page_map();
-    Memory::flush_page_map((Memory::PageTable*)pageTable);
+    // NOTE: (aarch64): just the user memory space
+    auto cr3 = Memory::get_user_memory_space();
+    Memory::set_user_memory_space(pageTable);
 
     // Copy environment contents to the stack, keeping track of addresses.
     uintptr_t stack_top_address = virtual_stack_top;
@@ -329,7 +330,7 @@ LoadUserspaceElf64Process(
     }
 #endif
 
-    Memory::flush_page_map(cr3);
+    Memory::set_user_memory_space(cr3);
 
     if (stack_top_address % 16 != 0) {
         if (stack_top_address % 8 != 0) {
