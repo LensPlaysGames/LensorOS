@@ -22,8 +22,9 @@
 const char to_hex_not_supported[] = "TYPE_NOT_SUPPORTED";
 
 extern "C" size_t cstring_length(const char* a) {
+    if (not a) return 0;
+
     size_t out = 0;
-    if (not a) return out;
     while (true) {
         if (*a == '\0')
             return out + 1;
