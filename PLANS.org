@@ -1,3 +1,11 @@
+* Real Metal
+High Priority
+
+Amlogix s805x-ac "La Frite" by Libre Computer (libretech)
+~$35
+
+Aarch64. That's a jump. :)
+
 * Flesh out the Network Stack
 Medium Priority
 
