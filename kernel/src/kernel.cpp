@@ -27,15 +27,16 @@
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
-#include <memory/virtual_memory_manager.h>
 #include <scheduler.h>
 #include <time.h>
 
 #include <print>
 
 #if defined(x86_64)
+#include <x86_64/virtual_memory_manager.h>
 #define DISABLE_INTERRUPTS asm volatile("cli")
 #define ENABLE_INTERRUPTS asm volatile("sti")
+
 #elif defined(aarch64)
 #define DISABLE_INTERRUPTS                                     \
     uint64_t __flags;                                          \
@@ -43,6 +44,8 @@
     asm volatile("msr daifset, #3" : : : "memory");
 #define ENABLE_INTERRUPTS \
     asm volatile("msr daif, %0" : : "r"(__flags) : "memory");
+#else
+#error "Unsupported architecture: inline assembly for interrupt toggling"
 #endif
 
 void print_memory_info(Vector2<u64>& position) {

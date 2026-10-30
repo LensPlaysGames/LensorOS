@@ -20,11 +20,11 @@
 #include <interrupts/interrupts.h>
 #include <memory/api.h>
 #include <memory/common.h>
-#include <memory/virtual_memory_manager.h>
 #include <time.h>
 #include <x86_64/cpu.h>
 #include <x86_64/lapic.h>
 #include <x86_64/pit.h>
+#include <x86_64/virtual_memory_manager.h>
 
 #include <print>
 

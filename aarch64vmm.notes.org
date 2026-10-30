@@ -1,0 +1,11 @@
+* =aarch64= VMM Notes
+
+I want to re-use the physical memory manager code, there's not /really/ anything architecture specific in there.
+
+I don't think I can re-use almost *any* of the virtual memory manager (VMM) code. There's basically /only/ architecture specific stuff going on there.
+
+So, what is the physical memory manager to do, in order to map it's region in large pages?
+
+I think we just shove a =map_large_region()= into the =Memory= API...
+
+Before any of that, though, first things first. We want to separate out the x86_64 virtual memory manager into the x86_64 branch of the build pipeline.

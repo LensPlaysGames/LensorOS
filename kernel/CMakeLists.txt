@@ -112,7 +112,6 @@ add_executable(
   src/memory.cpp
   src/memory/heap.cpp
   src/memory/physical_memory_manager.cpp
-  src/memory/virtual_memory_manager.cpp
   src/pci.cpp
   src/pci_descriptors.cpp
   src/pure_virtuals.cpp
@@ -156,6 +155,7 @@ if (${ARCH} MATCHES "x86_64")
     src/x86_64/time.cpp
     src/x86_64/tss.cpp
     src/x86_64/uart.cpp
+    src/x86_64/virtual_memory_manager.cpp
   )
 elseif(${ARCH} MATCHES "aarch64")
   target_sources(

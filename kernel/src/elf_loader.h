@@ -30,11 +30,11 @@
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/types.h>
-#include <memory/virtual_memory_manager.h>
 #include <scheduler.h>
 #include <storage/file_metadata.h>
 #include <system.h>
 #include <virtual_filesystem.h>
+#include <x86_64/virtual_memory_manager.h>
 
 #include <print>
 #include <string_view>

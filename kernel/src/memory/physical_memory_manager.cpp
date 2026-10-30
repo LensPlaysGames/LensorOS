@@ -26,8 +26,11 @@
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
-#include <memory/virtual_memory_manager.h>
 #include <panic.h>
+
+#ifdef x86_64
+#include <x86_64/virtual_memory_manager.h>
+#endif
 
 #include <format>
 

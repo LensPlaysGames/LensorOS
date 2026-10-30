@@ -346,10 +346,11 @@ if ( QEMU_PROGRAM )
     list( APPEND QEMU_FLAGS
       -enable-kvm
     )
+  else()
+    list( APPEND QEMU_FLAGS
+      -accel tcg,thread=multi
+    )
   endif()
-  # list( APPEND QEMU_FLAGS
-  #   -accel tcg,thread=multi
-  # )
 
   # Audio/Speaker Setup
   if ( CMAKE_HOST_WIN32 )

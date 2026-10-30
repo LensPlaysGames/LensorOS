@@ -24,10 +24,10 @@
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
-#include <memory/virtual_memory_manager.h>
 #include <scheduler.h>
 #include <x86_64/gdt.h>
 #include <x86_64/tss.h>
+#include <x86_64/virtual_memory_manager.h>
 
 #include <print>
 

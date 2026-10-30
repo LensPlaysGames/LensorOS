@@ -36,7 +36,6 @@
 #include <lensor/keys.h>
 #include <memory/api.h>
 #include <memory/paging.h>
-#include <memory/virtual_memory_manager.h>
 #include <mouse.h>
 #include <panic.h>
 #include <scheduler.h>
@@ -49,6 +48,7 @@
 #include <x86_64/lapic.h>
 #include <x86_64/pit.h>
 #include <x86_64/rtc.h>
+#include <x86_64/virtual_memory_manager.h>
 
 #include <format>
 

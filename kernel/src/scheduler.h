@@ -29,7 +29,6 @@
 #include <memory/physical_memory_manager.h>
 #include <memory/region.h>
 #include <memory/types.h>
-#include <memory/virtual_memory_manager.h>
 #include <storage/file_metadata.h>
 #include <vfs_forward.h>
 
@@ -39,6 +38,7 @@
 
 #if defined(x86_64)
 #include <x86_64/cpu.h>
+#include <x86_64/virtual_memory_manager.h>
 #elif defined(aarch64)
 #include <aarch64/cpu.h>
 #endif

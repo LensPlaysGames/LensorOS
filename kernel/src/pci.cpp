@@ -19,10 +19,14 @@
 
 #include <acpi.h>
 #include <devices/devices.h>
+#include <memory/api.h>
 #include <memory/paging.h>
-#include <memory/virtual_memory_manager.h>
 #include <pci.h>
 #include <system.h>
+
+#ifdef x86_64
+#include <x86_64/virtual_memory_manager.h>
+#endif
 
 // Uncomment the following directive for extra debug information output.
 // #define DEBUG_PCI

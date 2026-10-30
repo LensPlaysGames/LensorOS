@@ -24,7 +24,6 @@
 #include <memory/api.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
-#include <memory/virtual_memory_manager.h>
 #include <scheduler.h>
 #include <system.h>
 #include <time.h>
@@ -33,11 +32,9 @@
 #include <print>
 
 #ifdef x86_64
-#include <x86_64/hpet.h>
 #include <x86_64/idt.h>
-#include <x86_64/pit.h>
-#include <x86_64/rtc.h>
 #include <x86_64/tss.h>
+#include <x86_64/virtual_memory_manager.h>
 #endif
 
 void Process::destroy(int status) {

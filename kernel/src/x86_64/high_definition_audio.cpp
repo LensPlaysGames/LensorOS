@@ -20,10 +20,10 @@
 #include <event.h>
 #include <memory/physical_memory_manager.h>
 #include <memory/types.h>
-#include <memory/virtual_memory_manager.h>
 #include <stdint.h>
 #include <system.h>
 #include <x86_64/high_definition_audio.h>
+#include <x86_64/virtual_memory_manager.h>
 
 #include <print>
 #include <vector>

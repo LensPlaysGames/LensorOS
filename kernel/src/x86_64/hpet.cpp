@@ -20,8 +20,8 @@
 #include <integers.h>
 #include <memory.h>
 #include <memory/api.h>
-#include <memory/virtual_memory_manager.h>
 #include <x86_64/hpet.h>
+#include <x86_64/virtual_memory_manager.h>
 
 #include <format>
 
