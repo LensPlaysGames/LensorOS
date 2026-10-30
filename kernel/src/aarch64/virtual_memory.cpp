@@ -56,23 +56,16 @@ void unmap_region(
 }
 
 memory_space_handle active_memory_space() {
-    // TODO: now
     // inline assembly to fetch kernel memory space pointer.
     // used by early UART setup.
     // used by physical memory manager.
-    return {};
-}
-
-/// utilize a different memory space
-/// @return the old memory space handle.
-memory_space_handle use_memory_space(memory_space_handle new_handle) {
-    const auto old_handle = active_memory_space();
-
-    // TODO: now
-    // inline assembly to set userspace memory space register.
-    // used by scheduler to temporarily map user process
-
-    return old_handle;
+    Memory::memory_space_handle memory_handle{};
+    asm volatile(
+        "mrs %0, ttbr1_el1\n\t"
+        : "=r"(memory_handle)
+        : /** (!) No Inputs (!) **/
+        : "memory");
+    return memory_handle;
 }
 
 memory_space_handle copy_memory_space(memory_space_handle handle) {
@@ -92,20 +85,37 @@ void print_memory_space(memory_space_handle handle) {
 }
 
 void invalidate_tlb() {
-    // TODO: after now
     // inline assembly to invalidate entire virtual address translation cache,
     // and re-build it from memory.
     // used by physical memory manager.
+    asm volatile(
+        "tlbi vmalle1\n\t"  // Invalidate all stage 1 TLB entries for EL1
+        "dsb sy\n\t"        // Ensure TLB invalidation completes before continuing
+        "isb"               // Flush pipeline to use the updated translation context
+        :                   /* No Outputs */
+        :                   /* No Inputs */
+        : "memory"          // Tell compiler memory has changed drastically
+    );
 }
 
 memory_space_handle get_user_memory_space() {
-    // TODO: now
     // inline assembly to fetch ttbr0_el1
-    return 0;
+    Memory::memory_space_handle memory_handle{};
+    asm volatile(
+        "mrs %0, ttbr0_el1"
+        : "=r"(memory_handle)
+        : /** (!) No Inputs (!) **/
+        : "memory");
+    return memory_handle;
 }
-void set_user_memory_space(memory_space_handle) {
-    // TODO: now
+void set_user_memory_space(memory_space_handle handle) {
     // inline assembly to set ttbr0_el1
+    asm volatile(
+        "msr ttbr0_el1, %0\n\t"
+        "isb"
+        : /** (!) No Outputs (!) **/
+        : "r"(handle)
+        : "memory");
 }
 
 }  // namespace Memory
