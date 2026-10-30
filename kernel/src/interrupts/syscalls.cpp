@@ -38,7 +38,6 @@
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/region.h>
-#include <memory/virtual_memory_manager.h>
 #include <scheduler.h>
 #include <storage/file_metadata.h>
 #include <storage/filesystem_drivers/socket.h>

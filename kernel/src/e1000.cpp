@@ -19,10 +19,10 @@
 
 #include <e1000.h>
 #include <interrupts/interrupts.h>
+#include <memory/api.h>
 #include <memory/common.h>
 #include <memory/paging.h>
 #include <memory/physical_memory_manager.h>
-#include <memory/virtual_memory_manager.h>
 #include <network.h>
 #include <pci.h>
 #include <stdint.h>
