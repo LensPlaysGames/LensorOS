@@ -45,6 +45,8 @@
 
 uintptr_t KERNEL_PHYSICAL;
 
+uintptr_t PhysicalOffset{0};
+
 namespace Memory {
 Bitmap FrameBitmap{0, nullptr};
 
@@ -91,7 +93,8 @@ void print_physmem() {
 }
 
 void lock_page(void* address) {
-    u64 index = PhysicalAddress(PhysicalKernelAddress(address)).address / PAGE_SIZE;
+    u64 index = (PhysicalAddress(PhysicalKernelAddress(address)).address)
+                / PAGE_SIZE;
     // Page already locked.
     if (FrameBitmap.get(index))
         return;
@@ -108,7 +111,8 @@ void lock_pages(void* address, u64 numberOfPages) {
 }
 
 void free_page_impl(void* address) {
-    u64 index = PhysicalAddress(PhysicalKernelAddress(address)).address / PAGE_SIZE;
+    u64 index = (PhysicalAddress(PhysicalKernelAddress(address)).address)
+                / PAGE_SIZE;
     if (FrameBitmap.set(index, false)) {
         if (index < FirstFreeFrame) {
             FirstFreeFrame = index;
@@ -230,7 +234,8 @@ void* request_pages(u64 numberOfPages) {
                 return nullptr;
             }
             if (run >= numberOfPages) {
-                void* out = (void*)(FROM_FRAME_POINTER(PhysicalAddress(i * PAGE_SIZE)).address);
+                auto physical_address = PhysicalAddress(i * PAGE_SIZE);
+                void* out = (void*)(FROM_FRAME_POINTER(physical_address).address);
                 lock_pages(out, numberOfPages);
                 DBGMSG(
                     "  Successfully fulfilled memory request: {}\n"
@@ -260,6 +265,18 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
         InitialPageBitmapMaxAddress);
     // Calculate number of entries within memoryMap array.
     u64 entries = size / entrySize;
+
+    // Determine space addressable by initial page bitmap (determine first
+    // address of usable physical memory, offset initial page bitmap to that
+    // address).
+    for (u64 i = 0; i < entries; ++i) {
+        EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
+        if (desc->type == 7) {
+            PhysicalOffset = (uintptr_t)desc->physicalAddress;
+            break;
+        }
+    }
+
     // Find largest free and usable contiguous region of memory
     // within space addressable by initial page bitmap.
     void* largestFreeMemorySegment{nullptr};
@@ -269,9 +286,11 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
         if (desc->type == 7
             and uintptr_t(desc->physicalAddress) >= MiB(1)
             and desc->numPages > largestFreeMemorySegmentPageCount
-            and uintptr_t(desc->physicalAddress) + desc->numPages * PAGE_SIZE < InitialPageBitmapMaxAddress) {
+            and uintptr_t(desc->physicalAddress) < PhysicalOffset + InitialPageBitmapMaxAddress) {
             largestFreeMemorySegment = desc->physicalAddress;
-            largestFreeMemorySegmentPageCount = desc->numPages;
+            auto max_remaining_bytes = (PhysicalOffset + InitialPageBitmapMaxAddress) - uintptr_t(desc->physicalAddress);
+            auto max_remaining_pages = max_remaining_bytes / PAGE_SIZE;
+            largestFreeMemorySegmentPageCount = std::min(desc->numPages, max_remaining_pages);
         }
         TotalFrameCount += desc->numPages;
     }
@@ -305,13 +324,14 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
         auto* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
         if (desc->type == 7
             and uintptr_t(desc->physicalAddress) >= MiB(1)
-            and uintptr_t(desc->physicalAddress) < InitialPageBitmapMaxAddress) {
+            and uintptr_t(desc->physicalAddress) >= PhysicalOffset
+            and uintptr_t(desc->physicalAddress) < PhysicalOffset + InitialPageBitmapMaxAddress) {
             DBGMSG(
                 "Freeing {} pages starting at {:#016x} according to EFI\n",
                 desc->numPages,
                 (uintptr_t)desc->physicalAddress);
             free_pages(
-                (void*)PhysicalKernelAddress(PhysicalAddress(desc->physicalAddress)).address,
+                (void*)PhysicalKernelAddress(PhysicalAddress((uintptr_t)desc->physicalAddress - PhysicalOffset)).address,
                 desc->numPages);
             if (desc->numPages > MaxContiguousFreeFrames)
                 MaxContiguousFreeFrames = desc->numPages;
@@ -335,7 +355,7 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
     // We should probably wait until we can parse the kernel executable file,
     // then just re-map those as not writable.
     auto activePML4 = Memory::active_memory_space();
-    auto phys = PhysicalAddress(uintptr_t(0));
+    auto phys = PhysicalAddress(PhysicalOffset);
     auto virt = FROM_FRAME_POINTER(phys);
     map_region_kernel(
         activePML4,
@@ -374,9 +394,9 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
     for (u64 i = 0; i < entries; ++i) {
         auto* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
         if (desc->type == (u32)EFI::MemoryDescriptorType::ConventionalMemory
-            and uintptr_t(desc->physicalAddress) >= InitialPageBitmapMaxAddress) {
+            and uintptr_t(desc->physicalAddress) >= PhysicalOffset + InitialPageBitmapMaxAddress) {
             free_pages(
-                (void*)PhysicalKernelAddress(PhysicalAddress(desc->physicalAddress)).address,
+                (void*)PhysicalKernelAddress(PhysicalAddress((uintptr_t)desc->physicalAddress - PhysicalOffset)).address,
                 desc->numPages);
             if (desc->numPages > largestFreeMemorySegmentPageCount) {
                 largestFreeMemorySegment = desc->physicalAddress;

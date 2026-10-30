@@ -290,10 +290,6 @@ void parse_device_tree(fdt_header* dt) {
                         uart_base_address = (uart_base_address - parent_frame.translate_address) + parent_frame.range_address;
                 }
 
-                // NOTE: Right here is where we are failing. Basically, we need to map the
-                // UART in virtual address space before attempting to use it...
-                hang();
-
                 // Map uart MMIO starting at
                 //   uart_base_address until offset fdtstack[current_fdtstack_index].size
                 Memory::memory_space_handle memory_handle{};
@@ -306,6 +302,8 @@ void parse_device_tree(fdt_header* dt) {
                 auto uart_physical = PhysicalAddress(uart_base_address);
                 auto uart_virtual = PhysicalKernelAddress(uart_physical);
 
+                // hang();
+
                 Memory::map_region_mmio(
                     memory_handle,
                     uart_virtual,
@@ -315,6 +313,8 @@ void parse_device_tree(fdt_header* dt) {
                 UART::Base = uart_virtual.address;
                 UART::initialize();
                 UART::out("\n\ndid it work?\n\n");
+
+                hang();
             }
 
             if (current_fdtstack_index > 0)

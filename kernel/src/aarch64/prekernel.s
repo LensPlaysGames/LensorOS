@@ -33,20 +33,21 @@ kernel_stack_top:
 //   Maps 2MB Identity Code Block at dynamic load address
 //
 // UPPER HALF (TTBR1 Kernel & RAM):
-//                 ,-> k_l2_code -- Maps 2MB Higher-Half Code
-// k_l0  -> k_l1 --|
-//                 `-> k_l2_ram  -- Maps sequential 64MB RAM window
+//        ,-> k_l1_code -> k_l2_code -> k_l3_code -- Maps 2MB Higher-Half Code
+// k_l0 --|
+//        `-> k_l1_ram  -> k_l2_ram  -- Maps sequential 64MB RAM window
 
 // 4KB page alignment
 .align 12
-id_l0:     .zero 4096 // 4e000
-id_l1:     .zero 4096 // 4f000
-id_l2:     .zero 4096 // 50000
-k_l0:      .zero 4096 // 51000
-k_l1:      .zero 4096 // 52000
-k_l2_ram:  .zero 4096 // 53000
-k_l2_code: .zero 4096 // 54000
-k_l3_code: .zero 4096 // 55000
+id_l0:     .zero 4096
+id_l1:     .zero 4096
+id_l2:     .zero 4096
+k_l0:      .zero 4096
+k_l1_ram:  .zero 4096
+k_l2_ram:  .zero 4096
+k_l1_code: .zero 4096
+k_l2_code: .zero 4096
+k_l3_code: .zero 4096
 
 .section .text
 .align 11
@@ -136,6 +137,35 @@ _start:
     add x0, x0, x21             // x0 = P2V(x0)
     str x0, [x25, #32]          // update boot_info pointer
 
+    // find physical offset for mapping
+    // x22 -> physical offset for mapping
+    mov x22, #0
+    // iterate EFI memory map to find first type 7 (EfiConventionalMemory)
+    // region, and use that physical address as our base.
+    ldr x0, [x25, #32] // x0 -> boot_info.map
+    sub x0, x0, x21    // x0 = V2P(x0)
+    ldr x2, [x25, #40] // load boot_info.map_size
+    ldr x3, [x25, #48] // load boot_info.descriptor_size
+
+    add x2, x0, x2 // x2 = end address of the memory map (map_start + map_size)
+
+.loop_mem_map:
+    cmp x0, x2           // Have we reached the end of the memory map?
+    b.hs .map_not_found  // If x0 >= x2, type 7 region was not found
+
+    ldr w1, [x0]         // load efi_memory_descriptor.type (4 bytes)
+    cmp w1, #7           // check if type == 7 (EfiConventionalMemory)
+    b.eq .found_conventional
+
+    add x0, x0, x3 // Advance to the next descriptor: x0 = x0 + descriptor_size
+    b .loop_mem_map
+
+.found_conventional:
+    // x22 -> physical offset for mapping
+    ldr x22, [x0, #8] // x22 = physical address base of the first type 7 region
+.map_not_found:
+
+
     mov x0, x19                 // x0 = physical address base
 
 // ============================================================================
@@ -160,14 +190,16 @@ init_paging:
 
     adrp x5, k_l0
     add x5, x5, :lo12:k_l0      // x5 = k_l0
-    adrp x6, k_l1
-    add x6, x6, :lo12:k_l1      // x6 = k_l1
+    adrp x6, k_l1_code
+    add x6, x6, :lo12:k_l1_code // x6 = k_l1_code
     adrp x10, k_l2_code
     add x10, x10, :lo12:k_l2_code // x10 = k_l2_code
     adrp x11, k_l3_code
     add x11, x11, :lo12:k_l3_code // x11 = k_l3_code
     adrp x12, k_l2_ram
     add x12, x12, :lo12:k_l2_ram // x12 = k_l2_ram
+    adrp x18, k_l1_ram
+    add x18, x18, :lo12:k_l1_ram // x18 = k_l1_ram
 
     // ------------------------------------------------------------------------
     // Zero Out All Static Table Memory Space
@@ -178,10 +210,11 @@ zero_all_tables:
     str     xzr, [x2, x13]              // id_l1
     str     xzr, [x3, x13]              // id_l2
     str     xzr, [x5, x13]              // k_l0
-    str     xzr, [x6, x13]              // k_l1
+    str     xzr, [x6, x13]              // k_l1_code
     str     xzr, [x10, x13]             // k_l2_code
     str     xzr, [x11, x13]             // k_l3_code
     str     xzr, [x12, x13]             // k_l2_ram
+    str     xzr, [x18, x13]             // k_l1_ram
     add     x13, x13, #8
     cmp     x13, #4096
     b.ne    zero_all_tables
@@ -239,10 +272,10 @@ zero_all_tables:
     // ------------------------------------------------------------------------
     // Target 1: Higher Half Kernel @ 0xffff000000000000 (2MB mapped via 4KB pages)
 
-    orr     x4, x6, #0x3        // Link k_l0 -> k_l1
+    orr     x4, x6, #0x3        // Link k_l0 -> k_l1_code
     str     x4, [x5, #0]        // Store in L0 Entry 0
 
-    orr     x4, x10, #0x3       // Link k_l1 -> k_l2_code
+    orr     x4, x10, #0x3       // Link k_l1_code -> k_l2_code
     str     x4, [x6, #0]        // Store in L1 Entry 0
 
     // Link k_l2_code -> k_l3_code (Table descriptor, bits [1:0] = 0x3)
@@ -268,12 +301,15 @@ map_l3_loop:
 
     // Target 2: 64MiB Direct RAM Region @ 0xffff800000000000
     // 0xffff800000000000 sets Level 0 Index to 256
-    orr     x4, x12, #0x3 // Link k_l1 -> k_l2_ram (Our independent L2 table!)
-    str     x4, [x6, #8] // Store inside k_l1 Entry 1 (Index 1 handles next 512MB slot)
+    orr     x4, x18, #0x3          // Link k_l0[256] -> k_l1_ram
+    str     x4, [x5, #(256 * 8)]   // Store in L0 Entry 256
+
+    orr     x4, x12, #0x3 // Link k_l1_ram -> k_l2_ram
+    str     x4, [x18]     // Store inside k_l1_ram Entry 1
 
     // Map 32 sequential 2MB blocks (64MiB total) into k_l2_ram page
     mov     x14, #0   // Loop counter
-    mov     x7, xzr   // Physical frame pointer starting at 0x00000000
+    mov     x7, x22   // Physical frame pointer starting at x22 (calculated above)
 ram_map_loop:
     mov     x4, #0x0705
     orr     x4, x7, x4

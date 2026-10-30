@@ -23,6 +23,8 @@
 #include <memory/common.h>
 #include <stdint.h>
 
+extern uintptr_t PhysicalOffset;
+
 struct VirtualAddress;
 struct PhysicalAddress;
 struct PhysicalKernelAddress;
@@ -63,10 +65,10 @@ namespace Memory {
 using memory_space_handle = uintptr_t;
 
 constexpr inline PhysicalAddress TO_FRAME_POINTER(PhysicalKernelAddress p) {
-    return PhysicalAddress(p.address - PHYSICAL_BASE);
+    return PhysicalAddress(p.address - PHYSICAL_BASE - PhysicalOffset);
 }
 constexpr inline PhysicalKernelAddress FROM_FRAME_POINTER(PhysicalAddress p) {
-    return PhysicalKernelAddress(p.address + PHYSICAL_BASE);
+    return PhysicalKernelAddress(p.address + PHYSICAL_BASE - PhysicalOffset);
 }
 
 enum class Flags : uint32_t {

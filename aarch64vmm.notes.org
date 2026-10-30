@@ -9,3 +9,50 @@ So, what is the physical memory manager to do, in order to map it's region in la
 I think we just shove a =map_large_region()= into the =Memory= API...
 
 Before any of that, though, first things first. We want to separate out the x86_64 virtual memory manager into the x86_64 branch of the build pipeline.
+
+** It's later now
+
+Okay so I've made LOTS of progress. x86_64 VMM is separated completely. Core kernel components are ported.
+
+Problem now is a weird problem wrt memory addressing.
+
+On x86_64, DRAM starts at CPU address 0 and goes on. Hardware (i.e. MMIO) regions overlap this, usually in the first 4GiB somewhere.
+
+On aarch64, it isn't guaranteed. FDT memory nodes can place memory at whatever physical address the manufacturer wants. That's good (for them). For us, it's complicated.
+
+QEMU decides to place DRAM offset at 1GiB.
+
+Our physical memory manager only looked in the first 64MiB for free space. That obviously didn't work.
+
+Our prekernel only mapped the first 64MiB of higher half RAM mapping. That obviously wasn't very useful.
+
+So, my genius idea was to just keep an offset.
+
+In the prekernel, map our =0xffff800000000000= RAM mapping to our /offset/ base, not just zero.
+
+In the physical memory manager, have the initial 64MiB-covering bitmap start at our /offset/ base, not just zero.
+
+Then, voila.
+
+Currently, it's almost comical where this has led us.
+
+After adjusting physical <-> physical kernel address translation to take this offset into account, and /actually getting/ the right addresses, we are *still* hitting a synchronous fault when trying to access the memory.
+
+Wait, but this time, it's kind of funnier.
+
+Because, you see, we are trying to map within the /prekernel/ page tables, which are within the /kernel/ address space, which is *not* mapped in the physical RAM space... lol.
+
+So, we are now actually mapping the higher half RAM space, and we are now even mapping it to a dynamic base address passed to us from UEFI, but now the kernel itself is not mapped in that space, and so when we try to get the "physical kernel address" for our early boot page tables, it is pointing to an unmapped address. Comical.
+
+So, we could map the kernel in the physical RAM mapping space within the prekernel (such that a physical address pointing inside the kernel could be adjusted to a physical kernel address and dereferenced without worry)...
+
+#+begin_example
+(gdb) n
+68	        uint64_t* depth1_entry_ptr = &depth1_table[depth1_index];
+(gdb) p depth1_table
+$7 = (uint64_t *) 0xffff800005151000
+(gdb) n
+69	        if (not(*depth1_entry_ptr & entry_present)) {
+(gdb) n
+0x000000004514b200 in ?? ()
+#+end_example

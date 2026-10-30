@@ -10,17 +10,17 @@
 void kstage1(uintptr_t base, BootInfo* bInfo) {
     KERNEL_PHYSICAL = (uintptr_t)base;
 
-    // using prekernel map, try to get a basic message out the UART
-    fdt_header& fdt = *(fdt_header*)bInfo->devices;
-    parse_device_tree(&fdt);
-
-    hang();
-
     // Setup physical memory allocator from EFI memory map.
     Memory::init_physical(
         bInfo->map,
         bInfo->mapSize,
         bInfo->mapDescSize);
+
+    // using prekernel map, try to get a basic message out the UART
+    fdt_header& fdt = *(fdt_header*)bInfo->devices;
+    parse_device_tree(&fdt);
+
+    hang();
 
     Memory::startup_handle = Memory::active_memory_space();
 
