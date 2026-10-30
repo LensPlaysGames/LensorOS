@@ -273,6 +273,9 @@ void init_physical(EFI_MEMORY_DESCRIPTOR* memMap, u64 size, u64 entrySize) {
         EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((u64)memMap + (i * entrySize));
         if (desc->type == 7) {
             PhysicalOffset = (uintptr_t)desc->physicalAddress;
+            // 2MiB align (21 bit)
+            PhysicalOffset >>= 21;
+            PhysicalOffset <<= 21;
             break;
         }
     }

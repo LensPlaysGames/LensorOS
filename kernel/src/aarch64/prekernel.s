@@ -163,6 +163,9 @@ _start:
 .found_conventional:
     // x22 -> physical offset for mapping
     ldr x22, [x0, #8] // x22 = physical address base of the first type 7 region
+    // align down to 2MiB
+    lsr x22, x22, #21           // Shift right to strip unaligned bits
+    lsl x22, x22, #21           // Shift back left to restore the 2MiB alignment
 .map_not_found:
 
 

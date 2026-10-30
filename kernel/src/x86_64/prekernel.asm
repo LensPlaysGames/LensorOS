@@ -122,6 +122,34 @@ _start:
     sub rdx, r8 ;# RDX -> P2V(EFI_MEMORY_DESCRIPTOR*)
     mov QWORD [rel boot_info + 32], rdx
 
+    mov r10, 0
+    mov rax, QWORD [rel boot_info + 32]
+    mov rbx, KERNEL_VIRTUAL
+    sub rax, rbx
+    add rax, r8 ;# RAX -> V2P()   ;# RAX -> physical map base
+    mov rbx, QWORD [rel boot_info + 40]
+    mov rcx, QWORD [rel boot_info + 48] ;# RCX -> map descriptor size
+
+    mov rbx, rax
+    add rbx, QWORD [rel boot_info + 40] ;# RBX -> RBX + total map size in bytes -> end address of memory map
+
+loop_efi_memory:
+    cmp rax, rbx
+    jge loop_efi_exit
+
+    mov edx, DWORD [rax]
+    cmp edx, 7
+    je loop_efi_found
+
+    add rax, rcx
+    jmp loop_efi_memory
+
+loop_efi_found:
+    mov r10, QWORD [rax + 8]
+    shr r10, 21
+    shl r10, 21
+loop_efi_exit:
+
     ;# Since we don't know the physical location at compile time, we use R8
     ;# (the physical base) to dynamically map our static structures.
 
@@ -197,7 +225,7 @@ _start:
     mov [rel prekernel_pml3_ident + 0 * 8], rax
 
     ;# Loop to fill the entire PML2 table with 512 Huge Pages (2 MiB each = 1 GiB total)
-    mov rax, 0
+    mov rax, r10
     or  rax, (PAGE_PRESENT | PAGE_READ_WRITE | PAGE_LARGER_PAGES)
     lea rdi, [rel prekernel_pml2_ident]
     mov rcx, ENTRIES_PER_PAGE_TABLE
