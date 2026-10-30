@@ -334,18 +334,23 @@ if ( QEMU_PROGRAM )
   # Hardware Acceleration
   # Only possible if guest architecture is same as host (i.e. x86_64
   # LensorOS running on QEMU running on an x86_64 machine).
-  if ( CMAKE_HOST_WIN32 )
-    list( APPEND QEMU_FLAGS
-      -accel whpx
+  if (
+      ${ARCH} MATCHES "x86_64"
+      AND CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64|x64|[aA][mM][dD]64"
     )
-  elseif( CMAKE_HOST_APPLE )
-    list( APPEND QEMU_FLAGS
-      -accel hvf
-    )
-  elseif( CMAKE_HOST_UNIX )
-    list( APPEND QEMU_FLAGS
-      -enable-kvm
-    )
+    if ( CMAKE_HOST_WIN32 )
+      list( APPEND QEMU_FLAGS
+        -accel whpx
+      )
+    elseif( CMAKE_HOST_APPLE )
+      list( APPEND QEMU_FLAGS
+        -accel hvf
+      )
+    elseif( CMAKE_HOST_UNIX )
+      list( APPEND QEMU_FLAGS
+        -enable-kvm
+      )
+    endif()
   else()
     list( APPEND QEMU_FLAGS
       -accel tcg,thread=multi
