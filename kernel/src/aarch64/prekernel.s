@@ -244,6 +244,13 @@ zero_all_tables:
     orr     x4, x3, #0x3                // Table descriptor flag
     str     x4, [x2, x13, lsl #3]
 
+    // TODO: We should loop and map as many 2MiB descriptors are needed to
+    // cover the kernel image
+    // The last address needed by the kernel image should be calcutable by
+    // adding the size of the kernel image to the physical kernel base.
+    // The size of the kernel image may be found by subtracting
+    // KERNEL_END - KERNEL_VIRTUAL, for example.
+
     // Drop 2MB Block Descriptor into Level 2
     lsr     x13, x0, #21                // Level 2 bits: [29:21]
     and     x13, x13, #0x1ff
