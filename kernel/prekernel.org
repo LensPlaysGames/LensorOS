@@ -1,3 +1,11 @@
+* The LensorOS Prekernel
+
+When UEFI hands off execution to the kernel, it isn't exactly in an environment ready for C or C++ execution. We need a new stack, and we need to virtually map the kernel in the higher half (where it is linked), for starters.
+
+Each architecture implements it's own prekernel (in assembly, usually), building the execution environment necessary for the initial stages of the C++ kernel to run (i.e. calling =kmain=, =kstage1=, etc).
+
+The following is a little bit about the expected execution environment of the kernel.
+
 * PHYSICAL RAM
 
 Some large contiguous span of addresses that references actual DRAM.
