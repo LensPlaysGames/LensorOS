@@ -292,17 +292,13 @@ void parse_device_tree(fdt_header* dt) {
 
                 // Map uart MMIO starting at
                 //   uart_base_address until offset fdtstack[current_fdtstack_index].size
-                Memory::memory_space_handle memory_handle{};
-                asm volatile(
-                    "mrs %0, ttbr1_el1\n\t"
-                    : "=r"(memory_handle)
-                    : /** (!) No Inputs (!) **/
-                    : "memory");
+                auto memory_handle = Memory::active_memory_space();
 
                 auto uart_physical = PhysicalAddress(uart_base_address);
-                auto uart_virtual = PhysicalKernelAddress(uart_physical);
-
-                // hang();
+                // WARNING: DO NOT CONVERT uart_physical to a PhysicalKernelAddress
+                // because that's not how MMIO mappings work :(
+                // TODO: mmio space, or something (another fucking region of virtual memory)
+                auto uart_virtual = VirtualAddress(0xffff888800000000);
 
                 Memory::map_region_mmio(
                     memory_handle,
@@ -313,8 +309,6 @@ void parse_device_tree(fdt_header* dt) {
                 UART::Base = uart_virtual.address;
                 UART::initialize();
                 UART::out("\n\ndid it work?\n\n");
-
-                hang();
             }
 
             if (current_fdtstack_index > 0)
