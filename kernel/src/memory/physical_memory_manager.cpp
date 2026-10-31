@@ -166,7 +166,7 @@ void* request_page() {
         MaxContiguousFreeFrames);
     for (; FirstFreeFrame < TotalFrameCount; ++FirstFreeFrame) {
         if (FrameBitmap.get(FirstFreeFrame) == false) {
-            void* addr = (void*)(FROM_FRAME_POINTER(PhysicalAddress(FirstFreeFrame * PAGE_SIZE))).address;
+            void* addr = (void*)(FROM_FRAME_POINTER(PhysicalAddress(PhysicalOffset + FirstFreeFrame * PAGE_SIZE))).address;
             lock_page(addr);
             FirstFreeFrame += 1;  // Eat current page.
             DBGMSG(
@@ -234,7 +234,7 @@ void* request_pages(u64 numberOfPages) {
                 return nullptr;
             }
             if (run >= numberOfPages) {
-                auto physical_address = PhysicalAddress(i * PAGE_SIZE);
+                auto physical_address = PhysicalAddress(PhysicalOffset + i * PAGE_SIZE);
                 void* out = (void*)(FROM_FRAME_POINTER(physical_address).address);
                 lock_pages(out, numberOfPages);
                 DBGMSG(
