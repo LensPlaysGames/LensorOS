@@ -35,30 +35,32 @@ void out(u8 byte) {
 }
 
 void out(std::string_view str) {
-    if (initialized() == false)
+    if (!initialized())
         return;
 
-    // Set current character to beginning of string.
     const char* c = str.data();
-    // Check for null-terminator at current character.
-    while (*c != '\0') {
+    size_t remaining = str.size();
+
+    while (remaining > 0) {
 #ifdef LENSOR_OS_UART_HIDE_COLOR_CODES
         if (*c == '\033') {
-            // Loop until null terminator or 'm'.
+            // Loop safely within the boundaries of the string view size
             do {
                 c++;
-            } while (*c != 'm' && *c != '\0');
-            // Don't read memory past null terminator!
-            if (*c == '\0')
-                return;
-            // Skip the 'm'.
-            c++;
-            if (*c == '\0')
-                return;
+                remaining--;
+            } while (remaining > 0 && *c != 'm');
+
+            if (remaining > 0) {
+                c++;  // Skip the 'm'
+                remaining--;
+            }
+            continue;
         }
 #endif /* defined LENSOR_OS_UART_HIDE_COLOR_CODES */
-        out((u8)*c);
+
+        out(u8(*c));
         c++;
+        remaining--;
     }
 }
 
