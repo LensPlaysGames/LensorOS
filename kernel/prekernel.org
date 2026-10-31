@@ -1,0 +1,42 @@
+* PHYSICAL RAM
+
+Some large contiguous span of addresses that references actual DRAM.
+
+Often starts at 0x0, but very well may start at any offset.
+
+i.e. =0x0000000000000000= -- =0x0000000040000000= (1GiB)
+
+* Prekernel Mappings
+** Kernel Image - Physical Identity
+=0x0000............=
+
+Wherever the bootloader loaded us, we map the span of the entire kernel image, such that when we turn paging on but haven't yet transitioned our program counter to our link address, everything runs smoothly.
+
+This entire mapping can technically be removed upon the prekernel transitioning to link address space.
+
+** Kernel Image - Higher Half
+=0xffff000000000000=
+
+A fixed address the kernel image is at so the linker can do special maths and stuff, and so the kernel code can run concurrently with user code without any collisions
+
+** PHYSICAL RAM - HIGHER HALF
+=0xffff800000000000=
+
+Mapping the entire physical RAM space 1:1 creates issues (i.e. =nullptr= dereference being valid).
+
+So, we offset the entire physical RAM space by some offset to get a corresponding virtual address.
+
+This way, we can always convert between a physical RAM address and a readable/writable virtual address.
+
+If the PHYSICAL RAM starts at an offset, this space maps to that offset.
+
+i.e. offset of =0x200000=, =0xffff800000000000= is mapped to =0x200000=.
+
+Also in higher half to ensure it is out of the way of all user code (and =nullptr=, etc).
+
+** Kernel Image - Physical Higher Half
+=0xffff80..........=
+
+If the kernel image in physical memory is mapped outside the initial range of the higher half physical ram mapping set up in the prekernel, we specifically map the kernel image's physical address into the higher half physical ram address space, such that any physical address within the loaded kernel may be converted to a physical kernel address (readable/writable), and still be valid.
+
+Basically, if the bootloader loads the kernel above 1GiB offset from the start of physical memory, we have to ensure that it is mapped explicitly.
