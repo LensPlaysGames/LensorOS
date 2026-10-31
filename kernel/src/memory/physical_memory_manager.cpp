@@ -87,8 +87,8 @@ void print_physmem() {
             "  {}: {} pages beginning at {:16x} through {:16x}\n",
             last_locked ? "used" : "free",
             run,
-            begin * PAGE_SIZE,
-            (begin + run) * PAGE_SIZE);
+            PhysicalOffset + begin * PAGE_SIZE,
+            PhysicalOffset + (begin + run) * PAGE_SIZE);
     }
 }
 
