@@ -482,7 +482,7 @@ struct formatter<basic_string_view<_Char>, _Char> {
 
     template <typename _Ctx>
     auto format(basic_string_view<_Char> __str, _Ctx& __ctx) const {
-        return __ctx.out().append(__str.data(), __str.size());
+        return __ctx.out().append(__str);
     }
 };
 
