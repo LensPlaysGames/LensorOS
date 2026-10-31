@@ -22,11 +22,75 @@
 #include <memory/types.h>
 
 constexpr uint64_t entry_present = 1;
-
 constexpr uint64_t entry_page = 0b11;
 constexpr uint64_t entry_next_table = 0b11;
 constexpr uint64_t entry_large_page = 0b01;
-constexpr uint64_t entry_address_mask = ~uint64_t(0x1ff);
+constexpr uint64_t entry_user = (uint64_t(1) << 6);
+constexpr uint64_t entry_read_only = (uint64_t(1) << 7);
+constexpr uint64_t entry_inner_shareable = (uint64_t(0b11) << 8);
+constexpr uint64_t entry_access = (uint64_t(1) << 10);
+constexpr uint64_t entry_address_mask = 0x0000fffffffff000;
+
+/** L3 Entry Bit Breakdown
+ ** 1:0    Type Specifier
+ ** 4:2    AttrIdx: MAIR Index
+ ** 5      NS: Non-secure flag
+ ** 7:6    AP[2:1]: Access permissions
+ ** 9:8    SH: Sharability
+ ** 10     AF: Access Flag
+ ** 11     nG: Non-global flag
+ ** 47:12  Final page physical address
+ ** 50:48  Reserved
+ ** 51     DBM: Dirty bit modifier flag
+ ** 52     Contiguous flag
+ ** 53     PXN: Privileged execute never
+ ** 54     UXN: Unprivileged execute never
+ ** 63:55  Ignored
+ **
+ ** The non-secure flag (NS), bit 5, is relevant only when using the
+ ** "TrustZone" features.
+ **
+ ** The access permissions (AP) field specifies the data access
+ ** permissions for both privileged and unprivileged load/store
+ ** instructions. The high bit selects between read/write or read-only
+ ** access, and the low bit specifies whether unprivileged access is
+ ** allowed, giving the following combinations:
+ **
+ ** AP[2:1] with PSTATE.PAN clear Privileged Unprivileged
+ ** 0b00    Read/write  None
+ ** 0b01    Read/write  Read/write
+ ** 0b10    Read-only   None
+ ** 0b11    Read-only   Read-only
+ **
+ ** It's not possible to deny privileged access while allowing unprivileged
+ ** access at the table entry level, but the PSTATE register has a global
+ ** Privileged Access Never (PAN) flag, which redefines the table to have
+ ** the following meanings, making privileged and unprivileged access
+ ** mututally-exclusive:
+ **
+ ** AP[2:1] with PSTATE.PAN set Privileged Unprivileged
+ ** 0b00    Read/write  None
+ ** 0b01    None        Read/write
+ ** 0b10    Read-only   None
+ ** 0b11    None        Read-only
+ **
+ **
+ ** The Contiguous flag acts as a hint to the Memory Management Unit (MMU)
+ ** that a set of adjacent page table entries point to a continuous,
+ ** physically contiguous block of memory. This allows the CPU to cache
+ ** multiple entries into a single Translation Lookaside Buffer (TLB)
+ ** entry, significantly optimizing TLB space and reducing translation
+ ** misses.
+ **
+ **
+ **/
+
+// BE SURE THIS MATCHES HOW YOU PROGRAM THE MAIR REGISTER!!
+constexpr uint MAIR_MMIO = 0;
+constexpr uint MAIR_NORMAL = 1;
+
+constexpr uint64_t entry_mmio_unchacheable = (uint64_t(MAIR_MMIO) << 2);
+constexpr uint64_t entry_normal_memory = (uint64_t(MAIR_NORMAL) << 2);
 
 namespace Memory {
 
@@ -40,8 +104,14 @@ void map_region(
     Flags flags) {
     // map a virtual region in the page table pointed to by handle.
 
-    // TODO: flags combination -> MAIR index
-    uint mair_index = 0;
+    // flags combination -> MAIR index
+    uint64_t mair_index_mask = entry_normal_memory;
+    if ((flags & Flag::DisableReadCache) or (flags & Flag::DisableReadCache))
+        mair_index_mask = entry_mmio_unchacheable;
+
+    uint64_t entry_flags = entry_access
+                           | entry_inner_shareable
+                           | mair_index_mask;
 
     uintptr_t offset = 0;
     while (offset < byte_count) {
@@ -86,7 +156,7 @@ void map_region(
         if (can_map_2mib) {
             // Write a Depth 2 Block Descriptor (0b01) directly and advance by 2MB
             *depth2_entry_ptr = (pa & entry_address_mask)
-                                | ((mair_index << 2) & 0b111)
+                                | entry_flags
                                 | entry_large_page;
             offset += PAGE_SIZE_LARGE;
             continue;
@@ -113,6 +183,7 @@ void map_region(
             }
 
             // Update Depth 2 entry to target new split table
+            // HERE
             *depth2_entry_ptr = (PhysicalAddress(new_table).address & entry_address_mask)
                                 | entry_next_table;
         }
@@ -129,8 +200,7 @@ void map_region(
                                      .address;
         uint64_t* depth3_entry_ptr = &depth3_table[depth3_index];
         *depth3_entry_ptr = (pa & entry_address_mask)
-                            // TODO: shareability and stuff (other bits of entry)
-                            | ((mair_index << 2) & 0b111)
+                            | entry_flags
                             | entry_page;
         offset += PAGE_SIZE;
     }
