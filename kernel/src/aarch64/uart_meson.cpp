@@ -38,13 +38,131 @@ volatile uint32_t* status() { return (uint32_t*)(Base + 12); }
 volatile uint32_t* misc() { return (uint32_t*)(Base + 16); }
 volatile uint32_t* reg5() { return (uint32_t*)(Base + 20); }
 
+namespace Reg {
+namespace Status {
+// Bit Positions (Shifts)
+constexpr uint32_t POS_RECV_FIFO_COUNT = 0U;  // Corrected [6:0]
+constexpr uint32_t POS_TX_FIFO_COUNT = 8U;    // [14:8]
+constexpr uint32_t POS_PARITY_ERR = 16U;
+constexpr uint32_t POS_FRAME_ERR = 17U;
+constexpr uint32_t POS_WRITE_FULL_ERR = 18U;
+constexpr uint32_t POS_RECV_FIFO_FULL = 19U;
+constexpr uint32_t POS_RECV_FIFO_EMPTY = 20U;
+constexpr uint32_t POS_XMIT_FIFO_FULL = 21U;
+constexpr uint32_t POS_XMIT_FIFO_EMPTY = 22U;
+constexpr uint32_t POS_CTS_LEVEL = 23U;
+constexpr uint32_t POS_RECV_FIFO_OVFL = 24U;
+constexpr uint32_t POS_XMIT_BUSY = 25U;
+constexpr uint32_t POS_RECV_BUSY = 26U;
+
+// Flags & Masks
+constexpr uint32_t MASK_PARITY_ERR = 1U << POS_PARITY_ERR;
+constexpr uint32_t MASK_FRAME_ERR = 1U << POS_FRAME_ERR;
+constexpr uint32_t MASK_WRITE_FULL_ERR = 1U << POS_WRITE_FULL_ERR;
+constexpr uint32_t MASK_RECV_FIFO_FULL = 1U << POS_RECV_FIFO_FULL;
+constexpr uint32_t MASK_RECV_FIFO_EMPTY = 1U << POS_RECV_FIFO_EMPTY;
+constexpr uint32_t MASK_XMIT_FIFO_FULL = 1U << POS_XMIT_FIFO_FULL;
+constexpr uint32_t MASK_XMIT_FIFO_EMPTY = 1U << POS_XMIT_FIFO_EMPTY;
+constexpr uint32_t MASK_CTS_LEVEL = 1U << POS_CTS_LEVEL;
+constexpr uint32_t MASK_RECV_FIFO_OVFL = 1U << POS_RECV_FIFO_OVFL;
+constexpr uint32_t MASK_XMIT_BUSY = 1U << POS_XMIT_BUSY;
+constexpr uint32_t MASK_RECV_BUSY = 1U << POS_RECV_BUSY;
+
+constexpr uint32_t MASK_TX_FIFO_COUNT = 0x7FU << POS_TX_FIFO_COUNT;
+constexpr uint32_t MASK_RECV_FIFO_COUNT = 0x7FU << POS_RECV_FIFO_COUNT;
+
+[[nodiscard]]
+constexpr uint32_t tx_byte_count(uint32_t val) {
+    return (val & MASK_TX_FIFO_COUNT) >> POS_TX_FIFO_COUNT;
+}
+[[nodiscard]]
+constexpr uint32_t recv_byte_count(uint32_t val) {
+    return (val & MASK_RECV_FIFO_COUNT) >> POS_RECV_FIFO_COUNT;
+}
+
+[[nodiscard]]
+constexpr uint32_t has_errors(uint32_t val) {
+    return (val & (MASK_FRAME_ERR | MASK_PARITY_ERR | MASK_WRITE_FULL_ERR));
+}
+
+}  // namespace Status
+
+namespace Control {
+// --- Bit Positions (Shifts) ---
+constexpr uint32_t POS_BAuD_RATE = 0u;  // [11:0]
+constexpr uint32_t POS_TX_ENABLE = 12u;
+constexpr uint32_t POS_RX_ENABLE = 13u;
+constexpr uint32_t POS_TWO_WIRE = 15u;
+constexpr uint32_t POS_STOP_BIT_LEN = 16u;  // [17:16]
+constexpr uint32_t POS_PARITY_TYPE = 18u;
+constexpr uint32_t POS_PARITY_ENABLE = 19u;
+constexpr uint32_t POS_CHAR_LEN = 20u;  // [21:20]
+constexpr uint32_t POS_RESET_TX_SM = 22u;
+constexpr uint32_t POS_RESET_RX_SM = 23u;
+constexpr uint32_t POS_CLEAR_ERROR = 24u;
+constexpr uint32_t POS_INVERT_RX = 25u;
+constexpr uint32_t POS_INVERT_TX = 26u;
+constexpr uint32_t POS_INT_RX_BYTE = 27u;
+constexpr uint32_t POS_INT_TX_BYTE = 28u;
+constexpr uint32_t POS_INVERT_CTS = 29u;
+constexpr uint32_t POS_MASK_ERROR = 30u;
+constexpr uint32_t POS_INVERT_RTS = 31u;
+
+// --- Configuration Masks & Flags ---
+constexpr uint32_t MASK_BAUD_RATE = 0xfffu << POS_BAuD_RATE;
+constexpr uint32_t MASK_TX_ENABLE = 1u << POS_TX_ENABLE;
+constexpr uint32_t MASK_RX_ENABLE = 1u << POS_RX_ENABLE;
+constexpr uint32_t MASK_TWO_WIRE = 1u << POS_TWO_WIRE;
+constexpr uint32_t MASK_STOP_BIT_LEN = 3u << POS_STOP_BIT_LEN;
+constexpr uint32_t MASK_PARITY_TYPE = 1u << POS_PARITY_TYPE;
+constexpr uint32_t MASK_PARITY_ENABLE = 1u << POS_PARITY_ENABLE;
+constexpr uint32_t MASK_CHAR_LEN = 3u << POS_CHAR_LEN;
+constexpr uint32_t MASK_RESET_TX_SM = 1u << POS_RESET_TX_SM;
+constexpr uint32_t MASK_RESET_RX_SM = 1u << POS_RESET_RX_SM;
+constexpr uint32_t MASK_CLEAR_ERROR = 1u << POS_CLEAR_ERROR;
+constexpr uint32_t MASK_INVERT_RX = 1u << POS_INVERT_RX;
+constexpr uint32_t MASK_INVERT_TX = 1u << POS_INVERT_TX;
+constexpr uint32_t MASK_INT_RX_BYTE = 1u << POS_INT_RX_BYTE;
+constexpr uint32_t MASK_INT_TX_BYTE = 1u << POS_INT_TX_BYTE;
+constexpr uint32_t MASK_INVERT_CTS = 1u << POS_INVERT_CTS;
+constexpr uint32_t MASK_MASK_ERROR = 1u << POS_MASK_ERROR;
+constexpr uint32_t MASK_INVERT_RTS = 1u << POS_INVERT_RTS;
+
+namespace Option {
+// Character length options [21:20]
+constexpr uint32_t CHAR_LEN_8BIT = 0u << POS_CHAR_LEN;
+constexpr uint32_t CHAR_LEN_7BIT = 1u << POS_CHAR_LEN;
+constexpr uint32_t CHAR_LEN_6BIT = 2u << POS_CHAR_LEN;
+constexpr uint32_t CHAR_LEN_5BIT = 3u << POS_CHAR_LEN;
+
+// Stop bit options [17:16]
+constexpr uint32_t STOP_BITS_1 = 0u << POS_STOP_BIT_LEN;
+constexpr uint32_t STOP_BITS_2 = 1u << POS_STOP_BIT_LEN;
+
+// Parity type options (Bit 18)
+constexpr uint32_t PARITY_EVEN = 0u << POS_PARITY_TYPE;
+constexpr uint32_t PARITY_ODD = 1u << POS_PARITY_TYPE;
+}  // namespace Option
+
+constexpr void clear_errors() {
+    auto val = *control();
+
+    val |= MASK_CLEAR_ERROR;
+    *control() = val;
+
+    val &= ~MASK_CLEAR_ERROR;
+    *control() = val;
+}
+}  // namespace Control
+
+}  // namespace Reg
+
 // Called from the UART interrupt handler when data is received.
 uint8_t read() {
     if (not initialized()) return 0;
 
     uint maxSpins = 1000000u;
-    // bit 20 -- receive FIFO empty
-    while ((*status() & (1u << 20)) and maxSpins > 0)
+    while ((*status() & Reg::Status::MASK_RECV_FIFO_EMPTY) and maxSpins > 0)
         maxSpins--;
 
     if (maxSpins == 0)
@@ -61,8 +179,7 @@ void out_raw(uint8_t byte) {
     // over-writing data that was not yet sent, or causing a "FIFO written
     // while full" error.
     uint maxSpins = 1000000u;
-    // bit 21 -- transmit FIFO full
-    while ((*status() & (1u << 21)) and maxSpins > 0)
+    while ((*status() & Reg::Status::MASK_XMIT_FIFO_FULL) and maxSpins > 0)
         maxSpins--;
 
     if (maxSpins == 0)
@@ -74,13 +191,28 @@ void out_raw(uint8_t byte) {
 }  // namespace UART
 
 /**
+ **
+ ** High level overview:
+ ** We rely on UEFI or firmware or /something/ to initialize the UART :)
+ **
+ ** To write:
+ ** Wait while the FIFO is full, then write to WFIFO.
+ **
+ ** To read:
+ ** Wait while the FIFO is empty, then read from RFIFO.
+ **
+ **
+ **
  ** The following register definition is uniformly applied to all UART
  ** instantiations in the chip.
  **
  ** Instantiations   Base Address
  ** UART0            0xc1100000 + (0x2130 ~ 0x2135) * 4
+ **                  0xc11084c0 ~ 0xc11084d4
  ** UART1            0xc1100000 + (0x2137 ~ 0x213c) * 4
+ **                  0xc11084dc ~ 0xc11084f0
  ** UART2            0xc1100000 + (0x21C0 ~ 0x21c5) * 4
+ **                  0xc1108700 ~ 0xc1108714
  ** UART0-AO         0xc81004c0 ~ 0xc81004d4
  ** UART2-AO         0xc81004e0 ~ 0xc81004f4
  **
@@ -144,8 +276,8 @@ void out_raw(uint8_t byte) {
  **  [14-8] Read-only default=0 -- Transmit FIFO count. Number of bytes in
  **         the transmit FIFO
  **       7 Read-only default=0 -- Unused
- **   [8:0] Read-only default=0 -- Receive FIFO count. Number of bytes in the
- **   receive FIFO
+ **   [6:0] Read-only default=0 -- Receive FIFO count. Number of bytes in the
+ **         receive FIFO
  **
  ** UARTx_MISC: UART IRQ CONTROL
  ** 31 R/W 0 Added a “just in case” bit that can be set to 1 to enable clocks always. The default is 0 meaning the auto-clock
