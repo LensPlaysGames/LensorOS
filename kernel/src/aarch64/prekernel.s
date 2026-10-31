@@ -49,6 +49,9 @@ k_l1_code: .zero 4096
 k_l2_code: .zero 4096
 k_l3_code: .zero 4096
 
+// NOTE: unused if kernel is loaded under 1GiB
+k_l2_kernel_ram: .zero 4096
+
 .section .text
 .align 11
 exception_vectors:
@@ -203,6 +206,8 @@ init_paging:
     add x12, x12, :lo12:k_l2_ram // x12 = k_l2_ram
     adrp x18, k_l1_ram
     add x18, x18, :lo12:k_l1_ram // x18 = k_l1_ram
+    adrp x17, k_l2_kernel_ram
+    add x17, x17, :lo12:k_l2_kernel_ram // x17 = k_l2_kernel_ram
 
     // ------------------------------------------------------------------------
     // Zero Out All Static Table Memory Space
@@ -218,6 +223,7 @@ zero_all_tables:
     str     xzr, [x11, x13]             // k_l3_code
     str     xzr, [x12, x13]             // k_l2_ram
     str     xzr, [x18, x13]             // k_l1_ram
+    str     xzr, [x17, x13]             // k_l2_kernel_ram
     add     x13, x13, #8
     cmp     x13, #4096
     b.ne    zero_all_tables
@@ -308,9 +314,9 @@ map_l3_loop:
     str     x4, [x5, #(256 * 8)]   // Store in L0 Entry 256
 
     orr     x4, x12, #0x3 // Link k_l1_ram -> k_l2_ram
-    str     x4, [x18]     // Store inside k_l1_ram Entry 1
+    str     x4, [x18]     // Store inside k_l1_ram Entry
 
-    // Map 32 sequential 2MB blocks (64MiB total) into k_l2_ram page
+    // Map sequential 2MB blocks into k_l2_ram page
     mov     x14, #0   // Loop counter
     mov     x7, x22   // Physical frame pointer starting at x22 (calculated above)
 ram_map_loop:
@@ -320,9 +326,50 @@ ram_map_loop:
 
     add     x7, x7, #0x00200000         // Jump base PA forward by 2MB
     add     x14, x14, #1
-    cmp     x14, #32
+    cmp     x14, #512
     b.lt    ram_map_loop
 
+
+    // Basically, if the 1GiB physical ram mapping above doesn't cover the
+    // kernel image, we will have a hard time modifying early boot page tables
+    // from C++. This sets up another table in the k_l1_ram page to map the
+    // physical kernel image in the physical ram space.
+    sub x0, x19, x22 // x0 -> kernel physical base - physical RAM base
+    // x0 -> offset of kernel image in physical RAM
+    movz x2, #0x4000, lsl #16
+    cmp x0, x2
+    b.lo skip_kernel_physical_mapping
+
+    // x00 -> physical ram offset we need to map
+    // x18 -> k_l1_ram
+    // x17 -> k_l2_kernel_ram
+
+    // Align physical ram offset we need to map to 2MiB
+    lsr x0, x0, #21 // shift bottom 21 bits out
+    lsl x0, x0, #21 // shift bottom 21 bits in as zero
+
+    // Link k_l1_ram -> k_l2_kernel_ram (Table descriptor, bits [1:0] = 0x3)
+    // figure out k_l1_ram index, link k_l2_kernel_ram page table into k_l1_ram
+    lsr x2, x0, #30
+    and x2, x2, #0x1ff // index calculated!
+    // now we need to build the 8-byte entry
+    orr x3, x17, #0x3   // or the address in with the table descriptor flag
+    str x3, [x18, x2, lsl #3]
+
+    // utilize k_l2_kernel_ram page, map x0
+    // figure out k_l2_kernel_ram index, link x0 into k_l2_kernel_ram page
+    // table
+    lsr x2, x0, #21
+    and x2, x2, #0x1ff // depth2 index calculated!
+
+    // restore x0 to it's true physical address form, not the offset
+    add x0, x0, x22
+    // x0 is what we need to map into our physical ram address space
+    mov x3, #0x705
+    orr x3, x0, x3
+    str x3, [x17, x2, lsl #3]
+
+skip_kernel_physical_mapping:
 
     // ------------------------------------------------------------------------
     // Setup Environment Registers & Activate Translation Engine
@@ -426,16 +473,11 @@ ram_map_loop:
     br  x3                         // Jump to the virtual upper-half
 
 kernel_virtual_entry:
-    // --- YOU ARE NOW SAFELY IN THE KERNEL ---
-    // You can now safely disable TTBR0 to unmap the identity table:
-    // msr ttbr0_el1, xzr
-    // tlbi vmalle1is
-    // dsb ish
-    // isb
+    // --- YOU ARE NOW IN THE KERNEL, AS IT IS LINKED ---
 
-    // Call your C/C++ kernel main function
-    mov x0, x19
-    mov x1, x25
+    // Call the higher level kernel main function
+    mov x0, x19                 // Arg0 -> physical image base
+    mov x1, x25                 // Arg1 -> BootInfo*
     bl kmain
 
 /*
