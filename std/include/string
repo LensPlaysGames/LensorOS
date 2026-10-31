@@ -480,7 +480,7 @@ public:
             /// Char fits in the small string.
             if (__n <= size_t(__small.__rem_cap)) {
                 auto __data = __small.__data;
-                memcpy(__data + __size, __chars, __n * sizeof(_Char));
+                memmove(__data + __size, __chars, __n * sizeof(_Char));
                 // NOTE: The _Char that stores remaining capacity and
                 // is_large will be zero when there is zero remaining
                 // capacity. This means that the last _Char can act as a
