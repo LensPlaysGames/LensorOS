@@ -307,7 +307,14 @@ class basic_string {
     /// This function will always round up to the next power of two that is
     /// *greater than* the number of bytes required.
     _Nodiscard size_t __new_size(size_t __n) {
-        return (1 << (sizeof(size_t) - static_cast<size_t>(__builtin_clzll(size() + __n)))) * sizeof(_Char);
+        const auto __total_n = size() + __n;
+        if (__total_n == 0) return 0;
+
+        constexpr size_t __size_t_bitwidth = sizeof(size_t) * 8;
+
+        auto __shift = __size_t_bitwidth - ((size_t)(__builtin_clzll(__total_n)));
+
+        return (((size_t)1) << __shift) * sizeof(_Char);
     }
 
 public:
