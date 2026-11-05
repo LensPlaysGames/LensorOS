@@ -37,6 +37,8 @@ extern "C" int memcmp(const void* aPtr, const void* bPtr, size_t numBytes) {
 }
 
 extern "C" void* memcpy(void* __restrict__ dest, const void* __restrict__ src, size_t numBytes) {
+    if (numBytes == 0) return dest;
+
     void* result = dest;
 
 #if defined(x86_64)
@@ -54,36 +56,60 @@ extern "C" void* memcpy(void* __restrict__ dest, const void* __restrict__ src, s
     );
 
 #elif defined(aarch64)
-    asm volatile(
-        // Handle cases smaller than 16 bytes
-        "cmp    %[numBytes], #16\n\t"
-        "blt    2f\n\t"
+    // Fallback for very small blocks to prevent underflowing the buffer start
+    if (numBytes < 16) {
+        // Use standard byte-by-byte or small-word copies if numBytes < 16
+        auto* d = (char*)(dest);
+        const auto* s = (const char*)(src);
 
-        // Main loop copying 16 bytes at a time using Load/Store Pair
-        "1:\n\t"
-        "ldp    x4, x5, [%[src]], #16\n\t"   // Load 16 bytes, post-index src
-        "stp    x4, x5, [%[dest]], #16\n\t"  // Store 16 bytes, post-index dest
-        "sub    %[numBytes], %[numBytes], #16\n\t"
-        "cmp    %[numBytes], #16\n\t"
-        "bge    1b\n\t"
+        // unrolled small copy to keep it fast
+        if (numBytes & 8) {
+            *(uint64_t*)d = *(const uint64_t*)s;
+            d += 8;
+            s += 8;
+        }
+        if (numBytes & 4) {
+            *(uint32_t*)d = *(const uint32_t*)s;
+            d += 4;
+            s += 4;
+        }
+        if (numBytes & 2) {
+            *(uint16_t*)d = *(const uint16_t*)s;
+            d += 2;
+            s += 2;
+        }
+        if (numBytes & 1) {
+            *d = *s;
+        }
+    }
+    else {
+        asm volatile(
+            // Main loop copying 16 bytes at a time
+            "1:\n\t"
+            "ldp    x4, x5, [%[src]], #16\n\t"
+            "stp    x4, x5, [%[dest]], #16\n\t"
+            "sub    %[numBytes], %[numBytes], #16\n\t"
+            "cmp    %[numBytes], #16\n\t"
+            "bge    1b\n\t"
 
-        // Clean up remaining 0-15 bytes using a branchless overlap
-        "2:\n\t"
-        "cbz    %[numBytes], 3f\n\t"  // If perfectly divisible by 16, we are done
+            "cbz    %[numBytes], 2f\n\t"
 
-        // Rewind src and dest pointers back by (16 - remaining_bytes)
-        "mov    x4, #16\n\t"
-        "sub    x4, x4, %[numBytes]\n\t"   // x4 = 16 - remaining
-        "sub    %[src], %[src], x4\n\t"    // Adjust pointers backward so the final
-        "sub    %[dest], %[dest], x4\n\t"  // 16-byte copy aligns exactly with the buffer end
+            // Rewind safely based on the final remaining offset
+            // Because numBytes >= 16 initially, src has advanced at least 16 bytes.
+            // Rewinding here is guaranteed to stay within valid buffer boundaries.
+            "mov    x6, #16\n\t"
+            "sub    x6, x6, %[numBytes]\n\t"
+            "sub    %[src], %[src], x6\n\t"
+            "sub    %[dest], %[dest], x6\n\t"
 
-        "ldp    x4, x5, [%[src]]\n\t"   // Read final 16 bytes (some bytes will overlap)
-        "stp    x4, x5, [%[dest]]\n\t"  // Write final 16 bytes safely
-        "3:\n\t"
+            "ldp    x4, x5, [%[src]]\n\t"
+            "stp    x4, x5, [%[dest]]\n\t"
+            "2:\n\t"
 
-        : [dest] "+r"(dest), [src] "+r"(src), [numBytes] "+r"(numBytes)
-        :
-        : "x4", "x5", "cc", "memory");
+            : [dest] "+r"(dest), [src] "+r"(src), [numBytes] "+r"(numBytes)
+            : /** (!) No Inputs (!) **/
+            : "x4", "x5", "x6", "cc", "memory");
+    }
 #endif
 
     return result;
