@@ -107,6 +107,24 @@ struct fdt_token {
     fdt_property_value property{0, nullptr, nullptr};
 };
 
+struct fdt_stackframe {
+    // keep track of node's address
+    uintptr_t address{0};
+    uintptr_t size{0};
+
+    // for adusting child addresses
+    uintptr_t range_address{0};
+    uintptr_t translate_address{0};
+    uintptr_t range_size{0};
+
+    // for decoding *child* "reg" entries
+    uint address_cells{2};  // # of 4-byte cells
+    uint size_cells{2};     // # of 4-byte cells
+
+    bool has_range{false};
+    bool is_passthrough{false};
+};
+
 struct fdt_structure_parse_context {
     const u8* const structure{};
     const u8* const strings{};
@@ -244,27 +262,12 @@ void parse_device_tree(fdt_header* dt) {
     // WRONG memory address, by like a lot.
     //
     // By walking the frames, we would get the appropriate address @c81004c0.
-    struct stackframe {
-        // keep track of node's address
-        uintptr_t address{0};
-        uintptr_t size{0};
 
-        // for adusting child addresses
-        uintptr_t range_address{0};
-        uintptr_t translate_address{0};
-        uintptr_t range_size{0};
-
-        // for decoding *child* "reg" entries
-        uint address_cells{2};  // # of 4-byte cells
-        uint size_cells{2};     // # of 4-byte cells
-
-        bool has_range{false};
-    };
-
-    stackframe fdtstack[24]{};
+    fdt_stackframe fdtstack[24]{};
     size_t current_fdtstack_index{0};
 
     bool within_uart{false};
+    bool got_uart{false};
     while ((int)parse_context.current.type != FDT_END) {
         if ((int)parse_context.current.type == FDT_BEGIN_NODE) {
             ++current_fdtstack_index;
@@ -285,8 +288,9 @@ void parse_device_tree(fdt_header* dt) {
                     auto& parent_frame = fdtstack[i - 1];
                     if (
                         parent_frame.has_range
-                        and uart_base_address >= parent_frame.range_address
-                        and uart_base_address < (parent_frame.range_address + parent_frame.range_size))
+                        and (not parent_frame.is_passthrough)
+                        and uart_base_address >= parent_frame.translate_address
+                        and uart_base_address < (parent_frame.translate_address + parent_frame.range_size))
                         uart_base_address = (uart_base_address - parent_frame.translate_address) + parent_frame.range_address;
                 }
 
@@ -309,6 +313,8 @@ void parse_device_tree(fdt_header* dt) {
                 UART::Base = uart_virtual.address;
                 UART::initialize();
                 UART::out("\n\ndid it work?\n\n");
+
+                got_uart = true;
             }
 
             if (current_fdtstack_index > 0)
@@ -322,7 +328,9 @@ void parse_device_tree(fdt_header* dt) {
                 auto s_list = property.as_stringlist();
                 std::string_view s;
                 while ((s = s_list.next_string()).size()) {
-                    if (s == "amlogic,meson-ao-uart" or s == "arm,pl011") {
+                    if ((not got_uart)
+                        and (s == "amlogic,meson-ao-uart"
+                             or s == "arm,pl011")) {
                         // found amlogic uart! we need to figure out it's base address ('reg'
                         // property), and it's interrupt information.
                         // https://github.com/torvalds/linux/blob/master/arch/arm64/boot/dts/amlogic/meson-gx.dtsi
@@ -334,8 +342,8 @@ void parse_device_tree(fdt_header* dt) {
                 }
             }
             else if (property_name == "reg") {
-                stackframe& parent_frame = fdtstack[current_fdtstack_index - 1];
-                stackframe& new_frame = fdtstack[current_fdtstack_index];
+                auto& parent_frame = fdtstack[current_fdtstack_index - 1];
+                auto& new_frame = fdtstack[current_fdtstack_index];
 
                 auto* regdata = (uint32_t*)property.data;
                 for (uint i = 0; i < parent_frame.address_cells; ++i) {
@@ -352,23 +360,28 @@ void parse_device_tree(fdt_header* dt) {
                 auto& current_frame = fdtstack[current_fdtstack_index];
                 current_frame.has_range = true;
 
-                auto* rangesdata = (uint32_t*)property.data;
-                for (uint i = 0; i < current_frame.address_cells; ++i) {
-                    uint32_t cell = big_endian_to_cpu(rangesdata[i]);
-                    current_frame.translate_address = (current_frame.translate_address << 32) | cell;
+                if (property.data_byte_size == 0) {
+                    current_frame.is_passthrough = true;
                 }
-                rangesdata += current_frame.address_cells;
+                else {
+                    auto* rangesdata = (uint32_t*)property.data;
+                    for (uint i = 0; i < current_frame.address_cells; ++i) {
+                        uint32_t cell = big_endian_to_cpu(rangesdata[i]);
+                        current_frame.translate_address = (current_frame.translate_address << 32) | cell;
+                    }
+                    rangesdata += current_frame.address_cells;
 
-                auto& parent_frame = fdtstack[current_fdtstack_index];
-                for (uint i = 0; i < parent_frame.address_cells; ++i) {
-                    uint32_t cell = big_endian_to_cpu(rangesdata[i]);
-                    current_frame.range_address = (current_frame.range_address << 32) | cell;
-                }
-                rangesdata += parent_frame.address_cells;
+                    auto& parent_frame = fdtstack[current_fdtstack_index - 1];
+                    for (uint i = 0; i < parent_frame.address_cells; ++i) {
+                        uint32_t cell = big_endian_to_cpu(rangesdata[i]);
+                        current_frame.range_address = (current_frame.range_address << 32) | cell;
+                    }
+                    rangesdata += parent_frame.address_cells;
 
-                for (uint i = 0; i < current_frame.size_cells; ++i) {
-                    uint32_t cell = big_endian_to_cpu(rangesdata[i]);
-                    current_frame.range_size = (current_frame.range_size << 32) | cell;
+                    for (uint i = 0; i < current_frame.size_cells; ++i) {
+                        uint32_t cell = big_endian_to_cpu(rangesdata[i]);
+                        current_frame.range_size = (current_frame.range_size << 32) | cell;
+                    }
                 }
             }
             else if (property_name == "#address-cells") {
