@@ -87,7 +87,10 @@ elseif(${ARCH} MATCHES "aarch64")
 
   add_library(
     Assembly
+    src/aarch64/cache.s
     src/aarch64/prekernel.s
+    src/aarch64/prekernel_map_hi.s
+    src/aarch64/prekernel_map_lo.s
     src/aarch64/scheduler.s
   )
 endif()
