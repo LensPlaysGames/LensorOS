@@ -416,29 +416,154 @@ void dump_device_tree(fdt_header* dt) {
     std::string indent{};
     indent.reserve(64);
 
+    fdt_stackframe fdtstack[24]{};
+    size_t current_fdtstack_index{0};
+
     while ((int)parse_context.current.type != FDT_END) {
         switch (parse_context.current.type) {
             case FDTTokenType::BEGIN_NODE: {
-                std::print("{}node\n", indent);
+                std::print("{}node \"{}\"\n", indent, parse_context.current.name);
                 indent += "  ";
-                std::print("{}name=\"{}\"\n", indent, parse_context.current.name);
+
+                ++current_fdtstack_index;
+                fdtstack[current_fdtstack_index] = {};
+                auto& new_frame = fdtstack[current_fdtstack_index];
+                auto& parent_frame = fdtstack[current_fdtstack_index - 1];
+                new_frame.address_cells = parent_frame.address_cells;
+                new_frame.size_cells = parent_frame.size_cells;
+
             } break;
             case FDTTokenType::END_NODE: {
                 if (indent.size() >= 2)
                     indent.resize(indent.size() - 2);
+
+                if (current_fdtstack_index > 0)
+                    --current_fdtstack_index;
             } break;
             case FDTTokenType::PROPERTY: {
-                std::print("{}property\n", indent);
-                indent += "  ";
-
                 auto& property = parse_context.current.property;
-                std::print("{}name=\"{}\"\n", indent, property.name);
-                std::print("{}value=\"", indent);
-                for (auto i = usz(0); i < property.data_byte_size; ++i)
-                    std::print("  {:02x}", *(property.data + i));
-                std::print("\"\n");
+                std::print("{}property \"{}\"", indent, property.name);
 
-                indent.resize(indent.size() - 2);
+                // how to print property value
+                enum class property_value_type_t {
+                    raw,
+                    stringlist  // includes strings
+                } property_value_type{property_value_type_t::raw};
+
+                // determine type of property's value for best human-readability/output.
+                const auto property_name = property.name_string();
+                if (property_name == "compatible"
+                    or property_name == "status"
+                    or property_name == "device_type"
+                    or property_name == "clock-names"
+                    or property_name == "clock-output-names"
+                    or property_name == "stdout-path"
+                    or property_name == "model")
+                    property_value_type = property_value_type_t::stringlist;
+
+                if (property_name == "reg") {
+                    auto& parent_frame = fdtstack[current_fdtstack_index - 1];
+                    const auto expected_byte_size = parent_frame.address_cells * sizeof(uint32_t) + parent_frame.size_cells * sizeof(uint32_t);
+                    if (property.data_byte_size >= expected_byte_size) {
+                        auto& current_frame = fdtstack[current_fdtstack_index];
+
+                        auto* regdata = (uint32_t*)property.data;
+                        for (uint i = 0; i < parent_frame.address_cells; ++i) {
+                            uint32_t cell = big_endian_to_cpu(regdata[i]);
+                            current_frame.address = (((uintptr_t)current_frame.address) << 32) | cell;
+                        }
+                        regdata += parent_frame.address_cells;
+                        for (uint i = 0; i < parent_frame.size_cells; ++i) {
+                            uint32_t cell = big_endian_to_cpu(regdata[i]);
+                            current_frame.size = (((uintptr_t)current_frame.size) << 32) | cell;
+                        }
+                    }
+                }
+                else if (property_name == "ranges") {
+                    auto& current_frame = fdtstack[current_fdtstack_index];
+                    auto& parent_frame = fdtstack[current_fdtstack_index - 1];
+                    current_frame.has_range = true;
+
+                    const auto expected_byte_size = current_frame.address_cells * sizeof(uint32_t)
+                                                    + parent_frame.address_cells * sizeof(uint32_t)
+                                                    + current_frame.size_cells * sizeof(uint32_t);
+
+                    if (property.data_byte_size == 0) {
+                        current_frame.is_passthrough = true;
+                    }
+                    else if (property.data_byte_size >= expected_byte_size) {
+                        auto* rangesdata = (uint32_t*)property.data;
+                        for (uint i = 0; i < current_frame.address_cells; ++i) {
+                            uint32_t cell = big_endian_to_cpu(rangesdata[i]);
+                            current_frame.translate_address = (current_frame.translate_address << 32) | cell;
+                        }
+                        rangesdata += current_frame.address_cells;
+
+                        for (uint i = 0; i < parent_frame.address_cells; ++i) {
+                            uint32_t cell = big_endian_to_cpu(rangesdata[i]);
+                            current_frame.range_address = (current_frame.range_address << 32) | cell;
+                        }
+                        rangesdata += parent_frame.address_cells;
+
+                        for (uint i = 0; i < current_frame.size_cells; ++i) {
+                            uint32_t cell = big_endian_to_cpu(rangesdata[i]);
+                            current_frame.range_size = (current_frame.range_size << 32) | cell;
+                        }
+                    }
+                }
+                else if (property_name == "#address-cells") {
+                    fdtstack[current_fdtstack_index].address_cells = parse_context.current.property.as_u32();
+                }
+                else if (property_name == "#size-cells") {
+                    fdtstack[current_fdtstack_index].size_cells = parse_context.current.property.as_u32();
+                }
+
+                // print property value based on determined value type
+                switch (property_value_type) {
+                    case property_value_type_t::raw: {
+                        if (property.data_byte_size == 0)
+                            break;
+
+                        std::print(" = \"");
+                        for (auto i = usz(0); i < property.data_byte_size; ++i)
+                            std::print(" {:02x}", *(property.data + i));
+                        std::print("\"");
+                    } break;
+
+                    case property_value_type_t::stringlist: {
+                        auto s_list = property.as_stringlist();
+                        std::string_view s;
+                        std::print(" =");
+                        while ((s = s_list.next_string()).size()) {
+                            std::print(" \"{}\"", s);
+                        }
+                    } break;
+                }
+
+                // translate address
+                if (property_name == "reg") {
+                    uintptr_t base_address = fdtstack[current_fdtstack_index].address;
+
+                    for (size_t i = current_fdtstack_index; i; --i) {
+                        auto& parent_frame = fdtstack[i - 1];
+                        if (
+                            parent_frame.has_range
+                            and (not parent_frame.is_passthrough)
+                            and base_address >= parent_frame.translate_address
+                            and base_address < (parent_frame.translate_address + parent_frame.range_size)) {
+                            base_address = (base_address - parent_frame.translate_address) + parent_frame.range_address;
+                        }
+                    }
+
+                    std::print(
+                        " addr={:#x} size={:#x} (@{:#x})",
+                        fdtstack[current_fdtstack_index].address,
+                        fdtstack[current_fdtstack_index].size,
+                        base_address);
+                }
+
+                std::print("\n");
+
             } break;
 
             case FDTTokenType::NOP:
