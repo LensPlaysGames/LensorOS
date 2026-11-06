@@ -41,24 +41,24 @@ exception_vectors:
     // 0x000: Synchronous from current EL with SP0
     .align 7
 
-    // movz x14, #0x04c0
-    // movk x14, #0xc810, lsl #16
-    // mov w15, #'Y'
-    // str w15, [x14]
-    // mov w15, #'\n'
-    // str w15, [x14]
+    movz x14, #0x04c0
+    movk x14, #0xc810, lsl #16
+    mov w15, #'Y'
+    str w15, [x14]
+    mov w15, #'\n'
+    str w15, [x14]
 
     b .  // Loop forever here so QEMU halts exactly on the faulting line!
 
     // 0x200: Synchronous from current EL with SPx
     .align 7
 
-    // movz x14, #0x04c0
-    // movk x14, #0xc810, lsl #16
-    // mov w15, #'X'
-    // str w15, [x14]
-    // mov w15, #'\n'
-    // str w15, [x14]
+    movz x14, #0x04c0
+    movk x14, #0xc810, lsl #16
+    mov w15, #'X'
+    str w15, [x14]
+    mov w15, #'\n'
+    str w15, [x14]
 
     b .  // Putting a spin-lock here stops the infinite loop
 
@@ -75,12 +75,12 @@ _start:
     // ------------------------------------------------------------------------
     msr daifset, 3
 
-    // movz x14, #0x04c0
-    // movk x14, #0xc810, lsl #16
-    // mov w15, #'!'
-    // str w15, [x14]
-    // mov w15, #'\n'
-    // str w15, [x14]
+    movz x14, #0x04c0
+    movk x14, #0xc810, lsl #16
+    mov w15, #'!'
+    str w15, [x14]
+    mov w15, #'\n'
+    str w15, [x14]
 
     mov x19, x0
     mov x20, x1

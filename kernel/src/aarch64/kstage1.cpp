@@ -24,14 +24,12 @@ void kstage1(uintptr_t base, BootInfo* bInfo) {
 
     Memory::startup_handle = Memory::active_memory_space();
 
-    // Informational/debug physical memory printout
-    Memory::print_physmem();
-
     // Setup dynamic memory allocation (`new`, `delete`).
     init_heap();
+
+    // Informational/debug memory printout
+    Memory::print_physmem();
     heap_print_debug_summed();
 
     dump_device_tree(&fdt);
-
-    hang();
 }

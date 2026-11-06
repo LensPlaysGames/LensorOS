@@ -315,6 +315,8 @@ void parse_device_tree(fdt_header* dt) {
                 UART::out("\n\ndid it work?\n\n");
 
                 got_uart = true;
+
+                hang();
             }
 
             if (current_fdtstack_index > 0)
@@ -329,13 +331,7 @@ void parse_device_tree(fdt_header* dt) {
                 std::string_view s;
                 while ((s = s_list.next_string()).size()) {
                     if ((not got_uart)
-                        and (s == "amlogic,meson-ao-uart"
-                             or s == "arm,pl011")) {
-                        // found amlogic uart! we need to figure out it's base address ('reg'
-                        // property), and it's interrupt information.
-                        // https://github.com/torvalds/linux/blob/master/arch/arm64/boot/dts/amlogic/meson-gx.dtsi
-                        // https://devicetree-specification.readthedocs.io/en/latest/chapter2-devicetree-basics.html#devicetree-structure-and-conventions
-                        // file:///home/lens_r/Downloads/extensible-host-controler-interface-usb-xhci.pdf
+                        and (s == "amlogic,meson-ao-uart" or s == "arm,pl011")) {
                         within_uart = true;
                         break;
                     }
