@@ -75,12 +75,22 @@ _start:
     // ------------------------------------------------------------------------
     msr daifset, 3
 
+    // QEMU:  0x09000000
+    // MESON: 0xc81004c0
     movz x14, #0x04c0
     movk x14, #0xc810, lsl #16
-    mov w15, #'!'
+
+    mrs x15, CurrentEL
+    ubfx x15, x15, #2, #2    // extract 2 bits starting at bit 2
+    add x15, x15, #'0'
+
     str w15, [x14]
-    mov w15, #'\n'
-    str w15, [x14]
+    dsb sy
+    isb
+
+1:
+    wfe
+    b 1b
 
     mov x19, x0
     mov x20, x1
