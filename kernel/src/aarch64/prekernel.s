@@ -16,51 +16,50 @@
 // You should have received a copy of the GNU General Public License
 // along with LensorOS. If not, see <https://www.gnu.org/licenses/>
 
+.extern map_kernel_identity
+.extern map_kernel_flexible
+.extern clean_dcache_range
+
 .section .bss
 .align 12
 kernel_stack_bottom:
     ;;# 64 KiB stack
-    .zero 0x16000
+    .zero 0x10000
 kernel_stack_top:
 
-// ============================================================================
-// EXPLICIT STATIC TABLE ALLOCATIONS (.data)
-// ============================================================================
-.section .data
-
-// LOWER HALF (TTBR0 Identity Map):
-// id_l0 -> id_l1 -> id_l2
-//   Maps 2MB Identity Code Block at dynamic load address
-//
-// UPPER HALF (TTBR1 Kernel & RAM):
-//        ,-> k_l1_code -> k_l2_code -> k_l3_code -- Maps 2MB Higher-Half Code
-// k_l0 --|
-//        `-> k_l1_ram  -> k_l2_ram  -- Maps sequential 64MB RAM window
-
-// 4KB page alignment
-.align 12
-id_l0:     .zero 4096
-id_l1:     .zero 4096
-id_l2:     .zero 4096
-k_l0:      .zero 4096
-k_l1_ram:  .zero 4096
-k_l2_ram:  .zero 4096
-k_l1_code: .zero 4096
-k_l2_code: .zero 4096
-k_l3_code: .zero 4096
-
-// NOTE: unused if kernel is loaded under 1GiB
-k_l2_kernel_ram: .zero 4096
+table_pool:
+    .zero (4096 * 16)
+id_l0:
+    .zero 4096
+k_l0:
+    .zero 4096
+table_pool_end:
 
 .section .text
 .align 11
 exception_vectors:
     // 0x000: Synchronous from current EL with SP0
     .align 7
+
+    // movz x14, #0x04c0
+    // movk x14, #0xc810, lsl #16
+    // mov w15, #'Y'
+    // str w15, [x14]
+    // mov w15, #'\n'
+    // str w15, [x14]
+
     b .  // Loop forever here so QEMU halts exactly on the faulting line!
 
     // 0x200: Synchronous from current EL with SPx
     .align 7
+
+    // movz x14, #0x04c0
+    // movk x14, #0xc810, lsl #16
+    // mov w15, #'X'
+    // str w15, [x14]
+    // mov w15, #'\n'
+    // str w15, [x14]
+
     b .  // Putting a spin-lock here stops the infinite loop
 
 // 4-byte alignment
@@ -75,6 +74,13 @@ _start:
     // Disable interrupts
     // ------------------------------------------------------------------------
     msr daifset, 3
+
+    // movz x14, #0x04c0
+    // movk x14, #0xc810, lsl #16
+    // mov w15, #'!'
+    // str w15, [x14]
+    // mov w15, #'\n'
+    // str w15, [x14]
 
     mov x19, x0
     mov x20, x1
@@ -171,7 +177,6 @@ _start:
     lsl x22, x22, #21           // Shift back left to restore the 2MiB alignment
 .map_not_found:
 
-
     mov x0, x19                 // x0 = physical address base
 
 // ============================================================================
@@ -181,202 +186,148 @@ _start:
 // Inputs:
 //   x0 = Physical address dynamically passed
 init_paging:
-    mov     x4, #0x001fffff             // Mask for lower 21 bits
-    bic     x0, x0, x4                  // Clear lower 21 bits to align to 2MB
-
     // ------------------------------------------------------------------------
-    // Discover Physical Addresses of Static Tables Dynamically
+    // Task 1: Identity Map (TTBR0)
     // ------------------------------------------------------------------------
-    adrp x1, id_l0
-    add x1, x1, :lo12:id_l0     // x1 = id_l0
-    adrp x2, id_l1
-    add x2, x2, :lo12:id_l1     // x2 = id_l1
-    adrp x3, id_l2
-    add x3, x3, :lo12:id_l2     // x3 = id_l2
+    // Target 0: Kernel Image
+    // x0 = address to identity map
 
-    adrp x5, k_l0
-    add x5, x5, :lo12:k_l0      // x5 = k_l0
-    adrp x6, k_l1_code
-    add x6, x6, :lo12:k_l1_code // x6 = k_l1_code
-    adrp x10, k_l2_code
-    add x10, x10, :lo12:k_l2_code // x10 = k_l2_code
-    adrp x11, k_l3_code
-    add x11, x11, :lo12:k_l3_code // x11 = k_l3_code
-    adrp x12, k_l2_ram
-    add x12, x12, :lo12:k_l2_ram // x12 = k_l2_ram
-    adrp x18, k_l1_ram
-    add x18, x18, :lo12:k_l1_ram // x18 = k_l1_ram
-    adrp x17, k_l2_kernel_ram
-    add x17, x17, :lo12:k_l2_kernel_ram // x17 = k_l2_kernel_ram
+    // x1 = kernel image size in bytes
+    // Calculate kernel image size
+    adrp    x1, KERNEL_END
+    add     x1, x1, :lo12:KERNEL_END      // x1 = Full absolute KERNEL_END address
+    adrp    x11, KERNEL_VIRTUAL
+    add     x11, x11, :lo12:KERNEL_VIRTUAL// x11 = Full absolute KERNEL_VIRTUAL address
+    sub     x1, x1, x11                   // x1 = Kernel Size in Bytes
 
-    // ------------------------------------------------------------------------
-    // Zero Out All Static Table Memory Space
-    // ------------------------------------------------------------------------
-    mov     x13, #0
-zero_all_tables:
-    str     xzr, [x1, x13]              // id_l0
-    str     xzr, [x2, x13]              // id_l1
-    str     xzr, [x3, x13]              // id_l2
-    str     xzr, [x5, x13]              // k_l0
-    str     xzr, [x6, x13]              // k_l1_code
-    str     xzr, [x10, x13]             // k_l2_code
-    str     xzr, [x11, x13]             // k_l3_code
-    str     xzr, [x12, x13]             // k_l2_ram
-    str     xzr, [x18, x13]             // k_l1_ram
-    str     xzr, [x17, x13]             // k_l2_kernel_ram
-    add     x13, x13, #8
-    cmp     x13, #4096
-    b.ne    zero_all_tables
+    // x2 = page table pointer
+    adrp    x2, id_l0
+    add     x2, x2, :lo12:id_l0
 
-    // ------------------------------------------------------------------------
-    // Configure TTBR0: 4-Level Identity Map
-    // ------------------------------------------------------------------------
-    // Target 1: Kernel Image (x0)
-    // Link Level 0 -> Level 1
-    lsr     x13, x0, #39                // Level 0 bits: [47:39]
-    and     x13, x13, #0x1ff
-    orr     x4, x2, #0x3                // Table descriptor flag
-    str     x4, [x1, x13, lsl #3]
+    // x3 = pool base
+    // Load common base page pool starting pointer
+    adrp    x3, table_pool
+    add     x3, x3, :lo12:table_pool // x3 = Address of table pool
 
-    // Link Level 1 -> Level 2
-    lsr     x13, x0, #30                // Level 1 bits: [38:30]
-    and     x13, x13, #0x1ff
-    orr     x4, x3, #0x3                // Table descriptor flag
-    str     x4, [x2, x13, lsl #3]
-
-    // TODO: We should loop and map as many 2MiB descriptors are needed to
-    // cover the kernel image
-    // The last address needed by the kernel image should be calcutable by
-    // adding the size of the kernel image to the physical kernel base.
-    // The size of the kernel image may be found by subtracting
-    // KERNEL_END - KERNEL_VIRTUAL, for example.
-
-    // Drop 2MB Block Descriptor into Level 2
-    lsr     x13, x0, #21                // Level 2 bits: [29:21]
-    and     x13, x13, #0x1ff
-    mov     x4, #0x0705                 // Normal Memory block attributes
-    orr     x4, x0, x4                  // Output physical matched perfectly to virtual
-    str     x4, [x3, x13, lsl #3]
+    bl      map_kernel_identity
+    // Catch updated pool pointer in x3
+    mov     x3, x0 // x3 = pool base
 
     // Target 2: Device Tree Blob
-    ldr     x0, [x25, #8]       // Load device tree pointer into x0
+    ldr     x0, [x25, #8]               // Load physical DTB pointer from boot info
+    // x0 = pointer to map
 
-    // Align x0 down to 2MiB boundary
-    bic     x0, x0, #0x1fffff   // 0x1fffff covers 21 bits
+    // Parse DTB Size from its Big-Endian Header field (offset +4 bytes)
+    ldr     w1, [x0, #4]                // Load 4-byte size field (Big-Endian)
+    rev     w1, w1                      // Convert Big-Endian to Little-Endian
+    uxtw    x1, w1                      // Zero-extend 32-bit size into 64-bit x1
+    // x1 = size in bytes to map
 
-    // Link Level 0 -> Level 1
-    lsr     x13, x0, #39        // Level 0 bits: [47:39]
-    and     x13, x13, #0x1ff
-    orr     x4, x2, #0x3        // Table descriptor flag
-    str     x4, [x1, x13, lsl #3]
+    adrp    x2, id_l0
+    add     x2, x2, :lo12:id_l0         // x2 = Root L0 Pointer
+    // x2 = table to map it in
 
-    // Link Level 1 -> Level 2
-    lsr     x13, x0, #30        // Level 1 bits: [38:30]
-    and     x13, x13, #0x1ff
-    orr     x4, x3, #0x3        // Table descriptor flag
-    str     x4, [x2, x13, lsl #3]
+    // x3 = Current free pool tracking pointer
 
-    // Drop 2MiB Block Descriptor into Level 2
-    lsr     x13, x0, #21        // Level 2 bits: [29:21]
-    and     x13, x13, #0x1ff
-    mov     x4, #0x0705
-    orr     x4, x0, x4
-    str     x4, [x3, x13, lsl #3]
+    // Map the DTB region
+    bl      map_kernel_identity         // Generates L1/L2 tables as needed from pool
+    mov     x4, x0                      // Save updated free pool tracker back to x4
 
     // ------------------------------------------------------------------------
-    // Configure TTBR1: 4-Level High-Half Mapping Layout
+    // Task 2: Higher Half Mapping Layout (TTBR1)
     // ------------------------------------------------------------------------
-    // Target 1: Higher Half Kernel @ 0xffff000000000000 (2MB mapped via 4KB pages)
+    // Target 1: Kernel Image (x0)
+    // x0 = kernel virtual base
+    // TODO: get from linker without literal pool
+    movz    x0, #0xffff, lsl #48        // Target Base: 0xffff000000000000
+    // x1 = kernel physical base
+    mov     x1, x19                     // Physical base address
 
-    orr     x4, x6, #0x3        // Link k_l0 -> k_l1_code
-    str     x4, [x5, #0]        // Store in L0 Entry 0
+    // x2 = kernel image size
+    adrp    x2, KERNEL_END
+    add     x2, x2, :lo12:KERNEL_END       // x2 = Full absolute KERNEL_END address
+    adrp    x11, KERNEL_VIRTUAL
+    add     x11, x11, :lo12:KERNEL_VIRTUAL // x11 = Full absolute KERNEL_VIRTUAL address
+    sub     x2, x2, x11                    // x2 = Kernel Size in Bytes
 
-    orr     x4, x10, #0x3       // Link k_l1_code -> k_l2_code
-    str     x4, [x6, #0]        // Store in L1 Entry 0
+    // x3 = page table pointer
+    adrp    x3, k_l0
+    add     x3, x3, :lo12:k_l0          // Higher-half root pointer
 
-    // Link k_l2_code -> k_l3_code (Table descriptor, bits [1:0] = 0x3)
-    orr     x4, x11, #0x3
-    str     x4, [x10, #0]       // Store in k_l2_code Entry 0
+    // x4 = pool base
+
+    bl      map_kernel_flexible
+    // Catch updated pool pointer in x4
+    mov     x4, x0
 
     // ------------------------------------------------------------------------
-    // Loop to Populate L3: Map 512 entries (2 MiB total)
-    // ------------------------------------------------------------------------
-    mov     x14, #0     // x14 = L3 entry index counter (0 to 511)
-    mov     x15, x19    // x15 = Working copy of physical base address
-    mov     x16, #0x0707 // x16 = Page attributes (Normal Memory, RW, Valid)
-
-map_l3_loop:
-    orr     x4, x15, x16 // Combine current physical address + attributes
-    str     x4, [x11, x14, lsl #3] // Store into k_l3_code[x14] (Index * 8 bytes)
-
-    add     x15, x15, #0x1000 // Move physical address to next 4 KiB page
-    add     x14, x14, #1      // Increment entry index
-    cmp     x14, #512         // Have we filled all 512 entries?
-    b.ne    map_l3_loop       // If not, loop back
-
-
     // Target 2: 64MiB Direct RAM Region @ 0xffff800000000000
-    // 0xffff800000000000 sets Level 0 Index to 256
-    orr     x4, x18, #0x3          // Link k_l0[256] -> k_l1_ram
-    str     x4, [x5, #(256 * 8)]   // Store in L0 Entry 256
+    // ------------------------------------------------------------------------
+    // x0 = virtual address
+    movz    x0, #0xffff, lsl #48
+    movk    x0, #0x8000, lsl #32        // x0 = 0xffff800000000000
+    // x1 = physical address
+    mov     x1, x22                     // Physical base = Conventional RAM base
+    // x2 = size in bytes
+    mov     x2, #0x40000000             // Size = 1GiB
+    // x3 = page table pointer
+    adrp    x3, k_l0
+    add     x3, x3, :lo12:k_l0
+    // x4 = pool base
+    bl      map_kernel_flexible
+    mov     x4, x0                      // Save updated pool pointer in x4
 
-    orr     x4, x12, #0x3 // Link k_l1_ram -> k_l2_ram
-    str     x4, [x18]     // Store inside k_l1_ram Entry
+    // ------------------------------------------------------------------------
+    // Target 3: Map Kernel into the Direct RAM Region Space
+    // ------------------------------------------------------------------------
+    sub     x0, x19, x22                // Offset inside physical RAM block
+    movz    x1, #0xffff, lsl #48
+    movk    x1, #0x8000, lsl #32
+    add     x0, x1, x0                  // x0 = Target virtual location inside RAM window
+    mov     x1, x19                     // Physical base = True physical kernel base
+    // x2 still holds our exact kernel size from earlier calculation
+    adrp    x3, k_l0
+    add     x3, x3, :lo12:k_l0
+    // x4 = pool base
+    bl      map_kernel_flexible
+    mov     x4, x0
 
-    // Map sequential 2MB blocks into k_l2_ram page
-    mov     x14, #0   // Loop counter
-    mov     x7, x22   // Physical frame pointer starting at x22 (calculated above)
-ram_map_loop:
-    mov     x4, #0x0705
-    orr     x4, x7, x4
-    str     x4, [x12, x14, lsl #3]
+    // ------------------------------------------------------------------------
+    // Target 4: Map Device Tree Blob into Higher Half Direct RAM Region
+    // ------------------------------------------------------------------------
+    ldr     x0, [x25, #8]               // Load raw physical DTB pointer from boot info
+    cbz     x0, .L_high_skip_dtb        // If the DTB pointer is NULL, skip high-half mapping
 
-    add     x7, x7, #0x00200000         // Jump base PA forward by 2MB
-    add     x14, x14, #1
-    cmp     x14, #512
-    b.lt    ram_map_loop
+    // Parse the dynamic DTB size from its Big-Endian header field (offset +4 bytes)
+    ldr     w1, [x0, #4]                // Load 4-byte size field (Big-Endian)
+    rev     w1, w1                      // Convert Big-Endian to Little-Endian
+    uxtw    x2, w1                      // x2 = Size of region in bytes (for function argument)
 
+    // Calculate target high-half virtual address inside the Direct RAM window:
+    //    Virtual Address = 0xffff800000000000 + (dtb_physical_address - conventional_ram_base)
+    sub     x1, x0, x22                 // x1 = Offset of DTB inside physical RAM block
+    movz    x10, #0xffff, lsl #48
+    movk    x10, #0x8000, lsl #32       // x10 = Direct RAM virtual root base address
+    add     x0, x10, x1                 // x0 = Target High-Half Virtual Address for DTB
 
-    // Basically, if the 1GiB physical ram mapping above doesn't cover the
-    // kernel image, we will have a hard time modifying early boot page tables
-    // from C++. This sets up another table in the k_l1_ram page to map the
-    // physical kernel image in the physical ram space.
-    sub x0, x19, x22 // x0 -> kernel physical base - physical RAM base
-    // x0 -> offset of kernel image in physical RAM
-    movz x2, #0x4000, lsl #16
-    cmp x0, x2
-    b.lo skip_kernel_physical_mapping
+    // Set up remaining parameters for the block mapper function
+    ldr     x1, [x25, #8]               // x1 = True raw physical base address of DTB
+    // x2 already contains the parsed DTB size from step 2
+    adrp    x3, k_l0
+    add     x3, x3, :lo12:k_l0          // x3 = Root PGD base table pointer
+    // x4 already contains free pool pointer
+    bl      map_kernel_flexible
+    mov     x4, x0                      // Save the final updated free pool tracking pointer
 
-    // x00 -> physical ram offset we need to map
-    // x18 -> k_l1_ram
-    // x17 -> k_l2_kernel_ram
+    // Update boot info struct copy on the stack
+    ldr     x1, [x25, #8]
+    sub     x1, x1, x22                 // Recalculate RAM block offset
+    movz    x10, #0xffff, lsl #48
+    movk    x10, #0x8000, lsl #32       // x10 = Direct RAM virtual root base address
+    add     x0, x10, x1                 // Reconstruct the virtual pointer
+    str     x0, [x25, #8]               // Update boot_info.dtb pointer with high-half vaddr
 
-    // Align physical ram offset we need to map to 2MiB
-    lsr x0, x0, #21 // shift bottom 21 bits out
-    lsl x0, x0, #21 // shift bottom 21 bits in as zero
-
-    // Link k_l1_ram -> k_l2_kernel_ram (Table descriptor, bits [1:0] = 0x3)
-    // figure out k_l1_ram index, link k_l2_kernel_ram page table into k_l1_ram
-    lsr x2, x0, #30
-    and x2, x2, #0x1ff // index calculated!
-    // now we need to build the 8-byte entry
-    orr x3, x17, #0x3   // or the address in with the table descriptor flag
-    str x3, [x18, x2, lsl #3]
-
-    // utilize k_l2_kernel_ram page, map x0
-    // figure out k_l2_kernel_ram index, link x0 into k_l2_kernel_ram page
-    // table
-    lsr x2, x0, #21
-    and x2, x2, #0x1ff // depth2 index calculated!
-
-    // restore x0 to it's true physical address form, not the offset
-    add x0, x0, x22
-    // x0 is what we need to map into our physical ram address space
-    mov x3, #0x705
-    orr x3, x0, x3
-    str x3, [x17, x2, lsl #3]
-
-skip_kernel_physical_mapping:
+.L_high_skip_dtb:
 
     // ------------------------------------------------------------------------
     // Setup Environment Registers & Activate Translation Engine
@@ -384,6 +335,13 @@ skip_kernel_physical_mapping:
     // --- (MMU Configuration & Enable) ---
     dsb sy
     isb
+
+    // Flush entire table pool to physical RAM
+    adrp x0, table_pool
+    add x0, x0, :lo12:table_pool
+    adrp x1, table_pool_end
+    add x1, x1, :lo12:table_pool_end
+    bl clean_dcache_range
 
     // Disable MMU to change control registers safely
     mrs x3, sctlr_el1
@@ -443,8 +401,12 @@ skip_kernel_physical_mapping:
     isb                         // Synchronize context
 
     // Set page table roots
+    adrp    x1, id_l0
+    add     x1, x1, :lo12:id_l0
     msr ttbr0_el1, x1           // lower half (identity map)
-    msr ttbr1_el1, x5           // upper half (kernel map)
+    adrp    x1, k_l0
+    add     x1, x1, :lo12:k_l0
+    msr ttbr1_el1, x1           // upper half (kernel map)
 
     // Flush old UEFI cached translations
     tlbi vmalle1is
@@ -482,10 +444,16 @@ skip_kernel_physical_mapping:
 kernel_virtual_entry:
     // --- YOU ARE NOW IN THE KERNEL, AS IT IS LINKED ---
 
+    add x29, x29, x21 // update link register to maintain stacktrace
+
     // Call the higher level kernel main function
     mov x0, x19                 // Arg0 -> physical image base
     mov x1, x25                 // Arg1 -> BootInfo*
     bl kmain
+
+1:
+    wfe
+    b 1b
 
 /*
  * void *kmemcpy(void *dest, const void *src, size_t count);
