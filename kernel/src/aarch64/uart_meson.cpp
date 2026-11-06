@@ -31,8 +31,8 @@ void initialize() {
     Initialized = true;
 }
 
-volatile uint8_t* wfifo() { return (uint8_t*)(Base + 0); }
-volatile uint8_t* rfifo() { return (uint8_t*)(Base + 4); }
+volatile uint32_t* wfifo() { return (uint32_t*)(Base + 0); }
+volatile uint32_t* rfifo() { return (uint32_t*)(Base + 4); }
 volatile uint32_t* control() { return (uint32_t*)(Base + 8); }
 volatile uint32_t* status() { return (uint32_t*)(Base + 12); }
 volatile uint32_t* misc() { return (uint32_t*)(Base + 16); }
@@ -89,7 +89,7 @@ constexpr uint32_t has_errors(uint32_t val) {
 
 namespace Control {
 // --- Bit Positions (Shifts) ---
-constexpr uint32_t POS_BAuD_RATE = 0u;  // [11:0]
+constexpr uint32_t POS_BAUD_RATE = 0u;  // [11:0]
 constexpr uint32_t POS_TX_ENABLE = 12u;
 constexpr uint32_t POS_RX_ENABLE = 13u;
 constexpr uint32_t POS_TWO_WIRE = 15u;
@@ -109,7 +109,7 @@ constexpr uint32_t POS_MASK_ERROR = 30u;
 constexpr uint32_t POS_INVERT_RTS = 31u;
 
 // --- Configuration Masks & Flags ---
-constexpr uint32_t MASK_BAUD_RATE = 0xfffu << POS_BAuD_RATE;
+constexpr uint32_t MASK_BAUD_RATE = 0xfffu << POS_BAUD_RATE;
 constexpr uint32_t MASK_TX_ENABLE = 1u << POS_TX_ENABLE;
 constexpr uint32_t MASK_RX_ENABLE = 1u << POS_RX_ENABLE;
 constexpr uint32_t MASK_TWO_WIRE = 1u << POS_TWO_WIRE;
@@ -172,7 +172,7 @@ uint8_t read() {
 }
 
 void out_raw(uint8_t byte) {
-    if (initialized() == false)
+    if (not initialized())
         return;
 
     // Wait for UART chip to empty it's transmit buffer before potentially
