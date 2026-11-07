@@ -435,8 +435,8 @@ el1_landing_pad:
     bic     x3, x3, x4     // Clear target fields in our base register
 
     // Build explicit configuration layout in x2
-    mov     x2, #0x3510
-    movk    x2, #0xa510, lsl #16
+    mov     x2, #0x3f10
+    movk    x2, #0xbf10, lsl #16
 
     // Dynamically fetch hardware physical address size (PARange) into x4
     mrs     x4, id_aa64mmfr0_el1
