@@ -41,6 +41,9 @@ exception_vectors:
     // 0x000: Synchronous from current EL with SP0
     .align 7
 
+    // QEMU:  0x09000000
+    // MESON: 0xc81004c0
+//     movz x14, #0x0900, lsl #16
 //     movz x14, #0x04c0
 //     movk x14, #0xc810, lsl #16
 // 1:
@@ -57,6 +60,9 @@ exception_vectors:
     // 0x200: Synchronous from current EL with SPx
     .align 7
 
+    // QEMU:  0x09000000
+    // MESON: 0xc81004c0
+//     movz x14, #0x0900, lsl #16
 //     movz x14, #0x04c0
 //     movk x14, #0xc810, lsl #16
 // 1:
@@ -85,9 +91,13 @@ _start:
 
     // QEMU:  0x09000000
     // MESON: 0xc81004c0
-    movz x14, #0x0900, lsl #16
-    // movz x14, #0x04c0
-    // movk x14, #0xc810, lsl #16
+    // movz x14, #0x0900, lsl #16
+    movz x14, #0x04c0
+    movk x14, #0xc810, lsl #16
+1:
+    ldr w15, [x14, #0xc]
+    tst w15, #0x00200000
+    b.ne 1b
 
     mrs x15, CurrentEL
     ubfx x15, x15, #2, #2    // extract 2 bits starting at bit 2
@@ -358,7 +368,6 @@ init_paging:
     add x1, x1, :lo12:table_pool_end
     bl clean_dcache_range
 
-
     // If at EL2, drop to EL1 so that we are actually in the environment we think we are.
     // basically, this is the transition from "UEFI Identity Maps" to "EL1 MMU Off".
     mrs x0, CurrentEL
@@ -401,9 +410,41 @@ el1_landing_pad:
     msr sctlr_el1, x3
     isb
 
+    // QEMU:  0x09000000
+    // MESON: 0xc81004c0
+    // movz x14, #0x0900, lsl #16
+    movz x14, #0x04c0
+    movk x14, #0xc810, lsl #16
+1:
+    ldr w15, [x14, #0xc]
+    tst w15, #0x00200000
+    b.ne 1b
+
+    mrs x15, CurrentEL
+    ubfx x15, x15, #2, #2
+    add x15, x15, #'0'
+
+    str w15, [x14]
+    dsb sy
+    isb
+
     adrp    x0, exception_vectors
     add     x0, x0, :lo12:exception_vectors
     msr     vbar_el1, x0
+    isb
+
+    // QEMU:  0x09000000
+    // MESON: 0xc81004c0
+    // movz x14, #0x0900, lsl #16
+    movz x14, #0x04c0
+    movk x14, #0xc810, lsl #16
+1:
+    ldr w15, [x14, #0xc]
+    tst w15, #0x00200000
+    b.ne 1b
+    mov w15, #'*'
+    str w15, [x14]
+    dsb sy
     isb
 
     // Configures the Memory Attribute Indirection Register.
@@ -466,18 +507,17 @@ el1_landing_pad:
 
     // QEMU:  0x09000000
     // MESON: 0xc81004c0
-    movz x14, #0x0900, lsl #16
-    // movz x14, #0x04c0
-    // movk x14, #0xc810, lsl #16
-
-    mrs x15, CurrentEL
-    ubfx x15, x15, #2, #2
-    add x15, x15, #'0'
-
+    // movz x14, #0x0900, lsl #16
+    movz x14, #0x04c0
+    movk x14, #0xc810, lsl #16
+1:
+    ldr w15, [x14, #0xc]
+    tst w15, #0x00200000
+    b.ne 1b
+    mov w15, #'$'
     str w15, [x14]
     dsb sy
     isb
-
 
     // Re-enable MMU
     mrs x3, sctlr_el1
