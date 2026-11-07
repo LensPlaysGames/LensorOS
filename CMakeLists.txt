@@ -261,7 +261,7 @@ if ( QEMU_PROGRAM )
 
   elseif(${ARCH} MATCHES "aarch64")
     list( APPEND QEMU_FLAGS
-      -machine virt,acpi=off
+      -machine virt,acpi=off,virtualization=on
       -nodefaults
       -monitor vc
       # CPU:

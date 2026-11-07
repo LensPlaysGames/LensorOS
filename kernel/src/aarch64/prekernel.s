@@ -41,26 +41,34 @@ exception_vectors:
     // 0x000: Synchronous from current EL with SP0
     .align 7
 
-    movz x14, #0x04c0
-    movk x14, #0xc810, lsl #16
-    mov w15, #'Y'
-    str w15, [x14]
-    mov w15, #'\n'
-    str w15, [x14]
+//     movz x14, #0x04c0
+//     movk x14, #0xc810, lsl #16
+// 1:
+//     ldr w15, [x14, #0xc]
+//     tst w15, #0x00200000
+//     b.ne 1b
+//     mov w15, #'Y'
+//     str w15, [x14]
+//     dsb sy
+//     isb
 
     b .  // Loop forever here so QEMU halts exactly on the faulting line!
 
     // 0x200: Synchronous from current EL with SPx
     .align 7
 
-    movz x14, #0x04c0
-    movk x14, #0xc810, lsl #16
-    mov w15, #'X'
-    str w15, [x14]
-    mov w15, #'\n'
-    str w15, [x14]
+//     movz x14, #0x04c0
+//     movk x14, #0xc810, lsl #16
+// 1:
+//     ldr w15, [x14, #0xc]
+//     tst w15, #0x00200000
+//     b.ne 1b
+//     mov w15, #'X'
+//     str w15, [x14]
+//     dsb sy
+//     isb
 
-    b .  // Putting a spin-lock here stops the infinite loop
+    b . // spin here
 
 // 4-byte alignment
 .align 2
@@ -77,8 +85,9 @@ _start:
 
     // QEMU:  0x09000000
     // MESON: 0xc81004c0
-    movz x14, #0x04c0
-    movk x14, #0xc810, lsl #16
+    movz x14, #0x0900, lsl #16
+    // movz x14, #0x04c0
+    // movk x14, #0xc810, lsl #16
 
     mrs x15, CurrentEL
     ubfx x15, x15, #2, #2    // extract 2 bits starting at bit 2
@@ -87,10 +96,6 @@ _start:
     str w15, [x14]
     dsb sy
     isb
-
-1:
-    wfe
-    b 1b
 
     mov x19, x0
     mov x20, x1
@@ -118,6 +123,7 @@ _start:
 
     // x3 holds the valid physical address. assign it to SP:
     mov sp, x3                      // Stack pointer is now set in physical space
+
     // ------------------------------------------------------------------------
     // Stack setup: COMPLETE
     // ------------------------------------------------------------------------
@@ -131,7 +137,6 @@ _start:
     stp     x29, x30, [sp, #-16]!
     // Point the Frame Pointer register to the base of this new frame
     mov     x29, sp
-
 
     // Copy boot info
     sub sp, sp, #64
@@ -353,6 +358,42 @@ init_paging:
     add x1, x1, :lo12:table_pool_end
     bl clean_dcache_range
 
+
+    // If at EL2, drop to EL1 so that we are actually in the environment we think we are.
+    // basically, this is the transition from "UEFI Identity Maps" to "EL1 MMU Off".
+    mrs x0, CurrentEL
+    ubfx x0, x0, #2, #2
+    cmp x0, #2
+    b.eq from_el2
+
+    cmp x0, #1
+    b el1_landing_pad
+
+1:
+    wfe
+    b 1b // hang if unexpected exception level
+
+from_el2:
+    mov x0, #(1 << 31)    // Set Bit 31 (RW = 1)
+    msr hcr_el2, x0
+
+    mov x0, #0x3c5
+    msr spsr_el2, x0
+
+    adrp x0, el1_landing_pad
+    add x0, x0, :lo12:el1_landing_pad
+    msr elr_el2, x0
+
+    mov x0, xzr
+    msr sctlr_el1, x0
+
+    mov x0, sp
+    msr sp_el1, x0
+
+    isb
+    eret
+
+el1_landing_pad:
     // Disable MMU to change control registers safely
     mrs x3, sctlr_el1
     mov x4, #0x1005
@@ -418,12 +459,27 @@ init_paging:
     add     x1, x1, :lo12:k_l0
     msr ttbr1_el1, x1           // upper half (kernel map)
 
-    // Flush old UEFI cached translations
+    // Flush caches
     tlbi vmalle1is
-    dsb ish
+    dsb sy
     isb
 
-    // Re-enable MMU with your new mappings
+    // QEMU:  0x09000000
+    // MESON: 0xc81004c0
+    movz x14, #0x0900, lsl #16
+    // movz x14, #0x04c0
+    // movk x14, #0xc810, lsl #16
+
+    mrs x15, CurrentEL
+    ubfx x15, x15, #2, #2
+    add x15, x15, #'0'
+
+    str w15, [x14]
+    dsb sy
+    isb
+
+
+    // Re-enable MMU
     mrs x3, sctlr_el1
     orr x3, x3, #0x1            // MMU
     orr x3, x3, #0x4            // D-Cache
