@@ -50,7 +50,7 @@ namespace __detail {
 template <typename _Str, typename _Char>
 constexpr void __remove_trailing(_Str& __str, basic_string_view<_Char> __chars) {
     /// String is empty, so there's nothing to do.
-    if (!__str.size() or !__chars.size()) return;
+    if ((not __str.size()) or (not __chars.size())) return;
 
     /// So long as there are characters left,
     auto __it = __str.rbegin();
@@ -68,7 +68,7 @@ constexpr void __remove_trailing(_Str& __str, basic_string_view<_Char> __chars) 
         }
 
         /// finally, stop if we didn't find a match.
-        if (!__found) break;
+        if (not __found) break;
     }
 
     /// Erase everything after the last character we found.
@@ -175,7 +175,7 @@ public:
                     break;
                 }
             }
-            if (!__found) return __i;
+            if (not __found) return __i;
         }
         return npos;
     }
@@ -483,7 +483,7 @@ public:
         const auto __chars = __sv.data();
         const auto __n = __sv.size();
 
-        if (!__is_large()) {
+        if (not __is_large()) {
             /// Char fits in the small string.
             if (__n <= size_t(__small.__rem_cap)) {
                 auto __data = __small.__data;
@@ -551,7 +551,7 @@ public:
         auto __new_cap = __new_size(__n);
         auto __p = new _Char[__new_cap];
 
-        if (!__is_large()) {
+        if (not __is_large()) {
             memcpy(__p, __small.__data, (__max_chars_small + 1) * sizeof(_Char));
             __large.__data = __p;
             __large.__sz = __size;
@@ -567,7 +567,7 @@ public:
     }
 
     void shrink_to_fit() {
-        if (!__is_large()) return;
+        if (not __is_large()) return;
 
         auto __size = size();
         auto __capacity = capacity();
@@ -612,7 +612,7 @@ public:
                 __p[__i] = __ch;
 
             // Update the size tracking and add the trailing null terminator
-            if (!__is_large())
+            if (not __is_large())
                 __small.__rem_cap = __max_chars_small - __n;
             else
                 __large.__sz = __n;
@@ -665,7 +665,7 @@ public:
     void __remove_trailing(basic_string_view<_Char> __other) { ::std::__detail::__remove_trailing(*this, __other); }
 
     void clear() {
-        if (!__is_large()) {
+        if (not __is_large()) {
             __small.__data[0] = 0;
             __small.__rem_cap = __max_chars_small;
         }
@@ -687,7 +687,7 @@ public:
 
         /// Truncate if we're erasing up to the end of the string.
         if (__pos + __n == __size) {
-            if (!__is_large()) {
+            if (not __is_large()) {
                 __small.__data[__pos] = 0;
                 __small.__rem_cap += __n;
             }
@@ -699,7 +699,7 @@ public:
         }
 
         /// Otherwise, we need to move the remaining characters to the left.
-        if (!__is_large()) {
+        if (not __is_large()) {
             memmove(__small.__data + __pos, __small.__data + __pos + __n, (__size - __pos - __n + 1) * sizeof(_Char));
             __small.__rem_cap += __n;
         }
@@ -732,7 +732,7 @@ public:
     constexpr void pop_back() {
         if (empty()) return;
         auto __new_sz = size() - 1;
-        if (!__is_large()) {
+        if (not __is_large()) {
             __small.__data[__new_sz] = 0;
             _PushIgnoreWarning("-Wconversion");
             __small.__rem_cap += 1;
