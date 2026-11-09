@@ -28,7 +28,7 @@ kernel_stack_bottom:
 kernel_stack_top:
 
 table_pool:
-    .zero (4096 * 16)
+    .zero (4096 * 22)
 id_l0:
     .zero 4096
 k_l0:
@@ -78,6 +78,89 @@ exception_vectors:
 
 // 4-byte alignment
 .align 2
+
+.global asm_meson_uart_char
+asm_meson_uart_char:
+    // Build frame
+    sub     sp, sp, #32
+    stp     x29, x30, [sp, #16]     // Store frame pointer + link register
+    add     x29, sp, #16
+    stp     x14, x15, [sp, #0]      // Save the scratch registers used below
+
+    // QEMU:  0x09000000
+    // MESON: 0xc81004c0
+    // movz x14, #0x0900, lsl #16
+    movz x14, #0x04c0
+    movk x14, #0xc810, lsl #16
+
+    // Wait until UART FIFO is available
+1:
+    ldr w15, [x14, #0xc]
+    tst w15, #0x00200000
+    b.ne 1b
+
+    // Write to Hardware UART FIFO
+    str w0, [x14]
+    dsb sy
+    isb
+
+    // Restore frame
+    ldp     x14, x15, [sp, #0]
+    ldp     x29, x30, [sp, #16]
+    add     sp, sp, #32
+
+    ret
+
+
+    .global print_reg_hex
+.type print_reg_hex, %function
+
+asm_x0_hex:
+    // Build frame
+    // We need to preserve x19, x20, and x21 because they are callee-saved
+    // registers we use to hold state across the nested 'bl' calls.
+    sub     sp, sp, #48
+    stp     x29, x30, [sp, #32]     // Store FP/LR
+    add     x29, sp, #32
+    stp     x19, x20, [sp, #16]     // Preserve x19, x20,
+    str     x21, [sp, #0]           // and x21
+
+    // --- Function Body ---
+    mov     x19, x0                 // x19 = The 64-bit value to print
+    mov     x20, #60                // x20 = Bit shift amount (start at highest nibble: 60, 56, ... 0)
+
+.Lloop_hex:
+    // Extract the current 4-bit nibble
+    lsr     x21, x19, x20           // Shift value right by current shift amount
+    and     x21, x21, #0xF          // Mask out everything except the lowest 4 bits
+
+    // Convert the 4-bit value to an ASCII character
+    cmp     x21, #10
+    blt     .Lis_digit              // If 0-9, skip to digit handling
+
+    // Handle letters (A-F)
+    add     w0, w21, #('A' - 10)    // Convert 10-15 to 'A'-'F'
+    b       .Lprint_char
+
+.Lis_digit:
+    // Handle digits (0-9)
+    add     w0, w21, #'0'           // Convert 0-9 to '0'-'9'
+
+.Lprint_char:
+    // Call UART print
+    bl      asm_meson_uart_char
+
+    // Move to next nibble
+    subs    x20, x20, #4            // Move right 4 bits (one nibble)
+    b.ge    .Lloop_hex              // Continue looping until shift amount goes below 0
+
+    // Restore from frame
+    ldr     x21, [sp, #0]           // Restore x21,
+    ldp     x19, x20, [sp, #16]     // x19, and x20.
+    ldp     x29, x30, [sp, #32]     // Restore FP/LR
+    add     sp, sp, #48             // Clean up reserved stack space
+    ret
+
 .global _start
 .type _start, %function
 _start:
@@ -137,6 +220,12 @@ _start:
     // ------------------------------------------------------------------------
     // Stack setup: COMPLETE
     // ------------------------------------------------------------------------
+
+    mov x0, #'\n'
+    bl asm_meson_uart_char
+
+    mov x0, x19
+    bl asm_x0_hex
 
     // Initial null stack frame
     // Move zero into two temporary registers
@@ -256,7 +345,23 @@ init_paging:
 
     // Map the DTB region
     bl      map_kernel_identity         // Generates L1/L2 tables as needed from pool
-    mov     x4, x0                      // Save updated free pool tracker back to x4
+    mov     x3, x0                      // Save updated free pool tracker back to x4
+
+    // Target 3: UART debug address
+    // movz    x0, #0x0900, lsl #16 // QEMU
+    movz    x0, #0x04c0
+    movk    x0, #0xc810, lsl #16
+
+    mov     x1, #4096
+    // x1 = size in bytes to map
+
+    adrp    x2, id_l0
+    add     x2, x2, :lo12:id_l0         // x2 = Root L0 Pointer
+    // x2 = table to map it in
+
+    // x3 = Current free pool tracking pointer
+    bl      map_kernel_identity
+    mov     x4, x0
 
     // ------------------------------------------------------------------------
     // Task 2: Higher Half Mapping Layout (TTBR1)
@@ -532,6 +637,20 @@ el1_landing_pad:
     dsb ish
     isb
 
+    // QEMU:  0x09000000
+    // MESON: 0xc81004c0
+    // movz x14, #0x0900, lsl #16
+    movz x14, #0x04c0
+    movk x14, #0xc810, lsl #16
+1:
+    ldr w15, [x14, #0xc]
+    tst w15, #0x00200000
+    b.ne 1b
+    mov w15, #'*'
+    str w15, [x14]
+    dsb sy
+    isb
+
     // --- STACK ADDRESS FIXUP ---
     // Calculate and apply the higher-half virtual offset to the stack pointer.
     // Higher-half kernel base starts at 0xffff000000000000:
@@ -551,6 +670,20 @@ kernel_virtual_entry:
     // --- YOU ARE NOW IN THE KERNEL, AS IT IS LINKED ---
 
     add x29, x29, x21 // update link register to maintain stacktrace
+
+    // QEMU:  0x09000000
+    // MESON: 0xc81004c0
+    // movz x14, #0x0900, lsl #16
+    movz x14, #0x04c0
+    movk x14, #0xc810, lsl #16
+1:
+    ldr w15, [x14, #0xc]
+    tst w15, #0x00200000
+    b.ne 1b
+    mov w15, #'$'
+    str w15, [x14]
+    dsb sy
+    isb
 
     // Call the higher level kernel main function
     mov x0, x19                 // Arg0 -> physical image base
