@@ -111,9 +111,21 @@ asm_meson_uart_char:
 
     ret
 
+asm_uart_newl:
+    sub     sp, sp, #32
+    stp     x29, x30, [sp, #16]     // Store FP/LR
+    add     x29, sp, #16
+    stp     x0, x1, [sp, #0]
 
-    .global print_reg_hex
-.type print_reg_hex, %function
+    mov     x0, #'\r'
+    bl      asm_meson_uart_char
+    mov     x0, #'\n'
+    bl      asm_meson_uart_char
+
+    ldp     x0, x1, [sp, #0]
+    ldp     x29, x30, [sp, #0]
+    add     sp, sp, #32
+    ret
 
 asm_x0_hex:
     // Build frame
@@ -159,6 +171,130 @@ asm_x0_hex:
     ldp     x19, x20, [sp, #16]     // x19, and x20.
     ldp     x29, x30, [sp, #32]     // Restore FP/LR
     add     sp, sp, #48             // Clean up reserved stack space
+    ret
+
+
+asm_uart_pagemap:
+    // Build frame
+    sub     sp, sp, #64
+    stp     x29, x30, [sp, #48]     // Store frame pointer + link register
+    add     x29, sp, #48
+    stp     x19, x20, [sp, #32]
+    stp     x21, x22, [sp, #16]
+    stp     x23, x24, [sp, #0]      // Save the scratch registers used below
+
+    mov     x19, x0
+    mov     x20, #0
+    mov     x21, #0
+    bl      .Lwalk_table
+
+    ldp     x19, x20, [sp, #32]
+    ldp     x21, x22, [sp, #16]
+    ldp     x23, x24, [sp, #0]
+    ldp     x29, x30, [sp, #48]     // Restore FP/LR
+    add     sp, sp, #64             // Clean up reserved stack space
+    ret
+
+// Internal recursive-like or iterative block descriptor parser
+// Expects: x19 = table base, x20 = starting VA for this level, x21 = current level depth
+.Lwalk_table:
+    // We need to loop through all 512 entries in this table level
+    mov     x22, #0                 // x22 = Entry index counter (0 to 511)
+
+.Lloop_entries:
+    // Fetch the 64-bit descriptor entry: entry_ptr = table_base + (index * 8)
+    lsl     x23, x22, #3
+    ldr     x24, [x19, x23]         // x24 = Page Table Descriptor entry value
+
+    // Check Bit 0 (Valid bit)
+    tst     x24, #1
+    b.eq    .Lnext_entry            // If bit 0 is 0, descriptor is invalid/unmapped
+
+    // If bit 0 is 1, it's valid. Check Bit 1 to see if it's a Block or a Table.
+    // In L0, L1, and L2: Bit 1 = 0 means Block block mapping, Bit 1 = 1 means Next-Level Table.
+    // In L3 (Page Level): Bit 1 = 1 means a valid Page.
+    cmp     x21, #3                 // Are we at Level 3?
+    b.eq    .Lhandle_page           // Level 3 entries are terminal pages
+
+    tst     x24, #2                 // Check Bit 1
+    b.eq    .Lhandle_block          // Bit 1 is 0: This maps a large block directly
+
+    // --- CASE 1: Next-Level Table Pointer ---
+    // Save current level context to the stack temporarily to recurse safely
+    sub     sp, sp, #48
+    // stp     x19, x20, [sp, #32]
+    str     x19, [sp, #32]
+    stp     x21, x22, [sp, #16]
+    stp     x2, x3, [sp, #0]
+
+    // Calculate the scale factor for the virtual address bits of this level index
+    // L0 index shifts by 39 bits, L1 by 30 bits, L2 by 21 bits
+    mov     x2, #3
+    sub     x2, x2, x21             // x2 = 3 - level
+    mov     x3, #9
+    mul     x2, x2, x3
+    add     x2, x2, #12             // Shift amount = (3 - level) * 9 + 12
+    lsl     x3, x22, x2             // Shift the index into position
+    add     x20, x20, x3            // Update our tracked base VA
+
+    // Extract next level table physical address from the descriptor bits [47:12]
+    mov     x2, #0x0000FFFFFFFFF000
+    and     x19, x24, x2            // x19 now points to the sub-table base address
+
+    mov x0, x19
+    bl asm_x0_hex
+    bl asm_uart_newl
+
+    // add     x21, x21, #1            // Increment level depth
+    // bl      .Lwalk_table            // Recurse into the sub-table
+
+    // Restore context after returning from sub-table
+    ldp     x19, x20, [sp, #32]
+    ldr     x19, [sp, #32]
+    ldp     x21, x22, [sp, #16]
+    ldp     x2, x3, [sp, #0]
+    add     sp, sp, #48
+    b       .Lnext_entry
+
+.Lhandle_block:
+    // --- CASE 2: Block Mapping Found ---
+    // A large contiguous block of memory is mapped here.
+    // Print out the range: Tracked VA base to physical address mapping.
+    mov     x0, x20                 // Pass the calculated current Base VA
+    bl      asm_x0_hex              // Print the Virtual Address block start
+
+    mov     x0, #' '
+    bl      asm_meson_uart_char
+
+    mov     x2, #0x0000FFFFFFFFF000
+    and     x0, x24, x2             // Extract output Physical Address base from descriptor
+    bl      asm_x0_hex              // Print physical target mapping address
+
+    bl      asm_uart_newl
+
+    b       .Lnext_entry
+
+.Lhandle_page:
+    // --- CASE 3: Level 3 Page Descriptor Found ---
+    // Calculate final precise 4KB VA address
+    lsl     x3, x22, #12
+    add     x0, x20, x3             // x0 = Final Virtual Address
+    bl      asm_x0_hex              // Print the mapped Virtual Address page
+
+    mov     x0, #' '
+    bl      asm_meson_uart_char
+
+    mov     x2, #0x0000FFFFFFFFF000
+    and     x0, x24, x2             // Extract physical page address
+    bl      asm_x0_hex              // Print mapped physical destination
+
+    bl      asm_uart_newl
+
+.Lnext_entry:
+    add     x22, x22, #1            // Increment index counter
+    cmp     x22, #512
+    b.lt    .Lloop_entries          // Keep looping until all 512 entries are handled
+
     ret
 
 .global _start
@@ -220,12 +356,6 @@ _start:
     // ------------------------------------------------------------------------
     // Stack setup: COMPLETE
     // ------------------------------------------------------------------------
-
-    mov x0, #'\n'
-    bl asm_meson_uart_char
-
-    mov x0, x19
-    bl asm_x0_hex
 
     // Initial null stack frame
     // Move zero into two temporary registers
@@ -472,6 +602,19 @@ init_paging:
     adrp x1, table_pool_end
     add x1, x1, :lo12:table_pool_end
     bl clean_dcache_range
+
+    bl asm_uart_newl
+
+    // print page tables to UART...
+    adrp x0, id_l0
+    add x0, x0, :lo12:id_l0
+    bl asm_uart_pagemap
+
+    bl asm_uart_newl
+
+    adrp x0, k_l0
+    add x0, x0, :lo12:k_l0
+    bl asm_uart_pagemap
 
     // If at EL2, drop to EL1 so that we are actually in the environment we think we are.
     // basically, this is the transition from "UEFI Identity Maps" to "EL1 MMU Off".
