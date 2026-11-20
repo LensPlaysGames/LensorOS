@@ -249,6 +249,8 @@ asm_x0_hex:
     ret
 
 
+// Parameters:
+//   x0 -> Page Map Base Address
 asm_uart_pagemap:
     // Build frame
     sub     sp, sp, #64
@@ -259,51 +261,34 @@ asm_uart_pagemap:
     stp     x23, x24, [sp, #0]      // Save the scratch registers used below
 
     mov     x19, x0
-    mov     x20, x1
-    mov     x21, #0
 
-// Internal recursive-like or iterative block descriptor parser
-// Expects: x19 = table base, x20 = starting VA for this level, x21 = current level depth
-.Lwalk_table:
     // We need to loop through all 512 entries in this table level
     mov     x22, #0                 // x22 = Entry index counter (0 to 511)
 
-.Lloop_entries:
-    // Fetch the 64-bit descriptor entry: entry_ptr = table_base + (index * 8)
-    lsl     x23, x22, #3
-    ldr     x24, [x19, x23]         // x24 = Page Table Descriptor entry value
-
-    // x20 contains our virtual base address
-    // we should add our current descriptor entry index shifted into the
-    // proper position to form our virtual address.
-
-    mov     x0, #'V'
-    bl      asm_meson_uart_char
-
-    // Calculate shift amount: 12 + 9 * (3 - x21)
-    mov     x1, #3
-    sub     x1, x1, x21             // x1 = 3 - table_depth
-    add     x1, x1, x1, lsl #3      // x1 = x1 * 9  (x1 + x1*8)
-    add     x1, x1, #12             // x1 = 12 + 9 * (3 - table_depth)
-
-    // Perform shift on x22 "entry_index"
-    lsl     x0, x22, x1             // x0 = entry_index << shift
-    add     x0, x20, x0             // x0 = Current Entry's Virtual Address
+    mov     x0, x19
     bl      asm_x0_hex
+    bl      asm_uart_newl
 
+.Lloop_entries:
+    // Fetch two 64-bit descriptor entries: entry_ptr = table_base + (index * 8)
+    add     x23, x19, x22, lsl #3   // x23 = address of eight-byte pair
+    ldp     x20, x24, [x23]         // x20, x24 = eight-byte values
+
+    mov     x0, x20
+    bl      asm_x0_hex
     mov     x0, #' '
     bl      asm_meson_uart_char
-    mov     x0, #'P'
+    mov     x0, #' '
     bl      asm_meson_uart_char
-
     mov     x0, x24
     bl      asm_x0_hex
+
     bl      asm_uart_newl
 
     b       .Lnext_entry
 
 .Lnext_entry:
-    add     x22, x22, #1            // Increment index counter
+    add     x22, x22, #2            // Increment index counter
     cmp     x22, #512
     b.lt    .Lloop_entries          // Keep looping until all 512 entries are handled
 
@@ -438,6 +423,49 @@ _start:
     lsr x22, x22, #21           // Shift right to strip unaligned bits
     lsl x22, x22, #21           // Shift back left to restore the 2MiB alignment
 .map_not_found:
+
+
+    mov x0, #'p'
+    bl asm_meson_uart_char
+    mov x0, #'m'
+    bl asm_meson_uart_char
+    mov x0, #'_'
+    bl asm_meson_uart_char
+    mrs x0, ttbr0_el1
+    bl asm_x0_hex
+    bl asm_uart_newl
+
+    mov x0, #'p'
+    bl asm_meson_uart_char
+    mov x0, #'m'
+    bl asm_meson_uart_char
+    mov x0, #'^'
+    bl asm_meson_uart_char
+    mrs x0, ttbr1_el1
+    bl asm_x0_hex
+    bl asm_uart_newl
+
+
+    mov x0, #'t'
+    bl asm_meson_uart_char
+    mov x0, #'c'
+    bl asm_meson_uart_char
+    mov x0, #'r'
+    bl asm_meson_uart_char
+    mrs x0, tcr_el1
+    bl asm_x0_hex
+    bl asm_uart_newl
+
+    mov x0, #'m'
+    bl asm_meson_uart_char
+    mov x0, #'a'
+    bl asm_meson_uart_char
+    mov x0, #'i'
+    bl asm_meson_uart_char
+    mrs x0, mair_el1
+    bl asm_x0_hex
+    bl asm_uart_newl
+
 
     mov x0, x19                 // x0 = physical address base
 
@@ -635,6 +663,23 @@ init_paging:
     add x0, x0, :lo12:k_l0
     movz x1, #0xffff, lsl #48
     bl asm_uart_pagemap
+    bl asm_uart_newl
+
+
+    adrp x0, table_pool
+    add x0, x0, :lo12:table_pool
+    add x3, x0, #(4096 * 16)
+    sub sp, sp, #16
+1:
+    stp x0, x3, [sp]
+    mov x1, xzr
+    bl asm_uart_pagemap
+    bl asm_uart_newl
+    ldp x0, x3, [sp]
+    add x0, x0, #4096
+    cmp x0, x3
+    b.ne 1b
+    add sp, sp, #16
 
     // If at EL2, drop to EL1 so that we are actually in the environment we think we are.
     // basically, this is the transition from "UEFI Identity Maps" to "EL1 MMU Off".
@@ -683,9 +728,9 @@ el1_landing_pad:
     add x0, x0, #'0'
     bl asm_meson_uart_char
 
-    adrp    x0, exception_vectors
-    add     x0, x0, :lo12:exception_vectors
-    msr     vbar_el1, x0
+    adrp x0, exception_vectors
+    add x0, x0, :lo12:exception_vectors
+    msr vbar_el1, x0
     isb
 
     mov x0, #'*'
@@ -745,25 +790,108 @@ el1_landing_pad:
     msr ttbr1_el1, x1           // upper half (kernel map)
 
     // Flush caches
-    tlbi vmalle1is
+    dsb sy
+    dsb ishst
+    tlbi vmalle1
+    dsb ish
     dsb sy
     isb
 
     mov x0, #'$'
     bl asm_meson_uart_char
+    bl asm_uart_newl
+
+    mov x0, #'p'
+    bl asm_meson_uart_char
+    mov x0, #'m'
+    bl asm_meson_uart_char
+    mov x0, #'_'
+    bl asm_meson_uart_char
+    mrs x0, ttbr0_el1
+    bl asm_x0_hex
+    bl asm_uart_newl
+
+    mov x0, #'p'
+    bl asm_meson_uart_char
+    mov x0, #'m'
+    bl asm_meson_uart_char
+    mov x0, #'^'
+    bl asm_meson_uart_char
+    mrs x0, ttbr1_el1
+    bl asm_x0_hex
+    bl asm_uart_newl
+
+
+    mov x0, #'t'
+    bl asm_meson_uart_char
+    mov x0, #'c'
+    bl asm_meson_uart_char
+    mov x0, #'r'
+    bl asm_meson_uart_char
+    mrs x0, tcr_el1
+    bl asm_x0_hex
+    bl asm_uart_newl
+
+    mov x0, #'m'
+    bl asm_meson_uart_char
+    mov x0, #'a'
+    bl asm_meson_uart_char
+    mov x0, #'i'
+    bl asm_meson_uart_char
+    mrs x0, mair_el1
+    bl asm_x0_hex
+    bl asm_uart_newl
+
+    mov x0, #'p'
+    bl asm_meson_uart_char
+    mov x0, #'c'
+    bl asm_meson_uart_char
+    mov x0, #' '
+    bl asm_meson_uart_char
+    adr x0, .     // program counter
+    bl asm_x0_hex
+    bl asm_uart_newl
+
+    dsb ishst
+    ic iallu
+    tlbi vmalle1
+    dsb ish
+    isb
 
     // Re-enable MMU
     mrs x3, sctlr_el1
     orr x3, x3, #0x1            // MMU
-    orr x3, x3, #0x4            // D-Cache
-    orr x3, x3, #0x1000         // I-Cache
+    // orr x3, x3, #0x4            // D-Cache
+    // orr x3, x3, #0x1000         // I-Cache
     msr sctlr_el1, x3
     isb
 
     // Flush old UEFI cached translations
-    tlbi vmalle1is
+    dsb ishst
+    tlbi vmalle1
     dsb ish
     isb
+
+    mov x0, #'*'
+    bl asm_meson_uart_char
+
+    mov x0, #'s'
+    bl asm_meson_uart_char
+    mov x0, #'p'
+    bl asm_meson_uart_char
+    mov x0, #' '
+    bl asm_meson_uart_char
+    mov x0, sp
+    bl asm_x0_hex
+
+    mov x0, #'1'
+    bl asm_meson_uart_char
+    mov x0, #'9'
+    bl asm_meson_uart_char
+    mov x0, #' '
+    bl asm_meson_uart_char
+    mov x0, x19
+    bl asm_x0_hex
 
 asm_bigboihang:
     wfe
@@ -779,6 +907,9 @@ asm_bigboihang:
     movz x4, #0xffff, lsl #48    // Form the kernel virtual higher-half offset
     add x3, x3, x4               // x3 = stack offset + virtual base
     mov sp, x3                   // Update the stack pointer
+
+    mov x0, #'$'
+    bl asm_meson_uart_char
 
     // --- THE HIGHER-HALF JUMP ---
     ldr x3, =kernel_virtual_entry  // Load the 0xffff... higher-half address
