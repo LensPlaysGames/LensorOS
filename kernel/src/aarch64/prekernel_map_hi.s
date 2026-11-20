@@ -19,7 +19,7 @@
 // ============================================================================
 // FUNCTION: map_kernel_flexible
 // ============================================================================
-// Arguments (AAPCS compliant):
+// Arguments:
 //   x0 = Target Virtual Base Address (e.g., 0xffff000000000000)
 //   x1 = Physical base address of region to map
 //   x2 = Size of region in bytes (e.g., KERNEL_END - KERNEL_VIRTUAL)
@@ -38,17 +38,17 @@ map_kernel_flexible:
     stp     x21, x22, [sp, #32]         // x21 = Alloc Pool,       x22 = Aligned End Address
     stp     x23, x24, [sp, #48]         // x23 = Virt Page tracker
 
-    // Move incoming parameters into non-volatile callee-saved registers
+    // Move arguments into non-volatile callee-saved registers
     mov     x23, x0                     // x23 = Virtual Base Target
     mov     x19, x1                     // x19 = Physical Base
     mov     x20, x3                     // x20 = Root L0 Table Pointer
     mov     x21, x4                     // x21 = Table Allocation Pool Pointer
 
-    // 1. Strict 4KiB Granule Safe-Alignment Check
+    // 4KiB Alignment
     mov     x6, #0xfff                  // 4KiB page mask
     and     x7, x19, x6                 // Capture physical unaligned remainder
-    bic     x19, x19, x6                // Force realign physical base down
-    bic     x23, x23, x6                // Force realign virtual base down
+    bic     x19, x19, x6                // Force align physical base down
+    bic     x23, x23, x6                // Force align virtual base down
 
     add     x2, x2, x7                  // Account for size extension due to alignment
     add     x22, x19, x2                // Compute raw end address based on physical offset
@@ -66,7 +66,7 @@ map_kernel_flexible:
     str     x10, [x20, x13, lsl #3]
     add     x21, x21, #4096
 .L_flex_l0_linked:
-    bic     x10, x10, #0x3
+    bic     x10, x10, #0x3 // FIXME: upper bit flags
 
     // --- LEVEL 1 PROCESSING (1GiB Blocks) ---
     lsr     x13, x23, #30
@@ -78,7 +78,7 @@ map_kernel_flexible:
     str     x11, [x10, x13, lsl #3]
     add     x21, x21, #4096
 .L_flex_l1_linked:
-    bic     x11, x11, #0x3
+    bic     x11, x11, #0x3 // FIXME: upper bit flags
 
     // --- LEVEL 2 SELECTION (2MiB Block vs 4KiB Page Table Check) ---
     lsr     x13, x23, #21
@@ -121,6 +121,7 @@ map_kernel_flexible:
     str     x12, [x15]
     add     x21, x21, #4096
 .L_flex_l2_linked:
+    // FIXME: upper bit flags
     bic     x12, x12, #0x3              // Isolate raw pointer base address
 
     lsr     x13, x23, #12               // Extract index bits [20:12]
@@ -137,6 +138,10 @@ map_kernel_flexible:
 .L_flex_loop_test:
     cmp     x19, x22
     b.lo    .L_flex_loop
+
+    // Sync
+    dsb     ishst
+    isb
 
     // Stack Clean-up & Return allocation pool pointer back in x0
     mov     x0, x21
