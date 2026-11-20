@@ -40,41 +40,88 @@ table_pool_end:
 exception_vectors:
     // 0x000: Synchronous from current EL with SP0
     .align 7
-
-    // QEMU:  0x09000000
-    // MESON: 0xc81004c0
-//     movz x14, #0x0900, lsl #16
-//     movz x14, #0x04c0
-//     movk x14, #0xc810, lsl #16
-// 1:
-//     ldr w15, [x14, #0xc]
-//     tst w15, #0x00200000
-//     b.ne 1b
-//     mov w15, #'Y'
-//     str w15, [x14]
-//     dsb sy
-//     isb
-
-    b .  // Loop forever here so QEMU halts exactly on the faulting line!
+    b .
+    // 0x80
+    .align 7
+    b .
+    // 0x100
+    .align 7
+    b .
+    // 0x180
+    .align 7
+    b .
 
     // 0x200: Synchronous from current EL with SPx
-    .align 7
+    .align 9
 
-    // QEMU:  0x09000000
-    // MESON: 0xc81004c0
-//     movz x14, #0x0900, lsl #16
-//     movz x14, #0x04c0
-//     movk x14, #0xc810, lsl #16
-// 1:
-//     ldr w15, [x14, #0xc]
-//     tst w15, #0x00200000
-//     b.ne 1b
-//     mov w15, #'X'
-//     str w15, [x14]
-//     dsb sy
-//     isb
+    bl asm_uart_newl
+
+    mov x0, #'X'
+    bl asm_meson_uart_char
+    bl asm_uart_newl
+
+    mov x0, #'e'
+    bl asm_meson_uart_char
+    mov x0, #'s'
+    bl asm_meson_uart_char
+    mov x0, #'r'
+    bl asm_meson_uart_char
+    mrs x0, esr_el1
+    bl asm_x0_hex
+    bl asm_uart_newl
+
+    mov x0, #'f'
+    bl asm_meson_uart_char
+    mov x0, #'a'
+    bl asm_meson_uart_char
+    mov x0, #'r'
+    bl asm_meson_uart_char
+    mrs x0, far_el1
+    bl asm_x0_hex
+    bl asm_uart_newl
+
+    mov x0, #'e'
+    bl asm_meson_uart_char
+    mov x0, #'l'
+    bl asm_meson_uart_char
+    mov x0, #'r'
+    bl asm_meson_uart_char
+    mrs x0, elr_el1
+    bl asm_x0_hex
+    bl asm_uart_newl
 
     b . // spin here
+
+    // 0x280
+    .align 7
+    b .
+
+    // 0x300
+    .align 7
+    b .
+
+    // 0x380
+    .align 7
+    b .
+
+    // 0x400 (lower EL aarch64)
+    .align 7
+    b .
+    .align 7
+    b .
+    .align 7
+    b .
+    .align 7
+    b .
+    // 0x600 (lower EL aarch32)
+    .align 7
+    b .
+    .align 7
+    b .
+    .align 7
+    b .
+    .align 7
+    b .
 
 // 4-byte alignment
 .align 2
