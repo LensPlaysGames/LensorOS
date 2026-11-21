@@ -134,9 +134,7 @@ asm_meson_uart_char:
     add     x29, sp, #16
     stp     x14, x15, [sp, #0]      // Save the scratch registers used below
 
-    // QEMU:  0x09000000
     // MESON: 0xc81004c0
-    // movz x14, #0x0900, lsl #16
     movz x14, #0x04c0
     movk x14, #0xc810, lsl #16
 
@@ -789,14 +787,6 @@ el1_landing_pad:
     add     x1, x1, :lo12:k_l0
     msr ttbr1_el1, x1           // upper half (kernel map)
 
-    // Flush caches
-    dsb sy
-    dsb ishst
-    tlbi vmalle1
-    dsb ish
-    dsb sy
-    isb
-
     mov x0, #'$'
     bl asm_meson_uart_char
     bl asm_uart_newl
@@ -853,21 +843,23 @@ el1_landing_pad:
     bl asm_uart_newl
 
     dsb ishst
+
+    // clear instruction cache (I-cache) and translation lookaside buffer (TLB)
+    dsb sy
     ic iallu
     tlbi vmalle1
-    dsb ish
+    dsb sy
     isb
 
     // Re-enable MMU
     mrs x3, sctlr_el1
     orr x3, x3, #0x1            // MMU
     // orr x3, x3, #0x4            // D-Cache
-    // orr x3, x3, #0x1000         // I-Cache
+    orr x3, x3, #0x1000         // I-Cache
     msr sctlr_el1, x3
     isb
 
-    // Flush old UEFI cached translations
-    dsb ishst
+    dsb ish
     tlbi vmalle1
     dsb ish
     isb
