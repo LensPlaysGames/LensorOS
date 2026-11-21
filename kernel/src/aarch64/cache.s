@@ -37,9 +37,9 @@ clean_dcache_range:
     bic x0, x0, x3
 
 .Ldcache_loop:
-    dc cvac, x0     // clear cache line at x0
-    add x0, x0, x2  // move x0 to next cache line
-    cmp x0, x1      // until we are done
+    dc civac, x0     // clean *and invalidate* cache line at x0
+    add x0, x0, x2   // move x0 to next cache line
+    cmp x0, x1       // until we are done
     b.lo .Ldcache_loop
 
     dsb sy
