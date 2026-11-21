@@ -464,6 +464,35 @@ _start:
     bl asm_x0_hex
     bl asm_uart_newl
 
+    // print kernel image size in bytes
+    mov x0, #'s'
+    bl asm_meson_uart_char
+    mov x0, #'z'
+    bl asm_meson_uart_char
+    mov x0, #' '
+    bl asm_meson_uart_char
+    adrp    x0, KERNEL_END
+    add     x0, x0, :lo12:KERNEL_END
+    adrp    x1, KERNEL_VIRTUAL
+    add     x1, x1, :lo12:KERNEL_VIRTUAL
+    sub     x0, x0, x1
+    bl asm_x0_hex
+    bl asm_uart_newl
+
+    // print kernel image size in bytes
+    mov x0, #'s'
+    bl asm_meson_uart_char
+    mov x0, #'z'
+    bl asm_meson_uart_char
+    mov x0, #' '
+    bl asm_meson_uart_char
+    adrp    x0, KERNEL_END
+    add     x0, x0, :lo12:KERNEL_END
+    adrp    x1, KERNEL_VIRTUAL
+    add     x1, x1, :lo12:KERNEL_VIRTUAL
+    sub     x0, x0, x1
+    bl asm_x0_hex
+    bl asm_uart_newl
 
     mov x0, x19                 // x0 = physical address base
 
@@ -534,7 +563,7 @@ init_paging:
     // x2 = table to map it in
 
     // x3 = Current free pool tracking pointer
-    bl      map_kernel_identity
+    bl      map_kernel_identity_nocache
     mov     x4, x0
 
     // ------------------------------------------------------------------------
@@ -640,12 +669,22 @@ init_paging:
     dsb sy
     isb
 
-    // Flush entire table pool to physical RAM
-    adrp x0, table_pool
-    add x0, x0, :lo12:table_pool
-    adrp x1, table_pool_end
-    add x1, x1, :lo12:table_pool_end
-    bl clean_dcache_range
+    // Flush kernel image (including table pool) to physical RAM
+    //
+    // On real hardware, if we do not do this, the data we just stored into
+    // memory sits in the L1/L2 caches of the CPU, never making it to physical
+    // RAM. This causes huge issues with coherency when re-enabling the MMU/caches.
+    //
+    // x1 = kernel image size in bytes
+    // Calculate kernel image size
+    adrp    x1, KERNEL_END
+    add     x1, x1, :lo12:KERNEL_END      // x1 = Full absolute KERNEL_END address
+    adrp    x11, KERNEL_VIRTUAL
+    add     x11, x11, :lo12:KERNEL_VIRTUAL// x11 = Full absolute KERNEL_VIRTUAL address
+    sub     x1, x1, x11                   // x1 = Kernel Size in Bytes
+    add     x1, x19, x1                   // x1 = Kernel End Address
+    mov     x0, x19                       // x0 = Kernel Start Address
+    bl      clean_dcache_range
 
     bl asm_uart_newl
 
@@ -842,7 +881,18 @@ el1_landing_pad:
     bl asm_x0_hex
     bl asm_uart_newl
 
-    dsb ishst
+    // Clean and invalidate entire kernel
+    //
+    // x1 = kernel image size in bytes
+    // Calculate kernel image size
+    adrp    x1, KERNEL_END
+    add     x1, x1, :lo12:KERNEL_END      // x1 = Full absolute KERNEL_END address
+    adrp    x11, KERNEL_VIRTUAL
+    add     x11, x11, :lo12:KERNEL_VIRTUAL// x11 = Full absolute KERNEL_VIRTUAL address
+    sub     x1, x1, x11                   // x1 = Kernel Size in Bytes
+    add     x1, x19, x1                   // x1 = Kernel End Address
+    mov     x0, x19                       // x0 = Kernel Start Address
+    bl      clean_dcache_range
 
     // clear instruction cache (I-cache) and translation lookaside buffer (TLB)
     dsb sy
@@ -854,7 +904,7 @@ el1_landing_pad:
     // Re-enable MMU
     mrs x3, sctlr_el1
     orr x3, x3, #0x1            // MMU
-    // orr x3, x3, #0x4            // D-Cache
+    orr x3, x3, #0x4            // D-Cache
     orr x3, x3, #0x1000         // I-Cache
     msr sctlr_el1, x3
     isb
@@ -875,15 +925,27 @@ el1_landing_pad:
     bl asm_meson_uart_char
     mov x0, sp
     bl asm_x0_hex
+    bl asm_uart_newl
 
+    mov x0, #'x'
+    bl asm_meson_uart_char
     mov x0, #'1'
     bl asm_meson_uart_char
     mov x0, #'9'
     bl asm_meson_uart_char
-    mov x0, #' '
+    mov x0, x19
+    bl asm_x0_hex
+    bl asm_uart_newl
+
+    mov x0, #'x'
+    bl asm_meson_uart_char
+    mov x0, #'1'
+    bl asm_meson_uart_char
+    mov x0, #'9'
     bl asm_meson_uart_char
     mov x0, x19
     bl asm_x0_hex
+    bl asm_uart_newl
 
 asm_bigboihang:
     wfe
