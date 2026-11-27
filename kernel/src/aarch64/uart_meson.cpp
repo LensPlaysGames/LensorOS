@@ -41,8 +41,8 @@ volatile uint32_t* reg5() { return (uint32_t*)(Base + 20); }
 namespace Reg {
 namespace Status {
 // Bit Positions (Shifts)
-constexpr uint32_t POS_RECV_FIFO_COUNT = 0U;  // Corrected [6:0]
-constexpr uint32_t POS_TX_FIFO_COUNT = 8U;    // [14:8]
+constexpr uint32_t POS_RECV_FIFO_COUNT = 0U;
+constexpr uint32_t POS_TX_FIFO_COUNT = 8U;
 constexpr uint32_t POS_PARITY_ERR = 16U;
 constexpr uint32_t POS_FRAME_ERR = 17U;
 constexpr uint32_t POS_WRITE_FULL_ERR = 18U;

@@ -1,4 +1,5 @@
 #include <aarch64/device_tree.h>
+#include <aarch64/uart.h>
 #include <kstage1.h>
 #include <memory/api.h>
 #include <memory/common.h>
@@ -8,6 +9,15 @@
 #include <uart.h>
 
 void kstage1(uintptr_t base, BootInfo* bInfo) {
+    UART::Base = 0xc81004c0;
+    UART::initialize();
+    UART::out_raw('^');
+
+    asm volatile(
+        "1:\n\t"
+        "wfe\n\t"
+        "b 1b\n\t");
+
     KERNEL_PHYSICAL = (uintptr_t)base;
 
     // Setup physical memory allocator from EFI memory map.

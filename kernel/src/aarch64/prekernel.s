@@ -917,40 +917,6 @@ el1_landing_pad:
     mov x0, #'*'
     bl asm_meson_uart_char
 
-    mov x0, #'s'
-    bl asm_meson_uart_char
-    mov x0, #'p'
-    bl asm_meson_uart_char
-    mov x0, #' '
-    bl asm_meson_uart_char
-    mov x0, sp
-    bl asm_x0_hex
-    bl asm_uart_newl
-
-    mov x0, #'x'
-    bl asm_meson_uart_char
-    mov x0, #'1'
-    bl asm_meson_uart_char
-    mov x0, #'9'
-    bl asm_meson_uart_char
-    mov x0, x19
-    bl asm_x0_hex
-    bl asm_uart_newl
-
-    mov x0, #'x'
-    bl asm_meson_uart_char
-    mov x0, #'1'
-    bl asm_meson_uart_char
-    mov x0, #'9'
-    bl asm_meson_uart_char
-    mov x0, x19
-    bl asm_x0_hex
-    bl asm_uart_newl
-
-asm_bigboihang:
-    wfe
-    b asm_bigboihang
-
     // --- STACK ADDRESS FIXUP ---
     // Calculate and apply the higher-half virtual offset to the stack pointer.
     // Higher-half kernel base starts at 0xffff000000000000:
@@ -964,6 +930,7 @@ asm_bigboihang:
 
     mov x0, #'$'
     bl asm_meson_uart_char
+    bl asm_uart_newl
 
     // --- THE HIGHER-HALF JUMP ---
     ldr x3, =kernel_virtual_entry  // Load the 0xffff... higher-half address
@@ -973,6 +940,14 @@ kernel_virtual_entry:
     // --- YOU ARE NOW IN THE KERNEL, AS IT IS LINKED ---
 
     add x29, x29, x21 // update link register to maintain stacktrace
+
+    mov x0, #'^'
+    bl asm_meson_uart_char
+    mov x0, #'$'
+    bl asm_meson_uart_char
+    mov x0, #'$'
+    bl asm_meson_uart_char
+    bl asm_uart_newl
 
     // Call the higher level kernel main function
     mov x0, x19                 // Arg0 -> physical image base
